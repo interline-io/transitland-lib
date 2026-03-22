@@ -131,29 +131,38 @@ type CalendarDateFilter struct {
 	ExceptionType *int `json:"exception_type,omitempty"`
 }
 
-// Generic container for various datasets including Census ACS, TIGER, and NTD.
-// Contains relational data tables and geographic layers.
+// A named collection of geographic and/or statistical data from a single source.
+//
+// Datasets currently include:
+// - **US Census Bureau ACS** (e.g. `acsdt5y2022`): American Community Survey 5-year estimates; contains demographic and socioeconomic data (population, income, etc.) keyed to standard FIPS geographic identifiers
+// - **US Census Bureau TIGER/Line** (e.g. `tiger2021`): geographic boundary files for census tracts, block groups, states, and other administrative units
+// - **US Federal Transit Administration NTD** (e.g. `ntd-annual-2024`): National Transit Database annual reporting data; contains operational metrics (vehicle revenue miles, operating expenses) by agency and mode
+//
+// Each dataset contains one or more `CensusLayer`s (geographic boundary types), `CensusSource`s (individual source files), `CensusTable`s (data table definitions), and queryable `CensusGeography` records with associated `CensusValue` data.
 type CensusDataset struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Dataset name, e.g. `acsdt5y2022`, `ntd-annual`
+	// Dataset name (e.g. `acsdt5y2022`, `tiger2021`, `ntd-annual-2024`)
 	Name string `json:"name"`
-	// Dataset description
+	// Human-readable description of this dataset
 	Description *string `json:"description,omitempty"`
-	// Dataset url
+	// URL to the source or documentation for this dataset
 	URL *tt.Url `json:"url,omitempty"`
-	// Minimum year of data in this dataset
+	// Earliest year of data coverage in this dataset
 	YearMin *int `json:"year_min,omitempty"`
-	// Maximum year of data in this dataset
+	// Latest year of data coverage in this dataset
 	YearMax *int `json:"year_max,omitempty"`
-	// Sources in this dataset
+	// Individual source files or archives that make up this dataset
 	Sources []*CensusSource `json:"sources,omitempty"`
-	// Census geographies in this dataset
+	// Geographic units in this dataset, optionally filtered by layer, location, or ID
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
-	// Census tables in this dataset
+	// Data table definitions available in this dataset
 	Tables []*CensusTable `json:"tables,omitempty"`
+	// Geographic layers (boundary types) available in this dataset, e.g. `tract`, `blockgroup`, `state`
 	Layers []*CensusLayer `json:"layers,omitempty"`
-	// Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table.
+	// Cursor-paginated data values for this dataset.
+	// Use for large datasets (e.g. NTD) where result sets exceed practical limits for the standard `values` field.
+	// Filter by `geoid`, `geoid_prefix`, or `table`.
 	ValuesRelay *CensusValueConnection `json:"values_relay,omitempty"`
 }
 
@@ -212,59 +221,68 @@ type CensusDatasetValueFilter struct {
 	GeoidPrefix *string `json:"geoid_prefix,omitempty"`
 }
 
-// Metadata definition for a single column/field within a table.
+// Schema definition for a single column within a `CensusTable`.
+// Field names from this type correspond to keys in the `CensusValue.values` map.
 type CensusField struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Census field name
+	// Column name as it appears in `CensusValue.values` (e.g. `b01001_001`)
 	FieldName string `json:"field_name"`
-	// Census field title
+	// Human-readable label for this column (e.g. `Total`)
 	FieldTitle string `json:"field_title"`
-	// Census field column order
+	// Display order of this column within the table
 	ColumnOrder *float64 `json:"column_order,omitempty"`
 	TableID     int      `json:"-"`
 }
 
-// A specific spatial unit within a layer (e.g., a specific Census Tract, a State, or a derived NTD entity).
-// Can be linked to data values.
+// A single spatial unit within a layer — for example, a specific Census Tract, a US State, or an NTD agency record.
+//
+// Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via `values`. When queried with a spatial filter (e.g. `stop_buffer` or `bbox`), the `intersection_area` and `intersection_geometry` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
+//
+// Note: spatial queries may return the same geography multiple times when it intersects a search area in multiple places (e.g. two separate stop buffers within the same tract). Use `geoid` to deduplicate if needed.
 type CensusGeography struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Dataset name, e.g. `acsdt5y2022`
+	// Name of the parent dataset (e.g. `tiger2021`)
 	DatasetName string `json:"dataset_name"`
-	// Source name, e.g. `tl_2024_01_tract.zip`
+	// Name of the source file this geography was loaded from (e.g. `tl_2024_01_tract.zip`)
 	SourceName string `json:"source_name"`
-	// Census geography source layer
+	// Name of the layer this geography belongs to (e.g. `tract`, `state`)
 	LayerName string `json:"layer_name"`
-	// Unique identifier for this geography (e.g., FIPS code, NTD ID)
+	// Standard identifier for this geography.
+	// For ACS/TIGER geographies this is the FIPS code (e.g. `06075` for San Francisco County).
+	// For NTD geographies this is the NTD agency ID.
+	// Use this field to deduplicate results from spatial queries.
 	Geoid *string `json:"geoid,omitempty"`
-	// Census geography name
+	// Human-readable name of this geography (e.g. a county or tract name)
 	Name *string `json:"name,omitempty"`
-	// Geometry total area, in square meters
+	// Total area of this geography's geometry, in square meters
 	GeometryArea *float64 `json:"geometry_area,omitempty"`
-	// Land area, in square meters
+	// Land area, in square meters (from TIGER/Line `ALAND` field)
 	Aland *float64 `json:"aland,omitempty"`
-	// Water area, in square meters
+	// Water area, in square meters (from TIGER/Line `AWATER` field)
 	Awater *float64 `json:"awater,omitempty"`
 	// State or province name
 	Adm1Name *string `json:"adm1_name,omitempty"`
-	// State or province ISO code
+	// State or province ISO 3166-2 code (e.g. `US-CA`)
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Country name
 	Adm0Name *string `json:"adm0_name,omitempty"`
-	// Country ISO code
+	// Country ISO 3166-1 alpha-2 code (e.g. `US`)
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
-	// Census geography polygon
+	// Boundary polygon for this geography
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
-	// Intersection area with a given geometry, in square meters
+	// When this geography was returned by a spatial query (e.g. `stop_buffer` or `bbox`), the area of overlap between this geography and the search area, in square meters.
+	// Divide by `geometry_area` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
 	IntersectionArea *float64 `json:"intersection_area,omitempty"`
-	// Intersection geometry with a given geometry
+	// When this geography was returned by a spatial query, the geometry of the intersection between this geography and the search area.
+	// Only populated when explicitly requested; may be expensive to compute.
 	IntersectionGeometry *tt.Geometry `json:"intersection_geometry,omitempty"`
-	// Census tables containing data for this geography
+	// Statistical data values for this geography from the specified tables
 	Values []*CensusValue `json:"values"`
-	// Layer
+	// The layer this geography belongs to
 	Layer *CensusLayer `json:"layer,omitempty"`
-	// Source
+	// The source file this geography was loaded from
 	Source        *CensusSource `json:"source,omitempty"`
 	DatasetID     int           `json:"-"`
 	LayerID       int           `json:"-"`
@@ -282,36 +300,38 @@ type CensusGeographyFilter struct {
 	Search  *string  `json:"search,omitempty"`
 }
 
-// A geographic layer within a dataset, defining a collection of related geometries (e.g., census tracts, states, UZAs).
+// A named category of geographic boundaries within a dataset, grouping geometries of the same type (e.g. all census tracts, all states).
+//
+// Common layer names include `tract` (census tracts), `blockgroup` (block groups), and `state`. Layers are used as the primary filter when querying `CensusGeography` records to select the desired level of geographic aggregation.
 type CensusLayer struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Layer name, e.g. `tl_2024_01_tract`
+	// Layer name used as a filter key (e.g. `tract`, `blockgroup`, `state`)
 	Name string `json:"name"`
-	// Layer description
+	// Human-readable description of this layer
 	Description *string `json:"description,omitempty"`
-	// Census geographies in this layer
+	// Geographic units belonging to this layer
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
 	DatasetID   int                `json:"-"`
 }
 
-// A specific source file or archive within a dataset (e.g., a specific year's TIGER shapefile or ACS data release).
+// A specific source file or archive that was imported to populate part of a dataset (e.g. a single state's TIGER/Line shapefile, or one year's ACS data release).
 type CensusSource struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Source name, e.g. `tl_2024_01_tract.zip`
+	// Source file name (e.g. `tl_2024_01_tract.zip`)
 	Name string `json:"name"`
-	// Source description
+	// Description of this source file
 	Description *string `json:"description,omitempty"`
-	// Source url
+	// URL to the original source file
 	URL tt.Url `json:"url"`
-	// Source checksum
+	// SHA1 checksum of the source file
 	Sha1 string `json:"sha1"`
-	// Census geographies in this layer
+	// Geographic units loaded from this source file
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
-	// Census tables in this source
+	// Data tables loaded from this source file
 	Tables []*CensusTable `json:"tables,omitempty"`
-	// Layers
+	// Geographic layers defined by this source file
 	Layers    []*CensusLayer `json:"layers,omitempty"`
 	DatasetID int            `json:"-"`
 }
@@ -333,19 +353,20 @@ type CensusSourceGeographyFilter struct {
 	Location *CensusDatasetGeographyLocationFilter `json:"location,omitempty"`
 }
 
-// Metadata definition for a table of data values.
+// Schema definition for a data table within a dataset.
+// Describes the available columns and their metadata; the actual data is returned via `CensusValue`.
 type CensusTable struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Census table name
+	// Table identifier used when querying values (e.g. `b01001`, `service_data_and_operating_expenses_by_mode`)
 	TableName string `json:"table_name"`
-	// Census table title
+	// Human-readable title of this table (e.g. `Sex By Age`)
 	TableTitle string `json:"table_title"`
-	// Census table group
+	// Grouping category for this table within the dataset
 	TableGroup *string `json:"table_group,omitempty"`
-	// Additional details, e.g. population universe
+	// Additional descriptive details, such as the population universe (e.g. `Total population`)
 	TableDetails *string `json:"table_details,omitempty"`
-	// Individial field definitions for this table
+	// Field (column) definitions for this table
 	Fields    []*CensusField `json:"fields"`
 	DatasetID int            `json:"-"`
 }
@@ -354,17 +375,23 @@ type CensusTableFilter struct {
 	Search *string `json:"search,omitempty"`
 }
 
-// Data values associated with a specific geography and table (e.g., population count, vehicle revenue miles).
+// Statistical data values for a specific geography and table row.
+//
+// The `values` field is an unstructured map of column names to their values for this geography. Column names and types vary by dataset and table — consult the associated `CensusTable` and `CensusField` records for schema information.
+//
+// Examples:
+// - ACS table `b01001`: `{ "b01001_001": 42381 }` (total population estimate)
+// - NTD table `service_data_and_operating_expenses_by_mode`: `{ "Vehicle Revenue Miles": 1234567, "Operating Expenses": 9876543, "mode": "MB", "ntd_id": "90001" }`
 type CensusValue struct {
-	// Dataset name, e.g. `acsdt5y2022`
+	// Name of the dataset this value belongs to (e.g. `acsdt5y2022`)
 	DatasetName string `json:"dataset_name"`
-	// Source name, e.g. `tl_2024_01_tract.zip`
+	// Name of the source file this value was loaded from
 	SourceName string `json:"source_name"`
-	// Source table
+	// Table definition describing the columns in `values`
 	Table *CensusTable `json:"table"`
-	// Map of column names to values for this table
+	// Map of column names to their values for this geography and table
 	Values tt.Map `json:"values"`
-	// GEOID of associated census geography
+	// GEOID of the associated geography (FIPS code, NTD ID, etc.)
 	Geoid       string `json:"geoid"`
 	GeographyID int    `json:"-"`
 	TableID     int    `json:"-"`

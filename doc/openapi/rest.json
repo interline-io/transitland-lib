@@ -510,7 +510,7 @@
                       "items": {
                         "properties": {
                           "agency_email": {
-                            "description": "GTFS `agency.agency_email`",
+                            "description": "GTFS `agency.agency_email`; email address actively monitored by the agency's customer service department",
                             "format": "email",
                             "nullable": true,
                             "title": "agency_email",
@@ -518,7 +518,7 @@
                             "x-order": 20
                           },
                           "agency_fare_url": {
-                            "description": "GTFS `agency.agency_fare_url`",
+                            "description": "GTFS `agency.agency_fare_url`; URL of a web page where a rider can purchase tickets or passes",
                             "nullable": true,
                             "title": "agency_fare_url",
                             "type": "string",
@@ -531,7 +531,7 @@
                             "x-order": 6
                           },
                           "agency_lang": {
-                            "description": "GTFS `agency.agency_lang`",
+                            "description": "GTFS `agency.agency_lang`; primary language used by this transit agency, as a BCP 47 language tag",
                             "nullable": true,
                             "title": "agency_lang",
                             "type": "string",
@@ -544,14 +544,14 @@
                             "x-order": 4
                           },
                           "agency_phone": {
-                            "description": "GTFS `agency.agency_phone`",
+                            "description": "GTFS `agency.agency_phone`; voice telephone number for the agency's customer service",
                             "nullable": true,
                             "title": "agency_phone",
                             "type": "string",
                             "x-order": 16
                           },
                           "agency_timezone": {
-                            "description": "GTFS `agency.agency_timezone`",
+                            "description": "GTFS `agency.agency_timezone`; timezone where the transit agency is located; stop times use this timezone unless overridden by stop_timezone",
                             "title": "agency_timezone",
                             "type": "string",
                             "x-order": 12
@@ -1192,14 +1192,14 @@
                                   "x-order": 114
                                 },
                                 "route_long_name": {
-                                  "description": "GTFS `routes.route_long_name`",
+                                  "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                                   "nullable": true,
                                   "title": "route_long_name",
                                   "type": "string",
                                   "x-order": 118
                                 },
                                 "route_short_name": {
-                                  "description": "GTFS `routes.route_short_name`",
+                                  "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                                   "nullable": true,
                                   "title": "route_short_name",
                                   "type": "string",
@@ -1341,7 +1341,7 @@
                       "items": {
                         "properties": {
                           "agency_email": {
-                            "description": "GTFS `agency.agency_email`",
+                            "description": "GTFS `agency.agency_email`; email address actively monitored by the agency's customer service department",
                             "format": "email",
                             "nullable": true,
                             "title": "agency_email",
@@ -1349,7 +1349,7 @@
                             "x-order": 20
                           },
                           "agency_fare_url": {
-                            "description": "GTFS `agency.agency_fare_url`",
+                            "description": "GTFS `agency.agency_fare_url`; URL of a web page where a rider can purchase tickets or passes",
                             "nullable": true,
                             "title": "agency_fare_url",
                             "type": "string",
@@ -1362,7 +1362,7 @@
                             "x-order": 6
                           },
                           "agency_lang": {
-                            "description": "GTFS `agency.agency_lang`",
+                            "description": "GTFS `agency.agency_lang`; primary language used by this transit agency, as a BCP 47 language tag",
                             "nullable": true,
                             "title": "agency_lang",
                             "type": "string",
@@ -1375,14 +1375,14 @@
                             "x-order": 4
                           },
                           "agency_phone": {
-                            "description": "GTFS `agency.agency_phone`",
+                            "description": "GTFS `agency.agency_phone`; voice telephone number for the agency's customer service",
                             "nullable": true,
                             "title": "agency_phone",
                             "type": "string",
                             "x-order": 16
                           },
                           "agency_timezone": {
-                            "description": "GTFS `agency.agency_timezone`",
+                            "description": "GTFS `agency.agency_timezone`; timezone where the transit agency is located; stop times use this timezone unless overridden by stop_timezone",
                             "title": "agency_timezone",
                             "type": "string",
                             "x-order": 12
@@ -2023,14 +2023,14 @@
                                   "x-order": 114
                                 },
                                 "route_long_name": {
-                                  "description": "GTFS `routes.route_long_name`",
+                                  "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                                   "nullable": true,
                                   "title": "route_long_name",
                                   "type": "string",
                                   "x-order": 118
                                 },
                                 "route_short_name": {
-                                  "description": "GTFS `routes.route_short_name`",
+                                  "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                                   "nullable": true,
                                   "title": "route_short_name",
                                   "type": "string",
@@ -6267,14 +6267,14 @@
                             "x-order": 73
                           },
                           "continuous_drop_off": {
-                            "description": "GTFS `routes.continuous_drop_off`",
+                            "description": "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                             "nullable": true,
                             "title": "continuous_drop_off",
                             "type": "integer",
                             "x-order": 24
                           },
                           "continuous_pickup": {
-                            "description": "GTFS `routes.continuous_pickup`",
+                            "description": "GTFS `routes.continuous_pickup`; indicates whether a rider can board along the route between stops [0=continuous stopping pickup, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                             "nullable": true,
                             "title": "continuous_pickup",
                             "type": "integer",
@@ -6351,14 +6351,14 @@
                             "x-order": 26
                           },
                           "route_color": {
-                            "description": "GTFS `routes.route_color`",
+                            "description": "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)",
                             "nullable": true,
                             "title": "route_color",
                             "type": "string",
                             "x-order": 4
                           },
                           "route_desc": {
-                            "description": "GTFS `routes.route_desc`",
+                            "description": "GTFS `routes.route_desc`; description of a route that provides useful, quality information",
                             "nullable": true,
                             "title": "route_desc",
                             "type": "string",
@@ -6371,21 +6371,21 @@
                             "x-order": 8
                           },
                           "route_long_name": {
-                            "description": "GTFS `routes.route_long_name`",
+                            "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                             "nullable": true,
                             "title": "route_long_name",
                             "type": "string",
                             "x-order": 10
                           },
                           "route_short_name": {
-                            "description": "GTFS `routes.route_short_name`",
+                            "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                             "nullable": true,
                             "title": "route_short_name",
                             "type": "string",
                             "x-order": 12
                           },
                           "route_sort_order": {
-                            "description": "GTFS `routes.route_sort_order`",
+                            "description": "GTFS `routes.route_sort_order`; orders routes for display; routes with a lower value should be displayed first",
                             "nullable": true,
                             "title": "route_sort_order",
                             "type": "integer",
@@ -6652,20 +6652,20 @@
                             "x-order": 199
                           },
                           "route_text_color": {
-                            "description": "GTFS `routes.route_text_color`",
+                            "description": "GTFS `routes.route_text_color`; legible color to use for text drawn against the route_color background, as a six-digit hexadecimal number",
                             "nullable": true,
                             "title": "route_text_color",
                             "type": "string",
                             "x-order": 16
                           },
                           "route_type": {
-                            "description": "GTFS `routes.route_type`",
+                            "description": "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported",
                             "title": "route_type",
                             "type": "integer",
                             "x-order": 18
                           },
                           "route_url": {
-                            "description": "GTFS `routes.route_url`",
+                            "description": "GTFS `routes.route_url`; URL of a web page about the particular route",
                             "nullable": true,
                             "title": "route_url",
                             "type": "string",
@@ -7237,14 +7237,14 @@
                             "x-order": 73
                           },
                           "continuous_drop_off": {
-                            "description": "GTFS `routes.continuous_drop_off`",
+                            "description": "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                             "nullable": true,
                             "title": "continuous_drop_off",
                             "type": "integer",
                             "x-order": 24
                           },
                           "continuous_pickup": {
-                            "description": "GTFS `routes.continuous_pickup`",
+                            "description": "GTFS `routes.continuous_pickup`; indicates whether a rider can board along the route between stops [0=continuous stopping pickup, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                             "nullable": true,
                             "title": "continuous_pickup",
                             "type": "integer",
@@ -7321,14 +7321,14 @@
                             "x-order": 26
                           },
                           "route_color": {
-                            "description": "GTFS `routes.route_color`",
+                            "description": "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)",
                             "nullable": true,
                             "title": "route_color",
                             "type": "string",
                             "x-order": 4
                           },
                           "route_desc": {
-                            "description": "GTFS `routes.route_desc`",
+                            "description": "GTFS `routes.route_desc`; description of a route that provides useful, quality information",
                             "nullable": true,
                             "title": "route_desc",
                             "type": "string",
@@ -7341,21 +7341,21 @@
                             "x-order": 8
                           },
                           "route_long_name": {
-                            "description": "GTFS `routes.route_long_name`",
+                            "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                             "nullable": true,
                             "title": "route_long_name",
                             "type": "string",
                             "x-order": 10
                           },
                           "route_short_name": {
-                            "description": "GTFS `routes.route_short_name`",
+                            "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                             "nullable": true,
                             "title": "route_short_name",
                             "type": "string",
                             "x-order": 12
                           },
                           "route_sort_order": {
-                            "description": "GTFS `routes.route_sort_order`",
+                            "description": "GTFS `routes.route_sort_order`; orders routes for display; routes with a lower value should be displayed first",
                             "nullable": true,
                             "title": "route_sort_order",
                             "type": "integer",
@@ -7622,20 +7622,20 @@
                             "x-order": 199
                           },
                           "route_text_color": {
-                            "description": "GTFS `routes.route_text_color`",
+                            "description": "GTFS `routes.route_text_color`; legible color to use for text drawn against the route_color background, as a six-digit hexadecimal number",
                             "nullable": true,
                             "title": "route_text_color",
                             "type": "string",
                             "x-order": 16
                           },
                           "route_type": {
-                            "description": "GTFS `routes.route_type`",
+                            "description": "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported",
                             "title": "route_type",
                             "type": "integer",
                             "x-order": 18
                           },
                           "route_url": {
-                            "description": "GTFS `routes.route_url`",
+                            "description": "GTFS `routes.route_url`; URL of a web page about the particular route",
                             "nullable": true,
                             "title": "route_url",
                             "type": "string",
@@ -8077,14 +8077,14 @@
                             "x-order": 121
                           },
                           "bikes_allowed": {
-                            "description": "GTFS `trips.bikes_allowed`",
+                            "description": "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]",
                             "nullable": true,
                             "title": "bikes_allowed",
                             "type": "integer",
                             "x-order": 16
                           },
                           "block_id": {
-                            "description": "GTFS `trips.block_id`",
+                            "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
                             "nullable": true,
                             "title": "block_id",
                             "type": "string",
@@ -8114,13 +8114,13 @@
                                 "x-order": 47
                               },
                               "friday": {
-                                "description": "GTFS `calendar.friday`",
+                                "description": "GTFS `calendar.friday` [1=service runs on Fridays, 0=service does not run]",
                                 "title": "friday",
                                 "type": "integer",
                                 "x-order": 57
                               },
                               "monday": {
-                                "description": "GTFS `calendar.monday`",
+                                "description": "GTFS `calendar.monday` [1=service runs on Mondays, 0=service does not run]",
                                 "title": "monday",
                                 "type": "integer",
                                 "x-order": 49
@@ -8138,7 +8138,7 @@
                                 "x-order": 65
                               },
                               "saturday": {
-                                "description": "GTFS `calendar.saturday`",
+                                "description": "GTFS `calendar.saturday` [1=service runs on Saturdays, 0=service does not run]",
                                 "title": "saturday",
                                 "type": "integer",
                                 "x-order": 59
@@ -8158,25 +8158,25 @@
                                 "x-order": 45
                               },
                               "sunday": {
-                                "description": "GTFS `calendar.sunday`",
+                                "description": "GTFS `calendar.sunday` [1=service runs on Sundays, 0=service does not run]",
                                 "title": "sunday",
                                 "type": "integer",
                                 "x-order": 61
                               },
                               "thursday": {
-                                "description": "GTFS `calendar.thursday`",
+                                "description": "GTFS `calendar.thursday` [1=service runs on Thursdays, 0=service does not run]",
                                 "title": "thursday",
                                 "type": "integer",
                                 "x-order": 55
                               },
                               "tuesday": {
-                                "description": "GTFS `calendar.tuesday`",
+                                "description": "GTFS `calendar.tuesday` [1=service runs on Tuesdays, 0=service does not run]",
                                 "title": "tuesday",
                                 "type": "integer",
                                 "x-order": 51
                               },
                               "wednesday": {
-                                "description": "GTFS `calendar.wednesday`",
+                                "description": "GTFS `calendar.wednesday` [1=service runs on Wednesdays, 0=service does not run]",
                                 "title": "wednesday",
                                 "type": "integer",
                                 "x-order": 53
@@ -8188,7 +8188,7 @@
                             "x-order": 66
                           },
                           "direction_id": {
-                            "description": "GTFS `trips.direction_id`",
+                            "description": "GTFS `trips.direction_id`; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency",
                             "nullable": true,
                             "title": "direction_id",
                             "type": "integer",
@@ -8252,14 +8252,14 @@
                                   "x-order": 71
                                 },
                                 "exact_times": {
-                                  "description": "GTFS `frequencies.exact_times`",
+                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
                                   "nullable": true,
                                   "title": "exact_times",
                                   "type": "integer",
                                   "x-order": 75
                                 },
                                 "headway_secs": {
-                                  "description": "GTFS `frequencies.headway_secs`",
+                                  "description": "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip",
                                   "title": "headway_secs",
                                   "type": "integer",
                                   "x-order": 73
@@ -8766,14 +8766,14 @@
                                 "x-order": 128
                               },
                               "route_long_name": {
-                                "description": "GTFS `routes.route_long_name`",
+                                "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                                 "nullable": true,
                                 "title": "route_long_name",
                                 "type": "string",
                                 "x-order": 132
                               },
                               "route_short_name": {
-                                "description": "GTFS `routes.route_short_name`",
+                                "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                                 "nullable": true,
                                 "title": "route_short_name",
                                 "type": "string",
@@ -8861,7 +8861,7 @@
                                   "x-order": 238
                                 },
                                 "drop_off_type": {
-                                  "description": "GTFS `stop_times.drop_off_type`",
+                                  "description": "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "drop_off_type",
                                   "type": "integer",
@@ -8875,7 +8875,7 @@
                                   "x-order": 250
                                 },
                                 "pickup_type": {
-                                  "description": "GTFS `stop_times.pickup_type`",
+                                  "description": "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "pickup_type",
                                   "type": "integer",
@@ -9128,20 +9128,20 @@
                                   "x-order": 305
                                 },
                                 "stop_headsign": {
-                                  "description": "GTFS `stop_times.stop_headsign`",
+                                  "description": "GTFS `stop_times.stop_headsign`; overrides the trip-level headsign for passengers boarding at this stop",
                                   "nullable": true,
                                   "title": "stop_headsign",
                                   "type": "string",
                                   "x-order": 242
                                 },
                                 "stop_sequence": {
-                                  "description": "GTFS `stop_times.stop_sequence`",
+                                  "description": "GTFS `stop_times.stop_sequence`; order of stops for this trip; values must increase along the trip but need not be consecutive",
                                   "title": "stop_sequence",
                                   "type": "integer",
                                   "x-order": 240
                                 },
                                 "timepoint": {
-                                  "description": "GTFS `stop_times.timepoint`",
+                                  "description": "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]",
                                   "nullable": true,
                                   "title": "timepoint",
                                   "type": "integer",
@@ -9158,7 +9158,7 @@
                             "x-order": 306
                           },
                           "trip_headsign": {
-                            "description": "GTFS `trips.trip_headsign`",
+                            "description": "GTFS `trips.trip_headsign`; text that appears on signage identifying the trip's destination to riders",
                             "nullable": true,
                             "title": "trip_headsign",
                             "type": "string",
@@ -9171,14 +9171,14 @@
                             "x-order": 4
                           },
                           "trip_short_name": {
-                            "description": "GTFS `trips.trip_short_name`",
+                            "description": "GTFS `trips.trip_short_name`; public-facing text used to identify the trip to riders, such as a train number",
                             "nullable": true,
                             "title": "trip_short_name",
                             "type": "string",
                             "x-order": 8
                           },
                           "wheelchair_accessible": {
-                            "description": "GTFS `trips.wheelchair_accessible`",
+                            "description": "GTFS `trips.wheelchair_accessible` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]",
                             "nullable": true,
                             "title": "wheelchair_accessible",
                             "type": "integer",
@@ -9545,14 +9545,14 @@
                             "x-order": 121
                           },
                           "bikes_allowed": {
-                            "description": "GTFS `trips.bikes_allowed`",
+                            "description": "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]",
                             "nullable": true,
                             "title": "bikes_allowed",
                             "type": "integer",
                             "x-order": 16
                           },
                           "block_id": {
-                            "description": "GTFS `trips.block_id`",
+                            "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
                             "nullable": true,
                             "title": "block_id",
                             "type": "string",
@@ -9582,13 +9582,13 @@
                                 "x-order": 47
                               },
                               "friday": {
-                                "description": "GTFS `calendar.friday`",
+                                "description": "GTFS `calendar.friday` [1=service runs on Fridays, 0=service does not run]",
                                 "title": "friday",
                                 "type": "integer",
                                 "x-order": 57
                               },
                               "monday": {
-                                "description": "GTFS `calendar.monday`",
+                                "description": "GTFS `calendar.monday` [1=service runs on Mondays, 0=service does not run]",
                                 "title": "monday",
                                 "type": "integer",
                                 "x-order": 49
@@ -9606,7 +9606,7 @@
                                 "x-order": 65
                               },
                               "saturday": {
-                                "description": "GTFS `calendar.saturday`",
+                                "description": "GTFS `calendar.saturday` [1=service runs on Saturdays, 0=service does not run]",
                                 "title": "saturday",
                                 "type": "integer",
                                 "x-order": 59
@@ -9626,25 +9626,25 @@
                                 "x-order": 45
                               },
                               "sunday": {
-                                "description": "GTFS `calendar.sunday`",
+                                "description": "GTFS `calendar.sunday` [1=service runs on Sundays, 0=service does not run]",
                                 "title": "sunday",
                                 "type": "integer",
                                 "x-order": 61
                               },
                               "thursday": {
-                                "description": "GTFS `calendar.thursday`",
+                                "description": "GTFS `calendar.thursday` [1=service runs on Thursdays, 0=service does not run]",
                                 "title": "thursday",
                                 "type": "integer",
                                 "x-order": 55
                               },
                               "tuesday": {
-                                "description": "GTFS `calendar.tuesday`",
+                                "description": "GTFS `calendar.tuesday` [1=service runs on Tuesdays, 0=service does not run]",
                                 "title": "tuesday",
                                 "type": "integer",
                                 "x-order": 51
                               },
                               "wednesday": {
-                                "description": "GTFS `calendar.wednesday`",
+                                "description": "GTFS `calendar.wednesday` [1=service runs on Wednesdays, 0=service does not run]",
                                 "title": "wednesday",
                                 "type": "integer",
                                 "x-order": 53
@@ -9656,7 +9656,7 @@
                             "x-order": 66
                           },
                           "direction_id": {
-                            "description": "GTFS `trips.direction_id`",
+                            "description": "GTFS `trips.direction_id`; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency",
                             "nullable": true,
                             "title": "direction_id",
                             "type": "integer",
@@ -9720,14 +9720,14 @@
                                   "x-order": 71
                                 },
                                 "exact_times": {
-                                  "description": "GTFS `frequencies.exact_times`",
+                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
                                   "nullable": true,
                                   "title": "exact_times",
                                   "type": "integer",
                                   "x-order": 75
                                 },
                                 "headway_secs": {
-                                  "description": "GTFS `frequencies.headway_secs`",
+                                  "description": "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip",
                                   "title": "headway_secs",
                                   "type": "integer",
                                   "x-order": 73
@@ -10234,14 +10234,14 @@
                                 "x-order": 128
                               },
                               "route_long_name": {
-                                "description": "GTFS `routes.route_long_name`",
+                                "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                                 "nullable": true,
                                 "title": "route_long_name",
                                 "type": "string",
                                 "x-order": 132
                               },
                               "route_short_name": {
-                                "description": "GTFS `routes.route_short_name`",
+                                "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                                 "nullable": true,
                                 "title": "route_short_name",
                                 "type": "string",
@@ -10329,7 +10329,7 @@
                                   "x-order": 238
                                 },
                                 "drop_off_type": {
-                                  "description": "GTFS `stop_times.drop_off_type`",
+                                  "description": "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "drop_off_type",
                                   "type": "integer",
@@ -10343,7 +10343,7 @@
                                   "x-order": 250
                                 },
                                 "pickup_type": {
-                                  "description": "GTFS `stop_times.pickup_type`",
+                                  "description": "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "pickup_type",
                                   "type": "integer",
@@ -10596,20 +10596,20 @@
                                   "x-order": 305
                                 },
                                 "stop_headsign": {
-                                  "description": "GTFS `stop_times.stop_headsign`",
+                                  "description": "GTFS `stop_times.stop_headsign`; overrides the trip-level headsign for passengers boarding at this stop",
                                   "nullable": true,
                                   "title": "stop_headsign",
                                   "type": "string",
                                   "x-order": 242
                                 },
                                 "stop_sequence": {
-                                  "description": "GTFS `stop_times.stop_sequence`",
+                                  "description": "GTFS `stop_times.stop_sequence`; order of stops for this trip; values must increase along the trip but need not be consecutive",
                                   "title": "stop_sequence",
                                   "type": "integer",
                                   "x-order": 240
                                 },
                                 "timepoint": {
-                                  "description": "GTFS `stop_times.timepoint`",
+                                  "description": "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]",
                                   "nullable": true,
                                   "title": "timepoint",
                                   "type": "integer",
@@ -10626,7 +10626,7 @@
                             "x-order": 306
                           },
                           "trip_headsign": {
-                            "description": "GTFS `trips.trip_headsign`",
+                            "description": "GTFS `trips.trip_headsign`; text that appears on signage identifying the trip's destination to riders",
                             "nullable": true,
                             "title": "trip_headsign",
                             "type": "string",
@@ -10639,14 +10639,14 @@
                             "x-order": 4
                           },
                           "trip_short_name": {
-                            "description": "GTFS `trips.trip_short_name`",
+                            "description": "GTFS `trips.trip_short_name`; public-facing text used to identify the trip to riders, such as a train number",
                             "nullable": true,
                             "title": "trip_short_name",
                             "type": "string",
                             "x-order": 8
                           },
                           "wheelchair_accessible": {
-                            "description": "GTFS `trips.wheelchair_accessible`",
+                            "description": "GTFS `trips.wheelchair_accessible` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]",
                             "nullable": true,
                             "title": "wheelchair_accessible",
                             "type": "integer",
@@ -11195,13 +11195,13 @@
                                 "x-order": 55
                               },
                               "level_index": {
-                                "description": "GTFS `levels.level_index`",
+                                "description": "GTFS `levels.level_index`; numeric index of the level; higher values indicate upper levels, 0 is ground level, negative values for underground",
                                 "title": "level_index",
                                 "type": "number",
                                 "x-order": 59
                               },
                               "level_name": {
-                                "description": "GTFS `levels.level_name`",
+                                "description": "GTFS `levels.level_name`; optional name of the level as seen by the rider (e.g. `Mezzanine`, `Upper Level`)",
                                 "nullable": true,
                                 "title": "level_name",
                                 "type": "string",
@@ -11214,14 +11214,7 @@
                             "x-order": 60
                           },
                           "location_type": {
-                            "description": "GTFS `stops.location_type`; this is optional in GTFS spec",
-                            "enum": [
-                              "`0",
-                              "1",
-                              "2",
-                              "3",
-                              "4`"
-                            ],
+                            "description": "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]",
                             "title": "location_type",
                             "type": "integer",
                             "x-order": 24
@@ -11519,14 +11512,14 @@
                             "x-order": 38
                           },
                           "platform_code": {
-                            "description": "GTFS `stops.platform_code`",
+                            "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
                             "nullable": true,
                             "title": "platform_code",
                             "type": "string",
                             "x-order": 18
                           },
                           "stop_code": {
-                            "description": "GTFS `stops.stop_code`",
+                            "description": "GTFS `stops.stop_code`; short text or number identifying the location for riders",
                             "nullable": true,
                             "title": "stop_code",
                             "type": "string",
@@ -11556,7 +11549,7 @@
                             "x-order": 6
                           },
                           "stop_timezone": {
-                            "description": "GTFS `stops.stop_timezone`; if overriding agency/route timezone",
+                            "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
                             "example": "America/Los_Angeles",
                             "nullable": true,
                             "title": "stop_timezone",
@@ -11571,26 +11564,21 @@
                             "x-order": 8
                           },
                           "tts_stop_name": {
-                            "description": "GTFS `stops.tts_stop_name`",
+                            "description": "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems",
                             "nullable": true,
                             "title": "tts_stop_name",
                             "type": "string",
                             "x-order": 20
                           },
                           "wheelchair_boarding": {
-                            "description": "GTFS `stops.wheelchair_boarding`",
-                            "enum": [
-                              "`0",
-                              "1",
-                              "2`"
-                            ],
+                            "description": "GTFS `stops.wheelchair_boarding` [0=no information, 1=some accessible path exists, 2=no accessible path]",
                             "nullable": true,
                             "title": "wheelchair_boarding",
                             "type": "integer",
                             "x-order": 22
                           },
                           "zone_id": {
-                            "description": "GTFS `stops.zone_id`",
+                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
                             "nullable": true,
                             "title": "zone_id",
                             "type": "string",
@@ -11993,13 +11981,13 @@
                                 "x-order": 55
                               },
                               "level_index": {
-                                "description": "GTFS `levels.level_index`",
+                                "description": "GTFS `levels.level_index`; numeric index of the level; higher values indicate upper levels, 0 is ground level, negative values for underground",
                                 "title": "level_index",
                                 "type": "number",
                                 "x-order": 59
                               },
                               "level_name": {
-                                "description": "GTFS `levels.level_name`",
+                                "description": "GTFS `levels.level_name`; optional name of the level as seen by the rider (e.g. `Mezzanine`, `Upper Level`)",
                                 "nullable": true,
                                 "title": "level_name",
                                 "type": "string",
@@ -12012,14 +12000,7 @@
                             "x-order": 60
                           },
                           "location_type": {
-                            "description": "GTFS `stops.location_type`; this is optional in GTFS spec",
-                            "enum": [
-                              "`0",
-                              "1",
-                              "2",
-                              "3",
-                              "4`"
-                            ],
+                            "description": "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]",
                             "title": "location_type",
                             "type": "integer",
                             "x-order": 24
@@ -12317,14 +12298,14 @@
                             "x-order": 38
                           },
                           "platform_code": {
-                            "description": "GTFS `stops.platform_code`",
+                            "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
                             "nullable": true,
                             "title": "platform_code",
                             "type": "string",
                             "x-order": 18
                           },
                           "stop_code": {
-                            "description": "GTFS `stops.stop_code`",
+                            "description": "GTFS `stops.stop_code`; short text or number identifying the location for riders",
                             "nullable": true,
                             "title": "stop_code",
                             "type": "string",
@@ -12354,7 +12335,7 @@
                             "x-order": 6
                           },
                           "stop_timezone": {
-                            "description": "GTFS `stops.stop_timezone`; if overriding agency/route timezone",
+                            "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
                             "example": "America/Los_Angeles",
                             "nullable": true,
                             "title": "stop_timezone",
@@ -12369,26 +12350,21 @@
                             "x-order": 8
                           },
                           "tts_stop_name": {
-                            "description": "GTFS `stops.tts_stop_name`",
+                            "description": "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems",
                             "nullable": true,
                             "title": "tts_stop_name",
                             "type": "string",
                             "x-order": 20
                           },
                           "wheelchair_boarding": {
-                            "description": "GTFS `stops.wheelchair_boarding`",
-                            "enum": [
-                              "`0",
-                              "1",
-                              "2`"
-                            ],
+                            "description": "GTFS `stops.wheelchair_boarding` [0=no information, 1=some accessible path exists, 2=no accessible path]",
                             "nullable": true,
                             "title": "wheelchair_boarding",
                             "type": "integer",
                             "x-order": 22
                           },
                           "zone_id": {
-                            "description": "GTFS `stops.zone_id`",
+                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
                             "nullable": true,
                             "title": "zone_id",
                             "type": "string",
@@ -13143,14 +13119,14 @@
                                         "x-order": 388
                                       },
                                       "continuous_drop_off": {
-                                        "description": "GTFS `stop_times.continuous_drop_off`",
+                                        "description": "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                         "nullable": true,
                                         "title": "continuous_drop_off",
                                         "type": "integer",
                                         "x-order": 382
                                       },
                                       "continuous_pickup": {
-                                        "description": "GTFS `stop_times.continuous_pickup`",
+                                        "description": "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                         "nullable": true,
                                         "title": "continuous_pickup",
                                         "type": "integer",
@@ -13259,7 +13235,7 @@
                                         "x-order": 390
                                       },
                                       "drop_off_type": {
-                                        "description": "GTFS `stop_times.drop_off_type`",
+                                        "description": "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                         "nullable": true,
                                         "title": "drop_off_type",
                                         "type": "integer",
@@ -13273,7 +13249,7 @@
                                         "x-order": 384
                                       },
                                       "pickup_type": {
-                                        "description": "GTFS `stop_times.pickup_type`",
+                                        "description": "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                         "nullable": true,
                                         "title": "pickup_type",
                                         "type": "integer",
@@ -13309,27 +13285,27 @@
                                         "x-order": 396
                                       },
                                       "shape_dist_traveled": {
-                                        "description": "GTFS `stop_times.shape_dist_traveled`",
+                                        "description": "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt",
                                         "nullable": true,
                                         "title": "shape_dist_traveled",
                                         "type": "number",
                                         "x-order": 392
                                       },
                                       "stop_headsign": {
-                                        "description": "GTFS `stop_times.stop_headsign`",
+                                        "description": "GTFS `stop_times.stop_headsign`; overrides the trip-level headsign for passengers boarding at this stop",
                                         "nullable": true,
                                         "title": "stop_headsign",
                                         "type": "string",
                                         "x-order": 372
                                       },
                                       "stop_sequence": {
-                                        "description": "GTFS `stop_times.stop_sequence`",
+                                        "description": "GTFS `stop_times.stop_sequence`; order of stops for this trip; values must increase along the trip but need not be consecutive",
                                         "title": "stop_sequence",
                                         "type": "integer",
                                         "x-order": 370
                                       },
                                       "timepoint": {
-                                        "description": "GTFS `stop_times.timepoint`",
+                                        "description": "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]",
                                         "nullable": true,
                                         "title": "timepoint",
                                         "type": "integer",
@@ -13550,21 +13526,21 @@
                                             "x-order": 657
                                           },
                                           "bikes_allowed": {
-                                            "description": "GTFS `trips.bikes_allowed`",
+                                            "description": "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]",
                                             "nullable": true,
                                             "title": "bikes_allowed",
                                             "type": "integer",
                                             "x-order": 456
                                           },
                                           "block_id": {
-                                            "description": "GTFS `trips.block_id`",
+                                            "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
                                             "nullable": true,
                                             "title": "block_id",
                                             "type": "string",
                                             "x-order": 452
                                           },
                                           "direction_id": {
-                                            "description": "GTFS `trips.direction_id`",
+                                            "description": "GTFS `trips.direction_id`; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency",
                                             "nullable": true,
                                             "title": "direction_id",
                                             "type": "integer",
@@ -13583,14 +13559,14 @@
                                                   "x-order": 607
                                                 },
                                                 "exact_times": {
-                                                  "description": "GTFS `frequencies.exact_times`",
+                                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
                                                   "nullable": true,
                                                   "title": "exact_times",
                                                   "type": "integer",
                                                   "x-order": 611
                                                 },
                                                 "headway_secs": {
-                                                  "description": "GTFS `frequencies.headway_secs`",
+                                                  "description": "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip",
                                                   "title": "headway_secs",
                                                   "type": "integer",
                                                   "x-order": 609
@@ -14084,14 +14060,14 @@
                                                 "x-order": 533
                                               },
                                               "continuous_drop_off": {
-                                                "description": "GTFS `routes.continuous_drop_off`",
+                                                "description": "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                                                 "nullable": true,
                                                 "title": "continuous_drop_off",
                                                 "type": "integer",
                                                 "x-order": 486
                                               },
                                               "continuous_pickup": {
-                                                "description": "GTFS `routes.continuous_pickup`",
+                                                "description": "GTFS `routes.continuous_pickup`; indicates whether a rider can board along the route between stops [0=continuous stopping pickup, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                                                 "nullable": true,
                                                 "title": "continuous_pickup",
                                                 "type": "integer",
@@ -14111,14 +14087,14 @@
                                                 "x-order": 468
                                               },
                                               "route_color": {
-                                                "description": "GTFS `routes.route_color`",
+                                                "description": "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)",
                                                 "nullable": true,
                                                 "title": "route_color",
                                                 "type": "string",
                                                 "x-order": 476
                                               },
                                               "route_desc": {
-                                                "description": "GTFS `routes.route_desc`",
+                                                "description": "GTFS `routes.route_desc`; description of a route that provides useful, quality information",
                                                 "nullable": true,
                                                 "title": "route_desc",
                                                 "type": "string",
@@ -14131,34 +14107,34 @@
                                                 "x-order": 470
                                               },
                                               "route_long_name": {
-                                                "description": "GTFS `routes.route_long_name`",
+                                                "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                                                 "nullable": true,
                                                 "title": "route_long_name",
                                                 "type": "string",
                                                 "x-order": 474
                                               },
                                               "route_short_name": {
-                                                "description": "GTFS `routes.route_short_name`",
+                                                "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                                                 "nullable": true,
                                                 "title": "route_short_name",
                                                 "type": "string",
                                                 "x-order": 472
                                               },
                                               "route_text_color": {
-                                                "description": "GTFS `routes.route_text_color`",
+                                                "description": "GTFS `routes.route_text_color`; legible color to use for text drawn against the route_color background, as a six-digit hexadecimal number",
                                                 "nullable": true,
                                                 "title": "route_text_color",
                                                 "type": "string",
                                                 "x-order": 480
                                               },
                                               "route_type": {
-                                                "description": "GTFS `routes.route_type`",
+                                                "description": "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported",
                                                 "title": "route_type",
                                                 "type": "integer",
                                                 "x-order": 482
                                               },
                                               "route_url": {
-                                                "description": "GTFS `routes.route_url`",
+                                                "description": "GTFS `routes.route_url`; URL of a web page about the particular route",
                                                 "nullable": true,
                                                 "title": "route_url",
                                                 "type": "string",
@@ -14239,7 +14215,7 @@
                                             "x-order": 462
                                           },
                                           "trip_headsign": {
-                                            "description": "GTFS `trips.trip_headsign`",
+                                            "description": "GTFS `trips.trip_headsign`; text that appears on signage identifying the trip's destination to riders",
                                             "nullable": true,
                                             "title": "trip_headsign",
                                             "type": "string",
@@ -14252,14 +14228,14 @@
                                             "x-order": 444
                                           },
                                           "trip_short_name": {
-                                            "description": "GTFS `trips.trip_short_name`",
+                                            "description": "GTFS `trips.trip_short_name`; public-facing text used to identify the trip to riders, such as a train number",
                                             "nullable": true,
                                             "title": "trip_short_name",
                                             "type": "string",
                                             "x-order": 448
                                           },
                                           "wheelchair_accessible": {
-                                            "description": "GTFS `trips.wheelchair_accessible`",
+                                            "description": "GTFS `trips.wheelchair_accessible` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]",
                                             "nullable": true,
                                             "title": "wheelchair_accessible",
                                             "type": "integer",
@@ -14293,14 +14269,7 @@
                                   "x-order": 340
                                 },
                                 "location_type": {
-                                  "description": "GTFS `stops.location_type`; this is optional in GTFS spec",
-                                  "enum": [
-                                    "`0",
-                                    "1",
-                                    "2",
-                                    "3",
-                                    "4`"
-                                  ],
+                                  "description": "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]",
                                   "title": "location_type",
                                   "type": "integer",
                                   "x-order": 358
@@ -14313,14 +14282,14 @@
                                   "x-order": 342
                                 },
                                 "platform_code": {
-                                  "description": "GTFS `stops.platform_code`",
+                                  "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
                                   "nullable": true,
                                   "title": "platform_code",
                                   "type": "string",
                                   "x-order": 360
                                 },
                                 "stop_code": {
-                                  "description": "GTFS `stops.stop_code`",
+                                  "description": "GTFS `stops.stop_code`; short text or number identifying the location for riders",
                                   "nullable": true,
                                   "title": "stop_code",
                                   "type": "string",
@@ -14350,7 +14319,7 @@
                                   "x-order": 350
                                 },
                                 "stop_timezone": {
-                                  "description": "GTFS `stops.stop_timezone`; if overriding agency/route timezone",
+                                  "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
                                   "example": "America/Los_Angeles",
                                   "nullable": true,
                                   "title": "stop_timezone",
@@ -14365,26 +14334,21 @@
                                   "x-order": 354
                                 },
                                 "tts_stop_name": {
-                                  "description": "GTFS `stops.tts_stop_name`",
+                                  "description": "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems",
                                   "nullable": true,
                                   "title": "tts_stop_name",
                                   "type": "string",
                                   "x-order": 362
                                 },
                                 "wheelchair_boarding": {
-                                  "description": "GTFS `stops.wheelchair_boarding`",
-                                  "enum": [
-                                    "`0",
-                                    "1",
-                                    "2`"
-                                  ],
+                                  "description": "GTFS `stops.wheelchair_boarding` [0=no information, 1=some accessible path exists, 2=no accessible path]",
                                   "nullable": true,
                                   "title": "wheelchair_boarding",
                                   "type": "integer",
                                   "x-order": 364
                                 },
                                 "zone_id": {
-                                  "description": "GTFS `stops.zone_id`",
+                                  "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
                                   "nullable": true,
                                   "title": "zone_id",
                                   "type": "string",
@@ -14499,14 +14463,14 @@
                                   "x-order": 65
                                 },
                                 "continuous_drop_off": {
-                                  "description": "GTFS `stop_times.continuous_drop_off`",
+                                  "description": "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "continuous_drop_off",
                                   "type": "integer",
                                   "x-order": 59
                                 },
                                 "continuous_pickup": {
-                                  "description": "GTFS `stop_times.continuous_pickup`",
+                                  "description": "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "continuous_pickup",
                                   "type": "integer",
@@ -14615,7 +14579,7 @@
                                   "x-order": 67
                                 },
                                 "drop_off_type": {
-                                  "description": "GTFS `stop_times.drop_off_type`",
+                                  "description": "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "drop_off_type",
                                   "type": "integer",
@@ -14629,7 +14593,7 @@
                                   "x-order": 61
                                 },
                                 "pickup_type": {
-                                  "description": "GTFS `stop_times.pickup_type`",
+                                  "description": "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "pickup_type",
                                   "type": "integer",
@@ -14665,27 +14629,27 @@
                                   "x-order": 73
                                 },
                                 "shape_dist_traveled": {
-                                  "description": "GTFS `stop_times.shape_dist_traveled`",
+                                  "description": "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt",
                                   "nullable": true,
                                   "title": "shape_dist_traveled",
                                   "type": "number",
                                   "x-order": 69
                                 },
                                 "stop_headsign": {
-                                  "description": "GTFS `stop_times.stop_headsign`",
+                                  "description": "GTFS `stop_times.stop_headsign`; overrides the trip-level headsign for passengers boarding at this stop",
                                   "nullable": true,
                                   "title": "stop_headsign",
                                   "type": "string",
                                   "x-order": 49
                                 },
                                 "stop_sequence": {
-                                  "description": "GTFS `stop_times.stop_sequence`",
+                                  "description": "GTFS `stop_times.stop_sequence`; order of stops for this trip; values must increase along the trip but need not be consecutive",
                                   "title": "stop_sequence",
                                   "type": "integer",
                                   "x-order": 47
                                 },
                                 "timepoint": {
-                                  "description": "GTFS `stop_times.timepoint`",
+                                  "description": "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]",
                                   "nullable": true,
                                   "title": "timepoint",
                                   "type": "integer",
@@ -14906,21 +14870,21 @@
                                       "x-order": 334
                                     },
                                     "bikes_allowed": {
-                                      "description": "GTFS `trips.bikes_allowed`",
+                                      "description": "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]",
                                       "nullable": true,
                                       "title": "bikes_allowed",
                                       "type": "integer",
                                       "x-order": 133
                                     },
                                     "block_id": {
-                                      "description": "GTFS `trips.block_id`",
+                                      "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
                                       "nullable": true,
                                       "title": "block_id",
                                       "type": "string",
                                       "x-order": 129
                                     },
                                     "direction_id": {
-                                      "description": "GTFS `trips.direction_id`",
+                                      "description": "GTFS `trips.direction_id`; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency",
                                       "nullable": true,
                                       "title": "direction_id",
                                       "type": "integer",
@@ -14939,14 +14903,14 @@
                                             "x-order": 284
                                           },
                                           "exact_times": {
-                                            "description": "GTFS `frequencies.exact_times`",
+                                            "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
                                             "nullable": true,
                                             "title": "exact_times",
                                             "type": "integer",
                                             "x-order": 288
                                           },
                                           "headway_secs": {
-                                            "description": "GTFS `frequencies.headway_secs`",
+                                            "description": "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip",
                                             "title": "headway_secs",
                                             "type": "integer",
                                             "x-order": 286
@@ -15440,14 +15404,14 @@
                                           "x-order": 210
                                         },
                                         "continuous_drop_off": {
-                                          "description": "GTFS `routes.continuous_drop_off`",
+                                          "description": "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                                           "nullable": true,
                                           "title": "continuous_drop_off",
                                           "type": "integer",
                                           "x-order": 163
                                         },
                                         "continuous_pickup": {
-                                          "description": "GTFS `routes.continuous_pickup`",
+                                          "description": "GTFS `routes.continuous_pickup`; indicates whether a rider can board along the route between stops [0=continuous stopping pickup, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                                           "nullable": true,
                                           "title": "continuous_pickup",
                                           "type": "integer",
@@ -15467,14 +15431,14 @@
                                           "x-order": 145
                                         },
                                         "route_color": {
-                                          "description": "GTFS `routes.route_color`",
+                                          "description": "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)",
                                           "nullable": true,
                                           "title": "route_color",
                                           "type": "string",
                                           "x-order": 153
                                         },
                                         "route_desc": {
-                                          "description": "GTFS `routes.route_desc`",
+                                          "description": "GTFS `routes.route_desc`; description of a route that provides useful, quality information",
                                           "nullable": true,
                                           "title": "route_desc",
                                           "type": "string",
@@ -15487,34 +15451,34 @@
                                           "x-order": 147
                                         },
                                         "route_long_name": {
-                                          "description": "GTFS `routes.route_long_name`",
+                                          "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                                           "nullable": true,
                                           "title": "route_long_name",
                                           "type": "string",
                                           "x-order": 151
                                         },
                                         "route_short_name": {
-                                          "description": "GTFS `routes.route_short_name`",
+                                          "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                                           "nullable": true,
                                           "title": "route_short_name",
                                           "type": "string",
                                           "x-order": 149
                                         },
                                         "route_text_color": {
-                                          "description": "GTFS `routes.route_text_color`",
+                                          "description": "GTFS `routes.route_text_color`; legible color to use for text drawn against the route_color background, as a six-digit hexadecimal number",
                                           "nullable": true,
                                           "title": "route_text_color",
                                           "type": "string",
                                           "x-order": 157
                                         },
                                         "route_type": {
-                                          "description": "GTFS `routes.route_type`",
+                                          "description": "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported",
                                           "title": "route_type",
                                           "type": "integer",
                                           "x-order": 159
                                         },
                                         "route_url": {
-                                          "description": "GTFS `routes.route_url`",
+                                          "description": "GTFS `routes.route_url`; URL of a web page about the particular route",
                                           "nullable": true,
                                           "title": "route_url",
                                           "type": "string",
@@ -15595,7 +15559,7 @@
                                       "x-order": 139
                                     },
                                     "trip_headsign": {
-                                      "description": "GTFS `trips.trip_headsign`",
+                                      "description": "GTFS `trips.trip_headsign`; text that appears on signage identifying the trip's destination to riders",
                                       "nullable": true,
                                       "title": "trip_headsign",
                                       "type": "string",
@@ -15608,14 +15572,14 @@
                                       "x-order": 121
                                     },
                                     "trip_short_name": {
-                                      "description": "GTFS `trips.trip_short_name`",
+                                      "description": "GTFS `trips.trip_short_name`; public-facing text used to identify the trip to riders, such as a train number",
                                       "nullable": true,
                                       "title": "trip_short_name",
                                       "type": "string",
                                       "x-order": 125
                                     },
                                     "wheelchair_accessible": {
-                                      "description": "GTFS `trips.wheelchair_accessible`",
+                                      "description": "GTFS `trips.wheelchair_accessible` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]",
                                       "nullable": true,
                                       "title": "wheelchair_accessible",
                                       "type": "integer",
@@ -15700,14 +15664,7 @@
                             "x-order": 3
                           },
                           "location_type": {
-                            "description": "GTFS `stops.location_type`; this is optional in GTFS spec",
-                            "enum": [
-                              "`0",
-                              "1",
-                              "2",
-                              "3",
-                              "4`"
-                            ],
+                            "description": "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]",
                             "title": "location_type",
                             "type": "integer",
                             "x-order": 21
@@ -16247,14 +16204,14 @@
                                             "x-order": 787
                                           },
                                           "continuous_drop_off": {
-                                            "description": "GTFS `stop_times.continuous_drop_off`",
+                                            "description": "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                             "nullable": true,
                                             "title": "continuous_drop_off",
                                             "type": "integer",
                                             "x-order": 781
                                           },
                                           "continuous_pickup": {
-                                            "description": "GTFS `stop_times.continuous_pickup`",
+                                            "description": "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                             "nullable": true,
                                             "title": "continuous_pickup",
                                             "type": "integer",
@@ -16363,7 +16320,7 @@
                                             "x-order": 789
                                           },
                                           "drop_off_type": {
-                                            "description": "GTFS `stop_times.drop_off_type`",
+                                            "description": "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                             "nullable": true,
                                             "title": "drop_off_type",
                                             "type": "integer",
@@ -16377,7 +16334,7 @@
                                             "x-order": 783
                                           },
                                           "pickup_type": {
-                                            "description": "GTFS `stop_times.pickup_type`",
+                                            "description": "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]",
                                             "nullable": true,
                                             "title": "pickup_type",
                                             "type": "integer",
@@ -16413,27 +16370,27 @@
                                             "x-order": 795
                                           },
                                           "shape_dist_traveled": {
-                                            "description": "GTFS `stop_times.shape_dist_traveled`",
+                                            "description": "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt",
                                             "nullable": true,
                                             "title": "shape_dist_traveled",
                                             "type": "number",
                                             "x-order": 791
                                           },
                                           "stop_headsign": {
-                                            "description": "GTFS `stop_times.stop_headsign`",
+                                            "description": "GTFS `stop_times.stop_headsign`; overrides the trip-level headsign for passengers boarding at this stop",
                                             "nullable": true,
                                             "title": "stop_headsign",
                                             "type": "string",
                                             "x-order": 771
                                           },
                                           "stop_sequence": {
-                                            "description": "GTFS `stop_times.stop_sequence`",
+                                            "description": "GTFS `stop_times.stop_sequence`; order of stops for this trip; values must increase along the trip but need not be consecutive",
                                             "title": "stop_sequence",
                                             "type": "integer",
                                             "x-order": 769
                                           },
                                           "timepoint": {
-                                            "description": "GTFS `stop_times.timepoint`",
+                                            "description": "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]",
                                             "nullable": true,
                                             "title": "timepoint",
                                             "type": "integer",
@@ -16654,21 +16611,21 @@
                                                 "x-order": 1056
                                               },
                                               "bikes_allowed": {
-                                                "description": "GTFS `trips.bikes_allowed`",
+                                                "description": "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]",
                                                 "nullable": true,
                                                 "title": "bikes_allowed",
                                                 "type": "integer",
                                                 "x-order": 855
                                               },
                                               "block_id": {
-                                                "description": "GTFS `trips.block_id`",
+                                                "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
                                                 "nullable": true,
                                                 "title": "block_id",
                                                 "type": "string",
                                                 "x-order": 851
                                               },
                                               "direction_id": {
-                                                "description": "GTFS `trips.direction_id`",
+                                                "description": "GTFS `trips.direction_id`; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency",
                                                 "nullable": true,
                                                 "title": "direction_id",
                                                 "type": "integer",
@@ -16687,14 +16644,14 @@
                                                       "x-order": 1006
                                                     },
                                                     "exact_times": {
-                                                      "description": "GTFS `frequencies.exact_times`",
+                                                      "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
                                                       "nullable": true,
                                                       "title": "exact_times",
                                                       "type": "integer",
                                                       "x-order": 1010
                                                     },
                                                     "headway_secs": {
-                                                      "description": "GTFS `frequencies.headway_secs`",
+                                                      "description": "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip",
                                                       "title": "headway_secs",
                                                       "type": "integer",
                                                       "x-order": 1008
@@ -17188,14 +17145,14 @@
                                                     "x-order": 932
                                                   },
                                                   "continuous_drop_off": {
-                                                    "description": "GTFS `routes.continuous_drop_off`",
+                                                    "description": "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                                                     "nullable": true,
                                                     "title": "continuous_drop_off",
                                                     "type": "integer",
                                                     "x-order": 885
                                                   },
                                                   "continuous_pickup": {
-                                                    "description": "GTFS `routes.continuous_pickup`",
+                                                    "description": "GTFS `routes.continuous_pickup`; indicates whether a rider can board along the route between stops [0=continuous stopping pickup, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]",
                                                     "nullable": true,
                                                     "title": "continuous_pickup",
                                                     "type": "integer",
@@ -17215,14 +17172,14 @@
                                                     "x-order": 867
                                                   },
                                                   "route_color": {
-                                                    "description": "GTFS `routes.route_color`",
+                                                    "description": "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)",
                                                     "nullable": true,
                                                     "title": "route_color",
                                                     "type": "string",
                                                     "x-order": 875
                                                   },
                                                   "route_desc": {
-                                                    "description": "GTFS `routes.route_desc`",
+                                                    "description": "GTFS `routes.route_desc`; description of a route that provides useful, quality information",
                                                     "nullable": true,
                                                     "title": "route_desc",
                                                     "type": "string",
@@ -17235,34 +17192,34 @@
                                                     "x-order": 869
                                                   },
                                                   "route_long_name": {
-                                                    "description": "GTFS `routes.route_long_name`",
+                                                    "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
                                                     "nullable": true,
                                                     "title": "route_long_name",
                                                     "type": "string",
                                                     "x-order": 873
                                                   },
                                                   "route_short_name": {
-                                                    "description": "GTFS `routes.route_short_name`",
+                                                    "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
                                                     "nullable": true,
                                                     "title": "route_short_name",
                                                     "type": "string",
                                                     "x-order": 871
                                                   },
                                                   "route_text_color": {
-                                                    "description": "GTFS `routes.route_text_color`",
+                                                    "description": "GTFS `routes.route_text_color`; legible color to use for text drawn against the route_color background, as a six-digit hexadecimal number",
                                                     "nullable": true,
                                                     "title": "route_text_color",
                                                     "type": "string",
                                                     "x-order": 879
                                                   },
                                                   "route_type": {
-                                                    "description": "GTFS `routes.route_type`",
+                                                    "description": "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported",
                                                     "title": "route_type",
                                                     "type": "integer",
                                                     "x-order": 881
                                                   },
                                                   "route_url": {
-                                                    "description": "GTFS `routes.route_url`",
+                                                    "description": "GTFS `routes.route_url`; URL of a web page about the particular route",
                                                     "nullable": true,
                                                     "title": "route_url",
                                                     "type": "string",
@@ -17343,7 +17300,7 @@
                                                 "x-order": 861
                                               },
                                               "trip_headsign": {
-                                                "description": "GTFS `trips.trip_headsign`",
+                                                "description": "GTFS `trips.trip_headsign`; text that appears on signage identifying the trip's destination to riders",
                                                 "nullable": true,
                                                 "title": "trip_headsign",
                                                 "type": "string",
@@ -17356,14 +17313,14 @@
                                                 "x-order": 843
                                               },
                                               "trip_short_name": {
-                                                "description": "GTFS `trips.trip_short_name`",
+                                                "description": "GTFS `trips.trip_short_name`; public-facing text used to identify the trip to riders, such as a train number",
                                                 "nullable": true,
                                                 "title": "trip_short_name",
                                                 "type": "string",
                                                 "x-order": 847
                                               },
                                               "wheelchair_accessible": {
-                                                "description": "GTFS `trips.wheelchair_accessible`",
+                                                "description": "GTFS `trips.wheelchair_accessible` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]",
                                                 "nullable": true,
                                                 "title": "wheelchair_accessible",
                                                 "type": "integer",
@@ -17397,14 +17354,7 @@
                                       "x-order": 739
                                     },
                                     "location_type": {
-                                      "description": "GTFS `stops.location_type`; this is optional in GTFS spec",
-                                      "enum": [
-                                        "`0",
-                                        "1",
-                                        "2",
-                                        "3",
-                                        "4`"
-                                      ],
+                                      "description": "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]",
                                       "title": "location_type",
                                       "type": "integer",
                                       "x-order": 757
@@ -17417,14 +17367,14 @@
                                       "x-order": 741
                                     },
                                     "platform_code": {
-                                      "description": "GTFS `stops.platform_code`",
+                                      "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
                                       "nullable": true,
                                       "title": "platform_code",
                                       "type": "string",
                                       "x-order": 759
                                     },
                                     "stop_code": {
-                                      "description": "GTFS `stops.stop_code`",
+                                      "description": "GTFS `stops.stop_code`; short text or number identifying the location for riders",
                                       "nullable": true,
                                       "title": "stop_code",
                                       "type": "string",
@@ -17454,7 +17404,7 @@
                                       "x-order": 749
                                     },
                                     "stop_timezone": {
-                                      "description": "GTFS `stops.stop_timezone`; if overriding agency/route timezone",
+                                      "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
                                       "example": "America/Los_Angeles",
                                       "nullable": true,
                                       "title": "stop_timezone",
@@ -17469,26 +17419,21 @@
                                       "x-order": 753
                                     },
                                     "tts_stop_name": {
-                                      "description": "GTFS `stops.tts_stop_name`",
+                                      "description": "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems",
                                       "nullable": true,
                                       "title": "tts_stop_name",
                                       "type": "string",
                                       "x-order": 761
                                     },
                                     "wheelchair_boarding": {
-                                      "description": "GTFS `stops.wheelchair_boarding`",
-                                      "enum": [
-                                        "`0",
-                                        "1",
-                                        "2`"
-                                      ],
+                                      "description": "GTFS `stops.wheelchair_boarding` [0=no information, 1=some accessible path exists, 2=no accessible path]",
                                       "nullable": true,
                                       "title": "wheelchair_boarding",
                                       "type": "integer",
                                       "x-order": 763
                                     },
                                     "zone_id": {
-                                      "description": "GTFS `stops.zone_id`",
+                                      "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
                                       "nullable": true,
                                       "title": "zone_id",
                                       "type": "string",
@@ -17517,14 +17462,7 @@
                                 "x-order": 709
                               },
                               "location_type": {
-                                "description": "GTFS `stops.location_type`; this is optional in GTFS spec",
-                                "enum": [
-                                  "`0",
-                                  "1",
-                                  "2",
-                                  "3",
-                                  "4`"
-                                ],
+                                "description": "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]",
                                 "title": "location_type",
                                 "type": "integer",
                                 "x-order": 727
@@ -17537,14 +17475,14 @@
                                 "x-order": 711
                               },
                               "platform_code": {
-                                "description": "GTFS `stops.platform_code`",
+                                "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
                                 "nullable": true,
                                 "title": "platform_code",
                                 "type": "string",
                                 "x-order": 729
                               },
                               "stop_code": {
-                                "description": "GTFS `stops.stop_code`",
+                                "description": "GTFS `stops.stop_code`; short text or number identifying the location for riders",
                                 "nullable": true,
                                 "title": "stop_code",
                                 "type": "string",
@@ -17574,7 +17512,7 @@
                                 "x-order": 719
                               },
                               "stop_timezone": {
-                                "description": "GTFS `stops.stop_timezone`; if overriding agency/route timezone",
+                                "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
                                 "example": "America/Los_Angeles",
                                 "nullable": true,
                                 "title": "stop_timezone",
@@ -17589,26 +17527,21 @@
                                 "x-order": 723
                               },
                               "tts_stop_name": {
-                                "description": "GTFS `stops.tts_stop_name`",
+                                "description": "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems",
                                 "nullable": true,
                                 "title": "tts_stop_name",
                                 "type": "string",
                                 "x-order": 731
                               },
                               "wheelchair_boarding": {
-                                "description": "GTFS `stops.wheelchair_boarding`",
-                                "enum": [
-                                  "`0",
-                                  "1",
-                                  "2`"
-                                ],
+                                "description": "GTFS `stops.wheelchair_boarding` [0=no information, 1=some accessible path exists, 2=no accessible path]",
                                 "nullable": true,
                                 "title": "wheelchair_boarding",
                                 "type": "integer",
                                 "x-order": 733
                               },
                               "zone_id": {
-                                "description": "GTFS `stops.zone_id`",
+                                "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
                                 "nullable": true,
                                 "title": "zone_id",
                                 "type": "string",
@@ -17621,14 +17554,14 @@
                             "x-order": 1150
                           },
                           "platform_code": {
-                            "description": "GTFS `stops.platform_code`",
+                            "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
                             "nullable": true,
                             "title": "platform_code",
                             "type": "string",
                             "x-order": 23
                           },
                           "stop_code": {
-                            "description": "GTFS `stops.stop_code`",
+                            "description": "GTFS `stops.stop_code`; short text or number identifying the location for riders",
                             "nullable": true,
                             "title": "stop_code",
                             "type": "string",
@@ -17658,7 +17591,7 @@
                             "x-order": 13
                           },
                           "stop_timezone": {
-                            "description": "GTFS `stops.stop_timezone`; if overriding agency/route timezone",
+                            "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
                             "example": "America/Los_Angeles",
                             "nullable": true,
                             "title": "stop_timezone",
@@ -17673,26 +17606,21 @@
                             "x-order": 17
                           },
                           "tts_stop_name": {
-                            "description": "GTFS `stops.tts_stop_name`",
+                            "description": "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems",
                             "nullable": true,
                             "title": "tts_stop_name",
                             "type": "string",
                             "x-order": 25
                           },
                           "wheelchair_boarding": {
-                            "description": "GTFS `stops.wheelchair_boarding`",
-                            "enum": [
-                              "`0",
-                              "1",
-                              "2`"
-                            ],
+                            "description": "GTFS `stops.wheelchair_boarding` [0=no information, 1=some accessible path exists, 2=no accessible path]",
                             "nullable": true,
                             "title": "wheelchair_boarding",
                             "type": "integer",
                             "x-order": 27
                           },
                           "zone_id": {
-                            "description": "GTFS `stops.zone_id`",
+                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
                             "nullable": true,
                             "title": "zone_id",
                             "type": "string",

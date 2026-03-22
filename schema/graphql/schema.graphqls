@@ -175,9 +175,7 @@ type Query {
   "Current user metadata. Requires authentication"
   me: Me!
   
-  """
-  List or search for Census Datasets, generic containers for various datasets including US Census Bureau ACS, TIGER/Line, and US FTA NTD.
-  """
+  "List available Census Datasets (US Census Bureau ACS, TIGER/Line geographic boundaries, US FTA National Transit Database)"
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
 }
 
@@ -1835,183 +1833,221 @@ type RouteAttribute {
 # Census entities
 
 """
-Generic container for various datasets including Census ACS, TIGER, and NTD.
-Contains relational data tables and geographic layers.
+A named collection of geographic and/or statistical data from a single source.
+
+Datasets currently include:
+- **US Census Bureau ACS** (e.g. `acsdt5y2022`): American Community Survey 5-year estimates; contains demographic and socioeconomic data (population, income, etc.) keyed to standard FIPS geographic identifiers
+- **US Census Bureau TIGER/Line** (e.g. `tiger2021`): geographic boundary files for census tracts, block groups, states, and other administrative units
+- **US Federal Transit Administration NTD** (e.g. `ntd-annual-2024`): National Transit Database annual reporting data; contains operational metrics (vehicle revenue miles, operating expenses) by agency and mode
+
+Each dataset contains one or more `CensusLayer`s (geographic boundary types), `CensusSource`s (individual source files), `CensusTable`s (data table definitions), and queryable `CensusGeography` records with associated `CensusValue` data.
 """
 type CensusDataset {
   "Internal integer ID"
   id: Int!
-  
-  "Dataset name, e.g. `acsdt5y2022`, `ntd-annual`"
+
+  "Dataset name (e.g. `acsdt5y2022`, `tiger2021`, `ntd-annual-2024`)"
   name: String!
-  
-  "Dataset description"
+
+  "Human-readable description of this dataset"
   description: String
-  
-  "Dataset url"
+
+  "URL to the source or documentation for this dataset"
   url: Url
-  
-  "Minimum year of data in this dataset"
+
+  "Earliest year of data coverage in this dataset"
   year_min: Int
-  
-  "Maximum year of data in this dataset"
+
+  "Latest year of data coverage in this dataset"
   year_max: Int
-  
-  "Sources in this dataset"
+
+  "Individual source files or archives that make up this dataset"
   sources(limit: Int, where: CensusSourceFilter): [CensusSource!]
-  
-  "Census geographies in this dataset"
+
+  "Geographic units in this dataset, optionally filtered by layer, location, or ID"
   geographies(limit: Int, where: CensusDatasetGeographyFilter): [CensusGeography!]
-  
-  "Census tables in this dataset"
+
+  "Data table definitions available in this dataset"
   tables(limit: Int, where: CensusTableFilter): [CensusTable!]
+
+  "Geographic layers (boundary types) available in this dataset, e.g. `tract`, `blockgroup`, `state`"
   layers: [CensusLayer!]
-  """Census values in this dataset with cursor pagination. Query by geoid, geoid_prefix, or table."""
+
+  """
+  Cursor-paginated data values for this dataset.
+  Use for large datasets (e.g. NTD) where result sets exceed practical limits for the standard `values` field.
+  Filter by `geoid`, `geoid_prefix`, or `table`.
+  """
   values_relay(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
 }
 
 """
-A specific source file or archive within a dataset (e.g., a specific year's TIGER shapefile or ACS data release).
+A specific source file or archive that was imported to populate part of a dataset (e.g. a single state's TIGER/Line shapefile, or one year's ACS data release).
 """
 type CensusSource {
   "Internal integer ID"
   id: Int!
-  
-  "Source name, e.g. `tl_2024_01_tract.zip`"
+
+  "Source file name (e.g. `tl_2024_01_tract.zip`)"
   name: String!
-  
-  "Source description"
+
+  "Description of this source file"
   description: String
-  
-  "Source url"
+
+  "URL to the original source file"
   url: Url!
-  
-  "Source checksum"
+
+  "SHA1 checksum of the source file"
   sha1: String!
-  
-  "Census geographies in this layer"
+
+  "Geographic units loaded from this source file"
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
-  
-  "Census tables in this source"
+
+  "Data tables loaded from this source file"
   tables(limit: Int): [CensusTable!]
-  
-  "Layers"
+
+  "Geographic layers defined by this source file"
   layers: [CensusLayer!]
 }
 
 """
-A geographic layer within a dataset, defining a collection of related geometries (e.g., census tracts, states, UZAs).
+A named category of geographic boundaries within a dataset, grouping geometries of the same type (e.g. all census tracts, all states).
+
+Common layer names include `tract` (census tracts), `blockgroup` (block groups), and `state`. Layers are used as the primary filter when querying `CensusGeography` records to select the desired level of geographic aggregation.
 """
 type CensusLayer {
   "Internal integer ID"
   id: Int!
-  
-  "Layer name, e.g. `tl_2024_01_tract`"
+
+  "Layer name used as a filter key (e.g. `tract`, `blockgroup`, `state`)"
   name: String!
-  
-  "Layer description"
+
+  "Human-readable description of this layer"
   description: String
-  
-  "Census geographies in this layer"
+
+  "Geographic units belonging to this layer"
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
 }
 
 """
-A specific spatial unit within a layer (e.g., a specific Census Tract, a State, or a derived NTD entity).
-Can be linked to data values.
+A single spatial unit within a layer — for example, a specific Census Tract, a US State, or an NTD agency record.
+
+Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via `values`. When queried with a spatial filter (e.g. `stop_buffer` or `bbox`), the `intersection_area` and `intersection_geometry` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
+
+Note: spatial queries may return the same geography multiple times when it intersects a search area in multiple places (e.g. two separate stop buffers within the same tract). Use `geoid` to deduplicate if needed.
 """
 type CensusGeography {
   "Internal integer ID"
   id: Int!
-  
-  "Dataset name, e.g. `acsdt5y2022`"
+
+  "Name of the parent dataset (e.g. `tiger2021`)"
   dataset_name: String!
-  
-  "Source name, e.g. `tl_2024_01_tract.zip`"
+
+  "Name of the source file this geography was loaded from (e.g. `tl_2024_01_tract.zip`)"
   source_name: String!
-  
-  "Census geography source layer"
+
+  "Name of the layer this geography belongs to (e.g. `tract`, `state`)"
   layer_name: String!
-  
-  "Unique identifier for this geography (e.g., FIPS code, NTD ID)"
+
+  """
+  Standard identifier for this geography.
+  For ACS/TIGER geographies this is the FIPS code (e.g. `06075` for San Francisco County).
+  For NTD geographies this is the NTD agency ID.
+  Use this field to deduplicate results from spatial queries.
+  """
   geoid: String
-  
-  "Census geography name"
+
+  "Human-readable name of this geography (e.g. a county or tract name)"
   name: String
-  
-  "Geometry total area, in square meters"
+
+  "Total area of this geography's geometry, in square meters"
   geometry_area: Float
-  
-  "Land area, in square meters"
+
+  "Land area, in square meters (from TIGER/Line `ALAND` field)"
   aland: Float
-  
-  "Water area, in square meters"
+
+  "Water area, in square meters (from TIGER/Line `AWATER` field)"
   awater: Float
-  
+
   "State or province name"
   adm1_name: String
-  
-  "State or province ISO code"
+
+  "State or province ISO 3166-2 code (e.g. `US-CA`)"
   adm1_iso: String
-  
+
   "Country name"
   adm0_name: String
-  
-  "Country ISO code"
+
+  "Country ISO 3166-1 alpha-2 code (e.g. `US`)"
   adm0_iso: String
-  
-  "Census geography polygon"
+
+  "Boundary polygon for this geography"
   geometry: MultiPolygon
-  
-  "Intersection area with a given geometry, in square meters"
+
+  """
+  When this geography was returned by a spatial query (e.g. `stop_buffer` or `bbox`), the area of overlap between this geography and the search area, in square meters.
+  Divide by `geometry_area` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
+  """
   intersection_area: Float
-  
-  "Intersection geometry with a given geometry"
+
+  """
+  When this geography was returned by a spatial query, the geometry of the intersection between this geography and the search area.
+  Only populated when explicitly requested; may be expensive to compute.
+  """
   intersection_geometry: Geometry
-  
-  "Census tables containing data for this geography"
+
+  "Statistical data values for this geography from the specified tables"
   values(table_names: [String!]!, dataset: String, limit: Int): [CensusValue]!
-  
-  "Layer"
+
+  "The layer this geography belongs to"
   layer: CensusLayer
-  
-  "Source"
+
+  "The source file this geography was loaded from"
   source: CensusSource
 }
 
 """
-Data values associated with a specific geography and table (e.g., population count, vehicle revenue miles).
+Statistical data values for a specific geography and table row.
+
+The `values` field is an unstructured map of column names to their values for this geography. Column names and types vary by dataset and table — consult the associated `CensusTable` and `CensusField` records for schema information.
+
+Examples:
+- ACS table `b01001`: `{ "b01001_001": 42381 }` (total population estimate)
+- NTD table `service_data_and_operating_expenses_by_mode`: `{ "Vehicle Revenue Miles": 1234567, "Operating Expenses": 9876543, "mode": "MB", "ntd_id": "90001" }`
 """
 type CensusValue {
-  "Dataset name, e.g. `acsdt5y2022`"
+  "Name of the dataset this value belongs to (e.g. `acsdt5y2022`)"
   dataset_name: String!
-  
-  "Source name, e.g. `tl_2024_01_tract.zip`"
+
+  "Name of the source file this value was loaded from"
   source_name: String!
-  
-  "Source table"
+
+  "Table definition describing the columns in `values`"
   table: CensusTable!
-  
-  "Map of column names to values for this table"
+
+  "Map of column names to their values for this geography and table"
   values: Map!
-  
-  "GEOID of associated census geography"
+
+  "GEOID of the associated geography (FIPS code, NTD ID, etc.)"
   geoid: String!
 }
 
-"""Relay connection for census values"""
+"""
+Relay-style cursor-paginated connection for census values.
+Use `values_relay` on `CensusDataset` when fetching large result sets (e.g. full NTD datasets).
+"""
 type CensusValueConnection {
   edges: [CensusValueEdge!]!
   pageInfo: PageInfo!
 }
 
-"""Edge in census values connection"""
+"""A single edge in a CensusValueConnection."""
 type CensusValueEdge {
   node: CensusValue!
   cursor: String!
 }
 
-"""Pagination information"""
+"""Relay-style pagination metadata."""
 type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
@@ -2020,42 +2056,44 @@ type PageInfo {
 }
 
 """
-Metadata definition for a table of data values.
+Schema definition for a data table within a dataset.
+Describes the available columns and their metadata; the actual data is returned via `CensusValue`.
 """
 type CensusTable {
   "Internal integer ID"
   id: Int!
-  
-  "Census table name"
+
+  "Table identifier used when querying values (e.g. `b01001`, `service_data_and_operating_expenses_by_mode`)"
   table_name: String!
-  
-  "Census table title"
+
+  "Human-readable title of this table (e.g. `Sex By Age`)"
   table_title: String!
-  
-  "Census table group"
+
+  "Grouping category for this table within the dataset"
   table_group: String
-  
-  "Additional details, e.g. population universe"
+
+  "Additional descriptive details, such as the population universe (e.g. `Total population`)"
   table_details: String
-  
-  "Individial field definitions for this table"
+
+  "Field (column) definitions for this table"
   fields: [CensusField!]!
 }
 
 """
-Metadata definition for a single column/field within a table.
+Schema definition for a single column within a `CensusTable`.
+Field names from this type correspond to keys in the `CensusValue.values` map.
 """
 type CensusField {
   "Internal integer ID"
   id: Int!
-  
-  "Census field name"
+
+  "Column name as it appears in `CensusValue.values` (e.g. `b01001_001`)"
   field_name: String!
-  
-  "Census field title"
+
+  "Human-readable label for this column (e.g. `Total`)"
   field_title: String!
-  
-  "Census field column order"
+
+  "Display order of this column within the table"
   column_order: Float
 }
 
