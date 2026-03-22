@@ -2,9 +2,13 @@ package gql
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/gorilla/websocket"
 	"github.com/interline-io/transitland-lib/internal/generated/gqlout"
 )
 
@@ -24,8 +28,21 @@ func WithExtensions(exts ...graphql.HandlerExtension) ServerOption {
 
 func NewServer(opts ...ServerOption) (http.Handler, error) {
 	c := gqlout.Config{Resolvers: &Resolver{}}
-	// Setup server
-	srv := handler.NewDefaultServer(gqlout.NewExecutableSchema(c))
+	// Setup server with explicit transports to include WebSocket support
+	srv := handler.New(gqlout.NewExecutableSchema(c))
+	srv.AddTransport(transport.Options{})
+	srv.AddTransport(transport.GET{})
+	srv.AddTransport(transport.POST{})
+	srv.AddTransport(transport.MultipartForm{})
+	srv.AddTransport(transport.Websocket{
+		KeepAlivePingInterval: 10 * time.Second,
+		Upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
+	})
+	srv.Use(extension.Introspection{})
 	// Apply functional options
 	for _, opt := range opts {
 		if opt != nil {

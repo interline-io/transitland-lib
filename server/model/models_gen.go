@@ -1285,6 +1285,9 @@ type StopTimeFilter struct {
 	ExcludeLast *bool `json:"exclude_last,omitempty"`
 }
 
+type Subscription struct {
+}
+
 // Search options for trips
 type TripFilter struct {
 	// Search for trips scheduled on the specified GTFS calendar service date
@@ -1448,8 +1451,16 @@ type ValidationReportFilter struct {
 type VehiclePosition struct {
 	// GTFS-RT VehiclePosition vehicle. See https://gtfs.org/realtime/reference/#message-vehicledescriptor
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`
+	// GTFS-RT VehiclePosition trip. See https://gtfs.org/realtime/reference/#message-tripdescriptor
+	Trip *RTTripDescriptor `json:"trip,omitempty"`
+	// Feed that provided this vehicle position
+	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// GTFS-RT VehiclePosition current vehicle position
 	Position *tt.Point `json:"position,omitempty"`
+	// GTFS-RT VehiclePosition bearing in degrees
+	Bearing *float64 `json:"bearing,omitempty"`
+	// GTFS-RT VehiclePosition speed in meters per second
+	Speed *float64 `json:"speed,omitempty"`
 	// GTFS-RT VehiclePosition current stop sequence in trip
 	CurrentStopSequence *int `json:"current_stop_sequence,omitempty"`
 	// GTFS-RT VehiclePosition current stop in trip
@@ -1460,6 +1471,18 @@ type VehiclePosition struct {
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 	// GTFS-RT VehiclePosition congestion level estimate
 	CongestionLevel *string `json:"congestion_level,omitempty"`
+}
+
+// Filter for vehicle position subscriptions
+type VehiclePositionFilter struct {
+	// Bounding box to filter vehicle positions by geographic area
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Filter by feed OnestopIDs
+	FeedOnestopIds []string `json:"feed_onestop_ids,omitempty"`
+	// Filter by agency IDs
+	AgencyIds []string `json:"agency_ids,omitempty"`
+	// Filter by route IDs
+	RouteIds []string `json:"route_ids,omitempty"`
 }
 
 type Waypoint struct {

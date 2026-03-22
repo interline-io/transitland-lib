@@ -145,6 +145,9 @@ func (r *Resolver) Query() gqlout.QueryResolver { return &queryResolver{r} }
 // Mutation .
 func (r *Resolver) Mutation() gqlout.MutationResolver { return &mutationResolver{r} }
 
+// Subscription .
+func (r *Resolver) Subscription() gqlout.SubscriptionResolver { return &subscriptionResolver{r} }
+
 // Agency .
 func (r *Resolver) Agency() gqlout.AgencyResolver { return &agencyResolver{r} }
 
