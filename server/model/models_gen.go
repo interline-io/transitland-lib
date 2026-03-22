@@ -1081,9 +1081,9 @@ type RouteStopPattern struct {
 	StopPatternID int `json:"stop_pattern_id"`
 	// Direction ID of the trip
 	DirectionID int `json:"direction_id"`
-	// Count of trips for this stop pattern
+	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
-	// Trips for this stop pattern
+	// Representative trips for this stop pattern
 	Trips   []*Trip `json:"trips,omitempty"`
 	RouteID int     `json:"-"`
 }

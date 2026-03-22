@@ -9488,7 +9488,7 @@ type Feed {
   "Current feed state (active version, last fetch status)"
   feed_state: FeedState
   
-  "Fetch attempts for this feed (history of downloads)"
+  "History of fetch attempts for this feed; filter with ` + "`" + `where: {success: true}` + "`" + ` to find the most recent successful download"
   feed_fetches(limit: Int, where: FeedFetchFilter): [FeedFetch!]
   
   "Versions of this feed that have been fetched, archived, and imported"
@@ -9904,7 +9904,7 @@ type Agency {
   "Census geographies associated with this agency"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
-  "GTFS-RT alerts for this agency"
+  "GTFS-RT service alerts for this agency; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 }
 
@@ -9977,28 +9977,28 @@ type Route {
   "Trips associated with this route"
   trips(limit: Int, where: TripFilter): [Trip!]!
   
-  "Stops associated with this route"
+  "Stops that this route serves (flat list of Stop objects)"
   stops(limit: Int, where: StopFilter): [Stop!]!
   
-  "Stops associated with this route"
+  "Stops that this route serves, as RouteStop associations (includes route and agency context alongside each stop)"
   route_stops(limit: Int): [RouteStop!]!
   
-  "Calculated headways for this route"
+  "Typical service frequency for this route, grouped by direction and day-of-week category (1=weekday, 6=Saturday, 7=Sunday); includes departure times and headway in seconds"
   headways(limit: Int): [RouteHeadway!]!
   
   "Representative geometries for this route"
   geometries(limit: Int): [RouteGeometry!]!
   
-  "Census geographies associated with this route"
+  "Census geographies intersecting this route's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
-  "Calculated spatial buffer geometry around this route"
+  "Spatial buffer polygon around all stops on this route; the ` + "`" + `radius` + "`" + ` parameter (in meters) controls the buffer size; useful for geographic coverage and intersection queries"
   route_stop_buffer(radius: Float): RouteStopBuffer!
   
-  "Stop patterns for this route"
+  "Unique stop sequences operated on this route; each pattern has a direction, a count of trips using it, and access to representative trips with full stop_times"
   patterns: [RouteStopPattern!]
   
-  "GTFS-RT alerts for this route"
+  "GTFS-RT service alerts for this route; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
   
   "Normalized route segment data for this route, if available"
@@ -10083,7 +10083,7 @@ type Stop {
   "Stop children"
   children(limit: Int): [Stop!]
   
-  "Associated routes"
+  "Routes serving this stop, as RouteStop associations (includes route and agency context)"
   route_stops(limit: Int): [RouteStop!]!
   
   "Dependent levels"
@@ -10095,13 +10095,13 @@ type Stop {
   "Pathways to this stop"
   pathways_to_stop(limit: Int): [Pathway!]!
   
-  "Stop times for this stop"
+  "Raw scheduled stop times for this stop from the GTFS schedule, without date or time filtering"
   stop_times(limit: Int, where: StopTimeFilter): [StopTime!]!
   
-  "Departures from this stop for a given date and time"
+  "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use ` + "`" + `StopTimeFilter` + "`" + ` to specify a date and time range"
   departures(limit: Int, where: StopTimeFilter): [StopTime!]!
   
-  "Arrivals from this stop for a given date and time"
+  "Scheduled arrivals at this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use ` + "`" + `StopTimeFilter` + "`" + ` to specify a date and time range"
   arrivals(limit: Int, where: StopTimeFilter): [StopTime!]!
   
   "Search Rank: Internal usage for search result ordering"
@@ -10110,16 +10110,16 @@ type Stop {
   "State/Province associated with this stop"
   place: StopPlace
   
-  "Census geographies associated with this stop"
+  "Census geographies intersecting this stop's location; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field for population-within-service-area analysis"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
   "Directions from this stop"
   directions(to:WaypointInput, from: WaypointInput, mode: StepMode, depart_at: Time): Directions!
   
-  "Stops within a specified radius of this stop"
+  "Stops within a specified radius of this stop; ` + "`" + `radius` + "`" + ` is in meters; useful for identifying transfer opportunities between stops from different feeds or operators"
   nearby_stops(limit: Int, radius: Float): [Stop!]
   
-  "GTFS-RT Alerts for this stop"
+  "GTFS-RT service alerts for this stop; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
   
   "Matching feature ids from polygon search"
@@ -10249,7 +10249,7 @@ type Trip {
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   
-  "GTFS-RT alerts for this trip"
+  "GTFS-RT service alerts for this trip; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
   
   """
@@ -10901,10 +10901,10 @@ type RouteStopPattern {
   "Direction ID of the trip"
   direction_id: Int!
   
-  "Count of trips for this stop pattern"
+  "Number of trips that operate this stop pattern"
   count: Int!
-  
-  "Trips for this stop pattern"
+
+  "Representative trips for this stop pattern"
   trips(limit: Int): [Trip!]
 }
 
