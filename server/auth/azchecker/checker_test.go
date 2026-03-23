@@ -18,8 +18,8 @@ import (
 )
 
 func init() {
-	// Ensure Checker implements CheckerServer
-	var _ authz.CheckerServer = &Checker{}
+	// Ensure Checker implements authz.PermissionManager
+	var _ authz.PermissionManager = &Checker{}
 }
 
 type testCase struct {

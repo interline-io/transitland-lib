@@ -1,9 +1,6 @@
 package authz
 
-import (
-	"context"
-	"fmt"
-)
+import "fmt"
 
 // Action represents a permission action that can be checked.
 type Action int32
@@ -684,67 +681,3 @@ func (x *FeedVersionModifyPermissionRequest) GetEntityRelation() *EntityRelation
 
 type FeedVersionSaveResponse struct{}
 
-//////
-// CheckerServer interface — legacy, kept for azchecker internal use
-// This will be removed in Phase 4 when server.go is refactored.
-//////
-
-type CheckerServer interface {
-	UserList(context.Context, *UserListRequest) (*UserListResponse, error)
-	User(context.Context, *UserRequest) (*UserResponse, error)
-	TenantList(context.Context, *TenantListRequest) (*TenantListResponse, error)
-	Tenant(context.Context, *TenantRequest) (*TenantResponse, error)
-	TenantPermissions(context.Context, *TenantRequest) (*TenantPermissionsResponse, error)
-	TenantSave(context.Context, *TenantSaveRequest) (*TenantSaveResponse, error)
-	TenantAddPermission(context.Context, *TenantModifyPermissionRequest) (*TenantSaveResponse, error)
-	TenantRemovePermission(context.Context, *TenantModifyPermissionRequest) (*TenantSaveResponse, error)
-	TenantCreate(context.Context, *TenantCreateRequest) (*TenantSaveResponse, error)
-	TenantCreateGroup(context.Context, *TenantCreateGroupRequest) (*GroupSaveResponse, error)
-	GroupList(context.Context, *GroupListRequest) (*GroupListResponse, error)
-	Group(context.Context, *GroupRequest) (*GroupResponse, error)
-	GroupPermissions(context.Context, *GroupRequest) (*GroupPermissionsResponse, error)
-	GroupSave(context.Context, *GroupSaveRequest) (*GroupSaveResponse, error)
-	GroupAddPermission(context.Context, *GroupModifyPermissionRequest) (*GroupSaveResponse, error)
-	GroupRemovePermission(context.Context, *GroupModifyPermissionRequest) (*GroupSaveResponse, error)
-	GroupSetTenant(context.Context, *GroupSetTenantRequest) (*GroupSetTenantResponse, error)
-	FeedList(context.Context, *FeedListRequest) (*FeedListResponse, error)
-	Feed(context.Context, *FeedRequest) (*FeedResponse, error)
-	FeedPermissions(context.Context, *FeedRequest) (*FeedPermissionsResponse, error)
-	FeedSetGroup(context.Context, *FeedSetGroupRequest) (*FeedSaveResponse, error)
-	FeedVersionList(context.Context, *FeedVersionListRequest) (*FeedVersionListResponse, error)
-	FeedVersion(context.Context, *FeedVersionRequest) (*FeedVersionResponse, error)
-	FeedVersionPermissions(context.Context, *FeedVersionRequest) (*FeedVersionPermissionsResponse, error)
-	FeedVersionAddPermission(context.Context, *FeedVersionModifyPermissionRequest) (*FeedVersionSaveResponse, error)
-	FeedVersionRemovePermission(context.Context, *FeedVersionModifyPermissionRequest) (*FeedVersionSaveResponse, error)
-}
-
-// UnimplementedCheckerServer provides default no-op implementations of CheckerServer.
-// Embed this in structs to implement the interface with only the methods you need.
-type UnimplementedCheckerServer struct{}
-
-func (UnimplementedCheckerServer) UserList(context.Context, *UserListRequest) (*UserListResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) User(context.Context, *UserRequest) (*UserResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) TenantList(context.Context, *TenantListRequest) (*TenantListResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) Tenant(context.Context, *TenantRequest) (*TenantResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) TenantPermissions(context.Context, *TenantRequest) (*TenantPermissionsResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) TenantSave(context.Context, *TenantSaveRequest) (*TenantSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) TenantAddPermission(context.Context, *TenantModifyPermissionRequest) (*TenantSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) TenantRemovePermission(context.Context, *TenantModifyPermissionRequest) (*TenantSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) TenantCreate(context.Context, *TenantCreateRequest) (*TenantSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) TenantCreateGroup(context.Context, *TenantCreateGroupRequest) (*GroupSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) GroupList(context.Context, *GroupListRequest) (*GroupListResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) Group(context.Context, *GroupRequest) (*GroupResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) GroupPermissions(context.Context, *GroupRequest) (*GroupPermissionsResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) GroupSave(context.Context, *GroupSaveRequest) (*GroupSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) GroupAddPermission(context.Context, *GroupModifyPermissionRequest) (*GroupSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) GroupRemovePermission(context.Context, *GroupModifyPermissionRequest) (*GroupSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) GroupSetTenant(context.Context, *GroupSetTenantRequest) (*GroupSetTenantResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedList(context.Context, *FeedListRequest) (*FeedListResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) Feed(context.Context, *FeedRequest) (*FeedResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedPermissions(context.Context, *FeedRequest) (*FeedPermissionsResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedSetGroup(context.Context, *FeedSetGroupRequest) (*FeedSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedVersionList(context.Context, *FeedVersionListRequest) (*FeedVersionListResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedVersion(context.Context, *FeedVersionRequest) (*FeedVersionResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedVersionPermissions(context.Context, *FeedVersionRequest) (*FeedVersionPermissionsResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedVersionAddPermission(context.Context, *FeedVersionModifyPermissionRequest) (*FeedVersionSaveResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) FeedVersionRemovePermission(context.Context, *FeedVersionModifyPermissionRequest) (*FeedVersionSaveResponse, error) { return nil, nil }
