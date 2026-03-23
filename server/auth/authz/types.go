@@ -60,6 +60,20 @@ func (a Action) String() string {
 	return fmt.Sprintf("Action(%d)", a)
 }
 
+// MarshalText implements encoding.TextMarshaler so Action works as a JSON map key.
+func (a Action) MarshalText() ([]byte, error) {
+	return []byte(a.String()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (a *Action) UnmarshalText(text []byte) error {
+	if v, ok := Action_value[string(text)]; ok {
+		*a = Action(v)
+		return nil
+	}
+	return fmt.Errorf("unknown action: %s", text)
+}
+
 // ObjectType represents the type of an entity in the authorization model.
 type ObjectType int32
 

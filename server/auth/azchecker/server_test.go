@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/testutil"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -148,8 +149,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekGetNames(tc.ExpectKeys),
-					responseGetNames(t, rr.Body.Bytes(), "tenants", "name"),
+					ekLookupIDs(t, dbx, tc.ExpectKeys),
+					responseGetIDs(t, rr.Body.Bytes()),
 				)
 			})
 		}
@@ -219,8 +220,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekGetNames(tc.ExpectKeys),
-					responseGetNames(t, rr.Body.Bytes(), "groups", "name"),
+					ekLookupIDs(t, dbx, tc.ExpectKeys),
+					responseGetIDs(t, rr.Body.Bytes()),
 				)
 			})
 		}
@@ -270,19 +271,19 @@ func TestServer(t *testing.T) {
 		checks := []testCase{
 			{
 				Subject:    newEntityKey(UserType, "tl-tenant-admin"),
-				ExpectKeys: newEntityKeys(TenantType, "BA", "CT"),
+				ExpectKeys: newEntityKeys(FeedType, "BA", "CT"),
 			},
 			{
 				Subject:    newEntityKey(UserType, "ian"),
-				ExpectKeys: newEntityKeys(TenantType, "BA"),
+				ExpectKeys: newEntityKeys(FeedType, "BA"),
 			},
 			{
 				Subject:    newEntityKey(UserType, "drew"),
-				ExpectKeys: newEntityKeys(TenantType, "CT"),
+				ExpectKeys: newEntityKeys(FeedType, "CT"),
 			},
 			{
 				Subject:    newEntityKey(UserType, "unknown"),
-				ExpectKeys: newEntityKeys(TenantType),
+				ExpectKeys: newEntityKeys(FeedType),
 			},
 		}
 		for _, tc := range checks {
@@ -294,8 +295,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekGetNames(tc.ExpectKeys),
-					responseGetNames(t, rr.Body.Bytes(), "feeds", "onestop_id"),
+					ekLookupIDs(t, dbx, tc.ExpectKeys),
+					responseGetIDs(t, rr.Body.Bytes()),
 				)
 			})
 		}
@@ -365,8 +366,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekGetNames(tc.ExpectKeys),
-					responseGetNames(t, rr.Body.Bytes(), "feed_versions", "sha1"),
+					ekLookupIDs(t, dbx, tc.ExpectKeys),
+					responseGetIDs(t, rr.Body.Bytes()),
 				)
 			})
 		}
@@ -443,10 +444,30 @@ func responseGetNames(t testing.TB, data []byte, path string, key string) []stri
 	return ret
 }
 
+// responseGetIDs extracts IDs from a JSON array of ObjectRef: [{type: ..., id: N}, ...]
+func responseGetIDs(t testing.TB, data []byte) []int64 {
+	a := gjson.ParseBytes(data)
+	var ret []int64
+	for _, b := range a.Array() {
+		ret = append(ret, b.Get("id").Int())
+	}
+	return ret
+}
+
 func ekGetNames(eks []EntityKey) []string {
 	var ret []string
 	for _, ek := range eks {
 		ret = append(ret, ek.Name)
+	}
+	return ret
+}
+
+// ekLookupIDs resolves entity keys to DB IDs for comparison with ListObjects responses.
+func ekLookupIDs(t testing.TB, dbx sqlx.Ext, eks []EntityKey) []int64 {
+	var ret []int64
+	for _, ek := range eks {
+		resolved, _, _ := dbNameToEntityKey(dbx, ek)
+		ret = append(ret, resolved.ID())
 	}
 	return ret
 }
