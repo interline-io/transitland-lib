@@ -194,12 +194,14 @@ func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
 	feed := feeds[0]
 
 	// Check feed permissions
-	if checker := cfg.Checker; checker == nil {
-		// pass
-	} else if check, err := checker.FeedPermissions(ctx, &authz.FeedRequest{Id: int64(feed.ID)}); err != nil {
-		return nil, err
-	} else if !check.Actions.CanCreateFeedVersion {
-		return nil, errors.New("unauthorized")
+	if checker := cfg.Checker; checker != nil {
+		ok, err := checker.Check(ctx, authz.ObjectRef{Type: authz.FeedType, ID: int64(feed.ID)}, authz.CanCreateFeedVersion)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("unauthorized")
+		}
 	}
 	return feed, nil
 }

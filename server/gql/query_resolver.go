@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/interline-io/transitland-lib/server/auth/authn"
-	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -20,13 +19,13 @@ func (r *queryResolver) Me(ctx context.Context) (*model.Me, error) {
 	me.ExternalData = tt.NewMap(map[string]any{})
 	if checker := cfg.Checker; checker != nil {
 		// Use checker if available
-		cm, err := checker.LegacyMe(ctx, &authz.MeRequest{})
+		cm, err := checker.Me(ctx)
 		if err != nil {
 			return nil, err
 		}
-		me.ID = cm.User.Id
-		me.Email = &cm.User.Email
-		me.Name = &cm.User.Name
+		me.ID = cm.ID
+		me.Email = &cm.Email
+		me.Name = &cm.Name
 		me.Roles = cm.Roles
 		for k, v := range cm.ExternalData {
 			me.ExternalData.Val[k] = v
