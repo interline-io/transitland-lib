@@ -88,8 +88,10 @@ type Checker struct {
 	fgaClient    FGAProvider
 	db           sqlx.Ext
 	globalAdmins []string
-	authz.UnsafeCheckerServer
 }
+
+// Compile-time check that Checker implements authz.PermissionManager
+var _ authz.PermissionManager = (*Checker)(nil)
 
 func NewCheckerFromConfig(ctx context.Context, cfg CheckerConfig, db sqlx.Ext) (*Checker, error) {
 	var userClient UserProvider
@@ -186,7 +188,7 @@ func (c *Checker) User(ctx context.Context, req *authz.UserRequest) (*authz.User
 	return &authz.UserResponse{User: newAzpbUser(user)}, err
 }
 
-func (c *Checker) Me(ctx context.Context, req *authz.MeRequest) (*authz.MeResponse, error) {
+func (c *Checker) LegacyMe(ctx context.Context, req *authz.MeRequest) (*authz.MeResponse, error) {
 	user := authn.ForContext(ctx)
 	if user == nil || user.ID() == "" {
 		return nil, ErrUnauthorized
@@ -712,6 +714,312 @@ func (c *Checker) FeedVersionRemovePermission(ctx context.Context, req *authz.Fe
 	tk := req.GetEntityRelation().WithObject(newEntityID(FeedVersionType, fvid))
 	log.For(ctx).Trace().Str("tk", tk.String()).Int64("id", fvid).Msg("FeedVersionRemovePermission")
 	return &authz.FeedVersionSaveResponse{}, c.fgaClient.DeleteTuple(ctx, tk)
+}
+
+// ///////////////////
+// New generic Checker / PermissionManager interface
+// ///////////////////
+
+// actionsForType returns the actions to check for each object type.
+func actionsForType(t ObjectType) []Action {
+	switch t {
+	case TenantType:
+		return []Action{CanView, CanEdit, CanEditMembers, CanCreateOrg, CanDeleteOrg}
+	case GroupType:
+		return []Action{CanView, CanEdit, CanEditMembers, CanCreateFeed, CanDeleteFeed}
+	case FeedType:
+		return []Action{CanView, CanEdit, CanSetGroup, CanCreateFeedVersion, CanDeleteFeedVersion}
+	case FeedVersionType:
+		return []Action{CanView, CanEdit, CanEditMembers}
+	}
+	return nil
+}
+
+// exclusiveRelationsForType returns the mutually exclusive relations for AddPermission.
+func exclusiveRelationsForType(t ObjectType) []Relation {
+	switch t {
+	case TenantType:
+		return []Relation{MemberRelation, AdminRelation}
+	case GroupType, FeedVersionType:
+		return []Relation{ViewerRelation, EditorRelation, ManagerRelation}
+	}
+	return nil
+}
+
+// setParentActionForType returns the action required to set a parent on this type.
+func setParentActionForType(t ObjectType) Action {
+	switch t {
+	case GroupType:
+		return CanSetTenant
+	case FeedType:
+		return CanSetGroup
+	}
+	return Action(0)
+}
+
+// parentTypeForType returns the expected parent object type.
+func parentTypeForType(t ObjectType) ObjectType {
+	switch t {
+	case GroupType:
+		return TenantType
+	case FeedType:
+		return GroupType
+	}
+	return ObjectType(0)
+}
+
+func (c *Checker) Me(ctx context.Context) (*authz.UserInfo, error) {
+	user := authn.ForContext(ctx)
+	if user == nil || user.ID() == "" {
+		return nil, ErrUnauthorized
+	}
+
+	// Direct groups
+	var directGroupIds []int64
+	checkTk := authz.NewTupleKey().
+		WithSubject(authz.UserType, user.ID()).
+		WithObject(authz.GroupType, "")
+	groupTuples, err := c.fgaClient.GetObjectTuples(ctx, checkTk)
+	if err != nil {
+		return nil, err
+	}
+	for _, groupTuple := range groupTuples {
+		directGroupIds = append(directGroupIds, groupTuple.Object.ID())
+	}
+	directGroups, err := c.getGroups(ctx, directGroupIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// Expanded groups
+	expandedGroupIds, err := c.listCtxObjectRelations(ctx, GroupType, ViewerRelation)
+	if err != nil {
+		return nil, err
+	}
+	expandedGroups, err := c.getGroups(ctx, expandedGroupIds)
+	if err != nil {
+		return nil, err
+	}
+
+	extData := map[string]string{}
+	if gkData, ok := user.GetExternalData("gatekeeper"); ok {
+		extData["gatekeeper"] = gkData
+	}
+
+	// Convert groups
+	var dg []authz.Group
+	for _, g := range directGroups {
+		if g != nil {
+			dg = append(dg, *g)
+		}
+	}
+	var eg []authz.Group
+	for _, g := range expandedGroups {
+		if g != nil {
+			eg = append(eg, *g)
+		}
+	}
+
+	return &authz.UserInfo{
+		ID:             user.ID(),
+		Name:           user.Name(),
+		Email:          user.Email(),
+		Roles:          user.Roles(),
+		Groups:         dg,
+		ExpandedGroups: eg,
+		ExternalData:   extData,
+	}, nil
+}
+
+func (c *Checker) IsGlobalAdmin(ctx context.Context) (bool, error) {
+	return c.checkGlobalAdmin(authn.ForContext(ctx)), nil
+}
+
+func (c *Checker) ListObjects(ctx context.Context, objType ObjectType) ([]authz.ObjectRef, error) {
+	ids, err := c.listCtxObjects(ctx, objType, CanView)
+	if err != nil {
+		return nil, err
+	}
+	refs := make([]authz.ObjectRef, len(ids))
+	for i, id := range ids {
+		refs[i] = authz.ObjectRef{Type: objType, ID: id}
+	}
+	return refs, nil
+}
+
+func (c *Checker) Check(ctx context.Context, obj authz.ObjectRef, action Action) (bool, error) {
+	ctxTuples := c.contextualTuples(ctx, obj)
+	return c.checkAction(ctx, action, newEntityID(obj.Type, obj.ID), ctxTuples...)
+}
+
+func (c *Checker) ObjectPermissions(ctx context.Context, obj authz.ObjectRef) (*authz.ObjectPermissions, error) {
+	entKey := newEntityID(obj.Type, obj.ID)
+	ctxTuples := c.contextualTuples(ctx, obj)
+
+	// Check view access
+	if err := c.checkActionOrError(ctx, CanView, entKey, ctxTuples...); err != nil {
+		return nil, err
+	}
+
+	ret := &authz.ObjectPermissions{
+		Ref:     obj,
+		Actions: authz.ActionSet{},
+	}
+
+	// Check all actions relevant to this type
+	for _, action := range actionsForType(obj.Type) {
+		ret.Actions[action], _ = c.checkAction(ctx, action, entKey, ctxTuples...)
+	}
+	// Special case: CanSetTenant on groups is global-admin only
+	if obj.Type == GroupType {
+		ret.Actions[CanSetTenant] = c.ctxIsGlobalAdmin(ctx)
+	}
+
+	// Get tuples — subjects + parent
+	tuples, _ := c.getObjectTuples(ctx, entKey, ctxTuples...)
+	for _, tk := range tuples {
+		if tk.Relation == ParentRelation {
+			ret.Parent = &authz.ObjectRef{Type: tk.Subject.Type, ID: tk.Subject.ID()}
+		} else {
+			ret.Subjects = append(ret.Subjects, authz.SubjectRef{
+				Subject:  tk.Subject,
+				Relation: tk.Relation,
+			})
+		}
+	}
+	c.hydrateSubjectRefs(ctx, ret.Subjects)
+
+	// Hydrate name from DB
+	ret.Name = c.lookupName(ctx, obj)
+
+	// Children
+	if childType, ok := childTypeForType(obj.Type); ok {
+		childIds, _ := c.listSubjectRelations(ctx, entKey, childType, ParentRelation)
+		for _, id := range childIds {
+			ret.Children = append(ret.Children, authz.ObjectRef{Type: childType, ID: id})
+		}
+	}
+
+	return ret, nil
+}
+
+func (c *Checker) SetParent(ctx context.Context, child authz.ObjectRef, parent authz.ObjectRef) error {
+	action := setParentActionForType(child.Type)
+	if action == Action(0) {
+		return errors.New("set parent not supported for this type")
+	}
+	ok, err := c.Check(ctx, child, action)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrUnauthorized
+	}
+	tk := authz.NewTupleKey().WithSubjectID(parent.Type, parent.ID).WithObjectID(child.Type, child.ID).WithRelation(ParentRelation)
+	return c.fgaClient.SetExclusiveRelation(ctx, tk)
+}
+
+func (c *Checker) AddPermission(ctx context.Context, obj authz.ObjectRef, subject EntityKey, relation Relation) error {
+	ok, err := c.Check(ctx, obj, CanEditMembers)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrUnauthorized
+	}
+	tk := authz.NewTupleKey().WithSubject(subject.Type, subject.Name).WithObjectID(obj.Type, obj.ID).WithRelation(relation)
+	exclusiveRels := exclusiveRelationsForType(obj.Type)
+	if len(exclusiveRels) > 0 {
+		return c.fgaClient.SetExclusiveSubjectRelation(ctx, tk, exclusiveRels...)
+	}
+	return c.fgaClient.WriteTuple(ctx, tk)
+}
+
+func (c *Checker) RemovePermission(ctx context.Context, obj authz.ObjectRef, subject EntityKey) error {
+	ok, err := c.Check(ctx, obj, CanEditMembers)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrUnauthorized
+	}
+	tk := authz.NewTupleKey().WithSubject(subject.Type, subject.Name).WithObjectID(obj.Type, obj.ID)
+	return c.fgaClient.DeleteTuple(ctx, tk)
+}
+
+// contextualTuples builds the contextual tuples needed for FGA checks.
+// Feed versions need a parent tuple pointing to their feed.
+func (c *Checker) contextualTuples(ctx context.Context, obj authz.ObjectRef) []TupleKey {
+	if obj.Type != FeedVersionType {
+		return nil
+	}
+	feedId := c.lookupFeedIDForVersion(obj.ID)
+	if feedId == 0 {
+		return nil
+	}
+	return []TupleKey{
+		authz.NewTupleKey().WithObjectID(FeedVersionType, obj.ID).WithSubjectID(FeedType, feedId).WithRelation(ParentRelation),
+	}
+}
+
+// lookupFeedIDForVersion gets the feed_id for a feed_version from the DB.
+func (c *Checker) lookupFeedIDForVersion(fvid int64) int64 {
+	var feedId int64
+	if err := sqlx.Get(c.db, &feedId, "SELECT feed_id FROM feed_versions WHERE id = $1", fvid); err != nil {
+		return 0
+	}
+	return feedId
+}
+
+// lookupName fetches the display name for an object from the DB.
+func (c *Checker) lookupName(ctx context.Context, obj authz.ObjectRef) string {
+	var name string
+	var err error
+	switch obj.Type {
+	case TenantType:
+		err = sqlx.Get(c.db, &name, "SELECT coalesce(tenant_name,'') FROM tl_tenants WHERE id = $1", obj.ID)
+	case GroupType:
+		err = sqlx.Get(c.db, &name, "SELECT coalesce(group_name,'') FROM tl_groups WHERE id = $1", obj.ID)
+	case FeedType:
+		err = sqlx.Get(c.db, &name, "SELECT coalesce(name,'') FROM current_feeds WHERE id = $1", obj.ID)
+	case FeedVersionType:
+		err = sqlx.Get(c.db, &name, "SELECT coalesce(name,'') FROM feed_versions WHERE id = $1", obj.ID)
+	}
+	if err != nil {
+		return ""
+	}
+	return name
+}
+
+// childTypeForType returns the child type for listing children.
+func childTypeForType(t ObjectType) (ObjectType, bool) {
+	switch t {
+	case TenantType:
+		return GroupType, true
+	case GroupType:
+		return FeedType, true
+	}
+	return 0, false
+}
+
+// hydrateSubjectRefs populates display names on subject refs.
+func (c *Checker) hydrateSubjectRefs(ctx context.Context, refs []authz.SubjectRef) {
+	for i, v := range refs {
+		switch v.Subject.Type {
+		case TenantType:
+			if t, _ := c.getTenants(ctx, []int64{v.Subject.ID()}); len(t) > 0 && t[0] != nil {
+				refs[i].Name = t[0].Name
+			}
+		case GroupType:
+			if t, _ := c.getGroups(ctx, []int64{v.Subject.ID()}); len(t) > 0 && t[0] != nil {
+				refs[i].Name = t[0].Name
+			}
+		case UserType:
+			if t, err := c.User(ctx, &authz.UserRequest{Id: v.Subject.Name}); err == nil && t != nil && t.User != nil {
+				refs[i].Name = t.User.Name
+			}
+		}
+	}
 }
 
 // ///////////////////

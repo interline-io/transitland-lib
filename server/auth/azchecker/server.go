@@ -28,7 +28,7 @@ func NewServer(checker authz.CheckerServer) (http.Handler, error) {
 		handleJson(r.Context(), w, ret, err)
 	})
 	router.Get("/me", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.Me(r.Context(), &authz.MeRequest{})
+		ret, err := checker.LegacyMe(r.Context(), &authz.MeRequest{})
 		handleJson(r.Context(), w, ret, err)
 	})
 

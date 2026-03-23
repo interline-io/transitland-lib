@@ -341,7 +341,7 @@ func TestChecker(t *testing.T) {
 		}
 		for _, tc := range tcs {
 			t.Run(tc.Name, func(t *testing.T) {
-				ent, err := checker.Me(newUserCtx(tc.CheckAsUser), &authz.MeRequest{})
+				ent, err := checker.LegacyMe(newUserCtx(tc.CheckAsUser), &authz.MeRequest{})
 				if !checkExpectError(t, err, tc.ExpectError) {
 					return
 				}

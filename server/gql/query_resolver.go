@@ -20,7 +20,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.Me, error) {
 	me.ExternalData = tt.NewMap(map[string]any{})
 	if checker := cfg.Checker; checker != nil {
 		// Use checker if available
-		cm, err := checker.Me(ctx, &authz.MeRequest{})
+		cm, err := checker.LegacyMe(ctx, &authz.MeRequest{})
 		if err != nil {
 			return nil, err
 		}
