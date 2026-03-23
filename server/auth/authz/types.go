@@ -750,9 +750,3 @@ func (UnimplementedCheckerServer) FeedVersion(context.Context, *FeedVersionReque
 func (UnimplementedCheckerServer) FeedVersionPermissions(context.Context, *FeedVersionRequest) (*FeedVersionPermissionsResponse, error) { return nil, nil }
 func (UnimplementedCheckerServer) FeedVersionAddPermission(context.Context, *FeedVersionModifyPermissionRequest) (*FeedVersionSaveResponse, error) { return nil, nil }
 func (UnimplementedCheckerServer) FeedVersionRemovePermission(context.Context, *FeedVersionModifyPermissionRequest) (*FeedVersionSaveResponse, error) { return nil, nil }
-
-// UnsafeCheckerServer is kept for compile compatibility with azchecker.Checker struct.
-// Will be removed in Phase 2.
-type UnsafeCheckerServer interface {
-	mustEmbedUnimplementedCheckerServer()
-}

@@ -51,7 +51,6 @@ require (
 	github.com/twpayne/go-polyline v1.1.1
 	github.com/twpayne/go-shapefile v0.0.6
 	github.com/vektah/gqlparser/v2 v2.5.30
-	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/dnaeon/go-vcr.v2 v2.3.0
 )
@@ -117,6 +116,8 @@ require (
 	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/woodsbury/decimal128 v1.3.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
+	go.opentelemetry.io/otel/metric v1.39.0 // indirect
+	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
@@ -129,16 +130,12 @@ require (
 	golang.org/x/term v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/tools v0.39.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 tool github.com/99designs/gqlgen
 
 tool google.golang.org/protobuf/cmd/protoc-gen-go
-
-tool google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
 // Fork to allow exporting x- extensions
 replace github.com/getkin/kin-openapi => github.com/irees/kin-openapi v0.0.0-20250915211515-c3bd85109028
