@@ -341,14 +341,14 @@ func TestChecker(t *testing.T) {
 		}
 		for _, tc := range tcs {
 			t.Run(tc.Name, func(t *testing.T) {
-				ent, err := checker.LegacyMe(newUserCtx(tc.CheckAsUser), &authz.MeRequest{})
+				ent, err := checker.Me(newUserCtx(tc.CheckAsUser))
 				if !checkExpectError(t, err, tc.ExpectError) {
 					return
 				}
 				if ent == nil {
 					t.Fatal("got no result")
 				}
-				assert.Equal(t, tc.ExpectUserId, ent.User.Id)
+				assert.Equal(t, tc.ExpectUserId, ent.ID)
 				var directGroupNames []string
 				for _, g := range ent.Groups {
 					directGroupNames = append(directGroupNames, g.Name)

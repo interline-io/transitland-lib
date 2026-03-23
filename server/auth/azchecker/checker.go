@@ -188,66 +188,6 @@ func (c *Checker) User(ctx context.Context, req *authz.UserRequest) (*authz.User
 	return &authz.UserResponse{User: newAzpbUser(user)}, err
 }
 
-func (c *Checker) LegacyMe(ctx context.Context, req *authz.MeRequest) (*authz.MeResponse, error) {
-	user := authn.ForContext(ctx)
-	if user == nil || user.ID() == "" {
-		return nil, ErrUnauthorized
-	}
-
-	// TODO: consider an explicit check to authn provider .GetUser,
-	// however this requires a authn provider to be configured and not just the default.
-
-	// Direct groups
-	var directGroupIds []int64
-	checkTk := authz.NewTupleKey().
-		WithSubject(authz.UserType, user.ID()).
-		WithObject(authz.GroupType, "")
-	groupTuples, err := c.fgaClient.GetObjectTuples(ctx, checkTk)
-	if err != nil {
-		return nil, err
-	}
-	for _, groupTuple := range groupTuples {
-		directGroupIds = append(directGroupIds, groupTuple.Object.ID())
-	}
-	directGroups, err := c.getGroups(ctx, directGroupIds)
-	if err != nil {
-		return nil, err
-	}
-
-	// Expanded groups
-	expandedGroupIds, err := c.listCtxObjectRelations(
-		ctx,
-		GroupType,
-		ViewerRelation,
-	)
-	if err != nil {
-		return nil, err
-	}
-	expandedGroups, err := c.getGroups(ctx, expandedGroupIds)
-	if err != nil {
-		return nil, err
-	}
-
-	extData := map[string]string{}
-	if gkData, ok := user.GetExternalData("gatekeeper"); ok {
-		extData["gatekeeper"] = gkData
-	}
-
-	// Return
-	ret := &authz.MeResponse{
-		User:           newAzpbUser(user),
-		Groups:         directGroups,
-		Roles:          user.Roles(),
-		ExpandedGroups: expandedGroups,
-		ExternalData:   extData,
-	}
-	return ret, nil
-}
-
-func (c *Checker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
-	return c.checkGlobalAdmin(authn.ForContext(ctx)), nil
-}
-
 func (c *Checker) hydrateEntityRels(ctx context.Context, ers []*authz.EntityRelation) ([]*authz.EntityRelation, error) {
 	// This is awful :( :(
 	for i, v := range ers {
@@ -755,17 +695,6 @@ func setParentActionForType(t ObjectType) Action {
 		return CanSetGroup
 	}
 	return Action(0)
-}
-
-// parentTypeForType returns the expected parent object type.
-func parentTypeForType(t ObjectType) ObjectType {
-	switch t {
-	case GroupType:
-		return TenantType
-	case FeedType:
-		return GroupType
-	}
-	return ObjectType(0)
 }
 
 func (c *Checker) Me(ctx context.Context) (*authz.UserInfo, error) {

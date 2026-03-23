@@ -692,7 +692,6 @@ type FeedVersionSaveResponse struct{}
 type CheckerServer interface {
 	UserList(context.Context, *UserListRequest) (*UserListResponse, error)
 	User(context.Context, *UserRequest) (*UserResponse, error)
-	LegacyMe(context.Context, *MeRequest) (*MeResponse, error)
 	TenantList(context.Context, *TenantListRequest) (*TenantListResponse, error)
 	Tenant(context.Context, *TenantRequest) (*TenantResponse, error)
 	TenantPermissions(context.Context, *TenantRequest) (*TenantPermissionsResponse, error)
@@ -725,7 +724,6 @@ type UnimplementedCheckerServer struct{}
 
 func (UnimplementedCheckerServer) UserList(context.Context, *UserListRequest) (*UserListResponse, error) { return nil, nil }
 func (UnimplementedCheckerServer) User(context.Context, *UserRequest) (*UserResponse, error) { return nil, nil }
-func (UnimplementedCheckerServer) LegacyMe(context.Context, *MeRequest) (*MeResponse, error) { return nil, nil }
 func (UnimplementedCheckerServer) TenantList(context.Context, *TenantListRequest) (*TenantListResponse, error) { return nil, nil }
 func (UnimplementedCheckerServer) Tenant(context.Context, *TenantRequest) (*TenantResponse, error) { return nil, nil }
 func (UnimplementedCheckerServer) TenantPermissions(context.Context, *TenantRequest) (*TenantPermissionsResponse, error) { return nil, nil }
