@@ -53,11 +53,8 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 
 	// Redirect root to OpenAPI documentation
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Get the base path from the request URL
-		basePath := strings.TrimSuffix(r.URL.Path, "/")
-		// When path is "/", basePath will be empty, which is correct for root
-		redirectPath := basePath + "/openapi.json"
-		http.Redirect(w, r, redirectPath, http.StatusMovedPermanently)
+		cfg := model.ForContext(r.Context())
+		http.Redirect(w, r, cfg.RestPrefix+"/openapi.json", http.StatusMovedPermanently)
 	})
 
 	// OpenAPI Schema endpoint
