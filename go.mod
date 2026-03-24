@@ -1,6 +1,6 @@
 module github.com/interline-io/transitland-lib
 
-go 1.25.0
+go 1.24.2
 
 require (
 	github.com/99designs/gqlgen v0.17.78
@@ -39,7 +39,7 @@ require (
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/openfga/api/proto v0.0.0-20260122164422-25e22cb1875b
 	github.com/openfga/go-sdk v0.2.3
-	github.com/openfga/openfga v1.11.6
+	github.com/openfga/openfga v1.11.5
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.34.0
 	github.com/sergi/go-diff v1.3.1

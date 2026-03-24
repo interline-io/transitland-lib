@@ -561,7 +561,7 @@ func (c *Checker) contextualTuples(ctx context.Context, obj authz.ObjectRef) []T
 	if obj.Type != FeedVersionType {
 		return nil
 	}
-	feedId := c.lookupFeedIDForVersion(obj.ID)
+	feedId := c.lookupFeedIDForVersion(ctx, obj.ID)
 	if feedId == 0 {
 		return nil
 	}
@@ -571,9 +571,10 @@ func (c *Checker) contextualTuples(ctx context.Context, obj authz.ObjectRef) []T
 }
 
 // lookupFeedIDForVersion gets the feed_id for a feed_version from the DB.
-func (c *Checker) lookupFeedIDForVersion(fvid int64) int64 {
+func (c *Checker) lookupFeedIDForVersion(ctx context.Context, fvid int64) int64 {
 	var feedId int64
-	if err := sqlx.Get(c.db, &feedId, "SELECT feed_id FROM feed_versions WHERE id = $1", fvid); err != nil {
+	q := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).Select("feed_id").From("feed_versions").Where(sq.Eq{"id": fvid})
+	if err := dbutil.Get(ctx, c.db, q, &feedId); err != nil {
 		return 0
 	}
 	return feedId
@@ -597,8 +598,11 @@ func (c *Checker) entityExists(ctx context.Context, obj authz.ObjectRef) (bool, 
 	var exists bool
 	q := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).Select("true").From(table).Where(sq.Eq{"id": obj.ID})
 	err := dbutil.Get(ctx, c.db, q, &exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
-		return false, nil // not found
+		return false, err
 	}
 	return exists, nil
 }
@@ -668,18 +672,59 @@ func childTypeForType(t ObjectType) (ObjectType, bool) {
 	return 0, false
 }
 
-// hydrateSubjectRefs populates display names on subject refs.
+// hydrateSubjectRefs populates display names on subject refs, batched by type.
 func (c *Checker) hydrateSubjectRefs(ctx context.Context, refs []authz.SubjectRef) {
+	// Collect IDs by type
+	tenantIDs := map[int64]bool{}
+	groupIDs := map[int64]bool{}
+	for _, v := range refs {
+		switch v.Subject.Type {
+		case TenantType:
+			tenantIDs[v.Subject.ID()] = true
+		case GroupType:
+			groupIDs[v.Subject.ID()] = true
+		}
+	}
+
+	// Batch fetch tenants
+	tenantNames := map[int64]string{}
+	if len(tenantIDs) > 0 {
+		ids := make([]int64, 0, len(tenantIDs))
+		for id := range tenantIDs {
+			ids = append(ids, id)
+		}
+		if tenants, _ := c.getTenants(ctx, ids); tenants != nil {
+			for _, t := range tenants {
+				if t != nil {
+					tenantNames[t.Id] = t.Name
+				}
+			}
+		}
+	}
+
+	// Batch fetch groups
+	groupNames := map[int64]string{}
+	if len(groupIDs) > 0 {
+		ids := make([]int64, 0, len(groupIDs))
+		for id := range groupIDs {
+			ids = append(ids, id)
+		}
+		if groups, _ := c.getGroups(ctx, ids); groups != nil {
+			for _, g := range groups {
+				if g != nil {
+					groupNames[g.Id] = g.Name
+				}
+			}
+		}
+	}
+
+	// Apply names
 	for i, v := range refs {
 		switch v.Subject.Type {
 		case TenantType:
-			if t, _ := c.getTenants(ctx, []int64{v.Subject.ID()}); len(t) > 0 && t[0] != nil {
-				refs[i].Name = t[0].Name
-			}
+			refs[i].Name = tenantNames[v.Subject.ID()]
 		case GroupType:
-			if t, _ := c.getGroups(ctx, []int64{v.Subject.ID()}); len(t) > 0 && t[0] != nil {
-				refs[i].Name = t[0].Name
-			}
+			refs[i].Name = groupNames[v.Subject.ID()]
 		case UserType:
 			if t, err := c.User(ctx, &authz.UserRequest{Id: v.Subject.Name}); err == nil && t != nil && t.User != nil {
 				refs[i].Name = t.User.Name

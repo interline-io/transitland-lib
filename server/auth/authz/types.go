@@ -108,6 +108,20 @@ func (o ObjectType) String() string {
 	return fmt.Sprintf("ObjectType(%d)", o)
 }
 
+// MarshalText implements encoding.TextMarshaler so ObjectType works as a JSON map key.
+func (o ObjectType) MarshalText() ([]byte, error) {
+	return []byte(o.String()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (o *ObjectType) UnmarshalText(text []byte) error {
+	if v, ok := ObjectType_value[string(text)]; ok {
+		*o = ObjectType(v)
+		return nil
+	}
+	return fmt.Errorf("unknown object type: %s", text)
+}
+
 // Relation represents a relationship between entities.
 type Relation int32
 
@@ -146,6 +160,20 @@ func (r Relation) String() string {
 		return s
 	}
 	return fmt.Sprintf("Relation(%d)", r)
+}
+
+// MarshalText implements encoding.TextMarshaler so Relation works as a JSON map key.
+func (r Relation) MarshalText() ([]byte, error) {
+	return []byte(r.String()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (r *Relation) UnmarshalText(text []byte) error {
+	if v, ok := Relation_value[string(text)]; ok {
+		*r = Relation(v)
+		return nil
+	}
+	return fmt.Errorf("unknown relation: %s", text)
 }
 
 //////
