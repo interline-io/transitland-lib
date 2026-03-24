@@ -242,7 +242,6 @@ func wrapFeedPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermiss
 type feedVersionPermissionsResponse struct {
 	FeedVersion *authz.FeedVersion `json:"feed_version,omitempty"`
 	Feed        *authz.Feed        `json:"feed,omitempty"`
-	Group       *authz.Group       `json:"group,omitempty"`
 	Actions     map[string]bool    `json:"actions,omitempty"`
 	Users       *fvPermUsers       `json:"users,omitempty"`
 }

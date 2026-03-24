@@ -2,7 +2,7 @@
 
 The authorization system internals have been refactored, but the admin REST API response shapes are preserved. All endpoints use the same URL paths, HTTP methods, request bodies, and response JSON shapes as before.
 
-Request bodies accept both integer and string enum values for `type` and `relation` fields.
+Request bodies use integer enum values for `type` and `relation` fields (e.g., `"type": 5` for user, `"relation": 1` for admin), matching the previous proto3 JSON format.
 
 ## Unchanged endpoints
 
