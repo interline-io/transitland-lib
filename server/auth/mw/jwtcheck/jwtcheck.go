@@ -54,7 +54,7 @@ func JWTMiddlewareOIDC(jwtAudience string, jwtIssuer string, useEmailAsId bool) 
 // JWTMiddlewareOIDCCtx is like JWTMiddlewareOIDC but accepts a context that controls
 // the lifetime of the background JWKS refresh goroutine.
 func JWTMiddlewareOIDCCtx(ctx context.Context, jwtAudience string, jwtIssuer string, useEmailAsId bool) (func(http.Handler) http.Handler, error) {
-	jwksURL, err := discoverJWKSURL(jwtIssuer)
+	jwksURL, err := discoverJWKSURLWithContext(ctx, jwtIssuer)
 	if err != nil {
 		return nil, fmt.Errorf("OIDC discovery failed: %w", err)
 	}
@@ -84,7 +84,7 @@ func discoverJWKSURLWithContext(ctx context.Context, issuer string) (string, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("OIDC discovery endpoint returned status %d", resp.StatusCode)
+		return "", fmt.Errorf("OIDC discovery endpoint %s returned status %d", discoveryURL, resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
