@@ -14,7 +14,6 @@ type Config struct {
 	RTFinder                RTFinder
 	GbfsFinder              GbfsFinder
 	Checker                 Checker
-	PermissionManager       PermissionManager
 	Actions                 Actions
 	JobQueue                jobs.JobQueue
 	Clock                   clock.Clock

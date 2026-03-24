@@ -125,8 +125,7 @@ var _ authz.AdminManager = (*mockAdminManager)(nil)
 func newPermTestClient(t testing.TB, pm authz.PermissionManager) *client.Client {
 	srv, _ := NewServer()
 	cfg := model.Config{
-		Checker:           pm,
-		PermissionManager: pm,
+		Checker: pm,
 	}
 	handler := model.AddConfigAndPerms(cfg, srv)
 	handler = usercheck.NewUserDefaultMiddleware(func() authn.User {

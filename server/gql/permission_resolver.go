@@ -257,15 +257,15 @@ func (r *mutationResolver) GroupSave(ctx context.Context, id int, input model.Gr
 
 func getPermissionManager(ctx context.Context) (authz.PermissionManager, error) {
 	cfg := model.ForContext(ctx)
-	if cfg.PermissionManager != nil {
-		return cfg.PermissionManager, nil
+	if pm, ok := cfg.Checker.(authz.PermissionManager); ok {
+		return pm, nil
 	}
 	return nil, nil
 }
 
 func getAdminManager(ctx context.Context) (authz.AdminManager, error) {
 	cfg := model.ForContext(ctx)
-	if am, ok := cfg.PermissionManager.(authz.AdminManager); ok {
+	if am, ok := cfg.Checker.(authz.AdminManager); ok {
 		return am, nil
 	}
 	return nil, errors.New("admin operations not configured")
