@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	keyfunc "github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
@@ -27,7 +28,7 @@ func JWTMiddleware(jwtAudience string, jwtIssuer string, pubKeyPath string, useE
 	if err != nil {
 		return nil, err
 	}
-	keyFunc := func(token *jwt.Token) (interface{}, error) {
+	keyFunc := func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -66,8 +67,18 @@ func JWTMiddlewareOIDCCtx(ctx context.Context, jwtAudience string, jwtIssuer str
 
 // discoverJWKSURL fetches the OIDC discovery document from the issuer and returns the jwks_uri.
 func discoverJWKSURL(issuer string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return discoverJWKSURLWithContext(ctx, issuer)
+}
+
+func discoverJWKSURLWithContext(ctx context.Context, issuer string) (string, error) {
 	discoveryURL := strings.TrimRight(issuer, "/") + "/.well-known/openid-configuration"
-	resp, err := http.Get(discoveryURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create OIDC discovery request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch OIDC discovery document from %s: %w", discoveryURL, err)
 	}
@@ -94,8 +105,8 @@ func discoverJWKSURL(issuer string) (string, error) {
 func newJWTHandler(keyFunc jwt.Keyfunc, jwtAudience string, jwtIssuer string, useEmailAsId bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if tokenString := strings.Split(r.Header.Get("Authorization"), "Bearer "); len(tokenString) == 2 {
-				claims, err := validateJwt(keyFunc, jwtAudience, jwtIssuer, tokenString[1])
+			if tokenString, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok && tokenString != "" {
+				claims, err := validateJwt(keyFunc, jwtAudience, jwtIssuer, tokenString)
 				if err != nil {
 					log.Error().Err(err).Msgf("invalid jwt token")
 					writeJsonError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -117,6 +128,9 @@ func newJWTHandler(keyFunc jwt.Keyfunc, jwtAudience string, jwtIssuer string, us
 		})
 	}
 }
+
+// CustomClaimsExample contains the JWT claims used by the middleware.
+type CustomClaimsExample = customClaims
 
 type customClaims struct {
 	Email string `json:"email"`
