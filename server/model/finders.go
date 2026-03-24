@@ -172,6 +172,7 @@ type GbfsFinder interface {
 
 type Checker = authz.Checker
 type PermissionManager = authz.PermissionManager
+type AdminManager = authz.AdminManager
 
 type Actions interface {
 	StaticFetch(context.Context, string, io.Reader, string) (*FeedVersionFetchResult, error)

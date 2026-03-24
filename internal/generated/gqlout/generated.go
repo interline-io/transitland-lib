@@ -738,7 +738,7 @@ type ComplexityRoot struct {
 	}
 
 	Group struct {
-		Feeds       func(childComplexity int) int
+		Feeds       func(childComplexity int, limit *int) int
 		ID          func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Permissions func(childComplexity int) int
@@ -940,13 +940,13 @@ type ComplexityRoot struct {
 		Docks          func(childComplexity int, limit *int, where *model.GbfsDockRequest) int
 		FeedVersions   func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedVersionFilter) int
 		Feeds          func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedFilter) int
-		Groups         func(childComplexity int) int
+		Groups         func(childComplexity int, limit *int) int
 		Me             func(childComplexity int) int
 		Operators      func(childComplexity int, limit *int, after *int, ids []int, where *model.OperatorFilter) int
 		Places         func(childComplexity int, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) int
 		Routes         func(childComplexity int, limit *int, after *int, ids []int, where *model.RouteFilter) int
 		Stops          func(childComplexity int, limit *int, after *int, ids []int, where *model.StopFilter) int
-		Tenants        func(childComplexity int) int
+		Tenants        func(childComplexity int, limit *int) int
 		Trips          func(childComplexity int, limit *int, after *int, ids []int, where *model.TripFilter) int
 	}
 
@@ -1209,7 +1209,7 @@ type ComplexityRoot struct {
 	}
 
 	Tenant struct {
-		Groups      func(childComplexity int) int
+		Groups      func(childComplexity int, limit *int) int
 		ID          func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Permissions func(childComplexity int) int
@@ -1436,7 +1436,7 @@ type FlexStopTimeResolver interface {
 }
 type GroupResolver interface {
 	Tenant(ctx context.Context, obj *model.Group) (*model.Tenant, error)
-	Feeds(ctx context.Context, obj *model.Group) ([]*model.Feed, error)
+	Feeds(ctx context.Context, obj *model.Group, limit *int) ([]*model.Feed, error)
 	Permissions(ctx context.Context, obj *model.Group) (*model.Permissions, error)
 }
 type LevelResolver interface {
@@ -1504,8 +1504,8 @@ type QueryResolver interface {
 	Docks(ctx context.Context, limit *int, where *model.GbfsDockRequest) ([]*model.GbfsStationInformation, error)
 	Me(ctx context.Context) (*model.Me, error)
 	CensusDatasets(ctx context.Context, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) ([]*model.CensusDataset, error)
-	Tenants(ctx context.Context) ([]*model.Tenant, error)
-	Groups(ctx context.Context) ([]*model.Group, error)
+	Tenants(ctx context.Context, limit *int) ([]*model.Tenant, error)
+	Groups(ctx context.Context, limit *int) ([]*model.Group, error)
 }
 type RouteResolver interface {
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
@@ -1584,7 +1584,7 @@ type StopTimeResolver interface {
 	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
 }
 type TenantResolver interface {
-	Groups(ctx context.Context, obj *model.Tenant) ([]*model.Group, error)
+	Groups(ctx context.Context, obj *model.Tenant, limit *int) ([]*model.Group, error)
 	Permissions(ctx context.Context, obj *model.Tenant) (*model.Permissions, error)
 }
 type TripResolver interface {
@@ -5069,7 +5069,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.Group.Feeds(childComplexity), true
+		args, err := ec.field_Group_feeds_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Group.Feeds(childComplexity, args["limit"].(*int)), true
 
 	case "Group.id":
 		if e.complexity.Group.ID == nil {
@@ -6244,7 +6249,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.Query.Groups(childComplexity), true
+		args, err := ec.field_Query_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Groups(childComplexity, args["limit"].(*int)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -6306,7 +6316,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.Query.Tenants(childComplexity), true
+		args, err := ec.field_Query_tenants_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Tenants(childComplexity, args["limit"].(*int)), true
 
 	case "Query.trips":
 		if e.complexity.Query.Trips == nil {
@@ -7815,7 +7830,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.Tenant.Groups(childComplexity), true
+		args, err := ec.field_Tenant_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Tenant.Groups(childComplexity, args["limit"].(*int)), true
 
 	case "Tenant.id":
 		if e.complexity.Tenant.ID == nil {
@@ -9107,7 +9127,7 @@ type Permissions {
 
 """A user or group that has been granted access to an entity"""
 type PermissionSubject {
-  "Type of subject (e.g. user, tenant, org)"
+  "Type of subject (e.g. user, tenant, group)"
   type: String!
   "Subject identifier"
   id: String!
@@ -9119,7 +9139,7 @@ type PermissionSubject {
 
 """Reference to a related entity in the authorization hierarchy"""
 type PermissionRef {
-  "Entity type"
+  "Entity type (e.g. tenant, group, feed, feed_version)"
   type: String!
   "Entity ID"
   id: Int!
@@ -9134,7 +9154,7 @@ type Tenant {
   "Tenant name"
   name: String!
   "Groups owned by this tenant"
-  groups: [Group!]!
+  groups(limit: Int): [Group!]!
   "Authorization permissions for this tenant"
   permissions: Permissions
 }
@@ -9148,14 +9168,14 @@ type Group {
   "Parent tenant"
   tenant: Tenant
   "Feeds assigned to this group"
-  feeds: [Feed!]!
+  feeds(limit: Int): [Feed!]!
   "Authorization permissions for this group"
   permissions: Permissions
 }
 
 """Input for adding or removing a permission"""
 input PermissionInput {
-  "Subject type (e.g. user, tenant, org)"
+  "Subject type (e.g. user, tenant, group)"
   subject_type: String!
   "Subject identifier"
   subject_id: String!
@@ -9185,9 +9205,9 @@ input GroupInput {
 
 extend type Query {
   "List tenants accessible to the current user"
-  tenants: [Tenant!]!
+  tenants(limit: Int): [Tenant!]!
   "List groups accessible to the current user"
-  groups: [Group!]!
+  groups(limit: Int): [Group!]!
 }
 
 extend type Mutation {
@@ -12147,6 +12167,17 @@ func (ec *executionContext) field_Feed_feed_versions_args(ctx context.Context, r
 	return args, nil
 }
 
+func (ec *executionContext) field_Group_feeds_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_LocationGroup_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -12660,6 +12691,17 @@ func (ec *executionContext) field_Query_feeds_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_operators_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -12761,6 +12803,17 @@ func (ec *executionContext) field_Query_stops_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["where"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_tenants_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -13142,6 +13195,17 @@ func (ec *executionContext) field_Stop_stop_times_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Tenant_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -35896,7 +35960,7 @@ func (ec *executionContext) _Group_feeds(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Group().Feeds(rctx, obj)
+		return ec.resolvers.Group().Feeds(rctx, obj, fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -35913,7 +35977,7 @@ func (ec *executionContext) _Group_feeds(ctx context.Context, field graphql.Coll
 	return ec.marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Group_feeds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Group_feeds(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Group",
 		Field:      field,
@@ -35956,6 +36020,17 @@ func (ec *executionContext) fieldContext_Group_feeds(_ context.Context, field gr
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Group_feeds_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -44485,7 +44560,7 @@ func (ec *executionContext) _Query_tenants(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Tenants(rctx)
+		return ec.resolvers.Query().Tenants(rctx, fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -44502,7 +44577,7 @@ func (ec *executionContext) _Query_tenants(ctx context.Context, field graphql.Co
 	return ec.marshalNTenant2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_tenants(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_tenants(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -44522,6 +44597,17 @@ func (ec *executionContext) fieldContext_Query_tenants(_ context.Context, field 
 			return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
 		},
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_tenants_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
 	return fc, nil
 }
 
@@ -44539,7 +44625,7 @@ func (ec *executionContext) _Query_groups(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Groups(rctx)
+		return ec.resolvers.Query().Groups(rctx, fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -44556,7 +44642,7 @@ func (ec *executionContext) _Query_groups(ctx context.Context, field graphql.Col
 	return ec.marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_groups(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -44577,6 +44663,17 @@ func (ec *executionContext) fieldContext_Query_groups(_ context.Context, field g
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -55104,7 +55201,7 @@ func (ec *executionContext) _Tenant_groups(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Tenant().Groups(rctx, obj)
+		return ec.resolvers.Tenant().Groups(rctx, obj, fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -55121,7 +55218,7 @@ func (ec *executionContext) _Tenant_groups(ctx context.Context, field graphql.Co
 	return ec.marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Tenant_groups(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Tenant_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Tenant",
 		Field:      field,
@@ -55142,6 +55239,17 @@ func (ec *executionContext) fieldContext_Tenant_groups(_ context.Context, field 
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Tenant_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }

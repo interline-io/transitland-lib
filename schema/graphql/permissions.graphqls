@@ -12,7 +12,7 @@ type Permissions {
 
 """A user or group that has been granted access to an entity"""
 type PermissionSubject {
-  "Type of subject (e.g. user, tenant, org)"
+  "Type of subject (e.g. user, tenant, group)"
   type: String!
   "Subject identifier"
   id: String!
@@ -24,7 +24,7 @@ type PermissionSubject {
 
 """Reference to a related entity in the authorization hierarchy"""
 type PermissionRef {
-  "Entity type"
+  "Entity type (e.g. tenant, group, feed, feed_version)"
   type: String!
   "Entity ID"
   id: Int!
@@ -39,7 +39,7 @@ type Tenant {
   "Tenant name"
   name: String!
   "Groups owned by this tenant"
-  groups: [Group!]!
+  groups(limit: Int): [Group!]!
   "Authorization permissions for this tenant"
   permissions: Permissions
 }
@@ -53,14 +53,14 @@ type Group {
   "Parent tenant"
   tenant: Tenant
   "Feeds assigned to this group"
-  feeds: [Feed!]!
+  feeds(limit: Int): [Feed!]!
   "Authorization permissions for this group"
   permissions: Permissions
 }
 
 """Input for adding or removing a permission"""
 input PermissionInput {
-  "Subject type (e.g. user, tenant, org)"
+  "Subject type (e.g. user, tenant, group)"
   subject_type: String!
   "Subject identifier"
   subject_id: String!
@@ -90,9 +90,9 @@ input GroupInput {
 
 extend type Query {
   "List tenants accessible to the current user"
-  tenants: [Tenant!]!
+  tenants(limit: Int): [Tenant!]!
   "List groups accessible to the current user"
-  groups: [Group!]!
+  groups(limit: Int): [Group!]!
 }
 
 extend type Mutation {

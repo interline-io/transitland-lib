@@ -768,7 +768,7 @@ type PathwaySetInput struct {
 
 // Input for adding or removing a permission
 type PermissionInput struct {
-	// Subject type (e.g. user, tenant, org)
+	// Subject type (e.g. user, tenant, group)
 	SubjectType string `json:"subject_type"`
 	// Subject identifier
 	SubjectID string `json:"subject_id"`
@@ -778,7 +778,7 @@ type PermissionInput struct {
 
 // Reference to a related entity in the authorization hierarchy
 type PermissionRef struct {
-	// Entity type
+	// Entity type (e.g. tenant, group, feed, feed_version)
 	Type string `json:"type"`
 	// Entity ID
 	ID int `json:"id"`
@@ -788,7 +788,7 @@ type PermissionRef struct {
 
 // A user or group that has been granted access to an entity
 type PermissionSubject struct {
-	// Type of subject (e.g. user, tenant, org)
+	// Type of subject (e.g. user, tenant, group)
 	Type string `json:"type"`
 	// Subject identifier
 	ID string `json:"id"`

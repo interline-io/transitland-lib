@@ -83,7 +83,46 @@ func (m *mockPermissionManager) addPermissions(objType authz.ObjectType, id int6
 	m.permissions[key] = perms
 }
 
-func newPermTestClient(t testing.TB, pm *mockPermissionManager) *client.Client {
+// mockAdminManager extends mockPermissionManager with admin operations.
+type mockAdminManager struct {
+	mockPermissionManager
+	tenantSaved       []authz.TenantSaveRequest
+	groupsCreated     []authz.TenantCreateGroupRequest
+	groupSaved        []authz.GroupSaveRequest
+	nextGroupID       int64
+}
+
+func newMockAdminManager() *mockAdminManager {
+	return &mockAdminManager{
+		mockPermissionManager: *newMockPermissionManager(),
+		nextGroupID:           100,
+	}
+}
+
+func (m *mockAdminManager) TenantSave(ctx context.Context, req *authz.TenantSaveRequest) (*authz.TenantSaveResponse, error) {
+	m.tenantSaved = append(m.tenantSaved, *req)
+	return &authz.TenantSaveResponse{}, nil
+}
+
+func (m *mockAdminManager) TenantCreateGroup(ctx context.Context, req *authz.TenantCreateGroupRequest) (*authz.GroupSaveResponse, error) {
+	m.groupsCreated = append(m.groupsCreated, *req)
+	id := m.nextGroupID
+	m.nextGroupID++
+	return &authz.GroupSaveResponse{Group: &authz.Group{Id: id}}, nil
+}
+
+func (m *mockAdminManager) GroupSave(ctx context.Context, req *authz.GroupSaveRequest) (*authz.GroupSaveResponse, error) {
+	m.groupSaved = append(m.groupSaved, *req)
+	return &authz.GroupSaveResponse{}, nil
+}
+
+// Compile-time checks
+var _ authz.PermissionManager = (*mockPermissionManager)(nil)
+var _ authz.AdminManager = (*mockAdminManager)(nil)
+
+// Test helpers
+
+func newPermTestClient(t testing.TB, pm authz.PermissionManager) *client.Client {
 	srv, _ := NewServer()
 	cfg := model.Config{
 		Checker:           pm,
@@ -116,9 +155,6 @@ func postQueryExpectError(t testing.TB, c *client.Client, query string) {
 	err := c.Post(query, &resp)
 	assert.Error(t, err)
 }
-
-// Compile-time check
-var _ authz.PermissionManager = (*mockPermissionManager)(nil)
 
 // Tests
 
@@ -164,7 +200,7 @@ func TestPermissionResolver_Tenants(t *testing.T) {
 
 		children := perms.Get("children").Array()
 		assert.Equal(t, 1, len(children))
-		assert.Equal(t, "org", children[0].Get("type").Str)
+		assert.Equal(t, "group", children[0].Get("type").Str)
 	})
 
 	t.Run("tenant groups", func(t *testing.T) {
@@ -203,7 +239,7 @@ func TestPermissionResolver_Groups(t *testing.T) {
 		assert.Equal(t, "test-tenant", tenant.Get("name").Str)
 	})
 
-	t.Run("group permissions", func(t *testing.T) {
+	t.Run("group permissions parent type", func(t *testing.T) {
 		jj := postQuery(t, c, `{ groups { permissions { actions parent { type id name } } } }`, nil)
 		perms := gjson.Get(jj, "groups.0.permissions")
 		actions := perms.Get("actions").Array()
@@ -269,8 +305,61 @@ func TestPermissionResolver_Mutations(t *testing.T) {
 	})
 }
 
+func TestPermissionResolver_AdminMutations(t *testing.T) {
+	t.Run("tenant_save", func(t *testing.T) {
+		am := newMockAdminManager()
+		c := newPermTestClient(t, am)
+		jj := postQuery(t, c, `mutation {
+			tenant_save(id: 1, input: {name: "new-name"}) { id name }
+		}`, nil)
+		assert.Equal(t, int64(1), gjson.Get(jj, "tenant_save.id").Int())
+		assert.Equal(t, "new-name", gjson.Get(jj, "tenant_save.name").Str)
+		assert.Equal(t, 1, len(am.tenantSaved))
+		assert.Equal(t, int64(1), am.tenantSaved[0].Tenant.Id)
+		assert.Equal(t, "new-name", am.tenantSaved[0].Tenant.Name)
+	})
+
+	t.Run("tenant_create_group", func(t *testing.T) {
+		am := newMockAdminManager()
+		c := newPermTestClient(t, am)
+		jj := postQuery(t, c, `mutation {
+			tenant_create_group(id: 1, input: {name: "new-group"}) { id name }
+		}`, nil)
+		assert.Equal(t, int64(100), gjson.Get(jj, "tenant_create_group.id").Int())
+		assert.Equal(t, "new-group", gjson.Get(jj, "tenant_create_group.name").Str)
+		assert.Equal(t, 1, len(am.groupsCreated))
+		assert.Equal(t, int64(1), am.groupsCreated[0].Id)
+	})
+
+	t.Run("group_save", func(t *testing.T) {
+		am := newMockAdminManager()
+		c := newPermTestClient(t, am)
+		jj := postQuery(t, c, `mutation {
+			group_save(id: 5, input: {name: "renamed"}) { id name }
+		}`, nil)
+		assert.Equal(t, int64(5), gjson.Get(jj, "group_save.id").Int())
+		assert.Equal(t, "renamed", gjson.Get(jj, "group_save.name").Str)
+		assert.Equal(t, 1, len(am.groupSaved))
+		assert.Equal(t, int64(5), am.groupSaved[0].Group.Id)
+	})
+
+	t.Run("admin not configured", func(t *testing.T) {
+		// Plain PermissionManager without AdminManager — admin mutations should fail
+		pm := newMockPermissionManager()
+		c := newPermTestClient(t, pm)
+		postQueryExpectError(t, c, `mutation {
+			tenant_save(id: 1, input: {name: "test"}) { id }
+		}`)
+		postQueryExpectError(t, c, `mutation {
+			tenant_create_group(id: 1, input: {name: "test"}) { id }
+		}`)
+		postQueryExpectError(t, c, `mutation {
+			group_save(id: 1, input: {name: "test"}) { id }
+		}`)
+	})
+}
+
 func TestPermissionResolver_NilPermissionManager(t *testing.T) {
-	// When PermissionManager is not configured, permissions field should return null
 	srv, _ := NewServer()
 	cfg := model.Config{}
 	handler := model.AddConfigAndPerms(cfg, srv)

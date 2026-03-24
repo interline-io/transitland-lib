@@ -10,13 +10,27 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
+// objectTypeDisplayName maps internal FGA type names to user-facing GraphQL names.
+// The FGA model uses "org" but the GraphQL API exposes "group".
+var objectTypeDisplayName = map[string]string{
+	"org": "group",
+}
+
+func displayTypeName(t authz.ObjectType) string {
+	s := t.String()
+	if mapped, ok := objectTypeDisplayName[s]; ok {
+		return mapped
+	}
+	return s
+}
+
 // Tenant resolver
 
 type tenantResolver struct{ *Resolver }
 
 func (r *Resolver) Tenant() gqlout.TenantResolver { return &tenantResolver{r} }
 
-func (r *tenantResolver) Groups(ctx context.Context, obj *model.Tenant) ([]*model.Group, error) {
+func (r *tenantResolver) Groups(ctx context.Context, obj *model.Tenant, limit *int) ([]*model.Group, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return []*model.Group{}, err
@@ -30,6 +44,9 @@ func (r *tenantResolver) Groups(ctx context.Context, obj *model.Tenant) ([]*mode
 	for _, child := range perms.Children {
 		if child.Type == authz.GroupType {
 			groups = append(groups, &model.Group{ID: int(child.ID), Name: child.Name})
+		}
+		if limit != nil && len(groups) >= *limit {
+			break
 		}
 	}
 	return groups, nil
@@ -61,7 +78,7 @@ func (r *groupResolver) Tenant(ctx context.Context, obj *model.Group) (*model.Te
 	return nil, nil
 }
 
-func (r *groupResolver) Feeds(ctx context.Context, obj *model.Group) ([]*model.Feed, error) {
+func (r *groupResolver) Feeds(ctx context.Context, obj *model.Group, limit *int) ([]*model.Feed, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return []*model.Feed{}, err
@@ -81,7 +98,7 @@ func (r *groupResolver) Feeds(ctx context.Context, obj *model.Group) ([]*model.F
 		return []*model.Feed{}, nil
 	}
 	cfg := model.ForContext(ctx)
-	return cfg.Finder.FindFeeds(ctx, nil, nil, ids, nil)
+	return cfg.Finder.FindFeeds(ctx, limit, nil, ids, nil)
 }
 
 func (r *groupResolver) Permissions(ctx context.Context, obj *model.Group) (*model.Permissions, error) {
@@ -102,7 +119,7 @@ func (r *feedVersionResolver) Permissions(ctx context.Context, obj *model.FeedVe
 
 // Query resolvers for tenants and groups
 
-func (r *queryResolver) Tenants(ctx context.Context) ([]*model.Tenant, error) {
+func (r *queryResolver) Tenants(ctx context.Context, limit *int) ([]*model.Tenant, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return nil, errors.New("permissions not configured")
@@ -118,11 +135,14 @@ func (r *queryResolver) Tenants(ctx context.Context) ([]*model.Tenant, error) {
 			t.Name = perms.Ref.Name
 		}
 		tenants = append(tenants, t)
+		if limit != nil && len(tenants) >= *limit {
+			break
+		}
 	}
 	return tenants, nil
 }
 
-func (r *queryResolver) Groups(ctx context.Context) ([]*model.Group, error) {
+func (r *queryResolver) Groups(ctx context.Context, limit *int) ([]*model.Group, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return nil, errors.New("permissions not configured")
@@ -138,6 +158,9 @@ func (r *queryResolver) Groups(ctx context.Context) ([]*model.Group, error) {
 			g.Name = perms.Ref.Name
 		}
 		groups = append(groups, g)
+		if limit != nil && len(groups) >= *limit {
+			break
+		}
 	}
 	return groups, nil
 }
@@ -188,11 +211,11 @@ func (r *mutationResolver) PermissionSetParent(ctx context.Context, typeArg stri
 }
 
 func (r *mutationResolver) TenantSave(ctx context.Context, id int, input model.TenantInput) (*model.Tenant, error) {
-	pm, err := getPermissionManagerConcrete(ctx)
+	am, err := getAdminManager(ctx)
 	if err != nil {
 		return nil, err
 	}
-	_, err = pm.TenantSave(ctx, &authz.TenantSaveRequest{
+	_, err = am.TenantSave(ctx, &authz.TenantSaveRequest{
 		Tenant: &authz.Tenant{Id: int64(id), Name: input.Name},
 	})
 	if err != nil {
@@ -202,11 +225,11 @@ func (r *mutationResolver) TenantSave(ctx context.Context, id int, input model.T
 }
 
 func (r *mutationResolver) TenantCreateGroup(ctx context.Context, id int, input model.GroupInput) (*model.Group, error) {
-	pm, err := getPermissionManagerConcrete(ctx)
+	am, err := getAdminManager(ctx)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := pm.TenantCreateGroup(ctx, &authz.TenantCreateGroupRequest{
+	resp, err := am.TenantCreateGroup(ctx, &authz.TenantCreateGroupRequest{
 		Id:    int64(id),
 		Group: &authz.Group{Name: input.Name},
 	})
@@ -217,11 +240,11 @@ func (r *mutationResolver) TenantCreateGroup(ctx context.Context, id int, input 
 }
 
 func (r *mutationResolver) GroupSave(ctx context.Context, id int, input model.GroupInput) (*model.Group, error) {
-	pm, err := getPermissionManagerConcrete(ctx)
+	am, err := getAdminManager(ctx)
 	if err != nil {
 		return nil, err
 	}
-	_, err = pm.GroupSave(ctx, &authz.GroupSaveRequest{
+	_, err = am.GroupSave(ctx, &authz.GroupSaveRequest{
 		Group: &authz.Group{Id: int64(id), Name: input.Name},
 	})
 	if err != nil {
@@ -240,24 +263,12 @@ func getPermissionManager(ctx context.Context) (authz.PermissionManager, error) 
 	return nil, nil
 }
 
-// getPermissionManagerConcrete returns the azchecker.Checker for admin-specific
-// methods (TenantSave, TenantCreateGroup, GroupSave) that are not on the
-// PermissionManager interface. These require the concrete type.
-func getPermissionManagerConcrete(ctx context.Context) (concretePermissionManager, error) {
+func getAdminManager(ctx context.Context) (authz.AdminManager, error) {
 	cfg := model.ForContext(ctx)
-	if pm, ok := cfg.PermissionManager.(concretePermissionManager); ok {
-		return pm, nil
+	if am, ok := cfg.PermissionManager.(authz.AdminManager); ok {
+		return am, nil
 	}
 	return nil, errors.New("admin operations not configured")
-}
-
-// concretePermissionManager extends PermissionManager with admin-specific
-// DB write methods that only the concrete azchecker.Checker provides.
-type concretePermissionManager interface {
-	authz.PermissionManager
-	TenantSave(ctx context.Context, req *authz.TenantSaveRequest) (*authz.TenantSaveResponse, error)
-	TenantCreateGroup(ctx context.Context, req *authz.TenantCreateGroupRequest) (*authz.GroupSaveResponse, error)
-	GroupSave(ctx context.Context, req *authz.GroupSaveRequest) (*authz.GroupSaveResponse, error)
 }
 
 // parsePermissionArgs validates and converts the string arguments for
@@ -309,7 +320,7 @@ func resolvePermissions(ctx context.Context, objType authz.ObjectType, id int64)
 	// Subjects
 	for _, s := range perms.Subjects {
 		result.Subjects = append(result.Subjects, &model.PermissionSubject{
-			Type:     s.Subject.Type.String(),
+			Type:     displayTypeName(s.Subject.Type),
 			ID:       s.Subject.Name,
 			Name:     s.Name,
 			Relation: s.Relation.String(),
@@ -318,7 +329,7 @@ func resolvePermissions(ctx context.Context, objType authz.ObjectType, id int64)
 	// Parent
 	if perms.Parent != nil {
 		result.Parent = &model.PermissionRef{
-			Type: perms.Parent.Type.String(),
+			Type: displayTypeName(perms.Parent.Type),
 			ID:   int(perms.Parent.ID),
 			Name: perms.Parent.Name,
 		}
@@ -326,7 +337,7 @@ func resolvePermissions(ctx context.Context, objType authz.ObjectType, id int64)
 	// Children
 	for _, child := range perms.Children {
 		result.Children = append(result.Children, &model.PermissionRef{
-			Type: child.Type.String(),
+			Type: displayTypeName(child.Type),
 			ID:   int(child.ID),
 			Name: child.Name,
 		})

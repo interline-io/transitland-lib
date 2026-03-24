@@ -50,13 +50,25 @@ type Checker interface {
 
 // PermissionManager extends Checker with write operations for managing
 // permissions, parents, and viewing detailed permission info.
-// Used by the admin REST API only.
+// Implementations must enforce authorization checks internally — callers
+// (e.g., GraphQL resolvers) delegate all access control to these methods.
 type PermissionManager interface {
 	Checker
 	ObjectPermissions(ctx context.Context, obj ObjectRef) (*ObjectPermissions, error)
 	SetParent(ctx context.Context, child ObjectRef, parent ObjectRef) error
 	AddPermission(ctx context.Context, obj ObjectRef, subject EntityKey, relation Relation) error
 	RemovePermission(ctx context.Context, obj ObjectRef, subject EntityKey, relation Relation) error
+}
+
+// AdminManager extends PermissionManager with admin-specific DB write
+// operations for managing tenants and groups. These are not expressible
+// through the generic permission interface because they create/update
+// database entities, not just authorization tuples.
+type AdminManager interface {
+	PermissionManager
+	TenantSave(ctx context.Context, req *TenantSaveRequest) (*TenantSaveResponse, error)
+	TenantCreateGroup(ctx context.Context, req *TenantCreateGroupRequest) (*GroupSaveResponse, error)
+	GroupSave(ctx context.Context, req *GroupSaveRequest) (*GroupSaveResponse, error)
 }
 
 // GlobalAdminChecker implements Checker and always grants access.
