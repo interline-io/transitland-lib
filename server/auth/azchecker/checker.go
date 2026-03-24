@@ -200,6 +200,14 @@ func (c *Checker) getGroups(ctx context.Context, ids []int64) ([]*authz.Group, e
 	return getEntities[*authz.Group](ctx, c.db, ids, "tl_groups", "id", "coalesce(group_name,'') as name")
 }
 
+func (c *Checker) getFeeds(ctx context.Context, ids []int64) ([]*authz.Feed, error) {
+	return getEntities[*authz.Feed](ctx, c.db, ids, "current_feeds", "id", "onestop_id", "coalesce(name,'') as name")
+}
+
+func (c *Checker) getFeedVersions(ctx context.Context, ids []int64) ([]*authz.FeedVersion, error) {
+	return getEntities[*authz.FeedVersion](ctx, c.db, ids, "feed_versions", "id", "feed_id", "sha1", "coalesce(name,'') as name")
+}
+
 // ///////////////////
 // Admin-specific methods (DB writes, not expressible through generic interface)
 // ///////////////////

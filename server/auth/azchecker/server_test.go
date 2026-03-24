@@ -9,7 +9,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/testutil"
-	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -145,8 +144,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekLookupIDs(t, dbx, tc.ExpectKeys),
-					responseGetIDs(t, rr.Body.Bytes()),
+					ekGetNames(tc.ExpectKeys),
+					responseGetNames(t, rr.Body.Bytes(), "tenants", "name"),
 				)
 			})
 		}
@@ -216,8 +215,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekLookupIDs(t, dbx, tc.ExpectKeys),
-					responseGetIDs(t, rr.Body.Bytes()),
+					ekGetNames(tc.ExpectKeys),
+					responseGetNames(t, rr.Body.Bytes(), "groups", "name"),
 				)
 			})
 		}
@@ -291,8 +290,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekLookupIDs(t, dbx, tc.ExpectKeys),
-					responseGetIDs(t, rr.Body.Bytes()),
+					ekGetNames(tc.ExpectKeys),
+					responseGetNames(t, rr.Body.Bytes(), "feeds", "onestop_id"),
 				)
 			})
 		}
@@ -362,8 +361,8 @@ func TestServer(t *testing.T) {
 				checkHttpExpectError(t, tc, rr)
 				assert.ElementsMatch(
 					t,
-					ekLookupIDs(t, dbx, tc.ExpectKeys),
-					responseGetIDs(t, rr.Body.Bytes()),
+					ekGetNames(tc.ExpectKeys),
+					responseGetNames(t, rr.Body.Bytes(), "feed_versions", "sha1"),
 				)
 			})
 		}
@@ -440,30 +439,10 @@ func responseGetNames(t testing.TB, data []byte, path string, key string) []stri
 	return ret
 }
 
-// responseGetIDs extracts IDs from a JSON array of ObjectRef: [{type: ..., id: N}, ...]
-func responseGetIDs(t testing.TB, data []byte) []int64 {
-	a := gjson.ParseBytes(data)
-	var ret []int64
-	for _, b := range a.Array() {
-		ret = append(ret, b.Get("id").Int())
-	}
-	return ret
-}
-
 func ekGetNames(eks []EntityKey) []string {
 	var ret []string
 	for _, ek := range eks {
 		ret = append(ret, ek.Name)
-	}
-	return ret
-}
-
-// ekLookupIDs resolves entity keys to DB IDs for comparison with ListObjects responses.
-func ekLookupIDs(t testing.TB, dbx sqlx.Ext, eks []EntityKey) []int64 {
-	var ret []int64
-	for _, ek := range eks {
-		resolved, _, _ := dbNameToEntityKey(dbx, ek)
-		ret = append(ret, resolved.ID())
 	}
 	return ret
 }

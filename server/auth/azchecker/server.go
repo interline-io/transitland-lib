@@ -28,8 +28,8 @@ func NewServer(checker *Checker) (http.Handler, error) {
 		handleJson(r.Context(), w, ret, err)
 	})
 	router.Get("/me", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.Me(r.Context())
-		handleJson(r.Context(), w, ret, err)
+		info, err := checker.Me(r.Context())
+		handleJson(r.Context(), w, wrapMe(info), err)
 	})
 
 	/////////////////
@@ -37,12 +37,12 @@ func NewServer(checker *Checker) (http.Handler, error) {
 	/////////////////
 
 	router.Get("/tenants", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ListObjects(r.Context(), TenantType)
-		handleJson(r.Context(), w, ret, err)
+		refs, err := checker.ListObjects(r.Context(), TenantType)
+		handleJson(r.Context(), w, wrapTenantList(r.Context(), checker, refs), err)
 	})
 	router.Get("/tenants/{tenant_id}", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: TenantType, ID: checkId(r, "tenant_id")})
-		handleJson(r.Context(), w, ret, err)
+		p, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: TenantType, ID: checkId(r, "tenant_id")})
+		handleJson(r.Context(), w, wrapTenantPermissions(r.Context(), checker, p), err)
 	})
 	router.Post("/tenants/{tenant_id}", func(w http.ResponseWriter, r *http.Request) {
 		check := authz.Tenant{}
@@ -89,8 +89,8 @@ func NewServer(checker *Checker) (http.Handler, error) {
 	/////////////////
 
 	router.Get("/groups", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ListObjects(r.Context(), GroupType)
-		handleJson(r.Context(), w, ret, err)
+		refs, err := checker.ListObjects(r.Context(), GroupType)
+		handleJson(r.Context(), w, wrapGroupList(r.Context(), checker, refs), err)
 	})
 	router.Post("/groups/{group_id}", func(w http.ResponseWriter, r *http.Request) {
 		check := authz.Group{}
@@ -103,8 +103,8 @@ func NewServer(checker *Checker) (http.Handler, error) {
 		handleJson(r.Context(), w, nil, err)
 	})
 	router.Get("/groups/{group_id}", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: GroupType, ID: checkId(r, "group_id")})
-		handleJson(r.Context(), w, ret, err)
+		p, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: GroupType, ID: checkId(r, "group_id")})
+		handleJson(r.Context(), w, wrapGroupPermissions(r.Context(), checker, p), err)
 	})
 	router.Post("/groups/{group_id}/permissions", func(w http.ResponseWriter, r *http.Request) {
 		er := &authz.EntityRelation{}
@@ -145,12 +145,12 @@ func NewServer(checker *Checker) (http.Handler, error) {
 	/////////////////
 
 	router.Get("/feeds", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ListObjects(r.Context(), FeedType)
-		handleJson(r.Context(), w, ret, err)
+		refs, err := checker.ListObjects(r.Context(), FeedType)
+		handleJson(r.Context(), w, wrapFeedList(r.Context(), checker, refs), err)
 	})
 	router.Get("/feeds/{feed_id}", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: FeedType, ID: checkId(r, "feed_id")})
-		handleJson(r.Context(), w, ret, err)
+		p, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: FeedType, ID: checkId(r, "feed_id")})
+		handleJson(r.Context(), w, wrapFeedPermissions(r.Context(), checker, p), err)
 	})
 	router.Post("/feeds/{feed_id}/group", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
@@ -171,12 +171,12 @@ func NewServer(checker *Checker) (http.Handler, error) {
 	/////////////////
 
 	router.Get("/feed_versions", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ListObjects(r.Context(), FeedVersionType)
-		handleJson(r.Context(), w, ret, err)
+		refs, err := checker.ListObjects(r.Context(), FeedVersionType)
+		handleJson(r.Context(), w, wrapFeedVersionList(r.Context(), checker, refs), err)
 	})
 	router.Get("/feed_versions/{feed_version_id}", func(w http.ResponseWriter, r *http.Request) {
-		ret, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: FeedVersionType, ID: checkId(r, "feed_version_id")})
-		handleJson(r.Context(), w, ret, err)
+		p, err := checker.ObjectPermissions(r.Context(), authz.ObjectRef{Type: FeedVersionType, ID: checkId(r, "feed_version_id")})
+		handleJson(r.Context(), w, wrapFeedVersionPermissions(r.Context(), checker, p), err)
 	})
 	router.Post("/feed_versions/{feed_version_id}/permissions", func(w http.ResponseWriter, r *http.Request) {
 		er := &authz.EntityRelation{}
