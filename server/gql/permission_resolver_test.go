@@ -1,137 +1,63 @@
 package gql
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
+	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/server/testutil"
+	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
 
-// mockPermissionManager implements authz.PermissionManager for testing.
-type mockPermissionManager struct {
-	authz.GlobalAdminChecker
-	objects     map[authz.ObjectType][]authz.ObjectRef
-	permissions map[string]*authz.ObjectPermissions
-	added       []mockPermCall
-	removed     []mockPermCall
-	parents     []mockParentCall
+// testTuples defines the FGA authorization tuples loaded for permission resolver tests.
+// These reference entities that exist in the test database fixtures (test_supplement.pgsql).
+var testTuples = []authz.TupleKey{
+	// Assign users to tenant
+	{Subject: authz.NewEntityKey(authz.UserType, "tl-tenant-admin"), Object: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Relation: authz.AdminRelation},
+	{Subject: authz.NewEntityKey(authz.UserType, "ian"), Object: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Relation: authz.MemberRelation},
+	// Assign groups to tenant
+	{Subject: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Object: authz.NewEntityKey(authz.GroupType, "CT-group"), Relation: authz.ParentRelation},
+	{Subject: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Object: authz.NewEntityKey(authz.GroupType, "BA-group"), Relation: authz.ParentRelation},
+	// Assign users to groups
+	{Subject: authz.NewEntityKey(authz.UserType, "ian"), Object: authz.NewEntityKey(authz.GroupType, "CT-group"), Relation: authz.ViewerRelation},
+	{Subject: authz.NewEntityKey(authz.UserType, "ian"), Object: authz.NewEntityKey(authz.GroupType, "BA-group"), Relation: authz.EditorRelation},
+	// Assign feeds to groups
+	{Subject: authz.NewEntityKey(authz.GroupType, "CT-group"), Object: authz.NewEntityKey(authz.FeedType, "CT"), Relation: authz.ParentRelation},
+	{Subject: authz.NewEntityKey(authz.GroupType, "BA-group"), Object: authz.NewEntityKey(authz.FeedType, "BA"), Relation: authz.ParentRelation},
 }
 
-type mockPermCall struct {
-	Ref      authz.ObjectRef
-	Subject  authz.EntityKey
-	Relation authz.Relation
-}
-
-type mockParentCall struct {
-	Child  authz.ObjectRef
-	Parent authz.ObjectRef
-}
-
-func newMockPermissionManager() *mockPermissionManager {
-	return &mockPermissionManager{
-		objects:     map[authz.ObjectType][]authz.ObjectRef{},
-		permissions: map[string]*authz.ObjectPermissions{},
+func fgaTestOpts(t testing.TB) testconfig.Options {
+	t.Helper()
+	return testconfig.Options{
+		FGAEndpoint:    testutil.FGAServer(t),
+		FGAModelFile:   testdata.Path("server/authz/tls.json"),
+		FGAModelTuples: testTuples,
 	}
 }
 
-func (m *mockPermissionManager) ListObjects(ctx context.Context, objType authz.ObjectType) ([]authz.ObjectRef, error) {
-	return m.objects[objType], nil
-}
-
-func (m *mockPermissionManager) ObjectPermissions(ctx context.Context, obj authz.ObjectRef) (*authz.ObjectPermissions, error) {
-	key := fmt.Sprintf("%s:%d", obj.Type.String(), obj.ID)
-	if p, ok := m.permissions[key]; ok {
-		return p, nil
-	}
-	return nil, errors.New("not found")
-}
-
-func (m *mockPermissionManager) SetParent(ctx context.Context, child authz.ObjectRef, parent authz.ObjectRef) error {
-	m.parents = append(m.parents, mockParentCall{Child: child, Parent: parent})
-	return nil
-}
-
-func (m *mockPermissionManager) AddPermission(ctx context.Context, obj authz.ObjectRef, subject authz.EntityKey, relation authz.Relation) error {
-	m.added = append(m.added, mockPermCall{Ref: obj, Subject: subject, Relation: relation})
-	return nil
-}
-
-func (m *mockPermissionManager) RemovePermission(ctx context.Context, obj authz.ObjectRef, subject authz.EntityKey, relation authz.Relation) error {
-	m.removed = append(m.removed, mockPermCall{Ref: obj, Subject: subject, Relation: relation})
-	return nil
-}
-
-func (m *mockPermissionManager) addObject(objType authz.ObjectType, id int64) {
-	m.objects[objType] = append(m.objects[objType], authz.ObjectRef{Type: objType, ID: id})
-}
-
-func (m *mockPermissionManager) addPermissions(objType authz.ObjectType, id int64, perms *authz.ObjectPermissions) {
-	key := fmt.Sprintf("%s:%d", objType.String(), id)
-	if perms.Ref.Type == 0 {
-		perms.Ref = authz.ObjectRef{Type: objType, ID: id}
-	}
-	m.permissions[key] = perms
-}
-
-// mockAdminManager extends mockPermissionManager with admin operations.
-type mockAdminManager struct {
-	mockPermissionManager
-	tenantSaved       []authz.TenantSaveRequest
-	groupsCreated     []authz.TenantCreateGroupRequest
-	groupSaved        []authz.GroupSaveRequest
-	nextGroupID       int64
-}
-
-func newMockAdminManager() *mockAdminManager {
-	return &mockAdminManager{
-		mockPermissionManager: *newMockPermissionManager(),
-		nextGroupID:           100,
-	}
-}
-
-func (m *mockAdminManager) TenantSave(ctx context.Context, req *authz.TenantSaveRequest) (*authz.TenantSaveResponse, error) {
-	m.tenantSaved = append(m.tenantSaved, *req)
-	return &authz.TenantSaveResponse{}, nil
-}
-
-func (m *mockAdminManager) TenantCreateGroup(ctx context.Context, req *authz.TenantCreateGroupRequest) (*authz.GroupSaveResponse, error) {
-	m.groupsCreated = append(m.groupsCreated, *req)
-	id := m.nextGroupID
-	m.nextGroupID++
-	return &authz.GroupSaveResponse{Group: &authz.Group{Id: id}}, nil
-}
-
-func (m *mockAdminManager) GroupSave(ctx context.Context, req *authz.GroupSaveRequest) (*authz.GroupSaveResponse, error) {
-	m.groupSaved = append(m.groupSaved, *req)
-	return &authz.GroupSaveResponse{}, nil
-}
-
-// Compile-time checks
-var _ authz.PermissionManager = (*mockPermissionManager)(nil)
-var _ authz.AdminManager = (*mockAdminManager)(nil)
-
-// Test helpers
-
-func newPermTestClient(t testing.TB, pm authz.PermissionManager) *client.Client {
+// newPermTestClientFromConfig creates a GraphQL test client from an existing config.
+func newPermTestClientFromConfig(cfg model.Config, user string) *client.Client {
 	srv, _ := NewServer()
-	cfg := model.Config{
-		Checker: pm,
-	}
 	handler := model.AddConfigAndPerms(cfg, srv)
 	handler = usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "Test User", "test@example.com").WithRoles("admin")
+		return authn.NewCtxUser(user, user, user+"@example.com").WithRoles("admin")
 	})(handler)
 	return client.New(handler)
+}
+
+// newPermTestClient creates a GraphQL test client with a real azchecker backed by
+// in-memory OpenFGA and the test database.
+func newPermTestClient(t testing.TB, user string) *client.Client {
+	t.Helper()
+	cfg := testconfig.Config(t, fgaTestOpts(t))
+	return newPermTestClientFromConfig(cfg, user)
 }
 
 func postQuery(t testing.TB, c *client.Client, query string, vars map[string]interface{}) string {
@@ -158,146 +84,208 @@ func postQueryExpectError(t testing.TB, c *client.Client, query string) {
 // Tests
 
 func TestPermissionResolver_Tenants(t *testing.T) {
-	pm := newMockPermissionManager()
-	pm.addObject(authz.TenantType, 1)
-	pm.addPermissions(authz.TenantType, 1, &authz.ObjectPermissions{
-		Ref:     authz.ObjectRef{Type: authz.TenantType, ID: 1, Name: "test-tenant"},
-		Actions: authz.ActionSet{authz.CanView: true, authz.CanEdit: true},
-		Children: []authz.ObjectRef{
-			{Type: authz.GroupType, ID: 10, Name: "test-group"},
-		},
-		Subjects: []authz.SubjectRef{
-			{Subject: authz.NewEntityKey(authz.UserType, "ian"), Relation: authz.AdminRelation, Name: "Ian"},
-		},
-	})
-
-	c := newPermTestClient(t, pm)
+	c := newPermTestClient(t, "tl-tenant-admin")
 
 	t.Run("list tenants", func(t *testing.T) {
 		jj := postQuery(t, c, `{ tenants { id name } }`, nil)
 		tenants := gjson.Get(jj, "tenants").Array()
-		assert.Equal(t, 1, len(tenants))
-		assert.Equal(t, int64(1), tenants[0].Get("id").Int())
-		assert.Equal(t, "test-tenant", tenants[0].Get("name").Str)
+		assert.GreaterOrEqual(t, len(tenants), 1)
+		var found bool
+		for _, tenant := range tenants {
+			if tenant.Get("name").Str == "tl-tenant" {
+				found = true
+				assert.Greater(t, tenant.Get("id").Int(), int64(0))
+			}
+		}
+		assert.True(t, found, "expected to find tl-tenant")
 	})
 
 	t.Run("tenant permissions", func(t *testing.T) {
-		jj := postQuery(t, c, `{ tenants { permissions { actions subjects { type id name relation } children { type id name } } } }`, nil)
-		perms := gjson.Get(jj, "tenants.0.permissions")
-		actions := perms.Get("actions").Array()
-		var actionStrs []string
-		for _, a := range actions {
-			actionStrs = append(actionStrs, a.Str)
+		jj := postQuery(t, c, `{ tenants { name permissions { actions subjects { type id name relation } children { type id name } } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			perms := tenant.Get("permissions")
+
+			var actionStrs []string
+			for _, a := range perms.Get("actions").Array() {
+				actionStrs = append(actionStrs, a.Str)
+			}
+			assert.Contains(t, actionStrs, "can_view")
+			assert.Contains(t, actionStrs, "can_edit")
+
+			subjects := perms.Get("subjects").Array()
+			assert.GreaterOrEqual(t, len(subjects), 1)
+			var foundAdmin bool
+			for _, s := range subjects {
+				if s.Get("id").Str == "tl-tenant-admin" && s.Get("relation").Str == "admin" {
+					foundAdmin = true
+					assert.Equal(t, "user", s.Get("type").Str)
+				}
+			}
+			assert.True(t, foundAdmin, "expected tl-tenant-admin as admin subject")
+
+			children := perms.Get("children").Array()
+			assert.GreaterOrEqual(t, len(children), 2)
+			for _, child := range children {
+				assert.Equal(t, "group", child.Get("type").Str)
+			}
+			return
 		}
-		assert.ElementsMatch(t, []string{"can_view", "can_edit"}, actionStrs)
-
-		subjects := perms.Get("subjects").Array()
-		assert.Equal(t, 1, len(subjects))
-		assert.Equal(t, "user", subjects[0].Get("type").Str)
-		assert.Equal(t, "ian", subjects[0].Get("id").Str)
-		assert.Equal(t, "admin", subjects[0].Get("relation").Str)
-
-		children := perms.Get("children").Array()
-		assert.Equal(t, 1, len(children))
-		assert.Equal(t, "group", children[0].Get("type").Str)
+		t.Fatal("tl-tenant not found in response")
 	})
 
 	t.Run("tenant groups", func(t *testing.T) {
-		jj := postQuery(t, c, `{ tenants { groups { id name } } }`, nil)
-		groups := gjson.Get(jj, "tenants.0.groups").Array()
-		assert.Equal(t, 1, len(groups))
-		assert.Equal(t, int64(10), groups[0].Get("id").Int())
-		assert.Equal(t, "test-group", groups[0].Get("name").Str)
+		jj := postQuery(t, c, `{ tenants { name groups { id name } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			groups := tenant.Get("groups").Array()
+			assert.GreaterOrEqual(t, len(groups), 2)
+			var groupNames []string
+			for _, g := range groups {
+				groupNames = append(groupNames, g.Get("name").Str)
+			}
+			assert.Contains(t, groupNames, "CT-group")
+			assert.Contains(t, groupNames, "BA-group")
+			return
+		}
+		t.Fatal("tl-tenant not found in response")
 	})
 }
 
 func TestPermissionResolver_Groups(t *testing.T) {
-	pm := newMockPermissionManager()
-	pm.addObject(authz.GroupType, 10)
-	pm.addPermissions(authz.GroupType, 10, &authz.ObjectPermissions{
-		Ref: authz.ObjectRef{Type: authz.GroupType, ID: 10, Name: "test-group"},
-		Parent: &authz.ObjectRef{
-			Type: authz.TenantType, ID: 1, Name: "test-tenant",
-		},
-		Actions: authz.ActionSet{authz.CanView: true},
-	})
-
-	c := newPermTestClient(t, pm)
+	c := newPermTestClient(t, "ian")
 
 	t.Run("list groups", func(t *testing.T) {
 		jj := postQuery(t, c, `{ groups { id name } }`, nil)
 		groups := gjson.Get(jj, "groups").Array()
-		assert.Equal(t, 1, len(groups))
-		assert.Equal(t, "test-group", groups[0].Get("name").Str)
+		assert.GreaterOrEqual(t, len(groups), 2)
+		var groupNames []string
+		for _, g := range groups {
+			groupNames = append(groupNames, g.Get("name").Str)
+		}
+		assert.Contains(t, groupNames, "CT-group")
+		assert.Contains(t, groupNames, "BA-group")
 	})
 
 	t.Run("group tenant", func(t *testing.T) {
-		jj := postQuery(t, c, `{ groups { tenant { id name } } }`, nil)
-		tenant := gjson.Get(jj, "groups.0.tenant")
-		assert.Equal(t, int64(1), tenant.Get("id").Int())
-		assert.Equal(t, "test-tenant", tenant.Get("name").Str)
+		jj := postQuery(t, c, `{ groups { name tenant { id name } } }`, nil)
+		for _, group := range gjson.Get(jj, "groups").Array() {
+			if group.Get("name").Str != "CT-group" {
+				continue
+			}
+			tenant := group.Get("tenant")
+			assert.Equal(t, "tl-tenant", tenant.Get("name").Str)
+			assert.Greater(t, tenant.Get("id").Int(), int64(0))
+			return
+		}
+		t.Fatal("CT-group not found in response")
 	})
 
-	t.Run("group permissions parent type", func(t *testing.T) {
-		jj := postQuery(t, c, `{ groups { permissions { actions parent { type id name } } } }`, nil)
-		perms := gjson.Get(jj, "groups.0.permissions")
+	t.Run("group permissions", func(t *testing.T) {
+		jj := postQuery(t, c, `{ groups { name permissions { actions parent { type id name } } } }`, nil)
+		for _, group := range gjson.Get(jj, "groups").Array() {
+			if group.Get("name").Str != "CT-group" {
+				continue
+			}
+			perms := group.Get("permissions")
+			actions := perms.Get("actions").Array()
+			assert.GreaterOrEqual(t, len(actions), 1)
+			assert.Equal(t, "tenant", perms.Get("parent.type").Str)
+			assert.Equal(t, "tl-tenant", perms.Get("parent.name").Str)
+			return
+		}
+		t.Fatal("CT-group not found in response")
+	})
+
+	t.Run("group feeds", func(t *testing.T) {
+		jj := postQuery(t, c, `{ groups { name feeds { id onestop_id } } }`, nil)
+		for _, group := range gjson.Get(jj, "groups").Array() {
+			if group.Get("name").Str != "CT-group" {
+				continue
+			}
+			feeds := group.Get("feeds").Array()
+			assert.Equal(t, 1, len(feeds))
+			assert.Equal(t, "CT", feeds[0].Get("onestop_id").Str)
+			return
+		}
+		t.Fatal("CT-group not found in response")
+	})
+}
+
+func TestPermissionResolver_FeedPermissions(t *testing.T) {
+	c := newPermTestClient(t, "ian")
+
+	t.Run("feed with permissions", func(t *testing.T) {
+		jj := postQuery(t, c, `{ feeds(where:{onestop_id:"CT"}) { onestop_id permissions { actions parent { type name } } } }`, nil)
+		feeds := gjson.Get(jj, "feeds").Array()
+		assert.Equal(t, 1, len(feeds))
+		perms := feeds[0].Get("permissions")
+		assert.True(t, perms.Exists(), "expected permissions to be present")
 		actions := perms.Get("actions").Array()
-		assert.Equal(t, 1, len(actions))
-		assert.Equal(t, "can_view", actions[0].Str)
-		assert.Equal(t, "tenant", perms.Get("parent.type").Str)
+		assert.GreaterOrEqual(t, len(actions), 1)
+		assert.Equal(t, "group", perms.Get("parent.type").Str)
+		assert.Equal(t, "CT-group", perms.Get("parent.name").Str)
 	})
 }
 
 func TestPermissionResolver_Mutations(t *testing.T) {
+	c := newPermTestClient(t, "tl-tenant-admin")
+
+	// Look up the tl-tenant ID for use in mutations
+	jj := postQuery(t, c, `{ tenants { id name } }`, nil)
+	var tenantID int64
+	for _, tenant := range gjson.Get(jj, "tenants").Array() {
+		if tenant.Get("name").Str == "tl-tenant" {
+			tenantID = tenant.Get("id").Int()
+		}
+	}
+	assert.Greater(t, tenantID, int64(0), "expected to find tl-tenant ID")
+
 	t.Run("permission_add", func(t *testing.T) {
-		pm := newMockPermissionManager()
-		c := newPermTestClient(t, pm)
-		jj := postQuery(t, c, `mutation {
-			permission_add(type: "tenant", id: 1, input: {subject_type: "user", subject_id: "ian", relation: "admin"})
-		}`, nil)
+		jj := postQuery(t, c, `mutation($id: Int!) {
+			permission_add(type: "tenant", id: $id, input: {subject_type: "user", subject_id: "newuser", relation: "member"})
+		}`, map[string]interface{}{"id": tenantID})
 		assert.Equal(t, true, gjson.Get(jj, "permission_add").Bool())
-		assert.Equal(t, 1, len(pm.added))
-		assert.Equal(t, authz.TenantType, pm.added[0].Ref.Type)
-		assert.Equal(t, int64(1), pm.added[0].Ref.ID)
-		assert.Equal(t, "ian", pm.added[0].Subject.Name)
-		assert.Equal(t, authz.AdminRelation, pm.added[0].Relation)
 	})
 
 	t.Run("permission_remove", func(t *testing.T) {
-		pm := newMockPermissionManager()
-		c := newPermTestClient(t, pm)
-		jj := postQuery(t, c, `mutation {
-			permission_remove(type: "org", id: 5, input: {subject_type: "user", subject_id: "drew", relation: "viewer"})
-		}`, nil)
+		postQuery(t, c, `mutation($id: Int!) {
+			permission_add(type: "tenant", id: $id, input: {subject_type: "user", subject_id: "tempuser", relation: "member"})
+		}`, map[string]interface{}{"id": tenantID})
+
+		jj := postQuery(t, c, `mutation($id: Int!) {
+			permission_remove(type: "tenant", id: $id, input: {subject_type: "user", subject_id: "tempuser", relation: "member"})
+		}`, map[string]interface{}{"id": tenantID})
 		assert.Equal(t, true, gjson.Get(jj, "permission_remove").Bool())
-		assert.Equal(t, 1, len(pm.removed))
-		assert.Equal(t, authz.GroupType, pm.removed[0].Ref.Type)
-		assert.Equal(t, int64(5), pm.removed[0].Ref.ID)
 	})
 
 	t.Run("permission_set_parent", func(t *testing.T) {
-		pm := newMockPermissionManager()
-		c := newPermTestClient(t, pm)
-		jj := postQuery(t, c, `mutation {
-			permission_set_parent(type: "org", id: 10, input: {parent_type: "tenant", parent_id: 1})
-		}`, nil)
+		jj := postQuery(t, c, `{ groups { id name } }`, nil)
+		var groupID int64
+		for _, g := range gjson.Get(jj, "groups").Array() {
+			if g.Get("name").Str == "CT-group" {
+				groupID = g.Get("id").Int()
+			}
+		}
+		assert.Greater(t, groupID, int64(0))
+
+		jj = postQuery(t, c, `mutation($groupId: Int!, $tenantId: Int!) {
+			permission_set_parent(type: "org", id: $groupId, input: {parent_type: "tenant", parent_id: $tenantId})
+		}`, map[string]interface{}{"groupId": groupID, "tenantId": tenantID})
 		assert.Equal(t, true, gjson.Get(jj, "permission_set_parent").Bool())
-		assert.Equal(t, 1, len(pm.parents))
-		assert.Equal(t, authz.GroupType, pm.parents[0].Child.Type)
-		assert.Equal(t, authz.TenantType, pm.parents[0].Parent.Type)
 	})
 
 	t.Run("invalid type", func(t *testing.T) {
-		pm := newMockPermissionManager()
-		c := newPermTestClient(t, pm)
 		postQueryExpectError(t, c, `mutation {
 			permission_add(type: "bogus", id: 1, input: {subject_type: "user", subject_id: "ian", relation: "admin"})
 		}`)
 	})
 
 	t.Run("invalid relation", func(t *testing.T) {
-		pm := newMockPermissionManager()
-		c := newPermTestClient(t, pm)
 		postQueryExpectError(t, c, `mutation {
 			permission_add(type: "tenant", id: 1, input: {subject_type: "user", subject_id: "ian", relation: "bogus"})
 		}`)
@@ -305,62 +293,58 @@ func TestPermissionResolver_Mutations(t *testing.T) {
 }
 
 func TestPermissionResolver_AdminMutations(t *testing.T) {
-	t.Run("tenant_save", func(t *testing.T) {
-		am := newMockAdminManager()
-		c := newPermTestClient(t, am)
-		jj := postQuery(t, c, `mutation {
-			tenant_save(id: 1, input: {name: "new-name"}) { id name }
-		}`, nil)
-		assert.Equal(t, int64(1), gjson.Get(jj, "tenant_save.id").Int())
-		assert.Equal(t, "new-name", gjson.Get(jj, "tenant_save.name").Str)
-		assert.Equal(t, 1, len(am.tenantSaved))
-		assert.Equal(t, int64(1), am.tenantSaved[0].Tenant.Id)
-		assert.Equal(t, "new-name", am.tenantSaved[0].Tenant.Name)
-	})
+	// Admin mutations modify DB rows, so run inside a rollback transaction
+	testconfig.ConfigTxRollback(t, fgaTestOpts(t), func(cfg model.Config) {
+		c := newPermTestClientFromConfig(cfg, "tl-tenant-admin")
 
-	t.Run("tenant_create_group", func(t *testing.T) {
-		am := newMockAdminManager()
-		c := newPermTestClient(t, am)
-		jj := postQuery(t, c, `mutation {
-			tenant_create_group(id: 1, input: {name: "new-group"}) { id name }
-		}`, nil)
-		assert.Equal(t, int64(100), gjson.Get(jj, "tenant_create_group.id").Int())
-		assert.Equal(t, "new-group", gjson.Get(jj, "tenant_create_group.name").Str)
-		assert.Equal(t, 1, len(am.groupsCreated))
-		assert.Equal(t, int64(1), am.groupsCreated[0].Id)
-	})
+		// Look up the tl-tenant ID
+		jj := postQuery(t, c, `{ tenants { id name } }`, nil)
+		var tenantID int64
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str == "tl-tenant" {
+				tenantID = tenant.Get("id").Int()
+			}
+		}
+		assert.Greater(t, tenantID, int64(0))
 
-	t.Run("group_save", func(t *testing.T) {
-		am := newMockAdminManager()
-		c := newPermTestClient(t, am)
-		jj := postQuery(t, c, `mutation {
-			group_save(id: 5, input: {name: "renamed"}) { id name }
-		}`, nil)
-		assert.Equal(t, int64(5), gjson.Get(jj, "group_save.id").Int())
-		assert.Equal(t, "renamed", gjson.Get(jj, "group_save.name").Str)
-		assert.Equal(t, 1, len(am.groupSaved))
-		assert.Equal(t, int64(5), am.groupSaved[0].Group.Id)
-	})
+		t.Run("tenant_save", func(t *testing.T) {
+			jj := postQuery(t, c, `mutation($id: Int!) {
+				tenant_save(id: $id, input: {name: "tl-tenant-renamed"}) { id name }
+			}`, map[string]interface{}{"id": tenantID})
+			assert.Equal(t, tenantID, gjson.Get(jj, "tenant_save.id").Int())
+			assert.Equal(t, "tl-tenant-renamed", gjson.Get(jj, "tenant_save.name").Str)
+		})
 
-	t.Run("admin not configured", func(t *testing.T) {
-		// Plain PermissionManager without AdminManager — admin mutations should fail
-		pm := newMockPermissionManager()
-		c := newPermTestClient(t, pm)
-		postQueryExpectError(t, c, `mutation {
-			tenant_save(id: 1, input: {name: "test"}) { id }
-		}`)
-		postQueryExpectError(t, c, `mutation {
-			tenant_create_group(id: 1, input: {name: "test"}) { id }
-		}`)
-		postQueryExpectError(t, c, `mutation {
-			group_save(id: 1, input: {name: "test"}) { id }
-		}`)
+		t.Run("tenant_create_group", func(t *testing.T) {
+			jj := postQuery(t, c, `mutation($id: Int!) {
+				tenant_create_group(id: $id, input: {name: "new-test-group"}) { id name }
+			}`, map[string]interface{}{"id": tenantID})
+			assert.Greater(t, gjson.Get(jj, "tenant_create_group.id").Int(), int64(0))
+			assert.Equal(t, "new-test-group", gjson.Get(jj, "tenant_create_group.name").Str)
+		})
+
+		t.Run("group_save", func(t *testing.T) {
+			jj := postQuery(t, c, `{ groups { id name } }`, nil)
+			var groupID int64
+			for _, g := range gjson.Get(jj, "groups").Array() {
+				if g.Get("name").Str == "CT-group" {
+					groupID = g.Get("id").Int()
+				}
+			}
+			assert.Greater(t, groupID, int64(0))
+
+			jj = postQuery(t, c, `mutation($id: Int!) {
+				group_save(id: $id, input: {name: "CT-group-renamed"}) { id name }
+			}`, map[string]interface{}{"id": groupID})
+			assert.Equal(t, groupID, gjson.Get(jj, "group_save.id").Int())
+			assert.Equal(t, "CT-group-renamed", gjson.Get(jj, "group_save.name").Str)
+		})
 	})
 }
 
 func TestPermissionResolver_NilPermissionManager(t *testing.T) {
 	srv, _ := NewServer()
-	cfg := model.Config{}
+	cfg := testconfig.Config(t, testconfig.Options{})
 	handler := model.AddConfigAndPerms(cfg, srv)
 	handler = usercheck.NewUserDefaultMiddleware(func() authn.User {
 		return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
@@ -372,7 +356,11 @@ func TestPermissionResolver_NilPermissionManager(t *testing.T) {
 	})
 
 	t.Run("feed permissions returns null", func(t *testing.T) {
-		// This test requires the DB test fixtures; skip if not available.
-		t.Skip("requires test database")
+		jj := postQuery(t, c, `{ feeds(where:{onestop_id:"CT"}) { onestop_id permissions { actions } } }`, nil)
+		feeds := gjson.Get(jj, "feeds").Array()
+		assert.GreaterOrEqual(t, len(feeds), 1)
+		// permissions should be null when no PermissionManager is configured
+		p := feeds[0].Get("permissions")
+		assert.True(t, p.Type == gjson.Null || !p.Exists(), "expected permissions to be null")
 	})
 }
