@@ -3,6 +3,7 @@ package gql
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"github.com/interline-io/transitland-lib/internal/generated/gqlout"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
@@ -18,14 +19,14 @@ func (r *Resolver) Tenant() gqlout.TenantResolver { return &tenantResolver{r} }
 func (r *tenantResolver) Groups(ctx context.Context, obj *model.Tenant) ([]*model.Group, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
-		return nil, err
+		return []*model.Group{}, err
 	}
 	ref := authz.ObjectRef{Type: authz.TenantType, ID: int64(obj.ID)}
 	perms, err := pm.ObjectPermissions(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
-	var groups []*model.Group
+	groups := []*model.Group{}
 	for _, child := range perms.Children {
 		if child.Type == authz.GroupType {
 			groups = append(groups, &model.Group{ID: int(child.ID), Name: child.Name})
@@ -63,21 +64,21 @@ func (r *groupResolver) Tenant(ctx context.Context, obj *model.Group) (*model.Te
 func (r *groupResolver) Feeds(ctx context.Context, obj *model.Group) ([]*model.Feed, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
-		return nil, err
+		return []*model.Feed{}, err
 	}
 	ref := authz.ObjectRef{Type: authz.GroupType, ID: int64(obj.ID)}
 	perms, err := pm.ObjectPermissions(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
-	if len(perms.Children) == 0 {
-		return nil, nil
-	}
 	var ids []int
 	for _, child := range perms.Children {
 		if child.Type == authz.FeedType {
 			ids = append(ids, int(child.ID))
 		}
+	}
+	if len(ids) == 0 {
+		return []*model.Feed{}, nil
 	}
 	cfg := model.ForContext(ctx)
 	return cfg.Finder.FindFeeds(ctx, nil, nil, ids, nil)
@@ -102,23 +103,19 @@ func (r *feedVersionResolver) Permissions(ctx context.Context, obj *model.FeedVe
 // Query resolvers for tenants and groups
 
 func (r *queryResolver) Tenants(ctx context.Context) ([]*model.Tenant, error) {
-	checker := model.ForContext(ctx).Checker
-	if checker == nil {
+	pm, err := getPermissionManager(ctx)
+	if pm == nil || err != nil {
 		return nil, errors.New("permissions not configured")
 	}
-	refs, err := checker.ListObjects(ctx, authz.TenantType)
+	refs, err := pm.ListObjects(ctx, authz.TenantType)
 	if err != nil {
 		return nil, err
 	}
-	// Hydrate names via ObjectPermissions
-	pm, _ := getPermissionManager(ctx)
-	var tenants []*model.Tenant
+	tenants := make([]*model.Tenant, 0, len(refs))
 	for _, ref := range refs {
 		t := &model.Tenant{ID: int(ref.ID)}
-		if pm != nil {
-			if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
-				t.Name = perms.Ref.Name
-			}
+		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
+			t.Name = perms.Ref.Name
 		}
 		tenants = append(tenants, t)
 	}
@@ -126,22 +123,19 @@ func (r *queryResolver) Tenants(ctx context.Context) ([]*model.Tenant, error) {
 }
 
 func (r *queryResolver) Groups(ctx context.Context) ([]*model.Group, error) {
-	checker := model.ForContext(ctx).Checker
-	if checker == nil {
+	pm, err := getPermissionManager(ctx)
+	if pm == nil || err != nil {
 		return nil, errors.New("permissions not configured")
 	}
-	refs, err := checker.ListObjects(ctx, authz.GroupType)
+	refs, err := pm.ListObjects(ctx, authz.GroupType)
 	if err != nil {
 		return nil, err
 	}
-	pm, _ := getPermissionManager(ctx)
-	var groups []*model.Group
+	groups := make([]*model.Group, 0, len(refs))
 	for _, ref := range refs {
 		g := &model.Group{ID: int(ref.ID)}
-		if pm != nil {
-			if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
-				g.Name = perms.Ref.Name
-			}
+		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
+			g.Name = perms.Ref.Name
 		}
 		groups = append(groups, g)
 	}
@@ -155,7 +149,10 @@ func (r *mutationResolver) PermissionAdd(ctx context.Context, typeArg string, id
 	if err != nil {
 		return false, err
 	}
-	return true, pm.AddPermission(ctx, ref, subject, rel)
+	if err := pm.AddPermission(ctx, ref, subject, rel); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *mutationResolver) PermissionRemove(ctx context.Context, typeArg string, id int, input model.PermissionInput) (bool, error) {
@@ -163,7 +160,10 @@ func (r *mutationResolver) PermissionRemove(ctx context.Context, typeArg string,
 	if err != nil {
 		return false, err
 	}
-	return true, pm.RemovePermission(ctx, ref, subject, rel)
+	if err := pm.RemovePermission(ctx, ref, subject, rel); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *mutationResolver) PermissionSetParent(ctx context.Context, typeArg string, id int, input model.SetParentInput) (bool, error) {
@@ -181,7 +181,10 @@ func (r *mutationResolver) PermissionSetParent(ctx context.Context, typeArg stri
 	}
 	child := authz.ObjectRef{Type: childType, ID: int64(id)}
 	parent := authz.ObjectRef{Type: parentType, ID: int64(input.ParentID)}
-	return true, pm.SetParent(ctx, child, parent)
+	if err := pm.SetParent(ctx, child, parent); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *mutationResolver) TenantSave(ctx context.Context, id int, input model.TenantInput) (*model.Tenant, error) {
@@ -291,13 +294,18 @@ func resolvePermissions(ctx context.Context, objType authz.ObjectType, id int64)
 	if err != nil {
 		return nil, err
 	}
-	result := &model.Permissions{}
+	result := &model.Permissions{
+		Actions:  []string{},
+		Subjects: []*model.PermissionSubject{},
+		Children: []*model.PermissionRef{},
+	}
 	// Actions
 	for action, granted := range perms.Actions {
 		if granted {
 			result.Actions = append(result.Actions, action.String())
 		}
 	}
+	sort.Strings(result.Actions)
 	// Subjects
 	for _, s := range perms.Subjects {
 		result.Subjects = append(result.Subjects, &model.PermissionSubject{
