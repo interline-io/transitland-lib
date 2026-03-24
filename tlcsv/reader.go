@@ -444,13 +444,13 @@ func (reader *Reader) Locations() (out chan gtfs.Location) {
 	out = make(chan gtfs.Location, bufferSize)
 	go func() {
 		defer close(out)
-		
+
 		locs, err := reader.readLocationsGeoJSON("locations.geojson")
 		if err != nil {
 			// File doesn't exist or error reading - just return empty
 			return
 		}
-		
+
 		for _, loc := range locs {
 			out <- loc
 		}

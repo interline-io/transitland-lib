@@ -189,7 +189,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.DatasetID, p.Where, p.Limit
 			},
 		),
-		CensusTableByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.CensusTableByIDs),
+		CensusTableByIDs:   withWaitAndCapacity(waitTime, batchSize, dbf.CensusTableByIDs),
 		CensusLayersByIDs:  withWaitAndCapacity(waitTime, batchSize, dbf.CensusLayersByIDs),
 		CensusSourcesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.CensusSourcesByIDs),
 		CensusGeographiesBySourceIDs: withWaitAndCapacityGroup(waitTime, batchSize,

@@ -26,4 +26,3 @@ func (ent *LocationGroup) Filename() string {
 func (ent *LocationGroup) TableName() string {
 	return "gtfs_location_groups"
 }
-
