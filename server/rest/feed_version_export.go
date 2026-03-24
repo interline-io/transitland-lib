@@ -443,7 +443,7 @@ func validateFeedVersionsForExport(ctx context.Context, ids []int, graphqlHandle
 	// TODO: Consider adding entity-level OpenFGA permission checks here
 	// Currently uses role-based access (tl_export_feed_versions) + redistribution license check
 	// Future enhancement: Add can_export action to OpenFGA model and check:
-	//   - Add can_export = 12 to Action enum in server/auth/authz/azpb.proto
+	//   - Add can_export = 12 to Action enum in server/auth/authz/types.go
 	//   - Add "define can_export: editor" (or viewer/manager) to feed_version in testdata/server/authz/tls.model
 	//   - Check permission: checker.checkActionOrError(ctx, CanExport, newEntityID(FeedVersionType, fvid), ctxTk)
 	//   This would enable per-feed-version export control in multi-tenant deployments

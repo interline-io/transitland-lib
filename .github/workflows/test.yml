@@ -26,7 +26,7 @@ jobs:
     env:
       TL_TEST_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test?sslmode=disable
       TL_TEST_SERVER_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test_server?sslmode=disable
-      TL_REDIS_URL: redis://localhost    
+      TL_REDIS_URL: redis://localhost
     services:
       postgres:
         image: postgis/postgis:12-3.4-alpine
@@ -37,7 +37,7 @@ jobs:
           POSTGRES_PASSWORD: for_testing
           POSTGRES_DB: tlv2_test_server
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U root -d tlv2_test_server"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -61,7 +61,7 @@ jobs:
     - run: (cd cmd/transitland && go version && go install .)
     - run: ./testdata/test_setup.sh
     - name: Run tests
-      run: go test -v -coverprofile c.out ./...
+      run: go test -coverprofile c.out ./...
     - name: Produce coverage report
       run: go tool cover -html=c.out -o coverage.html
     - name: Save coverage report as artifact

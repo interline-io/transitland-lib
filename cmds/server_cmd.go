@@ -172,7 +172,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 
 	// Disable auth if requested
 	if cmd.DisableAuth {
-		cfg.Checker = &globalAdminChecker{}
+		cfg.Checker = globalAdminCheckerInstance
 	}
 
 	// Setup router
@@ -250,12 +250,5 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	return srv.ListenAndServe()
 }
 
-// globalAdminChecker is a simple checker that always returns true for CheckGlobalAdmin,
-// effectively disabling all feed authorization checks.
-type globalAdminChecker struct {
-	authz.UnimplementedCheckerServer
-}
-
-func (c *globalAdminChecker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
-	return true, nil
-}
+// globalAdminChecker disables all feed authorization checks.
+var globalAdminCheckerInstance = &authz.GlobalAdminChecker{}
