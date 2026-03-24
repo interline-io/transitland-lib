@@ -37,7 +37,7 @@ jobs:
           POSTGRES_PASSWORD: for_testing
           POSTGRES_DB: tlv2_test_server
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U root -d tlv2_test_server"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -61,7 +61,7 @@ jobs:
     - run: (cd cmd/transitland && go version && go install .)
     - run: ./testdata/test_setup.sh
     - name: Run tests
-      run: go test -v -coverprofile c.out ./...
+      run: go test -coverprofile c.out ./...
     - name: Produce coverage report
       run: go tool cover -html=c.out -o coverage.html
     - name: Save coverage report as artifact
