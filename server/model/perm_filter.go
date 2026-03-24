@@ -118,41 +118,38 @@ func AddPerms(checker Checker) func(http.Handler) http.Handler {
 	}
 }
 
-type canCheckGlobalAdmin interface {
-	CheckGlobalAdmin(context.Context) (bool, error)
+func refsToInts(refs []authz.ObjectRef) []int {
+	result := make([]int, len(refs))
+	for i, ref := range refs {
+		result[i] = int(ref.ID)
+	}
+	return result
 }
 
 func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
 	active := &PermFilter{}
 	if checker == nil {
-		// log.For(ctx).Trace().Msg("checkActive: no checker")
 		return active, nil
 	}
 
-	// TODO: Make this part of actual checker interface
-	if c, ok := checker.(canCheckGlobalAdmin); ok {
-		if a, err := c.CheckGlobalAdmin(ctx); err != nil {
-			return nil, err
-		} else if a {
-			return &PermFilter{IsGlobalAdmin: true}, nil
-		}
+	if ok, err := checker.IsGlobalAdmin(ctx); err != nil {
+		return nil, err
+	} else if ok {
+		return &PermFilter{IsGlobalAdmin: true}, nil
 	}
 
-	okFeeds, err := checker.FeedList(ctx, &authz.FeedListRequest{})
+	feedRefs, err := checker.ListObjects(ctx, authz.FeedType)
 	if err != nil {
 		return nil, err
 	}
-	for _, feed := range okFeeds.Feeds {
-		active.AllowedFeeds = append(active.AllowedFeeds, int(feed.Id))
-	}
-	okFvids, err := checker.FeedVersionList(ctx, &authz.FeedVersionListRequest{})
+	active.AllowedFeeds = refsToInts(feedRefs)
+
+	fvRefs, err := checker.ListObjects(ctx, authz.FeedVersionType)
 	if err != nil {
 		return nil, err
 	}
-	for _, fv := range okFvids.FeedVersions {
-		active.AllowedFeedVersions = append(active.AllowedFeedVersions, int(fv.Id))
-	}
-	// fmt.Println("active allowed feeds:", active.AllowedFeeds, "fvs:", active.AllowedFeedVersions)
+	active.AllowedFeedVersions = refsToInts(fvRefs)
+
 	return active, nil
 }
 
