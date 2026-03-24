@@ -26,7 +26,7 @@ jobs:
     env:
       TL_TEST_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test?sslmode=disable
       TL_TEST_SERVER_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test_server?sslmode=disable
-      TL_REDIS_URL: redis://localhost    
+      TL_REDIS_URL: redis://localhost
     services:
       postgres:
         image: postgis/postgis:12-3.4-alpine

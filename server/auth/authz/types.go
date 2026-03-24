@@ -323,10 +323,9 @@ func (x *EntityRelation) GetRelation() Relation {
 }
 
 //////
-// Request/Response types used by azchecker
+// Request/Response types used by admin-specific methods on azchecker.Checker
 //////
 
-// User requests/responses
 type UserListRequest struct {
 	Q string `json:"q,omitempty"`
 }
@@ -357,58 +356,6 @@ type UserResponse struct {
 	User *User `json:"user,omitempty"`
 }
 
-type MeRequest struct{}
-
-type MeResponse struct {
-	User           *User             `json:"user,omitempty"`
-	Groups         []*Group          `json:"groups,omitempty"`
-	ExpandedGroups []*Group          `json:"expanded_groups,omitempty"`
-	ExternalData   map[string]string `json:"external_data,omitempty"`
-	Roles          []string          `json:"roles,omitempty"`
-}
-
-// Tenant requests/responses
-type TenantRequest struct {
-	Id int64 `json:"id,omitempty"`
-}
-
-func (x *TenantRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-type TenantListRequest struct{}
-
-type TenantListResponse struct {
-	Tenants []*Tenant `json:"tenants,omitempty"`
-}
-
-type TenantResponse struct {
-	Tenant *Tenant `json:"tenant,omitempty"`
-}
-
-type TenantPermissionsResponse struct {
-	Tenant  *Tenant                            `json:"tenant,omitempty"`
-	Groups  []*Group                           `json:"groups,omitempty"`
-	Actions *TenantPermissionsResponse_Actions `json:"actions,omitempty"`
-	Users   *TenantPermissionsResponse_Users   `json:"users,omitempty"`
-}
-
-type TenantPermissionsResponse_Actions struct {
-	CanEditMembers bool `json:"can_edit_members,omitempty"`
-	CanView        bool `json:"can_view,omitempty"`
-	CanEdit        bool `json:"can_edit,omitempty"`
-	CanCreateOrg   bool `json:"can_create_org,omitempty"`
-	CanDeleteOrg   bool `json:"can_delete_org,omitempty"`
-}
-
-type TenantPermissionsResponse_Users struct {
-	Admins  []*EntityRelation `json:"admins,omitempty"`
-	Members []*EntityRelation `json:"members,omitempty"`
-}
-
 type TenantSaveRequest struct {
 	Tenant *Tenant `json:"tenant,omitempty"`
 }
@@ -421,8 +368,6 @@ func (x *TenantSaveRequest) GetTenant() *Tenant {
 }
 
 type TenantSaveResponse struct{}
-
-type TenantCreateRequest struct{}
 
 type TenantCreateGroupRequest struct {
 	Id    int64  `json:"id,omitempty"`
@@ -443,70 +388,6 @@ func (x *TenantCreateGroupRequest) GetGroup() *Group {
 	return nil
 }
 
-type TenantModifyPermissionRequest struct {
-	Id             int64           `json:"id,omitempty"`
-	EntityRelation *EntityRelation `json:"entity_relation,omitempty"`
-}
-
-func (x *TenantModifyPermissionRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *TenantModifyPermissionRequest) GetEntityRelation() *EntityRelation {
-	if x != nil {
-		return x.EntityRelation
-	}
-	return nil
-}
-
-// Group requests/responses
-type GroupRequest struct {
-	Id int64 `json:"id,omitempty"`
-}
-
-func (x *GroupRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-type GroupListRequest struct{}
-
-type GroupListResponse struct {
-	Groups []*Group `json:"groups,omitempty"`
-}
-
-type GroupResponse struct {
-	Group *Group `json:"group,omitempty"`
-}
-
-type GroupPermissionsResponse struct {
-	Group   *Group                            `json:"group,omitempty"`
-	Tenant  *Tenant                           `json:"tenant,omitempty"`
-	Feeds   []*Feed                           `json:"feeds,omitempty"`
-	Actions *GroupPermissionsResponse_Actions  `json:"actions,omitempty"`
-	Users   *GroupPermissionsResponse_Users    `json:"users,omitempty"`
-}
-
-type GroupPermissionsResponse_Actions struct {
-	CanView        bool `json:"can_view,omitempty"`
-	CanEditMembers bool `json:"can_edit_members,omitempty"`
-	CanCreateFeed  bool `json:"can_create_feed,omitempty"`
-	CanDeleteFeed  bool `json:"can_delete_feed,omitempty"`
-	CanEdit        bool `json:"can_edit,omitempty"`
-	CanSetTenant   bool `json:"can_set_tenant,omitempty"`
-}
-
-type GroupPermissionsResponse_Users struct {
-	Managers []*EntityRelation `json:"managers,omitempty"`
-	Editors  []*EntityRelation `json:"editors,omitempty"`
-	Viewers  []*EntityRelation `json:"viewers,omitempty"`
-}
-
 type GroupSaveRequest struct {
 	Group *Group `json:"group,omitempty"`
 }
@@ -521,163 +402,4 @@ func (x *GroupSaveRequest) GetGroup() *Group {
 type GroupSaveResponse struct {
 	Group *Group `json:"group,omitempty"`
 }
-
-type GroupModifyPermissionRequest struct {
-	Id             int64           `json:"id,omitempty"`
-	EntityRelation *EntityRelation `json:"entity_relation,omitempty"`
-}
-
-func (x *GroupModifyPermissionRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *GroupModifyPermissionRequest) GetEntityRelation() *EntityRelation {
-	if x != nil {
-		return x.EntityRelation
-	}
-	return nil
-}
-
-type GroupSetTenantRequest struct {
-	Id       int64 `json:"id,omitempty"`
-	TenantId int64 `json:"tenant_id,omitempty"`
-}
-
-func (x *GroupSetTenantRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *GroupSetTenantRequest) GetTenantId() int64 {
-	if x != nil {
-		return x.TenantId
-	}
-	return 0
-}
-
-type GroupSetTenantResponse struct{}
-
-// Feed requests/responses
-type FeedRequest struct {
-	Id int64 `json:"id,omitempty"`
-}
-
-func (x *FeedRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-type FeedListRequest struct{}
-
-type FeedListResponse struct {
-	Feeds []*Feed `json:"feeds,omitempty"`
-}
-
-type FeedResponse struct {
-	Feed *Feed `json:"feed,omitempty"`
-}
-
-type FeedPermissionsResponse struct {
-	Feed    *Feed                            `json:"feed,omitempty"`
-	Group   *Group                           `json:"group,omitempty"`
-	Actions *FeedPermissionsResponse_Actions `json:"actions,omitempty"`
-}
-
-type FeedPermissionsResponse_Actions struct {
-	CanView              bool `json:"can_view,omitempty"`
-	CanEdit              bool `json:"can_edit,omitempty"`
-	CanSetGroup          bool `json:"can_set_group,omitempty"`
-	CanCreateFeedVersion bool `json:"can_create_feed_version,omitempty"`
-	CanDeleteFeedVersion bool `json:"can_delete_feed_version,omitempty"`
-}
-
-type FeedSetGroupRequest struct {
-	Id      int64 `json:"id,omitempty"`
-	GroupId int64 `json:"group_id,omitempty"`
-}
-
-func (x *FeedSetGroupRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *FeedSetGroupRequest) GetGroupId() int64 {
-	if x != nil {
-		return x.GroupId
-	}
-	return 0
-}
-
-type FeedSaveResponse struct{}
-
-// FeedVersion requests/responses
-type FeedVersionRequest struct {
-	Id int64 `json:"id,omitempty"`
-}
-
-func (x *FeedVersionRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-type FeedVersionListRequest struct{}
-
-type FeedVersionListResponse struct {
-	FeedVersions []*FeedVersion `json:"feed_versions,omitempty"`
-}
-
-type FeedVersionResponse struct {
-	FeedVersion *FeedVersion `json:"feed_version,omitempty"`
-}
-
-type FeedVersionPermissionsResponse struct {
-	FeedVersion *FeedVersion                            `json:"feed_version,omitempty"`
-	Feed        *Feed                                   `json:"feed,omitempty"`
-	Group       *Group                                  `json:"group,omitempty"`
-	Actions     *FeedVersionPermissionsResponse_Actions `json:"actions,omitempty"`
-	Users       *FeedVersionPermissionsResponse_Users   `json:"users,omitempty"`
-}
-
-type FeedVersionPermissionsResponse_Actions struct {
-	CanView        bool `json:"can_view,omitempty"`
-	CanEditMembers bool `json:"can_edit_members,omitempty"`
-	CanEdit        bool `json:"can_edit,omitempty"`
-}
-
-type FeedVersionPermissionsResponse_Users struct {
-	Editors []*EntityRelation `json:"editors,omitempty"`
-	Viewers []*EntityRelation `json:"viewers,omitempty"`
-}
-
-type FeedVersionModifyPermissionRequest struct {
-	Id             int64           `json:"id,omitempty"`
-	EntityRelation *EntityRelation `json:"entity_relation,omitempty"`
-}
-
-func (x *FeedVersionModifyPermissionRequest) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *FeedVersionModifyPermissionRequest) GetEntityRelation() *EntityRelation {
-	if x != nil {
-		return x.EntityRelation
-	}
-	return nil
-}
-
-type FeedVersionSaveResponse struct{}
 

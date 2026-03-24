@@ -57,7 +57,7 @@ type PermissionManager interface {
 	ObjectPermissions(ctx context.Context, obj ObjectRef) (*ObjectPermissions, error)
 	SetParent(ctx context.Context, child ObjectRef, parent ObjectRef) error
 	AddPermission(ctx context.Context, obj ObjectRef, subject EntityKey, relation Relation) error
-	RemovePermission(ctx context.Context, obj ObjectRef, subject EntityKey) error
+	RemovePermission(ctx context.Context, obj ObjectRef, subject EntityKey, relation Relation) error
 }
 
 // GlobalAdminChecker implements Checker and always grants access.

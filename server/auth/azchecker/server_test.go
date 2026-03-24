@@ -15,11 +15,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	fgaUrl, a, ok := testutil.CheckEnv("TL_TEST_FGA_ENDPOINT")
-	if !ok {
-		t.Skip(a)
-		return
-	}
+	fgaUrl := testutil.FGAServer(t)
 	dbx := testutil.MustOpenTestDB(t)
 	serverTestData := []testCase{
 		{

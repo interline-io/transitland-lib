@@ -80,7 +80,7 @@ func NewServer(checker *Checker) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: TenantType, ID: checkId(r, "tenant_id")}
-		err := checker.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id))
+		err := checker.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 
@@ -123,7 +123,7 @@ func NewServer(checker *Checker) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: GroupType, ID: checkId(r, "group_id")}
-		err := checker.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id))
+		err := checker.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 	router.Post("/groups/{group_id}/tenant", func(w http.ResponseWriter, r *http.Request) {
@@ -195,7 +195,7 @@ func NewServer(checker *Checker) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: FeedVersionType, ID: checkId(r, "feed_version_id")}
-		err := checker.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id))
+		err := checker.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 
