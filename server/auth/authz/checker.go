@@ -22,7 +22,6 @@ type SubjectRef struct {
 // ObjectPermissions is the generic return from a permissions query.
 type ObjectPermissions struct {
 	Ref      ObjectRef    `json:"ref"`
-	Name     string       `json:"name"`
 	Actions  ActionSet    `json:"actions"`
 	Subjects []SubjectRef `json:"subjects"`
 	Parent   *ObjectRef   `json:"parent,omitempty"`

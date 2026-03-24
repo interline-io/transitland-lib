@@ -169,7 +169,7 @@ func (c *Checker) UserList(ctx context.Context, req *authz.UserListRequest) (*au
 	}
 	var ret []*authz.User
 	for _, user := range users {
-		ret = append(ret, newAzpbUser(user))
+		ret = append(ret, newUser(user))
 	}
 	return &authz.UserListResponse{Users: ret}, nil
 }
@@ -185,7 +185,7 @@ func (c *Checker) User(ctx context.Context, req *authz.UserRequest) (*authz.User
 	if user == nil || err != nil {
 		return nil, ErrUnauthorized
 	}
-	return &authz.UserResponse{User: newAzpbUser(user)}, err
+	return &authz.UserResponse{User: newUser(user)}, err
 }
 
 // ///////////////////
@@ -434,13 +434,15 @@ func (c *Checker) ObjectPermissions(ctx context.Context, obj authz.ObjectRef) (*
 		Actions: authz.ActionSet{},
 	}
 
-	// Check all actions relevant to this type
+	// Check all actions relevant to this type; only include granted actions
 	for _, action := range actionsForType(obj.Type) {
-		ret.Actions[action], _ = c.checkAction(ctx, action, entKey, ctxTuples...)
+		if ok, _ := c.checkAction(ctx, action, entKey, ctxTuples...); ok {
+			ret.Actions[action] = true
+		}
 	}
 	// Special case: CanSetTenant on groups is global-admin only
-	if obj.Type == GroupType {
-		ret.Actions[CanSetTenant] = c.ctxIsGlobalAdmin(ctx)
+	if obj.Type == GroupType && c.ctxIsGlobalAdmin(ctx) {
+		ret.Actions[CanSetTenant] = true
 	}
 
 	// Get tuples — subjects + parent
@@ -474,7 +476,6 @@ func (c *Checker) ObjectPermissions(ctx context.Context, obj authz.ObjectRef) (*
 	c.hydrateObjectRefs(ctx, toHydrate)
 	// Apply back
 	ret.Ref.Name = toHydrate[0].Name
-	ret.Name = toHydrate[0].Name
 	idx := 1
 	if ret.Parent != nil {
 		ret.Parent.Name = toHydrate[idx].Name
@@ -912,6 +913,6 @@ func newEntityID(t ObjectType, id int64) EntityKey {
 	return authz.NewEntityKey(t, strconv.Itoa(int(id)))
 }
 
-func newAzpbUser(u authn.User) *authz.User {
+func newUser(u authn.User) *authz.User {
 	return &authz.User{Id: u.ID(), Name: u.Name(), Email: u.Email()}
 }
