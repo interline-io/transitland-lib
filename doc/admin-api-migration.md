@@ -1,6 +1,6 @@
 # Admin REST API Migration Guide
 
-The admin REST API response shapes have changed as part of the authorization system refactoring. All endpoints use the same URL paths and HTTP methods. Request bodies are unchanged. Only response JSON shapes differ.
+The admin REST API response shapes have changed as part of the authorization system refactoring. All endpoints use the same URL paths and HTTP methods. Request bodies are unchanged (both integer and string enum values are accepted). Only response JSON shapes differ.
 
 ## Unchanged endpoints
 
@@ -170,7 +170,7 @@ All permissions endpoints now return a generic `ObjectPermissions` shape instead
 | Parent as type-specific field (`tenant` on groups, `group` on feeds) | `parent` with `{type, id, name}` |
 | Children as type-specific field (`groups` on tenants, `feeds` on groups) | `children` array of `{type, id, name}` |
 | Users grouped by role (`admins`, `members`, `managers`, `editors`, `viewers`) | `subjects` flat array with `.relation` field |
-| Actions include `false` values via `omitempty` (absent = false) | Actions only include `true` values (absent = false) |
+| Actions included both granted (`true`) and denied (`false`) values | Actions only include granted (`true`) values (absent = not granted) |
 | Feed-specific fields in children (`onestop_id`) | Only `name` available on children |
 
 ### Key differences summary
