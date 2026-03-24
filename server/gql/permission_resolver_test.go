@@ -235,6 +235,39 @@ func TestPermissionResolver_FeedPermissions(t *testing.T) {
 	})
 }
 
+func TestPermissionResolver_FeedVersionPermissions(t *testing.T) {
+	c := newPermTestClient(t, "ian")
+
+	t.Run("feed version with permissions", func(t *testing.T) {
+		// Query a feed version belonging to CT (which has a parent group).
+		// The checker injects a contextual feed→feed_version parent tuple
+		// for action checks, so the feed version inherits actions from the feed.
+		jj := postQuery(t, c, `{ feed_versions(where:{feed_onestop_id:"CT"}) { sha1 permissions { actions } } }`, nil)
+		fvs := gjson.Get(jj, "feed_versions").Array()
+		assert.GreaterOrEqual(t, len(fvs), 1)
+		perms := fvs[0].Get("permissions")
+		assert.True(t, perms.Exists(), "expected permissions to be present")
+		actions := perms.Get("actions").Array()
+		assert.GreaterOrEqual(t, len(actions), 1)
+		var actionStrs []string
+		for _, a := range actions {
+			actionStrs = append(actionStrs, a.Str)
+		}
+		assert.Contains(t, actionStrs, "can_view")
+	})
+
+	t.Run("feed version without permissions returns null", func(t *testing.T) {
+		// Without a PermissionManager, permissions should be null
+		cfg := testconfig.Config(t, testconfig.Options{})
+		noAuthClient := newPermTestClientFromConfig(cfg, "testuser", "testrole")
+		jj := postQuery(t, noAuthClient, `{ feed_versions(where:{feed_onestop_id:"CT"}) { sha1 permissions { actions } } }`, nil)
+		fvs := gjson.Get(jj, "feed_versions").Array()
+		assert.GreaterOrEqual(t, len(fvs), 1)
+		p := fvs[0].Get("permissions")
+		assert.True(t, p.Type == gjson.Null || !p.Exists(), "expected permissions to be null")
+	})
+}
+
 func TestPermissionResolver_Mutations(t *testing.T) {
 	c := newPermTestClient(t, "tl-tenant-admin")
 
@@ -388,20 +421,114 @@ func TestPermissionResolver_UnauthorizedUser(t *testing.T) {
 		assert.Equal(t, 0, len(groups))
 	})
 
-	t.Run("mutation permission_add unauthorized", func(t *testing.T) {
-		// Look up a real tenant ID via the admin client
-		jj := postQuery(t, adminClient, `{ tenants { id name } }`, nil)
-		var tenantID int64
-		for _, tenant := range gjson.Get(jj, "tenants").Array() {
-			if tenant.Get("name").Str == "tl-tenant" {
-				tenantID = tenant.Get("id").Int()
-			}
+	// Look up real IDs via the admin client for use in mutation tests
+	jj := postQuery(t, adminClient, `{ tenants { id name } }`, nil)
+	var tenantID int64
+	for _, tenant := range gjson.Get(jj, "tenants").Array() {
+		if tenant.Get("name").Str == "tl-tenant" {
+			tenantID = tenant.Get("id").Int()
 		}
-		assert.Greater(t, tenantID, int64(0))
+	}
+	assert.Greater(t, tenantID, int64(0))
 
-		// Unauthorized user should be denied
+	jj = postQuery(t, adminClient, `{ groups { id name } }`, nil)
+	var groupID int64
+	for _, g := range gjson.Get(jj, "groups").Array() {
+		if g.Get("name").Str == "CT-group" {
+			groupID = g.Get("id").Int()
+		}
+	}
+	assert.Greater(t, groupID, int64(0))
+
+	t.Run("permission_add unauthorized", func(t *testing.T) {
 		postQueryExpectError(t, nobodyClient, fmt.Sprintf(`mutation {
 			permission_add(type: "tenant", id: %d, input: {subject_type: "user", subject_id: "someone", relation: "member"})
 		}`, tenantID))
 	})
+
+	t.Run("tenant_save unauthorized", func(t *testing.T) {
+		postQueryExpectError(t, nobodyClient, fmt.Sprintf(`mutation {
+			tenant_save(id: %d, input: {name: "hacked"}) { id }
+		}`, tenantID))
+	})
+
+	t.Run("tenant_create_group unauthorized", func(t *testing.T) {
+		postQueryExpectError(t, nobodyClient, fmt.Sprintf(`mutation {
+			tenant_create_group(id: %d, input: {name: "hacked-group"}) { id }
+		}`, tenantID))
+	})
+
+	t.Run("group_save unauthorized", func(t *testing.T) {
+		postQueryExpectError(t, nobodyClient, fmt.Sprintf(`mutation {
+			group_save(id: %d, input: {name: "hacked-group"}) { id }
+		}`, groupID))
+	})
+}
+
+func TestPermissionResolver_MutationRoundTrip(t *testing.T) {
+	// Verify that permission_add actually creates a visible permission,
+	// and permission_remove actually deletes it.
+	cfg := testconfig.Config(t, fgaTestOpts(t))
+	c := newPermTestClientFromConfig(cfg, "tl-tenant-admin", "admin")
+
+	// Look up tenant ID
+	jj := postQuery(t, c, `{ tenants { id name } }`, nil)
+	var tenantID int64
+	for _, tenant := range gjson.Get(jj, "tenants").Array() {
+		if tenant.Get("name").Str == "tl-tenant" {
+			tenantID = tenant.Get("id").Int()
+		}
+	}
+	assert.Greater(t, tenantID, int64(0))
+
+	// Verify "roundtrip-user" is not a subject before we add them
+	jj = postQuery(t, c, `{ tenants { id name permissions { subjects { id relation } } } }`, nil)
+	for _, tenant := range gjson.Get(jj, "tenants").Array() {
+		if tenant.Get("name").Str != "tl-tenant" {
+			continue
+		}
+		for _, s := range tenant.Get("permissions.subjects").Array() {
+			assert.NotEqual(t, "roundtrip-user", s.Get("id").Str, "roundtrip-user should not exist before add")
+		}
+	}
+
+	// Add the permission
+	postQuery(t, c, fmt.Sprintf(`mutation {
+		permission_add(type: "tenant", id: %d, input: {subject_type: "user", subject_id: "roundtrip-user", relation: "member"})
+	}`, tenantID), nil)
+
+	// Verify "roundtrip-user" now appears as a subject
+	jj = postQuery(t, c, `{ tenants { name permissions { subjects { id relation } } } }`, nil)
+	var foundAfterAdd bool
+	for _, tenant := range gjson.Get(jj, "tenants").Array() {
+		if tenant.Get("name").Str != "tl-tenant" {
+			continue
+		}
+		for _, s := range tenant.Get("permissions.subjects").Array() {
+			if s.Get("id").Str == "roundtrip-user" && s.Get("relation").Str == "member" {
+				foundAfterAdd = true
+			}
+		}
+	}
+	assert.True(t, foundAfterAdd, "roundtrip-user should appear as member after permission_add")
+
+	// Remove the permission
+	postQuery(t, c, fmt.Sprintf(`mutation {
+		permission_remove(type: "tenant", id: %d, input: {subject_type: "user", subject_id: "roundtrip-user", relation: "member"})
+	}`, tenantID), nil)
+
+	// Verify "roundtrip-user" is gone
+	jj = postQuery(t, c, `{ tenants { name permissions { subjects { id relation } } } }`, nil)
+	var foundAfterRemove bool
+	for _, tenant := range gjson.Get(jj, "tenants").Array() {
+		if tenant.Get("name").Str != "tl-tenant" {
+			continue
+		}
+		for _, s := range tenant.Get("permissions.subjects").Array() {
+			if s.Get("id").Str == "roundtrip-user" {
+				foundAfterRemove = true
+			}
+		}
+	}
+	assert.False(t, foundAfterRemove, "roundtrip-user should be gone after permission_remove")
 }
