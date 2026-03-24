@@ -475,12 +475,13 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 func loaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This is per request scoped loaders/cache
-		// Is this OK to use as a long term cache?
 		ctx := r.Context()
 		cfg := model.ForContext(ctx)
-		loaders := NewLoaders(cfg.Finder, cfg.LoaderBatchSize, cfg.LoaderStopTimeBatchSize)
-		nextCtx := context.WithValue(ctx, loadersKey, loaders)
-		r = r.WithContext(nextCtx)
+		if cfg.Finder != nil {
+			loaders := NewLoaders(cfg.Finder, cfg.LoaderBatchSize, cfg.LoaderStopTimeBatchSize)
+			ctx = context.WithValue(ctx, loadersKey, loaders)
+		}
+		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
 }
