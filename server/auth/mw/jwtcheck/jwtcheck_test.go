@@ -171,6 +171,9 @@ func TestNewJWTHandler(t *testing.T) {
 	audience := "test-audience"
 	issuer := "test-issuer"
 	keyFunc := func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return &key.PublicKey, nil
 	}
 
