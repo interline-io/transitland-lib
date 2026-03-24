@@ -6,6 +6,7 @@ import "context"
 type ObjectRef struct {
 	Type ObjectType `json:"type"`
 	ID   int64      `json:"id"`
+	Name string     `json:"name,omitempty"`
 }
 
 // ActionSet is the result of checking what a user can do on an object.

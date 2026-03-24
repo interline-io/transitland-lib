@@ -818,15 +818,32 @@ func (c *Checker) ObjectPermissions(ctx context.Context, obj authz.ObjectRef) (*
 	}
 	c.hydrateSubjectRefs(ctx, ret.Subjects)
 
-	// Hydrate name from DB
-	ret.Name = c.lookupName(ctx, obj)
-
 	// Children
 	if childType, ok := childTypeForType(obj.Type); ok {
 		childIds, _ := c.listSubjectRelations(ctx, entKey, childType, ParentRelation)
 		for _, id := range childIds {
 			ret.Children = append(ret.Children, authz.ObjectRef{Type: childType, ID: id})
 		}
+	}
+
+	// Batch hydrate names: self + parent + children
+	toHydrate := []authz.ObjectRef{obj}
+	if ret.Parent != nil {
+		toHydrate = append(toHydrate, *ret.Parent)
+	}
+	toHydrate = append(toHydrate, ret.Children...)
+	c.hydrateObjectRefs(ctx, toHydrate)
+	// Apply back
+	ret.Ref.Name = toHydrate[0].Name
+	ret.Name = toHydrate[0].Name
+	idx := 1
+	if ret.Parent != nil {
+		ret.Parent.Name = toHydrate[idx].Name
+		idx++
+	}
+	for i := range ret.Children {
+		ret.Children[i].Name = toHydrate[idx].Name
+		idx++
 	}
 
 	return ret, nil
@@ -900,24 +917,58 @@ func (c *Checker) lookupFeedIDForVersion(fvid int64) int64 {
 	return feedId
 }
 
-// lookupName fetches the display name for an object from the DB.
-func (c *Checker) lookupName(ctx context.Context, obj authz.ObjectRef) string {
-	var name string
-	var err error
-	switch obj.Type {
+// hydrateObjectRefs populates Name on a slice of ObjectRef, batched by type.
+func (c *Checker) hydrateObjectRefs(ctx context.Context, refs []authz.ObjectRef) {
+	// Group refs by type
+	byType := map[ObjectType][]int{}
+	for _, ref := range refs {
+		byType[ref.Type] = append(byType[ref.Type], int(ref.ID))
+	}
+	// Batch lookup names per type
+	names := map[ObjectType]map[int64]string{}
+	for objType, ids := range byType {
+		names[objType] = c.lookupNames(ctx, objType, ids)
+	}
+	// Apply
+	for i := range refs {
+		if m, ok := names[refs[i].Type]; ok {
+			refs[i].Name = m[refs[i].ID]
+		}
+	}
+}
+
+// lookupNames fetches display names for a batch of IDs of the same type.
+func (c *Checker) lookupNames(ctx context.Context, objType ObjectType, ids []int) map[int64]string {
+	type row struct {
+		ID   int64  `db:"id"`
+		Name string `db:"name"`
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	var table, nameCol string
+	switch objType {
 	case TenantType:
-		err = sqlx.Get(c.db, &name, "SELECT coalesce(tenant_name,'') FROM tl_tenants WHERE id = $1", obj.ID)
+		table, nameCol = "tl_tenants", "coalesce(tenant_name,'') as name"
 	case GroupType:
-		err = sqlx.Get(c.db, &name, "SELECT coalesce(group_name,'') FROM tl_groups WHERE id = $1", obj.ID)
+		table, nameCol = "tl_groups", "coalesce(group_name,'') as name"
 	case FeedType:
-		err = sqlx.Get(c.db, &name, "SELECT coalesce(name,'') FROM current_feeds WHERE id = $1", obj.ID)
+		table, nameCol = "current_feeds", "coalesce(name,'') as name"
 	case FeedVersionType:
-		err = sqlx.Get(c.db, &name, "SELECT coalesce(name,'') FROM feed_versions WHERE id = $1", obj.ID)
+		table, nameCol = "feed_versions", "coalesce(name,'') as name"
+	default:
+		return nil
 	}
-	if err != nil {
-		return ""
+	q := sq.StatementBuilder.Select("id", nameCol).From(table).Where(sq.Eq{"id": ids})
+	var rows []row
+	if err := dbutil.Select(ctx, c.db, q, &rows); err != nil {
+		return nil
 	}
-	return name
+	result := make(map[int64]string, len(rows))
+	for _, r := range rows {
+		result[r.ID] = r.Name
+	}
+	return result
 }
 
 // childTypeForType returns the child type for listing children.
@@ -1000,10 +1051,6 @@ func (c *Checker) listSubjectRelations(ctx context.Context, sub EntityKey, objec
 		ret = append(ret, v.Object.ID())
 	}
 	return ret, nil
-}
-
-func (c *Checker) getSubjectTuples(ctx context.Context, obj EntityKey, ctxtk ...TupleKey) ([]TupleKey, error) {
-	return c.fgaClient.GetObjectTuples(ctx, authz.NewTupleKey().WithSubject(obj.Type, obj.Name))
 }
 
 func (c *Checker) getObjectTuples(ctx context.Context, obj EntityKey, ctxtk ...TupleKey) ([]TupleKey, error) {
