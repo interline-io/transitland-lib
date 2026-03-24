@@ -559,6 +559,26 @@ type GbfsDockRequest struct {
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// A group that organizes feeds within a tenant
+type Group struct {
+	// Internal integer ID
+	ID int `json:"id"`
+	// Group name
+	Name string `json:"name"`
+	// Parent tenant
+	Tenant *Tenant `json:"tenant,omitempty"`
+	// Feeds assigned to this group
+	Feeds []*Feed `json:"feeds"`
+	// Authorization permissions for this group
+	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Input for saving a group
+type GroupInput struct {
+	// Group name
+	Name string `json:"name"`
+}
+
 type Itinerary struct {
 	Duration  *Duration `json:"duration"`
 	Distance  *Distance `json:"distance"`
@@ -744,6 +764,50 @@ type PathwaySetInput struct {
 	FromStop *StopSetInput `json:"from_stop,omitempty"`
 	// Set pathway destination to this stop
 	ToStop *StopSetInput `json:"to_stop,omitempty"`
+}
+
+// Input for adding or removing a permission
+type PermissionInput struct {
+	// Subject type (e.g. user, tenant, org)
+	SubjectType string `json:"subject_type"`
+	// Subject identifier
+	SubjectID string `json:"subject_id"`
+	// Relationship to grant (e.g. viewer, editor, manager, admin, member)
+	Relation string `json:"relation"`
+}
+
+// Reference to a related entity in the authorization hierarchy
+type PermissionRef struct {
+	// Entity type
+	Type string `json:"type"`
+	// Entity ID
+	ID int `json:"id"`
+	// Display name
+	Name string `json:"name"`
+}
+
+// A user or group that has been granted access to an entity
+type PermissionSubject struct {
+	// Type of subject (e.g. user, tenant, org)
+	Type string `json:"type"`
+	// Subject identifier
+	ID string `json:"id"`
+	// Display name
+	Name string `json:"name"`
+	// Relationship type (e.g. admin, member, viewer, editor, manager)
+	Relation string `json:"relation"`
+}
+
+// Authorization permissions for an entity
+type Permissions struct {
+	// Actions the current user can perform on this entity
+	Actions []string `json:"actions"`
+	// Users and groups with direct access to this entity
+	Subjects []*PermissionSubject `json:"subjects"`
+	// Parent entity in the authorization hierarchy
+	Parent *PermissionRef `json:"parent,omitempty"`
+	// Child entities in the authorization hierarchy
+	Children []*PermissionRef `json:"children"`
 }
 
 // Place name and associated operators
@@ -1037,6 +1101,14 @@ type ServiceCoversFilter struct {
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 }
 
+// Input for setting an entity's parent
+type SetParentInput struct {
+	// Parent entity type
+	ParentType string `json:"parent_type"`
+	// Parent entity ID
+	ParentID int `json:"parent_id"`
+}
+
 type Step struct {
 	Duration       *Duration `json:"duration"`
 	Distance       *Distance `json:"distance"`
@@ -1283,6 +1355,24 @@ type StopTimeFilter struct {
 	ExcludeFirst *bool `json:"exclude_first,omitempty"`
 	// Exclude the last stop_time in a trip
 	ExcludeLast *bool `json:"exclude_last,omitempty"`
+}
+
+// A tenant organization that owns groups and feeds
+type Tenant struct {
+	// Internal integer ID
+	ID int `json:"id"`
+	// Tenant name
+	Name string `json:"name"`
+	// Groups owned by this tenant
+	Groups []*Group `json:"groups"`
+	// Authorization permissions for this tenant
+	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Input for saving a tenant
+type TenantInput struct {
+	// Tenant name
+	Name string `json:"name"`
 }
 
 // Search options for trips
