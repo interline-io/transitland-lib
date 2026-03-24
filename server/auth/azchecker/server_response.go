@@ -52,10 +52,11 @@ type entityRelation struct {
 
 func subjectToEntityRelation(s authz.SubjectRef) entityRelation {
 	return entityRelation{
-		Type:     int32(s.Subject.Type),
-		Id:       s.Subject.Name,
-		Name:     s.Name,
-		Relation: int32(s.Relation),
+		Type:        int32(s.Subject.Type),
+		Id:          s.Subject.Name,
+		Name:        s.Name,
+		RefRelation: int32(s.Subject.RefRel),
+		Relation:    int32(s.Relation),
 	}
 }
 

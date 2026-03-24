@@ -515,6 +515,16 @@ func (c *Checker) SetParent(ctx context.Context, child authz.ObjectRef, parent a
 	if !ok {
 		return ErrUnauthorized
 	}
+	if exists, err := c.entityExists(ctx, child); err != nil {
+		return err
+	} else if !exists {
+		return errors.New("not found")
+	}
+	if exists, err := c.entityExists(ctx, parent); err != nil {
+		return err
+	} else if !exists {
+		return errors.New("not found")
+	}
 	tk := authz.NewTupleKey().WithSubjectID(parent.Type, parent.ID).WithObjectID(child.Type, child.ID).WithRelation(ParentRelation)
 	return c.fgaClient.SetExclusiveRelation(ctx, tk)
 }
