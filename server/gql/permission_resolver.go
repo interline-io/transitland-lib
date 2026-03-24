@@ -17,7 +17,7 @@ func (r *Resolver) Tenant() gqlout.TenantResolver { return &tenantResolver{r} }
 
 func (r *tenantResolver) Groups(ctx context.Context, obj *model.Tenant) ([]*model.Group, error) {
 	pm, err := getPermissionManager(ctx)
-	if err != nil {
+	if pm == nil || err != nil {
 		return nil, err
 	}
 	ref := authz.ObjectRef{Type: authz.TenantType, ID: int64(obj.ID)}
@@ -46,7 +46,7 @@ func (r *Resolver) Group() gqlout.GroupResolver { return &groupResolver{r} }
 
 func (r *groupResolver) Tenant(ctx context.Context, obj *model.Group) (*model.Tenant, error) {
 	pm, err := getPermissionManager(ctx)
-	if err != nil {
+	if pm == nil || err != nil {
 		return nil, err
 	}
 	ref := authz.ObjectRef{Type: authz.GroupType, ID: int64(obj.ID)}
@@ -62,7 +62,7 @@ func (r *groupResolver) Tenant(ctx context.Context, obj *model.Group) (*model.Te
 
 func (r *groupResolver) Feeds(ctx context.Context, obj *model.Group) ([]*model.Feed, error) {
 	pm, err := getPermissionManager(ctx)
-	if err != nil {
+	if pm == nil || err != nil {
 		return nil, err
 	}
 	ref := authz.ObjectRef{Type: authz.GroupType, ID: int64(obj.ID)}
@@ -168,8 +168,8 @@ func (r *mutationResolver) PermissionRemove(ctx context.Context, typeArg string,
 
 func (r *mutationResolver) PermissionSetParent(ctx context.Context, typeArg string, id int, input model.SetParentInput) (bool, error) {
 	pm, err := getPermissionManager(ctx)
-	if err != nil {
-		return false, err
+	if pm == nil || err != nil {
+		return false, errors.New("permission management not configured")
 	}
 	childType, err := authz.ObjectTypeString(typeArg)
 	if err != nil {
