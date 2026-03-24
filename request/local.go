@@ -74,6 +74,7 @@ func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) err
 	if err != nil {
 		return err
 	}
+	defer outf.Close()
 	_, err = io.Copy(outf, uploadFile)
 	return err
 }
