@@ -98,6 +98,9 @@ func (r *groupResolver) Feeds(ctx context.Context, obj *model.Group, limit *int)
 		return []*model.Feed{}, nil
 	}
 	cfg := model.ForContext(ctx)
+	if cfg.Finder == nil {
+		return []*model.Feed{}, nil
+	}
 	return cfg.Finder.FindFeeds(ctx, limit, nil, ids, nil)
 }
 

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 
+	"fmt"
+
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
@@ -43,21 +45,22 @@ func fgaTestOpts(t testing.TB) testconfig.Options {
 }
 
 // newPermTestClientFromConfig creates a GraphQL test client from an existing config.
-func newPermTestClientFromConfig(cfg model.Config, user string) *client.Client {
+func newPermTestClientFromConfig(cfg model.Config, user string, roles ...string) *client.Client {
 	srv, _ := NewServer()
 	handler := model.AddConfigAndPerms(cfg, srv)
 	handler = usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser(user, user, user+"@example.com").WithRoles("admin")
+		return authn.NewCtxUser(user, user, user+"@example.com").WithRoles(roles...)
 	})(handler)
 	return client.New(handler)
 }
 
 // newPermTestClient creates a GraphQL test client with a real azchecker backed by
-// in-memory OpenFGA and the test database.
+// in-memory OpenFGA and the test database. The user gets the "admin" role by
+// default, matching the existing test convention.
 func newPermTestClient(t testing.TB, user string) *client.Client {
 	t.Helper()
 	cfg := testconfig.Config(t, fgaTestOpts(t))
-	return newPermTestClientFromConfig(cfg, user)
+	return newPermTestClientFromConfig(cfg, user, "admin")
 }
 
 func postQuery(t testing.TB, c *client.Client, query string, vars map[string]interface{}) string {
@@ -273,8 +276,9 @@ func TestPermissionResolver_Mutations(t *testing.T) {
 		}
 		assert.Greater(t, groupID, int64(0))
 
+		// Use "group" (the display alias) instead of "org" to verify the alias works
 		jj = postQuery(t, c, `mutation($groupId: Int!, $tenantId: Int!) {
-			permission_set_parent(type: "org", id: $groupId, input: {parent_type: "tenant", parent_id: $tenantId})
+			permission_set_parent(type: "group", id: $groupId, input: {parent_type: "tenant", parent_id: $tenantId})
 		}`, map[string]interface{}{"groupId": groupID, "tenantId": tenantID})
 		assert.Equal(t, true, gjson.Get(jj, "permission_set_parent").Bool())
 	})
@@ -362,5 +366,42 @@ func TestPermissionResolver_NilPermissionManager(t *testing.T) {
 		// permissions should be null when no PermissionManager is configured
 		p := feeds[0].Get("permissions")
 		assert.True(t, p.Type == gjson.Null || !p.Exists(), "expected permissions to be null")
+	})
+}
+
+func TestPermissionResolver_UnauthorizedUser(t *testing.T) {
+	// Both clients share the same config (same FGA store and DB) so authorization
+	// tuples are visible across users. Only the authn user identity differs.
+	cfg := testconfig.Config(t, fgaTestOpts(t))
+	adminClient := newPermTestClientFromConfig(cfg, "tl-tenant-admin")
+	nobodyClient := newPermTestClientFromConfig(cfg, "nobody", "testrole")
+
+	t.Run("tenants returns empty", func(t *testing.T) {
+		jj := postQuery(t, nobodyClient, `{ tenants { id name } }`, nil)
+		tenants := gjson.Get(jj, "tenants").Array()
+		assert.Equal(t, 0, len(tenants))
+	})
+
+	t.Run("groups returns empty", func(t *testing.T) {
+		jj := postQuery(t, nobodyClient, `{ groups { id name } }`, nil)
+		groups := gjson.Get(jj, "groups").Array()
+		assert.Equal(t, 0, len(groups))
+	})
+
+	t.Run("mutation permission_add unauthorized", func(t *testing.T) {
+		// Look up a real tenant ID via the admin client
+		jj := postQuery(t, adminClient, `{ tenants { id name } }`, nil)
+		var tenantID int64
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str == "tl-tenant" {
+				tenantID = tenant.Get("id").Int()
+			}
+		}
+		assert.Greater(t, tenantID, int64(0))
+
+		// Unauthorized user should be denied
+		postQueryExpectError(t, nobodyClient, fmt.Sprintf(`mutation {
+			permission_add(type: "tenant", id: %d, input: {subject_type: "user", subject_id: "someone", relation: "member"})
+		}`, tenantID))
 	})
 }

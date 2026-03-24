@@ -96,6 +96,7 @@ var ObjectType_value = map[string]int32{
 	"empty_object": 0,
 	"tenant":       1,
 	"org":          2,
+	"group":        2, // alias for "org" — the GraphQL API exposes "group"
 	"feed":         3,
 	"feed_version": 4,
 	"user":         5,
