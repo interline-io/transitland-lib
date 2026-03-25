@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	keyfunc "github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
@@ -39,22 +38,9 @@ func JWTMiddleware(jwtAudience string, jwtIssuer string, pubKeyPath string, useE
 
 // JWTMiddlewareOIDC checks and pulls user information from JWT in Authorization header.
 // The JWKS keys are discovered from the issuer's OpenID Connect discovery endpoint.
-func JWTMiddlewareOIDC(jwtAudience string, jwtIssuer string, useEmailAsId bool) (func(http.Handler) http.Handler, error) {
-	jwksURL, err := discoverJWKSURL(jwtIssuer)
-	if err != nil {
-		return nil, fmt.Errorf("OIDC discovery failed: %w", err)
-	}
-	kf, err := keyfunc.NewDefault([]string{jwksURL})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create JWKS keyfunc: %w", err)
-	}
-	return newJWTHandler(kf.Keyfunc, jwtAudience, jwtIssuer, useEmailAsId), nil
-}
-
-// JWTMiddlewareOIDCCtx is like JWTMiddlewareOIDC but accepts a context that controls
-// the lifetime of the background JWKS refresh goroutine.
-func JWTMiddlewareOIDCCtx(ctx context.Context, jwtAudience string, jwtIssuer string, useEmailAsId bool) (func(http.Handler) http.Handler, error) {
-	jwksURL, err := discoverJWKSURLWithContext(ctx, jwtIssuer)
+// The context controls the lifetime of the background JWKS refresh goroutine.
+func JWTMiddlewareOIDC(ctx context.Context, jwtAudience string, jwtIssuer string, useEmailAsId bool) (func(http.Handler) http.Handler, error) {
+	jwksURL, err := discoverJWKSURL(ctx, jwtIssuer)
 	if err != nil {
 		return nil, fmt.Errorf("OIDC discovery failed: %w", err)
 	}
@@ -66,13 +52,7 @@ func JWTMiddlewareOIDCCtx(ctx context.Context, jwtAudience string, jwtIssuer str
 }
 
 // discoverJWKSURL fetches the OIDC discovery document from the issuer and returns the jwks_uri.
-func discoverJWKSURL(issuer string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	return discoverJWKSURLWithContext(ctx, issuer)
-}
-
-func discoverJWKSURLWithContext(ctx context.Context, issuer string) (string, error) {
+func discoverJWKSURL(ctx context.Context, issuer string) (string, error) {
 	discoveryURL := strings.TrimRight(issuer, "/") + "/.well-known/openid-configuration"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL, nil)
 	if err != nil {

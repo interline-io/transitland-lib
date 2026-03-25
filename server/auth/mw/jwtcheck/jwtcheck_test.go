@@ -35,7 +35,7 @@ func signToken(t *testing.T, key *rsa.PrivateKey, claims jwt.Claims) string {
 	return s
 }
 
-func TestDiscoverJWKSURLWithContext(t *testing.T) {
+func TestDiscoverJWKSURL(t *testing.T) {
 	t.Run("valid discovery document", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/.well-known/openid-configuration", r.URL.Path)
@@ -44,7 +44,7 @@ func TestDiscoverJWKSURLWithContext(t *testing.T) {
 			})
 		}))
 		defer srv.Close()
-		url, err := discoverJWKSURLWithContext(context.Background(), srv.URL)
+		url, err := discoverJWKSURL(context.Background(), srv.URL)
 		assert.NoError(t, err)
 		assert.Equal(t, "https://example.com/.well-known/jwks.json", url)
 	})
@@ -54,7 +54,7 @@ func TestDiscoverJWKSURLWithContext(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]string{"issuer": "https://example.com"})
 		}))
 		defer srv.Close()
-		_, err := discoverJWKSURLWithContext(context.Background(), srv.URL)
+		_, err := discoverJWKSURL(context.Background(), srv.URL)
 		assert.ErrorContains(t, err, "missing jwks_uri")
 	})
 
@@ -63,7 +63,7 @@ func TestDiscoverJWKSURLWithContext(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 		}))
 		defer srv.Close()
-		_, err := discoverJWKSURLWithContext(context.Background(), srv.URL)
+		_, err := discoverJWKSURL(context.Background(), srv.URL)
 		assert.ErrorContains(t, err, "returned status 404")
 		assert.ErrorContains(t, err, srv.URL)
 	})
@@ -73,14 +73,14 @@ func TestDiscoverJWKSURLWithContext(t *testing.T) {
 			w.Write([]byte("not json"))
 		}))
 		defer srv.Close()
-		_, err := discoverJWKSURLWithContext(context.Background(), srv.URL)
+		_, err := discoverJWKSURL(context.Background(), srv.URL)
 		assert.ErrorContains(t, err, "failed to parse")
 	})
 
 	t.Run("respects context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // cancel immediately
-		_, err := discoverJWKSURLWithContext(ctx, "http://localhost:0")
+		_, err := discoverJWKSURL(ctx, "http://localhost:0")
 		assert.Error(t, err)
 	})
 }
