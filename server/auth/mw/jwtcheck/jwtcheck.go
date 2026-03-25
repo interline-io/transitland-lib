@@ -36,15 +36,38 @@ func JWTMiddleware(jwtAudience string, jwtIssuer string, pubKeyPath string, useE
 	return newJWTHandler(keyFunc, jwtAudience, jwtIssuer, useEmailAsId), nil
 }
 
+// OIDCOption configures JWTMiddlewareOIDC behavior.
+type OIDCOption func(*oidcConfig)
+
+type oidcConfig struct {
+	skipJWKValidation bool
+}
+
+// WithSkipJWKValidation skips JWK structural validation (e.g. x5t thumbprint checks).
+// Some providers serve JWKS with incorrectly encoded x5t values that fail validation.
+// JWT signature verification still occurs at token parse time.
+// See https://github.com/MicahParks/keyfunc/issues/128
+func WithSkipJWKValidation() OIDCOption {
+	return func(c *oidcConfig) {
+		c.skipJWKValidation = true
+	}
+}
+
 // JWTMiddlewareOIDC checks and pulls user information from JWT in Authorization header.
 // The JWKS keys are discovered from the issuer's OpenID Connect discovery endpoint.
 // The context controls the lifetime of the background JWKS refresh goroutine.
-func JWTMiddlewareOIDC(ctx context.Context, jwtAudience string, jwtIssuer string, useEmailAsId bool) (func(http.Handler) http.Handler, error) {
+func JWTMiddlewareOIDC(ctx context.Context, jwtAudience string, jwtIssuer string, useEmailAsId bool, opts ...OIDCOption) (func(http.Handler) http.Handler, error) {
+	var cfg oidcConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
 	jwksURL, err := discoverJWKSURL(ctx, jwtIssuer)
 	if err != nil {
 		return nil, fmt.Errorf("OIDC discovery failed: %w", err)
 	}
-	kf, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
+	kf, err := keyfunc.NewDefaultOverrideCtx(ctx, []string{jwksURL}, keyfunc.Override{
+		ValidationSkipAll: cfg.skipJWKValidation,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JWKS keyfunc: %w", err)
 	}
