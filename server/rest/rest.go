@@ -54,7 +54,10 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	// Redirect root to OpenAPI documentation
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		cfg := model.ForContext(r.Context())
-		http.Redirect(w, r, cfg.RestPrefix+"/openapi.json", http.StatusMovedPermanently)
+		// chi does not strip r.URL.Path; it contains the full path (e.g. /rest/)
+		// Use it to build the absolute redirect URL, consistent with how pagination links work
+		path := strings.TrimRight(r.URL.Path, "/")
+		http.Redirect(w, r, cfg.RestPrefix+path+"/openapi.json", http.StatusMovedPermanently)
 	})
 
 	// OpenAPI Schema endpoint
