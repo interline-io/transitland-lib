@@ -13,7 +13,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { feeds {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "hopelink-flex", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name:   "basic fields",
@@ -88,7 +88,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where spec=gtfs",
 			query:        `query { feeds(where:{spec:[GTFS]}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "hopelink-flex", "BA", "HA", "test", "EX"},
 		},
 		{
 			name:         "where spec=gtfs-rt",
@@ -106,13 +106,13 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where fetch_error=false",
 			query:        `query { feeds(where:{fetch_error:false}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "hopelink-flex", "BA", "HA", "EX"},
 		},
 		{
 			name:         "where import_status=success",
 			query:        `query { feeds(where:{import_status:SUCCESS}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "hopelink-flex", "BA", "HA", "EX"},
 		},
 		{
 			name:         "where import_status=in_progress", // TODO: mock an in-progress import

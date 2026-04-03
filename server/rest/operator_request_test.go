@@ -12,7 +12,7 @@ func TestOperatorRequest(t *testing.T) {
 			name:         "basic",
 			h:            OperatorRequest{},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-caltrain", "o-unknown-c~tran", "o-9q9-bayarearapidtransit", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
+			expectSelect: []string{"o-9q9-caltrain", "o-unknown-c~tran", "o-unknown-hopelinktransportation", "o-9q9-bayarearapidtransit", "o-dhv-hillsborougharearegionaltransit", "o-9qs-demotransitauthority"},
 		},
 		{
 			name:         "feed_onestop_id",
@@ -153,7 +153,7 @@ func TestOperatorRequest_Pagination(t *testing.T) {
 			name:         "limit:1000",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 1000}},
 			selector:     "operators.#.onestop_id",
-			expectLength: 5,
+			expectLength: 6,
 		},
 	}
 	for _, tc := range testcases {

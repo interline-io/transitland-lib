@@ -21,7 +21,7 @@ func TestAgencyResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { agencies {agency_id}}`,
 			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", ""},
+			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "4982", "BART", ""},
 		},
 		{
 			name:   "basic fields",
@@ -363,7 +363,7 @@ func TestAgencyResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
 			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"CT", "BA", "HA", "ctran-flex"},
+			selectExpect: []string{"CT", "BA", "HA", "hopelink-flex", "ctran-flex"},
 		},
 		{
 			name: "focus basic: East coast focus returns FL agency before CA agencies",
@@ -375,7 +375,7 @@ func TestAgencyResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
 			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"HA", "BA", "CT", "ctran-flex"},
+			selectExpect: []string{"HA", "BA", "CT", "hopelink-flex", "ctran-flex"},
 		},
 		{
 			name: "focus with pagination: maintains ordering",

@@ -17,7 +17,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "ctran-flex", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			expectSelect: []string{"CT", "ctran-flex", "hopelink-flex", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name:         "onestop_id",
@@ -38,7 +38,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{Spec: "gtfs"},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "ctran-flex", "BA", "HA", "test", "EX"},
+			expectSelect: []string{"CT", "ctran-flex", "hopelink-flex", "BA", "HA", "test", "EX"},
 		},
 		{
 			name:         "spec lower case dash",
@@ -67,7 +67,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{FetchError: "false"},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "ctran-flex", "BA", "HA", "EX"},
+			expectSelect: []string{"CT", "ctran-flex", "hopelink-flex", "BA", "HA", "EX"},
 		},
 		{
 			name:         "tags test=ok",

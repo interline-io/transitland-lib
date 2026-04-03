@@ -18,7 +18,7 @@ func TestAgencyRequest(t *testing.T) {
 			name:         "basic",
 			h:            AgencyRequest{},
 			selector:     "agencies.#.agency_id",
-			expectSelect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", ""},
+			expectSelect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "4982", "BART", ""},
 		},
 		// this used to be caltrain but now bart is imported first.
 		{
