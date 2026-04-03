@@ -1179,6 +1179,8 @@ type ComplexityRoot struct {
 		Frequencies          func(childComplexity int, limit *int) int
 		ID                   func(childComplexity int) int
 		Route                func(childComplexity int) int
+		SafeDurationFactor   func(childComplexity int) int
+		SafeDurationOffset   func(childComplexity int) int
 		ScheduleRelationship func(childComplexity int) int
 		Shape                func(childComplexity int) int
 		StopPatternID        func(childComplexity int) int
@@ -7617,6 +7619,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Trip.Route(childComplexity), true
 
+	case "Trip.safe_duration_factor":
+		if e.complexity.Trip.SafeDurationFactor == nil {
+			break
+		}
+
+		return e.complexity.Trip.SafeDurationFactor(childComplexity), true
+
+	case "Trip.safe_duration_offset":
+		if e.complexity.Trip.SafeDurationOffset == nil {
+			break
+		}
+
+		return e.complexity.Trip.SafeDurationOffset(childComplexity), true
+
 	case "Trip.schedule_relationship":
 		if e.complexity.Trip.ScheduleRelationship == nil {
 			break
@@ -9497,6 +9513,10 @@ type Trip {
   wheelchair_accessible: Int
   "GTFS trips.bikes_allowed"
   bikes_allowed: Int
+  "GTFS trips.safe_duration_factor — multiplier applied to driving duration for safe travel time estimate"
+  safe_duration_factor: Float
+  "GTFS trips.safe_duration_offset — fixed offset in seconds added to driving duration for safe travel time estimate"
+  safe_duration_offset: Float
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
   "Calendar for this trip"
@@ -23569,6 +23589,10 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "safe_duration_factor":
+				return ec.fieldContext_Trip_safe_duration_factor(ctx, field)
+			case "safe_duration_offset":
+				return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -27025,6 +27049,10 @@ func (ec *executionContext) fieldContext_FlexStopTime_trip(_ context.Context, fi
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "safe_duration_factor":
+				return ec.fieldContext_Trip_safe_duration_factor(ctx, field)
+			case "safe_duration_offset":
+				return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -42170,6 +42198,10 @@ func (ec *executionContext) fieldContext_Query_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "safe_duration_factor":
+				return ec.fieldContext_Trip_safe_duration_factor(ctx, field)
+			case "safe_duration_offset":
+				return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -44326,6 +44358,10 @@ func (ec *executionContext) fieldContext_Route_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "safe_duration_factor":
+				return ec.fieldContext_Trip_safe_duration_factor(ctx, field)
+			case "safe_duration_offset":
+				return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -46655,6 +46691,10 @@ func (ec *executionContext) fieldContext_RouteStopPattern_trips(ctx context.Cont
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "safe_duration_factor":
+				return ec.fieldContext_Trip_safe_duration_factor(ctx, field)
+			case "safe_duration_offset":
+				return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -52203,6 +52243,10 @@ func (ec *executionContext) fieldContext_StopTime_trip(_ context.Context, field 
 				return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 			case "bikes_allowed":
 				return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+			case "safe_duration_factor":
+				return ec.fieldContext_Trip_safe_duration_factor(ctx, field)
+			case "safe_duration_offset":
+				return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
 			case "calendar":
@@ -53409,6 +53453,88 @@ func (ec *executionContext) fieldContext_Trip_bikes_allowed(_ context.Context, f
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Trip_safe_duration_factor(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Trip_safe_duration_factor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SafeDurationFactor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Float)
+	fc.Result = res
+	return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Trip_safe_duration_factor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Trip",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Trip_safe_duration_offset(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Trip_safe_duration_offset(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SafeDurationOffset, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(tt.Float)
+	fc.Result = res
+	return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Trip_safe_duration_offset(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Trip",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
 		},
 	}
 	return fc, nil
@@ -72706,6 +72832,10 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Trip_wheelchair_accessible(ctx, field, obj)
 		case "bikes_allowed":
 			out.Values[i] = ec._Trip_bikes_allowed(ctx, field, obj)
+		case "safe_duration_factor":
+			out.Values[i] = ec._Trip_safe_duration_factor(ctx, field, obj)
+		case "safe_duration_offset":
+			out.Values[i] = ec._Trip_safe_duration_offset(ctx, field, obj)
 		case "stop_pattern_id":
 			out.Values[i] = ec._Trip_stop_pattern_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
