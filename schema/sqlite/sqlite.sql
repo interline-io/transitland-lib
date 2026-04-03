@@ -264,6 +264,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_trips" (
   "feed_version_id" integer NOT NULL,
   "journey_pattern_id" integer,
   "journey_pattern_offset" integer,
+  "safe_duration_factor" real,
+  "safe_duration_offset" real,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id),

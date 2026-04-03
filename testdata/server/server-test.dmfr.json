@@ -51,6 +51,13 @@
       }
     },
     {
+      "spec": "gtfs",
+      "id": "hopelink-flex",
+      "urls": {
+        "static_current": "file://testdata/gtfs-external/hopelink-flex.zip"
+      }
+    },
+    {
       "spec": "gbfs",
       "id": "test-gbfs",
       "urls": {

@@ -411,3 +411,38 @@ func TestTripResolver_FlexStopTimes(t *testing.T) {
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)
 }
+
+func TestTripResolver_SafeDuration(t *testing.T) {
+	hopelinkFlexSha1 := "40b1560b9767ca4ee5d9cc3f70947822e0e346be"
+	hopelinkFlexTripID := "t_6143906_b_80444_tn_0"
+	testcases := []testcase{
+		{
+			name: "trip safe duration fields",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						trip_id
+						safe_duration_factor
+						safe_duration_offset
+					}
+				}
+			}`,
+			vars:   hw{"sha1": hopelinkFlexSha1, "trip_id": hopelinkFlexTripID},
+			expect: `{"feed_versions":[{"trips":[{"trip_id":"t_6143906_b_80444_tn_0","safe_duration_factor":1.75,"safe_duration_offset":900}]}]}`,
+		},
+		{
+			name: "safe duration fields null for non-flex trip",
+			query: `query($trip_id: String!) {
+				trips(where:{trip_id:$trip_id}) {
+					trip_id
+					safe_duration_factor
+					safe_duration_offset
+				}
+			}`,
+			vars:   hw{"trip_id": "3850526WKDY"},
+			expect: `{"trips":[{"trip_id":"3850526WKDY","safe_duration_factor":null,"safe_duration_offset":null}]}`,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}

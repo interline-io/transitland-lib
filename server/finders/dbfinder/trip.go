@@ -124,6 +124,8 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		"gtfs_trips.stop_pattern_id",
 		"gtfs_trips.journey_pattern_id",
 		"gtfs_trips.journey_pattern_offset",
+		"gtfs_trips.safe_duration_factor",
+		"gtfs_trips.safe_duration_offset",
 		"current_feeds.id AS feed_id",
 		"current_feeds.onestop_id AS feed_onestop_id",
 		"feed_versions.sha1 AS feed_version_sha1",
