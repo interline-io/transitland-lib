@@ -255,7 +255,7 @@ func TestAgencyRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional no",
 			h:    AgencyRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "agencies.#.agency_id",
-			expectSelect: []string{"BART"},
+			expectSelect: []string{"4982", "BART"},
 		},
 		{
 			name: "license:share_alike_optional exclude_no",
@@ -270,7 +270,7 @@ func TestAgencyRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed no",
 			h:    AgencyRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "agencies.#.agency_id",
-			expectSelect: []string{"BART"},
+			expectSelect: []string{"4982", "BART"},
 		},
 		{
 			name: "license:commercial_use_allowed exclude_no",
@@ -285,7 +285,7 @@ func TestAgencyRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product no",
 			h:    AgencyRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "agencies.#.agency_id",
-			expectSelect: []string{"BART"},
+			expectSelect: []string{"4982", "BART"},
 		},
 		{
 			name: "license:create_derived_product exclude_no",

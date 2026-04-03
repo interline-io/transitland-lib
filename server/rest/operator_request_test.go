@@ -175,7 +175,7 @@ func TestOperatorRequest_License(t *testing.T) {
 			name:         "license:share_alike_optional no",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-bayarearapidtransit"},
+			expectSelect: []string{"o-unknown-hopelinktransportation", "o-9q9-bayarearapidtransit"},
 		},
 		{
 			name:         "license:share_alike_optional exclude_no",
@@ -193,7 +193,7 @@ func TestOperatorRequest_License(t *testing.T) {
 			name:         "license:commercial_use_allowed no",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-bayarearapidtransit"},
+			expectSelect: []string{"o-unknown-hopelinktransportation", "o-9q9-bayarearapidtransit"},
 		},
 		{
 			name:         "license:commercial_use_allowed exclude_no",
@@ -211,7 +211,7 @@ func TestOperatorRequest_License(t *testing.T) {
 			name:         "license:create_derived_product no",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}},
 			selector:     "operators.#.onestop_id",
-			expectSelect: []string{"o-9q9-bayarearapidtransit"},
+			expectSelect: []string{"o-unknown-hopelinktransportation", "o-9q9-bayarearapidtransit"},
 		},
 		{
 			name:         "license:create_derived_product exclude_no",

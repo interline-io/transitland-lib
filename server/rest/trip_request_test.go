@@ -270,7 +270,7 @@ func TestTripRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional no",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "trips.#.trip_id",
-			expectLength: 2525,
+			expectLength: 2526,
 		},
 		{
 			name: "license:share_alike_optional exclude_no",
@@ -285,7 +285,7 @@ func TestTripRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed no",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "trips.#.trip_id",
-			expectLength: 2525,
+			expectLength: 2526,
 		},
 		{
 			name: "license:commercial_use_allowed exclude_no",
@@ -300,7 +300,7 @@ func TestTripRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product no",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "trips.#.trip_id",
-			expectLength: 2525,
+			expectLength: 2526,
 		},
 		{
 			name: "license:create_derived_product exclude_no",

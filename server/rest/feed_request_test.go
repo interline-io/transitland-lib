@@ -190,7 +190,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"BA"},
+			expectSelect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name: "license:share_alike_optional exclude_no",
@@ -205,7 +205,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"BA"},
+			expectSelect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name: "license:commercial_use_allowed exclude_no",
@@ -220,7 +220,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"BA"},
+			expectSelect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name: "license:create_derived_product exclude_no",

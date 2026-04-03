@@ -219,7 +219,7 @@ func TestRouteRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional no",
 			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "routes.#.route_id",
-			expectLength: 6,
+			expectLength: 7,
 		},
 		{
 			name: "license:share_alike_optional exclude_no",
@@ -234,7 +234,7 @@ func TestRouteRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed no",
 			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "routes.#.route_id",
-			expectLength: 6,
+			expectLength: 7,
 		},
 		{
 			name: "license:commercial_use_allowed exclude_no",
@@ -249,7 +249,7 @@ func TestRouteRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product no",
 			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "routes.#.route_id",
-			expectLength: 6,
+			expectLength: 7,
 		},
 		{
 			name: "license:create_derived_product exclude_no",

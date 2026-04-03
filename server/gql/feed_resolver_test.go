@@ -299,7 +299,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"share_alike_optional": "NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA"},
+			selectExpect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name:         "license filter: share_alike_optional = unknown",
@@ -328,7 +328,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"create_derived_product": "NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA"},
+			selectExpect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name:         "license filter: create_derived_product = unknown",
@@ -357,7 +357,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"commercial_use_allowed": "NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA"},
+			selectExpect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name:         "license filter: commercial_use_allowed = unknown",
@@ -386,7 +386,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"redistribution_allowed": "NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA"},
+			selectExpect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name:         "license filter: redistribution_allowed = unknown",
@@ -416,7 +416,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"use_without_attribution": "NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA"},
+			selectExpect: []string{"hopelink-flex", "BA"},
 		},
 		{
 			name:         "license filter: use_without_attribution = unknown",
