@@ -388,8 +388,10 @@ func TestPermissionResolver_NilPermissionManager(t *testing.T) {
 	})(handler)
 	c := client.New(handler.(http.Handler))
 
-	t.Run("tenants returns error", func(t *testing.T) {
-		postQueryExpectError(t, c, `{ tenants { id } }`)
+	t.Run("tenants returns empty list", func(t *testing.T) {
+		jj := postQuery(t, c, `{ tenants { id } }`, nil)
+		tenants := gjson.Get(jj, "tenants").Array()
+		assert.Equal(t, 0, len(tenants))
 	})
 
 	t.Run("feed permissions returns null", func(t *testing.T) {

@@ -125,7 +125,7 @@ func (r *feedVersionResolver) Permissions(ctx context.Context, obj *model.FeedVe
 func (r *queryResolver) Tenants(ctx context.Context, limit *int) ([]*model.Tenant, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
-		return nil, errors.New("permissions not configured")
+		return nil, nil
 	}
 	refs, err := pm.ListObjects(ctx, authz.TenantType)
 	if err != nil {
@@ -148,7 +148,7 @@ func (r *queryResolver) Tenants(ctx context.Context, limit *int) ([]*model.Tenan
 func (r *queryResolver) Groups(ctx context.Context, limit *int) ([]*model.Group, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
-		return nil, errors.New("permissions not configured")
+		return nil, nil
 	}
 	refs, err := pm.ListObjects(ctx, authz.GroupType)
 	if err != nil {
