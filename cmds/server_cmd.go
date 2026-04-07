@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"strings"
 	"time"
 	_ "time/tzdata"
 
@@ -241,35 +240,12 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// GraphQL Playground
 	root.Handle("/", playground.Handler("GraphQL playground", "/query"))
 
-	// WebSocket router — same config/auth middleware but no response writer wrapping
-	wsRoot := chi.NewRouter()
-	wsRoot.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"content-type", "apikey", "authorization"},
-		AllowCredentials: true,
-	}))
-	wsRoot.Use(model.AddConfig(cfg))
-	wsRoot.Use(usercheck.AdminDefaultMiddleware("admin"))
-	wsRoot.Use(log.RequestIDMiddleware)
-	wsRoot.Use(model.AddPerms(cfg.Checker))
-	wsRoot.Mount("/query", graphqlServer)
-
 	// Start server
 	timeOut := time.Duration(cmd.Timeout) * time.Second
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cmd.Port)
 	log.For(ctx).Info().Msgf("Listening on: %s", addr)
-	// Bypass timeout handler and response-writer-wrapping middleware for WebSocket upgrades
-	timeoutHandler := http.TimeoutHandler(root, timeOut, "timeout")
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
-			wsRoot.ServeHTTP(w, r)
-		} else {
-			timeoutHandler.ServeHTTP(w, r)
-		}
-	})
 	srv := &http.Server{
-		Handler:      handler,
+		Handler:      wsAwareTimeout(root, timeOut),
 		Addr:         addr,
 		WriteTimeout: 2 * timeOut,
 		ReadTimeout:  2 * timeOut,
@@ -285,4 +261,20 @@ type globalAdminChecker struct {
 
 func (c *globalAdminChecker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
 	return true, nil
+}
+
+// wsAwareTimeout wraps the handler with http.TimeoutHandler for normal HTTP requests,
+// but bypasses the timeout for WebSocket upgrades. WebSocket connections are long-lived
+// and would be killed by the timeout handler. The timeout handler also wraps the
+// ResponseWriter in a way that doesn't support Hijack(), which is required for the
+// WebSocket upgrade handshake.
+func wsAwareTimeout(h http.Handler, dt time.Duration) http.Handler {
+	timeoutHandler := http.TimeoutHandler(h, dt, "timeout")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Upgrade") != "" {
+			h.ServeHTTP(w, r)
+		} else {
+			timeoutHandler.ServeHTTP(w, r)
+		}
+	})
 }
