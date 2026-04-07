@@ -871,7 +871,11 @@ func dbTupleLookup(t testing.TB, dbx sqlx.Ext, tk TupleKey) TupleKey {
 	return tk
 }
 
-func ekLookup(dbx sqlx.Ext, tk TupleKey) (TupleKey, bool, error) {
+// EKLookup resolves symbolic entity names in a TupleKey to database IDs.
+// For example, a FeedType entity with name "CT" is looked up in current_feeds
+// and replaced with its integer ID. Returns the resolved tuple, whether both
+// sides were found, and any error.
+func EKLookup(dbx sqlx.Ext, tk TupleKey) (TupleKey, bool, error) {
 	var err error
 	var found1 bool
 	var found2 bool

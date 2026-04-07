@@ -113,7 +113,11 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 			}
 		}
 		for _, tk := range opts.FGAModelTuples {
-			if fgaErr := fgaClient.WriteTuple(ctx, tk); fgaErr != nil {
+			ltk, _, lookupErr := azchecker.EKLookup(db, tk)
+			if lookupErr != nil {
+				t.Fatal(lookupErr)
+			}
+			if fgaErr := fgaClient.WriteTuple(ctx, ltk); fgaErr != nil {
 				t.Fatal(fgaErr)
 			}
 		}
