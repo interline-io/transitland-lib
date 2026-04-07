@@ -64,6 +64,13 @@ type PermissionManager interface {
 // operations for managing tenants and groups. These are not expressible
 // through the generic permission interface because they create/update
 // database entities, not just authorization tuples.
+//
+// Implementations that expose user search (e.g., for assigning users to
+// tenants/groups) must handle visibility scoping in the UserProvider layer.
+// The GraphQL resolvers gate access via can_edit_members but do not filter
+// results — the UserProvider is responsible for limiting which users are
+// returned based on deployment-specific rules (e.g., Auth0 organization
+// boundaries, tenant membership, etc.).
 type AdminManager interface {
 	PermissionManager
 	TenantSave(ctx context.Context, req *TenantSaveRequest) (*TenantSaveResponse, error)

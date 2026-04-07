@@ -11,6 +11,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
+	"github.com/interline-io/transitland-lib/server/auth/fga"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
@@ -1793,16 +1794,19 @@ func checkActionsToMap(v []Action) map[string]bool {
 func newTestChecker(t testing.TB, url string, testData []testCase) *Checker {
 	ctx := context.Background()
 	dbx := testutil.MustOpenTestDB(t)
-	cfg := CheckerConfig{
-		FGAEndpoint:      url,
-		FGALoadModelFile: testdata.Path("server/authz/tls.json"),
-		GlobalAdmin:      "global_admin",
-	}
 
-	checker, err := NewCheckerFromConfig(ctx, cfg, dbx)
+	fgaClient, err := fga.NewFGAClient(url, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := fgaClient.CreateStore(ctx, "test"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fgaClient.CreateModel(ctx, testdata.Path("server/authz/tls.json")); err != nil {
+		t.Fatal(err)
+	}
+
+	checker := NewCheckerFromConfig(CheckerConfig{GlobalAdmin: "global_admin"}, nil, fgaClient, dbx)
 
 	// Add test data
 	for _, tc := range testData {
