@@ -77,7 +77,7 @@ func (r *subscriptionResolver) collectVehiclePositions(ctx context.Context, cfg 
 			if mvp == nil {
 				continue
 			}
-			if !matchesFilter(mvp, vp, where) {
+			if !matchesFilter(mvp, where) {
 				continue
 			}
 			result = append(result, mvp)
@@ -172,7 +172,7 @@ func convertVehiclePosition(vp *pb.VehiclePosition, feedOnestopID string) *model
 	return mvp
 }
 
-func matchesFilter(mvp *model.VehiclePosition, vp *pb.VehiclePosition, where *model.VehiclePositionFilter) bool {
+func matchesFilter(mvp *model.VehiclePosition, where *model.VehiclePositionFilter) bool {
 	if where == nil {
 		return true
 	}
@@ -186,17 +186,6 @@ func matchesFilter(mvp *model.VehiclePosition, vp *pb.VehiclePosition, where *mo
 			return false
 		}
 	}
-
-	// Route filter
-	if len(where.RouteIds) > 0 {
-		if vp.GetTrip() == nil || !containsString(where.RouteIds, vp.GetTrip().GetRouteId()) {
-			return false
-		}
-	}
-
-	// Agency filter — match via route_id is not possible without DB lookup,
-	// so for now agency_ids filters on the feed level only.
-	// A future enhancement could join against GTFS static data.
 
 	return true
 }

@@ -9000,10 +9000,6 @@ input VehiclePositionFilter {
   bbox: BoundingBox
   "Filter by feed OnestopIDs"
   feed_onestop_ids: [String!]
-  "Filter by agency IDs"
-  agency_ids: [String!]
-  "Filter by route IDs"
-  route_ids: [String!]
 }
 
 """Result of entity delete operation"""
@@ -62832,7 +62828,7 @@ func (ec *executionContext) unmarshalInputVehiclePositionFilter(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"bbox", "feed_onestop_ids", "agency_ids", "route_ids"}
+	fieldsInOrder := [...]string{"bbox", "feed_onestop_ids"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -62853,20 +62849,6 @@ func (ec *executionContext) unmarshalInputVehiclePositionFilter(ctx context.Cont
 				return it, err
 			}
 			it.FeedOnestopIds = data
-		case "agency_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agency_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AgencyIds = data
-		case "route_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.RouteIds = data
 		}
 	}
 

@@ -1476,10 +1476,6 @@ type VehiclePositionFilter struct {
 	Bbox *BoundingBox `json:"bbox,omitempty"`
 	// Filter by feed OnestopIDs
 	FeedOnestopIds []string `json:"feed_onestop_ids,omitempty"`
-	// Filter by agency IDs
-	AgencyIds []string `json:"agency_ids,omitempty"`
-	// Filter by route IDs
-	RouteIds []string `json:"route_ids,omitempty"`
 }
 
 type Waypoint struct {

@@ -147,10 +147,6 @@ input VehiclePositionFilter {
   bbox: BoundingBox
   "Filter by feed OnestopIDs"
   feed_onestop_ids: [String!]
-  "Filter by agency IDs"
-  agency_ids: [String!]
-  "Filter by route IDs"
-  route_ids: [String!]
 }
 
 """Result of entity delete operation"""
