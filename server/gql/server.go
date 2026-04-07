@@ -36,6 +36,7 @@ func NewServer(opts ...ServerOption) (http.Handler, error) {
 	srv.AddTransport(transport.MultipartForm{})
 	srv.AddTransport(transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
+		InitTimeout:           30 * time.Second,
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
