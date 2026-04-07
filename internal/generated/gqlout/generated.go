@@ -10390,8 +10390,8 @@ type VehiclePosition {
   speed: Float
   "GTFS-RT VehiclePosition current stop sequence in trip"
   current_stop_sequence: Int
-  "GTFS-RT VehiclePosition current stop in trip"
-  stop_id: Stop
+  "GTFS-RT VehiclePosition current stop ID"
+  stop_id: String
   "GTFS-RT VehiclePosition current status string"
   current_status: String
   "GTFS-RT VehiclePosition timestamp"
@@ -57015,9 +57015,9 @@ func (ec *executionContext) _VehiclePosition_stop_id(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Stop)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_VehiclePosition_stop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -57027,83 +57027,7 @@ func (ec *executionContext) fieldContext_VehiclePosition_stop_id(_ context.Conte
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Stop_id(ctx, field)
-			case "onestop_id":
-				return ec.fieldContext_Stop_onestop_id(ctx, field)
-			case "location_type":
-				return ec.fieldContext_Stop_location_type(ctx, field)
-			case "stop_code":
-				return ec.fieldContext_Stop_stop_code(ctx, field)
-			case "stop_desc":
-				return ec.fieldContext_Stop_stop_desc(ctx, field)
-			case "stop_id":
-				return ec.fieldContext_Stop_stop_id(ctx, field)
-			case "stop_name":
-				return ec.fieldContext_Stop_stop_name(ctx, field)
-			case "stop_timezone":
-				return ec.fieldContext_Stop_stop_timezone(ctx, field)
-			case "stop_url":
-				return ec.fieldContext_Stop_stop_url(ctx, field)
-			case "wheelchair_boarding":
-				return ec.fieldContext_Stop_wheelchair_boarding(ctx, field)
-			case "zone_id":
-				return ec.fieldContext_Stop_zone_id(ctx, field)
-			case "platform_code":
-				return ec.fieldContext_Stop_platform_code(ctx, field)
-			case "tts_stop_name":
-				return ec.fieldContext_Stop_tts_stop_name(ctx, field)
-			case "geometry":
-				return ec.fieldContext_Stop_geometry(ctx, field)
-			case "feed_version_sha1":
-				return ec.fieldContext_Stop_feed_version_sha1(ctx, field)
-			case "feed_onestop_id":
-				return ec.fieldContext_Stop_feed_onestop_id(ctx, field)
-			case "feed_version":
-				return ec.fieldContext_Stop_feed_version(ctx, field)
-			case "location_groups":
-				return ec.fieldContext_Stop_location_groups(ctx, field)
-			case "level":
-				return ec.fieldContext_Stop_level(ctx, field)
-			case "parent":
-				return ec.fieldContext_Stop_parent(ctx, field)
-			case "external_reference":
-				return ec.fieldContext_Stop_external_reference(ctx, field)
-			case "observations":
-				return ec.fieldContext_Stop_observations(ctx, field)
-			case "children":
-				return ec.fieldContext_Stop_children(ctx, field)
-			case "route_stops":
-				return ec.fieldContext_Stop_route_stops(ctx, field)
-			case "child_levels":
-				return ec.fieldContext_Stop_child_levels(ctx, field)
-			case "pathways_from_stop":
-				return ec.fieldContext_Stop_pathways_from_stop(ctx, field)
-			case "pathways_to_stop":
-				return ec.fieldContext_Stop_pathways_to_stop(ctx, field)
-			case "stop_times":
-				return ec.fieldContext_Stop_stop_times(ctx, field)
-			case "departures":
-				return ec.fieldContext_Stop_departures(ctx, field)
-			case "arrivals":
-				return ec.fieldContext_Stop_arrivals(ctx, field)
-			case "search_rank":
-				return ec.fieldContext_Stop_search_rank(ctx, field)
-			case "place":
-				return ec.fieldContext_Stop_place(ctx, field)
-			case "census_geographies":
-				return ec.fieldContext_Stop_census_geographies(ctx, field)
-			case "directions":
-				return ec.fieldContext_Stop_directions(ctx, field)
-			case "nearby_stops":
-				return ec.fieldContext_Stop_nearby_stops(ctx, field)
-			case "alerts":
-				return ec.fieldContext_Stop_alerts(ctx, field)
-			case "within_features":
-				return ec.fieldContext_Stop_within_features(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil

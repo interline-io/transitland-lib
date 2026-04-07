@@ -147,6 +147,9 @@ func convertVehiclePosition(vp *pb.VehiclePosition, feedOnestopID string) *model
 	}
 
 	// Stop info
+	if vp.StopId != nil {
+		mvp.StopID = vp.StopId
+	}
 	if vp.CurrentStopSequence != nil {
 		seq := int(vp.GetCurrentStopSequence())
 		mvp.CurrentStopSequence = &seq

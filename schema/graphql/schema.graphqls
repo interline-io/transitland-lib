@@ -1537,8 +1537,8 @@ type VehiclePosition {
   speed: Float
   "GTFS-RT VehiclePosition current stop sequence in trip"
   current_stop_sequence: Int
-  "GTFS-RT VehiclePosition current stop in trip"
-  stop_id: Stop
+  "GTFS-RT VehiclePosition current stop ID"
+  stop_id: String
   "GTFS-RT VehiclePosition current status string"
   current_status: String
   "GTFS-RT VehiclePosition timestamp"

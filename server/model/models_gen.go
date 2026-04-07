@@ -1460,8 +1460,8 @@ type VehiclePosition struct {
 	Speed *float64 `json:"speed,omitempty"`
 	// GTFS-RT VehiclePosition current stop sequence in trip
 	CurrentStopSequence *int `json:"current_stop_sequence,omitempty"`
-	// GTFS-RT VehiclePosition current stop in trip
-	StopID *Stop `json:"stop_id,omitempty"`
+	// GTFS-RT VehiclePosition current stop ID
+	StopID *string `json:"stop_id,omitempty"`
 	// GTFS-RT VehiclePosition current status string
 	CurrentStatus *string `json:"current_status,omitempty"`
 	// GTFS-RT VehiclePosition timestamp
