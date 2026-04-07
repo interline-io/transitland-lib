@@ -850,25 +850,15 @@ func first[T any](v []T) T {
 	return xt
 }
 
-// todo: rename to dbTestTupleLookup and make arg TestTuple
 func dbTupleLookup(t testing.TB, dbx sqlx.Ext, tk TupleKey) TupleKey {
-	var err error
-	var found bool
-	tk.Subject, found, err = dbNameToEntityKey(dbx, tk.Subject)
-	if !found && t != nil {
-		t.Logf("lookup warning: %s not found", tk.Subject.String())
+	ltk, found, err := EKLookup(dbx, tk)
+	if !found {
+		t.Logf("lookup warning: tuple entities not found: %s", tk.String())
 	}
 	if err != nil {
 		t.Log(err)
 	}
-	tk.Object, found, err = dbNameToEntityKey(dbx, tk.Object)
-	if !found && t != nil {
-		t.Logf("lookup warning: %s not found", tk.Object.String())
-	}
-	if err != nil {
-		t.Log(err)
-	}
-	return tk
+	return ltk
 }
 
 // EKLookup resolves symbolic entity names in a TupleKey to database IDs.
