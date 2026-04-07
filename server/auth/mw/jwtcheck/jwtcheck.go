@@ -124,6 +124,11 @@ func newJWTHandler(keyFunc jwt.Keyfunc, jwtAudience string, jwtIssuer string, us
 				if useEmailAsId {
 					userId = claims.Email
 				}
+				if userId == "" {
+					log.Error().Msgf("jwt token has empty user id")
+					writeJsonError(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+					return
+				}
 				jwtUser := authn.NewCtxUser(userId, claims.Subject, claims.Email).WithRoles("has_jwt")
 				r = r.WithContext(authn.WithUser(r.Context(), jwtUser))
 			}

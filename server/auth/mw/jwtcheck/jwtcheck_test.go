@@ -245,6 +245,33 @@ func TestNewJWTHandler(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
+	t.Run("empty subject returns 401", func(t *testing.T) {
+		next, _ := captureUser()
+		mw := newJWTHandler(keyFunc, audience, issuer, false)
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Authorization", "Bearer "+signToken(t, key, &customClaims{
+			RegisteredClaims: jwt.RegisteredClaims{
+				Subject:   "",
+				Audience:  jwt.ClaimStrings{audience},
+				Issuer:    issuer,
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			},
+		}))
+		rr := httptest.NewRecorder()
+		mw(next).ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	})
+
+	t.Run("missing email returns 401 when useEmailAsId", func(t *testing.T) {
+		next, _ := captureUser()
+		mw := newJWTHandler(keyFunc, audience, issuer, true)
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Authorization", "Bearer "+validToken("user-123", ""))
+		rr := httptest.NewRecorder()
+		mw(next).ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	})
+
 	t.Run("bearer prefix only passes through", func(t *testing.T) {
 		next, getUser := captureUser()
 		mw := newJWTHandler(keyFunc, audience, issuer, false)
