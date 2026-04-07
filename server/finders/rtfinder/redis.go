@@ -28,20 +28,18 @@ func newListener(s *Source, parent context.Context) *listener {
 }
 
 type RedisCache struct {
-	ctx         context.Context
-	lock        sync.Mutex
-	client      *redis.Client
-	listeners   map[string]*listener
-	subscribers map[chan string]struct{}
+	ctx       context.Context
+	lock      sync.Mutex
+	client    *redis.Client
+	listeners map[string]*listener
 }
 
 func NewRedisCache(client *redis.Client) *RedisCache {
 	ctx := context.Background()
 	f := RedisCache{
-		client:      client,
-		listeners:   map[string]*listener{},
-		subscribers: map[chan string]struct{}{},
-		ctx:         ctx,
+		client:    client,
+		listeners: map[string]*listener{},
+		ctx:       ctx,
 	}
 	return &f
 }
@@ -78,18 +76,6 @@ func (f *RedisCache) Subscribe() (chan string, func()) {
 		close(ch)
 	}
 	return ch, cancel
-}
-
-func (f *RedisCache) notifySubscribers(topic string) {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-	for ch := range f.subscribers {
-		select {
-		case ch <- topic:
-		default:
-			// drop if subscriber is slow
-		}
-	}
 }
 
 func (f *RedisCache) GetSourceKeys() []string {
@@ -188,7 +174,6 @@ func (f *RedisCache) startListener(ctx context.Context, topic string) (*listener
 				log.For(ctx).Error().Err(err).Str("topic", topic).Int("bytes", len(rmsg.Payload)).Msg("cache: error processing update")
 			} else {
 				log.For(ctx).Trace().Str("topic", topic).Int("bytes", len(rmsg.Payload)).Msg("cache: processed update")
-				f.notifySubscribers(topic)
 			}
 		}
 	}(f.client, topic, ls)
