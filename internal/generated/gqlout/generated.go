@@ -9000,6 +9000,8 @@ input VehiclePositionFilter {
   bbox: BoundingBox
   "Filter by feed OnestopIDs"
   feed_onestop_ids: [String!]
+  "Maximum number of vehicle positions to return per update (default 1000)"
+  limit: Int
 }
 
 """Result of entity delete operation"""
@@ -62828,7 +62830,7 @@ func (ec *executionContext) unmarshalInputVehiclePositionFilter(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"bbox", "feed_onestop_ids"}
+	fieldsInOrder := [...]string{"bbox", "feed_onestop_ids", "limit"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -62849,6 +62851,13 @@ func (ec *executionContext) unmarshalInputVehiclePositionFilter(ctx context.Cont
 				return it, err
 			}
 			it.FeedOnestopIds = data
+		case "limit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Limit = data
 		}
 	}
 

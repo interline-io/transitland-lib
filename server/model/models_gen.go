@@ -1476,6 +1476,8 @@ type VehiclePositionFilter struct {
 	Bbox *BoundingBox `json:"bbox,omitempty"`
 	// Filter by feed OnestopIDs
 	FeedOnestopIds []string `json:"feed_onestop_ids,omitempty"`
+	// Maximum number of vehicle positions to return per update (default 1000)
+	Limit *int `json:"limit,omitempty"`
 }
 
 type Waypoint struct {

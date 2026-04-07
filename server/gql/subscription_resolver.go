@@ -63,6 +63,18 @@ func (r *subscriptionResolver) collectVehiclePositions(ctx context.Context, cfg 
 	feedIDs := cfg.RTFinder.GetCachedFeedIDs()
 	log.For(ctx).Trace().Strs("feed_ids", feedIDs).Msg("subscription: collecting vehicle positions")
 
+	// Apply limit: use filter value if provided, otherwise default
+	limit := RESOLVER_MAXLIMIT
+	if where != nil && where.Limit != nil {
+		limit = *where.Limit
+	}
+	if limit > RESOLVER_MAXLIMIT {
+		limit = RESOLVER_MAXLIMIT
+	}
+	if limit < 0 {
+		limit = 0
+	}
+
 	var result []*model.VehiclePosition
 	for _, feedID := range feedIDs {
 		// Filter by feed_onestop_ids if specified
@@ -73,6 +85,9 @@ func (r *subscriptionResolver) collectVehiclePositions(ctx context.Context, cfg 
 		}
 		vps := cfg.RTFinder.GetVehiclePositions(ctx, feedID)
 		for _, vp := range vps {
+			if len(result) >= limit {
+				return result
+			}
 			mvp := convertVehiclePosition(vp, feedID)
 			if mvp == nil {
 				continue

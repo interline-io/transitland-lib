@@ -147,6 +147,8 @@ input VehiclePositionFilter {
   bbox: BoundingBox
   "Filter by feed OnestopIDs"
   feed_onestop_ids: [String!]
+  "Maximum number of vehicle positions to return per update (default 1000)"
+  limit: Int
 }
 
 """Result of entity delete operation"""
