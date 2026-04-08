@@ -1407,6 +1407,24 @@ type TripStopTimeFilter struct {
 	End *tt.Seconds `json:"end,omitempty"`
 }
 
+// A user in the authorization system
+type User struct {
+	// User identifier
+	ID string `json:"id"`
+	// Display name
+	Name string `json:"name"`
+	// Email address
+	Email string `json:"email"`
+}
+
+// Search options for users
+type UserFilter struct {
+	// Search for a user by ID
+	ID *string `json:"id,omitempty"`
+	// Full text search
+	Q *string `json:"q,omitempty"`
+}
+
 // Source URL and JSON representation of GTFS-RT data used for validation
 type ValidationRealtimeResult struct {
 	// Source URL

@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
+	"github.com/interline-io/transitland-lib/server/auth/azchecker"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
@@ -103,6 +104,31 @@ func TestPermissionResolver_Tenants(t *testing.T) {
 		assert.True(t, found, "expected to find tl-tenant")
 	})
 
+	t.Run("get tenant by ids", func(t *testing.T) {
+		// First get the tenant ID
+		jj := postQuery(t, c, `{ tenants { id name } }`, nil)
+		var tenantID int64
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str == "tl-tenant" {
+				tenantID = tenant.Get("id").Int()
+			}
+		}
+		assert.Greater(t, tenantID, int64(0))
+
+		// Look up by IDs
+		jj = postQuery(t, c, `query($ids: [Int!]) { tenants(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int64{tenantID}})
+		tenants := gjson.Get(jj, "tenants").Array()
+		assert.Equal(t, 1, len(tenants))
+		assert.Equal(t, tenantID, tenants[0].Get("id").Int())
+		assert.Equal(t, "tl-tenant", tenants[0].Get("name").Str)
+	})
+
+	t.Run("get tenant by ids not found", func(t *testing.T) {
+		jj := postQuery(t, c, `query($ids: [Int!]) { tenants(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int{999999}})
+		tenants := gjson.Get(jj, "tenants").Array()
+		assert.Equal(t, 0, len(tenants))
+	})
+
 	t.Run("tenant permissions", func(t *testing.T) {
 		jj := postQuery(t, c, `{ tenants { name permissions { actions subjects { type id name relation } children { type id name } } } }`, nil)
 		for _, tenant := range gjson.Get(jj, "tenants").Array() {
@@ -172,6 +198,31 @@ func TestPermissionResolver_Groups(t *testing.T) {
 		}
 		assert.Contains(t, groupNames, "CT-group")
 		assert.Contains(t, groupNames, "BA-group")
+	})
+
+	t.Run("get group by ids", func(t *testing.T) {
+		// First get the group ID
+		jj := postQuery(t, c, `{ groups { id name } }`, nil)
+		var groupID int64
+		for _, g := range gjson.Get(jj, "groups").Array() {
+			if g.Get("name").Str == "CT-group" {
+				groupID = g.Get("id").Int()
+			}
+		}
+		assert.Greater(t, groupID, int64(0))
+
+		// Look up by IDs
+		jj = postQuery(t, c, `query($ids: [Int!]) { groups(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int64{groupID}})
+		groups := gjson.Get(jj, "groups").Array()
+		assert.Equal(t, 1, len(groups))
+		assert.Equal(t, groupID, groups[0].Get("id").Int())
+		assert.Equal(t, "CT-group", groups[0].Get("name").Str)
+	})
+
+	t.Run("get group by ids not found", func(t *testing.T) {
+		jj := postQuery(t, c, `query($ids: [Int!]) { groups(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int{999999}})
+		groups := gjson.Get(jj, "groups").Array()
+		assert.Equal(t, 0, len(groups))
 	})
 
 	t.Run("group tenant", func(t *testing.T) {
@@ -376,6 +427,68 @@ func TestPermissionResolver_AdminMutations(t *testing.T) {
 			assert.Equal(t, groupID, gjson.Get(jj, "group_save.id").Int())
 			assert.Equal(t, "CT-group-renamed", gjson.Get(jj, "group_save.name").Str)
 		})
+	})
+}
+
+func TestPermissionResolver_Users(t *testing.T) {
+	// Build a checker with seeded users
+	mockUsers := azchecker.NewMockUserProvider()
+	mockUsers.AddUser("alice", authn.NewCtxUser("alice", "Alice Smith", "alice@example.com"))
+	mockUsers.AddUser("bob", authn.NewCtxUser("bob", "Bob Jones", "bob@example.com"))
+	mockUsers.AddUser("charlie", authn.NewCtxUser("charlie", "Charlie Brown", "charlie@example.com"))
+	checker := azchecker.NewChecker(mockUsers, azchecker.NewMockFGAClient(), nil)
+	cfg := testconfig.Config(t, testconfig.Options{})
+	cfg.Checker = checker
+	c := newPermTestClientFromConfig(cfg, "tl-tenant-admin", "admin")
+
+	t.Run("list all users", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 3, len(users))
+	})
+
+	t.Run("search users with q", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(where:{q:"alice"}) { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 1, len(users))
+		assert.Equal(t, "alice", users[0].Get("id").Str)
+		assert.Equal(t, "Alice Smith", users[0].Get("name").Str)
+		assert.Equal(t, "alice@example.com", users[0].Get("email").Str)
+	})
+
+	t.Run("search users with q no match", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(where:{q:"nobody"}) { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 0, len(users))
+	})
+
+	t.Run("list users with limit", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(limit: 2) { id } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 2, len(users))
+	})
+
+	t.Run("get user by id", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(where:{id:"bob"}) { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 1, len(users))
+		assert.Equal(t, "bob", users[0].Get("id").Str)
+		assert.Equal(t, "Bob Jones", users[0].Get("name").Str)
+		assert.Equal(t, "bob@example.com", users[0].Get("email").Str)
+	})
+
+	t.Run("get user by id not found", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(where:{id:"nonexistent"}) { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 0, len(users))
+	})
+
+	t.Run("users returns empty without admin manager", func(t *testing.T) {
+		noAuthCfg := testconfig.Config(t, testconfig.Options{})
+		noAuthClient := newPermTestClientFromConfig(noAuthCfg, "testuser", "testrole")
+		jj := postQuery(t, noAuthClient, `{ users { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 0, len(users))
 	})
 }
 
