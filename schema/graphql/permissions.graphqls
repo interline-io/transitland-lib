@@ -88,11 +88,23 @@ input GroupInput {
   name: String!
 }
 
+"""A user in the authorization system"""
+type User {
+  "User identifier"
+  id: String!
+  "Display name"
+  name: String!
+  "Email address"
+  email: String!
+}
+
 extend type Query {
   "List tenants accessible to the current user"
-  tenants(limit: Int): [Tenant!]!
+  tenants(limit: Int, id: Int): [Tenant!]!
   "List groups accessible to the current user"
-  groups(limit: Int): [Group!]!
+  groups(limit: Int, id: Int): [Group!]!
+  "Search for users"
+  users(limit: Int, id: String, q: String): [User!]!
 }
 
 extend type Mutation {

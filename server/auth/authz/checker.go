@@ -73,6 +73,8 @@ type PermissionManager interface {
 // boundaries, tenant membership, etc.).
 type AdminManager interface {
 	PermissionManager
+	UserList(ctx context.Context, req *UserListRequest) (*UserListResponse, error)
+	User(ctx context.Context, req *UserRequest) (*UserResponse, error)
 	TenantSave(ctx context.Context, req *TenantSaveRequest) (*TenantSaveResponse, error)
 	TenantCreateGroup(ctx context.Context, req *TenantCreateGroupRequest) (*GroupSaveResponse, error)
 	GroupSave(ctx context.Context, req *GroupSaveRequest) (*GroupSaveResponse, error)

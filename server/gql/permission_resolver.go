@@ -122,7 +122,7 @@ func (r *feedVersionResolver) Permissions(ctx context.Context, obj *model.FeedVe
 
 // Query resolvers for tenants and groups
 
-func (r *queryResolver) Tenants(ctx context.Context, limit *int) ([]*model.Tenant, error) {
+func (r *queryResolver) Tenants(ctx context.Context, limit *int, id *int) ([]*model.Tenant, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return nil, nil
@@ -133,6 +133,9 @@ func (r *queryResolver) Tenants(ctx context.Context, limit *int) ([]*model.Tenan
 	}
 	tenants := make([]*model.Tenant, 0, len(refs))
 	for _, ref := range refs {
+		if id != nil && int(ref.ID) != *id {
+			continue
+		}
 		t := &model.Tenant{ID: int(ref.ID)}
 		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
 			t.Name = perms.Ref.Name
@@ -145,7 +148,7 @@ func (r *queryResolver) Tenants(ctx context.Context, limit *int) ([]*model.Tenan
 	return tenants, nil
 }
 
-func (r *queryResolver) Groups(ctx context.Context, limit *int) ([]*model.Group, error) {
+func (r *queryResolver) Groups(ctx context.Context, limit *int, id *int) ([]*model.Group, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return nil, nil
@@ -156,6 +159,9 @@ func (r *queryResolver) Groups(ctx context.Context, limit *int) ([]*model.Group,
 	}
 	groups := make([]*model.Group, 0, len(refs))
 	for _, ref := range refs {
+		if id != nil && int(ref.ID) != *id {
+			continue
+		}
 		g := &model.Group{ID: int(ref.ID)}
 		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
 			g.Name = perms.Ref.Name
@@ -166,6 +172,49 @@ func (r *queryResolver) Groups(ctx context.Context, limit *int) ([]*model.Group,
 		}
 	}
 	return groups, nil
+}
+
+func (r *queryResolver) Users(ctx context.Context, limit *int, id *string, q *string) ([]*model.User, error) {
+	am, err := getAdminManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Single user lookup by ID
+	if id != nil {
+		resp, err := am.User(ctx, &authz.UserRequest{Id: *id})
+		if err != nil {
+			return nil, err
+		}
+		if resp.User == nil {
+			return []*model.User{}, nil
+		}
+		return []*model.User{{
+			ID:    resp.User.Id,
+			Name:  resp.User.Name,
+			Email: resp.User.Email,
+		}}, nil
+	}
+	// Search/list users
+	searchQ := ""
+	if q != nil {
+		searchQ = *q
+	}
+	resp, err := am.UserList(ctx, &authz.UserListRequest{Q: searchQ})
+	if err != nil {
+		return nil, err
+	}
+	users := make([]*model.User, 0, len(resp.Users))
+	for _, u := range resp.Users {
+		users = append(users, &model.User{
+			ID:    u.Id,
+			Name:  u.Name,
+			Email: u.Email,
+		})
+		if limit != nil && len(users) >= *limit {
+			break
+		}
+	}
+	return users, nil
 }
 
 // Mutation resolvers
