@@ -54,6 +54,7 @@ type ResolverRoot interface {
 	FeedVersion() FeedVersionResolver
 	FeedVersionGtfsImport() FeedVersionGtfsImportResolver
 	FlexStopTime() FlexStopTimeResolver
+	Group() GroupResolver
 	Level() LevelResolver
 	Location() LocationResolver
 	LocationGroup() LocationGroupResolver
@@ -72,6 +73,7 @@ type ResolverRoot interface {
 	Stop() StopResolver
 	StopExternalReference() StopExternalReferenceResolver
 	StopTime() StopTimeResolver
+	Tenant() TenantResolver
 	Trip() TripResolver
 	ValidationReport() ValidationReportResolver
 	ValidationReportErrorGroup() ValidationReportErrorGroupResolver
@@ -290,6 +292,7 @@ type ComplexityRoot struct {
 		Languages           func(childComplexity int) int
 		License             func(childComplexity int) int
 		Name                func(childComplexity int) int
+		Permissions         func(childComplexity int) int
 		SearchRank          func(childComplexity int) int
 		Spec                func(childComplexity int) int
 		Tags                func(childComplexity int) int
@@ -373,6 +376,7 @@ type ComplexityRoot struct {
 		LocationGroups        func(childComplexity int, limit *int, where *model.LocationGroupFilter) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
+		Permissions           func(childComplexity int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SHA1                  func(childComplexity int) int
 		Segments              func(childComplexity int, limit *int) int
@@ -733,6 +737,14 @@ type ComplexityRoot struct {
 		VehicleType       func(childComplexity int) int
 	}
 
+	Group struct {
+		Feeds       func(childComplexity int, limit *int) int
+		ID          func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Permissions func(childComplexity int) int
+		Tenant      func(childComplexity int) int
+	}
+
 	Itinerary struct {
 		Distance  func(childComplexity int) int
 		Duration  func(childComplexity int) int
@@ -837,15 +849,21 @@ type ComplexityRoot struct {
 		FeedVersionImport   func(childComplexity int, id int) int
 		FeedVersionUnimport func(childComplexity int, id int) int
 		FeedVersionUpdate   func(childComplexity int, set model.FeedVersionSetInput) int
+		GroupSave           func(childComplexity int, id int, input model.GroupInput) int
 		LevelCreate         func(childComplexity int, set model.LevelSetInput) int
 		LevelDelete         func(childComplexity int, id int) int
 		LevelUpdate         func(childComplexity int, set model.LevelSetInput) int
 		PathwayCreate       func(childComplexity int, set model.PathwaySetInput) int
 		PathwayDelete       func(childComplexity int, id int) int
 		PathwayUpdate       func(childComplexity int, set model.PathwaySetInput) int
+		PermissionAdd       func(childComplexity int, typeArg string, id int, input model.PermissionInput) int
+		PermissionRemove    func(childComplexity int, typeArg string, id int, input model.PermissionInput) int
+		PermissionSetParent func(childComplexity int, typeArg string, id int, input model.SetParentInput) int
 		StopCreate          func(childComplexity int, set model.StopSetInput) int
 		StopDelete          func(childComplexity int, id int) int
 		StopUpdate          func(childComplexity int, set model.StopSetInput) int
+		TenantCreateGroup   func(childComplexity int, id int, input model.GroupInput) int
+		TenantSave          func(childComplexity int, id int, input model.TenantInput) int
 		ValidateGtfs        func(childComplexity int, file *graphql.Upload, url *string, realtimeUrls []string) int
 	}
 
@@ -886,6 +904,26 @@ type ComplexityRoot struct {
 		TraversalTime       func(childComplexity int) int
 	}
 
+	PermissionRef struct {
+		ID   func(childComplexity int) int
+		Name func(childComplexity int) int
+		Type func(childComplexity int) int
+	}
+
+	PermissionSubject struct {
+		ID       func(childComplexity int) int
+		Name     func(childComplexity int) int
+		Relation func(childComplexity int) int
+		Type     func(childComplexity int) int
+	}
+
+	Permissions struct {
+		Actions  func(childComplexity int) int
+		Children func(childComplexity int) int
+		Parent   func(childComplexity int) int
+		Subjects func(childComplexity int) int
+	}
+
 	Place struct {
 		Adm0Name  func(childComplexity int) int
 		Adm1Name  func(childComplexity int) int
@@ -902,11 +940,13 @@ type ComplexityRoot struct {
 		Docks          func(childComplexity int, limit *int, where *model.GbfsDockRequest) int
 		FeedVersions   func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedVersionFilter) int
 		Feeds          func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedFilter) int
+		Groups         func(childComplexity int, limit *int) int
 		Me             func(childComplexity int) int
 		Operators      func(childComplexity int, limit *int, after *int, ids []int, where *model.OperatorFilter) int
 		Places         func(childComplexity int, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) int
 		Routes         func(childComplexity int, limit *int, after *int, ids []int, where *model.RouteFilter) int
 		Stops          func(childComplexity int, limit *int, after *int, ids []int, where *model.StopFilter) int
+		Tenants        func(childComplexity int, limit *int) int
 		Trips          func(childComplexity int, limit *int, after *int, ids []int, where *model.TripFilter) int
 	}
 
@@ -1168,6 +1208,13 @@ type ComplexityRoot struct {
 		Uncertainty    func(childComplexity int) int
 	}
 
+	Tenant struct {
+		Groups      func(childComplexity int, limit *int) int
+		ID          func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Permissions func(childComplexity int) int
+	}
+
 	Trip struct {
 		Alerts               func(childComplexity int, active *bool, limit *int) int
 		BikesAllowed         func(childComplexity int) int
@@ -1344,6 +1391,7 @@ type FeedResolver interface {
 	FeedState(ctx context.Context, obj *model.Feed) (*model.FeedState, error)
 	FeedFetches(ctx context.Context, obj *model.Feed, limit *int, where *model.FeedFetchFilter) ([]*model.FeedFetch, error)
 	FeedVersions(ctx context.Context, obj *model.Feed, limit *int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error)
+	Permissions(ctx context.Context, obj *model.Feed) (*model.Permissions, error)
 }
 type FeedStateResolver interface {
 	FeedVersion(ctx context.Context, obj *model.FeedState) (*model.FeedVersion, error)
@@ -1365,6 +1413,7 @@ type FeedVersionResolver interface {
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
+	Permissions(ctx context.Context, obj *model.FeedVersion) (*model.Permissions, error)
 }
 type FeedVersionGtfsImportResolver interface {
 	SkipEntityErrorCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
@@ -1384,6 +1433,11 @@ type FlexStopTimeResolver interface {
 	Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
 
 	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
+}
+type GroupResolver interface {
+	Tenant(ctx context.Context, obj *model.Group) (*model.Tenant, error)
+	Feeds(ctx context.Context, obj *model.Group, limit *int) ([]*model.Feed, error)
+	Permissions(ctx context.Context, obj *model.Group) (*model.Permissions, error)
 }
 type LevelResolver interface {
 	Stops(ctx context.Context, obj *model.Level) ([]*model.Stop, error)
@@ -1417,6 +1471,12 @@ type MutationResolver interface {
 	PathwayCreate(ctx context.Context, set model.PathwaySetInput) (*model.Pathway, error)
 	PathwayUpdate(ctx context.Context, set model.PathwaySetInput) (*model.Pathway, error)
 	PathwayDelete(ctx context.Context, id int) (*model.EntityDeleteResult, error)
+	PermissionAdd(ctx context.Context, typeArg string, id int, input model.PermissionInput) (bool, error)
+	PermissionRemove(ctx context.Context, typeArg string, id int, input model.PermissionInput) (bool, error)
+	PermissionSetParent(ctx context.Context, typeArg string, id int, input model.SetParentInput) (bool, error)
+	TenantSave(ctx context.Context, id int, input model.TenantInput) (*model.Tenant, error)
+	TenantCreateGroup(ctx context.Context, id int, input model.GroupInput) (*model.Group, error)
+	GroupSave(ctx context.Context, id int, input model.GroupInput) (*model.Group, error)
 }
 type OperatorResolver interface {
 	Agencies(ctx context.Context, obj *model.Operator) ([]*model.Agency, error)
@@ -1444,6 +1504,8 @@ type QueryResolver interface {
 	Docks(ctx context.Context, limit *int, where *model.GbfsDockRequest) ([]*model.GbfsStationInformation, error)
 	Me(ctx context.Context) (*model.Me, error)
 	CensusDatasets(ctx context.Context, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) ([]*model.CensusDataset, error)
+	Tenants(ctx context.Context, limit *int) ([]*model.Tenant, error)
+	Groups(ctx context.Context, limit *int) ([]*model.Group, error)
 }
 type RouteResolver interface {
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
@@ -1520,6 +1582,10 @@ type StopTimeResolver interface {
 	Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
 
 	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
+}
+type TenantResolver interface {
+	Groups(ctx context.Context, obj *model.Tenant, limit *int) ([]*model.Group, error)
+	Permissions(ctx context.Context, obj *model.Tenant) (*model.Permissions, error)
 }
 type TripResolver interface {
 	Calendar(ctx context.Context, obj *model.Trip) (*model.Calendar, error)
@@ -2719,6 +2785,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Feed.Name(childComplexity), true
 
+	case "Feed.permissions":
+		if e.complexity.Feed.Permissions == nil {
+			break
+		}
+
+		return e.complexity.Feed.Permissions(childComplexity), true
+
 	case "Feed.search_rank":
 		if e.complexity.Feed.SearchRank == nil {
 			break
@@ -3182,6 +3255,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.FeedVersion.Name(childComplexity), true
+
+	case "FeedVersion.permissions":
+		if e.complexity.FeedVersion.Permissions == nil {
+			break
+		}
+
+		return e.complexity.FeedVersion.Permissions(childComplexity), true
 
 	case "FeedVersion.routes":
 		if e.complexity.FeedVersion.Routes == nil {
@@ -4984,6 +5064,46 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.GbfsVehicleTypeAvailable.VehicleType(childComplexity), true
 
+	case "Group.feeds":
+		if e.complexity.Group.Feeds == nil {
+			break
+		}
+
+		args, err := ec.field_Group_feeds_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Group.Feeds(childComplexity, args["limit"].(*int)), true
+
+	case "Group.id":
+		if e.complexity.Group.ID == nil {
+			break
+		}
+
+		return e.complexity.Group.ID(childComplexity), true
+
+	case "Group.name":
+		if e.complexity.Group.Name == nil {
+			break
+		}
+
+		return e.complexity.Group.Name(childComplexity), true
+
+	case "Group.permissions":
+		if e.complexity.Group.Permissions == nil {
+			break
+		}
+
+		return e.complexity.Group.Permissions(childComplexity), true
+
+	case "Group.tenant":
+		if e.complexity.Group.Tenant == nil {
+			break
+		}
+
+		return e.complexity.Group.Tenant(childComplexity), true
+
 	case "Itinerary.distance":
 		if e.complexity.Itinerary.Distance == nil {
 			break
@@ -5535,6 +5655,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.FeedVersionUpdate(childComplexity, args["set"].(model.FeedVersionSetInput)), true
 
+	case "Mutation.group_save":
+		if e.complexity.Mutation.GroupSave == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_group_save_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.GroupSave(childComplexity, args["id"].(int), args["input"].(model.GroupInput)), true
+
 	case "Mutation.level_create":
 		if e.complexity.Mutation.LevelCreate == nil {
 			break
@@ -5607,6 +5739,42 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.PathwayUpdate(childComplexity, args["set"].(model.PathwaySetInput)), true
 
+	case "Mutation.permission_add":
+		if e.complexity.Mutation.PermissionAdd == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_permission_add_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PermissionAdd(childComplexity, args["type"].(string), args["id"].(int), args["input"].(model.PermissionInput)), true
+
+	case "Mutation.permission_remove":
+		if e.complexity.Mutation.PermissionRemove == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_permission_remove_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PermissionRemove(childComplexity, args["type"].(string), args["id"].(int), args["input"].(model.PermissionInput)), true
+
+	case "Mutation.permission_set_parent":
+		if e.complexity.Mutation.PermissionSetParent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_permission_set_parent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PermissionSetParent(childComplexity, args["type"].(string), args["id"].(int), args["input"].(model.SetParentInput)), true
+
 	case "Mutation.stop_create":
 		if e.complexity.Mutation.StopCreate == nil {
 			break
@@ -5642,6 +5810,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.StopUpdate(childComplexity, args["set"].(model.StopSetInput)), true
+
+	case "Mutation.tenant_create_group":
+		if e.complexity.Mutation.TenantCreateGroup == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_tenant_create_group_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.TenantCreateGroup(childComplexity, args["id"].(int), args["input"].(model.GroupInput)), true
+
+	case "Mutation.tenant_save":
+		if e.complexity.Mutation.TenantSave == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_tenant_save_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.TenantSave(childComplexity, args["id"].(int), args["input"].(model.TenantInput)), true
 
 	case "Mutation.validate_gtfs":
 		if e.complexity.Mutation.ValidateGtfs == nil {
@@ -5856,6 +6048,83 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Pathway.TraversalTime(childComplexity), true
 
+	case "PermissionRef.id":
+		if e.complexity.PermissionRef.ID == nil {
+			break
+		}
+
+		return e.complexity.PermissionRef.ID(childComplexity), true
+
+	case "PermissionRef.name":
+		if e.complexity.PermissionRef.Name == nil {
+			break
+		}
+
+		return e.complexity.PermissionRef.Name(childComplexity), true
+
+	case "PermissionRef.type":
+		if e.complexity.PermissionRef.Type == nil {
+			break
+		}
+
+		return e.complexity.PermissionRef.Type(childComplexity), true
+
+	case "PermissionSubject.id":
+		if e.complexity.PermissionSubject.ID == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.ID(childComplexity), true
+
+	case "PermissionSubject.name":
+		if e.complexity.PermissionSubject.Name == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.Name(childComplexity), true
+
+	case "PermissionSubject.relation":
+		if e.complexity.PermissionSubject.Relation == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.Relation(childComplexity), true
+
+	case "PermissionSubject.type":
+		if e.complexity.PermissionSubject.Type == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.Type(childComplexity), true
+
+	case "Permissions.actions":
+		if e.complexity.Permissions.Actions == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Actions(childComplexity), true
+
+	case "Permissions.children":
+		if e.complexity.Permissions.Children == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Children(childComplexity), true
+
+	case "Permissions.parent":
+		if e.complexity.Permissions.Parent == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Parent(childComplexity), true
+
+	case "Permissions.subjects":
+		if e.complexity.Permissions.Subjects == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Subjects(childComplexity), true
+
 	case "Place.adm0_name":
 		if e.complexity.Place.Adm0Name == nil {
 			break
@@ -5975,6 +6244,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Feeds(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.FeedFilter)), true
 
+	case "Query.groups":
+		if e.complexity.Query.Groups == nil {
+			break
+		}
+
+		args, err := ec.field_Query_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Groups(childComplexity, args["limit"].(*int)), true
+
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
 			break
@@ -6029,6 +6310,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Stops(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.StopFilter)), true
+
+	case "Query.tenants":
+		if e.complexity.Query.Tenants == nil {
+			break
+		}
+
+		args, err := ec.field_Query_tenants_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Tenants(childComplexity, args["limit"].(*int)), true
 
 	case "Query.trips":
 		if e.complexity.Query.Trips == nil {
@@ -7532,6 +7825,39 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.StopTimeEvent.Uncertainty(childComplexity), true
 
+	case "Tenant.groups":
+		if e.complexity.Tenant.Groups == nil {
+			break
+		}
+
+		args, err := ec.field_Tenant_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Tenant.Groups(childComplexity, args["limit"].(*int)), true
+
+	case "Tenant.id":
+		if e.complexity.Tenant.ID == nil {
+			break
+		}
+
+		return e.complexity.Tenant.ID(childComplexity), true
+
+	case "Tenant.name":
+		if e.complexity.Tenant.Name == nil {
+			break
+		}
+
+		return e.complexity.Tenant.Name(childComplexity), true
+
+	case "Tenant.permissions":
+		if e.complexity.Tenant.Permissions == nil {
+			break
+		}
+
+		return e.complexity.Tenant.Permissions(childComplexity), true
+
 	case "Trip.alerts":
 		if e.complexity.Trip.Alerts == nil {
 			break
@@ -8249,6 +8575,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputFocusPoint,
 		ec.unmarshalInputGbfsBikeRequest,
 		ec.unmarshalInputGbfsDockRequest,
+		ec.unmarshalInputGroupInput,
 		ec.unmarshalInputLevelSetInput,
 		ec.unmarshalInputLicenseFilter,
 		ec.unmarshalInputLocationFilter,
@@ -8256,6 +8583,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputOperatorFilter,
 		ec.unmarshalInputPathwayFilter,
 		ec.unmarshalInputPathwaySetInput,
+		ec.unmarshalInputPermissionInput,
 		ec.unmarshalInputPlaceFilter,
 		ec.unmarshalInputPointRadius,
 		ec.unmarshalInputRouteFilter,
@@ -8263,6 +8591,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSegmentFilter,
 		ec.unmarshalInputSegmentPatternFilter,
 		ec.unmarshalInputServiceCoversFilter,
+		ec.unmarshalInputSetParentInput,
 		ec.unmarshalInputStopBuffer,
 		ec.unmarshalInputStopExternalReferenceSetInput,
 		ec.unmarshalInputStopFilter,
@@ -8270,6 +8599,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputStopObservationFilter,
 		ec.unmarshalInputStopSetInput,
 		ec.unmarshalInputStopTimeFilter,
+		ec.unmarshalInputTenantInput,
 		ec.unmarshalInputTripFilter,
 		ec.unmarshalInputTripStopTimeFilter,
 		ec.unmarshalInputValidationReportFilter,
@@ -8781,6 +9111,128 @@ input GbfsBikeRequest {
 
 input GbfsDockRequest {
 	near: PointRadius
+}
+`, BuiltIn: false},
+	{Name: "../../../schema/graphql/permissions.graphqls", Input: `"""Authorization permissions for an entity"""
+type Permissions {
+  "Actions the current user can perform on this entity"
+  actions: [String!]!
+  "Users and groups with direct access to this entity"
+  subjects: [PermissionSubject!]!
+  "Parent entity in the authorization hierarchy"
+  parent: PermissionRef
+  "Child entities in the authorization hierarchy"
+  children: [PermissionRef!]!
+}
+
+"""A user or group that has been granted access to an entity"""
+type PermissionSubject {
+  "Type of subject (e.g. user, tenant, group)"
+  type: String!
+  "Subject identifier"
+  id: String!
+  "Display name"
+  name: String!
+  "Relationship type (e.g. admin, member, viewer, editor, manager)"
+  relation: String!
+}
+
+"""Reference to a related entity in the authorization hierarchy"""
+type PermissionRef {
+  "Entity type (e.g. tenant, group, feed, feed_version)"
+  type: String!
+  "Entity ID"
+  id: Int!
+  "Display name"
+  name: String!
+}
+
+"""A tenant organization that owns groups and feeds"""
+type Tenant {
+  "Internal integer ID"
+  id: Int!
+  "Tenant name"
+  name: String!
+  "Groups owned by this tenant"
+  groups(limit: Int): [Group!]!
+  "Authorization permissions for this tenant"
+  permissions: Permissions
+}
+
+"""A group that organizes feeds within a tenant"""
+type Group {
+  "Internal integer ID"
+  id: Int!
+  "Group name"
+  name: String!
+  "Parent tenant"
+  tenant: Tenant
+  "Feeds assigned to this group"
+  feeds(limit: Int): [Feed!]!
+  "Authorization permissions for this group"
+  permissions: Permissions
+}
+
+"""Input for adding or removing a permission"""
+input PermissionInput {
+  "Subject type (e.g. user, tenant, group)"
+  subject_type: String!
+  "Subject identifier"
+  subject_id: String!
+  "Relationship to grant (e.g. viewer, editor, manager, admin, member)"
+  relation: String!
+}
+
+"""Input for setting an entity's parent"""
+input SetParentInput {
+  "Parent entity type"
+  parent_type: String!
+  "Parent entity ID"
+  parent_id: Int!
+}
+
+"""Input for saving a tenant"""
+input TenantInput {
+  "Tenant name"
+  name: String!
+}
+
+"""Input for saving a group"""
+input GroupInput {
+  "Group name"
+  name: String!
+}
+
+extend type Query {
+  "List tenants accessible to the current user"
+  tenants(limit: Int): [Tenant!]!
+  "List groups accessible to the current user"
+  groups(limit: Int): [Group!]!
+}
+
+extend type Mutation {
+  "Add a permission to an entity"
+  permission_add(type: String!, id: Int!, input: PermissionInput!): Boolean!
+  "Remove a permission from an entity"
+  permission_remove(type: String!, id: Int!, input: PermissionInput!): Boolean!
+  "Set an entity's parent in the authorization hierarchy"
+  permission_set_parent(type: String!, id: Int!, input: SetParentInput!): Boolean!
+  "Update a tenant's name"
+  tenant_save(id: Int!, input: TenantInput!): Tenant!
+  "Create a group within a tenant"
+  tenant_create_group(id: Int!, input: GroupInput!): Group!
+  "Update a group's name"
+  group_save(id: Int!, input: GroupInput!): Group!
+}
+
+extend type Feed {
+  "Authorization permissions for this feed"
+  permissions: Permissions
+}
+
+extend type FeedVersion {
+  "Authorization permissions for this feed version"
+  permissions: Permissions
 }
 `, BuiltIn: false},
 	{Name: "../../../schema/graphql/schema.graphqls", Input: `# Scalar types
@@ -11715,6 +12167,17 @@ func (ec *executionContext) field_Feed_feed_versions_args(ctx context.Context, r
 	return args, nil
 }
 
+func (ec *executionContext) field_Group_feeds_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_LocationGroup_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11823,6 +12286,22 @@ func (ec *executionContext) field_Mutation_feed_version_update_args(ctx context.
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_group_save_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNGroupInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_level_create_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11889,6 +12368,69 @@ func (ec *executionContext) field_Mutation_pathway_update_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_permission_add_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNPermissionInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_permission_remove_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNPermissionInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_permission_set_parent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNSetParentInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSetParentInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg2
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_stop_create_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11919,6 +12461,38 @@ func (ec *executionContext) field_Mutation_stop_update_args(ctx context.Context,
 		return nil, err
 	}
 	args["set"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_tenant_create_group_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNGroupInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_tenant_save_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNTenantInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -12117,6 +12691,17 @@ func (ec *executionContext) field_Query_feeds_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_operators_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -12218,6 +12803,17 @@ func (ec *executionContext) field_Query_stops_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["where"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_tenants_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -12599,6 +13195,17 @@ func (ec *executionContext) field_Stop_stop_times_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Tenant_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -13409,6 +14016,8 @@ func (ec *executionContext) fieldContext_Agency_feed_version(_ context.Context, 
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -15443,6 +16052,8 @@ func (ec *executionContext) fieldContext_BookingRule_feed_version(_ context.Cont
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -20468,6 +21079,8 @@ func (ec *executionContext) fieldContext_Feed_feed_versions(ctx context.Context,
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -20482,6 +21095,57 @@ func (ec *executionContext) fieldContext_Feed_feed_versions(ctx context.Context,
 	if fc.Args, err = ec.field_Feed_feed_versions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Feed_permissions(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Feed_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Feed().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Feed_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Feed",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -21942,6 +22606,8 @@ func (ec *executionContext) fieldContext_FeedState_feed_version(_ context.Contex
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -22880,6 +23546,8 @@ func (ec *executionContext) fieldContext_FeedVersion_feed(_ context.Context, fie
 				return ec.fieldContext_Feed_feed_fetches(ctx, field)
 			case "feed_versions":
 				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
 		},
@@ -24075,6 +24743,57 @@ func (ec *executionContext) fieldContext_FeedVersion_segments(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _FeedVersion_permissions(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FeedVersion_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FeedVersion().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FeedVersion_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FeedVersionDeleteResult_success(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionDeleteResult) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FeedVersionDeleteResult_success(ctx, field)
 	if err != nil {
@@ -24209,6 +24928,8 @@ func (ec *executionContext) fieldContext_FeedVersionFetchResult_feed_version(_ c
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -35086,6 +35807,285 @@ func (ec *executionContext) fieldContext_GbfsVehicleTypeAvailable_vehicle_type(_
 	return fc, nil
 }
 
+func (ec *executionContext) _Group_id(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_name(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_tenant(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_tenant(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Group().Tenant(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Tenant)
+	fc.Result = res
+	return ec.marshalOTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_tenant(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Tenant_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Tenant_name(ctx, field)
+			case "groups":
+				return ec.fieldContext_Tenant_groups(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Tenant_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_feeds(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_feeds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Group().Feeds(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Feed)
+	fc.Result = res
+	return ec.marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_feeds(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Feed_id(ctx, field)
+			case "onestop_id":
+				return ec.fieldContext_Feed_onestop_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Feed_name(ctx, field)
+			case "file":
+				return ec.fieldContext_Feed_file(ctx, field)
+			case "spec":
+				return ec.fieldContext_Feed_spec(ctx, field)
+			case "languages":
+				return ec.fieldContext_Feed_languages(ctx, field)
+			case "tags":
+				return ec.fieldContext_Feed_tags(ctx, field)
+			case "authorization":
+				return ec.fieldContext_Feed_authorization(ctx, field)
+			case "urls":
+				return ec.fieldContext_Feed_urls(ctx, field)
+			case "license":
+				return ec.fieldContext_Feed_license(ctx, field)
+			case "search_rank":
+				return ec.fieldContext_Feed_search_rank(ctx, field)
+			case "associated_operators":
+				return ec.fieldContext_Feed_associated_operators(ctx, field)
+			case "feed_state":
+				return ec.fieldContext_Feed_feed_state(ctx, field)
+			case "feed_fetches":
+				return ec.fieldContext_Feed_feed_fetches(ctx, field)
+			case "feed_versions":
+				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Group_feeds_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_permissions(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Group().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Itinerary_duration(ctx context.Context, field graphql.CollectedField, obj *model.Itinerary) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Itinerary_duration(ctx, field)
 	if err != nil {
@@ -37576,6 +38576,8 @@ func (ec *executionContext) fieldContext_Location_feed_version(_ context.Context
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -37996,6 +38998,8 @@ func (ec *executionContext) fieldContext_LocationGroup_feed_version(_ context.Co
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -38844,6 +39848,8 @@ func (ec *executionContext) fieldContext_Mutation_feed_version_update(ctx contex
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -39844,6 +40850,370 @@ func (ec *executionContext) fieldContext_Mutation_pathway_delete(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_permission_add(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_permission_add(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PermissionAdd(rctx, fc.Args["type"].(string), fc.Args["id"].(int), fc.Args["input"].(model.PermissionInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_permission_add(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_permission_add_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_permission_remove(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_permission_remove(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PermissionRemove(rctx, fc.Args["type"].(string), fc.Args["id"].(int), fc.Args["input"].(model.PermissionInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_permission_remove(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_permission_remove_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_permission_set_parent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_permission_set_parent(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PermissionSetParent(rctx, fc.Args["type"].(string), fc.Args["id"].(int), fc.Args["input"].(model.SetParentInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_permission_set_parent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_permission_set_parent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_tenant_save(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_tenant_save(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().TenantSave(rctx, fc.Args["id"].(int), fc.Args["input"].(model.TenantInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Tenant)
+	fc.Result = res
+	return ec.marshalNTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_tenant_save(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Tenant_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Tenant_name(ctx, field)
+			case "groups":
+				return ec.fieldContext_Tenant_groups(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Tenant_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_tenant_save_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_tenant_create_group(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_tenant_create_group(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().TenantCreateGroup(rctx, fc.Args["id"].(int), fc.Args["input"].(model.GroupInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_tenant_create_group(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_tenant_create_group_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_group_save(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_group_save(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().GroupSave(rctx, fc.Args["id"].(int), fc.Args["input"].(model.GroupInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_group_save(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_group_save_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Operator_id(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Operator_id(ctx, field)
 	if err != nil {
@@ -40368,6 +41738,8 @@ func (ec *executionContext) fieldContext_Operator_feeds(ctx context.Context, fie
 				return ec.fieldContext_Feed_feed_fetches(ctx, field)
 			case "feed_versions":
 				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
 		},
@@ -41259,6 +42631,513 @@ func (ec *executionContext) fieldContext_Pathway_to_stop(_ context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _PermissionRef_type(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionRef_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionRef_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionRef",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionRef_id(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionRef_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionRef_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionRef",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionRef_name(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionRef_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionRef_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionRef",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_type(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_id(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_name(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_relation(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_relation(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Relation, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_relation(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_actions(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_actions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Actions, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_actions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_subjects(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_subjects(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Subjects, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PermissionSubject)
+	fc.Result = res
+	return ec.marshalNPermissionSubject2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubjectᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_subjects(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_PermissionSubject_type(ctx, field)
+			case "id":
+				return ec.fieldContext_PermissionSubject_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PermissionSubject_name(ctx, field)
+			case "relation":
+				return ec.fieldContext_PermissionSubject_relation(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PermissionSubject", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_parent(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_parent(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Parent, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.PermissionRef)
+	fc.Result = res
+	return ec.marshalOPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_parent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_PermissionRef_type(ctx, field)
+			case "id":
+				return ec.fieldContext_PermissionRef_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PermissionRef_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PermissionRef", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_children(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_children(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Children, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PermissionRef)
+	fc.Result = res
+	return ec.marshalNPermissionRef2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRefᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_children(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_PermissionRef_type(ctx, field)
+			case "id":
+				return ec.fieldContext_PermissionRef_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PermissionRef_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PermissionRef", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Place_adm0_name(ctx context.Context, field graphql.CollectedField, obj *model.Place) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Place_adm0_name(ctx, field)
 	if err != nil {
@@ -41560,6 +43439,8 @@ func (ec *executionContext) fieldContext_Query_feeds(ctx context.Context, field 
 				return ec.fieldContext_Feed_feed_fetches(ctx, field)
 			case "feed_versions":
 				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
 		},
@@ -41750,6 +43631,8 @@ func (ec *executionContext) fieldContext_Query_feed_versions(ctx context.Context
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -42657,6 +44540,138 @@ func (ec *executionContext) fieldContext_Query_census_datasets(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_census_datasets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_tenants(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_tenants(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Tenants(rctx, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Tenant)
+	fc.Result = res
+	return ec.marshalNTenant2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_tenants(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Tenant_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Tenant_name(ctx, field)
+			case "groups":
+				return ec.fieldContext_Tenant_groups(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Tenant_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_tenants_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_groups(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_groups(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Groups(rctx, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -44174,6 +46189,8 @@ func (ec *executionContext) fieldContext_Route_feed_version(_ context.Context, f
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -48682,6 +50699,8 @@ func (ec *executionContext) fieldContext_Stop_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -53080,6 +55099,212 @@ func (ec *executionContext) fieldContext_StopTimeEvent_uncertainty(_ context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Tenant_id(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Tenant_name(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Tenant_groups(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_groups(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Tenant().Groups(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Tenant_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Tenant_permissions(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Tenant().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Trip_id(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Trip_id(ctx, field)
 	if err != nil {
@@ -53782,6 +56007,8 @@ func (ec *executionContext) fieldContext_Trip_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -60904,6 +63131,33 @@ func (ec *executionContext) unmarshalInputGbfsDockRequest(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputGroupInput(ctx context.Context, obj any) (model.GroupInput, error) {
+	var it model.GroupInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputLevelSetInput(ctx context.Context, obj any) (model.LevelSetInput, error) {
 	var it model.LevelSetInput
 	asMap := map[string]any{}
@@ -61366,6 +63620,47 @@ func (ec *executionContext) unmarshalInputPathwaySetInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPermissionInput(ctx context.Context, obj any) (model.PermissionInput, error) {
+	var it model.PermissionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"subject_type", "subject_id", "relation"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "subject_type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subject_type"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SubjectType = data
+		case "subject_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subject_id"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SubjectID = data
+		case "relation":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relation"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Relation = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPlaceFilter(ctx context.Context, obj any) (model.PlaceFilter, error) {
 	var it model.PlaceFilter
 	asMap := map[string]any{}
@@ -61766,6 +64061,40 @@ func (ec *executionContext) unmarshalInputServiceCoversFilter(ctx context.Contex
 				return it, err
 			}
 			it.LatestCalendarDate = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSetParentInput(ctx context.Context, obj any) (model.SetParentInput, error) {
+	var it model.SetParentInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"parent_type", "parent_id"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "parent_type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent_type"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ParentType = data
+		case "parent_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent_id"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ParentID = data
 		}
 	}
 
@@ -62340,6 +64669,33 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 				return it, err
 			}
 			it.ExcludeLast = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTenantInput(ctx context.Context, obj any) (model.TenantInput, error) {
+	var it model.TenantInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
 		}
 	}
 
@@ -64716,6 +67072,39 @@ func (ec *executionContext) _Feed(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Feed_permissions(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -65723,6 +68112,39 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._FeedVersion_segments(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_permissions(ctx, field, obj)
 				return res
 			}
 
@@ -67993,6 +70415,152 @@ func (ec *executionContext) _GbfsVehicleTypeAvailable(ctx context.Context, sel a
 	return out
 }
 
+var groupImplementors = []string{"Group"}
+
+func (ec *executionContext) _Group(ctx context.Context, sel ast.SelectionSet, obj *model.Group) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, groupImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Group")
+		case "id":
+			out.Values[i] = ec._Group_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "name":
+			out.Values[i] = ec._Group_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "tenant":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_tenant(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feeds":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_feeds(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_permissions(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var itineraryImplementors = []string{"Itinerary"}
 
 func (ec *executionContext) _Itinerary(ctx context.Context, sel ast.SelectionSet, obj *model.Itinerary) graphql.Marshaler {
@@ -68979,6 +71547,48 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "permission_add":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_permission_add(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "permission_remove":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_permission_remove(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "permission_set_parent":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_permission_set_parent(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "tenant_save":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_tenant_save(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "tenant_create_group":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_tenant_create_group(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "group_save":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_group_save(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -69291,6 +71901,160 @@ func (ec *executionContext) _Pathway(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var permissionRefImplementors = []string{"PermissionRef"}
+
+func (ec *executionContext) _PermissionRef(ctx context.Context, sel ast.SelectionSet, obj *model.PermissionRef) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, permissionRefImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PermissionRef")
+		case "type":
+			out.Values[i] = ec._PermissionRef_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "id":
+			out.Values[i] = ec._PermissionRef_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._PermissionRef_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var permissionSubjectImplementors = []string{"PermissionSubject"}
+
+func (ec *executionContext) _PermissionSubject(ctx context.Context, sel ast.SelectionSet, obj *model.PermissionSubject) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, permissionSubjectImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PermissionSubject")
+		case "type":
+			out.Values[i] = ec._PermissionSubject_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "id":
+			out.Values[i] = ec._PermissionSubject_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._PermissionSubject_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "relation":
+			out.Values[i] = ec._PermissionSubject_relation(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var permissionsImplementors = []string{"Permissions"}
+
+func (ec *executionContext) _Permissions(ctx context.Context, sel ast.SelectionSet, obj *model.Permissions) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, permissionsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Permissions")
+		case "actions":
+			out.Values[i] = ec._Permissions_actions(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "subjects":
+			out.Values[i] = ec._Permissions_subjects(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "parent":
+			out.Values[i] = ec._Permissions_parent(ctx, field, obj)
+		case "children":
+			out.Values[i] = ec._Permissions_children(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -69707,6 +72471,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_census_datasets(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "tenants":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_tenants(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "groups":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_groups(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -72673,6 +75481,119 @@ func (ec *executionContext) _StopTimeEvent(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var tenantImplementors = []string{"Tenant"}
+
+func (ec *executionContext) _Tenant(ctx context.Context, sel ast.SelectionSet, obj *model.Tenant) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tenantImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Tenant")
+		case "id":
+			out.Values[i] = ec._Tenant_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "name":
+			out.Values[i] = ec._Tenant_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "groups":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Tenant_groups(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Tenant_permissions(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var tripImplementors = []string{"Trip"}
 
 func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj *model.Trip) graphql.Marshaler {
@@ -75251,6 +78172,69 @@ func (ec *executionContext) marshalNGeometry2githubᚗcomᚋinterlineᚑioᚋtra
 	return v
 }
 
+func (ec *executionContext) marshalNGroup2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx context.Context, sel ast.SelectionSet, v model.Group) graphql.Marshaler {
+	return ec._Group(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Group) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx context.Context, sel ast.SelectionSet, v *model.Group) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Group(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNGroupInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupInput(ctx context.Context, v any) (model.GroupInput, error) {
+	res, err := ec.unmarshalInputGroupInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx context.Context, v any) (tt.Int, error) {
 	var res tt.Int
 	err := res.UnmarshalGQL(v)
@@ -75689,6 +78673,119 @@ func (ec *executionContext) unmarshalNPathwaySetInput2githubᚗcomᚋinterline�
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNPermissionInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionInput(ctx context.Context, v any) (model.PermissionInput, error) {
+	res, err := ec.unmarshalInputPermissionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPermissionRef2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRefᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PermissionRef) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx context.Context, sel ast.SelectionSet, v *model.PermissionRef) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PermissionRef(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPermissionSubject2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PermissionSubject) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPermissionSubject2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubject(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPermissionSubject2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubject(ctx context.Context, sel ast.SelectionSet, v *model.PermissionSubject) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PermissionSubject(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlace(ctx context.Context, sel ast.SelectionSet, v *model.Place) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -76067,6 +79164,11 @@ func (ec *executionContext) marshalNSegmentPattern2ᚖgithubᚗcomᚋinterline�
 	return ec._SegmentPattern(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNSetParentInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSetParentInput(ctx context.Context, v any) (model.SetParentInput, error) {
+	res, err := ec.unmarshalInputSetParentInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNShape2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v model.Shape) graphql.Marshaler {
 	return ec._Shape(ctx, sel, &v)
 }
@@ -76356,6 +79458,69 @@ func (ec *executionContext) marshalNString2ᚖstring(ctx context.Context, sel as
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNTenant2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx context.Context, sel ast.SelectionSet, v model.Tenant) graphql.Marshaler {
+	return ec._Tenant(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTenant2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Tenant) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx context.Context, sel ast.SelectionSet, v *model.Tenant) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Tenant(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNTenantInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantInput(ctx context.Context, v any) (model.TenantInput, error) {
+	res, err := ec.unmarshalInputTenantInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v any) (time.Time, error) {
@@ -79015,6 +82180,20 @@ func (ec *executionContext) unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterline
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalOPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx context.Context, sel ast.SelectionSet, v *model.PermissionRef) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._PermissionRef(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx context.Context, sel ast.SelectionSet, v *model.Permissions) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Permissions(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlaceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Place) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -79867,6 +83046,13 @@ func (ec *executionContext) marshalOTags2ᚖgithubᚗcomᚋinterlineᚑioᚋtran
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) marshalOTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx context.Context, sel ast.SelectionSet, v *model.Tenant) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Tenant(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOTime2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐTime(ctx context.Context, v any) (tt.Time, error) {

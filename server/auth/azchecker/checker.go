@@ -12,10 +12,8 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/server/auth/auth0"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
-	"github.com/interline-io/transitland-lib/server/auth/fga"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 )
 
@@ -71,16 +69,7 @@ type FGAProvider interface {
 }
 
 type CheckerConfig struct {
-	Auth0Domain       string
-	Auth0ClientID     string
-	Auth0ClientSecret string
-	Auth0Connection   string
-	FGAStoreID        string
-	FGAModelID        string
-	FGAEndpoint       string
-	FGALoadModelFile  string
-	FGALoadTestData   []TupleKey
-	GlobalAdmin       string
+	GlobalAdmin string
 }
 
 type Checker struct {
@@ -90,63 +79,21 @@ type Checker struct {
 	globalAdmins []string
 }
 
-// Compile-time check that Checker implements authz.PermissionManager
-var _ authz.PermissionManager = (*Checker)(nil)
+// Compile-time check that Checker implements authz.AdminManager
+var _ authz.AdminManager = (*Checker)(nil)
 
-func NewCheckerFromConfig(ctx context.Context, cfg CheckerConfig, db sqlx.Ext) (*Checker, error) {
-	var userClient UserProvider
-	userClient = NewMockUserProvider()
-	var fgaClient FGAProvider
-	fgaClient = NewMockFGAClient()
-
-	// Use Auth0 if configured
-	if cfg.Auth0Domain != "" {
-		auth0Client, err := auth0.NewAuth0Client(cfg.Auth0Domain, cfg.Auth0ClientID, cfg.Auth0ClientSecret)
-		auth0Client.Connection = cfg.Auth0Connection
-		if err != nil {
-			return nil, err
-		}
-		userClient = auth0Client
+func NewCheckerFromConfig(cfg CheckerConfig, userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) *Checker {
+	if userClient == nil {
+		userClient = NewMockUserProvider()
 	}
-
-	// Use FGA if configured
-	if cfg.FGAEndpoint != "" {
-		fgac, err := fga.NewFGAClient(cfg.FGAEndpoint, cfg.FGAStoreID, cfg.FGAModelID)
-		if err != nil {
-			return nil, err
-		}
-		fgaClient = fgac
-		// Create test FGA environment
-		if cfg.FGALoadModelFile != "" {
-			if cfg.FGAStoreID == "" {
-				if _, err := fgac.CreateStore(ctx, "test"); err != nil {
-					return nil, err
-				}
-			}
-			if _, err := fgac.CreateModel(ctx, cfg.FGALoadModelFile); err != nil {
-				return nil, err
-			}
-		}
-		// Add test data
-		for _, tk := range cfg.FGALoadTestData {
-			ltk, found, err := ekLookup(db, tk)
-			if !found {
-				log.For(ctx).Info().Msgf("warning, tuple entities not found in database: %s", tk.String())
-			}
-			if err != nil {
-				return nil, err
-			}
-			if err := fgaClient.WriteTuple(ctx, ltk); err != nil {
-				return nil, err
-			}
-		}
+	if fgaClient == nil {
+		fgaClient = NewMockFGAClient()
 	}
-
 	checker := NewChecker(userClient, fgaClient, db)
 	if cfg.GlobalAdmin != "" {
 		checker.globalAdmins = append(checker.globalAdmins, cfg.GlobalAdmin)
 	}
-	return checker, nil
+	return checker
 }
 
 func NewChecker(n UserProvider, p FGAProvider, db sqlx.Ext) *Checker {
@@ -903,28 +850,22 @@ func first[T any](v []T) T {
 	return xt
 }
 
-// todo: rename to dbTestTupleLookup and make arg TestTuple
 func dbTupleLookup(t testing.TB, dbx sqlx.Ext, tk TupleKey) TupleKey {
-	var err error
-	var found bool
-	tk.Subject, found, err = dbNameToEntityKey(dbx, tk.Subject)
-	if !found && t != nil {
-		t.Logf("lookup warning: %s not found", tk.Subject.String())
+	ltk, found, err := EKLookup(dbx, tk)
+	if !found {
+		t.Logf("lookup warning: tuple entities not found: %s", tk.String())
 	}
 	if err != nil {
 		t.Log(err)
 	}
-	tk.Object, found, err = dbNameToEntityKey(dbx, tk.Object)
-	if !found && t != nil {
-		t.Logf("lookup warning: %s not found", tk.Object.String())
-	}
-	if err != nil {
-		t.Log(err)
-	}
-	return tk
+	return ltk
 }
 
-func ekLookup(dbx sqlx.Ext, tk TupleKey) (TupleKey, bool, error) {
+// EKLookup resolves symbolic entity names in a TupleKey to database IDs.
+// For example, a FeedType entity with name "CT" is looked up in current_feeds
+// and replaced with its integer ID. Returns the resolved tuple, whether both
+// sides were found, and any error.
+func EKLookup(dbx sqlx.Ext, tk TupleKey) (TupleKey, bool, error) {
 	var err error
 	var found1 bool
 	var found2 bool

@@ -75,12 +75,12 @@ func (a *Action) UnmarshalText(text []byte) error {
 type ObjectType int32
 
 const (
-	ObjectType_empty_object  ObjectType = 0
-	ObjectType_tenant        ObjectType = 1
-	ObjectType_org           ObjectType = 2
-	ObjectType_feed          ObjectType = 3
-	ObjectType_feed_version  ObjectType = 4
-	ObjectType_user          ObjectType = 5
+	ObjectType_empty_object ObjectType = 0
+	ObjectType_tenant       ObjectType = 1
+	ObjectType_org          ObjectType = 2
+	ObjectType_feed         ObjectType = 3
+	ObjectType_feed_version ObjectType = 4
+	ObjectType_user         ObjectType = 5
 )
 
 var ObjectType_name = map[int32]string{
@@ -96,6 +96,7 @@ var ObjectType_value = map[string]int32{
 	"empty_object": 0,
 	"tenant":       1,
 	"org":          2,
+	"group":        2, // alias for "org" — the GraphQL API exposes "group"
 	"feed":         3,
 	"feed_version": 4,
 	"user":         5,
@@ -430,4 +431,3 @@ func (x *GroupSaveRequest) GetGroup() *Group {
 type GroupSaveResponse struct {
 	Group *Group `json:"group,omitempty"`
 }
-
