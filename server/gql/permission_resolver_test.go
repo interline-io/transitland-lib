@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
+	"github.com/interline-io/transitland-lib/server/auth/azchecker"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
@@ -430,18 +431,50 @@ func TestPermissionResolver_AdminMutations(t *testing.T) {
 }
 
 func TestPermissionResolver_Users(t *testing.T) {
-	c := newPermTestClient(t, "tl-tenant-admin")
+	// Build a checker with seeded users
+	mockUsers := azchecker.NewMockUserProvider()
+	mockUsers.AddUser("alice", authn.NewCtxUser("alice", "Alice Smith", "alice@example.com"))
+	mockUsers.AddUser("bob", authn.NewCtxUser("bob", "Bob Jones", "bob@example.com"))
+	mockUsers.AddUser("charlie", authn.NewCtxUser("charlie", "Charlie Brown", "charlie@example.com"))
+	checker := azchecker.NewChecker(mockUsers, azchecker.NewMockFGAClient(), nil)
+	cfg := testconfig.Config(t, testconfig.Options{})
+	cfg.Checker = checker
+	c := newPermTestClientFromConfig(cfg, "tl-tenant-admin", "admin")
 
-	t.Run("list users returns empty with mock provider", func(t *testing.T) {
+	t.Run("list all users", func(t *testing.T) {
 		jj := postQuery(t, c, `{ users { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 3, len(users))
+	})
+
+	t.Run("search users with q", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(q: "alice") { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 1, len(users))
+		assert.Equal(t, "alice", users[0].Get("id").Str)
+		assert.Equal(t, "Alice Smith", users[0].Get("name").Str)
+		assert.Equal(t, "alice@example.com", users[0].Get("email").Str)
+	})
+
+	t.Run("search users with q no match", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(q: "nobody") { id name email } }`, nil)
 		users := gjson.Get(jj, "users").Array()
 		assert.Equal(t, 0, len(users))
 	})
 
-	t.Run("search users with q returns empty with mock provider", func(t *testing.T) {
-		jj := postQuery(t, c, `{ users(q: "test") { id name email } }`, nil)
+	t.Run("list users with limit", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(limit: 2) { id } }`, nil)
 		users := gjson.Get(jj, "users").Array()
-		assert.Equal(t, 0, len(users))
+		assert.Equal(t, 2, len(users))
+	})
+
+	t.Run("get user by id", func(t *testing.T) {
+		jj := postQuery(t, c, `{ users(id: "bob") { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 1, len(users))
+		assert.Equal(t, "bob", users[0].Get("id").Str)
+		assert.Equal(t, "Bob Jones", users[0].Get("name").Str)
+		assert.Equal(t, "bob@example.com", users[0].Get("email").Str)
 	})
 
 	t.Run("get user by id not found", func(t *testing.T) {
@@ -449,8 +482,8 @@ func TestPermissionResolver_Users(t *testing.T) {
 	})
 
 	t.Run("users returns empty without admin manager", func(t *testing.T) {
-		cfg := testconfig.Config(t, testconfig.Options{})
-		noAuthClient := newPermTestClientFromConfig(cfg, "testuser", "testrole")
+		noAuthCfg := testconfig.Config(t, testconfig.Options{})
+		noAuthClient := newPermTestClientFromConfig(noAuthCfg, "testuser", "testrole")
 		jj := postQuery(t, noAuthClient, `{ users { id name email } }`, nil)
 		users := gjson.Get(jj, "users").Array()
 		assert.Equal(t, 0, len(users))
