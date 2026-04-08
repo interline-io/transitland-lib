@@ -127,15 +127,20 @@ func (r *queryResolver) Tenants(ctx context.Context, limit *int, id *int) ([]*mo
 	if pm == nil || err != nil {
 		return nil, nil
 	}
+	if id != nil {
+		ref := authz.ObjectRef{Type: authz.TenantType, ID: int64(*id)}
+		perms, err := pm.ObjectPermissions(ctx, ref)
+		if err != nil {
+			return []*model.Tenant{}, nil
+		}
+		return []*model.Tenant{{ID: *id, Name: perms.Ref.Name}}, nil
+	}
 	refs, err := pm.ListObjects(ctx, authz.TenantType)
 	if err != nil {
 		return nil, err
 	}
 	tenants := make([]*model.Tenant, 0, len(refs))
 	for _, ref := range refs {
-		if id != nil && int(ref.ID) != *id {
-			continue
-		}
 		t := &model.Tenant{ID: int(ref.ID)}
 		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
 			t.Name = perms.Ref.Name
@@ -153,15 +158,20 @@ func (r *queryResolver) Groups(ctx context.Context, limit *int, id *int) ([]*mod
 	if pm == nil || err != nil {
 		return nil, nil
 	}
+	if id != nil {
+		ref := authz.ObjectRef{Type: authz.GroupType, ID: int64(*id)}
+		perms, err := pm.ObjectPermissions(ctx, ref)
+		if err != nil {
+			return []*model.Group{}, nil
+		}
+		return []*model.Group{{ID: *id, Name: perms.Ref.Name}}, nil
+	}
 	refs, err := pm.ListObjects(ctx, authz.GroupType)
 	if err != nil {
 		return nil, err
 	}
 	groups := make([]*model.Group, 0, len(refs))
 	for _, ref := range refs {
-		if id != nil && int(ref.ID) != *id {
-			continue
-		}
 		g := &model.Group{ID: int(ref.ID)}
 		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
 			g.Name = perms.Ref.Name
@@ -177,7 +187,7 @@ func (r *queryResolver) Groups(ctx context.Context, limit *int, id *int) ([]*mod
 func (r *queryResolver) Users(ctx context.Context, limit *int, id *string, q *string) ([]*model.User, error) {
 	am, err := getAdminManager(ctx)
 	if err != nil {
-		return nil, err
+		return []*model.User{}, nil
 	}
 	// Single user lookup by ID
 	if id != nil {
