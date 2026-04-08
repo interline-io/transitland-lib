@@ -42,9 +42,15 @@ func (r *tenantResolver) Groups(ctx context.Context, obj *model.Tenant, limit *i
 	}
 	groups := []*model.Group{}
 	for _, child := range perms.Children {
-		if child.Type == authz.GroupType {
-			groups = append(groups, &model.Group{ID: int(child.ID), Name: child.Name})
+		if child.Type != authz.GroupType {
+			continue
 		}
+		// Check that user has permission to view each group
+		childPerms, err := pm.ObjectPermissions(ctx, child)
+		if err != nil {
+			continue
+		}
+		groups = append(groups, &model.Group{ID: int(child.ID), Name: childPerms.Ref.Name})
 		if limit != nil && len(groups) >= *limit {
 			break
 		}
@@ -407,12 +413,16 @@ func resolvePermissions(ctx context.Context, objType authz.ObjectType, id int64)
 			Name: perms.Parent.Name,
 		}
 	}
-	// Children
+	// Children - filter to only include children the user can view
 	for _, child := range perms.Children {
+		childPerms, err := pm.ObjectPermissions(ctx, child)
+		if err != nil {
+			continue
+		}
 		result.Children = append(result.Children, &model.PermissionRef{
 			Type: displayTypeName(child.Type),
 			ID:   int(child.ID),
-			Name: child.Name,
+			Name: childPerms.Ref.Name,
 		})
 	}
 	return result, nil
