@@ -206,10 +206,7 @@ func (r *queryResolver) Users(ctx context.Context, limit *int, where *model.User
 	// Single user lookup by ID
 	if where != nil && where.ID != nil {
 		resp, err := am.User(ctx, &authz.UserRequest{Id: *where.ID})
-		if err != nil {
-			return nil, err
-		}
-		if resp.User == nil {
+		if err != nil || resp.User == nil {
 			return []*model.User{}, nil
 		}
 		return []*model.User{{

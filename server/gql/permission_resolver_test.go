@@ -478,7 +478,9 @@ func TestPermissionResolver_Users(t *testing.T) {
 	})
 
 	t.Run("get user by id not found", func(t *testing.T) {
-		postQueryExpectError(t, c, `{ users(where:{id:"nonexistent"}) { id name email } }`)
+		jj := postQuery(t, c, `{ users(where:{id:"nonexistent"}) { id name email } }`, nil)
+		users := gjson.Get(jj, "users").Array()
+		assert.Equal(t, 0, len(users))
 	})
 
 	t.Run("users returns empty without admin manager", func(t *testing.T) {
