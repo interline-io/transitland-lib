@@ -104,7 +104,7 @@ func TestPermissionResolver_Tenants(t *testing.T) {
 		assert.True(t, found, "expected to find tl-tenant")
 	})
 
-	t.Run("get tenant by id", func(t *testing.T) {
+	t.Run("get tenant by ids", func(t *testing.T) {
 		// First get the tenant ID
 		jj := postQuery(t, c, `{ tenants { id name } }`, nil)
 		var tenantID int64
@@ -115,16 +115,16 @@ func TestPermissionResolver_Tenants(t *testing.T) {
 		}
 		assert.Greater(t, tenantID, int64(0))
 
-		// Look up by ID
-		jj = postQuery(t, c, `query($id: Int) { tenants(id: $id) { id name } }`, map[string]interface{}{"id": tenantID})
+		// Look up by IDs
+		jj = postQuery(t, c, `query($ids: [Int!]) { tenants(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int64{tenantID}})
 		tenants := gjson.Get(jj, "tenants").Array()
 		assert.Equal(t, 1, len(tenants))
 		assert.Equal(t, tenantID, tenants[0].Get("id").Int())
 		assert.Equal(t, "tl-tenant", tenants[0].Get("name").Str)
 	})
 
-	t.Run("get tenant by id not found", func(t *testing.T) {
-		jj := postQuery(t, c, `query($id: Int) { tenants(id: $id) { id name } }`, map[string]interface{}{"id": 999999})
+	t.Run("get tenant by ids not found", func(t *testing.T) {
+		jj := postQuery(t, c, `query($ids: [Int!]) { tenants(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int{999999}})
 		tenants := gjson.Get(jj, "tenants").Array()
 		assert.Equal(t, 0, len(tenants))
 	})
@@ -200,7 +200,7 @@ func TestPermissionResolver_Groups(t *testing.T) {
 		assert.Contains(t, groupNames, "BA-group")
 	})
 
-	t.Run("get group by id", func(t *testing.T) {
+	t.Run("get group by ids", func(t *testing.T) {
 		// First get the group ID
 		jj := postQuery(t, c, `{ groups { id name } }`, nil)
 		var groupID int64
@@ -211,16 +211,16 @@ func TestPermissionResolver_Groups(t *testing.T) {
 		}
 		assert.Greater(t, groupID, int64(0))
 
-		// Look up by ID
-		jj = postQuery(t, c, `query($id: Int) { groups(id: $id) { id name } }`, map[string]interface{}{"id": groupID})
+		// Look up by IDs
+		jj = postQuery(t, c, `query($ids: [Int!]) { groups(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int64{groupID}})
 		groups := gjson.Get(jj, "groups").Array()
 		assert.Equal(t, 1, len(groups))
 		assert.Equal(t, groupID, groups[0].Get("id").Int())
 		assert.Equal(t, "CT-group", groups[0].Get("name").Str)
 	})
 
-	t.Run("get group by id not found", func(t *testing.T) {
-		jj := postQuery(t, c, `query($id: Int) { groups(id: $id) { id name } }`, map[string]interface{}{"id": 999999})
+	t.Run("get group by ids not found", func(t *testing.T) {
+		jj := postQuery(t, c, `query($ids: [Int!]) { groups(ids: $ids) { id name } }`, map[string]interface{}{"ids": []int{999999}})
 		groups := gjson.Get(jj, "groups").Array()
 		assert.Equal(t, 0, len(groups))
 	})
@@ -448,7 +448,7 @@ func TestPermissionResolver_Users(t *testing.T) {
 	})
 
 	t.Run("search users with q", func(t *testing.T) {
-		jj := postQuery(t, c, `{ users(q: "alice") { id name email } }`, nil)
+		jj := postQuery(t, c, `{ users(where:{q:"alice"}) { id name email } }`, nil)
 		users := gjson.Get(jj, "users").Array()
 		assert.Equal(t, 1, len(users))
 		assert.Equal(t, "alice", users[0].Get("id").Str)
@@ -457,7 +457,7 @@ func TestPermissionResolver_Users(t *testing.T) {
 	})
 
 	t.Run("search users with q no match", func(t *testing.T) {
-		jj := postQuery(t, c, `{ users(q: "nobody") { id name email } }`, nil)
+		jj := postQuery(t, c, `{ users(where:{q:"nobody"}) { id name email } }`, nil)
 		users := gjson.Get(jj, "users").Array()
 		assert.Equal(t, 0, len(users))
 	})
@@ -469,7 +469,7 @@ func TestPermissionResolver_Users(t *testing.T) {
 	})
 
 	t.Run("get user by id", func(t *testing.T) {
-		jj := postQuery(t, c, `{ users(id: "bob") { id name email } }`, nil)
+		jj := postQuery(t, c, `{ users(where:{id:"bob"}) { id name email } }`, nil)
 		users := gjson.Get(jj, "users").Array()
 		assert.Equal(t, 1, len(users))
 		assert.Equal(t, "bob", users[0].Get("id").Str)
@@ -478,7 +478,7 @@ func TestPermissionResolver_Users(t *testing.T) {
 	})
 
 	t.Run("get user by id not found", func(t *testing.T) {
-		postQueryExpectError(t, c, `{ users(id: "nonexistent") { id name email } }`)
+		postQueryExpectError(t, c, `{ users(where:{id:"nonexistent"}) { id name email } }`)
 	})
 
 	t.Run("users returns empty without admin manager", func(t *testing.T) {

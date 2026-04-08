@@ -98,13 +98,21 @@ type User {
   email: String!
 }
 
+"""Search options for users"""
+input UserFilter {
+  "Search for a user by ID"
+  id: String
+  "Full text search"
+  q: String
+}
+
 extend type Query {
   "List tenants accessible to the current user"
-  tenants(limit: Int, id: Int): [Tenant!]!
+  tenants(limit: Int, ids: [Int!]): [Tenant!]!
   "List groups accessible to the current user"
-  groups(limit: Int, id: Int): [Group!]!
+  groups(limit: Int, ids: [Int!]): [Group!]!
   "Search for users"
-  users(limit: Int, id: String, q: String): [User!]!
+  users(limit: Int, where: UserFilter): [User!]!
 }
 
 extend type Mutation {

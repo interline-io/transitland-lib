@@ -940,15 +940,15 @@ type ComplexityRoot struct {
 		Docks          func(childComplexity int, limit *int, where *model.GbfsDockRequest) int
 		FeedVersions   func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedVersionFilter) int
 		Feeds          func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedFilter) int
-		Groups         func(childComplexity int, limit *int, id *int) int
+		Groups         func(childComplexity int, limit *int, ids []int) int
 		Me             func(childComplexity int) int
 		Operators      func(childComplexity int, limit *int, after *int, ids []int, where *model.OperatorFilter) int
 		Places         func(childComplexity int, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) int
 		Routes         func(childComplexity int, limit *int, after *int, ids []int, where *model.RouteFilter) int
 		Stops          func(childComplexity int, limit *int, after *int, ids []int, where *model.StopFilter) int
-		Tenants        func(childComplexity int, limit *int, id *int) int
+		Tenants        func(childComplexity int, limit *int, ids []int) int
 		Trips          func(childComplexity int, limit *int, after *int, ids []int, where *model.TripFilter) int
-		Users          func(childComplexity int, limit *int, id *string, q *string) int
+		Users          func(childComplexity int, limit *int, where *model.UserFilter) int
 	}
 
 	RTTimeRange struct {
@@ -1511,9 +1511,9 @@ type QueryResolver interface {
 	Docks(ctx context.Context, limit *int, where *model.GbfsDockRequest) ([]*model.GbfsStationInformation, error)
 	Me(ctx context.Context) (*model.Me, error)
 	CensusDatasets(ctx context.Context, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) ([]*model.CensusDataset, error)
-	Tenants(ctx context.Context, limit *int, id *int) ([]*model.Tenant, error)
-	Groups(ctx context.Context, limit *int, id *int) ([]*model.Group, error)
-	Users(ctx context.Context, limit *int, id *string, q *string) ([]*model.User, error)
+	Tenants(ctx context.Context, limit *int, ids []int) ([]*model.Tenant, error)
+	Groups(ctx context.Context, limit *int, ids []int) ([]*model.Group, error)
+	Users(ctx context.Context, limit *int, where *model.UserFilter) ([]*model.User, error)
 }
 type RouteResolver interface {
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
@@ -6262,7 +6262,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Groups(childComplexity, args["limit"].(*int), args["id"].(*int)), true
+		return e.complexity.Query.Groups(childComplexity, args["limit"].(*int), args["ids"].([]int)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -6329,7 +6329,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Tenants(childComplexity, args["limit"].(*int), args["id"].(*int)), true
+		return e.complexity.Query.Tenants(childComplexity, args["limit"].(*int), args["ids"].([]int)), true
 
 	case "Query.trips":
 		if e.complexity.Query.Trips == nil {
@@ -6353,7 +6353,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Users(childComplexity, args["limit"].(*int), args["id"].(*string), args["q"].(*string)), true
+		return e.complexity.Query.Users(childComplexity, args["limit"].(*int), args["where"].(*model.UserFilter)), true
 
 	case "RTTimeRange.end":
 		if e.complexity.RTTimeRange.End == nil {
@@ -8643,6 +8643,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputTenantInput,
 		ec.unmarshalInputTripFilter,
 		ec.unmarshalInputTripStopTimeFilter,
+		ec.unmarshalInputUserFilter,
 		ec.unmarshalInputValidationReportFilter,
 		ec.unmarshalInputWaypointInput,
 	)
@@ -9254,13 +9255,21 @@ type User {
   email: String!
 }
 
+"""Search options for users"""
+input UserFilter {
+  "Search for a user by ID"
+  id: String
+  "Full text search"
+  q: String
+}
+
 extend type Query {
   "List tenants accessible to the current user"
-  tenants(limit: Int, id: Int): [Tenant!]!
+  tenants(limit: Int, ids: [Int!]): [Tenant!]!
   "List groups accessible to the current user"
-  groups(limit: Int, id: Int): [Group!]!
+  groups(limit: Int, ids: [Int!]): [Group!]!
   "Search for users"
-  users(limit: Int, id: String, q: String): [User!]!
+  users(limit: Int, where: UserFilter): [User!]!
 }
 
 extend type Mutation {
@@ -12752,11 +12761,11 @@ func (ec *executionContext) field_Query_groups_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalOInt2ᚖint)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "ids", ec.unmarshalOInt2ᚕintᚄ)
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg1
+	args["ids"] = arg1
 	return args, nil
 }
 
@@ -12872,11 +12881,11 @@ func (ec *executionContext) field_Query_tenants_args(ctx context.Context, rawArg
 		return nil, err
 	}
 	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalOInt2ᚖint)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "ids", ec.unmarshalOInt2ᚕintᚄ)
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg1
+	args["ids"] = arg1
 	return args, nil
 }
 
@@ -12914,16 +12923,11 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalOString2ᚖstring)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOUserFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUserFilter)
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "q", ec.unmarshalOString2ᚖstring)
-	if err != nil {
-		return nil, err
-	}
-	args["q"] = arg2
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -44644,7 +44648,7 @@ func (ec *executionContext) _Query_tenants(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Tenants(rctx, fc.Args["limit"].(*int), fc.Args["id"].(*int))
+		return ec.resolvers.Query().Tenants(rctx, fc.Args["limit"].(*int), fc.Args["ids"].([]int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -44709,7 +44713,7 @@ func (ec *executionContext) _Query_groups(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Groups(rctx, fc.Args["limit"].(*int), fc.Args["id"].(*int))
+		return ec.resolvers.Query().Groups(rctx, fc.Args["limit"].(*int), fc.Args["ids"].([]int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -44776,7 +44780,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Users(rctx, fc.Args["limit"].(*int), fc.Args["id"].(*string), fc.Args["q"].(*string))
+		return ec.resolvers.Query().Users(rctx, fc.Args["limit"].(*int), fc.Args["where"].(*model.UserFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -65105,6 +65109,40 @@ func (ec *executionContext) unmarshalInputTripStopTimeFilter(ctx context.Context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUserFilter(ctx context.Context, obj any) (model.UserFilter, error) {
+	var it model.UserFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "q"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "q":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("q"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Q = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputValidationReportFilter(ctx context.Context, obj any) (model.ValidationReportFilter, error) {
 	var it model.ValidationReportFilter
 	asMap := map[string]any{}
@@ -83614,6 +83652,14 @@ func (ec *executionContext) marshalOUrl2ᚖgithubᚗcomᚋinterlineᚑioᚋtrans
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOUserFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUserFilter(ctx context.Context, v any) (*model.UserFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUserFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOValidationRealtimeResult2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationRealtimeResultᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ValidationRealtimeResult) graphql.Marshaler {

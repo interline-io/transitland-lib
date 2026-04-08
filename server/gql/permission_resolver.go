@@ -122,18 +122,25 @@ func (r *feedVersionResolver) Permissions(ctx context.Context, obj *model.FeedVe
 
 // Query resolvers for tenants and groups
 
-func (r *queryResolver) Tenants(ctx context.Context, limit *int, id *int) ([]*model.Tenant, error) {
+func (r *queryResolver) Tenants(ctx context.Context, limit *int, ids []int) ([]*model.Tenant, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return nil, nil
 	}
-	if id != nil {
-		ref := authz.ObjectRef{Type: authz.TenantType, ID: int64(*id)}
-		perms, err := pm.ObjectPermissions(ctx, ref)
-		if err != nil {
-			return []*model.Tenant{}, nil
+	if len(ids) > 0 {
+		tenants := make([]*model.Tenant, 0, len(ids))
+		for _, id := range ids {
+			ref := authz.ObjectRef{Type: authz.TenantType, ID: int64(id)}
+			perms, err := pm.ObjectPermissions(ctx, ref)
+			if err != nil {
+				continue
+			}
+			tenants = append(tenants, &model.Tenant{ID: id, Name: perms.Ref.Name})
+			if limit != nil && len(tenants) >= *limit {
+				break
+			}
 		}
-		return []*model.Tenant{{ID: *id, Name: perms.Ref.Name}}, nil
+		return tenants, nil
 	}
 	refs, err := pm.ListObjects(ctx, authz.TenantType)
 	if err != nil {
@@ -153,18 +160,25 @@ func (r *queryResolver) Tenants(ctx context.Context, limit *int, id *int) ([]*mo
 	return tenants, nil
 }
 
-func (r *queryResolver) Groups(ctx context.Context, limit *int, id *int) ([]*model.Group, error) {
+func (r *queryResolver) Groups(ctx context.Context, limit *int, ids []int) ([]*model.Group, error) {
 	pm, err := getPermissionManager(ctx)
 	if pm == nil || err != nil {
 		return nil, nil
 	}
-	if id != nil {
-		ref := authz.ObjectRef{Type: authz.GroupType, ID: int64(*id)}
-		perms, err := pm.ObjectPermissions(ctx, ref)
-		if err != nil {
-			return []*model.Group{}, nil
+	if len(ids) > 0 {
+		groups := make([]*model.Group, 0, len(ids))
+		for _, id := range ids {
+			ref := authz.ObjectRef{Type: authz.GroupType, ID: int64(id)}
+			perms, err := pm.ObjectPermissions(ctx, ref)
+			if err != nil {
+				continue
+			}
+			groups = append(groups, &model.Group{ID: id, Name: perms.Ref.Name})
+			if limit != nil && len(groups) >= *limit {
+				break
+			}
 		}
-		return []*model.Group{{ID: *id, Name: perms.Ref.Name}}, nil
+		return groups, nil
 	}
 	refs, err := pm.ListObjects(ctx, authz.GroupType)
 	if err != nil {
@@ -184,14 +198,14 @@ func (r *queryResolver) Groups(ctx context.Context, limit *int, id *int) ([]*mod
 	return groups, nil
 }
 
-func (r *queryResolver) Users(ctx context.Context, limit *int, id *string, q *string) ([]*model.User, error) {
+func (r *queryResolver) Users(ctx context.Context, limit *int, where *model.UserFilter) ([]*model.User, error) {
 	am, err := getAdminManager(ctx)
 	if err != nil {
 		return []*model.User{}, nil
 	}
 	// Single user lookup by ID
-	if id != nil {
-		resp, err := am.User(ctx, &authz.UserRequest{Id: *id})
+	if where != nil && where.ID != nil {
+		resp, err := am.User(ctx, &authz.UserRequest{Id: *where.ID})
 		if err != nil {
 			return nil, err
 		}
@@ -206,8 +220,8 @@ func (r *queryResolver) Users(ctx context.Context, limit *int, id *string, q *st
 	}
 	// Search/list users
 	searchQ := ""
-	if q != nil {
-		searchQ = *q
+	if where != nil && where.Q != nil {
+		searchQ = *where.Q
 	}
 	resp, err := am.UserList(ctx, &authz.UserListRequest{Q: searchQ})
 	if err != nil {

@@ -1417,6 +1417,14 @@ type User struct {
 	Email string `json:"email"`
 }
 
+// Search options for users
+type UserFilter struct {
+	// Search for a user by ID
+	ID *string `json:"id,omitempty"`
+	// Full text search
+	Q *string `json:"q,omitempty"`
+}
+
 // Source URL and JSON representation of GTFS-RT data used for validation
 type ValidationRealtimeResult struct {
 	// Source URL
