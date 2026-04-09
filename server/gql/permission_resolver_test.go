@@ -561,6 +561,22 @@ func TestPermissionResolver_Filtering(t *testing.T) {
 		assert.NotContains(t, tenantGroups, "HA-group", "traversal should not widen to HA-group")
 	})
 
+	t.Run("partial-user tenant permissions children filtered", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "partial-user")
+		jj := postQuery(t, c, `{ tenants { name permissions { children { type name } } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			childNames := names(tenant.Get("permissions.children").Array(), "name")
+			assert.Contains(t, childNames, "CT-group")
+			assert.NotContains(t, childNames, "BA-group", "permissions children should not include BA-group")
+			assert.NotContains(t, childNames, "HA-group", "permissions children should not include HA-group")
+			return
+		}
+		t.Fatal("tl-tenant not found")
+	})
+
 	t.Run("partial-user group feeds", func(t *testing.T) {
 		c := newPermTestClientFromConfig(cfg, "partial-user")
 		jj := postQuery(t, c, `{ groups { name feeds { onestop_id } } }`, nil)

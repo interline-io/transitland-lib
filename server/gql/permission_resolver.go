@@ -140,6 +140,9 @@ func (r *queryResolver) Tenants(ctx context.Context, limit *int, ids []int) ([]*
 				continue
 			}
 			refs = append(refs, perms.Ref)
+			if limit != nil && len(refs) >= *limit {
+				break
+			}
 		}
 	} else {
 		refs, err = pm.ListObjects(ctx, authz.TenantType)
@@ -171,6 +174,9 @@ func (r *queryResolver) Groups(ctx context.Context, limit *int, ids []int) ([]*m
 				continue
 			}
 			refs = append(refs, perms.Ref)
+			if limit != nil && len(refs) >= *limit {
+				break
+			}
 		}
 	} else {
 		refs, err = pm.ListObjects(ctx, authz.GroupType)
