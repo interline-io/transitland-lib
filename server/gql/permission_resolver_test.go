@@ -663,15 +663,17 @@ func TestPermissionResolver_Filtering(t *testing.T) {
 	})
 
 	t.Run("partial-user group permissions children filtered", func(t *testing.T) {
-		// Verify resolvePermissions filters children on a non-tenant type (group)
+		// Verify resolvePermissions filters children on a non-tenant type (group).
+		// CT-group has one feed child (CT); the permissions.children list should
+		// contain exactly that feed and nothing from other groups.
 		c := newPermTestClientFromConfig(cfg, "partial-user")
-		jj := postQuery(t, c, `{ groups { name permissions { children { type name } } } }`, nil)
+		jj := postQuery(t, c, `{ groups { name permissions { children { type id } } } }`, nil)
 		groups := gjson.Get(jj, "groups").Array()
 		assert.Equal(t, 1, len(groups), "partial-user should see exactly 1 group")
 		assert.Equal(t, "CT-group", groups[0].Get("name").Str)
-		childNames := names(groups[0].Get("permissions.children").Array(), "name")
-		assert.Contains(t, childNames, "CT")
-		assert.NotContains(t, childNames, "BA", "group permissions children should not include feeds from other groups")
+		children := groups[0].Get("permissions.children").Array()
+		assert.Equal(t, 1, len(children), "CT-group should have exactly 1 visible child feed")
+		assert.Equal(t, "feed", children[0].Get("type").Str)
 	})
 
 	t.Run("partial-user tenant groups with limit", func(t *testing.T) {
