@@ -45,12 +45,7 @@ func (r *tenantResolver) Groups(ctx context.Context, obj *model.Tenant, limit *i
 		if child.Type != authz.GroupType {
 			continue
 		}
-		// Check that user has permission to view each group
-		childPerms, err := pm.ObjectPermissions(ctx, child)
-		if err != nil {
-			continue
-		}
-		groups = append(groups, &model.Group{ID: int(child.ID), Name: childPerms.Ref.Name})
+		groups = append(groups, &model.Group{ID: int(child.ID), Name: child.Name})
 		if limit != nil && len(groups) >= *limit {
 			break
 		}
@@ -136,32 +131,25 @@ func (r *queryResolver) Tenants(ctx context.Context, limit *int, ids []int) ([]*
 	if pm == nil || err != nil {
 		return nil, nil
 	}
+	var refs []authz.ObjectRef
 	if len(ids) > 0 {
-		tenants := make([]*model.Tenant, 0, len(ids))
 		for _, id := range ids {
 			ref := authz.ObjectRef{Type: authz.TenantType, ID: int64(id)}
 			perms, err := pm.ObjectPermissions(ctx, ref)
 			if err != nil {
 				continue
 			}
-			tenants = append(tenants, &model.Tenant{ID: id, Name: perms.Ref.Name})
-			if limit != nil && len(tenants) >= *limit {
-				break
-			}
+			refs = append(refs, perms.Ref)
 		}
-		return tenants, nil
-	}
-	refs, err := pm.ListObjects(ctx, authz.TenantType)
-	if err != nil {
-		return nil, err
+	} else {
+		refs, err = pm.ListObjects(ctx, authz.TenantType)
+		if err != nil {
+			return nil, err
+		}
 	}
 	tenants := make([]*model.Tenant, 0, len(refs))
 	for _, ref := range refs {
-		t := &model.Tenant{ID: int(ref.ID)}
-		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
-			t.Name = perms.Ref.Name
-		}
-		tenants = append(tenants, t)
+		tenants = append(tenants, &model.Tenant{ID: int(ref.ID), Name: ref.Name})
 		if limit != nil && len(tenants) >= *limit {
 			break
 		}
@@ -174,32 +162,25 @@ func (r *queryResolver) Groups(ctx context.Context, limit *int, ids []int) ([]*m
 	if pm == nil || err != nil {
 		return nil, nil
 	}
+	var refs []authz.ObjectRef
 	if len(ids) > 0 {
-		groups := make([]*model.Group, 0, len(ids))
 		for _, id := range ids {
 			ref := authz.ObjectRef{Type: authz.GroupType, ID: int64(id)}
 			perms, err := pm.ObjectPermissions(ctx, ref)
 			if err != nil {
 				continue
 			}
-			groups = append(groups, &model.Group{ID: id, Name: perms.Ref.Name})
-			if limit != nil && len(groups) >= *limit {
-				break
-			}
+			refs = append(refs, perms.Ref)
 		}
-		return groups, nil
-	}
-	refs, err := pm.ListObjects(ctx, authz.GroupType)
-	if err != nil {
-		return nil, err
+	} else {
+		refs, err = pm.ListObjects(ctx, authz.GroupType)
+		if err != nil {
+			return nil, err
+		}
 	}
 	groups := make([]*model.Group, 0, len(refs))
 	for _, ref := range refs {
-		g := &model.Group{ID: int(ref.ID)}
-		if perms, err := pm.ObjectPermissions(ctx, ref); err == nil {
-			g.Name = perms.Ref.Name
-		}
-		groups = append(groups, g)
+		groups = append(groups, &model.Group{ID: int(ref.ID), Name: ref.Name})
 		if limit != nil && len(groups) >= *limit {
 			break
 		}
@@ -416,16 +397,12 @@ func resolvePermissions(ctx context.Context, objType authz.ObjectType, id int64)
 			Name: perms.Parent.Name,
 		}
 	}
-	// Children - filter to only include children the user can view
+	// Children (already filtered to viewable by ObjectPermissions)
 	for _, child := range perms.Children {
-		childPerms, err := pm.ObjectPermissions(ctx, child)
-		if err != nil {
-			continue
-		}
 		result.Children = append(result.Children, &model.PermissionRef{
 			Type: displayTypeName(child.Type),
 			ID:   int(child.ID),
-			Name: childPerms.Ref.Name,
+			Name: child.Name,
 		})
 	}
 	return result, nil

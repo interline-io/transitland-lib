@@ -359,6 +359,7 @@ func (c *Checker) ListObjects(ctx context.Context, objType ObjectType) ([]authz.
 	for i, id := range ids {
 		refs[i] = authz.ObjectRef{Type: objType, ID: id}
 	}
+	c.hydrateObjectRefs(ctx, refs)
 	return refs, nil
 }
 
@@ -414,11 +415,16 @@ func (c *Checker) ObjectPermissions(ctx context.Context, obj authz.ObjectRef) (*
 	}
 	c.hydrateSubjectRefs(ctx, ret.Subjects)
 
-	// Children
+	// Children — only include children the current user can view
 	if childType, ok := childTypeForType(obj.Type); ok {
 		childIds, _ := c.listSubjectRelations(ctx, entKey, childType, ParentRelation)
 		for _, id := range childIds {
-			ret.Children = append(ret.Children, authz.ObjectRef{Type: childType, ID: id})
+			childRef := authz.ObjectRef{Type: childType, ID: id}
+			childCtxTuples := c.contextualTuples(ctx, childRef)
+			childKey := newEntityID(childType, id)
+			if ok, _ := c.checkAction(ctx, CanView, childKey, childCtxTuples...); ok {
+				ret.Children = append(ret.Children, childRef)
+			}
 		}
 	}
 

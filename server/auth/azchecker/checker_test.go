@@ -529,6 +529,124 @@ func TestChecker(t *testing.T) {
 		}
 	})
 
+	t.Run("TenantPermissions children filtered", func(t *testing.T) {
+		checker := newTestChecker(t, fgaUrl, checkerTestData)
+		dbx := testutil.MustOpenTestDB(t)
+		type childrenTest struct {
+			Notes          string
+			CheckAsUser    string
+			Object         EntityKey
+			ExpectChildren []EntityKey
+		}
+		checks := []childrenTest{
+			{
+				Notes:          "admin sees all groups under tl-tenant",
+				CheckAsUser:    "tl-tenant-admin",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "CT-group", "BA-group", "HA-group", "EX-group"),
+			},
+			{
+				Notes:          "ian sees CT-group, BA-group, HA-group (viewer/editor + tenant member on HA)",
+				CheckAsUser:    "ian",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "CT-group", "BA-group", "HA-group"),
+			},
+			{
+				Notes:          "drew sees CT-group and HA-group (manager of CT + tenant member on HA)",
+				CheckAsUser:    "drew",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "CT-group", "HA-group"),
+			},
+			{
+				Notes:          "tl-tenant-member sees only HA-group (tenant member on HA)",
+				CheckAsUser:    "tl-tenant-member",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "HA-group"),
+			},
+		}
+		for _, tc := range checks {
+			t.Run(tc.Notes, func(t *testing.T) {
+				ltk := dbTupleLookup(t, dbx, TupleKey{Object: tc.Object})
+				ret, err := checker.ObjectPermissions(
+					newUserCtx(tc.CheckAsUser),
+					authz.ObjectRef{Type: TenantType, ID: ltk.Object.ID()},
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var gotIDs []int64
+				for _, child := range ret.Children {
+					gotIDs = append(gotIDs, child.ID)
+				}
+				var expectIDs []int64
+				for _, v := range tc.ExpectChildren {
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
+				}
+				assert.ElementsMatch(t, expectIDs, gotIDs)
+			})
+		}
+	})
+
+	t.Run("GroupPermissions children filtered", func(t *testing.T) {
+		checker := newTestChecker(t, fgaUrl, checkerTestData)
+		dbx := testutil.MustOpenTestDB(t)
+		type childrenTest struct {
+			Notes          string
+			CheckAsUser    string
+			Object         EntityKey
+			ExpectChildren []EntityKey
+		}
+		checks := []childrenTest{
+			{
+				Notes:          "admin sees all feeds under CT-group",
+				CheckAsUser:    "tl-tenant-admin",
+				Object:         newEntityKey(GroupType, "CT-group"),
+				ExpectChildren: newEntityKeys(FeedType, "CT"),
+			},
+			{
+				Notes:          "admin sees all feeds under BA-group",
+				CheckAsUser:    "tl-tenant-admin",
+				Object:         newEntityKey(GroupType, "BA-group"),
+				ExpectChildren: newEntityKeys(FeedType, "BA"),
+			},
+			{
+				Notes:          "ian (viewer of CT-group) sees feed CT",
+				CheckAsUser:    "ian",
+				Object:         newEntityKey(GroupType, "CT-group"),
+				ExpectChildren: newEntityKeys(FeedType, "CT"),
+			},
+			{
+				Notes:          "ian (editor of BA-group) sees feed BA",
+				CheckAsUser:    "ian",
+				Object:         newEntityKey(GroupType, "BA-group"),
+				ExpectChildren: newEntityKeys(FeedType, "BA"),
+			},
+		}
+		for _, tc := range checks {
+			t.Run(tc.Notes, func(t *testing.T) {
+				ltk := dbTupleLookup(t, dbx, TupleKey{Object: tc.Object})
+				ret, err := checker.ObjectPermissions(
+					newUserCtx(tc.CheckAsUser),
+					authz.ObjectRef{Type: GroupType, ID: ltk.Object.ID()},
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var gotIDs []int64
+				for _, child := range ret.Children {
+					gotIDs = append(gotIDs, child.ID)
+				}
+				var expectIDs []int64
+				for _, v := range tc.ExpectChildren {
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
+				}
+				assert.ElementsMatch(t, expectIDs, gotIDs)
+			})
+		}
+	})
+
 	t.Run("TenantAddPermission", func(t *testing.T) {
 		checks := []testCase{
 			// User checks
