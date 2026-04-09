@@ -94,6 +94,9 @@ func (r *groupResolver) Feeds(ctx context.Context, obj *model.Group, limit *int)
 	if err != nil {
 		return nil, err
 	}
+	// No per-child ObjectPermissions check needed here: feed IDs are passed
+	// to FindFeeds which applies PermFilter at the SQL layer, so unauthorized
+	// feeds are filtered out before results are returned.
 	var ids []int
 	for _, child := range perms.Children {
 		if child.Type == authz.FeedType {

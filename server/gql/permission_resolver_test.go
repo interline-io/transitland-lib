@@ -662,6 +662,52 @@ func TestPermissionResolver_Filtering(t *testing.T) {
 		assert.NotContains(t, groupNames, "HA-group")
 	})
 
+	t.Run("partial-user group permissions children filtered", func(t *testing.T) {
+		// Verify resolvePermissions filters children on a non-tenant type (group)
+		c := newPermTestClientFromConfig(cfg, "partial-user")
+		jj := postQuery(t, c, `{ groups { name permissions { children { type name } } } }`, nil)
+		groups := gjson.Get(jj, "groups").Array()
+		assert.Equal(t, 1, len(groups), "partial-user should see exactly 1 group")
+		assert.Equal(t, "CT-group", groups[0].Get("name").Str)
+		childNames := names(groups[0].Get("permissions.children").Array(), "name")
+		assert.Contains(t, childNames, "CT")
+		assert.NotContains(t, childNames, "BA", "group permissions children should not include feeds from other groups")
+	})
+
+	t.Run("partial-user tenant groups with limit", func(t *testing.T) {
+		// Verify that limit is applied after filtering, not before.
+		// tl-tenant has 3 groups but partial-user can only see CT-group.
+		// With limit=1 the user should still get CT-group (not an empty
+		// result from limiting before filtering).
+		c := newPermTestClientFromConfig(cfg, "partial-user")
+		jj := postQuery(t, c, `{ tenants { name groups(limit: 1) { name } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			groupNames := names(tenant.Get("groups").Array(), "name")
+			assert.Equal(t, 1, len(groupNames), "should return exactly 1 group")
+			assert.Contains(t, groupNames, "CT-group")
+			return
+		}
+		t.Fatal("tl-tenant not found")
+	})
+
+	t.Run("full-user tenant groups with limit", func(t *testing.T) {
+		// full-user can see all 3 groups; limit=2 should cap at 2
+		c := newPermTestClientFromConfig(cfg, "full-user")
+		jj := postQuery(t, c, `{ tenants { name groups(limit: 2) { name } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			groupNames := names(tenant.Get("groups").Array(), "name")
+			assert.Equal(t, 2, len(groupNames), "should return exactly 2 groups")
+			return
+		}
+		t.Fatal("tl-tenant not found")
+	})
+
 	t.Run("nobody sees nothing", func(t *testing.T) {
 		c := newPermTestClientFromConfig(cfg, "nobody")
 		jj := postQuery(t, c, `{ tenants { id } }`, nil)
