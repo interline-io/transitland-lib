@@ -492,6 +492,185 @@ func TestPermissionResolver_Users(t *testing.T) {
 	})
 }
 
+// TestPermissionResolver_Filtering verifies that traversing relationships
+// (tenant→groups, group→tenant→groups, permissions→children, group→feeds)
+// never widens the result set beyond what the querying user is authorized to see.
+func TestPermissionResolver_Filtering(t *testing.T) {
+	// Hierarchy:
+	//   tl-tenant
+	//     ├── CT-group  → feed CT (public)
+	//     ├── BA-group  → feed BA (public)
+	//     └── HA-group  → feed HA (public), feed EG (non-public)
+	//   restricted-tenant
+	//     └── EX-group  (no feeds)
+	//
+	// Users:
+	//   "full-user"    : admin of tl-tenant → sees all groups/feeds under tl-tenant
+	//   "partial-user" : viewer of CT-group only → sees only CT-group
+	//   "multi-user"   : viewer of CT-group + editor of EX-group → spans two tenants
+	//   "nobody"       : no tuples → sees nothing
+	filterTuples := []authz.TupleKey{
+		// tl-tenant groups
+		{Subject: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Object: authz.NewEntityKey(authz.GroupType, "CT-group"), Relation: authz.ParentRelation},
+		{Subject: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Object: authz.NewEntityKey(authz.GroupType, "BA-group"), Relation: authz.ParentRelation},
+		{Subject: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Object: authz.NewEntityKey(authz.GroupType, "HA-group"), Relation: authz.ParentRelation},
+		// restricted-tenant groups
+		{Subject: authz.NewEntityKey(authz.TenantType, "restricted-tenant"), Object: authz.NewEntityKey(authz.GroupType, "EX-group"), Relation: authz.ParentRelation},
+		// Feed assignments
+		{Subject: authz.NewEntityKey(authz.GroupType, "CT-group"), Object: authz.NewEntityKey(authz.FeedType, "CT"), Relation: authz.ParentRelation},
+		{Subject: authz.NewEntityKey(authz.GroupType, "BA-group"), Object: authz.NewEntityKey(authz.FeedType, "BA"), Relation: authz.ParentRelation},
+		{Subject: authz.NewEntityKey(authz.GroupType, "HA-group"), Object: authz.NewEntityKey(authz.FeedType, "HA"), Relation: authz.ParentRelation},
+		{Subject: authz.NewEntityKey(authz.GroupType, "HA-group"), Object: authz.NewEntityKey(authz.FeedType, "EG"), Relation: authz.ParentRelation},
+		// full-user: admin of tl-tenant (inherits access to all children)
+		{Subject: authz.NewEntityKey(authz.UserType, "full-user"), Object: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Relation: authz.AdminRelation},
+		// partial-user: viewer of CT-group only, member of tl-tenant
+		{Subject: authz.NewEntityKey(authz.UserType, "partial-user"), Object: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Relation: authz.MemberRelation},
+		{Subject: authz.NewEntityKey(authz.UserType, "partial-user"), Object: authz.NewEntityKey(authz.GroupType, "CT-group"), Relation: authz.ViewerRelation},
+		// multi-user: viewer of CT-group + editor of EX-group (spans two tenants)
+		{Subject: authz.NewEntityKey(authz.UserType, "multi-user"), Object: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Relation: authz.MemberRelation},
+		{Subject: authz.NewEntityKey(authz.UserType, "multi-user"), Object: authz.NewEntityKey(authz.GroupType, "CT-group"), Relation: authz.ViewerRelation},
+		{Subject: authz.NewEntityKey(authz.UserType, "multi-user"), Object: authz.NewEntityKey(authz.TenantType, "restricted-tenant"), Relation: authz.MemberRelation},
+		{Subject: authz.NewEntityKey(authz.UserType, "multi-user"), Object: authz.NewEntityKey(authz.GroupType, "EX-group"), Relation: authz.EditorRelation},
+	}
+	opts := testconfig.Options{
+		FGAEndpoint:    testutil.FGAServer(t),
+		FGAModelFile:   testdata.Path("server/authz/tls.json"),
+		FGAModelTuples: filterTuples,
+	}
+	cfg := testconfig.Config(t, opts)
+
+	// Helper to collect names from a gjson array
+	names := func(arr []gjson.Result, key string) []string {
+		var out []string
+		for _, r := range arr {
+			out = append(out, r.Get(key).Str)
+		}
+		return out
+	}
+
+	t.Run("partial-user tenant groups filtered", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "partial-user")
+		jj := postQuery(t, c, `{ tenants { name groups { name } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			groupNames := names(tenant.Get("groups").Array(), "name")
+			assert.Contains(t, groupNames, "CT-group")
+			assert.NotContains(t, groupNames, "BA-group", "partial-user should not see BA-group")
+			assert.NotContains(t, groupNames, "HA-group", "partial-user should not see HA-group")
+			return
+		}
+		t.Fatal("tl-tenant not found")
+	})
+
+	t.Run("partial-user group tenant groups no leak", func(t *testing.T) {
+		// Traversing group → tenant → groups must not widen results
+		c := newPermTestClientFromConfig(cfg, "partial-user")
+		jj := postQuery(t, c, `{ groups { name tenant { name groups { name } } } }`, nil)
+		groups := gjson.Get(jj, "groups").Array()
+		assert.Equal(t, 1, len(groups), "partial-user should see exactly 1 group")
+		assert.Equal(t, "CT-group", groups[0].Get("name").Str)
+		tenantGroups := names(groups[0].Get("tenant.groups").Array(), "name")
+		assert.Contains(t, tenantGroups, "CT-group")
+		assert.NotContains(t, tenantGroups, "BA-group", "traversal should not widen to BA-group")
+		assert.NotContains(t, tenantGroups, "HA-group", "traversal should not widen to HA-group")
+	})
+
+	t.Run("partial-user permissions children filtered", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "partial-user")
+		jj := postQuery(t, c, `{ tenants { name permissions { children { type name } } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			childNames := names(tenant.Get("permissions.children").Array(), "name")
+			assert.Contains(t, childNames, "CT-group")
+			assert.NotContains(t, childNames, "BA-group", "permissions children should not include BA-group")
+			assert.NotContains(t, childNames, "HA-group", "permissions children should not include HA-group")
+			return
+		}
+		t.Fatal("tl-tenant not found")
+	})
+
+	t.Run("partial-user group feeds", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "partial-user")
+		jj := postQuery(t, c, `{ groups { name feeds { onestop_id } } }`, nil)
+		groups := gjson.Get(jj, "groups").Array()
+		assert.Equal(t, 1, len(groups))
+		feedIDs := names(groups[0].Get("feeds").Array(), "onestop_id")
+		assert.Contains(t, feedIDs, "CT")
+		assert.NotContains(t, feedIDs, "BA")
+	})
+
+	t.Run("full-user sees all tenant groups", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "full-user")
+		jj := postQuery(t, c, `{ tenants { name groups { name } } }`, nil)
+		for _, tenant := range gjson.Get(jj, "tenants").Array() {
+			if tenant.Get("name").Str != "tl-tenant" {
+				continue
+			}
+			groupNames := names(tenant.Get("groups").Array(), "name")
+			assert.Contains(t, groupNames, "CT-group")
+			assert.Contains(t, groupNames, "BA-group")
+			assert.Contains(t, groupNames, "HA-group")
+			return
+		}
+		t.Fatal("tl-tenant not found")
+	})
+
+	t.Run("full-user sees non-public feed via group", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "full-user")
+		jj := postQuery(t, c, `{ groups { name feeds { onestop_id } } }`, nil)
+		for _, group := range gjson.Get(jj, "groups").Array() {
+			if group.Get("name").Str != "HA-group" {
+				continue
+			}
+			feedIDs := names(group.Get("feeds").Array(), "onestop_id")
+			assert.Contains(t, feedIDs, "HA")
+			assert.Contains(t, feedIDs, "EG", "admin should see non-public feed EG via HA-group")
+			return
+		}
+		t.Fatal("HA-group not found")
+	})
+
+	t.Run("multi-user cross-tenant isolation", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "multi-user")
+		jj := postQuery(t, c, `{ tenants { name groups { name } } }`, nil)
+		tenants := gjson.Get(jj, "tenants").Array()
+		assert.GreaterOrEqual(t, len(tenants), 2, "multi-user should see two tenants")
+		for _, tenant := range tenants {
+			groupNames := names(tenant.Get("groups").Array(), "name")
+			switch tenant.Get("name").Str {
+			case "tl-tenant":
+				assert.Contains(t, groupNames, "CT-group")
+				assert.NotContains(t, groupNames, "BA-group", "multi-user should not see BA-group")
+				assert.NotContains(t, groupNames, "HA-group", "multi-user should not see HA-group")
+			case "restricted-tenant":
+				assert.Contains(t, groupNames, "EX-group")
+			}
+		}
+	})
+
+	t.Run("multi-user top-level groups", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "multi-user")
+		jj := postQuery(t, c, `{ groups { name } }`, nil)
+		groupNames := names(gjson.Get(jj, "groups").Array(), "name")
+		assert.Contains(t, groupNames, "CT-group")
+		assert.Contains(t, groupNames, "EX-group")
+		assert.NotContains(t, groupNames, "BA-group")
+		assert.NotContains(t, groupNames, "HA-group")
+	})
+
+	t.Run("nobody sees nothing", func(t *testing.T) {
+		c := newPermTestClientFromConfig(cfg, "nobody")
+		jj := postQuery(t, c, `{ tenants { id } }`, nil)
+		assert.Equal(t, 0, len(gjson.Get(jj, "tenants").Array()))
+		jj = postQuery(t, c, `{ groups { id } }`, nil)
+		assert.Equal(t, 0, len(gjson.Get(jj, "groups").Array()))
+	})
+}
+
 func TestPermissionResolver_NilPermissionManager(t *testing.T) {
 	srv, _ := NewServer()
 	cfg := testconfig.Config(t, testconfig.Options{})
