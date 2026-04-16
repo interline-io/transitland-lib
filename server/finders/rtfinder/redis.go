@@ -35,20 +35,25 @@ func NewRedisCache(client *redis.Client) *RedisCache {
 
 func (f *RedisCache) GetSource(ctx context.Context, topic string) (*Source, bool) {
 	f.lock.Lock()
-	defer f.lock.Unlock()
 	if s, ok := f.sources[topic]; ok {
+		f.lock.Unlock()
 		return s, true
 	}
-	// Fetch last known data from Redis
+	f.lock.Unlock()
+	// Fetch last known data from Redis without holding lock
 	s, err := f.fetchLast(ctx, topic)
-	if err != nil {
+	if err != nil || s == nil {
 		return nil, false
 	}
-	if s != nil {
-		f.sources[topic] = s
-		return s, true
+	f.lock.Lock()
+	// Double-check: processMessage may have inserted it while we were fetching
+	if existing, ok := f.sources[topic]; ok {
+		f.lock.Unlock()
+		return existing, true
 	}
-	return nil, false
+	f.sources[topic] = s
+	f.lock.Unlock()
+	return s, true
 }
 
 func (f *RedisCache) AddFeedMessage(ctx context.Context, topic string, rtmsg *pb.FeedMessage) error {
@@ -92,6 +97,10 @@ func topicFromSubKey(channel string) string {
 func (f *RedisCache) subscribeAll() {
 	sub := f.client.PSubscribe(f.ctx, "rtfetch:sub:*")
 	defer sub.Close()
+	if _, err := sub.Receive(f.ctx); err != nil {
+		log.For(f.ctx).Error().Err(err).Msg("cache: error subscribing to updates")
+		return
+	}
 	ch := sub.Channel()
 	for msg := range ch {
 		topic := topicFromSubKey(msg.Channel)
