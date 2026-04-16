@@ -130,6 +130,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		defer redisClient.Close()
 	}
 
 	// Create Finder
@@ -143,7 +144,9 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	var gbfsFinder model.GbfsFinder
 	if redisClient != nil {
 		// Use redis backed finders
-		rtFinder = rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		rtf := rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		defer rtf.Close()
+		rtFinder = rtf
 		gbfsFinder = gbfsfinder.NewFinder(redisClient)
 	} else {
 		// Default to in-memory cache
