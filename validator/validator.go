@@ -19,7 +19,6 @@ import (
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
@@ -40,6 +39,7 @@ var defaultMaxFileRows = map[string]int64{
 // Options defines options for the Validator.
 type Options struct {
 	BestPractices            bool
+	IncludeStats             bool
 	CheckFileLimits          bool
 	IncludeServiceLevels     bool
 	IncludeEntities          bool
@@ -134,35 +134,48 @@ func (v *Validator) Validate(ctx context.Context) (*Result, error) {
 
 func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time, evaluateAtLocal time.Time) (*Result, error) {
 	result := NewResult(evaluateAt, evaluateAtLocal)
+	result.IncludesStatic.Set(true)
 	v.rtValidator = rt.NewValidator()
 	details := ResultDetails{}
-	if reader2, ok := reader.(*tlcsv.Reader); ok {
-		result.IncludesStatic.Set(true)
-		fvfis, err := stats.NewFeedVersionFileInfosFromReader(reader2)
-		if err != nil {
-			result.FailureReason.Set(fmt.Sprintf("Could not read basic CSV data from file: %s", err.Error()))
-			return result, nil
-		}
-		details.Files = fvfis
-		// Maximum file limits
-		if v.Options.CheckFileLimits {
-			for _, fvfi := range fvfis {
-				if maxRows, ok := defaultMaxFileRows[fvfi.Name]; ok && fvfi.Rows > maxRows {
-					result.FailureReason.Set(fmt.Sprintf(
-						"File '%s' exceeded maximum size; got %d rows, max allowed %d rows",
-						fvfi.Name,
-						fvfi.Rows,
-						maxRows,
-					))
-					return result, nil
-				}
+
+	// TODO: Inline NewFeedStatsFromReader to reduce copier passes
+	// Especially since this includes another call to NewFeedVersionFileInfosFromReader
+	fvStats, err := stats.NewFeedStatsFromReader(reader)
+	if err != nil {
+		result.FailureReason.Set(fmt.Sprintf("Failed to calculate stats: %s", err.Error()))
+		return result, nil
+	}
+
+	// Include stats
+	details.FileInfos = fvStats.FileInfos
+	if v.Options.IncludeServiceLevels {
+		result.Details.ServiceLevels = fvStats.ServiceLevels
+	}
+	if v.Options.IncludeStats {
+		result.Details.FeedVersionStats = fvStats
+	}
+
+	// Maximum file limits
+	if v.Options.CheckFileLimits {
+		for _, fvfi := range fvStats.FileInfos {
+			if maxRows, ok := defaultMaxFileRows[fvfi.Name]; ok && fvfi.Rows > maxRows {
+				result.FailureReason.Set(fmt.Sprintf(
+					"File '%s' exceeded maximum size; got %d rows, max allowed %d rows",
+					fvfi.Name,
+					fvfi.Rows,
+					maxRows,
+				))
+				return result, nil
 			}
 		}
 	}
 
 	// get sha1 and service period; continue even if errors
 	fv, err := stats.NewFeedVersionFromReader(reader)
-	_ = err
+	if err != nil {
+		result.FailureReason.Set(fmt.Sprintf("Failed to read basic feed version details: %s", err.Error()))
+		return result, nil
+	}
 	details.SHA1.Set(fv.SHA1)
 	details.EarliestCalendarDate = fv.EarliestCalendarDate
 	details.LatestCalendarDate = fv.LatestCalendarDate
@@ -175,23 +188,8 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		v.copierOptions(),
 	)
 	if err != nil {
-		result.FailureReason.Set("failed to validate feed")
+		result.FailureReason.Set("Failed to validate feed")
 		return result, nil
-	}
-
-	// Service levels
-	if v.Options.IncludeServiceLevels {
-		fvsls, err := stats.NewFeedVersionServiceLevelsFromReader(reader)
-		if err != nil {
-			result.FailureReason.Set(fmt.Sprintf("Could not calculate service levels: %s", err.Error()))
-			return result, nil
-		}
-		for i, fvsl := range fvsls {
-			if i > v.Options.IncludeEntitiesLimit {
-				break
-			}
-			details.ServiceLevels = append(details.ServiceLevels, fvsl)
-		}
 	}
 
 	routeShapes := map[string]*geom.MultiLineString{}
