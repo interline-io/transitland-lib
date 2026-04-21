@@ -188,6 +188,31 @@ func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *
 	return q
 }
 
+// tripStopAggregatesCTE returns a CTE keyed by (trip_id, feed_version_id)
+// that supplies the per-trip first departure time and min/max stop sequence
+// used by stopDeparturesSelect.
+//
+// Previously these aggregates were computed in a lateral join that re-ran
+// once per outer row (every matching trip × frequency-expansion combination).
+// Hoisting them into a single hash-aggregate pass cuts work on feeds where
+// trips repeat across frequencies or journey-pattern base trips.
+func tripStopAggregatesCTE(fvid int) sq.CTE {
+	return sq.CTE{
+		Alias:        "trip_stop_aggregates",
+		Materialized: true,
+		Expression: sq.Expr(`
+		SELECT
+			trip_id,
+			feed_version_id,
+			min(departure_time) AS first_departure_time,
+			min(stop_sequence) AS stop_sequence_min,
+			max(stop_sequence) AS stop_sequence_max
+		FROM gtfs_stop_times
+		WHERE feed_version_id = ?
+		GROUP BY trip_id, feed_version_id`, fvid),
+	}
+}
+
 // activeServicesCTE returns a CTE that finds all active service IDs for a given date and feed version.
 // This is used by both stopDeparturesSelect and locationDeparturesSelect.
 func activeServicesCTE(fvid int, serviceDate time.Time) sq.CTE {
@@ -256,6 +281,7 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		"sts.drop_off_booking_rule_id",
 	).
 		WithCTE(activeServicesCTE(fvid, serviceDate)).
+		WithCTE(tripStopAggregatesCTE(fvid)).
 		From("gtfs_trips").
 		Join("active_services gc on gc.id = gtfs_trips.service_id").
 		Join("gtfs_trips base_trip ON base_trip.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = base_trip.feed_version_id").
@@ -266,14 +292,7 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 			from gtfs_frequencies
 			where gtfs_frequencies.trip_id = gtfs_trips.id
 			) freq on true`).
-		JoinClause(`join lateral (
-			select 
-				min(sts2.departure_time) first_departure_time,
-				min(sts2.stop_sequence) stop_sequence_min, 
-				max(sts2.stop_sequence) stop_sequence_max 
-			from gtfs_stop_times sts2 
-			where sts2.trip_id = base_trip.id and sts2.feed_version_id = base_trip.feed_version_id
-			) trip_stop_sequence on true`).
+		Join("trip_stop_aggregates trip_stop_sequence on trip_stop_sequence.trip_id = base_trip.id and trip_stop_sequence.feed_version_id = base_trip.feed_version_id").
 		JoinClause(`join lateral (
 			select 
 				sts.*,
