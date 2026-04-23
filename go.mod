@@ -32,7 +32,7 @@ require (
 	github.com/iancoleman/orderedmap v0.2.0
 	github.com/interline-io/log v0.0.0-20260130001517-d932d48db9e4
 	github.com/irees/squirrel v0.0.0-20250822021440-28034b47d2f4
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jellydator/ttlcache/v2 v2.11.1
 	github.com/jlaffaye/ftp v0.0.0-20220524001917-dfa1e758f3af
 	github.com/jmoiron/sqlx v1.4.0
