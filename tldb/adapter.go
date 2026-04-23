@@ -2,7 +2,7 @@ package tldb
 
 import (
 	"context"
-	"net/url"
+	"strings"
 
 	sq "github.com/irees/squirrel"
 )
@@ -14,12 +14,15 @@ func RegisterAdapter(name string, fn func(string) Adapter) {
 }
 
 // newAdapter returns a Adapter for the given dburl.
+// Uses plain string splitting rather than url.Parse so that driver-specific
+// forms like "sqlite3://:memory:" (where ":memory:" is not a valid host:port)
+// are accepted.
 func newAdapter(dburl string) Adapter {
-	u, err := url.Parse(dburl)
-	if err != nil {
+	scheme, _, ok := strings.Cut(dburl, ":")
+	if !ok {
 		return nil
 	}
-	fn, ok := adapterFactories[u.Scheme]
+	fn, ok := adapterFactories[scheme]
 	if !ok {
 		return nil
 	}
