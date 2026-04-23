@@ -130,6 +130,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		defer redisClient.Close()
 	}
 
 	// Create Finder
@@ -143,7 +144,9 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	var gbfsFinder model.GbfsFinder
 	if redisClient != nil {
 		// Use redis backed finders
-		rtFinder = rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		rtf := rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		defer rtf.Close()
+		rtFinder = rtf
 		gbfsFinder = gbfsfinder.NewFinder(redisClient)
 	} else {
 		// Default to in-memory cache
@@ -172,7 +175,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 
 	// Disable auth if requested
 	if cmd.DisableAuth {
-		cfg.Checker = &globalAdminChecker{}
+		cfg.Checker = globalAdminCheckerInstance
 	}
 
 	// Setup router
@@ -250,12 +253,5 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	return srv.ListenAndServe()
 }
 
-// globalAdminChecker is a simple checker that always returns true for CheckGlobalAdmin,
-// effectively disabling all feed authorization checks.
-type globalAdminChecker struct {
-	authz.UnimplementedCheckerServer
-}
-
-func (c *globalAdminChecker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
-	return true, nil
-}
+// globalAdminChecker disables all feed authorization checks.
+var globalAdminCheckerInstance = &authz.GlobalAdminChecker{}

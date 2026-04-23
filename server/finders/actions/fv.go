@@ -304,11 +304,15 @@ func checkFeedEdit(ctx context.Context, fvid int) error {
 		return errors.New("invalid feed version id")
 	}
 	cfg := model.ForContext(ctx)
-	if checker := cfg.Checker; checker == nil {
+	checker := cfg.Checker
+	if checker == nil {
 		return nil
-	} else if check, err := checker.FeedVersionPermissions(ctx, &authz.FeedVersionRequest{Id: int64(fvid)}); err != nil {
+	}
+	ok, err := checker.Check(ctx, authz.ObjectRef{Type: authz.FeedVersionType, ID: int64(fvid)}, authz.CanEdit)
+	if err != nil {
 		return err
-	} else if !check.Actions.CanEdit {
+	}
+	if !ok {
 		return authz.ErrUnauthorized
 	}
 	return nil

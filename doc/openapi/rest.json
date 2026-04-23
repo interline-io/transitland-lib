@@ -10781,6 +10781,20 @@
             ]
           },
           {
+            "description": "Filter by location_type: 0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area",
+            "in": "query",
+            "name": "location_type",
+            "schema": {
+              "type": "integer"
+            },
+            "x-example-requests": [
+              {
+                "description": "location_type=1",
+                "url": "location_type=1"
+              }
+            ]
+          },
+          {
             "$ref": "#/components/parameters/includeAlertsParam"
           },
           {

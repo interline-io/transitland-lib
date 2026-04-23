@@ -9,39 +9,42 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
-// mockChecker implements the Checker interface for testing
+// mockChecker implements the Checker interface (4 methods) for testing
 type mockChecker struct {
-	authz.UnimplementedCheckerServer
 	feeds        []int
 	feedVersions []int
 	isAdmin      bool
 	shouldError  bool
 }
 
-func (m *mockChecker) FeedList(ctx context.Context, req *authz.FeedListRequest) (*authz.FeedListResponse, error) {
-	if m.shouldError {
-		return nil, context.DeadlineExceeded
-	}
-	resp := &authz.FeedListResponse{}
-	for _, id := range m.feeds {
-		resp.Feeds = append(resp.Feeds, &authz.Feed{Id: int64(id)})
-	}
-	return resp, nil
+func (m *mockChecker) Me(ctx context.Context) (*authz.UserInfo, error) {
+	return &authz.UserInfo{}, nil
 }
 
-func (m *mockChecker) FeedVersionList(ctx context.Context, req *authz.FeedVersionListRequest) (*authz.FeedVersionListResponse, error) {
-	if m.shouldError {
-		return nil, context.DeadlineExceeded
-	}
-	resp := &authz.FeedVersionListResponse{}
-	for _, id := range m.feedVersions {
-		resp.FeedVersions = append(resp.FeedVersions, &authz.FeedVersion{Id: int64(id)})
-	}
-	return resp, nil
-}
-
-func (m *mockChecker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
+func (m *mockChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
 	return m.isAdmin, nil
+}
+
+func (m *mockChecker) ListObjects(ctx context.Context, objType authz.ObjectType) ([]authz.ObjectRef, error) {
+	if m.shouldError {
+		return nil, context.DeadlineExceeded
+	}
+	var ids []int
+	switch objType {
+	case authz.FeedType:
+		ids = m.feeds
+	case authz.FeedVersionType:
+		ids = m.feedVersions
+	}
+	refs := make([]authz.ObjectRef, len(ids))
+	for i, id := range ids {
+		refs[i] = authz.ObjectRef{Type: objType, ID: int64(id)}
+	}
+	return refs, nil
+}
+
+func (m *mockChecker) Check(ctx context.Context, obj authz.ObjectRef, action authz.Action) (bool, error) {
+	return true, nil
 }
 
 func sortedInts(s []int) []int {

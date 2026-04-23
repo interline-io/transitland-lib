@@ -133,6 +133,10 @@ func check(err error) {
 }
 
 func getFvids(dburl string) ([]int, string, error) {
+	// See adapter.go for why this one DSN form is carved out.
+	if dburl == sqliteMemoryDBURL {
+		return []int{}, dburl, nil
+	}
 	fvids := []int{}
 	u, err := url.Parse(dburl)
 	if err != nil {
