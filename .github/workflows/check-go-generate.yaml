@@ -49,7 +49,7 @@ jobs:
           fi
 
       - name: Comment on PR
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         if: steps.check_changes.outputs.has_changes == 'true'
         with:
           script: |
@@ -100,7 +100,7 @@ jobs:
             }
 
       - name: Update success comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         if: steps.check_changes.outputs.has_changes != 'true'
         with:
           script: |

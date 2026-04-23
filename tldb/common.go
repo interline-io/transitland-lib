@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/jmoiron/sqlx"
@@ -134,18 +133,16 @@ func check(err error) {
 }
 
 func getFvids(dburl string) ([]int, string, error) {
-	// Split on "?" rather than using url.Parse so that driver-specific forms
-	// like "sqlite3://:memory:" (where ":memory:" is not a valid host:port)
-	// are accepted.
-	fvids := []int{}
-	base, query, hasQuery := strings.Cut(dburl, "?")
-	if !hasQuery {
-		return fvids, dburl, nil
+	// See adapter.go for why this one DSN form is carved out.
+	if dburl == sqliteMemoryDBURL {
+		return []int{}, dburl, nil
 	}
-	vars, err := url.ParseQuery(query)
+	fvids := []int{}
+	u, err := url.Parse(dburl)
 	if err != nil {
 		return nil, "", err
 	}
+	vars := u.Query()
 	if a, ok := vars["fvid"]; ok {
 		for _, v := range a {
 			fvid, err := strconv.Atoi(v)
@@ -156,9 +153,6 @@ func getFvids(dburl string) ([]int, string, error) {
 		}
 	}
 	delete(vars, "fvid")
-	newQuery := vars.Encode()
-	if newQuery == "" {
-		return fvids, base, nil
-	}
-	return fvids, base + "?" + newQuery, nil
+	u.RawQuery = vars.Encode()
+	return fvids, u.String(), nil
 }
