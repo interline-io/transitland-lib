@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest] # , macos-15
-        go-version: ['1.24.2']    
+        go-version: ['1.26.0']
     runs-on: ${{ matrix.os }}
     env:
       TL_TEST_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test?sslmode=disable
