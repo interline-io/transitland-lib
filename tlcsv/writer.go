@@ -171,6 +171,23 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 		eids = append(eids, sid)
 	}
 	err := writer.WriterAdapter.WriteRows(efn, rows)
+	if err != nil {
+		return eids, err
+	}
+
+	// For levels.txt, also write levels.geojson for levels with geometry
+	if efn == "levels.txt" {
+		var levelsWithGeom []tt.Entity
+		for _, ent := range ents {
+			if level, ok := ent.(*gtfs.Level); ok && level.Geometry.Valid {
+				levelsWithGeom = append(levelsWithGeom, ent)
+			}
+		}
+		if len(levelsWithGeom) > 0 {
+			_, err = writer.addBatchGeoJSON(levelsWithGeom, "levels.geojson")
+		}
+	}
+
 	return eids, err
 }
 
@@ -203,7 +220,18 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 				}
 			}
 		}
-	// TODO in future: Add support for levels.geojson
+	case "levels.geojson":
+		// Convert to Level entities
+		for _, ent := range ents {
+			if level, ok := ent.(*gtfs.Level); ok {
+				if feature, ok := writeLevelFeature(level); ok {
+					newFeatures = append(newFeatures, feature)
+					if v, ok := ent.(hasEntityKey); ok {
+						eids = append(eids, v.EntityKey())
+					}
+				}
+			}
+		}
 	default:
 		return nil, errors.New("unsupported GeoJSON file: " + filename)
 	}

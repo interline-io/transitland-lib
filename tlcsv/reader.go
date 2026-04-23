@@ -371,7 +371,28 @@ func (reader *Reader) Trips() (out chan gtfs.Trip) {
 }
 
 func (reader *Reader) Levels() (out chan gtfs.Level) {
-	return ReadEntities[gtfs.Level](reader, getFilename(&gtfs.Level{}))
+	out = make(chan gtfs.Level, bufferSize)
+	go func() {
+		defer close(out)
+
+		// Read geometry from levels.geojson (keyed by level_id)
+		geomMap := reader.readLevelsGeoJSONMap("levels.geojson")
+
+		// Read levels from CSV and merge geometry
+		ent := gtfs.Level{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			level := gtfs.Level{}
+			loadRow(&level, row)
+
+			// Merge geometry if available
+			if geom, ok := geomMap[level.LevelID.Val]; ok {
+				level.Geometry = geom
+			}
+
+			out <- level
+		})
+	}()
+	return out
 }
 
 func (reader *Reader) Pathways() (out chan gtfs.Pathway) {

@@ -51,6 +51,48 @@ func readGeoJSON[T any](reader *Reader, filename string, parser GeoJSONFeaturePa
 	return entities, nil
 }
 
+// parsePolygonGeometry extracts a Polygon or MultiPolygon geometry from a GeoJSON feature.
+// Returns the geometry and true if successful, or an invalid geometry and false otherwise.
+// This is a shared helper for locations.geojson and levels.geojson parsing.
+func parsePolygonGeometry(feature *geojson.Feature) (tt.Geometry, bool) {
+	if feature.Geometry == nil {
+		return tt.Geometry{}, false
+	}
+
+	switch g := feature.Geometry.(type) {
+	case *geom.Polygon:
+		g.SetSRID(4326)
+		return tt.NewGeometry(g), true
+	case *geom.MultiPolygon:
+		g.SetSRID(4326)
+		return tt.NewGeometry(g), true
+	default:
+		return tt.Geometry{}, false
+	}
+}
+
+// setFeaturePolygonGeometry sets a Polygon or MultiPolygon geometry on a GeoJSON feature.
+// Returns true if the geometry was set successfully, false otherwise.
+// This is a shared helper for locations.geojson and levels.geojson writing.
+func setFeaturePolygonGeometry(feature *geojson.Feature, geometry tt.Geometry) bool {
+	if !geometry.Valid {
+		return false
+	}
+
+	switch g := geometry.Val.(type) {
+	case *geom.Polygon:
+		g.SetSRID(4326)
+		feature.Geometry = g
+		return true
+	case *geom.MultiPolygon:
+		g.SetSRID(4326)
+		feature.Geometry = g
+		return true
+	default:
+		return false
+	}
+}
+
 // parseLocationFeature parses a GeoJSON feature into a gtfs.Location.
 // This is used for locations.geojson (GTFS-Flex extension).
 func parseLocationFeature(feature *geojson.Feature) (gtfs.Location, bool) {
@@ -78,19 +120,11 @@ func parseLocationFeature(feature *geojson.Feature) (gtfs.Location, bool) {
 	}
 
 	// Parse geometry - must be Polygon or MultiPolygon for locations
-	if feature.Geometry != nil {
-		switch g := feature.Geometry.(type) {
-		case *geom.Polygon:
-			g.SetSRID(4326)
-			loc.Geometry = tt.NewGeometry(g)
-		case *geom.MultiPolygon:
-			g.SetSRID(4326)
-			loc.Geometry = tt.NewGeometry(g)
-		default:
-			// Invalid geometry type for location - skip
-			return loc, false
-		}
+	geomVal, ok := parsePolygonGeometry(feature)
+	if !ok {
+		return loc, false
 	}
+	loc.Geometry = geomVal
 
 	return loc, true
 }
@@ -108,6 +142,7 @@ func writeLocationFeature(loc *gtfs.Location) (*geojson.Feature, bool) {
 	if loc == nil {
 		return nil, false
 	}
+
 	feature := &geojson.Feature{}
 
 	// Set feature ID from LocationID
@@ -134,20 +169,81 @@ func writeLocationFeature(loc *gtfs.Location) (*geojson.Feature, bool) {
 	}
 
 	// Set geometry - must be Polygon or MultiPolygon for locations
-	if !loc.Geometry.Valid {
+	if !setFeaturePolygonGeometry(feature, loc.Geometry) {
 		return nil, false
 	}
 
-	// Ensure SRID is set
-	switch g := loc.Geometry.Val.(type) {
-	case *geom.Polygon:
-		g.SetSRID(4326)
-		feature.Geometry = g
-	case *geom.MultiPolygon:
-		g.SetSRID(4326)
-		feature.Geometry = g
-	default:
-		// Invalid geometry type for location - skip
+	return feature, true
+}
+
+// readLevelsGeoJSONMap reads levels.geojson and returns a map of level_id to geometry.
+// This complements levels.txt by providing polygon geometry for level records.
+func (reader *Reader) readLevelsGeoJSONMap(filename string) map[string]tt.Geometry {
+	result := make(map[string]tt.Geometry)
+
+	parser := func(feature *geojson.Feature) (struct{}, bool) {
+		// Get level_id from feature ID or properties
+		levelID := feature.ID
+		if levelID == "" {
+			if feature.Properties != nil {
+				if v, ok := feature.Properties["level_id"].(string); ok {
+					levelID = v
+				}
+			}
+		}
+		if levelID == "" {
+			return struct{}{}, false
+		}
+
+		// Parse geometry
+		if geomVal, ok := parsePolygonGeometry(feature); ok {
+			result[levelID] = geomVal
+		}
+		return struct{}{}, false // Don't collect entities, just populate the map
+	}
+
+	// Ignore errors - file may not exist
+	readGeoJSON(reader, filename, parser)
+
+	return result
+}
+
+// writeLevelFeature converts a gtfs.Level entity to a GeoJSON feature.
+// This is used for levels.geojson which provides polygon geometry for levels.
+func writeLevelFeature(level *gtfs.Level) (*geojson.Feature, bool) {
+	if level == nil {
+		return nil, false
+	}
+
+	// Only write levels that have geometry
+	if !level.Geometry.Valid {
+		return nil, false
+	}
+
+	feature := &geojson.Feature{}
+
+	// Set feature ID from LevelID
+	if level.LevelID.Val != "" {
+		feature.ID = level.LevelID.Val
+	}
+
+	// Set properties
+	properties := make(map[string]any)
+	if level.LevelID.Val != "" {
+		properties["level_id"] = level.LevelID.Val
+	}
+	if level.LevelIndex.Valid {
+		properties["level_index"] = level.LevelIndex.Val
+	}
+	if level.LevelName.Val != "" {
+		properties["level_name"] = level.LevelName.Val
+	}
+	if len(properties) > 0 {
+		feature.Properties = properties
+	}
+
+	// Set geometry - must be Polygon or MultiPolygon for levels
+	if !setFeaturePolygonGeometry(feature, level.Geometry) {
 		return nil, false
 	}
 

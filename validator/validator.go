@@ -431,6 +431,8 @@ func (v *Validator) copierOptions() copier.Options {
 		}, 1)
 		// GTFS-Flex best practice: location groups should have stops
 		cpOpts.AddExtensionWithLevel(&bestpractices.FlexLocationGroupEmptyCheck{}, 1)
+		// GTFS-Pathways best practice: level geometry should be near its parent station
+		cpOpts.AddExtensionWithLevel(&bestpractices.LevelTooFarFromStationCheck{}, 1)
 	}
 	return cpOpts
 }
