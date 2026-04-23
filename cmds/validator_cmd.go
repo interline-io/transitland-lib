@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext"
 	"github.com/interline-io/transitland-lib/internal/snakejson"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
@@ -30,6 +34,15 @@ type ValidatorCommand struct {
 	ValidationReportStorage string
 	readerPath              string
 	errorThresholds         []string
+	SecretsFile             string
+	SecretEnv               []string
+	DMFRFile                string
+	FeedID                  string
+	URLType                 string
+	AllowFTPFetch           bool
+	AllowLocalFetch         bool
+	AllowS3Fetch            bool
+	secrets                 []dmfr.Secret
 }
 
 func (cmd *ValidatorCommand) HelpDesc() (string, string) {
@@ -38,11 +51,12 @@ func (cmd *ValidatorCommand) HelpDesc() (string, string) {
 
 func (cmd *ValidatorCommand) HelpExample() string {
 	return `% {{.ParentCommand}} {{.Command}} "https://www.bart.gov/dev/schedules/google_transit.zip"
-% {{.ParentCommand}} {{.Command}} -o - --include-entities "http://developer.trimet.org/schedule/gtfs.zip"`
+% {{.ParentCommand}} {{.Command}} -o - --include-entities "http://developer.trimet.org/schedule/gtfs.zip"
+% {{.ParentCommand}} {{.Command}} --dmfr feeds/wmata.com.dmfr.json --feed-id f-dqcq-wmata~rail --secrets secrets.json`
 }
 
 func (cmd *ValidatorCommand) HelpArgs() string {
-	return "[flags] <reader>"
+	return "[flags] [<reader>]"
 }
 
 // shouldShowLogs returns true if logs should be displayed
@@ -65,17 +79,52 @@ func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.rtFiles, "rt", nil, "Include GTFS-RT proto message in validation report")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
 	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
+	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file (requires --dmfr and --feed-id)")
+	fl.StringArrayVar(&cmd.SecretEnv, "secret-env", nil, "Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR (requires --dmfr and --feed-id)")
+	fl.StringVar(&cmd.DMFRFile, "dmfr", "", "DMFR file providing feed URL and authorization config; used with --feed-id")
+	fl.StringVar(&cmd.FeedID, "feed-id", "", "Feed onestop ID for DMFR and secret lookup (requires --dmfr)")
+	fl.StringVar(&cmd.URLType, "url-type", "static_current", "URL type in DMFR feed.urls to validate")
+	fl.BoolVar(&cmd.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls when --dmfr is used")
+	fl.BoolVar(&cmd.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem paths when --dmfr is used")
+	fl.BoolVar(&cmd.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls when --dmfr is used")
 }
 
 func (cmd *ValidatorCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
-	if fl.NArg() < 1 {
-		return errors.New("requires input reader")
-	}
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	cmd.readerPath = fl.Arg(0)
+	if fl.NArg() >= 1 {
+		cmd.readerPath = fl.Arg(0)
+	}
+	if cmd.DMFRFile != "" && cmd.FeedID == "" {
+		return errors.New("--dmfr requires --feed-id")
+	}
+	if cmd.FeedID != "" && cmd.DMFRFile == "" {
+		return errors.New("--feed-id requires --dmfr")
+	}
+	if (cmd.SecretsFile != "" || len(cmd.SecretEnv) > 0) && cmd.DMFRFile == "" {
+		return errors.New("--secrets and --secret-env require --dmfr and --feed-id")
+	}
+	if cmd.readerPath == "" && cmd.DMFRFile == "" {
+		return errors.New("requires input reader or --dmfr with --feed-id")
+	}
+	// Load secrets from file
+	if cmd.SecretsFile != "" {
+		r, err := dmfr.LoadAndParseRegistry(cmd.SecretsFile)
+		if err != nil {
+			return err
+		}
+		cmd.secrets = r.Secrets
+	}
+	// Parse --secret-env arguments
+	for _, se := range cmd.SecretEnv {
+		secret, err := parseSecretEnv(se)
+		if err != nil {
+			return err
+		}
+		cmd.secrets = append(cmd.secrets, secret)
+	}
 	cmd.Options.ValidateRealtimeMessages = cmd.rtFiles
 	cmd.Options.ExtensionDefs = cmd.extensionDefs
 	cmd.Options.EvaluateAt = time.Now().In(time.UTC)
@@ -102,6 +151,15 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 }
 
 func (cmd *ValidatorCommand) Run(ctx context.Context) error {
+	// If --dmfr is set, look up feed auth/URL and download to a temp file with auth
+	if cmd.DMFRFile != "" {
+		tmpfile, err := cmd.fetchWithAuth(ctx)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tmpfile)
+		cmd.readerPath = tmpfile
+	}
 	// Only log if not outputting JSON to stdout
 	if cmd.shouldShowLogs() {
 		log.For(ctx).Info().Msgf("Validating: %s", cmd.readerPath)
@@ -160,4 +218,90 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// fetchWithAuth resolves feed URL and authorization from the DMFR file, downloads
+// the feed with auth applied (if configured), and returns the path to a temp file
+// that the caller is responsible for removing.
+func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) {
+	reg, err := dmfr.LoadAndParseRegistry(cmd.DMFRFile)
+	if err != nil {
+		return "", err
+	}
+	var feed *dmfr.Feed
+	for i := range reg.Feeds {
+		if reg.Feeds[i].FeedID == cmd.FeedID {
+			feed = &reg.Feeds[i]
+			break
+		}
+	}
+	if feed == nil {
+		return "", fmt.Errorf("feed %q not found in %s", cmd.FeedID, cmd.DMFRFile)
+	}
+	// LoadAndParseRegistry doesn't populate feed.File; set it so secrets that
+	// match by filename (e.g. {"filename": "wmata.com.dmfr.json"}) resolve.
+	feed.File = filepath.Base(cmd.DMFRFile)
+	// Determine URL: explicit positional arg overrides DMFR lookup
+	feedURL := cmd.readerPath
+	if feedURL == "" {
+		feedURL, err = urlForType(feed.URLs, cmd.URLType)
+		if err != nil {
+			return "", err
+		}
+	}
+	if feedURL == "" {
+		return "", fmt.Errorf("no %s URL found for feed %q", cmd.URLType, cmd.FeedID)
+	}
+	var reqOpts []request.RequestOption
+	if cmd.AllowFTPFetch {
+		reqOpts = append(reqOpts, request.WithAllowFTP)
+	}
+	if cmd.AllowLocalFetch {
+		reqOpts = append(reqOpts, request.WithAllowLocal)
+	}
+	if cmd.AllowS3Fetch {
+		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	if feed.Authorization.Type != "" {
+		secret, err := feed.MatchSecrets(cmd.secrets, cmd.URLType)
+		if err != nil {
+			return "", fmt.Errorf("authorization %q configured for feed %q but %w", feed.Authorization.Type, cmd.FeedID, err)
+		}
+		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
+	}
+	if cmd.shouldShowLogs() {
+		log.For(ctx).Info().Str("feed_id", cmd.FeedID).Str("url", feedURL).Str("auth_type", feed.Authorization.Type).Msg("Fetching feed")
+	}
+	tmpfile, fr, err := request.AuthenticatedRequestDownload(ctx, feedURL, reqOpts...)
+	if err != nil {
+		if tmpfile != "" {
+			os.Remove(tmpfile)
+		}
+		return "", err
+	}
+	if fr.FetchError != nil {
+		if tmpfile != "" {
+			os.Remove(tmpfile)
+		}
+		return "", fmt.Errorf("fetch failed: %w", fr.FetchError)
+	}
+	return tmpfile, nil
+}
+
+func urlForType(urls dmfr.FeedUrls, urlType string) (string, error) {
+	switch urlType {
+	case "", "static_current":
+		return urls.StaticCurrent, nil
+	case "realtime_trip_updates":
+		return urls.RealtimeTripUpdates, nil
+	case "realtime_vehicle_positions":
+		return urls.RealtimeVehiclePositions, nil
+	case "realtime_alerts":
+		return urls.RealtimeAlerts, nil
+	case "gbfs_auto_discovery":
+		return urls.GbfsAutoDiscovery, nil
+	case "mds_provider":
+		return urls.MdsProvider, nil
+	}
+	return "", fmt.Errorf("unsupported --url-type %q", urlType)
 }
