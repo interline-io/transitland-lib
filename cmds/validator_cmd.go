@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/interline-io/log"
@@ -52,7 +53,7 @@ func (cmd *ValidatorCommand) HelpDesc() (string, string) {
 func (cmd *ValidatorCommand) HelpExample() string {
 	return `% {{.ParentCommand}} {{.Command}} "https://www.bart.gov/dev/schedules/google_transit.zip"
 % {{.ParentCommand}} {{.Command}} -o - --include-entities "http://developer.trimet.org/schedule/gtfs.zip"
-% {{.ParentCommand}} {{.Command}} --dmfr feeds/wmata.com.dmfr.json --feed-id f-dqcq-wmata~rail --secrets secrets.json`
+% {{.ParentCommand}} {{.Command}} --dmfr feeds/wmata.com.dmfr.json --feed-id f-dqc-wmata~rail --secrets secrets.json`
 }
 
 func (cmd *ValidatorCommand) HelpArgs() string {
@@ -157,7 +158,9 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		defer os.Remove(tmpfile)
+		// Strip any URL fragment preserved for the reader before removing the file.
+		removePath, _, _ := strings.Cut(tmpfile, "#")
+		defer os.Remove(removePath)
 		cmd.readerPath = tmpfile
 	}
 	// Only log if not outputting JSON to stdout
@@ -252,6 +255,10 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 	if feedURL == "" {
 		return "", fmt.Errorf("no %s URL found for feed %q", cmd.URLType, cmd.FeedID)
 	}
+	// Split off any URL fragment (e.g. "archive.zip#subdir") so the download
+	// targets just the URL; re-attach the fragment to the temp path so
+	// tlcsv.URLAdapter's internal-zip-path semantics are preserved.
+	fetchURL, fragment, hasFragment := strings.Cut(feedURL, "#")
 	var reqOpts []request.RequestOption
 	if cmd.AllowFTPFetch {
 		reqOpts = append(reqOpts, request.WithAllowFTP)
@@ -272,7 +279,7 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 	if cmd.shouldShowLogs() {
 		log.For(ctx).Info().Str("feed_id", cmd.FeedID).Str("url", feedURL).Str("auth_type", feed.Authorization.Type).Msg("Fetching feed")
 	}
-	tmpfile, fr, err := request.AuthenticatedRequestDownload(ctx, feedURL, reqOpts...)
+	tmpfile, fr, err := request.AuthenticatedRequestDownload(ctx, fetchURL, reqOpts...)
 	if err != nil {
 		if tmpfile != "" {
 			os.Remove(tmpfile)
@@ -284,6 +291,9 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 			os.Remove(tmpfile)
 		}
 		return "", fmt.Errorf("fetch failed: %w", fr.FetchError)
+	}
+	if hasFragment {
+		return tmpfile + "#" + fragment, nil
 	}
 	return tmpfile, nil
 }
