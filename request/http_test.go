@@ -356,15 +356,44 @@ func TestHttp_DefaultValues(t *testing.T) {
 
 	assert.Equal(t, defaultMaxRetries, h.getMaxRetries())
 	assert.Equal(t, defaultBackoffSchedule, h.getBackoffSchedule())
+	assert.Equal(t, defaultMaxRedirects, h.getMaxRedirects())
 }
 
 func TestHttp_CustomValues(t *testing.T) {
 	customSchedule := []time.Duration{5 * time.Second, 15 * time.Second, 45 * time.Second}
 	h := &Http{
 		MaxRetries:      10,
+		MaxRedirects:    5,
 		BackoffSchedule: customSchedule,
 	}
 
 	assert.Equal(t, 10, h.getMaxRetries())
+	assert.Equal(t, 5, h.getMaxRedirects())
 	assert.Equal(t, customSchedule, h.getBackoffSchedule())
+}
+
+func TestHttp_DownloadAuth_RedirectLoop(t *testing.T) {
+	var requestCount int32
+
+	// Server redirects to itself indefinitely (mimics an OIDC login loop
+	// that never completes without valid auth).
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&requestCount, 1)
+		// Rotate a query param so URL-equality cycle detection wouldn't trigger.
+		w.Header().Set("Location", r.URL.Path+"?n="+fmt.Sprint(atomic.LoadInt32(&requestCount)))
+		w.WriteHeader(http.StatusFound)
+	}))
+	defer ts.Close()
+
+	h := &Http{MaxRedirects: 3}
+
+	ctx := context.Background()
+	body, _, err := h.DownloadAuth(ctx, ts.URL, dmfr.FeedAuthorization{})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stopped after 3 redirects")
+	assert.Nil(t, body)
+	// CheckRedirect fires when len(via) >= MaxRedirects, so the initial request
+	// plus (MaxRedirects - 1) redirects are followed before the cap triggers.
+	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
 }
