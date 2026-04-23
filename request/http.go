@@ -48,8 +48,11 @@ type Http struct {
 	// MaxRetries sets the maximum number of retry attempts for a request.
 	// If MaxRetries is zero or negative, a default value (defaultMaxRetries) is used.
 	MaxRetries int
-	// MaxRedirects caps the number of HTTP redirects that will be followed.
-	// If MaxRedirects is zero or negative, a default value (defaultMaxRedirects) is used.
+	// MaxRedirects follows Go net/http CheckRedirect semantics and limits the
+	// total number of requests in a redirect chain, including the initial
+	// request — a value of N therefore allows up to N-1 redirects to be
+	// followed. If MaxRedirects is zero or negative, defaultMaxRedirects (10)
+	// is used, matching the net/http default.
 	MaxRedirects int
 	// BackoffSchedule defines the backoff duration for each retry attempt.
 	// If nil or empty, defaultBackoffSchedule is used.
