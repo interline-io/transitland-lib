@@ -1,6 +1,6 @@
 module github.com/interline-io/transitland-lib
 
-go 1.24.2
+go 1.26.0
 
 require (
 	github.com/99designs/gqlgen v0.17.78
