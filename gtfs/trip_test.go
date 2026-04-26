@@ -78,6 +78,45 @@ func TestTrip_Errors(t *testing.T) {
 			}),
 			expectedErrors: PE("InvalidFieldError:bikes_allowed"),
 		},
+		// GTFS-Flex safe duration fields (google/transit#598)
+		{
+			name: "Valid: both safe_duration fields present",
+			trip: newTrip(func(t *Trip) {
+				t.SafeDurationFactor = tt.NewFloat(1.75)
+				t.SafeDurationOffset = tt.NewFloat(900)
+			}),
+			expectedErrors: nil,
+		},
+		{
+			name: "Invalid: only safe_duration_factor present",
+			trip: newTrip(func(t *Trip) {
+				t.SafeDurationFactor = tt.NewFloat(1.5)
+			}),
+			expectedErrors: PE("ConditionallyRequiredFieldError:safe_duration_offset"),
+		},
+		{
+			name: "Invalid: only safe_duration_offset present",
+			trip: newTrip(func(t *Trip) {
+				t.SafeDurationOffset = tt.NewFloat(300)
+			}),
+			expectedErrors: PE("ConditionallyRequiredFieldError:safe_duration_factor"),
+		},
+		{
+			name: "Invalid: safe_duration_factor is negative",
+			trip: newTrip(func(t *Trip) {
+				t.SafeDurationFactor = tt.NewFloat(-1.5)
+				t.SafeDurationOffset = tt.NewFloat(300)
+			}),
+			expectedErrors: PE("InvalidFieldError:safe_duration_factor"),
+		},
+		{
+			name: "Valid: safe_duration_factor is zero offset",
+			trip: newTrip(func(t *Trip) {
+				t.SafeDurationFactor = tt.NewFloat(1.0)
+				t.SafeDurationOffset = tt.NewFloat(0)
+			}),
+			expectedErrors: nil,
+		},
 	}
 
 	for _, tc := range tests {

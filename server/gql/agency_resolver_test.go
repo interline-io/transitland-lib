@@ -21,7 +21,7 @@ func TestAgencyResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { agencies {agency_id}}`,
 			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", ""},
+			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "4982", "BART", ""},
 		},
 		{
 			name:   "basic fields",
@@ -363,7 +363,7 @@ func TestAgencyResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
 			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"CT", "BA", "HA", "ctran-flex"},
+			selectExpect: []string{"CT", "BA", "HA", "hopelink-flex", "ctran-flex"},
 		},
 		{
 			name: "focus basic: East coast focus returns FL agency before CA agencies",
@@ -375,7 +375,7 @@ func TestAgencyResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
 			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"HA", "BA", "CT", "ctran-flex"},
+			selectExpect: []string{"HA", "BA", "CT", "hopelink-flex", "ctran-flex"},
 		},
 		{
 			name: "focus with pagination: maintains ordering",
@@ -428,8 +428,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: share_alike_optional = exclude_no",
@@ -453,8 +453,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: create_derived_product = exclude_no",
@@ -478,8 +478,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = exclude_no",
@@ -503,8 +503,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: redistribution_allowed = exclude_no",
@@ -528,8 +528,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: use_without_attribution = exclude_no",

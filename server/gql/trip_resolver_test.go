@@ -214,8 +214,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  2525,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2526,
 		},
 		{
 			name:               "license filter: share_alike_optional = exclude_no",
@@ -239,8 +239,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  2525,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2526,
 		},
 		{
 			name:               "license filter: create_derived_product = exclude_no",
@@ -264,8 +264,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  2525,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2526,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = exclude_no",
@@ -289,8 +289,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  2525,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2526,
 		},
 		{
 			name:               "license filter: redistribution_allowed = exclude_no",
@@ -314,8 +314,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  2525,
+			selectExpectUnique: []string{"hopelink-flex", "BA"},
+			selectExpectCount:  2526,
 		},
 		{
 			name:               "license filter: use_without_attribution = exclude_no",
@@ -406,6 +406,41 @@ func TestTripResolver_FlexStopTimes(t *testing.T) {
 			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
 			selector:     "feed_versions.0.trips.0.flex_stop_times.#.pickup_booking_rule.booking_rule_id",
 			selectExpect: []string{"booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a", "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"},
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+func TestTripResolver_SafeDuration(t *testing.T) {
+	hopelinkFlexSha1 := "40b1560b9767ca4ee5d9cc3f70947822e0e346be"
+	hopelinkFlexTripID := "t_6143906_b_80444_tn_0"
+	testcases := []testcase{
+		{
+			name: "trip safe duration fields",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						trip_id
+						safe_duration_factor
+						safe_duration_offset
+					}
+				}
+			}`,
+			vars:   hw{"sha1": hopelinkFlexSha1, "trip_id": hopelinkFlexTripID},
+			expect: `{"feed_versions":[{"trips":[{"trip_id":"t_6143906_b_80444_tn_0","safe_duration_factor":1.75,"safe_duration_offset":900}]}]}`,
+		},
+		{
+			name: "safe duration fields null for non-flex trip",
+			query: `query($trip_id: String!) {
+				trips(where:{trip_id:$trip_id}) {
+					trip_id
+					safe_duration_factor
+					safe_duration_offset
+				}
+			}`,
+			vars:   hw{"trip_id": "3850526WKDY"},
+			expect: `{"trips":[{"trip_id":"3850526WKDY","safe_duration_factor":null,"safe_duration_offset":null}]}`,
 		},
 	}
 	c, _ := newTestClient(t)

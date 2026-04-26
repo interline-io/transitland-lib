@@ -51,6 +51,21 @@
       }
     },
     {
+      "spec": "gtfs",
+      "id": "hopelink-flex",
+      "license": {
+        "spdx_identifier": "test-restrictive",
+        "use_without_attribution": "no",
+        "create_derived_product": "no",
+        "redistribution_allowed": "no",
+        "commercial_use_allowed": "no",
+        "share_alike_optional": "no"
+      },
+      "urls": {
+        "static_current": "file://testdata/gtfs-external/hopelink-flex.zip"
+      }
+    },
+    {
       "spec": "gbfs",
       "id": "test-gbfs",
       "urls": {

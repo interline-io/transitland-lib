@@ -712,6 +712,10 @@ type Trip {
   wheelchair_accessible: Int
   "GTFS trips.bikes_allowed"
   bikes_allowed: Int
+  "GTFS trips.safe_duration_factor — multiplier applied to driving duration for safe travel time estimate"
+  safe_duration_factor: Float
+  "GTFS trips.safe_duration_offset — fixed offset in seconds added to driving duration for safe travel time estimate"
+  safe_duration_offset: Float
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
   "Calendar for this trip"
