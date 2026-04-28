@@ -3,6 +3,7 @@ module github.com/interline-io/transitland-lib
 go 1.26.0
 
 require (
+	code.dny.dev/ssrf v0.2.0
 	github.com/99designs/gqlgen v0.17.78
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.6.0

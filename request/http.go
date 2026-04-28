@@ -6,16 +6,38 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"code.dny.dev/ssrf"
 	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
+
+// defaultGuardian denies connections to IP ranges in the IANA Special-Purpose
+// Registries (loopback, RFC1918, link-local, multicast, the cloud metadata
+// address, etc.) and restricts IPv6 to global unicast. It runs as a
+// net.Dialer.Control hook, so it sees the resolved IP rather than the
+// hostname, closing basic DNS rebinding and multi-A-record gaps. Connections
+// to private destinations require opting out via Http.AllowHTTPUnfiltered.
+var defaultGuardian = ssrf.New()
+
+// safeTransport is shared across all DownloadAuth calls so that connection
+// pooling and HTTP/2 reuse work across feed fetches.
+var safeTransport = func() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.DialContext = (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		Control:   defaultGuardian.Safe,
+	}).DialContext
+	return t
+}()
 
 func init() {
 	var _ Downloader = &Http{}
@@ -47,6 +69,10 @@ type Http struct {
 	// BackoffSchedule defines the backoff duration for each retry attempt.
 	// If nil or empty, defaultBackoffSchedule is used.
 	BackoffSchedule []time.Duration
+	// AllowHTTPUnfiltered disables SSRF protection (private/loopback/metadata
+	// IPs are allowed). Off by default — only set in CLI contexts where the
+	// operator legitimately fetches from internal addresses.
+	AllowHTTPUnfiltered bool
 }
 
 func (r *Http) SetSecret(secret dmfr.Secret) error {
@@ -195,6 +221,9 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 			removeDefaultPortFromHost(req)
 			return nil
 		},
+	}
+	if !r.AllowHTTPUnfiltered {
+		client.Transport = safeTransport
 	}
 
 	maxRetries := r.getMaxRetries()

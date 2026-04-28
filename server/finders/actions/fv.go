@@ -11,6 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/importer"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -145,7 +146,11 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 		}
 	} else if feedURL != nil {
 		var err error
-		reader, err = tlcsv.NewReader(*feedURL)
+		var reqOpts []request.RequestOption
+		if cfg.AllowHTTPFetchUnfiltered {
+			reqOpts = append(reqOpts, request.WithAllowHTTPUnfiltered)
+		}
+		reader, err = tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(*feedURL, reqOpts...))
 		if err != nil {
 			result.FailureReason = strptr("Could not load URL")
 			return &result, nil
@@ -170,6 +175,7 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 		IncludeRealtimeJson:      true,
 		IncludeEntitiesLimit:     10_000,
 		MaxRTMessageSize:         10_000_000,
+		AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
 		ValidateRealtimeMessages: rturls,
 		Options:                  copier.Options{Quiet: true},
 	}

@@ -196,8 +196,9 @@ func TestHttp_DownloadAuth_429Retry(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -229,8 +230,9 @@ func TestHttp_DownloadAuth_503Retry(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -257,8 +259,9 @@ func TestHttp_DownloadAuth_429MaxRetriesExceeded(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      2,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond},
+		MaxRetries:          2,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -288,8 +291,9 @@ func TestHttp_DownloadAuth_429WithRetryAfterHeader(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -318,8 +322,9 @@ func TestHttp_DownloadAuth_ContextCancellation(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{1 * time.Second, 2 * time.Second, 3 * time.Second},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{1 * time.Second, 2 * time.Second, 3 * time.Second},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -339,8 +344,9 @@ func TestHttp_DownloadAuth_NonRetryableError(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()

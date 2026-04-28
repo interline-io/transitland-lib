@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/request"
 )
 
 func getTestAdapters() map[string]func() Adapter {
@@ -177,10 +178,10 @@ func TestURLAdapter(t *testing.T) {
 	}))
 	defer ts.Close()
 	// Main tests
-	testAdapter(t, &URLAdapter{url: ts.URL})
+	testAdapter(t, &URLAdapter{url: ts.URL, reqOpts: []request.RequestOption{request.WithAllowHTTPUnfiltered}})
 	//
 	t.Run("Download", func(t *testing.T) {
-		a := URLAdapter{url: ts.URL}
+		a := URLAdapter{url: ts.URL, reqOpts: []request.RequestOption{request.WithAllowHTTPUnfiltered}}
 		if err := a.Open(); err != nil {
 			t.Error(err)
 		}
