@@ -357,6 +357,36 @@ func TestHttp_DownloadAuth_NonRetryableError(t *testing.T) {
 	assert.Nil(t, body)
 }
 
+func TestHttp_DownloadAuth_SSRFRejectsLoopbackByDefault(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}))
+	defer ts.Close()
+
+	h := &Http{}
+	body, _, err := h.DownloadAuth(context.Background(), ts.URL, dmfr.FeedAuthorization{})
+	assert.Error(t, err, "default Http should reject loopback")
+	assert.Nil(t, body)
+}
+
+func TestHttp_DownloadAuth_AllowHTTPUnfilteredPermitsLoopback(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}))
+	defer ts.Close()
+
+	h := &Http{AllowHTTPUnfiltered: true}
+	body, statusCode, err := h.DownloadAuth(context.Background(), ts.URL, dmfr.FeedAuthorization{})
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.NotNil(t, body)
+	if body != nil {
+		body.Close()
+	}
+}
+
 func TestHttp_DefaultValues(t *testing.T) {
 	h := &Http{}
 

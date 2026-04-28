@@ -30,7 +30,12 @@ var defaultGuardian = ssrf.New()
 // safeTransport is shared across all DownloadAuth calls so that connection
 // pooling and HTTP/2 reuse work across feed fetches.
 var safeTransport = func() *http.Transport {
-	t := http.DefaultTransport.(*http.Transport).Clone()
+	var t *http.Transport
+	if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+		t = dt.Clone()
+	} else {
+		t = &http.Transport{}
+	}
 	t.DialContext = (&net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
