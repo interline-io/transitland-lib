@@ -25,7 +25,13 @@ import (
 // net.Dialer.Control hook, so it sees the resolved IP rather than the
 // hostname, closing basic DNS rebinding and multi-A-record gaps. Connections
 // to private destinations require opting out via Http.AllowHTTPUnfiltered.
-var defaultGuardian = ssrf.New()
+//
+// Port restriction is disabled (WithAnyPort): legitimate public GTFS feeds
+// commonly serve from non-standard HTTPS ports (8443, 4443, etc.). The
+// library only ever uses http.Client, so the dial port doesn't change the
+// protocol — port allowlisting would block real feeds without preventing
+// any attack the IP-based filter doesn't already cover.
+var defaultGuardian = ssrf.New(ssrf.WithAnyPort())
 
 // safeTransport is shared across all DownloadAuth calls so that connection
 // pooling and HTTP/2 reuse work across feed fetches.
