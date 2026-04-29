@@ -14,17 +14,18 @@ import (
 
 // Options sets options for a fetch operation.
 type Options struct {
-	FeedURL         string
-	FeedID          int
-	URLType         string
-	Storage         string
-	AllowFTPFetch   bool
-	AllowLocalFetch bool
-	AllowS3Fetch    bool
-	MaxSize         uint64
-	HideURL         bool
-	FetchedAt       time.Time
-	Secrets         []dmfr.Secret
+	FeedURL                  string
+	FeedID                   int
+	URLType                  string
+	Storage                  string
+	AllowFTPFetch            bool
+	AllowLocalFetch          bool
+	AllowS3Fetch             bool
+	AllowHTTPFetchUnfiltered bool
+	MaxSize                  uint64
+	HideURL                  bool
+	FetchedAt                time.Time
+	Secrets                  []dmfr.Secret
 }
 
 // Result contains results of a fetch operation.
@@ -76,6 +77,9 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	}
 	if opts.AllowS3Fetch {
 		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	if opts.AllowHTTPFetchUnfiltered {
+		reqOpts = append(reqOpts, request.WithAllowHTTPUnfiltered)
 	}
 	if opts.MaxSize > 0 {
 		reqOpts = append(reqOpts, request.WithMaxSize(opts.MaxSize))

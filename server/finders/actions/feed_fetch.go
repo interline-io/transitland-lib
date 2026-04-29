@@ -39,13 +39,14 @@ func StaticFetch(ctx context.Context, feedId string, feedSrc io.Reader, feedUrl 
 	// Prepare
 	fetchOpts := fetch.StaticFetchOptions{
 		Options: fetch.Options{
-			FeedID:        feed.ID,
-			URLType:       urlType,
-			FeedURL:       feedUrl,
-			Storage:       cfg.Storage,
-			Secrets:       cfg.Secrets,
-			FetchedAt:     time.Now().In(time.UTC),
-			AllowFTPFetch: true,
+			FeedID:                   feed.ID,
+			URLType:                  urlType,
+			FeedURL:                  feedUrl,
+			Storage:                  cfg.Storage,
+			Secrets:                  cfg.Secrets,
+			FetchedAt:                time.Now().In(time.UTC),
+			AllowFTPFetch:            true,
+			AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
 		},
 	}
 	if user := authn.ForContext(ctx); user != nil {
@@ -102,12 +103,13 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 	// Prepare
 	fetchOpts := fetch.RTFetchOptions{
 		Options: fetch.Options{
-			FeedID:    feed.ID,
-			URLType:   urlType,
-			FeedURL:   feedUrl,
-			Storage:   cfg.RTStorage,
-			Secrets:   cfg.Secrets,
-			FetchedAt: time.Now().In(time.UTC),
+			FeedID:                   feed.ID,
+			URLType:                  urlType,
+			FeedURL:                  feedUrl,
+			Storage:                  cfg.RTStorage,
+			Secrets:                  cfg.Secrets,
+			FetchedAt:                time.Now().In(time.UTC),
+			AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
 		},
 	}
 
@@ -156,6 +158,7 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 	opts.FeedID = gfeeds[0].ID
 	opts.URLType = "gbfs_auto_discovery"
 	opts.FetchedAt = time.Now().In(time.UTC)
+	opts.AllowHTTPFetchUnfiltered = cfg.AllowHTTPFetchUnfiltered
 	if feedUrl != "" {
 		opts.FeedURL = feedUrl
 	}

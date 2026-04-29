@@ -10,23 +10,24 @@ import (
 )
 
 type Config struct {
-	Finder                  Finder
-	RTFinder                RTFinder
-	GbfsFinder              GbfsFinder
-	Checker                 Checker
-	Actions                 Actions
-	JobQueue                jobs.JobQueue
-	Clock                   clock.Clock
-	Secrets                 []dmfr.Secret
-	ValidateLargeFiles      bool
-	DisableImage            bool
-	UseMaterialized         bool
-	RestPrefix              string
-	Storage                 string
-	RTStorage               string
-	LoaderBatchSize         int
-	LoaderStopTimeBatchSize int
-	MaxRadius               float64
+	Finder                   Finder
+	RTFinder                 RTFinder
+	GbfsFinder               GbfsFinder
+	Checker                  Checker
+	Actions                  Actions
+	JobQueue                 jobs.JobQueue
+	Clock                    clock.Clock
+	Secrets                  []dmfr.Secret
+	ValidateLargeFiles       bool
+	DisableImage             bool
+	UseMaterialized          bool
+	AllowHTTPFetchUnfiltered bool
+	RestPrefix               string
+	Storage                  string
+	RTStorage                string
+	LoaderBatchSize          int
+	LoaderStopTimeBatchSize  int
+	MaxRadius                float64
 }
 
 var finderCtxKey = &contextKey{"finderConfig"}

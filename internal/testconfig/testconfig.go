@@ -164,15 +164,16 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	actionFinder := &actions.Actions{}
 
 	return model.Config{
-		Finder:     dbf,
-		RTFinder:   rtf,
-		GbfsFinder: gbf,
-		Checker:    checker,
-		JobQueue:   jobQueue,
-		Actions:    actionFinder,
-		Clock:      cl,
-		Storage:    opts.Storage,
-		RTStorage:  opts.RTStorage,
-		MaxRadius:  100_000,
+		Finder:                   dbf,
+		RTFinder:                 rtf,
+		GbfsFinder:               gbf,
+		Checker:                  checker,
+		JobQueue:                 jobQueue,
+		Actions:                  actionFinder,
+		Clock:                    cl,
+		Storage:                  opts.Storage,
+		RTStorage:                opts.RTStorage,
+		MaxRadius:                100_000,
+		AllowHTTPFetchUnfiltered: true,
 	}
 }
