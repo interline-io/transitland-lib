@@ -18,7 +18,7 @@ import (
 // Entity mutation tests
 
 func TestStopCreate(t *testing.T) {
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
@@ -45,7 +45,7 @@ func TestStopCreate(t *testing.T) {
 }
 
 func TestStopUpdate(t *testing.T) {
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
@@ -86,7 +86,7 @@ func TestStopReference(t *testing.T) {
 		TargetFeedOnestopID tt.String `db:"target_feed_onestop_id"`
 		TargetStopID        tt.String `db:"target_stop_id"`
 	}
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}

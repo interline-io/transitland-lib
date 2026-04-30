@@ -164,8 +164,7 @@ func TestStaticFetchWorker(t *testing.T) {
 
 			// Setup job
 			feedUrl := ts.URL + "/" + tc.serveFile
-			testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
-				cfg.Checker = nil // disable checker for this test
+			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 				ctx := model.WithConfig(context.Background(), cfg)
 				// Run job
 				if result, err := actions.StaticFetch(ctx, tc.feedId, nil, feedUrl); err != nil && !tc.expectError {
@@ -244,7 +243,6 @@ func TestValidateUpload(t *testing.T) {
 
 			// Setup job
 			testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
-				cfg.Checker = nil // disable checker for this test
 				ctx := model.WithConfig(context.Background(), cfg)
 				// Run job
 				feedUrl := ts.URL + "/" + tc.serveFile

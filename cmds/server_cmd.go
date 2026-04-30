@@ -52,7 +52,6 @@ type ServerCommand struct {
 	LoadAdmins              bool
 	ValidateLargeFiles      bool
 	UseMaterialized         bool
-	DisableAuth             bool
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	SecretsFile             string
@@ -88,7 +87,6 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
 	fl.BoolVar(&cmd.UseMaterialized, "use-materialized", false, "Use materialized views for active entities")
-	fl.BoolVar(&cmd.DisableAuth, "disable-auth", false, "Disable feed authorization checks (treat all feeds as public)")
 }
 
 func (cmd *ServerCommand) Parse(args []string) error {
@@ -173,10 +171,11 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		MaxRadius:               cmd.MaxRadius,
 	}
 
-	// Disable auth if requested
-	if cmd.DisableAuth {
-		cfg.Checker = globalAdminCheckerInstance
-	}
+	// This demo binary always runs with authorization disabled — it does
+	// not wire up a real Checker. Callers that need enforced authorization
+	// must compose their own binary using this package as a library.
+	cfg.Checker = globalAdminCheckerInstance
+	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
 
 	// Setup router
 	root := chi.NewRouter()

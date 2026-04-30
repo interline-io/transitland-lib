@@ -81,7 +81,14 @@ type AdminManager interface {
 }
 
 // GlobalAdminChecker implements Checker and always grants access.
-// Used when auth is disabled (e.g., --disable-auth flag).
+// This is the deliberate "allow all" implementation: callers that do not
+// configure a real Checker must install this explicitly to opt out of
+// authorization. The library itself fails closed when Checker is nil; do
+// not rely on a nil Checker as an implicit "no auth" mode.
+//
+// Appropriate use cases: demo binaries, integration tests that are not
+// exercising authorization. Never use in a deployment that is expected
+// to enforce per-feed permissions.
 type GlobalAdminChecker struct{}
 
 func (c *GlobalAdminChecker) Me(ctx context.Context) (*UserInfo, error) {

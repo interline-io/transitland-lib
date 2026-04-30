@@ -36,6 +36,10 @@ type Options struct {
 	FGAEndpoint    string
 	FGAModelFile   string
 	FGAModelTuples []authz.TupleKey
+	// AllowAll installs a permissive GlobalAdminChecker. Tests that exercise
+	// mutations need this because the library now denies mutations when no
+	// Checker is configured. Ignored when FGAEndpoint is set.
+	AllowAll bool
 }
 
 func Config(t testing.TB, opts Options) model.Config {
@@ -97,8 +101,14 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	}
 	cl := &clock.Mock{T: when}
 
-	// Setup Checker
+	// Setup Checker. Default is nil so that read-side tests continue to
+	// see the "anonymous" view (only public feeds). Mutation tests must
+	// pass AllowAll: true — the library now fails closed on mutations
+	// when Checker is nil.
 	var checker model.Checker
+	if opts.AllowAll {
+		checker = &authz.GlobalAdminChecker{}
+	}
 	if opts.FGAEndpoint != "" {
 		fgaClient, fgaErr := fga.NewFGAClient(opts.FGAEndpoint, "", "")
 		if fgaErr != nil {

@@ -312,7 +312,7 @@ func checkFeedEdit(ctx context.Context, fvid int) error {
 	cfg := model.ForContext(ctx)
 	checker := cfg.Checker
 	if checker == nil {
-		return nil
+		return authz.ErrUnauthorized
 	}
 	ok, err := checker.Check(ctx, authz.ObjectRef{Type: authz.FeedVersionType, ID: int64(fvid)}, authz.CanEdit)
 	if err != nil {
