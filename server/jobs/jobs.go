@@ -36,7 +36,11 @@ var ErrJobAccessDenied = errors.New("job access denied")
 // ErrJobNotFound is returned when a JobId is not known to the queue.
 var ErrJobNotFound = errors.New("job not found")
 
-// Job queue
+// JobQueue is the unified interface every job backend must satisfy.
+//
+// Watch's channel closes when the job reaches a terminal state. Adapters
+// may skip intermediate transitions; for the full final status, call
+// Status after the channel closes.
 type JobQueue interface {
 	Use(JobMiddleware)
 	AddQueue(string, int) error

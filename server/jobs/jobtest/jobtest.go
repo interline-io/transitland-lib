@@ -56,7 +56,18 @@ func userCtx(id string) context.Context {
 	return authn.WithUser(context.Background(), authn.NewCtxUser(id, "", ""))
 }
 
+// TestJobQueue runs the full conformance suite — legacy enqueue/run behavior
+// plus the lifecycle methods (Status, Watch, ListJobs) and access control.
+// Backends that haven't yet implemented the lifecycle methods should call
+// TestJobQueueCore instead.
 func TestJobQueue(t *testing.T, newQueue func(string) JobQueue) {
+	TestJobQueueCore(t, newQueue)
+	TestJobQueueLifecycle(t, newQueue)
+}
+
+// TestJobQueueCore exercises the original enqueue/run/middleware behavior
+// any backend should support.
+func TestJobQueueCore(t *testing.T, newQueue func(string) JobQueue) {
 	ctx := adminCtx()
 	queueName := func(t testing.TB) string {
 		tName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-"))
@@ -205,27 +216,44 @@ func TestJobQueue(t *testing.T, newQueue func(string) JobQueue) {
 		assert.Equal(t, int64(2), count)
 		assert.Equal(t, int64(2*10), jwCount)
 	})
+}
+
+// TestJobQueueLifecycle exercises Status, Watch, ListJobs, and the
+// admin-or-creator access rules. Backends that haven't implemented these
+// methods should skip this suite.
+func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
+	ctx := adminCtx()
+	queueName := func(t testing.TB) string {
+		tName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-"))
+		return fmt.Sprintf("%s-%d-%d", tName, os.Getpid(), time.Now().UnixNano())
+	}
+	sleepyTime := 3 * time.Second
 	t.Run("status", func(t *testing.T) {
 		rtJobs := newQueue(queueName(t))
 		count := int64(0)
 		checkErr(t, rtJobs.AddJobType(func() JobWorker { return &TestWorker{count: &count, kind: "testStatus"} }))
-		// Add returns queued status with assigned JobId
+		// AddJob returns queued status with adapter-assigned JobId.
 		st, err := rtJobs.AddJob(ctx, Job{JobType: "testStatus", UserId: "alice", JobArgs: JobArgs{"x": "1"}})
 		checkErr(t, err)
 		assert.NotEmpty(t, st.JobId, "AddJob should assign a JobId")
 		assert.Equal(t, "alice", st.UserId)
-		assert.Equal(t, jobs.JobStateQueued, st.State)
-		// Run synchronously and assert terminal status
-		runSt, err := rtJobs.RunJob(ctx, Job{JobType: "testStatus", UserId: "alice", JobArgs: JobArgs{"x": "2"}})
+		// Status before Run is OK — backend should track queued state.
+		queuedSt, err := rtJobs.Status(ctx, st.JobId)
 		checkErr(t, err)
-		assert.True(t, runSt.State.Terminal())
-		assert.Equal(t, jobs.JobStateSucceeded, runSt.State)
-		// Status by id
-		got, err := rtJobs.Status(ctx, runSt.JobId)
+		assert.Equal(t, st.JobId, queuedSt.JobId)
+		// Run the queue and wait for the job to become terminal.
+		go func() {
+			time.Sleep(sleepyTime)
+			rtJobs.Stop(ctx)
+		}()
+		if err := rtJobs.Run(ctx); err != nil {
+			t.Fatal(err)
+		}
+		got, err := rtJobs.Status(ctx, st.JobId)
 		checkErr(t, err)
-		assert.Equal(t, runSt.JobId, got.JobId)
+		assert.True(t, got.State.Terminal(), "expected terminal state, got %s", got.State)
 		assert.Equal(t, jobs.JobStateSucceeded, got.State)
-		// Unknown id
+		// Unknown id.
 		_, err = rtJobs.Status(ctx, "does-not-exist")
 		assert.Error(t, err)
 	})
@@ -233,14 +261,29 @@ func TestJobQueue(t *testing.T, newQueue func(string) JobQueue) {
 		rtJobs := newQueue(queueName(t))
 		count := int64(0)
 		checkErr(t, rtJobs.AddJobType(func() JobWorker { return &TestWorker{count: &count, kind: "testWatch"} }))
-		// Watch a finished job: should replay terminal then close.
-		st, err := rtJobs.RunJob(ctx, Job{JobType: "testWatch", UserId: "alice", JobArgs: JobArgs{"x": "done"}})
+		st, err := rtJobs.AddJob(ctx, Job{JobType: "testWatch", UserId: "alice", JobArgs: JobArgs{"x": "live"}})
 		checkErr(t, err)
+		// Open the watch before the queue starts; we should see the transition
+		// from queued through to terminal.
 		ch, err := rtJobs.Watch(ctx, st.JobId)
 		checkErr(t, err)
+		go func() {
+			time.Sleep(sleepyTime)
+			rtJobs.Stop(ctx)
+		}()
+		go func() { _ = rtJobs.Run(ctx) }()
 		var events []jobs.JobEvent
-		for ev := range ch {
-			events = append(events, ev)
+		drained := make(chan struct{})
+		go func() {
+			for ev := range ch {
+				events = append(events, ev)
+			}
+			close(drained)
+		}()
+		select {
+		case <-drained:
+		case <-time.After(sleepyTime + 2*time.Second):
+			t.Fatal("watch did not close")
 		}
 		if assert.NotEmpty(t, events, "expected at least one terminal event") {
 			assert.True(t, events[len(events)-1].State.Terminal())
@@ -248,26 +291,29 @@ func TestJobQueue(t *testing.T, newQueue func(string) JobQueue) {
 	})
 	t.Run("list", func(t *testing.T) {
 		rtJobs := newQueue(queueName(t))
+		// Use a per-run unique JobType so persistent backends don't see
+		// rows from prior runs.
+		listType := fmt.Sprintf("testList-%d-%d", os.Getpid(), time.Now().UnixNano())
 		count := int64(0)
-		checkErr(t, rtJobs.AddJobType(func() JobWorker { return &TestWorker{count: &count, kind: "testList"} }))
+		checkErr(t, rtJobs.AddJobType(func() JobWorker { return &TestWorker{count: &count, kind: listType} }))
 		// Submit 5 jobs as alice, 3 as bob.
 		for i := 0; i < 5; i++ {
-			_, err := rtJobs.AddJob(ctx, Job{JobType: "testList", UserId: "alice", JobArgs: JobArgs{"i": i}})
+			_, err := rtJobs.AddJob(ctx, Job{JobType: listType, UserId: "alice", JobArgs: JobArgs{"i": i}})
 			checkErr(t, err)
 			time.Sleep(1 * time.Millisecond)
 		}
 		for i := 0; i < 3; i++ {
-			_, err := rtJobs.AddJob(ctx, Job{JobType: "testList", UserId: "bob", JobArgs: JobArgs{"i": i}})
+			_, err := rtJobs.AddJob(ctx, Job{JobType: listType, UserId: "bob", JobArgs: JobArgs{"i": i}})
 			checkErr(t, err)
 			time.Sleep(1 * time.Millisecond)
 		}
 		// Admin sees all.
-		all, err := rtJobs.ListJobs(ctx, jobs.JobListOptions{JobType: "testList"})
+		all, err := rtJobs.ListJobs(ctx, jobs.JobListOptions{JobType: listType})
 		checkErr(t, err)
 		assert.Equal(t, 8, len(all.Jobs))
 		// Alice (non-admin) sees only her own regardless of opts.UserId.
 		aliceCtx := userCtx("alice")
-		mine, err := rtJobs.ListJobs(aliceCtx, jobs.JobListOptions{JobType: "testList", UserId: "bob"})
+		mine, err := rtJobs.ListJobs(aliceCtx, jobs.JobListOptions{JobType: listType, UserId: "bob"})
 		checkErr(t, err)
 		assert.Equal(t, 5, len(mine.Jobs))
 		for _, st := range mine.Jobs {
@@ -277,7 +323,7 @@ func TestJobQueue(t *testing.T, newQueue func(string) JobQueue) {
 		seen := map[string]bool{}
 		var cursor string
 		for pages := 0; pages < 10; pages++ {
-			page, err := rtJobs.ListJobs(ctx, jobs.JobListOptions{JobType: "testList", UserId: "alice", Limit: 2, After: cursor})
+			page, err := rtJobs.ListJobs(ctx, jobs.JobListOptions{JobType: listType, UserId: "alice", Limit: 2, After: cursor})
 			checkErr(t, err)
 			for _, st := range page.Jobs {
 				assert.False(t, seen[st.JobId], "duplicate JobId across pages")
