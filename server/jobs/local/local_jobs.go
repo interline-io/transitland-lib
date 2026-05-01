@@ -20,6 +20,8 @@ func init() {
 
 const watchBufferSize = 16
 const defaultListLimit = 100
+const defaultTerminalTTL = 1 * time.Hour
+const sweepInterval = 1 * time.Minute
 
 type jobEntry struct {
 	mu       sync.Mutex
@@ -40,16 +42,24 @@ type LocalJobs struct {
 
 	registryLock sync.Mutex
 	registry     map[string]*jobEntry
+	terminalTTL  time.Duration
 }
 
 func NewLocalJobs() *LocalJobs {
 	f := &LocalJobs{
-		jobs:       make(chan jobs.Job, 1000),
-		uniqueJobs: map[string]bool{},
-		jobMapper:  jobs.NewJobMapper(),
-		registry:   map[string]*jobEntry{},
+		jobs:        make(chan jobs.Job, 1000),
+		uniqueJobs:  map[string]bool{},
+		jobMapper:   jobs.NewJobMapper(),
+		registry:    map[string]*jobEntry{},
+		terminalTTL: defaultTerminalTTL,
 	}
 	return f
+}
+
+// SetTerminalTTL configures how long terminal job entries are retained before
+// being evicted from the in-memory registry. Zero disables eviction.
+func (f *LocalJobs) SetTerminalTTL(d time.Duration) {
+	f.terminalTTL = d
 }
 
 func (f *LocalJobs) Use(mwf jobs.JobMiddleware) {
@@ -391,8 +401,40 @@ func (f *LocalJobs) Run(ctx context.Context) error {
 			}
 		}(jobfunc)
 	}
+	if f.terminalTTL > 0 {
+		go f.evictLoop(f.ctx)
+	}
 	<-f.ctx.Done()
 	return nil
+}
+
+func (f *LocalJobs) evictLoop(ctx context.Context) {
+	ticker := time.NewTicker(sweepInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			f.evictTerminal(time.Now().UTC().Add(-f.terminalTTL))
+		}
+	}
+}
+
+// evictTerminal removes terminal-state entries whose FinishedAt is at or before cutoff.
+func (f *LocalJobs) evictTerminal(cutoff time.Time) {
+	f.registryLock.Lock()
+	defer f.registryLock.Unlock()
+	for id, entry := range f.registry {
+		entry.mu.Lock()
+		evict := entry.status.State.Terminal() &&
+			entry.status.FinishedAt != nil &&
+			!entry.status.FinishedAt.After(cutoff)
+		entry.mu.Unlock()
+		if evict {
+			delete(f.registry, id)
+		}
+	}
 }
 
 func (f *LocalJobs) Stop(ctx context.Context) error {
