@@ -112,9 +112,7 @@ func (f *LocalJobs) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, e
 			f.uniqueJobsLock.Unlock()
 			log.Trace().Interface("job", job).Msgf("already locked: %s", key)
 			f.registerJob(job)
-			f.updateStatus(job.JobId, jobs.JobStateCancelled, "duplicate")
-			st, _ := f.statusUnchecked(job.JobId)
-			return st, nil
+			return f.updateStatus(job.JobId, jobs.JobStateCancelled, "duplicate"), nil
 		}
 		f.uniqueJobs[key] = true
 		f.uniqueJobsLock.Unlock()
@@ -129,8 +127,6 @@ func (f *LocalJobs) registerJob(job jobs.Job) jobs.JobStatus {
 	now := time.Now().UTC()
 	entry := &jobEntry{
 		status: jobs.JobStatus{
-			JobId:       job.JobId,
-			UserId:      job.UserId,
 			State:       jobs.JobStateQueued,
 			Job:         job,
 			SubmittedAt: now,
@@ -237,7 +233,7 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 		entry.mu.Lock()
 		st := entry.status
 		entry.mu.Unlock()
-		if filterUserId != "" && st.UserId != filterUserId {
+		if filterUserId != "" && st.Job.UserId != filterUserId {
 			continue
 		}
 		if opts.JobType != "" && st.Job.JobType != opts.JobType {
@@ -254,7 +250,7 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 		if !snapshot[i].SubmittedAt.Equal(snapshot[j].SubmittedAt) {
 			return snapshot[i].SubmittedAt.After(snapshot[j].SubmittedAt)
 		}
-		return snapshot[i].JobId < snapshot[j].JobId
+		return snapshot[i].Job.JobId < snapshot[j].Job.JobId
 	})
 
 	if opts.After != "" {
@@ -268,7 +264,7 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 		cutoff := -1
 		for i, st := range snapshot {
 			if st.SubmittedAt.Before(cur.SubmittedAt) ||
-				(st.SubmittedAt.Equal(cur.SubmittedAt) && st.JobId > cur.JobId) {
+				(st.SubmittedAt.Equal(cur.SubmittedAt) && st.Job.JobId > cur.JobId) {
 				cutoff = i
 				break
 			}
@@ -300,7 +296,7 @@ type listCursor struct {
 }
 
 func encodeCursor(st jobs.JobStatus) string {
-	b, _ := json.Marshal(listCursor{SubmittedAt: st.SubmittedAt, JobId: st.JobId})
+	b, _ := json.Marshal(listCursor{SubmittedAt: st.SubmittedAt, JobId: st.Job.JobId})
 	return base64.URLEncoding.EncodeToString(b)
 }
 
@@ -316,10 +312,10 @@ func decodeCursor(cursor string) (listCursor, error) {
 	return c, nil
 }
 
-func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg string) {
+func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg string) jobs.JobStatus {
 	entry := f.getEntry(jobId)
 	if entry == nil {
-		return
+		return jobs.JobStatus{}
 	}
 	entry.mu.Lock()
 	defer entry.mu.Unlock()
@@ -349,6 +345,7 @@ func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg strin
 		}
 		entry.watchers = nil
 	}
+	return entry.status
 }
 
 func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) error {
@@ -366,8 +363,6 @@ func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job,
 	return nil
 }
 
-// runQueuedJob is the worker-pool entry point. The job's JobId is already set
-// and registered by AddJob, so we go straight to execution.
 func (f *LocalJobs) runQueuedJob(ctx context.Context, job jobs.Job) error {
 	_, err := f.execute(ctx, job)
 	return err
@@ -381,22 +376,16 @@ func (f *LocalJobs) RunJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, e
 	return f.execute(ctx, job)
 }
 
-// execute runs the worker chain for an already-registered job, transitioning
-// state through queued -> running -> succeeded/failed/cancelled.
 func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
 	now := time.Now().In(time.UTC).Unix()
 	if job.JobDeadline > 0 && job.JobDeadline < now {
 		log.Trace().Int64("job_deadline", job.JobDeadline).Int64("now", now).Msg("job skipped - deadline in past")
-		f.updateStatus(job.JobId, jobs.JobStateCancelled, "deadline in past")
-		st, _ := f.statusUnchecked(job.JobId)
-		return st, nil
+		return f.updateStatus(job.JobId, jobs.JobStateCancelled, "deadline in past"), nil
 	}
 	if job.Unique {
 		key, err := job.HexKey()
 		if err != nil {
-			f.updateStatus(job.JobId, jobs.JobStateFailed, err.Error())
-			st, _ := f.statusUnchecked(job.JobId)
-			return st, err
+			return f.updateStatus(job.JobId, jobs.JobStateFailed, err.Error()), err
 		}
 		f.uniqueJobsLock.Lock()
 		delete(f.uniqueJobs, key)
@@ -405,32 +394,23 @@ func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 	}
 	w, err := f.jobMapper.GetRunner(job.JobType, job.JobArgs)
 	if err != nil {
-		f.updateStatus(job.JobId, jobs.JobStateFailed, err.Error())
-		st, _ := f.statusUnchecked(job.JobId)
-		return st, err
+		return f.updateStatus(job.JobId, jobs.JobStateFailed, err.Error()), err
 	}
 	if w == nil {
-		f.updateStatus(job.JobId, jobs.JobStateFailed, "no job")
-		st, _ := f.statusUnchecked(job.JobId)
-		return st, errors.New("no job")
+		return f.updateStatus(job.JobId, jobs.JobStateFailed, "no job"), errors.New("no job")
 	}
 	for _, mwf := range f.middlewares {
 		w = mwf(w, job)
 		if w == nil {
-			f.updateStatus(job.JobId, jobs.JobStateFailed, "no job")
-			st, _ := f.statusUnchecked(job.JobId)
-			return st, errors.New("no job")
+			return f.updateStatus(job.JobId, jobs.JobStateFailed, "no job"), errors.New("no job")
 		}
 	}
 	f.updateStatus(job.JobId, jobs.JobStateRunning, "")
 	runErr := w.Run(ctx)
 	if runErr != nil {
-		f.updateStatus(job.JobId, jobs.JobStateFailed, runErr.Error())
-	} else {
-		f.updateStatus(job.JobId, jobs.JobStateSucceeded, "")
+		return f.updateStatus(job.JobId, jobs.JobStateFailed, runErr.Error()), runErr
 	}
-	st, _ := f.statusUnchecked(job.JobId)
-	return st, runErr
+	return f.updateStatus(job.JobId, jobs.JobStateSucceeded, ""), nil
 }
 
 func (f *LocalJobs) Run(ctx context.Context) error {

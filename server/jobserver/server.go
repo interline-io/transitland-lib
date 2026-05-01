@@ -1,6 +1,7 @@
 package jobserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,21 +39,20 @@ type jobResponse struct {
 
 // addJobRequest adds the request to the appropriate queue
 func addJobRequest(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
+	queue := requireQueueAndAuth(w, req)
+	if queue == nil {
+		return
+	}
 	job, err := requestGetJob(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	ctx := req.Context()
+	scopeJobUserId(ctx, &job)
 
-	// add job to queue
-	ret := jobResponse{
-		Job: job,
-	}
-	if jobQueue := model.ForContext(ctx).JobQueue; jobQueue == nil {
-		ret.Status = "failed"
-		ret.Error = "no job queue available"
-	} else if status, err := jobQueue.AddJob(ctx, job); err != nil {
+	ret := jobResponse{Job: job}
+	if status, err := queue.AddJob(ctx, job); err != nil {
 		ret.Status = "failed"
 		ret.Error = err.Error()
 	} else {
@@ -66,21 +66,20 @@ func addJobRequest(w http.ResponseWriter, req *http.Request) {
 
 // runJobRequest runs the job directly
 func runJobRequest(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
+	queue := requireQueueAndAuth(w, req)
+	if queue == nil {
+		return
+	}
 	job, err := requestGetJob(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	ctx := req.Context()
+	scopeJobUserId(ctx, &job)
 
-	// run job directly
-	ret := jobResponse{
-		Job: job,
-	}
-	if jobQueue := model.ForContext(ctx).JobQueue; jobQueue == nil {
-		ret.Status = "failed"
-		ret.Error = "no job queue available"
-	} else if status, err := jobQueue.RunJob(ctx, job); err != nil {
+	ret := jobResponse{Job: job}
+	if status, err := queue.RunJob(ctx, job); err != nil {
 		ret.Status = "failed"
 		ret.Error = err.Error()
 	} else {
@@ -92,21 +91,45 @@ func runJobRequest(w http.ResponseWriter, req *http.Request) {
 	writeJobResponse(ret, w)
 }
 
-// statusJobRequest returns the JobStatus for a single job.
-// Returns 404 if the job is not visible to the caller (whether absent or not theirs).
-func statusJobRequest(w http.ResponseWriter, req *http.Request) {
+// scopeJobUserId binds the job's UserId to the authenticated user. Admins may
+// submit on behalf of any user (e.g. system jobs); non-admins always have
+// their own ID stamped, regardless of what the request body specified.
+func scopeJobUserId(ctx context.Context, job *jobs.Job) {
+	user := authn.ForContext(ctx)
+	if user == nil {
+		return
+	}
+	if user.HasRole("admin") {
+		return
+	}
+	job.UserId = user.ID()
+}
+
+// requireQueueAndAuth resolves the JobQueue and confirms the request is
+// authenticated. On failure it writes the appropriate response and returns
+// a nil queue; callers should return immediately in that case.
+func requireQueueAndAuth(w http.ResponseWriter, req *http.Request) jobs.JobQueue {
 	ctx := req.Context()
 	queue := model.ForContext(ctx).JobQueue
 	if queue == nil {
 		http.Error(w, "no job queue available", http.StatusServiceUnavailable)
-		return
+		return nil
 	}
 	if authn.ForContext(ctx) == nil {
 		http.Error(w, "unauthenticated", http.StatusForbidden)
+		return nil
+	}
+	return queue
+}
+
+// statusJobRequest returns the JobStatus for a single job.
+// Returns 404 if the job is not visible to the caller (whether absent or not theirs).
+func statusJobRequest(w http.ResponseWriter, req *http.Request) {
+	queue := requireQueueAndAuth(w, req)
+	if queue == nil {
 		return
 	}
-	jobId := chi.URLParam(req, "jobId")
-	st, err := queue.Status(ctx, jobId)
+	st, err := queue.Status(req.Context(), chi.URLParam(req, "jobId"))
 	if err != nil {
 		mapJobLookupError(w, err)
 		return
@@ -117,14 +140,8 @@ func statusJobRequest(w http.ResponseWriter, req *http.Request) {
 // listJobsRequest lists jobs visible to the caller. Non-admins see only their own.
 // Query params: states (comma-separated), user_id, job_type, limit, after.
 func listJobsRequest(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-	queue := model.ForContext(ctx).JobQueue
+	queue := requireQueueAndAuth(w, req)
 	if queue == nil {
-		http.Error(w, "no job queue available", http.StatusServiceUnavailable)
-		return
-	}
-	if authn.ForContext(ctx) == nil {
-		http.Error(w, "unauthenticated", http.StatusForbidden)
 		return
 	}
 	q := req.URL.Query()
@@ -148,7 +165,7 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 		}
 		opts.Limit = n
 	}
-	result, err := queue.ListJobs(ctx, opts)
+	result, err := queue.ListJobs(req.Context(), opts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -160,14 +177,8 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 // after a terminal event (with a final "event: end" sentinel) or when the
 // client disconnects.
 func watchJobRequest(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-	queue := model.ForContext(ctx).JobQueue
+	queue := requireQueueAndAuth(w, req)
 	if queue == nil {
-		http.Error(w, "no job queue available", http.StatusServiceUnavailable)
-		return
-	}
-	if authn.ForContext(ctx) == nil {
-		http.Error(w, "unauthenticated", http.StatusForbidden)
 		return
 	}
 	flusher, ok := w.(http.Flusher)
@@ -175,8 +186,8 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
-	jobId := chi.URLParam(req, "jobId")
-	ch, err := queue.Watch(ctx, jobId)
+	ctx := req.Context()
+	ch, err := queue.Watch(ctx, chi.URLParam(req, "jobId"))
 	if err != nil {
 		mapJobLookupError(w, err)
 		return

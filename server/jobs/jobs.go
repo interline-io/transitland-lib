@@ -79,10 +79,9 @@ func (job *Job) HexKey() (string, error) {
 	return job.JobType + ":" + hex.EncodeToString(sum[:]), nil
 }
 
-// JobStatus is the lifecycle state of a submitted job.
+// JobStatus is the lifecycle state of a submitted job. JobId and UserId are
+// available via Job.JobId and Job.UserId.
 type JobStatus struct {
-	JobId       string     `json:"job_id"`
-	UserId      string     `json:"user_id"`
 	State       JobState   `json:"state"`
 	Job         Job        `json:"job"`
 	SubmittedAt time.Time  `json:"submitted_at"`
@@ -117,8 +116,8 @@ type JobListResult struct {
 	NextCursor string
 }
 
-// CheckJobAccess returns nil if the context user is admin or matches status.UserId.
-// Otherwise it returns ErrJobAccessDenied.
+// CheckJobAccess returns nil if the context user is admin or matches the job's
+// creator (status.Job.UserId). Otherwise it returns ErrJobAccessDenied.
 func CheckJobAccess(ctx context.Context, status JobStatus) error {
 	user := authn.ForContext(ctx)
 	if user == nil {
@@ -127,7 +126,7 @@ func CheckJobAccess(ctx context.Context, status JobStatus) error {
 	if user.HasRole("admin") {
 		return nil
 	}
-	if user.ID() != "" && user.ID() == status.UserId {
+	if user.ID() != "" && user.ID() == status.Job.UserId {
 		return nil
 	}
 	return ErrJobAccessDenied

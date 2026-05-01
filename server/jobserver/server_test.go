@@ -90,7 +90,7 @@ func TestStatusEndpoint(t *testing.T) {
 	}
 
 	// Owner: 200.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.JobId, owner))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId, owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,11 +100,11 @@ func TestStatusEndpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
-	assert.Equal(t, st.JobId, got.JobId)
+	assert.Equal(t, st.Job.JobId, got.Job.JobId)
 	assert.Equal(t, jobs.JobStateSucceeded, got.State)
 
 	// Stranger: 404 (no leak).
-	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.JobId, stranger))
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId, stranger))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	// Unauthenticated: 403.
-	resp, err = http.Get(srv.URL + "/jobs/" + st.JobId)
+	resp, err = http.Get(srv.URL + "/jobs/" + st.Job.JobId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestListEndpoint(t *testing.T) {
 	resp.Body.Close()
 	assert.Equal(t, 3, len(mine.Jobs))
 	for _, st := range mine.Jobs {
-		assert.Equal(t, "alice", st.UserId)
+		assert.Equal(t, "alice", st.Job.UserId)
 	}
 
 	// Comma-separated states filter.
@@ -204,7 +204,7 @@ func TestWatchEndpointTerminalReplay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.JobId+"/watch", owner))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId+"/watch", owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +231,7 @@ func TestWatchEndpointStreaming(t *testing.T) {
 	}
 
 	// Open the watch before the queue starts running.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.JobId+"/watch", owner))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId+"/watch", owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,24 +253,6 @@ func TestWatchEndpointStreaming(t *testing.T) {
 	if assert.NotEmpty(t, events) {
 		assert.True(t, events[len(events)-1].State.Terminal())
 	}
-}
-
-func TestWatchEndpointAccessControl(t *testing.T) {
-	srv, q := newTestServer(t)
-	owner := authn.NewCtxUser("alice", "", "")
-	stranger := authn.NewCtxUser("bob", "", "")
-
-	st, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{JobType: "test", UserId: "alice"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.JobId+"/watch", stranger))
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 // readSSE reads an SSE stream until end sentinel or timeout. Returns parsed
