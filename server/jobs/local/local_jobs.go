@@ -263,8 +263,9 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 		// even if the cursor's row is gone, we still know where to resume.
 		cutoff := -1
 		for i, st := range snapshot {
-			if st.SubmittedAt.Before(cur.SubmittedAt) ||
-				(st.SubmittedAt.Equal(cur.SubmittedAt) && st.Job.JobId > cur.JobId) {
+			ts := st.SubmittedAt.UnixNano()
+			if ts < cur.SubmittedAtNano ||
+				(ts == cur.SubmittedAtNano && st.Job.JobId > cur.JobId) {
 				cutoff = i
 				break
 			}
@@ -289,14 +290,16 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 }
 
 // listCursor is the keyset payload — both fields of the sort key, so paging
-// can resume even if the cursor's underlying row was evicted.
+// can resume even if the cursor's underlying row was evicted. SubmittedAtNano
+// is unix-nanos so the cursor doesn't depend on a particular time.Time JSON
+// formatting and stays compact.
 type listCursor struct {
-	SubmittedAt time.Time `json:"t"`
-	JobId       string    `json:"i"`
+	SubmittedAtNano int64  `json:"t"`
+	JobId           string `json:"i"`
 }
 
 func encodeCursor(st jobs.JobStatus) string {
-	b, _ := json.Marshal(listCursor{SubmittedAt: st.SubmittedAt, JobId: st.Job.JobId})
+	b, _ := json.Marshal(listCursor{SubmittedAtNano: st.SubmittedAt.UnixNano(), JobId: st.Job.JobId})
 	return base64.URLEncoding.EncodeToString(b)
 }
 

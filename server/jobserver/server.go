@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/interline-io/transitland-lib/internal/util"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/jobs"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -28,44 +27,20 @@ func NewServer(queueName string, workers int) (http.Handler, error) {
 	return r, nil
 }
 
-// job response
-type jobResponse struct {
-	Status    string          `json:"status"`
-	Success   bool            `json:"success"`
-	Error     string          `json:"error,omitempty"`
-	Job       jobs.Job        `json:"job"`
-	JobStatus *jobs.JobStatus `json:"job_status,omitempty"`
-}
-
-// addJobRequest adds the request to the appropriate queue
+// addJobRequest enqueues the posted job. Responds with the resulting JobStatus.
 func addJobRequest(w http.ResponseWriter, req *http.Request) {
-	queue := requireQueueAndAuth(w, req)
-	if queue == nil {
-		return
-	}
-	job, err := requestGetJob(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	ctx := req.Context()
-	scopeJobUserId(ctx, &job)
-
-	ret := jobResponse{Job: job}
-	if status, err := queue.AddJob(ctx, job); err != nil {
-		ret.Status = "failed"
-		ret.Error = err.Error()
-	} else {
-		ret.Status = "added"
-		ret.Success = true
-		ret.Job = status.Job
-		ret.JobStatus = &status
-	}
-	writeJobResponse(ret, w)
+	submitJobRequest(w, req, jobs.JobQueue.AddJob)
 }
 
-// runJobRequest runs the job directly
+// runJobRequest runs the posted job synchronously. Responds with the terminal JobStatus.
 func runJobRequest(w http.ResponseWriter, req *http.Request) {
+	submitJobRequest(w, req, jobs.JobQueue.RunJob)
+}
+
+// submitJobRequest implements the shared shape of /add and /run: gate auth,
+// parse the body, scope the user, invoke the queue method, and write back the
+// JobStatus (or an HTTP error).
+func submitJobRequest(w http.ResponseWriter, req *http.Request, do func(jobs.JobQueue, context.Context, jobs.Job) (jobs.JobStatus, error)) {
 	queue := requireQueueAndAuth(w, req)
 	if queue == nil {
 		return
@@ -77,18 +52,12 @@ func runJobRequest(w http.ResponseWriter, req *http.Request) {
 	}
 	ctx := req.Context()
 	scopeJobUserId(ctx, &job)
-
-	ret := jobResponse{Job: job}
-	if status, err := queue.RunJob(ctx, job); err != nil {
-		ret.Status = "failed"
-		ret.Error = err.Error()
-	} else {
-		ret.Status = "completed"
-		ret.Success = true
-		ret.Job = status.Job
-		ret.JobStatus = &status
+	status, err := do(queue, ctx, job)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	writeJobResponse(ret, w)
+	writeJSON(w, status)
 }
 
 // scopeJobUserId binds the job's UserId to the authenticated user. Admins may
@@ -247,16 +216,6 @@ func requestGetJob(req *http.Request) (jobs.Job, error) {
 		return job, errors.New("error parsing body")
 	}
 	return job, nil
-}
-
-// writeJobResponse writes job response
-func writeJobResponse(ret jobResponse, w http.ResponseWriter) {
-	if rj, err := json.Marshal(ret); err != nil {
-		util.WriteJsonError(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	} else {
-		w.Write(rj)
-	}
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
