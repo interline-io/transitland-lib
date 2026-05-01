@@ -222,6 +222,7 @@ func TestWatchEndpointTerminalReplay(t *testing.T) {
 func TestWatchEndpointStreaming(t *testing.T) {
 	srv, q := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
+	q.AddQueue("default", 1)
 
 	// Submit but don't run yet — job stays in queued state.
 	st, err := q.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{JobType: "test", UserId: "alice"})
@@ -229,6 +230,7 @@ func TestWatchEndpointStreaming(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Open the watch before the queue starts running.
 	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.JobId+"/watch", owner))
 	if err != nil {
 		t.Fatal(err)
@@ -236,11 +238,15 @@ func TestWatchEndpointStreaming(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// Drive transitions concurrently.
+	// Run the queue; the worker pool will pick up the queued job and drive it
+	// to terminal, transitioning the registry entry the watcher is attached to.
+	runCtx, cancelRun := context.WithCancel(context.Background())
+	defer cancelRun()
 	go func() {
-		time.Sleep(50 * time.Millisecond)
-		_, _ = q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{JobId: st.JobId, JobType: "test", UserId: "alice"})
+		time.Sleep(500 * time.Millisecond)
+		_ = q.Stop(runCtx)
 	}()
+	go func() { _ = q.Run(runCtx) }()
 
 	events, sawEnd := readSSE(t, resp.Body, 3*time.Second)
 	assert.True(t, sawEnd)

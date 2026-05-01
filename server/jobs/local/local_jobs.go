@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"sort"
 	"sync"
@@ -18,7 +19,12 @@ func init() {
 	var _ jobs.JobQueue = &LocalJobs{}
 }
 
-const watchBufferSize = 16
+// watchBufferSize is overprovisioned so that the small number of events a
+// single job emits (queued -> running -> terminal) never fill the channel and
+// force a non-blocking drop. LocalJobs is a development adapter; corner cases
+// where this still overflows are documented on Watch's contract — only Status
+// is authoritative.
+const watchBufferSize = 256
 const defaultListLimit = 100
 const defaultTerminalTTL = 1 * time.Hour
 const sweepInterval = 1 * time.Minute
@@ -57,7 +63,9 @@ func NewLocalJobs() *LocalJobs {
 }
 
 // SetTerminalTTL configures how long terminal job entries are retained before
-// being evicted from the in-memory registry. Zero disables eviction.
+// being evicted from the in-memory registry. Zero disables eviction. The
+// eviction sweeper is started by Run; if Run is never called, no eviction
+// happens regardless of TTL.
 func (f *LocalJobs) SetTerminalTTL(d time.Duration) {
 	f.terminalTTL = d
 }
@@ -185,7 +193,24 @@ func (f *LocalJobs) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEve
 	}
 	entry.watchers = append(entry.watchers, ch)
 	entry.mu.Unlock()
+	// Drop the registration if the caller's context cancels before terminal.
+	// Both this goroutine and updateStatus take entry.mu, so we won't double-close.
+	go f.cleanupWatcherOnCancel(ctx, entry, ch)
 	return ch, nil
+}
+
+func (f *LocalJobs) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry, ch chan jobs.JobEvent) {
+	<-ctx.Done()
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	for i, c := range entry.watchers {
+		if c == ch {
+			entry.watchers = append(entry.watchers[:i], entry.watchers[i+1:]...)
+			close(c)
+			return
+		}
+	}
+	// Not found: updateStatus already broadcast and closed it on terminal.
 }
 
 func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (jobs.JobListResult, error) {
@@ -233,21 +258,25 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 	})
 
 	if opts.After != "" {
-		afterId, err := decodeCursor(opts.After)
+		cur, err := decodeCursor(opts.After)
 		if err != nil {
 			return jobs.JobListResult{}, err
 		}
-		idx := -1
+		// Keyset advance: find the first row strictly after the cursor under
+		// (SubmittedAt desc, JobId asc). This is robust against eviction —
+		// even if the cursor's row is gone, we still know where to resume.
+		cutoff := -1
 		for i, st := range snapshot {
-			if st.JobId == afterId {
-				idx = i
+			if st.SubmittedAt.Before(cur.SubmittedAt) ||
+				(st.SubmittedAt.Equal(cur.SubmittedAt) && st.JobId > cur.JobId) {
+				cutoff = i
 				break
 			}
 		}
-		if idx >= 0 {
-			snapshot = snapshot[idx+1:]
-		} else {
+		if cutoff < 0 {
 			snapshot = nil
+		} else {
+			snapshot = snapshot[cutoff:]
 		}
 	}
 
@@ -258,21 +287,33 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 	next := ""
 	if len(snapshot) > limit {
 		snapshot = snapshot[:limit]
-		next = encodeCursor(snapshot[len(snapshot)-1].JobId)
+		next = encodeCursor(snapshot[len(snapshot)-1])
 	}
 	return jobs.JobListResult{Jobs: snapshot, NextCursor: next}, nil
 }
 
-func encodeCursor(jobId string) string {
-	return base64.URLEncoding.EncodeToString([]byte(jobId))
+// listCursor is the keyset payload — both fields of the sort key, so paging
+// can resume even if the cursor's underlying row was evicted.
+type listCursor struct {
+	SubmittedAt time.Time `json:"t"`
+	JobId       string    `json:"i"`
 }
 
-func decodeCursor(cursor string) (string, error) {
-	b, err := base64.URLEncoding.DecodeString(cursor)
+func encodeCursor(st jobs.JobStatus) string {
+	b, _ := json.Marshal(listCursor{SubmittedAt: st.SubmittedAt, JobId: st.JobId})
+	return base64.URLEncoding.EncodeToString(b)
+}
+
+func decodeCursor(cursor string) (listCursor, error) {
+	raw, err := base64.URLEncoding.DecodeString(cursor)
 	if err != nil {
-		return "", errors.New("invalid cursor")
+		return listCursor{}, errors.New("invalid cursor")
 	}
-	return string(b), nil
+	var c listCursor
+	if err := json.Unmarshal(raw, &c); err != nil {
+		return listCursor{}, errors.New("invalid cursor")
+	}
+	return c, nil
 }
 
 func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg string) {
@@ -325,20 +366,24 @@ func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job,
 	return nil
 }
 
-// runQueuedJob is the worker-pool adapter for the channel's func(ctx, job) error signature.
+// runQueuedJob is the worker-pool entry point. The job's JobId is already set
+// and registered by AddJob, so we go straight to execution.
 func (f *LocalJobs) runQueuedJob(ctx context.Context, job jobs.Job) error {
-	_, err := f.RunJob(ctx, job)
+	_, err := f.execute(ctx, job)
 	return err
 }
 
+// RunJob runs a job synchronously. JobId is always assigned by the adapter;
+// any caller-set value is overwritten.
 func (f *LocalJobs) RunJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
-	if job.JobId == "" {
-		job.JobId = uuid.NewString()
-	}
-	if f.getEntry(job.JobId) == nil {
-		f.registerJob(job)
-	}
+	job.JobId = uuid.NewString()
+	f.registerJob(job)
+	return f.execute(ctx, job)
+}
 
+// execute runs the worker chain for an already-registered job, transitioning
+// state through queued -> running -> succeeded/failed/cancelled.
+func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
 	now := time.Now().In(time.UTC).Unix()
 	if job.JobDeadline > 0 && job.JobDeadline < now {
 		log.Trace().Int64("job_deadline", job.JobDeadline).Int64("now", now).Msg("job skipped - deadline in past")

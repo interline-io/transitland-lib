@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/interline-io/transitland-lib/internal/util"
@@ -187,10 +188,17 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
+	// Heartbeat keeps intermediate proxies (nginx, ELBs) from closing an idle
+	// stream when the job sits in queued/running for a while with no transitions.
+	heartbeat := time.NewTicker(sseHeartbeatInterval)
+	defer heartbeat.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-heartbeat.C:
+			fmt.Fprint(w, ": keepalive\n\n")
+			flusher.Flush()
 		case ev, open := <-ch:
 			if !open {
 				fmt.Fprint(w, "event: end\ndata: {}\n\n")
@@ -206,6 +214,8 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 }
+
+const sseHeartbeatInterval = 30 * time.Second
 
 // mapJobLookupError translates queue lookup errors to HTTP. ErrJobAccessDenied
 // from the queue means the caller is authenticated but not the owner; we return

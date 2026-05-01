@@ -38,9 +38,11 @@ var ErrJobNotFound = errors.New("job not found")
 
 // JobQueue is the unified interface every job backend must satisfy.
 //
-// Watch's channel closes when the job reaches a terminal state. Adapters
-// may skip intermediate transitions; for the full final status, call
-// Status after the channel closes.
+// Watch is best-effort and intended for UI feedback. Adapters may skip
+// intermediate transitions and the terminal event payload may be dropped
+// under load; the channel is still guaranteed to close when the job
+// reaches a terminal state. Only Status returns authoritative data —
+// callers should call it after the channel closes to learn the outcome.
 type JobQueue interface {
 	Use(JobMiddleware)
 	AddQueue(string, int) error
@@ -56,8 +58,8 @@ type JobQueue interface {
 	Stop(context.Context) error
 }
 
-// Job defines a single job. JobId is assigned by the adapter on submission and any
-// caller-set value is overwritten.
+// Job defines a single job. JobId is always assigned by the adapter; any
+// caller-set value is overwritten by AddJob, AddJobs, and RunJob.
 type Job struct {
 	JobId       string  `json:"job_id"`
 	UserId      string  `json:"user_id"`
@@ -98,8 +100,9 @@ type JobEvent struct {
 	Time    time.Time `json:"time"`
 }
 
-// JobListOptions controls ListJobs filtering and paging. Cursor is opaque
-// (base64 of the last JobId in the previous page).
+// JobListOptions controls ListJobs filtering and paging. After is an opaque
+// cursor returned in JobListResult.NextCursor; callers should pass it back
+// verbatim. The encoding is adapter-specific.
 type JobListOptions struct {
 	States  []JobState
 	UserId  string

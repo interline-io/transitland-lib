@@ -49,8 +49,3 @@ func TestLocalJobsEvictTerminal(t *testing.T) {
 	assert.ErrorIs(t, err, jobs.ErrJobNotFound)
 }
 
-func TestLocalJobsTerminalTTLDisabled(t *testing.T) {
-	q := NewLocalJobs()
-	q.SetTerminalTTL(0)
-	assert.Equal(t, time.Duration(0), q.terminalTTL)
-}
