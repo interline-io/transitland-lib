@@ -21,10 +21,11 @@ func NewServer(queueName string, workers int) (http.Handler, error) {
 
 // job response
 type jobResponse struct {
-	Status  string   `json:"status"`
-	Success bool     `json:"success"`
-	Error   string   `json:"error,omitempty"`
-	Job     jobs.Job `json:"job"`
+	Status    string          `json:"status"`
+	Success   bool            `json:"success"`
+	Error     string          `json:"error,omitempty"`
+	Job       jobs.Job        `json:"job"`
+	JobStatus *jobs.JobStatus `json:"job_status,omitempty"`
 }
 
 // addJobRequest adds the request to the appropriate queue
@@ -43,12 +44,14 @@ func addJobRequest(w http.ResponseWriter, req *http.Request) {
 	if jobQueue := model.ForContext(ctx).JobQueue; jobQueue == nil {
 		ret.Status = "failed"
 		ret.Error = "no job queue available"
-	} else if err := jobQueue.AddJob(ctx, job); err != nil {
+	} else if status, err := jobQueue.AddJob(ctx, job); err != nil {
 		ret.Status = "failed"
 		ret.Error = err.Error()
 	} else {
 		ret.Status = "added"
 		ret.Success = true
+		ret.Job = status.Job
+		ret.JobStatus = &status
 	}
 	writeJobResponse(ret, w)
 }
@@ -69,12 +72,14 @@ func runJobRequest(w http.ResponseWriter, req *http.Request) {
 	if jobQueue := model.ForContext(ctx).JobQueue; jobQueue == nil {
 		ret.Status = "failed"
 		ret.Error = "no job queue available"
-	} else if err := jobQueue.RunJob(ctx, job); err != nil {
+	} else if status, err := jobQueue.RunJob(ctx, job); err != nil {
 		ret.Status = "failed"
 		ret.Error = err.Error()
 	} else {
 		ret.Status = "completed"
 		ret.Success = true
+		ret.Job = status.Job
+		ret.JobStatus = &status
 	}
 	writeJobResponse(ret, w)
 }

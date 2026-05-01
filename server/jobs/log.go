@@ -41,17 +41,17 @@ func (w *JobLogger) AddJobType(jobFn JobFn) error {
 	return w.JobQueue.AddJobType(jobFn)
 }
 
-func (w *JobLogger) AddJob(ctx context.Context, job Job) error {
+func (w *JobLogger) AddJob(ctx context.Context, job Job) (JobStatus, error) {
 	w.log.Trace().Str("job_type", job.JobType).Any("job_args", job.JobArgs).Msg("jobs: adding job")
 	return w.JobQueue.AddJob(ctx, job)
 }
 
-func (w *JobLogger) AddJobs(ctx context.Context, jobs []Job) error {
+func (w *JobLogger) AddJobs(ctx context.Context, jobs []Job) ([]JobStatus, error) {
 	w.log.Trace().Msg("jobs: adding jobs")
 	return w.JobQueue.AddJobs(ctx, jobs)
 }
 
-func (w *JobLogger) RunJob(ctx context.Context, job Job) error {
+func (w *JobLogger) RunJob(ctx context.Context, job Job) (JobStatus, error) {
 	w.log.Trace().Str("job_type", job.JobType).Any("job_args", job.JobArgs).Msg("jobs: run job")
 	return w.JobQueue.RunJob(ctx, job)
 }
