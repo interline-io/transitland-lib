@@ -21,8 +21,8 @@ type echoWorker struct {
 	kind string
 }
 
-func (e *echoWorker) Kind() string                    { return e.kind }
-func (e *echoWorker) Run(ctx context.Context) error   { return nil }
+func (e *echoWorker) Kind() string                  { return e.kind }
+func (e *echoWorker) Run(ctx context.Context) error { return nil }
 
 // testAuthMiddleware reads X-Test-User and X-Test-Roles headers and attaches
 // the corresponding authn.User to the request context. Lets tests drive auth
@@ -46,21 +46,22 @@ func testAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func newTestServer(t *testing.T) (*httptest.Server, *localjobs.LocalJobs) {
+func newTestServer(t *testing.T) (*httptest.Server, *localjobs.LocalBackend, *jobs.Runner) {
 	t.Helper()
-	q := localjobs.NewLocalJobs()
-	q.SetTerminalTTL(0) // disable eviction during tests
-	if err := q.RegisterWorker(func() jobs.JobWorker { return &echoWorker{kind: "test"} }); err != nil {
+	runner := jobs.NewRunner()
+	backend := localjobs.NewLocalBackend(runner)
+	backend.SetTerminalTTL(0) // disable eviction during tests
+	if err := runner.RegisterWorker(func() jobs.JobWorker { return &echoWorker{kind: "test"} }); err != nil {
 		t.Fatal(err)
 	}
-	cfg := model.Config{JobQueue: q}
+	cfg := model.Config{JobBackend: backend, JobRunner: runner}
 	h, err := NewServer("default", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(testAuthMiddleware(model.AddConfig(cfg)(h)))
 	t.Cleanup(srv.Close)
-	return srv, q
+	return srv, backend, runner
 }
 
 func authedRequest(t *testing.T, method, url string, user authn.User) *http.Request {
@@ -78,16 +79,38 @@ func authedRequest(t *testing.T, method, url string, user authn.User) *http.Requ
 	return req
 }
 
-func TestStatusEndpoint(t *testing.T) {
-	srv, q := newTestServer(t)
-	owner := authn.NewCtxUser("alice", "", "")
-	stranger := authn.NewCtxUser("bob", "", "")
-
-	// Run a job as alice and grab its JobId.
-	st, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+// runOneAndStop submits a single job, runs the backend until that job reaches
+// a terminal state (or timeout), and stops it. Returns the terminal status.
+func runOneAndStop(t *testing.T, backend *localjobs.LocalBackend, ctx context.Context, job jobs.Job) jobs.JobStatus {
+	t.Helper()
+	backend.AddQueue("default", 1)
+	st, err := backend.AddJob(ctx, job)
 	if err != nil {
 		t.Fatal(err)
 	}
+	runCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = backend.Run(runCtx) }()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		got, _ := backend.Status(ctx, st.Job.ID)
+		if got.State.Terminal() {
+			_ = backend.Stop(runCtx)
+			return got
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	_ = backend.Stop(runCtx)
+	t.Fatal("job did not reach terminal state")
+	return jobs.JobStatus{}
+}
+
+func TestStatusEndpoint(t *testing.T) {
+	srv, backend, _ := newTestServer(t)
+	owner := authn.NewCtxUser("alice", "", "")
+	stranger := authn.NewCtxUser("bob", "", "")
+
+	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 
 	// Owner: 200.
 	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID, owner))
@@ -129,25 +152,47 @@ func TestStatusEndpoint(t *testing.T) {
 }
 
 func TestListEndpoint(t *testing.T) {
-	srv, q := newTestServer(t)
+	srv, backend, _ := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
 	admin := authn.NewCtxUser("admin", "", "").WithRoles("admin")
 
+	// Drain queued jobs through one running backend instance so the registry
+	// reflects 5 terminal jobs (3 alice, 2 carol) before we exercise /jobs.
+	backend.AddQueue("default", 4)
 	for i := 0; i < 3; i++ {
-		_, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+		_, err := backend.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	for i := 0; i < 2; i++ {
-		_, err := q.RunJob(authn.WithUser(context.Background(), admin), jobs.Job{Kind: "test", UserID: "carol"})
+		_, err := backend.AddJob(authn.WithUser(context.Background(), admin), jobs.Job{Kind: "test", UserID: "carol"})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
+	runCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = backend.Run(runCtx) }()
+	// Wait for all 5 jobs to terminate.
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		res, _ := backend.ListJobs(authn.WithUser(context.Background(), admin), jobs.JobListOptions{})
+		terminal := 0
+		for _, st := range res.Jobs {
+			if st.State.Terminal() {
+				terminal++
+			}
+		}
+		if terminal == 5 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	_ = backend.Stop(runCtx)
 
 	// Admin sees all 5.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs?job_type=test", admin))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs?kind=test", admin))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +205,7 @@ func TestListEndpoint(t *testing.T) {
 	assert.Equal(t, 5, len(all.Jobs))
 
 	// Alice sees only her 3, even when asking for carol's.
-	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs?job_type=test&user_id=carol", owner))
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs?kind=test&user_id=carol", owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,13 +241,10 @@ func TestListEndpoint(t *testing.T) {
 }
 
 func TestWatchEndpointTerminalReplay(t *testing.T) {
-	srv, q := newTestServer(t)
+	srv, backend, _ := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
 
-	st, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 
 	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID+"/watch", owner))
 	if err != nil {
@@ -220,12 +262,12 @@ func TestWatchEndpointTerminalReplay(t *testing.T) {
 }
 
 func TestWatchEndpointStreaming(t *testing.T) {
-	srv, q := newTestServer(t)
+	srv, backend, _ := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
-	q.AddQueue("default", 1)
+	backend.AddQueue("default", 1)
 
 	// Submit but don't run yet — job stays in queued state.
-	st, err := q.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+	st, err := backend.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,15 +280,15 @@ func TestWatchEndpointStreaming(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// Run the queue; the worker pool will pick up the queued job and drive it
-	// to terminal, transitioning the registry entry the watcher is attached to.
+	// Run the backend; the worker pool will pick up the queued job and drive
+	// it to terminal, transitioning the registry entry the watcher is attached to.
 	runCtx, cancelRun := context.WithCancel(context.Background())
 	defer cancelRun()
 	go func() {
 		time.Sleep(500 * time.Millisecond)
-		_ = q.Stop(runCtx)
+		_ = backend.Stop(runCtx)
 	}()
-	go func() { _ = q.Run(runCtx) }()
+	go func() { _ = backend.Run(runCtx) }()
 
 	events, sawEnd := readSSE(t, resp.Body, 3*time.Second)
 	assert.True(t, sawEnd)

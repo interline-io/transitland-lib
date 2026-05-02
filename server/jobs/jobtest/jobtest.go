@@ -15,10 +15,19 @@ import (
 )
 
 type Job = jobs.Job
-type JobQueue = jobs.JobQueue
+type Backend = jobs.Backend
+type Runner = jobs.Runner
 type JobMiddleware = jobs.JobMiddleware
 type JobWorker = jobs.JobWorker
 type JobArgs = jobs.JobArgs
+
+// TestSetup is the per-test pair returned by the factory. Tests register
+// workers/middleware on Runner and submit jobs through Backend; the factory
+// is responsible for wiring Backend to Runner internally.
+type TestSetup struct {
+	Runner  *Runner
+	Backend Backend
+}
 
 var (
 	feeds = []string{"BA", "SF", "AC", "CT"}
@@ -56,18 +65,18 @@ func userCtx(id string) context.Context {
 	return authn.WithUser(context.Background(), authn.NewCtxUser(id, "", ""))
 }
 
-// TestJobQueue runs the full conformance suite — legacy enqueue/run behavior
-// plus the lifecycle methods (Status, Watch, ListJobs) and access control.
+// TestBackend runs the full conformance suite — enqueue/run behavior plus the
+// lifecycle methods (Status, Watch, ListJobs, Cancel) and access control.
 // Backends that haven't yet implemented the lifecycle methods should call
-// TestJobQueueCore instead.
-func TestJobQueue(t *testing.T, newQueue func(string) JobQueue) {
-	TestJobQueueCore(t, newQueue)
-	TestJobQueueLifecycle(t, newQueue)
+// TestBackendCore instead.
+func TestBackend(t *testing.T, newSetup func(string) TestSetup) {
+	TestBackendCore(t, newSetup)
+	TestBackendLifecycle(t, newSetup)
 }
 
-// TestJobQueueCore exercises the original enqueue/run/middleware behavior
-// any backend should support.
-func TestJobQueueCore(t *testing.T, newQueue func(string) JobQueue) {
+// TestBackendCore exercises the original enqueue/run/middleware behavior any
+// backend should support.
+func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 	ctx := adminCtx()
 	queueName := func(t testing.TB) string {
 		tName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-"))
@@ -75,142 +84,122 @@ func TestJobQueueCore(t *testing.T, newQueue func(string) JobQueue) {
 	}
 	sleepyTime := 3 * time.Second
 	t.Run("run", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
+		setup := newSetup(queueName(t))
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testRun"} }))
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testRun"} }))
 		for _, feed := range feeds {
-			if _, err := rtJobs.RunJob(ctx, Job{Kind: "testRun", Args: JobArgs{"feed_id": feed}}); err != nil {
+			if err := setup.Runner.Run(ctx, Job{Kind: "testRun", Args: JobArgs{"feed_id": feed}}); err != nil {
 				t.Fatal(err)
 			}
 		}
 		assert.Equal(t, len(feeds), int(count))
 	})
 	t.Run("simple", func(t *testing.T) {
-		// Ugly :(
-		rtJobs := newQueue(queueName(t))
-		// Add workers
+		setup := newSetup(queueName(t))
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "test"} }))
-
-		// Add jobs
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "test"} }))
 		for _, feed := range feeds {
-			if _, err := rtJobs.AddJob(ctx, Job{Kind: "test", Args: JobArgs{"feed_id": feed}}); err != nil {
+			if _, err := setup.Backend.AddJob(ctx, Job{Kind: "test", Args: JobArgs{"feed_id": feed}}); err != nil {
 				t.Fatal(err)
 			}
 		}
-		// Run
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		if err := rtJobs.Run(ctx); err != nil {
+		if err := setup.Backend.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, len(feeds), int(count))
 	})
 	t.Run("AddJobs", func(t *testing.T) {
-		// Abuse the job queue
-		rtJobs := newQueue(queueName(t))
-		// Add workers
+		setup := newSetup(queueName(t))
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testAddJobs"} }))
-		// Add jobs
-		var jobs []Job
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testAddJobs"} }))
+		var jj []Job
 		for i := 0; i < 10; i++ {
-			// 1 job: j=0
-			jobs = append(jobs, Job{Kind: "testAddJobs", Args: JobArgs{"test": fmt.Sprintf("n:%d", i)}})
+			jj = append(jj, Job{Kind: "testAddJobs", Args: JobArgs{"test": fmt.Sprintf("n:%d", i)}})
 		}
-		// Run
-		_, err := rtJobs.AddJobs(ctx, jobs)
+		_, err := setup.Backend.AddJobs(ctx, jj)
 		checkErr(t, err)
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		if err := rtJobs.Run(ctx); err != nil {
+		if err := setup.Backend.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, int64(10), count)
 	})
 	t.Run("unique", func(t *testing.T) {
-		// Abuse the job queue
-		rtJobs := newQueue(queueName(t))
-		// Add workers
+		setup := newSetup(queueName(t))
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testUnique"} }))
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testNotUnique"} }))
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testUnique"} }))
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testNotUnique"} }))
 
-		// Add jobs
 		for i := 0; i < 10; i++ {
 			// 1 job: j=0
 			for j := 0; j < 10; j++ {
 				job := Job{Kind: "testUnique", Unique: true, Args: JobArgs{"test": fmt.Sprintf("n:%d", j/10)}}
-				_, err := rtJobs.AddJob(ctx, job)
+				_, err := setup.Backend.AddJob(ctx, job)
 				checkErr(t, err)
 			}
 			// 3 jobs; j=3, j=6, j=9... j=0 is not unique
 			for j := 0; j < 10; j++ {
 				job := Job{Kind: "testUnique", Unique: true, Args: JobArgs{"test": fmt.Sprintf("n:%d", j/3)}}
-				_, err := rtJobs.AddJob(ctx, job)
+				_, err := setup.Backend.AddJob(ctx, job)
 				checkErr(t, err)
 			}
 			// 10 jobs: j=0, j=0, j=2, j=2, j=4, j=4, j=6 j=6, j=8, j=8
 			for j := 0; j < 10; j++ {
 				job := Job{Kind: "testNotUnique", Args: JobArgs{"test": fmt.Sprintf("n:%d", j/2)}}
-				_, err := rtJobs.AddJob(ctx, job)
+				_, err := setup.Backend.AddJob(ctx, job)
 				checkErr(t, err)
 			}
 		}
-		// Run
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		if err := rtJobs.Run(ctx); err != nil {
+		if err := setup.Backend.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, int64(104), count)
 	})
 	t.Run("deadline", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
-		// Add workers
+		setup := newSetup(queueName(t))
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testDeadline"} }))
-		// Add jobs
-		rtJobs.AddJob(ctx, Job{Kind: "testDeadline", Args: JobArgs{"test": "test"}, Deadline: 0})
-		rtJobs.AddJob(ctx, Job{Kind: "testDeadline", Args: JobArgs{"test": "test"}, Deadline: time.Now().Add(1 * time.Hour).Unix()})
-		rtJobs.AddJob(ctx, Job{Kind: "testDeadline", Args: JobArgs{"test": "test"}, Deadline: time.Now().Add(-1 * time.Hour).Unix()})
-		// Run
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testDeadline"} }))
+		setup.Backend.AddJob(ctx, Job{Kind: "testDeadline", Args: JobArgs{"test": "test"}, Deadline: 0})
+		setup.Backend.AddJob(ctx, Job{Kind: "testDeadline", Args: JobArgs{"test": "test"}, Deadline: time.Now().Add(1 * time.Hour).Unix()})
+		setup.Backend.AddJob(ctx, Job{Kind: "testDeadline", Args: JobArgs{"test": "test"}, Deadline: time.Now().Add(-1 * time.Hour).Unix()})
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		if err := rtJobs.Run(ctx); err != nil {
+		if err := setup.Backend.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, int64(2), count)
 	})
 	t.Run("middleware", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
-		// Add middleware
+		setup := newSetup(queueName(t))
 		jwCount := int64(0)
-		rtJobs.Use(func(w JobWorker, j Job) JobWorker {
+		setup.Runner.Use(func(w JobWorker, j Job) JobWorker {
 			return &testJobMiddleware{
 				JobWorker: w,
 				jobCount:  &jwCount,
 			}
 		})
-		// Add workers
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testMiddleware"} }))
-		rtJobs.AddJob(ctx, Job{Kind: "testMiddleware", Args: JobArgs{"mw": "ok1"}})
-		rtJobs.AddJob(ctx, Job{Kind: "testMiddleware", Args: JobArgs{"mw": "ok2"}})
-		// Run
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testMiddleware"} }))
+		setup.Backend.AddJob(ctx, Job{Kind: "testMiddleware", Args: JobArgs{"mw": "ok1"}})
+		setup.Backend.AddJob(ctx, Job{Kind: "testMiddleware", Args: JobArgs{"mw": "ok2"}})
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		if err := rtJobs.Run(ctx); err != nil {
+		if err := setup.Backend.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, int64(2), count)
@@ -218,22 +207,22 @@ func TestJobQueueCore(t *testing.T, newQueue func(string) JobQueue) {
 	})
 }
 
-// requireReporter asserts the queue implements JobStatusReporter and skips
+// requireReporter asserts the backend implements JobStatusReporter and skips
 // the sub-test if it doesn't. Lifecycle backends that don't track jobs
 // (e.g. Redis fire-and-forget) won't satisfy this.
-func requireReporter(t *testing.T, q JobQueue) jobs.JobStatusReporter {
+func requireReporter(t *testing.T, b Backend) jobs.JobStatusReporter {
 	t.Helper()
-	r, ok := q.(jobs.JobStatusReporter)
+	r, ok := b.(jobs.JobStatusReporter)
 	if !ok {
-		t.Skipf("backend %T does not implement jobs.JobStatusReporter", q)
+		t.Skipf("backend %T does not implement jobs.JobStatusReporter", b)
 	}
 	return r
 }
 
-// TestJobQueueLifecycle exercises Status, Watch, ListJobs, Cancel and the
+// TestBackendLifecycle exercises Status, Watch, ListJobs, Cancel and the
 // admin-or-creator access rules. Sub-tests skip when the backend isn't a
 // JobStatusReporter.
-func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
+func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 	ctx := adminCtx()
 	queueName := func(t testing.TB) string {
 		tName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-"))
@@ -241,11 +230,11 @@ func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
 	}
 	sleepyTime := 3 * time.Second
 	t.Run("status", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
-		reporter := requireReporter(t, rtJobs)
+		setup := newSetup(queueName(t))
+		reporter := requireReporter(t, setup.Backend)
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testStatus"} }))
-		st, err := rtJobs.AddJob(ctx, Job{Kind: "testStatus", UserID: "alice", Args: JobArgs{"x": "1"}})
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testStatus"} }))
+		st, err := setup.Backend.AddJob(ctx, Job{Kind: "testStatus", UserID: "alice", Args: JobArgs{"x": "1"}})
 		checkErr(t, err)
 		assert.NotEmpty(t, st.Job.ID, "AddJob should assign a JobId")
 		assert.Equal(t, "alice", st.Job.UserID)
@@ -254,9 +243,9 @@ func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
 		assert.Equal(t, st.Job.ID, queuedSt.Job.ID)
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		if err := rtJobs.Run(ctx); err != nil {
+		if err := setup.Backend.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		got, err := reporter.Status(ctx, st.Job.ID)
@@ -267,20 +256,20 @@ func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
 		assert.Error(t, err)
 	})
 	t.Run("watch", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
-		reporter := requireReporter(t, rtJobs)
+		setup := newSetup(queueName(t))
+		reporter := requireReporter(t, setup.Backend)
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testWatch"} }))
-		st, err := rtJobs.AddJob(ctx, Job{Kind: "testWatch", UserID: "alice", Args: JobArgs{"x": "live"}})
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testWatch"} }))
+		st, err := setup.Backend.AddJob(ctx, Job{Kind: "testWatch", UserID: "alice", Args: JobArgs{"x": "live"}})
 		checkErr(t, err)
 		// Open the watch before the queue starts so we observe the full transition.
 		ch, err := reporter.Watch(ctx, st.Job.ID)
 		checkErr(t, err)
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		go func() { _ = rtJobs.Run(ctx) }()
+		go func() { _ = setup.Backend.Run(ctx) }()
 		var events []jobs.JobEvent
 		drained := make(chan struct{})
 		go func() {
@@ -299,19 +288,19 @@ func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
 		}
 	})
 	t.Run("list", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
-		reporter := requireReporter(t, rtJobs)
+		setup := newSetup(queueName(t))
+		reporter := requireReporter(t, setup.Backend)
 		// Per-run-unique JobType so persistent backends don't see rows from prior runs.
 		listType := fmt.Sprintf("testList-%d-%d", os.Getpid(), time.Now().UnixNano())
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: listType} }))
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: listType} }))
 		for i := 0; i < 5; i++ {
-			_, err := rtJobs.AddJob(ctx, Job{Kind: listType, UserID: "alice", Args: JobArgs{"i": i}})
+			_, err := setup.Backend.AddJob(ctx, Job{Kind: listType, UserID: "alice", Args: JobArgs{"i": i}})
 			checkErr(t, err)
 			time.Sleep(1 * time.Millisecond)
 		}
 		for i := 0; i < 3; i++ {
-			_, err := rtJobs.AddJob(ctx, Job{Kind: listType, UserID: "bob", Args: JobArgs{"i": i}})
+			_, err := setup.Backend.AddJob(ctx, Job{Kind: listType, UserID: "bob", Args: JobArgs{"i": i}})
 			checkErr(t, err)
 			time.Sleep(1 * time.Millisecond)
 		}
@@ -342,11 +331,11 @@ func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
 		assert.Equal(t, 5, len(seen))
 	})
 	t.Run("auth", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
-		reporter := requireReporter(t, rtJobs)
+		setup := newSetup(queueName(t))
+		reporter := requireReporter(t, setup.Backend)
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testAuth"} }))
-		st, err := rtJobs.AddJob(ctx, Job{Kind: "testAuth", UserID: "alice", Args: JobArgs{"x": "1"}})
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testAuth"} }))
+		st, err := setup.Backend.AddJob(ctx, Job{Kind: "testAuth", UserID: "alice", Args: JobArgs{"x": "1"}})
 		checkErr(t, err)
 		if _, err := reporter.Status(userCtx("alice"), st.Job.ID); err != nil {
 			t.Errorf("owner Status: %v", err)
@@ -362,12 +351,12 @@ func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
 		assert.ErrorIs(t, err, jobs.ErrJobAccessDenied)
 	})
 	t.Run("cancel", func(t *testing.T) {
-		rtJobs := newQueue(queueName(t))
-		reporter := requireReporter(t, rtJobs)
+		setup := newSetup(queueName(t))
+		reporter := requireReporter(t, setup.Backend)
 		count := int64(0)
-		checkErr(t, rtJobs.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testCancel"} }))
+		checkErr(t, setup.Runner.RegisterWorker(func() JobWorker { return &TestWorker{count: &count, kind: "testCancel"} }))
 		// Submit, cancel before Run drains the queue, confirm terminal state is cancelled and worker never ran.
-		st, err := rtJobs.AddJob(ctx, Job{Kind: "testCancel", UserID: "alice", Args: JobArgs{"x": "1"}})
+		st, err := setup.Backend.AddJob(ctx, Job{Kind: "testCancel", UserID: "alice", Args: JobArgs{"x": "1"}})
 		checkErr(t, err)
 		checkErr(t, reporter.Cancel(ctx, st.Job.ID))
 		// Stranger can't cancel.
@@ -379,9 +368,9 @@ func TestJobQueueLifecycle(t *testing.T, newQueue func(string) JobQueue) {
 		// Run the queue and confirm the cancelled job didn't execute.
 		go func() {
 			time.Sleep(sleepyTime)
-			rtJobs.Stop(ctx)
+			setup.Backend.Stop(ctx)
 		}()
-		if err := rtJobs.Run(ctx); err != nil {
+		if err := setup.Backend.Run(ctx); err != nil {
 			t.Fatal(err)
 		}
 		final, err := reporter.Status(ctx, st.Job.ID)

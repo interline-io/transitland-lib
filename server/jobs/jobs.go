@@ -40,17 +40,15 @@ var ErrJobNotFound = errors.New("job not found")
 // the job but cannot stop it (e.g. running on a worker the queue can't reach).
 var ErrCancelNotSupported = errors.New("job cancel not supported")
 
-// JobQueue is the minimum interface every job backend must satisfy: submit
-// jobs, run a worker pool, register workers. Lifecycle observation (Status,
-// Watch, ListJobs, Cancel) and recurring scheduling are optional capabilities
-// — see JobStatusReporter and PeriodicScheduler.
-type JobQueue interface {
-	Use(JobMiddleware)
+// Backend is the minimum interface every queue backend must satisfy:
+// submit jobs and run a worker pool. Worker registration and middleware live
+// on Runner — backends delegate execution by holding a *Runner. Lifecycle
+// observation (Status, Watch, ListJobs, Cancel) and recurring scheduling are
+// optional capabilities; see JobStatusReporter and PeriodicScheduler.
+type Backend interface {
 	AddQueue(string, int) error
-	RegisterWorker(JobFn) error
 	AddJob(context.Context, Job) (JobStatus, error)
 	AddJobs(context.Context, []Job) ([]JobStatus, error)
-	RunJob(context.Context, Job) (JobStatus, error)
 	Run(context.Context) error
 	Stop(context.Context) error
 }

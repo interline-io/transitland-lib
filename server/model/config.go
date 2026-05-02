@@ -15,7 +15,8 @@ type Config struct {
 	GbfsFinder               GbfsFinder
 	Checker                  Checker
 	Actions                  Actions
-	JobQueue                 jobs.JobQueue
+	JobBackend               jobs.Backend
+	JobRunner                *jobs.Runner
 	Clock                    clock.Clock
 	Secrets                  []dmfr.Secret
 	ValidateLargeFiles       bool

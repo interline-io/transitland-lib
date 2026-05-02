@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/jobs"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -27,22 +28,15 @@ func NewServer(queueName string, workers int) (http.Handler, error) {
 	return r, nil
 }
 
-// addJobRequest enqueues the posted job. Responds with the resulting JobStatus.
+// addJobRequest enqueues the posted job via the configured Backend.
 func addJobRequest(w http.ResponseWriter, req *http.Request) {
-	submitJobRequest(w, req, jobs.JobQueue.AddJob)
-}
-
-// runJobRequest runs the posted job synchronously. Responds with the terminal JobStatus.
-func runJobRequest(w http.ResponseWriter, req *http.Request) {
-	submitJobRequest(w, req, jobs.JobQueue.RunJob)
-}
-
-// submitJobRequest implements the shared shape of /add and /run: gate auth,
-// parse the body, scope the user, invoke the queue method, and write back the
-// JobStatus (or an HTTP error).
-func submitJobRequest(w http.ResponseWriter, req *http.Request, do func(jobs.JobQueue, context.Context, jobs.Job) (jobs.JobStatus, error)) {
-	queue := requireQueueAndAuth(w, req)
-	if queue == nil {
+	cfg := model.ForContext(req.Context())
+	if cfg.JobBackend == nil {
+		http.Error(w, "no job backend available", http.StatusServiceUnavailable)
+		return
+	}
+	if authn.ForContext(req.Context()) == nil {
+		http.Error(w, "unauthenticated", http.StatusForbidden)
 		return
 	}
 	job, err := requestGetJob(req)
@@ -50,14 +44,52 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request, do func(jobs.Job
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx := req.Context()
-	scopeJobUserID(ctx, &job)
-	status, err := do(queue, ctx, job)
+	scopeJobUserID(req.Context(), &job)
+	status, err := cfg.JobBackend.AddJob(req.Context(), job)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, status)
+}
+
+// runJobRequest runs the posted job synchronously via the configured Runner
+// and synthesizes a terminal JobStatus. Synchronous runs don't pass through a
+// Backend's queue, so they're not visible to Status/ListJobs.
+func runJobRequest(w http.ResponseWriter, req *http.Request) {
+	cfg := model.ForContext(req.Context())
+	if cfg.JobRunner == nil {
+		http.Error(w, "no job runner available", http.StatusServiceUnavailable)
+		return
+	}
+	if authn.ForContext(req.Context()) == nil {
+		http.Error(w, "unauthenticated", http.StatusForbidden)
+		return
+	}
+	job, err := requestGetJob(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	scopeJobUserID(req.Context(), &job)
+	job.ID = uuid.NewString()
+	startedAt := time.Now().UTC()
+	runErr := cfg.JobRunner.Run(req.Context(), job)
+	finishedAt := time.Now().UTC()
+	state := jobs.JobStateSucceeded
+	msg := ""
+	if runErr != nil {
+		state = jobs.JobStateFailed
+		msg = runErr.Error()
+	}
+	writeJSON(w, jobs.JobStatus{
+		State:       state,
+		Job:         job,
+		SubmittedAt: startedAt,
+		StartedAt:   &startedAt,
+		FinishedAt:  &finishedAt,
+		Error:       msg,
+	})
 }
 
 // scopeJobUserID binds the job's UserID to the authenticated user. Admins may
@@ -74,31 +106,23 @@ func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 	job.UserID = user.ID()
 }
 
-// requireQueueAndAuth resolves the JobQueue and confirms the request is
-// authenticated. On failure it writes the appropriate response and returns
-// a nil queue; callers should return immediately in that case.
-func requireQueueAndAuth(w http.ResponseWriter, req *http.Request) jobs.JobQueue {
+// requireReporterAndAuth resolves the Backend, confirms the request is
+// authenticated, and type-asserts JobStatusReporter (the /jobs lifecycle
+// endpoints can't run on backends that don't track jobs). On failure it
+// writes the appropriate response and returns nil; callers should return
+// immediately in that case.
+func requireReporterAndAuth(w http.ResponseWriter, req *http.Request) jobs.JobStatusReporter {
 	ctx := req.Context()
-	queue := model.ForContext(ctx).JobQueue
-	if queue == nil {
-		http.Error(w, "no job queue available", http.StatusServiceUnavailable)
+	backend := model.ForContext(ctx).JobBackend
+	if backend == nil {
+		http.Error(w, "no job backend available", http.StatusServiceUnavailable)
 		return nil
 	}
 	if authn.ForContext(ctx) == nil {
 		http.Error(w, "unauthenticated", http.StatusForbidden)
 		return nil
 	}
-	return queue
-}
-
-// requireReporterAndAuth additionally type-asserts JobStatusReporter; the
-// /jobs lifecycle endpoints can't run on backends that don't track jobs.
-func requireReporterAndAuth(w http.ResponseWriter, req *http.Request) jobs.JobStatusReporter {
-	queue := requireQueueAndAuth(w, req)
-	if queue == nil {
-		return nil
-	}
-	reporter, ok := queue.(jobs.JobStatusReporter)
+	reporter, ok := backend.(jobs.JobStatusReporter)
 	if !ok {
 		http.Error(w, "backend does not support job status", http.StatusNotImplemented)
 		return nil

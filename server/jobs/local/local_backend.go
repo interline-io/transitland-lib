@@ -17,14 +17,16 @@ import (
 )
 
 func init() {
-	var _ jobs.JobQueue = &LocalJobs{}
+	var _ jobs.Backend = &LocalBackend{}
+	var _ jobs.JobStatusReporter = &LocalBackend{}
+	var _ jobs.PeriodicScheduler = &LocalBackend{}
 }
 
 // watchBufferSize is overprovisioned so that the small number of events a
 // single job emits (queued -> running -> terminal) never fill the channel and
-// force a non-blocking drop. LocalJobs is a development adapter; corner cases
-// where this still overflows are documented on Watch's contract — only Status
-// is authoritative.
+// force a non-blocking drop. LocalBackend is a development adapter; corner
+// cases where this still overflows are documented on Watch's contract — only
+// Status is authoritative.
 const watchBufferSize = 256
 const defaultListLimit = 100
 const defaultTerminalTTL = 1 * time.Hour
@@ -38,14 +40,13 @@ type jobEntry struct {
 	cancelRequested bool               // set by Cancel; queued jobs check this before running
 }
 
-type LocalJobs struct {
+type LocalBackend struct {
+	runner         *jobs.Runner
 	jobs           chan jobs.Job
 	jobfuncs       []func(context.Context, jobs.Job) error
 	running        bool
-	middlewares    []jobs.JobMiddleware
 	uniqueJobs     map[string]time.Time // key -> expiresAt; zero means "until consumed by execute"
 	uniqueJobsLock sync.Mutex
-	jobMapper      *jobs.JobMapper
 	ctx            context.Context
 	cancel         context.CancelFunc
 
@@ -57,42 +58,33 @@ type LocalJobs struct {
 	periodics    map[string]context.CancelFunc
 }
 
-func NewLocalJobs() *LocalJobs {
-	f := &LocalJobs{
+func NewLocalBackend(runner *jobs.Runner) *LocalBackend {
+	return &LocalBackend{
+		runner:      runner,
 		jobs:        make(chan jobs.Job, 1000),
 		uniqueJobs:  map[string]time.Time{},
-		jobMapper:   jobs.NewJobMapper(),
 		registry:    map[string]*jobEntry{},
 		terminalTTL: defaultTerminalTTL,
 		periodics:   map[string]context.CancelFunc{},
 	}
-	return f
 }
 
 // SetTerminalTTL configures how long terminal job entries are retained before
 // being evicted from the in-memory registry. Zero disables eviction. The
 // eviction sweeper is started by Run; if Run is never called, no eviction
 // happens regardless of TTL.
-func (f *LocalJobs) SetTerminalTTL(d time.Duration) {
+func (f *LocalBackend) SetTerminalTTL(d time.Duration) {
 	f.terminalTTL = d
 }
 
-func (f *LocalJobs) Use(mwf jobs.JobMiddleware) {
-	f.middlewares = append(f.middlewares, mwf)
-}
-
-func (f *LocalJobs) AddQueue(queue string, count int) error {
+func (f *LocalBackend) AddQueue(queue string, count int) error {
 	for i := 0; i < count; i++ {
 		f.jobfuncs = append(f.jobfuncs, f.runQueuedJob)
 	}
 	return nil
 }
 
-func (f *LocalJobs) RegisterWorker(jobFn jobs.JobFn) error {
-	return f.jobMapper.Register(jobFn)
-}
-
-func (f *LocalJobs) AddJobs(ctx context.Context, in []jobs.Job) ([]jobs.JobStatus, error) {
+func (f *LocalBackend) AddJobs(ctx context.Context, in []jobs.Job) ([]jobs.JobStatus, error) {
 	out := make([]jobs.JobStatus, 0, len(in))
 	for _, job := range in {
 		st, err := f.AddJob(ctx, job)
@@ -104,7 +96,7 @@ func (f *LocalJobs) AddJobs(ctx context.Context, in []jobs.Job) ([]jobs.JobStatu
 	return out, nil
 }
 
-func (f *LocalJobs) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
+func (f *LocalBackend) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
 	if f.jobs == nil {
 		return jobs.JobStatus{}, errors.New("closed")
 	}
@@ -135,7 +127,7 @@ func (f *LocalJobs) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, e
 	return status, nil
 }
 
-func (f *LocalJobs) registerJob(job jobs.Job) jobs.JobStatus {
+func (f *LocalBackend) registerJob(job jobs.Job) jobs.JobStatus {
 	now := time.Now().UTC()
 	entry := &jobEntry{
 		status: jobs.JobStatus{
@@ -150,13 +142,13 @@ func (f *LocalJobs) registerJob(job jobs.Job) jobs.JobStatus {
 	return entry.status
 }
 
-func (f *LocalJobs) getEntry(jobId string) *jobEntry {
+func (f *LocalBackend) getEntry(jobId string) *jobEntry {
 	f.registryLock.Lock()
 	defer f.registryLock.Unlock()
 	return f.registry[jobId]
 }
 
-func (f *LocalJobs) statusUnchecked(jobId string) (jobs.JobStatus, error) {
+func (f *LocalBackend) statusUnchecked(jobId string) (jobs.JobStatus, error) {
 	entry := f.getEntry(jobId)
 	if entry == nil {
 		return jobs.JobStatus{}, jobs.ErrJobNotFound
@@ -166,7 +158,7 @@ func (f *LocalJobs) statusUnchecked(jobId string) (jobs.JobStatus, error) {
 	return entry.status, nil
 }
 
-func (f *LocalJobs) Status(ctx context.Context, jobId string) (jobs.JobStatus, error) {
+func (f *LocalBackend) Status(ctx context.Context, jobId string) (jobs.JobStatus, error) {
 	st, err := f.statusUnchecked(jobId)
 	if err != nil {
 		return jobs.JobStatus{}, err
@@ -177,7 +169,7 @@ func (f *LocalJobs) Status(ctx context.Context, jobId string) (jobs.JobStatus, e
 	return st, nil
 }
 
-func (f *LocalJobs) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEvent, error) {
+func (f *LocalBackend) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEvent, error) {
 	entry := f.getEntry(jobId)
 	if entry == nil {
 		return nil, jobs.ErrJobNotFound
@@ -208,7 +200,7 @@ func (f *LocalJobs) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEve
 	return ch, nil
 }
 
-func (f *LocalJobs) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry, ch chan jobs.JobEvent) {
+func (f *LocalBackend) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry, ch chan jobs.JobEvent) {
 	<-ctx.Done()
 	entry.mu.Lock()
 	defer entry.mu.Unlock()
@@ -222,7 +214,7 @@ func (f *LocalJobs) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry,
 	// Not found: updateStatus already broadcast and closed it on terminal.
 }
 
-func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (jobs.JobListResult, error) {
+func (f *LocalBackend) ListJobs(ctx context.Context, opts jobs.JobListOptions) (jobs.JobListResult, error) {
 	user := authn.ForContext(ctx)
 	if user == nil {
 		return jobs.JobListResult{}, jobs.ErrJobAccessDenied
@@ -328,7 +320,7 @@ func decodeCursor(cursor string) (listCursor, error) {
 	return c, nil
 }
 
-func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg string) jobs.JobStatus {
+func (f *LocalBackend) updateStatus(jobId string, state jobs.JobState, errMsg string) jobs.JobStatus {
 	entry := f.getEntry(jobId)
 	if entry == nil {
 		return jobs.JobStatus{}
@@ -364,7 +356,7 @@ func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg strin
 	return entry.status
 }
 
-func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
+func (w *LocalBackend) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
 	id := uuid.NewString()
 	pctx, cancel := context.WithCancel(ctx)
 	if cronTab != "" {
@@ -384,7 +376,7 @@ func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job,
 
 // RemovePeriodicJob stops a previously-added periodic schedule. Returns
 // ErrJobNotFound if the id is unknown (or already removed).
-func (w *LocalJobs) RemovePeriodicJob(ctx context.Context, id string) error {
+func (w *LocalBackend) RemovePeriodicJob(ctx context.Context, id string) error {
 	w.periodicLock.Lock()
 	defer w.periodicLock.Unlock()
 	cancel, ok := w.periodics[id]
@@ -396,13 +388,13 @@ func (w *LocalJobs) RemovePeriodicJob(ctx context.Context, id string) error {
 	return nil
 }
 
-func (w *LocalJobs) registerPeriodic(id string, cancel context.CancelFunc) {
+func (w *LocalBackend) registerPeriodic(id string, cancel context.CancelFunc) {
 	w.periodicLock.Lock()
 	w.periodics[id] = cancel
 	w.periodicLock.Unlock()
 }
 
-func (w *LocalJobs) runInterval(ctx context.Context, period time.Duration, jobFunc func() jobs.Job) {
+func (w *LocalBackend) runInterval(ctx context.Context, period time.Duration, jobFunc func() jobs.Job) {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
 	for {
@@ -415,7 +407,7 @@ func (w *LocalJobs) runInterval(ctx context.Context, period time.Duration, jobFu
 	}
 }
 
-func (w *LocalJobs) runCron(ctx context.Context, schedule cron.Schedule, jobFunc func() jobs.Job) {
+func (w *LocalBackend) runCron(ctx context.Context, schedule cron.Schedule, jobFunc func() jobs.Job) {
 	for {
 		next := schedule.Next(time.Now())
 		select {
@@ -427,20 +419,12 @@ func (w *LocalJobs) runCron(ctx context.Context, schedule cron.Schedule, jobFunc
 	}
 }
 
-func (f *LocalJobs) runQueuedJob(ctx context.Context, job jobs.Job) error {
+func (f *LocalBackend) runQueuedJob(ctx context.Context, job jobs.Job) error {
 	_, err := f.execute(ctx, job)
 	return err
 }
 
-// RunJob runs a job synchronously. ID is always assigned by the adapter;
-// any caller-set value is overwritten.
-func (f *LocalJobs) RunJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
-	job.ID = uuid.NewString()
-	f.registerJob(job)
-	return f.execute(ctx, job)
-}
-
-func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
+func (f *LocalBackend) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
 	// If Cancel was called while the job was queued, skip the run.
 	entry := f.getEntry(job.ID)
 	if entry != nil {
@@ -470,19 +454,6 @@ func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 		f.uniqueJobsLock.Unlock()
 		log.Trace().Interface("job", job).Msgf("unlocked: %s", key)
 	}
-	w, err := f.jobMapper.GetRunner(job.Kind, job.Args)
-	if err != nil {
-		return f.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
-	}
-	if w == nil {
-		return f.updateStatus(job.ID, jobs.JobStateFailed, "no job"), errors.New("no job")
-	}
-	for _, mwf := range f.middlewares {
-		w = mwf(w, job)
-		if w == nil {
-			return f.updateStatus(job.ID, jobs.JobStateFailed, "no job"), errors.New("no job")
-		}
-	}
 	// Derive a per-run ctx that Cancel can interrupt independently of Run/Stop.
 	runCtx, runCancel := context.WithCancel(ctx)
 	defer runCancel()
@@ -492,7 +463,7 @@ func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 		entry.mu.Unlock()
 	}
 	f.updateStatus(job.ID, jobs.JobStateRunning, "")
-	runErr := w.Run(runCtx)
+	runErr := f.runner.Run(runCtx, job)
 	// If Cancel was called mid-run, treat as cancelled rather than failed.
 	if entry != nil {
 		entry.mu.Lock()
@@ -511,7 +482,7 @@ func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 
 // Cancel marks a queued or running job for cancellation. Idempotent on
 // terminal jobs.
-func (f *LocalJobs) Cancel(ctx context.Context, jobId string) error {
+func (f *LocalBackend) Cancel(ctx context.Context, jobId string) error {
 	entry := f.getEntry(jobId)
 	if entry == nil {
 		return jobs.ErrJobNotFound
@@ -540,7 +511,7 @@ func (f *LocalJobs) Cancel(ctx context.Context, jobId string) error {
 	return nil
 }
 
-func (f *LocalJobs) Run(ctx context.Context) error {
+func (f *LocalBackend) Run(ctx context.Context) error {
 	if f.running {
 		return errors.New("already running")
 	}
@@ -560,7 +531,7 @@ func (f *LocalJobs) Run(ctx context.Context) error {
 	return nil
 }
 
-func (f *LocalJobs) evictLoop(ctx context.Context) {
+func (f *LocalBackend) evictLoop(ctx context.Context) {
 	ticker := time.NewTicker(sweepInterval)
 	defer ticker.Stop()
 	for {
@@ -576,7 +547,7 @@ func (f *LocalJobs) evictLoop(ctx context.Context) {
 
 // sweepUniqueExpired drops UniqueWindow entries whose window has elapsed.
 // Window-zero entries (cleared by execute) are left alone.
-func (f *LocalJobs) sweepUniqueExpired(now time.Time) {
+func (f *LocalBackend) sweepUniqueExpired(now time.Time) {
 	f.uniqueJobsLock.Lock()
 	defer f.uniqueJobsLock.Unlock()
 	for key, expiresAt := range f.uniqueJobs {
@@ -587,7 +558,7 @@ func (f *LocalJobs) sweepUniqueExpired(now time.Time) {
 }
 
 // evictTerminal removes terminal-state entries whose FinishedAt is at or before cutoff.
-func (f *LocalJobs) evictTerminal(cutoff time.Time) {
+func (f *LocalBackend) evictTerminal(cutoff time.Time) {
 	f.registryLock.Lock()
 	defer f.registryLock.Unlock()
 	for id, entry := range f.registry {
@@ -602,7 +573,7 @@ func (f *LocalJobs) evictTerminal(cutoff time.Time) {
 	}
 }
 
-func (f *LocalJobs) Stop(ctx context.Context) error {
+func (f *LocalBackend) Stop(ctx context.Context) error {
 	if !f.running {
 		return errors.New("not running")
 	}
