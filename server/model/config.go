@@ -15,7 +15,7 @@ type Config struct {
 	GbfsFinder               GbfsFinder
 	Checker                  Checker
 	Actions                  Actions
-	JobBackend               jobs.Backend
+	Jobs                     jobs.Backend
 	JobRunner                *jobs.Runner
 	Clock                    clock.Clock
 	Secrets                  []dmfr.Secret

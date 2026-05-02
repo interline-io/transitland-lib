@@ -159,7 +159,7 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 
 	// Initialize job runner + backend - do not start
 	jobRunner := jobs.NewRunner()
-	jobBackend := localjobs.NewLocalBackend(jobRunner)
+	jobBackend := localjobs.NewLocalBackend(jobRunner, nil)
 
 	// Action finder
 	actionFinder := &actions.Actions{}
@@ -169,7 +169,7 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		RTFinder:                 rtf,
 		GbfsFinder:               gbf,
 		Checker:                  checker,
-		JobBackend:               jobBackend,
+		Jobs:                     jobBackend,
 		JobRunner:                jobRunner,
 		Actions:                  actionFinder,
 		Clock:                    cl,

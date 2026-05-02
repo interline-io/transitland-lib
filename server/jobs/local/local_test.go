@@ -10,9 +10,10 @@ import (
 func TestLocalBackend(t *testing.T) {
 	newSetup := func(queueName string) jobtest.TestSetup {
 		runner := jobs.NewRunner()
-		backend := NewLocalBackend(runner)
-		backend.AddQueue("default", 4)
-		return jobtest.TestSetup{Runner: runner, Backend: backend}
+		backend := NewLocalBackend(runner, map[string]QueueOpts{
+			queueName: {Workers: 4},
+		})
+		return jobtest.TestSetup{Runner: runner, Backend: backend, QueueName: queueName}
 	}
 	jobtest.TestBackend(t, newSetup)
 }

@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const testQueue = "default"
+
 type echoWorker struct {
 	kind string
 }
@@ -25,8 +27,7 @@ func (e *echoWorker) Kind() string                  { return e.kind }
 func (e *echoWorker) Run(ctx context.Context) error { return nil }
 
 // testAuthMiddleware reads X-Test-User and X-Test-Roles headers and attaches
-// the corresponding authn.User to the request context. Lets tests drive auth
-// across an httptest.Server without a real auth backend.
+// the corresponding authn.User to the request context.
 func testAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.Header.Get("X-Test-User")
@@ -49,13 +50,14 @@ func testAuthMiddleware(next http.Handler) http.Handler {
 func newTestServer(t *testing.T) (*httptest.Server, *localjobs.LocalBackend, *jobs.Runner) {
 	t.Helper()
 	runner := jobs.NewRunner()
-	backend := localjobs.NewLocalBackend(runner)
-	backend.SetTerminalTTL(0) // disable eviction during tests
-	if err := runner.RegisterWorker(func() jobs.JobWorker { return &echoWorker{kind: "test"} }); err != nil {
+	backend := localjobs.NewLocalBackend(runner, map[string]localjobs.QueueOpts{
+		testQueue: {Workers: 1, TerminalTTL: -1}, // disable eviction during tests
+	})
+	if err := runner.Register(func() jobs.Worker { return &echoWorker{kind: "test"} }); err != nil {
 		t.Fatal(err)
 	}
-	cfg := model.Config{JobBackend: backend, JobRunner: runner}
-	h, err := NewServer("default", 1)
+	cfg := model.Config{Jobs: backend, JobRunner: runner}
+	h, err := NewServer()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,21 +81,22 @@ func authedRequest(t *testing.T, method, url string, user authn.User) *http.Requ
 	return req
 }
 
-// runOneAndStop submits a single job, runs the backend until that job reaches
-// a terminal state (or timeout), and stops it. Returns the terminal status.
+// runOneAndStop submits a single job, runs the backend until that job
+// reaches a terminal state, and stops it. Returns the terminal status.
 func runOneAndStop(t *testing.T, backend *localjobs.LocalBackend, ctx context.Context, job jobs.Job) jobs.JobStatus {
 	t.Helper()
-	backend.AddQueue("default", 1)
-	st, err := backend.AddJob(ctx, job)
+	q := backend.Queue(testQueue)
+	st, err := q.Submit(ctx, job)
 	if err != nil {
 		t.Fatal(err)
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() { _ = backend.Run(runCtx) }()
+	sq := q.(jobs.StatusQueue)
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		got, _ := backend.Status(ctx, st.Job.ID)
+		got, _ := sq.Status(ctx, st.Job.ID)
 		if got.State.Terminal() {
 			_ = backend.Stop(runCtx)
 			return got
@@ -112,8 +115,10 @@ func TestStatusEndpoint(t *testing.T) {
 
 	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 
+	url := srv.URL + "/queues/" + testQueue + "/jobs/" + st.Job.ID
+
 	// Owner: 200.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID, owner))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +132,7 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, jobs.JobStateSucceeded, got.State)
 
 	// Stranger: 404 (no leak).
-	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID, stranger))
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, stranger))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +140,15 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	// Unknown id: 404.
-	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/does-not-exist", owner))
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/queues/"+testQueue+"/jobs/does-not-exist", owner))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Unknown queue: 404.
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/queues/nope/jobs/"+st.Job.ID, owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +156,7 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	// Unauthenticated: 403.
-	resp, err = http.Get(srv.URL + "/jobs/" + st.Job.ID)
+	resp, err = http.Get(url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,17 +169,15 @@ func TestListEndpoint(t *testing.T) {
 	owner := authn.NewCtxUser("alice", "", "")
 	admin := authn.NewCtxUser("admin", "", "").WithRoles("admin")
 
-	// Drain queued jobs through one running backend instance so the registry
-	// reflects 5 terminal jobs (3 alice, 2 carol) before we exercise /jobs.
-	backend.AddQueue("default", 4)
+	q := backend.Queue(testQueue)
 	for i := 0; i < 3; i++ {
-		_, err := backend.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+		_, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	for i := 0; i < 2; i++ {
-		_, err := backend.AddJob(authn.WithUser(context.Background(), admin), jobs.Job{Kind: "test", UserID: "carol"})
+		_, err := q.Submit(authn.WithUser(context.Background(), admin), jobs.Job{Kind: "test", UserID: "carol"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -174,10 +185,10 @@ func TestListEndpoint(t *testing.T) {
 	runCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() { _ = backend.Run(runCtx) }()
-	// Wait for all 5 jobs to terminate.
+	sq := q.(jobs.StatusQueue)
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		res, _ := backend.ListJobs(authn.WithUser(context.Background(), admin), jobs.JobListOptions{})
+		res, _ := sq.List(authn.WithUser(context.Background(), admin), jobs.ListOptions{})
 		terminal := 0
 		for _, st := range res.Jobs {
 			if st.State.Terminal() {
@@ -191,12 +202,14 @@ func TestListEndpoint(t *testing.T) {
 	}
 	_ = backend.Stop(runCtx)
 
+	listURL := srv.URL + "/queues/" + testQueue + "/jobs"
+
 	// Admin sees all 5.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs?kind=test", admin))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, listURL+"?kind=test", admin))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var all jobs.JobListResult
+	var all jobs.ListResult
 	if err := json.NewDecoder(resp.Body).Decode(&all); err != nil {
 		t.Fatal(err)
 	}
@@ -204,12 +217,12 @@ func TestListEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, 5, len(all.Jobs))
 
-	// Alice sees only her 3, even when asking for carol's.
-	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs?kind=test&user_id=carol", owner))
+	// Alice sees only her 3 even when asking for carol's.
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, listURL+"?kind=test&user_id=carol", owner))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mine jobs.JobListResult
+	var mine jobs.ListResult
 	if err := json.NewDecoder(resp.Body).Decode(&mine); err != nil {
 		t.Fatal(err)
 	}
@@ -220,11 +233,11 @@ func TestListEndpoint(t *testing.T) {
 	}
 
 	// Comma-separated states filter.
-	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs?states=succeeded,failed", admin))
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, listURL+"?states=succeeded,failed", admin))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var byState jobs.JobListResult
+	var byState jobs.ListResult
 	if err := json.NewDecoder(resp.Body).Decode(&byState); err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +245,7 @@ func TestListEndpoint(t *testing.T) {
 	assert.Equal(t, 5, len(byState.Jobs))
 
 	// Unauthenticated: 403.
-	resp, err = http.Get(srv.URL + "/jobs")
+	resp, err = http.Get(listURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +259,8 @@ func TestWatchEndpointTerminalReplay(t *testing.T) {
 
 	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID+"/watch", owner))
+	url := srv.URL + "/queues/" + testQueue + "/jobs/" + st.Job.ID + "/watch"
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,24 +278,21 @@ func TestWatchEndpointTerminalReplay(t *testing.T) {
 func TestWatchEndpointStreaming(t *testing.T) {
 	srv, backend, _ := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
-	backend.AddQueue("default", 1)
 
-	// Submit but don't run yet — job stays in queued state.
-	st, err := backend.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+	q := backend.Queue(testQueue)
+	st, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Open the watch before the queue starts running.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID+"/watch", owner))
+	url := srv.URL + "/queues/" + testQueue + "/jobs/" + st.Job.ID + "/watch"
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, owner))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// Run the backend; the worker pool will pick up the queued job and drive
-	// it to terminal, transitioning the registry entry the watcher is attached to.
 	runCtx, cancelRun := context.WithCancel(context.Background())
 	defer cancelRun()
 	go func() {
@@ -298,8 +309,8 @@ func TestWatchEndpointStreaming(t *testing.T) {
 }
 
 // readSSE reads an SSE stream until end sentinel or timeout. Returns parsed
-// JobEvent payloads (excluding the end sentinel) and whether the end sentinel
-// was observed.
+// JobEvent payloads (excluding the end sentinel) and whether the end
+// sentinel was observed.
 func readSSE(t *testing.T, body interface {
 	Read(p []byte) (n int, err error)
 }, timeout time.Duration) ([]jobs.JobEvent, bool) {

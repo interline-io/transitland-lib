@@ -16,21 +16,123 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-func init() {
-	var _ jobs.Backend = &LocalBackend{}
-	var _ jobs.JobStatusReporter = &LocalBackend{}
-	var _ jobs.PeriodicScheduler = &LocalBackend{}
+// QueueOpts is per-queue configuration handed to NewLocalBackend.
+type QueueOpts struct {
+	// Workers is the number of goroutines draining the queue. Defaults to 1
+	// if zero or negative.
+	Workers int
+	// TerminalTTL controls how long terminal-state job entries are retained
+	// before being evicted from the in-memory registry. Zero = default (1h).
+	// Negative = eviction disabled (useful for tests).
+	TerminalTTL time.Duration
 }
 
-// watchBufferSize is overprovisioned so that the small number of events a
-// single job emits (queued -> running -> terminal) never fill the channel and
-// force a non-blocking drop. LocalBackend is a development adapter; corner
-// cases where this still overflows are documented on Watch's contract — only
-// Status is authoritative.
-const watchBufferSize = 256
-const defaultListLimit = 100
-const defaultTerminalTTL = 1 * time.Hour
-const sweepInterval = 1 * time.Minute
+const (
+	defaultListLimit   = 100
+	defaultTerminalTTL = 1 * time.Hour
+	sweepInterval      = 1 * time.Minute
+	// watchBufferSize is overprovisioned so the small number of events a
+	// single job emits (queued -> running -> terminal) never fills the
+	// channel and forces a non-blocking drop. LocalBackend is a development
+	// adapter; corner cases where this overflows are documented on Watch's
+	// contract — only Status is authoritative.
+	watchBufferSize = 256
+)
+
+// LocalBackend is a development backend that runs jobs in-process via
+// goroutine pools. Each declared queue gets its own pool, registry, and
+// dedup map. All queues share the supplied Runner.
+type LocalBackend struct {
+	runner  *jobs.Runner
+	queues  map[string]*localQueue
+	started bool
+	cancel  context.CancelFunc
+}
+
+func init() {
+	var _ jobs.Backend = &LocalBackend{}
+	var _ jobs.Queue = &localQueue{}
+	var _ jobs.StatusQueue = &localQueue{}
+	var _ jobs.PeriodicQueue = &localQueue{}
+}
+
+// NewLocalBackend constructs a LocalBackend hosting the named queues. Each
+// queue's worker pool is sized by QueueOpts.Workers.
+func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts) *LocalBackend {
+	b := &LocalBackend{
+		runner: runner,
+		queues: map[string]*localQueue{},
+	}
+	for name, opts := range queues {
+		b.queues[name] = newLocalQueue(name, opts, runner)
+	}
+	return b
+}
+
+// Queue returns the per-queue handle for name, or nil if not declared.
+func (b *LocalBackend) Queue(name string) jobs.Queue {
+	q, ok := b.queues[name]
+	if !ok {
+		return nil
+	}
+	return q
+}
+
+// Run starts every queue's worker pool and eviction loop, then blocks until
+// Stop is called (or the parent ctx is cancelled).
+func (b *LocalBackend) Run(ctx context.Context) error {
+	if b.started {
+		return errors.New("already running")
+	}
+	b.started = true
+	ctx, b.cancel = context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	for _, q := range b.queues {
+		q := q
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			q.run(ctx)
+		}()
+	}
+	<-ctx.Done()
+	for _, q := range b.queues {
+		q.shutdown()
+	}
+	wg.Wait()
+	return nil
+}
+
+func (b *LocalBackend) Stop(ctx context.Context) error {
+	if !b.started {
+		return errors.New("not running")
+	}
+	b.cancel()
+	b.started = false
+	return nil
+}
+
+// localQueue is the per-queue handle returned by LocalBackend.Queue.
+// Implements jobs.Queue, jobs.StatusQueue, jobs.PeriodicQueue.
+type localQueue struct {
+	name        string
+	workers     int
+	terminalTTL time.Duration
+	runner      *jobs.Runner
+
+	jobs    chan jobs.Job
+	closeMu sync.Mutex
+	closed  bool
+
+	uniqueMu   sync.Mutex
+	uniqueJobs map[string]time.Time
+
+	registryMu sync.Mutex
+	registry   map[string]*jobEntry
+
+	periodicMu sync.Mutex
+	periodics  map[string]context.CancelFunc
+}
 
 type jobEntry struct {
 	mu              sync.Mutex
@@ -40,54 +142,101 @@ type jobEntry struct {
 	cancelRequested bool               // set by Cancel; queued jobs check this before running
 }
 
-type LocalBackend struct {
-	runner         *jobs.Runner
-	jobs           chan jobs.Job
-	jobfuncs       []func(context.Context, jobs.Job) error
-	running        bool
-	uniqueJobs     map[string]time.Time // key -> expiresAt; zero means "until consumed by execute"
-	uniqueJobsLock sync.Mutex
-	ctx            context.Context
-	cancel         context.CancelFunc
-
-	registryLock sync.Mutex
-	registry     map[string]*jobEntry
-	terminalTTL  time.Duration
-
-	periodicLock sync.Mutex
-	periodics    map[string]context.CancelFunc
-}
-
-func NewLocalBackend(runner *jobs.Runner) *LocalBackend {
-	return &LocalBackend{
+func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner) *localQueue {
+	workers := opts.Workers
+	if workers <= 0 {
+		workers = 1
+	}
+	ttl := opts.TerminalTTL
+	switch {
+	case ttl < 0:
+		ttl = 0 // disabled
+	case ttl == 0:
+		ttl = defaultTerminalTTL
+	}
+	return &localQueue{
+		name:        name,
+		workers:     workers,
+		terminalTTL: ttl,
 		runner:      runner,
 		jobs:        make(chan jobs.Job, 1000),
 		uniqueJobs:  map[string]time.Time{},
 		registry:    map[string]*jobEntry{},
-		terminalTTL: defaultTerminalTTL,
 		periodics:   map[string]context.CancelFunc{},
 	}
 }
 
-// SetTerminalTTL configures how long terminal job entries are retained before
-// being evicted from the in-memory registry. Zero disables eviction. The
-// eviction sweeper is started by Run; if Run is never called, no eviction
-// happens regardless of TTL.
-func (f *LocalBackend) SetTerminalTTL(d time.Duration) {
-	f.terminalTTL = d
-}
-
-func (f *LocalBackend) AddQueue(queue string, count int) error {
-	for i := 0; i < count; i++ {
-		f.jobfuncs = append(f.jobfuncs, f.runQueuedJob)
+// run drains the queue with `workers` goroutines and sweeps terminal entries
+// + expired unique locks until ctx is cancelled.
+func (q *localQueue) run(ctx context.Context) {
+	var wg sync.WaitGroup
+	for i := 0; i < q.workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range q.jobs {
+				_, _ = q.execute(ctx, job)
+			}
+		}()
 	}
-	return nil
+	if q.terminalTTL > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			q.sweepLoop(ctx)
+		}()
+	}
+	wg.Wait()
 }
 
-func (f *LocalBackend) AddJobs(ctx context.Context, in []jobs.Job) ([]jobs.JobStatus, error) {
+func (q *localQueue) shutdown() {
+	q.closeMu.Lock()
+	defer q.closeMu.Unlock()
+	if q.closed {
+		return
+	}
+	q.closed = true
+	close(q.jobs)
+}
+
+func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
+	q.closeMu.Lock()
+	if q.closed {
+		q.closeMu.Unlock()
+		return jobs.JobStatus{}, errors.New("closed")
+	}
+	q.closeMu.Unlock()
+	job.ID = uuid.NewString()
+	if job.Unique {
+		key, err := job.HexKey()
+		if err != nil {
+			return jobs.JobStatus{}, err
+		}
+		q.uniqueMu.Lock()
+		if expiresAt, ok := q.uniqueJobs[key]; ok && (expiresAt.IsZero() || time.Now().Before(expiresAt)) {
+			q.uniqueMu.Unlock()
+			log.Trace().Interface("job", job).Msgf("already locked: %s", key)
+			q.registerJob(job)
+			return q.updateStatus(job.ID, jobs.JobStateCancelled, "duplicate"), nil
+		}
+		// Either no entry, or the entry's window expired — claim the slot.
+		var expiresAt time.Time
+		if job.UniqueWindow > 0 {
+			expiresAt = time.Now().Add(job.UniqueWindow)
+		}
+		q.uniqueJobs[key] = expiresAt
+		q.uniqueMu.Unlock()
+		log.Trace().Interface("job", job).Msgf("locked: %s", key)
+	}
+	status := q.registerJob(job)
+	q.jobs <- job
+	return status, nil
+}
+
+func (q *localQueue) SubmitMany(ctx context.Context, in []jobs.Job) ([]jobs.JobStatus, error) {
 	out := make([]jobs.JobStatus, 0, len(in))
 	for _, job := range in {
-		st, err := f.AddJob(ctx, job)
+		st, err := q.Submit(ctx, job)
 		if err != nil {
 			return out, err
 		}
@@ -96,38 +245,7 @@ func (f *LocalBackend) AddJobs(ctx context.Context, in []jobs.Job) ([]jobs.JobSt
 	return out, nil
 }
 
-func (f *LocalBackend) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
-	if f.jobs == nil {
-		return jobs.JobStatus{}, errors.New("closed")
-	}
-	job.ID = uuid.NewString()
-	if job.Unique {
-		key, err := job.HexKey()
-		if err != nil {
-			return jobs.JobStatus{}, err
-		}
-		f.uniqueJobsLock.Lock()
-		if expiresAt, ok := f.uniqueJobs[key]; ok && (expiresAt.IsZero() || time.Now().Before(expiresAt)) {
-			f.uniqueJobsLock.Unlock()
-			log.Trace().Interface("job", job).Msgf("already locked: %s", key)
-			f.registerJob(job)
-			return f.updateStatus(job.ID, jobs.JobStateCancelled, "duplicate"), nil
-		}
-		// Either no entry, or the entry's window expired — claim the slot.
-		var expiresAt time.Time
-		if job.UniqueWindow > 0 {
-			expiresAt = time.Now().Add(job.UniqueWindow)
-		}
-		f.uniqueJobs[key] = expiresAt
-		f.uniqueJobsLock.Unlock()
-		log.Trace().Interface("job", job).Msgf("locked: %s", key)
-	}
-	status := f.registerJob(job)
-	f.jobs <- job
-	return status, nil
-}
-
-func (f *LocalBackend) registerJob(job jobs.Job) jobs.JobStatus {
+func (q *localQueue) registerJob(job jobs.Job) jobs.JobStatus {
 	now := time.Now().UTC()
 	entry := &jobEntry{
 		status: jobs.JobStatus{
@@ -136,46 +254,39 @@ func (f *LocalBackend) registerJob(job jobs.Job) jobs.JobStatus {
 			SubmittedAt: now,
 		},
 	}
-	f.registryLock.Lock()
-	f.registry[job.ID] = entry
-	f.registryLock.Unlock()
+	q.registryMu.Lock()
+	q.registry[job.ID] = entry
+	q.registryMu.Unlock()
 	return entry.status
 }
 
-func (f *LocalBackend) getEntry(jobId string) *jobEntry {
-	f.registryLock.Lock()
-	defer f.registryLock.Unlock()
-	return f.registry[jobId]
+func (q *localQueue) getEntry(jobId string) *jobEntry {
+	q.registryMu.Lock()
+	defer q.registryMu.Unlock()
+	return q.registry[jobId]
 }
 
-func (f *LocalBackend) statusUnchecked(jobId string) (jobs.JobStatus, error) {
-	entry := f.getEntry(jobId)
+func (q *localQueue) Status(ctx context.Context, jobId string) (jobs.JobStatus, error) {
+	entry := q.getEntry(jobId)
 	if entry == nil {
 		return jobs.JobStatus{}, jobs.ErrJobNotFound
 	}
 	entry.mu.Lock()
-	defer entry.mu.Unlock()
-	return entry.status, nil
-}
-
-func (f *LocalBackend) Status(ctx context.Context, jobId string) (jobs.JobStatus, error) {
-	st, err := f.statusUnchecked(jobId)
-	if err != nil {
-		return jobs.JobStatus{}, err
-	}
-	if err := jobs.CheckJobAccess(ctx, st); err != nil {
+	st := entry.status
+	entry.mu.Unlock()
+	if err := jobs.CheckAccess(ctx, st); err != nil {
 		return jobs.JobStatus{}, err
 	}
 	return st, nil
 }
 
-func (f *LocalBackend) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEvent, error) {
-	entry := f.getEntry(jobId)
+func (q *localQueue) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEvent, error) {
+	entry := q.getEntry(jobId)
 	if entry == nil {
 		return nil, jobs.ErrJobNotFound
 	}
 	entry.mu.Lock()
-	if err := jobs.CheckJobAccess(ctx, entry.status); err != nil {
+	if err := jobs.CheckAccess(ctx, entry.status); err != nil {
 		entry.mu.Unlock()
 		return nil, err
 	}
@@ -196,11 +307,11 @@ func (f *LocalBackend) Watch(ctx context.Context, jobId string) (<-chan jobs.Job
 	entry.mu.Unlock()
 	// Drop the registration if the caller's context cancels before terminal.
 	// Both this goroutine and updateStatus take entry.mu, so we won't double-close.
-	go f.cleanupWatcherOnCancel(ctx, entry, ch)
+	go q.cleanupWatcherOnCancel(ctx, entry, ch)
 	return ch, nil
 }
 
-func (f *LocalBackend) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry, ch chan jobs.JobEvent) {
+func (q *localQueue) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry, ch chan jobs.JobEvent) {
 	<-ctx.Done()
 	entry.mu.Lock()
 	defer entry.mu.Unlock()
@@ -214,17 +325,17 @@ func (f *LocalBackend) cleanupWatcherOnCancel(ctx context.Context, entry *jobEnt
 	// Not found: updateStatus already broadcast and closed it on terminal.
 }
 
-func (f *LocalBackend) ListJobs(ctx context.Context, opts jobs.JobListOptions) (jobs.JobListResult, error) {
+func (q *localQueue) List(ctx context.Context, opts jobs.ListOptions) (jobs.ListResult, error) {
 	user := authn.ForContext(ctx)
 	if user == nil {
-		return jobs.JobListResult{}, jobs.ErrJobAccessDenied
+		return jobs.ListResult{}, jobs.ErrJobAccessDenied
 	}
 	isAdmin := user.HasRole("admin")
 	filterUserId := opts.UserID
 	if !isAdmin {
 		filterUserId = user.ID()
 		if filterUserId == "" {
-			return jobs.JobListResult{}, jobs.ErrJobAccessDenied
+			return jobs.ListResult{}, jobs.ErrJobAccessDenied
 		}
 	}
 	stateSet := map[jobs.JobState]bool{}
@@ -232,9 +343,9 @@ func (f *LocalBackend) ListJobs(ctx context.Context, opts jobs.JobListOptions) (
 		stateSet[s] = true
 	}
 
-	f.registryLock.Lock()
-	snapshot := make([]jobs.JobStatus, 0, len(f.registry))
-	for _, entry := range f.registry {
+	q.registryMu.Lock()
+	snapshot := make([]jobs.JobStatus, 0, len(q.registry))
+	for _, entry := range q.registry {
 		entry.mu.Lock()
 		st := entry.status
 		entry.mu.Unlock()
@@ -249,7 +360,7 @@ func (f *LocalBackend) ListJobs(ctx context.Context, opts jobs.JobListOptions) (
 		}
 		snapshot = append(snapshot, st)
 	}
-	f.registryLock.Unlock()
+	q.registryMu.Unlock()
 
 	sort.Slice(snapshot, func(i, j int) bool {
 		if !snapshot[i].SubmittedAt.Equal(snapshot[j].SubmittedAt) {
@@ -261,11 +372,11 @@ func (f *LocalBackend) ListJobs(ctx context.Context, opts jobs.JobListOptions) (
 	if opts.After != "" {
 		cur, err := decodeCursor(opts.After)
 		if err != nil {
-			return jobs.JobListResult{}, err
+			return jobs.ListResult{}, err
 		}
 		// Keyset advance: find the first row strictly after the cursor under
-		// (SubmittedAt desc, ID asc). This is robust against eviction —
-		// even if the cursor's row is gone, we still know where to resume.
+		// (SubmittedAt desc, ID asc). Robust against eviction — even if the
+		// cursor's row is gone, we still know where to resume.
 		cutoff := -1
 		for i, st := range snapshot {
 			ts := st.SubmittedAt.UnixNano()
@@ -291,13 +402,12 @@ func (f *LocalBackend) ListJobs(ctx context.Context, opts jobs.JobListOptions) (
 		snapshot = snapshot[:limit]
 		next = encodeCursor(snapshot[len(snapshot)-1])
 	}
-	return jobs.JobListResult{Jobs: snapshot, NextCursor: next}, nil
+	return jobs.ListResult{Jobs: snapshot, NextCursor: next}, nil
 }
 
 // listCursor is the keyset payload — both fields of the sort key, so paging
 // can resume even if the cursor's underlying row was evicted. SubmittedAtNano
-// is unix-nanos so the cursor doesn't depend on a particular time.Time JSON
-// formatting and stays compact.
+// stays compact and time.Time-format-independent.
 type listCursor struct {
 	SubmittedAtNano int64  `json:"t"`
 	ID              string `json:"i"`
@@ -320,8 +430,36 @@ func decodeCursor(cursor string) (listCursor, error) {
 	return c, nil
 }
 
-func (f *LocalBackend) updateStatus(jobId string, state jobs.JobState, errMsg string) jobs.JobStatus {
-	entry := f.getEntry(jobId)
+func (q *localQueue) Cancel(ctx context.Context, jobId string) error {
+	entry := q.getEntry(jobId)
+	if entry == nil {
+		return jobs.ErrJobNotFound
+	}
+	entry.mu.Lock()
+	if err := jobs.CheckAccess(ctx, entry.status); err != nil {
+		entry.mu.Unlock()
+		return err
+	}
+	if entry.status.State.Terminal() {
+		entry.mu.Unlock()
+		return nil
+	}
+	entry.cancelRequested = true
+	cancelRun := entry.cancelRun
+	wasQueued := entry.status.State == jobs.JobStateQueued
+	entry.mu.Unlock()
+
+	if cancelRun != nil {
+		cancelRun()
+	}
+	if wasQueued {
+		q.updateStatus(jobId, jobs.JobStateCancelled, "cancelled")
+	}
+	return nil
+}
+
+func (q *localQueue) updateStatus(jobId string, state jobs.JobState, errMsg string) jobs.JobStatus {
+	entry := q.getEntry(jobId)
 	if entry == nil {
 		return jobs.JobStatus{}
 	}
@@ -356,90 +494,22 @@ func (f *LocalBackend) updateStatus(jobId string, state jobs.JobState, errMsg st
 	return entry.status
 }
 
-func (w *LocalBackend) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
-	id := uuid.NewString()
-	pctx, cancel := context.WithCancel(ctx)
-	if cronTab != "" {
-		schedule, err := cron.ParseStandard(cronTab)
-		if err != nil {
-			cancel()
-			return "", err
-		}
-		w.registerPeriodic(id, cancel)
-		go w.runCron(pctx, schedule, jobFunc)
-		return id, nil
-	}
-	w.registerPeriodic(id, cancel)
-	go w.runInterval(pctx, period, jobFunc)
-	return id, nil
-}
-
-// RemovePeriodicJob stops a previously-added periodic schedule. Returns
-// ErrJobNotFound if the id is unknown (or already removed).
-func (w *LocalBackend) RemovePeriodicJob(ctx context.Context, id string) error {
-	w.periodicLock.Lock()
-	defer w.periodicLock.Unlock()
-	cancel, ok := w.periodics[id]
-	if !ok {
-		return jobs.ErrJobNotFound
-	}
-	cancel()
-	delete(w.periodics, id)
-	return nil
-}
-
-func (w *LocalBackend) registerPeriodic(id string, cancel context.CancelFunc) {
-	w.periodicLock.Lock()
-	w.periodics[id] = cancel
-	w.periodicLock.Unlock()
-}
-
-func (w *LocalBackend) runInterval(ctx context.Context, period time.Duration, jobFunc func() jobs.Job) {
-	ticker := time.NewTicker(period)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			w.AddJob(ctx, jobFunc())
-		}
-	}
-}
-
-func (w *LocalBackend) runCron(ctx context.Context, schedule cron.Schedule, jobFunc func() jobs.Job) {
-	for {
-		next := schedule.Next(time.Now())
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(time.Until(next)):
-			w.AddJob(ctx, jobFunc())
-		}
-	}
-}
-
-func (f *LocalBackend) runQueuedJob(ctx context.Context, job jobs.Job) error {
-	_, err := f.execute(ctx, job)
-	return err
-}
-
-func (f *LocalBackend) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
-	// If Cancel was called while the job was queued, skip the run.
-	entry := f.getEntry(job.ID)
+func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
+	// If Cancel was called while queued, skip the run.
+	entry := q.getEntry(job.ID)
 	if entry != nil {
 		entry.mu.Lock()
 		cancelled := entry.cancelRequested
 		entry.mu.Unlock()
 		if cancelled {
-			return f.updateStatus(job.ID, jobs.JobStateCancelled, "cancelled"), nil
+			return q.updateStatus(job.ID, jobs.JobStateCancelled, "cancelled"), nil
 		}
 	}
 
 	now := time.Now().In(time.UTC).Unix()
 	if job.Deadline > 0 && job.Deadline < now {
 		log.Trace().Int64("job_deadline", job.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
-		return f.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
+		return q.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
 	// Window=0 deduplicates only while a matching job is queued/running, so
 	// release the lock when execution starts. Window>0 entries are time-based
@@ -447,11 +517,11 @@ func (f *LocalBackend) execute(ctx context.Context, job jobs.Job) (jobs.JobStatu
 	if job.Unique && job.UniqueWindow == 0 {
 		key, err := job.HexKey()
 		if err != nil {
-			return f.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
+			return q.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
 		}
-		f.uniqueJobsLock.Lock()
-		delete(f.uniqueJobs, key)
-		f.uniqueJobsLock.Unlock()
+		q.uniqueMu.Lock()
+		delete(q.uniqueJobs, key)
+		q.uniqueMu.Unlock()
 		log.Trace().Interface("job", job).Msgf("unlocked: %s", key)
 	}
 	// Derive a per-run ctx that Cancel can interrupt independently of Run/Stop.
@@ -462,76 +532,87 @@ func (f *LocalBackend) execute(ctx context.Context, job jobs.Job) (jobs.JobStatu
 		entry.cancelRun = runCancel
 		entry.mu.Unlock()
 	}
-	f.updateStatus(job.ID, jobs.JobStateRunning, "")
-	runErr := f.runner.Run(runCtx, job)
-	// If Cancel was called mid-run, treat as cancelled rather than failed.
+	q.updateStatus(job.ID, jobs.JobStateRunning, "")
+	runErr := q.runner.Run(runCtx, job)
 	if entry != nil {
 		entry.mu.Lock()
 		cancelled := entry.cancelRequested
 		entry.cancelRun = nil
 		entry.mu.Unlock()
 		if cancelled {
-			return f.updateStatus(job.ID, jobs.JobStateCancelled, "cancelled"), nil
+			return q.updateStatus(job.ID, jobs.JobStateCancelled, "cancelled"), nil
 		}
 	}
 	if runErr != nil {
-		return f.updateStatus(job.ID, jobs.JobStateFailed, runErr.Error()), runErr
+		return q.updateStatus(job.ID, jobs.JobStateFailed, runErr.Error()), runErr
 	}
-	return f.updateStatus(job.ID, jobs.JobStateSucceeded, ""), nil
+	return q.updateStatus(job.ID, jobs.JobStateSucceeded, ""), nil
 }
 
-// Cancel marks a queued or running job for cancellation. Idempotent on
-// terminal jobs.
-func (f *LocalBackend) Cancel(ctx context.Context, jobId string) error {
-	entry := f.getEntry(jobId)
-	if entry == nil {
+func (q *localQueue) AddPeriodic(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
+	id := uuid.NewString()
+	pctx, cancel := context.WithCancel(ctx)
+	if cronTab != "" {
+		schedule, err := cron.ParseStandard(cronTab)
+		if err != nil {
+			cancel()
+			return "", err
+		}
+		q.registerPeriodic(id, cancel)
+		go q.runCron(pctx, schedule, jobFunc)
+		return id, nil
+	}
+	q.registerPeriodic(id, cancel)
+	go q.runInterval(pctx, period, jobFunc)
+	return id, nil
+}
+
+// RemovePeriodic stops a previously-added schedule. Returns ErrJobNotFound
+// if the id is unknown (or already removed).
+func (q *localQueue) RemovePeriodic(ctx context.Context, id string) error {
+	q.periodicMu.Lock()
+	defer q.periodicMu.Unlock()
+	cancel, ok := q.periodics[id]
+	if !ok {
 		return jobs.ErrJobNotFound
 	}
-	entry.mu.Lock()
-	if err := jobs.CheckJobAccess(ctx, entry.status); err != nil {
-		entry.mu.Unlock()
-		return err
-	}
-	if entry.status.State.Terminal() {
-		entry.mu.Unlock()
-		return nil
-	}
-	entry.cancelRequested = true
-	cancelRun := entry.cancelRun
-	wasQueued := entry.status.State == jobs.JobStateQueued
-	entry.mu.Unlock()
-
-	if cancelRun != nil {
-		cancelRun() // running job: ctx cancelled, execute will translate to JobStateCancelled
-	}
-	if wasQueued {
-		// Mark immediately; the worker will see cancelRequested before starting.
-		f.updateStatus(jobId, jobs.JobStateCancelled, "cancelled")
-	}
+	cancel()
+	delete(q.periodics, id)
 	return nil
 }
 
-func (f *LocalBackend) Run(ctx context.Context) error {
-	if f.running {
-		return errors.New("already running")
-	}
-	f.ctx, f.cancel = context.WithCancel(ctx)
-	f.running = true
-	for _, jobfunc := range f.jobfuncs {
-		go func(jf func(context.Context, jobs.Job) error) {
-			for job := range f.jobs {
-				jf(ctx, job)
-			}
-		}(jobfunc)
-	}
-	if f.terminalTTL > 0 {
-		go f.evictLoop(f.ctx)
-	}
-	<-f.ctx.Done()
-	return nil
+func (q *localQueue) registerPeriodic(id string, cancel context.CancelFunc) {
+	q.periodicMu.Lock()
+	q.periodics[id] = cancel
+	q.periodicMu.Unlock()
 }
 
-func (f *LocalBackend) evictLoop(ctx context.Context) {
+func (q *localQueue) runInterval(ctx context.Context, period time.Duration, jobFunc func() jobs.Job) {
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			q.Submit(ctx, jobFunc())
+		}
+	}
+}
+
+func (q *localQueue) runCron(ctx context.Context, schedule cron.Schedule, jobFunc func() jobs.Job) {
+	for {
+		next := schedule.Next(time.Now())
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(time.Until(next)):
+			q.Submit(ctx, jobFunc())
+		}
+	}
+}
+
+func (q *localQueue) sweepLoop(ctx context.Context) {
 	ticker := time.NewTicker(sweepInterval)
 	defer ticker.Stop()
 	for {
@@ -539,47 +620,36 @@ func (f *LocalBackend) evictLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			f.evictTerminal(time.Now().UTC().Add(-f.terminalTTL))
-			f.sweepUniqueExpired(time.Now())
+			q.evictTerminal(time.Now().UTC().Add(-q.terminalTTL))
+			q.sweepUniqueExpired(time.Now())
 		}
 	}
 }
 
 // sweepUniqueExpired drops UniqueWindow entries whose window has elapsed.
 // Window-zero entries (cleared by execute) are left alone.
-func (f *LocalBackend) sweepUniqueExpired(now time.Time) {
-	f.uniqueJobsLock.Lock()
-	defer f.uniqueJobsLock.Unlock()
-	for key, expiresAt := range f.uniqueJobs {
+func (q *localQueue) sweepUniqueExpired(now time.Time) {
+	q.uniqueMu.Lock()
+	defer q.uniqueMu.Unlock()
+	for key, expiresAt := range q.uniqueJobs {
 		if !expiresAt.IsZero() && now.After(expiresAt) {
-			delete(f.uniqueJobs, key)
+			delete(q.uniqueJobs, key)
 		}
 	}
 }
 
 // evictTerminal removes terminal-state entries whose FinishedAt is at or before cutoff.
-func (f *LocalBackend) evictTerminal(cutoff time.Time) {
-	f.registryLock.Lock()
-	defer f.registryLock.Unlock()
-	for id, entry := range f.registry {
+func (q *localQueue) evictTerminal(cutoff time.Time) {
+	q.registryMu.Lock()
+	defer q.registryMu.Unlock()
+	for id, entry := range q.registry {
 		entry.mu.Lock()
 		evict := entry.status.State.Terminal() &&
 			entry.status.FinishedAt != nil &&
 			!entry.status.FinishedAt.After(cutoff)
 		entry.mu.Unlock()
 		if evict {
-			delete(f.registry, id)
+			delete(q.registry, id)
 		}
 	}
-}
-
-func (f *LocalBackend) Stop(ctx context.Context) error {
-	if !f.running {
-		return errors.New("not running")
-	}
-	close(f.jobs)
-	f.cancel()
-	f.running = false
-	f.jobs = nil
-	return nil
 }
