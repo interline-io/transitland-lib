@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/interline-io/log"
@@ -54,6 +55,65 @@ func (w *JobLogger) AddJobs(ctx context.Context, jobs []Job) ([]JobStatus, error
 func (w *JobLogger) RunJob(ctx context.Context, job Job) (JobStatus, error) {
 	w.log.Trace().Str("kind", job.Kind).Any("args", job.Args).Msg("jobs: run job")
 	return w.JobQueue.RunJob(ctx, job)
+}
+
+// AddPeriodicJob forwards to the inner queue if it implements PeriodicScheduler.
+// JobLogger always satisfies the interface so callers can type-assert through
+// the wrapper; the runtime error surfaces backends that don't support it.
+func (w *JobLogger) AddPeriodicJob(ctx context.Context, jobFunc func() Job, period time.Duration, cronTab string) (string, error) {
+	ps, ok := w.JobQueue.(PeriodicScheduler)
+	if !ok {
+		return "", errors.New("backend does not support periodic jobs")
+	}
+	w.log.Trace().Str("cron", cronTab).Dur("period", period).Msg("jobs: adding periodic job")
+	return ps.AddPeriodicJob(ctx, jobFunc, period, cronTab)
+}
+
+func (w *JobLogger) RemovePeriodicJob(ctx context.Context, id string) error {
+	ps, ok := w.JobQueue.(PeriodicScheduler)
+	if !ok {
+		return errors.New("backend does not support periodic jobs")
+	}
+	w.log.Trace().Str("periodic_job_id", id).Msg("jobs: removing periodic job")
+	return ps.RemovePeriodicJob(ctx, id)
+}
+
+// Status, Watch, ListJobs, and Cancel forward to the inner queue if it
+// implements JobStatusReporter. JobLogger always satisfies the interface so
+// callers can type-assert through the wrapper; the runtime error surfaces
+// backends that don't track jobs (e.g. fire-and-forget Redis).
+
+func (w *JobLogger) Status(ctx context.Context, jobId string) (JobStatus, error) {
+	r, ok := w.JobQueue.(JobStatusReporter)
+	if !ok {
+		return JobStatus{}, errors.New("backend does not support job status")
+	}
+	return r.Status(ctx, jobId)
+}
+
+func (w *JobLogger) Watch(ctx context.Context, jobId string) (<-chan JobEvent, error) {
+	r, ok := w.JobQueue.(JobStatusReporter)
+	if !ok {
+		return nil, errors.New("backend does not support job status")
+	}
+	return r.Watch(ctx, jobId)
+}
+
+func (w *JobLogger) ListJobs(ctx context.Context, opts JobListOptions) (JobListResult, error) {
+	r, ok := w.JobQueue.(JobStatusReporter)
+	if !ok {
+		return JobListResult{}, errors.New("backend does not support job status")
+	}
+	return r.ListJobs(ctx, opts)
+}
+
+func (w *JobLogger) Cancel(ctx context.Context, jobId string) error {
+	r, ok := w.JobQueue.(JobStatusReporter)
+	if !ok {
+		return errors.New("backend does not support job status")
+	}
+	w.log.Trace().Str("job_id", jobId).Msg("jobs: cancel")
+	return r.Cancel(ctx, jobId)
 }
 
 func (w *JobLogger) Run(ctx context.Context) error {

@@ -36,39 +36,64 @@ var ErrJobAccessDenied = errors.New("job access denied")
 // ErrJobNotFound is returned when a JobId is not known to the queue.
 var ErrJobNotFound = errors.New("job not found")
 
-// JobQueue is the unified interface every job backend must satisfy.
-//
-// Watch is best-effort and intended for UI feedback. Adapters may skip
-// intermediate transitions and the terminal event payload may be dropped
-// under load; the channel is still guaranteed to close when the job
-// reaches a terminal state. Only Status returns authoritative data —
-// callers should call it after the channel closes to learn the outcome.
+// ErrCancelNotSupported is returned by Cancel when the backend can observe
+// the job but cannot stop it (e.g. running on a worker the queue can't reach).
+var ErrCancelNotSupported = errors.New("job cancel not supported")
+
+// JobQueue is the minimum interface every job backend must satisfy: submit
+// jobs, run a worker pool, register workers. Lifecycle observation (Status,
+// Watch, ListJobs, Cancel) and recurring scheduling are optional capabilities
+// — see JobStatusReporter and PeriodicScheduler.
 type JobQueue interface {
 	Use(JobMiddleware)
 	AddQueue(string, int) error
 	RegisterWorker(JobFn) error
 	AddJob(context.Context, Job) (JobStatus, error)
 	AddJobs(context.Context, []Job) ([]JobStatus, error)
-	AddPeriodicJob(context.Context, func() Job, time.Duration, string) error
 	RunJob(context.Context, Job) (JobStatus, error)
+	Run(context.Context) error
+	Stop(context.Context) error
+}
+
+// JobStatusReporter is the optional capability for backends that track
+// individual jobs after submission — the basis of UI status displays, ops
+// dashboards, and creator-only auth. Adapters that fire-and-forget (e.g.
+// Redis) simply omit it; callers should type-assert before use.
+//
+// Watch is best-effort and intended for UI feedback. Adapters may skip
+// intermediate transitions and the terminal event payload may be dropped
+// under load; the channel is still guaranteed to close when the job reaches
+// a terminal state. Only Status returns authoritative data — callers should
+// call it after the channel closes to learn the outcome.
+//
+// Cancel requests cancellation of a queued or running job. Idempotent on
+// terminal jobs. Backends that can't cancel running work should return
+// ErrCancelNotSupported for the running case; queued cancellation must
+// always succeed.
+type JobStatusReporter interface {
 	Status(context.Context, string) (JobStatus, error)
 	Watch(context.Context, string) (<-chan JobEvent, error)
 	ListJobs(context.Context, JobListOptions) (JobListResult, error)
-	Run(context.Context) error
-	Stop(context.Context) error
+	Cancel(context.Context, string) error
 }
 
 // Job defines a single job. ID is always assigned by the adapter; any
 // caller-set value is overwritten by AddJob, AddJobs, and RunJob.
 // Kind matches JobWorker.Kind() — that's how the queue routes a job to its worker.
+//
+// Unique deduplicates submissions with the same Kind+Args. UniqueWindow
+// controls the dedup span: zero means "while a matching job is still in
+// queued or running state" (no concurrent runs); a positive duration means
+// "at most one matching job submitted in the trailing window" (cron-style).
 type Job struct {
-	ID       string  `json:"id"`
-	UserID   string  `json:"user_id"`
-	Queue    string  `json:"queue"`
-	Kind     string  `json:"kind" river:"unique"`
-	Args     JobArgs `json:"args" river:"unique"`
-	Deadline int64   `json:"deadline"`
-	Unique   bool    `json:"unique"`
+	ID           string        `json:"id"`
+	UserID       string        `json:"user_id"`
+	Queue        string        `json:"queue"`
+	Kind         string        `json:"kind" river:"unique"`
+	Args         JobArgs       `json:"args" river:"unique"`
+	Deadline     int64         `json:"deadline"`
+	Unique       bool          `json:"unique"`
+	UniqueWindow time.Duration `json:"unique_window,omitempty"`
 }
 
 func (job *Job) HexKey() (string, error) {
@@ -96,6 +121,7 @@ type JobStatus struct {
 type JobEvent struct {
 	JobID   string    `json:"job_id"`
 	State   JobState  `json:"state"`
+	Attempt int       `json:"attempt,omitempty"`
 	Message string    `json:"message,omitempty"`
 	Time    time.Time `json:"time"`
 }
@@ -131,6 +157,18 @@ func CheckJobAccess(ctx context.Context, status JobStatus) error {
 		return nil
 	}
 	return ErrJobAccessDenied
+}
+
+// PeriodicScheduler is an optional capability backends can implement to
+// support recurring jobs. Adapters that don't (e.g. Redis) simply omit it;
+// callers should type-assert before use.
+//
+// AddPeriodicJob returns an opaque ID that RemovePeriodicJob accepts. When
+// cronTab is non-empty it takes precedence over period; otherwise period is
+// used as a fixed interval.
+type PeriodicScheduler interface {
+	AddPeriodicJob(ctx context.Context, jobFunc func() Job, period time.Duration, cronTab string) (string, error)
+	RemovePeriodicJob(ctx context.Context, periodicJobId string) error
 }
 
 // JobWorker defines a job worker

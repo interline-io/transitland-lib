@@ -31,9 +31,11 @@ const defaultTerminalTTL = 1 * time.Hour
 const sweepInterval = 1 * time.Minute
 
 type jobEntry struct {
-	mu       sync.Mutex
-	status   jobs.JobStatus
-	watchers []chan jobs.JobEvent
+	mu              sync.Mutex
+	status          jobs.JobStatus
+	watchers        []chan jobs.JobEvent
+	cancelRun       context.CancelFunc // nil until execute starts; cancels the worker's ctx
+	cancelRequested bool               // set by Cancel; queued jobs check this before running
 }
 
 type LocalJobs struct {
@@ -41,7 +43,7 @@ type LocalJobs struct {
 	jobfuncs       []func(context.Context, jobs.Job) error
 	running        bool
 	middlewares    []jobs.JobMiddleware
-	uniqueJobs     map[string]bool
+	uniqueJobs     map[string]time.Time // key -> expiresAt; zero means "until consumed by execute"
 	uniqueJobsLock sync.Mutex
 	jobMapper      *jobs.JobMapper
 	ctx            context.Context
@@ -50,15 +52,19 @@ type LocalJobs struct {
 	registryLock sync.Mutex
 	registry     map[string]*jobEntry
 	terminalTTL  time.Duration
+
+	periodicLock sync.Mutex
+	periodics    map[string]context.CancelFunc
 }
 
 func NewLocalJobs() *LocalJobs {
 	f := &LocalJobs{
 		jobs:        make(chan jobs.Job, 1000),
-		uniqueJobs:  map[string]bool{},
+		uniqueJobs:  map[string]time.Time{},
 		jobMapper:   jobs.NewJobMapper(),
 		registry:    map[string]*jobEntry{},
 		terminalTTL: defaultTerminalTTL,
+		periodics:   map[string]context.CancelFunc{},
 	}
 	return f
 }
@@ -109,13 +115,18 @@ func (f *LocalJobs) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, e
 			return jobs.JobStatus{}, err
 		}
 		f.uniqueJobsLock.Lock()
-		if _, ok := f.uniqueJobs[key]; ok {
+		if expiresAt, ok := f.uniqueJobs[key]; ok && (expiresAt.IsZero() || time.Now().Before(expiresAt)) {
 			f.uniqueJobsLock.Unlock()
 			log.Trace().Interface("job", job).Msgf("already locked: %s", key)
 			f.registerJob(job)
 			return f.updateStatus(job.ID, jobs.JobStateCancelled, "duplicate"), nil
 		}
-		f.uniqueJobs[key] = true
+		// Either no entry, or the entry's window expired — claim the slot.
+		var expiresAt time.Time
+		if job.UniqueWindow > 0 {
+			expiresAt = time.Now().Add(job.UniqueWindow)
+		}
+		f.uniqueJobs[key] = expiresAt
 		f.uniqueJobsLock.Unlock()
 		log.Trace().Interface("job", job).Msgf("locked: %s", key)
 	}
@@ -181,6 +192,7 @@ func (f *LocalJobs) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEve
 		ch <- jobs.JobEvent{
 			JobID:   jobId,
 			State:   entry.status.State,
+			Attempt: entry.status.Attempt,
 			Message: entry.status.Error,
 			Time:    time.Now().UTC(),
 		}
@@ -336,7 +348,7 @@ func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg strin
 	if errMsg != "" {
 		entry.status.Error = errMsg
 	}
-	evt := jobs.JobEvent{JobID: jobId, State: state, Message: errMsg, Time: now}
+	evt := jobs.JobEvent{JobID: jobId, State: state, Attempt: entry.status.Attempt, Message: errMsg, Time: now}
 	for _, ch := range entry.watchers {
 		select {
 		case ch <- evt:
@@ -352,17 +364,42 @@ func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg strin
 	return entry.status
 }
 
-func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) error {
+func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
+	id := uuid.NewString()
+	pctx, cancel := context.WithCancel(ctx)
 	if cronTab != "" {
 		schedule, err := cron.ParseStandard(cronTab)
 		if err != nil {
-			return err
+			cancel()
+			return "", err
 		}
-		go w.runCron(ctx, schedule, jobFunc)
-		return nil
+		w.registerPeriodic(id, cancel)
+		go w.runCron(pctx, schedule, jobFunc)
+		return id, nil
 	}
-	go w.runInterval(ctx, period, jobFunc)
+	w.registerPeriodic(id, cancel)
+	go w.runInterval(pctx, period, jobFunc)
+	return id, nil
+}
+
+// RemovePeriodicJob stops a previously-added periodic schedule. Returns
+// ErrJobNotFound if the id is unknown (or already removed).
+func (w *LocalJobs) RemovePeriodicJob(ctx context.Context, id string) error {
+	w.periodicLock.Lock()
+	defer w.periodicLock.Unlock()
+	cancel, ok := w.periodics[id]
+	if !ok {
+		return jobs.ErrJobNotFound
+	}
+	cancel()
+	delete(w.periodics, id)
 	return nil
+}
+
+func (w *LocalJobs) registerPeriodic(id string, cancel context.CancelFunc) {
+	w.periodicLock.Lock()
+	w.periodics[id] = cancel
+	w.periodicLock.Unlock()
 }
 
 func (w *LocalJobs) runInterval(ctx context.Context, period time.Duration, jobFunc func() jobs.Job) {
@@ -404,12 +441,26 @@ func (f *LocalJobs) RunJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, e
 }
 
 func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
+	// If Cancel was called while the job was queued, skip the run.
+	entry := f.getEntry(job.ID)
+	if entry != nil {
+		entry.mu.Lock()
+		cancelled := entry.cancelRequested
+		entry.mu.Unlock()
+		if cancelled {
+			return f.updateStatus(job.ID, jobs.JobStateCancelled, "cancelled"), nil
+		}
+	}
+
 	now := time.Now().In(time.UTC).Unix()
 	if job.Deadline > 0 && job.Deadline < now {
 		log.Trace().Int64("job_deadline", job.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
 		return f.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
-	if job.Unique {
+	// Window=0 deduplicates only while a matching job is queued/running, so
+	// release the lock when execution starts. Window>0 entries are time-based
+	// and expire on their own.
+	if job.Unique && job.UniqueWindow == 0 {
 		key, err := job.HexKey()
 		if err != nil {
 			return f.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
@@ -432,12 +483,61 @@ func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 			return f.updateStatus(job.ID, jobs.JobStateFailed, "no job"), errors.New("no job")
 		}
 	}
+	// Derive a per-run ctx that Cancel can interrupt independently of Run/Stop.
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+	if entry != nil {
+		entry.mu.Lock()
+		entry.cancelRun = runCancel
+		entry.mu.Unlock()
+	}
 	f.updateStatus(job.ID, jobs.JobStateRunning, "")
-	runErr := w.Run(ctx)
+	runErr := w.Run(runCtx)
+	// If Cancel was called mid-run, treat as cancelled rather than failed.
+	if entry != nil {
+		entry.mu.Lock()
+		cancelled := entry.cancelRequested
+		entry.cancelRun = nil
+		entry.mu.Unlock()
+		if cancelled {
+			return f.updateStatus(job.ID, jobs.JobStateCancelled, "cancelled"), nil
+		}
+	}
 	if runErr != nil {
 		return f.updateStatus(job.ID, jobs.JobStateFailed, runErr.Error()), runErr
 	}
 	return f.updateStatus(job.ID, jobs.JobStateSucceeded, ""), nil
+}
+
+// Cancel marks a queued or running job for cancellation. Idempotent on
+// terminal jobs.
+func (f *LocalJobs) Cancel(ctx context.Context, jobId string) error {
+	entry := f.getEntry(jobId)
+	if entry == nil {
+		return jobs.ErrJobNotFound
+	}
+	entry.mu.Lock()
+	if err := jobs.CheckJobAccess(ctx, entry.status); err != nil {
+		entry.mu.Unlock()
+		return err
+	}
+	if entry.status.State.Terminal() {
+		entry.mu.Unlock()
+		return nil
+	}
+	entry.cancelRequested = true
+	cancelRun := entry.cancelRun
+	wasQueued := entry.status.State == jobs.JobStateQueued
+	entry.mu.Unlock()
+
+	if cancelRun != nil {
+		cancelRun() // running job: ctx cancelled, execute will translate to JobStateCancelled
+	}
+	if wasQueued {
+		// Mark immediately; the worker will see cancelRequested before starting.
+		f.updateStatus(jobId, jobs.JobStateCancelled, "cancelled")
+	}
+	return nil
 }
 
 func (f *LocalJobs) Run(ctx context.Context) error {
@@ -469,6 +569,19 @@ func (f *LocalJobs) evictLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			f.evictTerminal(time.Now().UTC().Add(-f.terminalTTL))
+			f.sweepUniqueExpired(time.Now())
+		}
+	}
+}
+
+// sweepUniqueExpired drops UniqueWindow entries whose window has elapsed.
+// Window-zero entries (cleared by execute) are left alone.
+func (f *LocalJobs) sweepUniqueExpired(now time.Time) {
+	f.uniqueJobsLock.Lock()
+	defer f.uniqueJobsLock.Unlock()
+	for key, expiresAt := range f.uniqueJobs {
+		if !expiresAt.IsZero() && now.After(expiresAt) {
+			delete(f.uniqueJobs, key)
 		}
 	}
 }

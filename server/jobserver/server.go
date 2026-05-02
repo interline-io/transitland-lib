@@ -91,14 +91,29 @@ func requireQueueAndAuth(w http.ResponseWriter, req *http.Request) jobs.JobQueue
 	return queue
 }
 
+// requireReporterAndAuth additionally type-asserts JobStatusReporter; the
+// /jobs lifecycle endpoints can't run on backends that don't track jobs.
+func requireReporterAndAuth(w http.ResponseWriter, req *http.Request) jobs.JobStatusReporter {
+	queue := requireQueueAndAuth(w, req)
+	if queue == nil {
+		return nil
+	}
+	reporter, ok := queue.(jobs.JobStatusReporter)
+	if !ok {
+		http.Error(w, "backend does not support job status", http.StatusNotImplemented)
+		return nil
+	}
+	return reporter
+}
+
 // statusJobRequest returns the JobStatus for a single job.
 // Returns 404 if the job is not visible to the caller (whether absent or not theirs).
 func statusJobRequest(w http.ResponseWriter, req *http.Request) {
-	queue := requireQueueAndAuth(w, req)
-	if queue == nil {
+	reporter := requireReporterAndAuth(w, req)
+	if reporter == nil {
 		return
 	}
-	st, err := queue.Status(req.Context(), chi.URLParam(req, "jobId"))
+	st, err := reporter.Status(req.Context(), chi.URLParam(req, "jobId"))
 	if err != nil {
 		mapJobLookupError(w, err)
 		return
@@ -109,8 +124,8 @@ func statusJobRequest(w http.ResponseWriter, req *http.Request) {
 // listJobsRequest lists jobs visible to the caller. Non-admins see only their own.
 // Query params: states (comma-separated), user_id, kind, limit, after.
 func listJobsRequest(w http.ResponseWriter, req *http.Request) {
-	queue := requireQueueAndAuth(w, req)
-	if queue == nil {
+	reporter := requireReporterAndAuth(w, req)
+	if reporter == nil {
 		return
 	}
 	q := req.URL.Query()
@@ -134,7 +149,7 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 		}
 		opts.Limit = n
 	}
-	result, err := queue.ListJobs(req.Context(), opts)
+	result, err := reporter.ListJobs(req.Context(), opts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -146,8 +161,8 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 // after a terminal event (with a final "event: end" sentinel) or when the
 // client disconnects.
 func watchJobRequest(w http.ResponseWriter, req *http.Request) {
-	queue := requireQueueAndAuth(w, req)
-	if queue == nil {
+	reporter := requireReporterAndAuth(w, req)
+	if reporter == nil {
 		return
 	}
 	flusher, ok := w.(http.Flusher)
@@ -156,7 +171,7 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	ctx := req.Context()
-	ch, err := queue.Watch(ctx, chi.URLParam(req, "jobId"))
+	ch, err := reporter.Watch(ctx, chi.URLParam(req, "jobId"))
 	if err != nil {
 		mapJobLookupError(w, err)
 		return
