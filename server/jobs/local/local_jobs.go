@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/jobs"
+	"github.com/robfig/cron/v3"
 )
 
 func init() {
@@ -81,8 +82,8 @@ func (f *LocalJobs) AddQueue(queue string, count int) error {
 	return nil
 }
 
-func (f *LocalJobs) AddJobType(jobFn jobs.JobFn) error {
-	return f.jobMapper.AddJobType(jobFn)
+func (f *LocalJobs) RegisterWorker(jobFn jobs.JobFn) error {
+	return f.jobMapper.Register(jobFn)
 }
 
 func (f *LocalJobs) AddJobs(ctx context.Context, in []jobs.Job) ([]jobs.JobStatus, error) {
@@ -101,7 +102,7 @@ func (f *LocalJobs) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, e
 	if f.jobs == nil {
 		return jobs.JobStatus{}, errors.New("closed")
 	}
-	job.JobId = uuid.NewString()
+	job.ID = uuid.NewString()
 	if job.Unique {
 		key, err := job.HexKey()
 		if err != nil {
@@ -112,7 +113,7 @@ func (f *LocalJobs) AddJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, e
 			f.uniqueJobsLock.Unlock()
 			log.Trace().Interface("job", job).Msgf("already locked: %s", key)
 			f.registerJob(job)
-			return f.updateStatus(job.JobId, jobs.JobStateCancelled, "duplicate"), nil
+			return f.updateStatus(job.ID, jobs.JobStateCancelled, "duplicate"), nil
 		}
 		f.uniqueJobs[key] = true
 		f.uniqueJobsLock.Unlock()
@@ -133,7 +134,7 @@ func (f *LocalJobs) registerJob(job jobs.Job) jobs.JobStatus {
 		},
 	}
 	f.registryLock.Lock()
-	f.registry[job.JobId] = entry
+	f.registry[job.ID] = entry
 	f.registryLock.Unlock()
 	return entry.status
 }
@@ -178,7 +179,7 @@ func (f *LocalJobs) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEve
 	ch := make(chan jobs.JobEvent, watchBufferSize)
 	if entry.status.State.Terminal() {
 		ch <- jobs.JobEvent{
-			JobId:   jobId,
+			JobID:   jobId,
 			State:   entry.status.State,
 			Message: entry.status.Error,
 			Time:    time.Now().UTC(),
@@ -215,7 +216,7 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 		return jobs.JobListResult{}, jobs.ErrJobAccessDenied
 	}
 	isAdmin := user.HasRole("admin")
-	filterUserId := opts.UserId
+	filterUserId := opts.UserID
 	if !isAdmin {
 		filterUserId = user.ID()
 		if filterUserId == "" {
@@ -233,10 +234,10 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 		entry.mu.Lock()
 		st := entry.status
 		entry.mu.Unlock()
-		if filterUserId != "" && st.Job.UserId != filterUserId {
+		if filterUserId != "" && st.Job.UserID != filterUserId {
 			continue
 		}
-		if opts.JobType != "" && st.Job.JobType != opts.JobType {
+		if opts.Kind != "" && st.Job.Kind != opts.Kind {
 			continue
 		}
 		if len(stateSet) > 0 && !stateSet[st.State] {
@@ -250,7 +251,7 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 		if !snapshot[i].SubmittedAt.Equal(snapshot[j].SubmittedAt) {
 			return snapshot[i].SubmittedAt.After(snapshot[j].SubmittedAt)
 		}
-		return snapshot[i].Job.JobId < snapshot[j].Job.JobId
+		return snapshot[i].Job.ID < snapshot[j].Job.ID
 	})
 
 	if opts.After != "" {
@@ -259,13 +260,13 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 			return jobs.JobListResult{}, err
 		}
 		// Keyset advance: find the first row strictly after the cursor under
-		// (SubmittedAt desc, JobId asc). This is robust against eviction —
+		// (SubmittedAt desc, ID asc). This is robust against eviction —
 		// even if the cursor's row is gone, we still know where to resume.
 		cutoff := -1
 		for i, st := range snapshot {
 			ts := st.SubmittedAt.UnixNano()
 			if ts < cur.SubmittedAtNano ||
-				(ts == cur.SubmittedAtNano && st.Job.JobId > cur.JobId) {
+				(ts == cur.SubmittedAtNano && st.Job.ID > cur.ID) {
 				cutoff = i
 				break
 			}
@@ -295,11 +296,11 @@ func (f *LocalJobs) ListJobs(ctx context.Context, opts jobs.JobListOptions) (job
 // formatting and stays compact.
 type listCursor struct {
 	SubmittedAtNano int64  `json:"t"`
-	JobId           string `json:"i"`
+	ID              string `json:"i"`
 }
 
 func encodeCursor(st jobs.JobStatus) string {
-	b, _ := json.Marshal(listCursor{SubmittedAtNano: st.SubmittedAt.UnixNano(), JobId: st.Job.JobId})
+	b, _ := json.Marshal(listCursor{SubmittedAtNano: st.SubmittedAt.UnixNano(), ID: st.Job.ID})
 	return base64.URLEncoding.EncodeToString(b)
 }
 
@@ -335,7 +336,7 @@ func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg strin
 	if errMsg != "" {
 		entry.status.Error = errMsg
 	}
-	evt := jobs.JobEvent{JobId: jobId, State: state, Message: errMsg, Time: now}
+	evt := jobs.JobEvent{JobID: jobId, State: state, Message: errMsg, Time: now}
 	for _, ch := range entry.watchers {
 		select {
 		case ch <- evt:
@@ -352,18 +353,41 @@ func (f *LocalJobs) updateStatus(jobId string, state jobs.JobState, errMsg strin
 }
 
 func (w *LocalJobs) AddPeriodicJob(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) error {
-	ticker := time.NewTicker(period)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				w.AddJob(ctx, jobFunc())
-			}
+	if cronTab != "" {
+		schedule, err := cron.ParseStandard(cronTab)
+		if err != nil {
+			return err
 		}
-	}()
+		go w.runCron(ctx, schedule, jobFunc)
+		return nil
+	}
+	go w.runInterval(ctx, period, jobFunc)
 	return nil
+}
+
+func (w *LocalJobs) runInterval(ctx context.Context, period time.Duration, jobFunc func() jobs.Job) {
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.AddJob(ctx, jobFunc())
+		}
+	}
+}
+
+func (w *LocalJobs) runCron(ctx context.Context, schedule cron.Schedule, jobFunc func() jobs.Job) {
+	for {
+		next := schedule.Next(time.Now())
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(time.Until(next)):
+			w.AddJob(ctx, jobFunc())
+		}
+	}
 }
 
 func (f *LocalJobs) runQueuedJob(ctx context.Context, job jobs.Job) error {
@@ -371,49 +395,49 @@ func (f *LocalJobs) runQueuedJob(ctx context.Context, job jobs.Job) error {
 	return err
 }
 
-// RunJob runs a job synchronously. JobId is always assigned by the adapter;
+// RunJob runs a job synchronously. ID is always assigned by the adapter;
 // any caller-set value is overwritten.
 func (f *LocalJobs) RunJob(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
-	job.JobId = uuid.NewString()
+	job.ID = uuid.NewString()
 	f.registerJob(job)
 	return f.execute(ctx, job)
 }
 
 func (f *LocalJobs) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
 	now := time.Now().In(time.UTC).Unix()
-	if job.JobDeadline > 0 && job.JobDeadline < now {
-		log.Trace().Int64("job_deadline", job.JobDeadline).Int64("now", now).Msg("job skipped - deadline in past")
-		return f.updateStatus(job.JobId, jobs.JobStateCancelled, "deadline in past"), nil
+	if job.Deadline > 0 && job.Deadline < now {
+		log.Trace().Int64("job_deadline", job.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
+		return f.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
 	if job.Unique {
 		key, err := job.HexKey()
 		if err != nil {
-			return f.updateStatus(job.JobId, jobs.JobStateFailed, err.Error()), err
+			return f.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
 		}
 		f.uniqueJobsLock.Lock()
 		delete(f.uniqueJobs, key)
 		f.uniqueJobsLock.Unlock()
 		log.Trace().Interface("job", job).Msgf("unlocked: %s", key)
 	}
-	w, err := f.jobMapper.GetRunner(job.JobType, job.JobArgs)
+	w, err := f.jobMapper.GetRunner(job.Kind, job.Args)
 	if err != nil {
-		return f.updateStatus(job.JobId, jobs.JobStateFailed, err.Error()), err
+		return f.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
 	}
 	if w == nil {
-		return f.updateStatus(job.JobId, jobs.JobStateFailed, "no job"), errors.New("no job")
+		return f.updateStatus(job.ID, jobs.JobStateFailed, "no job"), errors.New("no job")
 	}
 	for _, mwf := range f.middlewares {
 		w = mwf(w, job)
 		if w == nil {
-			return f.updateStatus(job.JobId, jobs.JobStateFailed, "no job"), errors.New("no job")
+			return f.updateStatus(job.ID, jobs.JobStateFailed, "no job"), errors.New("no job")
 		}
 	}
-	f.updateStatus(job.JobId, jobs.JobStateRunning, "")
+	f.updateStatus(job.ID, jobs.JobStateRunning, "")
 	runErr := w.Run(ctx)
 	if runErr != nil {
-		return f.updateStatus(job.JobId, jobs.JobStateFailed, runErr.Error()), runErr
+		return f.updateStatus(job.ID, jobs.JobStateFailed, runErr.Error()), runErr
 	}
-	return f.updateStatus(job.JobId, jobs.JobStateSucceeded, ""), nil
+	return f.updateStatus(job.ID, jobs.JobStateSucceeded, ""), nil
 }
 
 func (f *LocalJobs) Run(ctx context.Context) error {

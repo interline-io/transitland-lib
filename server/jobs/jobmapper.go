@@ -15,19 +15,19 @@ func NewJobMapper() *JobMapper {
 	return &JobMapper{jobFns: map[string]JobFn{}}
 }
 
-func (j *JobMapper) AddJobType(jobFn JobFn) error {
+func (j *JobMapper) Register(jobFn JobFn) error {
 	jw := jobFn()
 	j.jobFns[jw.Kind()] = jobFn
 	return nil
 }
 
-func (j *JobMapper) GetRunner(jobType string, jobArgs JobArgs) (JobWorker, error) {
-	jobFn, ok := j.jobFns[jobType]
+func (j *JobMapper) GetRunner(kind string, args JobArgs) (JobWorker, error) {
+	jobFn, ok := j.jobFns[kind]
 	if !ok {
-		return nil, errors.New("unknown job type")
+		return nil, errors.New("unknown job kind")
 	}
 	runner := jobFn()
-	jw, err := json.Marshal(jobArgs)
+	jw, err := json.Marshal(args)
 	if err != nil {
 		return nil, err
 	}

@@ -51,7 +51,7 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request, do func(jobs.Job
 		return
 	}
 	ctx := req.Context()
-	scopeJobUserId(ctx, &job)
+	scopeJobUserID(ctx, &job)
 	status, err := do(queue, ctx, job)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -60,10 +60,10 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request, do func(jobs.Job
 	writeJSON(w, status)
 }
 
-// scopeJobUserId binds the job's UserId to the authenticated user. Admins may
+// scopeJobUserID binds the job's UserID to the authenticated user. Admins may
 // submit on behalf of any user (e.g. system jobs); non-admins always have
 // their own ID stamped, regardless of what the request body specified.
-func scopeJobUserId(ctx context.Context, job *jobs.Job) {
+func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 	user := authn.ForContext(ctx)
 	if user == nil {
 		return
@@ -71,7 +71,7 @@ func scopeJobUserId(ctx context.Context, job *jobs.Job) {
 	if user.HasRole("admin") {
 		return
 	}
-	job.UserId = user.ID()
+	job.UserID = user.ID()
 }
 
 // requireQueueAndAuth resolves the JobQueue and confirms the request is
@@ -107,7 +107,7 @@ func statusJobRequest(w http.ResponseWriter, req *http.Request) {
 }
 
 // listJobsRequest lists jobs visible to the caller. Non-admins see only their own.
-// Query params: states (comma-separated), user_id, job_type, limit, after.
+// Query params: states (comma-separated), user_id, kind, limit, after.
 func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	queue := requireQueueAndAuth(w, req)
 	if queue == nil {
@@ -115,9 +115,9 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	}
 	q := req.URL.Query()
 	opts := jobs.JobListOptions{
-		UserId:  q.Get("user_id"),
-		JobType: q.Get("job_type"),
-		After:   q.Get("after"),
+		UserID: q.Get("user_id"),
+		Kind:   q.Get("kind"),
+		After:  q.Get("after"),
 	}
 	if v := q.Get("states"); v != "" {
 		for _, s := range strings.Split(v, ",") {
@@ -199,7 +199,7 @@ const sseHeartbeatInterval = 30 * time.Second
 
 // mapJobLookupError translates queue lookup errors to HTTP. ErrJobAccessDenied
 // from the queue means the caller is authenticated but not the owner; we return
-// 404 to avoid leaking that the JobId exists.
+// 404 to avoid leaking that the job ID exists.
 func mapJobLookupError(w http.ResponseWriter, err error) {
 	if errors.Is(err, jobs.ErrJobNotFound) || errors.Is(err, jobs.ErrJobAccessDenied) {
 		http.Error(w, "not found", http.StatusNotFound)

@@ -50,7 +50,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *localjobs.LocalJobs) {
 	t.Helper()
 	q := localjobs.NewLocalJobs()
 	q.SetTerminalTTL(0) // disable eviction during tests
-	if err := q.AddJobType(func() jobs.JobWorker { return &echoWorker{kind: "test"} }); err != nil {
+	if err := q.RegisterWorker(func() jobs.JobWorker { return &echoWorker{kind: "test"} }); err != nil {
 		t.Fatal(err)
 	}
 	cfg := model.Config{JobQueue: q}
@@ -84,13 +84,13 @@ func TestStatusEndpoint(t *testing.T) {
 	stranger := authn.NewCtxUser("bob", "", "")
 
 	// Run a job as alice and grab its JobId.
-	st, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{JobType: "test", UserId: "alice"})
+	st, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Owner: 200.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId, owner))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID, owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,11 +100,11 @@ func TestStatusEndpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
-	assert.Equal(t, st.Job.JobId, got.Job.JobId)
+	assert.Equal(t, st.Job.ID, got.Job.ID)
 	assert.Equal(t, jobs.JobStateSucceeded, got.State)
 
 	// Stranger: 404 (no leak).
-	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId, stranger))
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID, stranger))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	// Unauthenticated: 403.
-	resp, err = http.Get(srv.URL + "/jobs/" + st.Job.JobId)
+	resp, err = http.Get(srv.URL + "/jobs/" + st.Job.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,13 +134,13 @@ func TestListEndpoint(t *testing.T) {
 	admin := authn.NewCtxUser("admin", "", "").WithRoles("admin")
 
 	for i := 0; i < 3; i++ {
-		_, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{JobType: "test", UserId: "alice"})
+		_, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	for i := 0; i < 2; i++ {
-		_, err := q.RunJob(authn.WithUser(context.Background(), admin), jobs.Job{JobType: "test", UserId: "carol"})
+		_, err := q.RunJob(authn.WithUser(context.Background(), admin), jobs.Job{Kind: "test", UserID: "carol"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,7 +171,7 @@ func TestListEndpoint(t *testing.T) {
 	resp.Body.Close()
 	assert.Equal(t, 3, len(mine.Jobs))
 	for _, st := range mine.Jobs {
-		assert.Equal(t, "alice", st.Job.UserId)
+		assert.Equal(t, "alice", st.Job.UserID)
 	}
 
 	// Comma-separated states filter.
@@ -199,12 +199,12 @@ func TestWatchEndpointTerminalReplay(t *testing.T) {
 	srv, q := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
 
-	st, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{JobType: "test", UserId: "alice"})
+	st, err := q.RunJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId+"/watch", owner))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID+"/watch", owner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,13 +225,13 @@ func TestWatchEndpointStreaming(t *testing.T) {
 	q.AddQueue("default", 1)
 
 	// Submit but don't run yet — job stays in queued state.
-	st, err := q.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{JobType: "test", UserId: "alice"})
+	st, err := q.AddJob(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Open the watch before the queue starts running.
-	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.JobId+"/watch", owner))
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, srv.URL+"/jobs/"+st.Job.ID+"/watch", owner))
 	if err != nil {
 		t.Fatal(err)
 	}

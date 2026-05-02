@@ -36,13 +36,13 @@ func (w *JobLogger) AddQueue(queue string, workers int) error {
 	return w.JobQueue.AddQueue(queue, workers)
 }
 
-func (w *JobLogger) AddJobType(jobFn JobFn) error {
-	w.log.Trace().Str("job_type", jobFn().Kind()).Msg("jobs: adding job type")
-	return w.JobQueue.AddJobType(jobFn)
+func (w *JobLogger) RegisterWorker(jobFn JobFn) error {
+	w.log.Trace().Str("kind", jobFn().Kind()).Msg("jobs: registering worker")
+	return w.JobQueue.RegisterWorker(jobFn)
 }
 
 func (w *JobLogger) AddJob(ctx context.Context, job Job) (JobStatus, error) {
-	w.log.Trace().Str("job_type", job.JobType).Any("job_args", job.JobArgs).Msg("jobs: adding job")
+	w.log.Trace().Str("kind", job.Kind).Any("args", job.Args).Msg("jobs: adding job")
 	return w.JobQueue.AddJob(ctx, job)
 }
 
@@ -52,7 +52,7 @@ func (w *JobLogger) AddJobs(ctx context.Context, jobs []Job) ([]JobStatus, error
 }
 
 func (w *JobLogger) RunJob(ctx context.Context, job Job) (JobStatus, error) {
-	w.log.Trace().Str("job_type", job.JobType).Any("job_args", job.JobArgs).Msg("jobs: run job")
+	w.log.Trace().Str("kind", job.Kind).Any("args", job.Args).Msg("jobs: run job")
 	return w.JobQueue.RunJob(ctx, job)
 }
 
@@ -76,7 +76,7 @@ type JobRunLogger struct {
 
 func (w *JobRunLogger) Run(ctx context.Context) error {
 	// Create logger for this job
-	ctxLogger := log.For(ctx).With().Str("job_type", w.job.JobType).Any("job_args", w.job.JobArgs).Logger()
+	ctxLogger := log.For(ctx).With().Str("kind", w.job.Kind).Any("args", w.job.Args).Logger()
 
 	// Attach to the context
 	ctx = ctxLogger.WithContext(ctx)

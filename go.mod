@@ -43,6 +43,7 @@ require (
 	github.com/openfga/go-sdk v0.2.3
 	github.com/openfga/openfga v1.11.5
 	github.com/pkg/errors v0.9.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.34.0
 	github.com/sergi/go-diff v1.3.1
 	github.com/snabb/isoweek v1.0.1

@@ -46,7 +46,7 @@ var ErrJobNotFound = errors.New("job not found")
 type JobQueue interface {
 	Use(JobMiddleware)
 	AddQueue(string, int) error
-	AddJobType(JobFn) error
+	RegisterWorker(JobFn) error
 	AddJob(context.Context, Job) (JobStatus, error)
 	AddJobs(context.Context, []Job) ([]JobStatus, error)
 	AddPeriodicJob(context.Context, func() Job, time.Duration, string) error
@@ -58,25 +58,26 @@ type JobQueue interface {
 	Stop(context.Context) error
 }
 
-// Job defines a single job. JobId is always assigned by the adapter; any
+// Job defines a single job. ID is always assigned by the adapter; any
 // caller-set value is overwritten by AddJob, AddJobs, and RunJob.
+// Kind matches JobWorker.Kind() — that's how the queue routes a job to its worker.
 type Job struct {
-	JobId       string  `json:"job_id"`
-	UserId      string  `json:"user_id"`
-	Queue       string  `json:"queue"`
-	JobType     string  `json:"job_type" river:"unique"`
-	JobArgs     JobArgs `json:"job_args" river:"unique"`
-	JobDeadline int64   `json:"job_deadline"`
-	Unique      bool    `json:"unique"`
+	ID       string  `json:"id"`
+	UserID   string  `json:"user_id"`
+	Queue    string  `json:"queue"`
+	Kind     string  `json:"kind" river:"unique"`
+	Args     JobArgs `json:"args" river:"unique"`
+	Deadline int64   `json:"deadline"`
+	Unique   bool    `json:"unique"`
 }
 
 func (job *Job) HexKey() (string, error) {
-	bytes, err := json.Marshal(job.JobArgs)
+	bytes, err := json.Marshal(job.Args)
 	if err != nil {
 		return "", err
 	}
 	sum := sha1.Sum(bytes)
-	return job.JobType + ":" + hex.EncodeToString(sum[:]), nil
+	return job.Kind + ":" + hex.EncodeToString(sum[:]), nil
 }
 
 // JobStatus is the lifecycle state of a submitted job. JobId and UserId are
@@ -93,7 +94,7 @@ type JobStatus struct {
 
 // JobEvent is emitted on a job state transition or status update.
 type JobEvent struct {
-	JobId   string    `json:"job_id"`
+	JobID   string    `json:"job_id"`
 	State   JobState  `json:"state"`
 	Message string    `json:"message,omitempty"`
 	Time    time.Time `json:"time"`
@@ -103,11 +104,11 @@ type JobEvent struct {
 // cursor returned in JobListResult.NextCursor; callers should pass it back
 // verbatim. The encoding is adapter-specific.
 type JobListOptions struct {
-	States  []JobState
-	UserId  string
-	JobType string
-	Limit   int
-	After   string
+	States []JobState
+	UserID string
+	Kind   string
+	Limit  int
+	After  string
 }
 
 // JobListResult is a page of JobStatus rows plus an opaque cursor for the next page.
@@ -126,7 +127,7 @@ func CheckJobAccess(ctx context.Context, status JobStatus) error {
 	if user.HasRole("admin") {
 		return nil
 	}
-	if user.ID() != "" && user.ID() == status.Job.UserId {
+	if user.ID() != "" && user.ID() == status.Job.UserID {
 		return nil
 	}
 	return ErrJobAccessDenied
