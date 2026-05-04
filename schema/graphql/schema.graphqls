@@ -646,6 +646,10 @@ type Stop {
   alerts(active: Boolean, limit: Int): [Alert!]
   "Matching feature ids from polygon search"
   within_features: Strings
+  "Time this stop record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this stop record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
 """Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaysstxt). Pathways are a graph representation of a subway or train station, with nodes (entrances, platforms, etc) and edges (the pathways). See https://gtfs.org/reference/static/#pathwaystxt"""

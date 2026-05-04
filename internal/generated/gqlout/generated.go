@@ -1101,6 +1101,7 @@ type ComplexityRoot struct {
 		CensusGeographies  func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		ChildLevels        func(childComplexity int, limit *int) int
 		Children           func(childComplexity int, limit *int) int
+		CreatedAt          func(childComplexity int) int
 		Departures         func(childComplexity int, limit *int, where *model.StopTimeFilter) int
 		Directions         func(childComplexity int, to *model.WaypointInput, from *model.WaypointInput, mode *model.StepMode, departAt *time.Time) int
 		ExternalReference  func(childComplexity int) int
@@ -1130,6 +1131,7 @@ type ComplexityRoot struct {
 		StopTimezone       func(childComplexity int) int
 		StopURL            func(childComplexity int) int
 		TtsStopName        func(childComplexity int) int
+		UpdatedAt          func(childComplexity int) int
 		WheelchairBoarding func(childComplexity int) int
 		WithinFeatures     func(childComplexity int) int
 		ZoneID             func(childComplexity int) int
@@ -7163,6 +7165,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Stop.Children(childComplexity, args["limit"].(*int)), true
 
+	case "Stop.created_at":
+		if e.complexity.Stop.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Stop.CreatedAt(childComplexity), true
+
 	case "Stop.departures":
 		if e.complexity.Stop.Departures == nil {
 			break
@@ -7410,6 +7419,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Stop.TtsStopName(childComplexity), true
+
+	case "Stop.updated_at":
+		if e.complexity.Stop.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Stop.UpdatedAt(childComplexity), true
 
 	case "Stop.wheelchair_boarding":
 		if e.complexity.Stop.WheelchairBoarding == nil {
@@ -9945,6 +9961,10 @@ type Stop {
   alerts(active: Boolean, limit: Int): [Alert!]
   "Matching feature ids from polygon search"
   within_features: Strings
+  "Time this stop record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this stop record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
 """Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaysstxt). Pathways are a graph representation of a subway or train station, with nodes (entrances, platforms, etc) and edges (the pathways). See https://gtfs.org/reference/static/#pathwaystxt"""
@@ -24252,6 +24272,10 @@ func (ec *executionContext) fieldContext_FeedVersion_stops(ctx context.Context, 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -38180,6 +38204,10 @@ func (ec *executionContext) fieldContext_Level_stops(_ context.Context, field gr
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -39208,6 +39236,10 @@ func (ec *executionContext) fieldContext_LocationGroup_stops(ctx context.Context
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -39548,6 +39580,10 @@ func (ec *executionContext) fieldContext_LocationGroupStop_stop(_ context.Contex
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -40308,6 +40344,10 @@ func (ec *executionContext) fieldContext_Mutation_stop_create(ctx context.Contex
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -40439,6 +40479,10 @@ func (ec *executionContext) fieldContext_Mutation_stop_update(ctx context.Contex
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -42592,6 +42636,10 @@ func (ec *executionContext) fieldContext_Pathway_from_stop(_ context.Context, fi
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -42712,6 +42760,10 @@ func (ec *executionContext) fieldContext_Pathway_to_stop(_ context.Context, fiel
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -44068,6 +44120,10 @@ func (ec *executionContext) fieldContext_Query_stops(ctx context.Context, field 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -46647,6 +46703,10 @@ func (ec *executionContext) fieldContext_Route_stops(ctx context.Context, field 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -47773,6 +47833,10 @@ func (ec *executionContext) fieldContext_RouteHeadway_stop(_ context.Context, fi
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -48423,6 +48487,10 @@ func (ec *executionContext) fieldContext_RouteStop_stop(_ context.Context, field
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -51097,6 +51165,10 @@ func (ec *executionContext) fieldContext_Stop_parent(_ context.Context, field gr
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -51349,6 +51421,10 @@ func (ec *executionContext) fieldContext_Stop_children(ctx context.Context, fiel
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -52347,6 +52423,10 @@ func (ec *executionContext) fieldContext_Stop_nearby_stops(ctx context.Context, 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -52473,6 +52553,88 @@ func (ec *executionContext) fieldContext_Stop_within_features(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Strings does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Stop_created_at(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Stop_created_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Stop_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Stop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Stop_updated_at(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Stop_updated_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Stop_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Stop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -52755,6 +52917,10 @@ func (ec *executionContext) fieldContext_StopExternalReference_target_active_sto
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -54311,6 +54477,10 @@ func (ec *executionContext) fieldContext_StopTime_stop(_ context.Context, field 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -58029,6 +58199,10 @@ func (ec *executionContext) fieldContext_ValidationReportDetails_stops(ctx conte
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -59236,6 +59410,10 @@ func (ec *executionContext) fieldContext_VehiclePosition_stop_id(_ context.Conte
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -75240,6 +75418,10 @@ func (ec *executionContext) _Stop(ctx context.Context, sel ast.SelectionSet, obj
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "within_features":
 			out.Values[i] = ec._Stop_within_features(ctx, field, obj)
+		case "created_at":
+			out.Values[i] = ec._Stop_created_at(ctx, field, obj)
+		case "updated_at":
+			out.Values[i] = ec._Stop_updated_at(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
