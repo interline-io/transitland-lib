@@ -78,6 +78,52 @@ func TestStopUpdate(t *testing.T) {
 	})
 }
 
+func TestStopUpdate_BumpsUpdatedAt(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+		finder := cfg.Finder
+		ctx := model.WithConfig(context.Background(), cfg)
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
+		fv := model.FeedVersionInput{ID: toPtr(1)}
+		stopInput := model.StopSetInput{
+			FeedVersion: &fv,
+			StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
+			StopName:    toPtr("hello"),
+			Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
+		}
+		eid, err := finder.StopCreate(ctx, stopInput)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Capture timestamps right after create
+		afterCreate := gtfs.Stop{}
+		afterCreate.ID = eid
+		if err := atx.Find(ctx, &afterCreate); err != nil {
+			t.Fatal(err)
+		}
+		// Sleep so the updated_at bump is observably later than created_at
+		// even on fast machines. Postgres timestamps have microsecond precision.
+		time.Sleep(2 * time.Millisecond)
+		stopUpdate := model.StopSetInput{
+			ID:       toPtr(eid),
+			StopName: toPtr("hello again"),
+		}
+		if _, err := finder.StopUpdate(ctx, stopUpdate); err != nil {
+			t.Fatal(err)
+		}
+		afterUpdate := gtfs.Stop{}
+		afterUpdate.ID = eid
+		if err := atx.Find(ctx, &afterUpdate); err != nil {
+			t.Fatal(err)
+		}
+		assert.True(t, afterUpdate.CreatedAt.Equal(afterCreate.CreatedAt),
+			"created_at should not change on update (was %s, now %s)",
+			afterCreate.CreatedAt, afterUpdate.CreatedAt)
+		assert.True(t, afterUpdate.UpdatedAt.After(afterCreate.UpdatedAt),
+			"updated_at should advance on update (was %s, now %s)",
+			afterCreate.UpdatedAt, afterUpdate.UpdatedAt)
+	})
+}
+
 func TestStopReference(t *testing.T) {
 	testStr := func(t *testing.T) string { return fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixNano()) }
 	type stopExternalReference struct {

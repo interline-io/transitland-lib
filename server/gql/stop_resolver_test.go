@@ -244,6 +244,17 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			selector:     "stops.0.route_stops.#.route.route_id",
 			selectExpect: []string{"01", "03", "07"},
 		},
+		{
+			name:  "timestamps",
+			query: `query($stop_id: String!) { stops(where:{stop_id:$stop_id}) { created_at updated_at } }`,
+			vars:  vars,
+			f: func(t *testing.T, jj string) {
+				createdAt := gjson.Get(jj, "stops.0.created_at").String()
+				updatedAt := gjson.Get(jj, "stops.0.updated_at").String()
+				assert.NotEmpty(t, createdAt, "created_at should be exposed and non-empty")
+				assert.NotEmpty(t, updatedAt, "updated_at should be exposed and non-empty")
+			},
+		},
 
 		{
 			name:         "where onestop_id",
