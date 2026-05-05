@@ -285,8 +285,8 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	// Apply sorting if requested
 	if req.Transforms != nil && req.Transforms.StandardizedSort != "" {
 		csvWriter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
-			StandardizedSort:        req.Transforms.StandardizedSort,
-			StandardizedSortColumns: req.Transforms.StandardizedSortColumns,
+			ApplySort:   req.Transforms.StandardizedSort,
+			SortColumns: req.Transforms.StandardizedSortColumns,
 		})
 	}
 
@@ -380,12 +380,9 @@ func validateExportRequest(req *FeedVersionExportRequest) error {
 		return util.NewBadRequestError("only 'gtfs_zip' format is currently supported", nil)
 	}
 
-	// Validate standardized sort order if provided
-	if req.Transforms != nil && req.Transforms.StandardizedSort != "" {
-		switch req.Transforms.StandardizedSort {
-		case adapters.SortAsc, adapters.SortDesc:
-		default:
-			return util.NewBadRequestError(fmt.Sprintf("invalid standardized_sort value: %s (must be 'asc' or 'desc')", req.Transforms.StandardizedSort), nil)
+	if req.Transforms != nil {
+		if err := adapters.ValidateSortDirection(req.Transforms.StandardizedSort); err != nil {
+			return util.NewBadRequestError(fmt.Sprintf("standardized_sort: %s", err), nil)
 		}
 	}
 

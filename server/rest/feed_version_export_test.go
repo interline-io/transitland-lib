@@ -425,7 +425,8 @@ func TestFeedVersionExportRequest(t *testing.T) {
 		rr := makeExportRequest(t, reqBody, asAdmin)
 
 		assert.Equal(t, 400, rr.Result().StatusCode, "should be bad request")
-		assert.Contains(t, rr.Body.String(), "invalid standardized_sort", "error message")
+		assert.Contains(t, rr.Body.String(), "standardized_sort", "error message")
+		assert.Contains(t, rr.Body.String(), "invalid sort direction", "error message")
 	})
 
 	t.Run("bad request - feed version not imported", func(t *testing.T) {

@@ -1,6 +1,10 @@
 package adapters
 
-import "github.com/interline-io/transitland-lib/tt"
+import (
+	"fmt"
+
+	"github.com/interline-io/transitland-lib/tt"
+)
 
 // Writer writes a GTFS feed.
 type Writer interface {
@@ -25,9 +29,20 @@ const (
 	SortDesc = "desc"
 )
 
+// ValidateSortDirection returns nil if s is empty, SortAsc, or SortDesc;
+// otherwise it returns an error listing the valid values. Empty is treated
+// as valid because callers conventionally use it to mean "no sort".
+func ValidateSortDirection(s string) error {
+	switch s {
+	case "", SortAsc, SortDesc:
+		return nil
+	}
+	return fmt.Errorf("invalid sort direction %q (must be %q or %q)", s, SortAsc, SortDesc)
+}
+
 type StandardizedSortOptions struct {
-	StandardizedSort        string   // SortAsc, SortDesc, or "" (no sort).
-	StandardizedSortColumns []string // Optional: specific columns to sort by. If empty, defaults are used.
+	ApplySort   string   // SortAsc, SortDesc, or "" (no sort).
+	SortColumns []string // Optional: specific columns to sort by. If empty, defaults are used.
 }
 
 // SortableWriter is the minimal interface for accepting a sort config.

@@ -485,7 +485,7 @@ func (adapter *DirAdapter) SetStandardizedSortOptions(opts adapters.Standardized
 // the captured per-file defaults; nil signals "skip this file".
 func (adapter *DirAdapter) resolveSortColumns(filename string) []*tags.FieldInfo {
 	captured := adapter.sortColumnsByFile[filename]
-	if len(adapter.sortOptions.StandardizedSortColumns) == 0 {
+	if len(adapter.sortOptions.SortColumns) == 0 {
 		return captured
 	}
 	// User-supplied column names still get type-aware sorting if we recognize them.
@@ -493,8 +493,8 @@ func (adapter *DirAdapter) resolveSortColumns(filename string) []*tags.FieldInfo
 	for _, c := range captured {
 		kindByName[c.Name] = c.Kind
 	}
-	out := make([]*tags.FieldInfo, 0, len(adapter.sortOptions.StandardizedSortColumns))
-	for i, name := range adapter.sortOptions.StandardizedSortColumns {
+	out := make([]*tags.FieldInfo, 0, len(adapter.sortOptions.SortColumns))
+	for i, name := range adapter.sortOptions.SortColumns {
 		out = append(out, &tags.FieldInfo{Name: name, Kind: kindByName[name], SortOrder: i + 1})
 	}
 	return out
@@ -513,7 +513,7 @@ func (adapter *DirAdapter) resolveSortColumns(filename string) []*tags.FieldInfo
 // a different code path. Revisit alongside any general resource-limit
 // work, not as a one-off.
 func (adapter *DirAdapter) StandardizedSortCSVFiles() error {
-	sortOrder := adapter.sortOptions.StandardizedSort
+	sortOrder := adapter.sortOptions.ApplySort
 	if sortOrder == "" {
 		return nil
 	}
@@ -577,7 +577,7 @@ func (adapter *DirAdapter) StandardizedSortCSVFiles() error {
 // Close the adapter. Flushes any buffered GeoJSON files before closing.
 func (adapter *DirAdapter) Close() error {
 	// Sort files if requested
-	if adapter.sortOptions.StandardizedSort != "" {
+	if adapter.sortOptions.ApplySort != "" {
 		if err := adapter.StandardizedSortCSVFiles(); err != nil {
 			return err
 		}
@@ -737,7 +737,7 @@ func NewZipWriterAdapter(path string) *ZipWriterAdapter {
 // Close creates a zip archive of all the written files at the specified destination.
 func (adapter *ZipWriterAdapter) Close() error {
 	// Sort files if requested
-	if adapter.sortOptions.StandardizedSort != "" {
+	if adapter.sortOptions.ApplySort != "" {
 		if err := adapter.DirAdapter.StandardizedSortCSVFiles(); err != nil {
 			return err
 		}

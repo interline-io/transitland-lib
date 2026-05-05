@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
@@ -88,10 +89,13 @@ func (cmd *CopyCommand) Run(ctx context.Context) error {
 		}
 	}
 	if cmd.standardizedSort != "" {
+		if err := adapters.ValidateSortDirection(cmd.standardizedSort); err != nil {
+			return fmt.Errorf("--standardized-sort: %w", err)
+		}
 		if v, ok := writer.(adapters.WriterWithStandardizedSort); ok {
 			v.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
-				StandardizedSort:        cmd.standardizedSort,
-				StandardizedSortColumns: cmd.standardizedSortColumns,
+				ApplySort:   cmd.standardizedSort,
+				SortColumns: cmd.standardizedSortColumns,
 			})
 		} else {
 			return errors.New("writer does not support standardized sort")

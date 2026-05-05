@@ -36,7 +36,7 @@ func TestSortCSVFiles(t *testing.T) {
 		}
 	}
 
-	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortAsc})
+	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{ApplySort: adapters.SortAsc})
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestSortCSVFilesDescending(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortDesc})
+	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{ApplySort: adapters.SortDesc})
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestSortCSVFilesEmptyNumericSqlConvention(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: direction})
+		w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{ApplySort: direction})
 		if err := w.Close(); err != nil {
 			t.Fatal(err)
 		}
@@ -125,8 +125,8 @@ func TestCustomColumnSort(t *testing.T) {
 		t.Fatal(err)
 	}
 	adapter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
-		StandardizedSort:        adapters.SortAsc,
-		StandardizedSortColumns: []string{"custom"},
+		ApplySort:   adapters.SortAsc,
+		SortColumns: []string{"custom"},
 	})
 	if err := adapter.Close(); err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestSortCSVFilesSkipsUnknownFiles(t *testing.T) {
 	if err := adapter.WriteRows("unknown.txt", original); err != nil {
 		t.Fatal(err)
 	}
-	adapter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortAsc})
+	adapter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{ApplySort: adapters.SortAsc})
 	if err := adapter.Close(); err != nil {
 		t.Fatal(err)
 	}
