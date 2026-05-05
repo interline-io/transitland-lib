@@ -25,12 +25,10 @@ const (
 	SortDesc = "desc"
 )
 
-type SortOptions struct {
+type StandardizedSortOptions struct {
 	StandardizedSort        string   // SortAsc, SortDesc, or "" (no sort).
 	StandardizedSortColumns []string // Optional: specific columns to sort by. If empty, defaults are used.
 }
-
-type StandardizedSortOptions = SortOptions
 
 // SortableWriter is the minimal interface for accepting a sort config.
 type SortableWriter interface {

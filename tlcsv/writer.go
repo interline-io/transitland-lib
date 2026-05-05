@@ -147,7 +147,7 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 		h2 := append([]string{}, header...)
 		h2 = append(h2, extraHeader...)
 		writer.WriterAdapter.WriteRows(efn, [][]string{h2})
-		if reg, ok3 := writer.WriterAdapter.(sortColumnRegistrar); ok3 {
+		if reg, okSortReg := writer.WriterAdapter.(sortColumnRegistrar); okSortReg {
 			if cols := MapperCache.GetSortColumns(ent); len(cols) > 0 {
 				reg.registerSortColumns(efn, cols)
 			}

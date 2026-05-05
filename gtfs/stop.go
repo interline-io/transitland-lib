@@ -20,7 +20,7 @@ type Stop struct {
 	StopURL            tt.Url
 	TtsStopName        tt.String
 	PlatformCode       tt.String
-	LocationType       tt.Int `enum:"0,1,2,3,4" standardized_sort:"2"`
+	LocationType       tt.Int `enum:"0,1,2,3,4"`
 	ParentStation      tt.Key `target:"stops.txt"`
 	StopTimezone       tt.Timezone
 	WheelchairBoarding tt.Int   `enum:"0,1,2"`

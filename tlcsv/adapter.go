@@ -500,6 +500,18 @@ func (adapter *DirAdapter) resolveSortColumns(filename string) []*tags.FieldInfo
 	return out
 }
 
+// StandardizedSortCSVFiles sorts every registered .txt file in place.
+//
+// TODO: this loads each file fully into memory (csv.ReadAll + in-memory
+// sort.SliceStable + truncate-and-rewrite). For large feeds, files like
+// stop_times.txt and shapes.txt can be tens of millions of rows and will
+// drive RSS up accordingly. The feature is opt-in, so the cost is only
+// paid when callers ask for it. A streaming external-merge replacement is
+// possible (write sorted runs to temp files, then k-way merge), but the
+// same memory pressure is reachable through other endpoints, so a
+// caller-bounded fix here can be defeated by an attacker who simply hits
+// a different code path. Revisit alongside any general resource-limit
+// work, not as a one-off.
 func (adapter *DirAdapter) StandardizedSortCSVFiles() error {
 	sortOrder := adapter.sortOptions.StandardizedSort
 	if sortOrder == "" {
