@@ -796,12 +796,14 @@ type ComplexityRoot struct {
 	}
 
 	Level struct {
+		CreatedAt  func(childComplexity int) int
 		Geometry   func(childComplexity int) int
 		ID         func(childComplexity int) int
 		LevelID    func(childComplexity int) int
 		LevelIndex func(childComplexity int) int
 		LevelName  func(childComplexity int) int
 		Stops      func(childComplexity int) int
+		UpdatedAt  func(childComplexity int) int
 	}
 
 	Location struct {
@@ -889,6 +891,7 @@ type ComplexityRoot struct {
 	}
 
 	Pathway struct {
+		CreatedAt           func(childComplexity int) int
 		FromStop            func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		IsBidirectional     func(childComplexity int) int
@@ -902,6 +905,7 @@ type ComplexityRoot struct {
 		StairCount          func(childComplexity int) int
 		ToStop              func(childComplexity int) int
 		TraversalTime       func(childComplexity int) int
+		UpdatedAt           func(childComplexity int) int
 	}
 
 	PermissionRef struct {
@@ -5359,6 +5363,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.LegTrip.TripShortName(childComplexity), true
 
+	case "Level.created_at":
+		if e.complexity.Level.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Level.CreatedAt(childComplexity), true
+
 	case "Level.geometry":
 		if e.complexity.Level.Geometry == nil {
 			break
@@ -5400,6 +5411,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Level.Stops(childComplexity), true
+
+	case "Level.updated_at":
+		if e.complexity.Level.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Level.UpdatedAt(childComplexity), true
 
 	case "Location.feed_onestop_id":
 		if e.complexity.Location.FeedOnestopID == nil {
@@ -5967,6 +5985,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PageInfo.StartCursor(childComplexity), true
 
+	case "Pathway.created_at":
+		if e.complexity.Pathway.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Pathway.CreatedAt(childComplexity), true
+
 	case "Pathway.from_stop":
 		if e.complexity.Pathway.FromStop == nil {
 			break
@@ -6057,6 +6082,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Pathway.TraversalTime(childComplexity), true
+
+	case "Pathway.updated_at":
+		if e.complexity.Pathway.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Pathway.UpdatedAt(childComplexity), true
 
 	case "PermissionRef.id":
 		if e.complexity.PermissionRef.ID == nil {
@@ -9995,6 +10027,10 @@ type Pathway {
   from_stop: Stop!
   "Pathway ends at this stop"
   to_stop: Stop!
+  "Time this pathway record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this pathway record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
 """Record from a static GTFS [levels.txt](https://gtfs.org/reference/static/#levelstxt). Levels describes different levels of a station; used in conjunction with pathways."""
@@ -10011,6 +10047,10 @@ type Level {
   geometry: MultiPolygon!
   "Stops associated with this level"
   stops: [Stop!]
+  "Time this level record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this level record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
 """Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file optionally enriched with by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages."""
@@ -38215,6 +38255,88 @@ func (ec *executionContext) fieldContext_Level_stops(_ context.Context, field gr
 	return fc, nil
 }
 
+func (ec *executionContext) _Level_created_at(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Level_created_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Level_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Level",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Level_updated_at(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Level_updated_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Level_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Level",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Location_id(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Location_id(ctx, field)
 	if err != nil {
@@ -40611,6 +40733,10 @@ func (ec *executionContext) fieldContext_Mutation_level_create(ctx context.Conte
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -40680,6 +40806,10 @@ func (ec *executionContext) fieldContext_Mutation_level_update(ctx context.Conte
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -40822,6 +40952,10 @@ func (ec *executionContext) fieldContext_Mutation_pathway_create(ctx context.Con
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -40905,6 +41039,10 @@ func (ec *executionContext) fieldContext_Mutation_pathway_update(ctx context.Con
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -42766,6 +42904,88 @@ func (ec *executionContext) fieldContext_Pathway_to_stop(_ context.Context, fiel
 				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Pathway_created_at(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Pathway_created_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Pathway_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pathway",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Pathway_updated_at(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Pathway_updated_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Pathway_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pathway",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -51048,6 +51268,10 @@ func (ec *executionContext) fieldContext_Stop_level(_ context.Context, field gra
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -51565,6 +51789,10 @@ func (ec *executionContext) fieldContext_Stop_child_levels(ctx context.Context, 
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -51648,6 +51876,10 @@ func (ec *executionContext) fieldContext_Stop_pathways_from_stop(ctx context.Con
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -51731,6 +51963,10 @@ func (ec *executionContext) fieldContext_Stop_pathways_to_stop(ctx context.Conte
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -71440,6 +71676,10 @@ func (ec *executionContext) _Level(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "created_at":
+			out.Values[i] = ec._Level_created_at(ctx, field, obj)
+		case "updated_at":
+			out.Values[i] = ec._Level_updated_at(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -72396,6 +72636,10 @@ func (ec *executionContext) _Pathway(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "created_at":
+			out.Values[i] = ec._Pathway_created_at(ctx, field, obj)
+		case "updated_at":
+			out.Values[i] = ec._Pathway_updated_at(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
