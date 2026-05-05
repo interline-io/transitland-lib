@@ -196,7 +196,7 @@ func TestAgencyResolver(t *testing.T) {
 
 func TestAgencyResolver_Cursor(t *testing.T) {
 	c, cfg := newTestClient(t)
-	ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+	ctx := model.WithConfigAndPerms(context.Background(), cfg)
 	allEnts, err := cfg.Finder.FindAgencies(ctx, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)

@@ -187,9 +187,8 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
 	cfg := model.ForContext(ctx)
 
-	// Both "feed does not exist" and "caller may not fetch this feed" return
-	// authz.ErrUnauthorized so an unauthorized caller cannot probe feed
-	// existence by error message. The actual reason is logged for ops.
+	// Both not-found and not-authorized return ErrUnauthorized — distinguishing
+	// them would let unauthorized callers probe feed existence.
 	feeds, err := cfg.Finder.FindFeeds(ctx, nil, nil, nil, &model.FeedFilter{OnestopID: &feedId})
 	if err != nil {
 		return nil, err

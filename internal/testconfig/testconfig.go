@@ -36,10 +36,8 @@ type Options struct {
 	FGAEndpoint    string
 	FGAModelFile   string
 	FGAModelTuples []authz.TupleKey
-	// AllowAll installs a permissive AllowAllChecker (every Check passes,
-	// IsGlobalAdmin returns true). Tests that exercise mutations need this.
-	// Default is a DenyAllChecker, paired with IncludePublic=true so read-side
-	// tests continue to see public feeds. Ignored when FGAEndpoint is set.
+	// AllowAll installs an AllowAllChecker. Required for tests that exercise
+	// mutations. Ignored when FGAEndpoint is set.
 	AllowAll bool
 }
 
@@ -102,10 +100,8 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	}
 	cl := &clock.Mock{T: when}
 
-	// Setup Checker. model.Config requires a non-nil Checker, so the default
-	// is a DenyAllChecker (denies every per-feed check, IsGlobalAdmin=false).
-	// Read-side tests still see public feeds because IncludePublic defaults
-	// to true below. Mutation tests must pass AllowAll: true.
+	// model.Config requires a non-nil Checker. Default to deny-all; read-side
+	// tests still see public feeds via IncludePublic=true below.
 	var checker model.Checker = &authz.DenyAllChecker{}
 	if opts.AllowAll {
 		checker = &authz.AllowAllChecker{}

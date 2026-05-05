@@ -24,9 +24,6 @@ func TestAddConfig_NoPanicWithChecker(t *testing.T) {
 		}
 	}()
 	mw := AddConfig(Config{Checker: &authz.DenyAllChecker{}})
-	// Exercise the returned middleware end-to-end so the test asserts
-	// AddConfig produces a usable handler, not just that construction
-	// doesn't panic.
 	srv := httptest.NewServer(mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL)

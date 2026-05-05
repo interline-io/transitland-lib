@@ -277,7 +277,7 @@ func TestStopRequest_Format(t *testing.T) {
 
 func TestStopRequest_Pagination(t *testing.T) {
 	cfg := testconfig.Config(t, testconfig.Options{})
-	ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+	ctx := model.WithConfigAndPerms(context.Background(), cfg)
 	allEnts, err := cfg.Finder.FindStops(ctx, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)

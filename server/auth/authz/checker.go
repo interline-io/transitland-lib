@@ -84,9 +84,8 @@ type AdminManager interface {
 	GroupSave(ctx context.Context, req *GroupSaveRequest) (*GroupSaveResponse, error)
 }
 
-// userInfoFromAuthn surfaces the authn user (when present) as a UserInfo.
-// Used by both convenience checkers so identity is preserved regardless of
-// whether the deployment is permitting or denying authorization checks.
+// userInfoFromAuthn lets the convenience checkers expose authn identity
+// without coupling identity to authorization decisions.
 func userInfoFromAuthn(ctx context.Context) *UserInfo {
 	user := authn.ForContext(ctx)
 	if user == nil {
@@ -100,18 +99,10 @@ func userInfoFromAuthn(ctx context.Context) *UserInfo {
 	}
 }
 
-// AllowAllChecker implements Checker and always grants access (every Check
-// returns true, IsGlobalAdmin returns true). This is the deliberate "allow
-// all" implementation: model.Config requires a non-nil Checker, so callers
-// that want to opt out of authorization must install this explicitly. Pairs
-// with DenyAllChecker as the two convenience defaults.
-//
-// Me() surfaces the authn user (when present) so the GraphQL `me` query
-// continues to return identity in demo binaries and tests.
-//
-// Appropriate use cases: demo binaries, integration tests that are not
-// exercising authorization. Never use in a deployment that is expected
-// to enforce per-feed permissions.
+// AllowAllChecker is the explicit "allow all" Checker — install it when a
+// deployment wants to opt out of authorization. Pairs with DenyAllChecker.
+// Use only in demo binaries or tests; never in a deployment that enforces
+// per-feed permissions.
 type AllowAllChecker struct{}
 
 func (c *AllowAllChecker) Me(ctx context.Context) (*UserInfo, error) {
@@ -130,14 +121,9 @@ func (c *AllowAllChecker) Check(ctx context.Context, obj ObjectRef, action Actio
 	return true, nil
 }
 
-// DenyAllChecker implements Checker and denies everything: no global admin,
-// no listed objects, no Check ever returns true. Use this as the default
-// when a deployment wants "anonymous = no access" — combine with
-// model.Config.IncludePublic = true if anonymous callers should still see
-// public feeds via the deployment-wide public-feed policy.
-//
-// Me() surfaces the authn user (when present) so identity is still visible
-// to callers; this Checker only restricts authorization, not who is asking.
+// DenyAllChecker is the explicit "deny all" Checker — install it when
+// callers should have no per-feed access. Combine with
+// model.Config.IncludePublic = true to still expose public feeds.
 type DenyAllChecker struct{}
 
 func (c *DenyAllChecker) Me(ctx context.Context) (*UserInfo, error) {

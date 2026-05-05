@@ -23,7 +23,7 @@ func TestTripRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+	ctx := model.WithConfigAndPerms(context.Background(), cfg)
 	d, err := makeGraphQLRequest(ctx, graphqlHandler, `query{routes(where:{feed_onestop_id:"BA",route_id:"11"}) {id onestop_id}}`, nil)
 	if err != nil {
 		t.Error("failed to get route id for tests")

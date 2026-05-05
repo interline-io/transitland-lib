@@ -171,11 +171,8 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		MaxRadius:               cmd.MaxRadius,
 	}
 
-	// This demo binary always runs with authorization disabled — it does
-	// not wire up a real Checker. Callers that need enforced authorization
-	// must compose their own binary using this package as a library.
-	// IncludePublic preserves the historical behavior where public feeds are
-	// visible without per-feed grants.
+	// Demo binary: authorization disabled. Production deployments should
+	// compose their own binary with a real Checker.
 	cfg.Checker = allowAllCheckerInstance
 	cfg.IncludePublic = true
 	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
@@ -255,5 +252,4 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	return srv.ListenAndServe()
 }
 
-// allowAllCheckerInstance disables all feed authorization checks.
 var allowAllCheckerInstance = &authz.AllowAllChecker{}

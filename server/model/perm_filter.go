@@ -9,8 +9,8 @@ import (
 
 // PermFilter holds permission-based filtering criteria for feeds and feed versions.
 // When IsGlobalAdmin is true, no filtering is applied (unrestricted access).
-// Otherwise, access is restricted to the specified AllowedFeeds and AllowedFeedVersions IDs,
-// plus rows where feed_states.public = true if IncludePublic is set.
+// Otherwise, access is restricted to AllowedFeeds and AllowedFeedVersions IDs,
+// plus feed_states.public rows if IncludePublic is set.
 type PermFilter struct {
 	AllowedFeeds        []int
 	AllowedFeedVersions []int
@@ -77,9 +77,8 @@ func PermsForContext(ctx context.Context) *PermFilter {
 }
 
 // WithPerms populates permission filters in the context using the provided Checker.
-// includePublic is the deployment-wide policy for public-feed visibility — when true,
-// the resulting PermFilter will include rows where feed_states.public = true. The
-// flag is OR-merged with any existing PermFilter already in context.
+// includePublic carries the deployment-wide public-feed policy onto the resulting
+// PermFilter.
 //
 // If an existing PermFilter is already set in context (e.g., via WithPermFilter),
 // the checker's results are merged into a new PermFilter (the original is not mutated).

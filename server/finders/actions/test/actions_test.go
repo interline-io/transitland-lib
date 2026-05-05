@@ -43,7 +43,7 @@ func TestGbfsFetch(t *testing.T) {
 	ts := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer ts.Close()
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
-		ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+		ctx := model.WithConfigAndPerms(context.Background(), cfg)
 		if err := actions.GbfsFetch(ctx, "test-gbfs", ts.URL+"/gbfs.json"); err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +165,7 @@ func TestStaticFetchWorker(t *testing.T) {
 			// Setup job
 			feedUrl := ts.URL + "/" + tc.serveFile
 			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
-				ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+				ctx := model.WithConfigAndPerms(context.Background(), cfg)
 				// Run job
 				if result, err := actions.StaticFetch(ctx, tc.feedId, nil, feedUrl); err != nil && !tc.expectError {
 					_ = result
@@ -241,11 +241,9 @@ func TestValidateUpload(t *testing.T) {
 			ts := testutil.NewTestServer(testdata.Path())
 			defer ts.Close()
 
-			// Setup job. ValidateUpload does not consult Checker or PermFilter,
-			// but the testconfig invariant requires a non-nil Checker — AllowAll
-			// keeps the setup consistent with the other action tests.
+			// AllowAll for setup-consistency; ValidateUpload doesn't consult Checker.
 			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
-				ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+				ctx := model.WithConfigAndPerms(context.Background(), cfg)
 				// Run job
 				feedUrl := ts.URL + "/" + tc.serveFile
 				var rturls []string

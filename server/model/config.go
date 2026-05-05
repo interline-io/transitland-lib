@@ -22,11 +22,8 @@ type Config struct {
 	DisableImage             bool
 	UseMaterialized          bool
 	AllowHTTPFetchUnfiltered bool
-	// IncludePublic, when true, includes feed_states.public = true rows in
-	// read queries regardless of the caller's per-feed permissions. This is
-	// the deployment-wide policy for public-feed visibility. When false,
-	// callers see only feeds explicitly granted to them by the Checker
-	// (or all rows if the Checker reports global admin).
+	// IncludePublic, when true, exposes feed_states.public rows to all callers
+	// regardless of per-feed Checker grants. Deployment-wide policy.
 	IncludePublic           bool
 	RestPrefix              string
 	Storage                 string
@@ -70,4 +67,10 @@ func AddConfig(cfg Config) func(http.Handler) http.Handler {
 
 func AddConfigAndPerms(cfg Config, next http.Handler) http.Handler {
 	return AddPerms(cfg.Checker, cfg.IncludePublic)(AddConfig(cfg)(next))
+}
+
+// WithConfigAndPerms is the context-only equivalent of AddConfigAndPerms,
+// for non-HTTP entry points (background jobs, tests).
+func WithConfigAndPerms(ctx context.Context, cfg Config) context.Context {
+	return WithPerms(WithConfig(ctx, cfg), cfg.Checker, cfg.IncludePublic)
 }
