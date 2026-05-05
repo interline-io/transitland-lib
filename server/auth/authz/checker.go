@@ -1,6 +1,10 @@
 package authz
 
-import "context"
+import (
+	"context"
+
+	"github.com/interline-io/transitland-lib/server/auth/authn"
+)
 
 // ObjectRef identifies an entity in the authorization system.
 type ObjectRef struct {
@@ -80,29 +84,63 @@ type AdminManager interface {
 	GroupSave(ctx context.Context, req *GroupSaveRequest) (*GroupSaveResponse, error)
 }
 
-// GlobalAdminChecker implements Checker and always grants access.
-// This is the deliberate "allow all" implementation: callers that do not
-// configure a real Checker must install this explicitly to opt out of
-// authorization. The library itself fails closed when Checker is nil; do
-// not rely on a nil Checker as an implicit "no auth" mode.
+// AllowAllChecker implements Checker and always grants access (every Check
+// returns true, IsGlobalAdmin returns true). This is the deliberate "allow
+// all" implementation: model.Config requires a non-nil Checker, so callers
+// that want to opt out of authorization must install this explicitly. Pairs
+// with DenyAllChecker as the two convenience defaults.
 //
 // Appropriate use cases: demo binaries, integration tests that are not
 // exercising authorization. Never use in a deployment that is expected
 // to enforce per-feed permissions.
-type GlobalAdminChecker struct{}
+type AllowAllChecker struct{}
 
-func (c *GlobalAdminChecker) Me(ctx context.Context) (*UserInfo, error) {
+func (c *AllowAllChecker) Me(ctx context.Context) (*UserInfo, error) {
 	return &UserInfo{}, nil
 }
 
-func (c *GlobalAdminChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
+func (c *AllowAllChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (c *GlobalAdminChecker) ListObjects(ctx context.Context, objType ObjectType) ([]ObjectRef, error) {
+func (c *AllowAllChecker) ListObjects(ctx context.Context, objType ObjectType) ([]ObjectRef, error) {
 	return nil, nil
 }
 
-func (c *GlobalAdminChecker) Check(ctx context.Context, obj ObjectRef, action Action) (bool, error) {
+func (c *AllowAllChecker) Check(ctx context.Context, obj ObjectRef, action Action) (bool, error) {
 	return true, nil
+}
+
+// DenyAllChecker implements Checker and denies everything: no global admin,
+// no listed objects, no Check ever returns true. Use this as the default
+// when a deployment wants "anonymous = no access" — combine with
+// model.Config.IncludePublic = true if anonymous callers should still see
+// public feeds via the deployment-wide public-feed policy.
+//
+// Me() surfaces the authn user (when present) so identity is still visible
+// to callers; this Checker only restricts authorization, not who is asking.
+type DenyAllChecker struct{}
+
+func (c *DenyAllChecker) Me(ctx context.Context) (*UserInfo, error) {
+	if user := authn.ForContext(ctx); user != nil {
+		return &UserInfo{
+			ID:    user.ID(),
+			Name:  user.Name(),
+			Email: user.Email(),
+			Roles: user.Roles(),
+		}, nil
+	}
+	return &UserInfo{}, nil
+}
+
+func (c *DenyAllChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
+	return false, nil
+}
+
+func (c *DenyAllChecker) ListObjects(ctx context.Context, objType ObjectType) ([]ObjectRef, error) {
+	return nil, nil
+}
+
+func (c *DenyAllChecker) Check(ctx context.Context, obj ObjectRef, action Action) (bool, error) {
+	return false, nil
 }

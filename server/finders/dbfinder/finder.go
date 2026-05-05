@@ -207,7 +207,9 @@ func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuil
 	q = q.Join("feed_states fsp on fsp.feed_id = current_feeds.id").
 		Where(sq.Eq{"current_feeds.deleted_at": nil})
 	sqOr := sq.Or{}
-	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
+	if permFilter.GetIncludePublic() {
+		sqOr = append(sqOr, sq.Expr("fsp.public = true"))
+	}
 	sqOr = append(sqOr, In("fsp.feed_id", permFilter.GetAllowedFeeds()))
 	if permFilter.GetIsGlobalAdmin() {
 		sqOr = append(sqOr, sq.Expr("1=1")) // Global admin: allow all rows
@@ -220,7 +222,9 @@ func pfJoinCheckFv(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBu
 		Where(sq.Eq{"current_feeds.deleted_at": nil}).
 		Where(sq.Eq{"feed_versions.deleted_at": nil})
 	sqOr := sq.Or{}
-	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
+	if permFilter.GetIncludePublic() {
+		sqOr = append(sqOr, sq.Expr("fsp.public = true"))
+	}
 	sqOr = append(sqOr, In("feed_versions.feed_id", permFilter.GetAllowedFeeds()))
 	sqOr = append(sqOr, In("feed_versions.id", permFilter.GetAllowedFeedVersions()))
 	if permFilter.GetIsGlobalAdmin() {

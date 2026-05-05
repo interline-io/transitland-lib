@@ -174,7 +174,10 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// This demo binary always runs with authorization disabled — it does
 	// not wire up a real Checker. Callers that need enforced authorization
 	// must compose their own binary using this package as a library.
-	cfg.Checker = globalAdminCheckerInstance
+	// IncludePublic preserves the historical behavior where public feeds are
+	// visible without per-feed grants.
+	cfg.Checker = allowAllCheckerInstance
+	cfg.IncludePublic = true
 	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
 
 	// Setup router
@@ -203,7 +206,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	}))
 
 	// PermFilter context
-	root.Use(model.AddPerms(cfg.Checker))
+	root.Use(model.AddPerms(cfg.Checker, cfg.IncludePublic))
 
 	// Profiling
 	root.HandleFunc("/debug/pprof/", pprof.Index)
@@ -252,5 +255,5 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	return srv.ListenAndServe()
 }
 
-// globalAdminChecker disables all feed authorization checks.
-var globalAdminCheckerInstance = &authz.GlobalAdminChecker{}
+// allowAllCheckerInstance disables all feed authorization checks.
+var allowAllCheckerInstance = &authz.AllowAllChecker{}

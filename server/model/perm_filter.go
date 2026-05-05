@@ -9,11 +9,13 @@ import (
 
 // PermFilter holds permission-based filtering criteria for feeds and feed versions.
 // When IsGlobalAdmin is true, no filtering is applied (unrestricted access).
-// Otherwise, access is restricted to the specified AllowedFeeds and AllowedFeedVersions IDs.
+// Otherwise, access is restricted to the specified AllowedFeeds and AllowedFeedVersions IDs,
+// plus rows where feed_states.public = true if IncludePublic is set.
 type PermFilter struct {
 	AllowedFeeds        []int
 	AllowedFeedVersions []int
 	IsGlobalAdmin       bool
+	IncludePublic       bool
 }
 
 func (pf *PermFilter) GetAllowedFeeds() []int {
@@ -36,6 +38,13 @@ func (pf *PermFilter) GetIsGlobalAdmin() bool {
 		return false
 	}
 	return pf.IsGlobalAdmin
+}
+
+func (pf *PermFilter) GetIncludePublic() bool {
+	if pf == nil {
+		return false
+	}
+	return pf.IncludePublic
 }
 
 // dedupeInts returns a new slice with duplicate values removed, preserving order.
@@ -68,6 +77,10 @@ func PermsForContext(ctx context.Context) *PermFilter {
 }
 
 // WithPerms populates permission filters in the context using the provided Checker.
+// includePublic is the deployment-wide policy for public-feed visibility — when true,
+// the resulting PermFilter will include rows where feed_states.public = true. The
+// flag is OR-merged with any existing PermFilter already in context.
+//
 // If an existing PermFilter is already set in context (e.g., via WithPermFilter),
 // the checker's results are merged into a new PermFilter (the original is not mutated).
 //
@@ -75,11 +88,13 @@ func PermsForContext(ctx context.Context) *PermFilter {
 //   - No existing filter: checker results are used directly
 //   - Existing filter + checker results: creates new filter with merged, deduplicated IDs
 //   - Either filter has IsGlobalAdmin=true: resulting filter has IsGlobalAdmin=true
-func WithPerms(ctx context.Context, checker Checker) context.Context {
+//   - Either filter has IncludePublic=true: resulting filter has IncludePublic=true
+func WithPerms(ctx context.Context, checker Checker, includePublic bool) context.Context {
 	checkerPf, err := checkActive(ctx, checker)
 	if err != nil {
 		panic(err)
 	}
+	checkerPf.IncludePublic = includePublic
 
 	existing, hasExisting := ctx.Value(pfCtxKey).(*PermFilter)
 
@@ -100,6 +115,7 @@ func WithPerms(ctx context.Context, checker Checker) context.Context {
 			AllowedFeeds:        dedupeInts(mergedFeeds),
 			AllowedFeedVersions: dedupeInts(mergedFvs),
 			IsGlobalAdmin:       existing.IsGlobalAdmin || checkerPf.IsGlobalAdmin,
+			IncludePublic:       existing.IncludePublic || checkerPf.IncludePublic,
 		}
 		return context.WithValue(ctx, pfCtxKey, merged)
 	}
@@ -108,11 +124,11 @@ func WithPerms(ctx context.Context, checker Checker) context.Context {
 	return context.WithValue(ctx, pfCtxKey, checkerPf)
 }
 
-func AddPerms(checker Checker) func(http.Handler) http.Handler {
+func AddPerms(checker Checker, includePublic bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			r = r.WithContext(WithPerms(ctx, checker))
+			r = r.WithContext(WithPerms(ctx, checker, includePublic))
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -127,10 +143,10 @@ func refsToInts(refs []authz.ObjectRef) []int {
 }
 
 func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
-	active := &PermFilter{}
 	if checker == nil {
-		return active, nil
+		panic("model.checkActive: Checker must be non-nil; install authz.DenyAllChecker for the deny-all default")
 	}
+	active := &PermFilter{}
 
 	if ok, err := checker.IsGlobalAdmin(ctx); err != nil {
 		return nil, err

@@ -216,7 +216,7 @@ func TestWithPermFilter(t *testing.T) {
 
 		// Simulate what WithPerms would do - it should create a new filter
 		checker := &mockChecker{feeds: []int{4, 5}}
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		// Original should be unchanged
 		if !reflect.DeepEqual(original.AllowedFeeds, []int{1, 2, 3}) {
@@ -240,7 +240,7 @@ func TestWithPerms(t *testing.T) {
 	t.Run("no existing filter - sets checker result", func(t *testing.T) {
 		ctx := context.Background()
 		checker := &mockChecker{feeds: []int{1, 2}, feedVersions: []int{10, 20}}
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
@@ -257,7 +257,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{3, 4}, feedVersions: []int{20, 30}}
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2, 3, 4}) {
@@ -275,7 +275,7 @@ func TestWithPerms(t *testing.T) {
 
 		// Checker returns overlapping IDs
 		checker := &mockChecker{feeds: []int{2, 3, 4}, feedVersions: []int{20, 30}}
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2, 3, 4}) {
@@ -292,7 +292,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{3}, feedVersions: []int{20}}
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		pf := PermsForContext(ctx)
 		if pf == existing {
@@ -306,7 +306,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{isAdmin: true}
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		// For admin, the filter should have IsGlobalAdmin=true
 		pf := PermsForContext(ctx)
@@ -321,7 +321,7 @@ func TestWithPerms(t *testing.T) {
 	t.Run("global admin - no existing filter", func(t *testing.T) {
 		ctx := context.Background()
 		checker := &mockChecker{isAdmin: true}
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		pf := PermsForContext(ctx)
 		if pf == nil {
@@ -332,30 +332,39 @@ func TestWithPerms(t *testing.T) {
 		}
 	})
 
-	t.Run("nil checker - returns empty filter", func(t *testing.T) {
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
 		ctx := context.Background()
-		ctx = WithPerms(ctx, nil)
+		WithPerms(ctx, nil, false)
+	})
+
+	t.Run("includePublic propagates onto PermFilter", func(t *testing.T) {
+		ctx := context.Background()
+		checker := &mockChecker{feeds: []int{1}}
+		ctx = WithPerms(ctx, checker, true)
 
 		pf := PermsForContext(ctx)
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 || len(pf.AllowedFeedVersions) != 0 {
-			t.Error("expected empty PermFilter")
+		if !pf.GetIncludePublic() {
+			t.Error("expected IncludePublic to be true")
 		}
 	})
 
-	t.Run("nil checker with existing filter - merges empty", func(t *testing.T) {
+	t.Run("includePublic merges OR with existing filter", func(t *testing.T) {
 		ctx := context.Background()
-		existing := &PermFilter{AllowedFeeds: []int{1, 2}, AllowedFeedVersions: []int{10}}
+		existing := &PermFilter{IncludePublic: true}
 		ctx = WithPermFilter(ctx, existing)
 
-		ctx = WithPerms(ctx, nil)
+		// Even though includePublic=false is passed, the existing IncludePublic=true is preserved
+		checker := &mockChecker{feeds: []int{1}}
+		ctx = WithPerms(ctx, checker, false)
 
 		pf := PermsForContext(ctx)
-		// Should merge existing with empty checker result
-		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
-			t.Errorf("expected feeds [1, 2], got %v", pf.AllowedFeeds)
+		if !pf.GetIncludePublic() {
+			t.Error("expected IncludePublic to remain true after merge")
 		}
 	})
 
@@ -365,7 +374,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{1, 2}} // non-admin checker
-		ctx = WithPerms(ctx, checker)
+		ctx = WithPerms(ctx, checker, false)
 
 		pf := PermsForContext(ctx)
 		if !pf.IsGlobalAdmin {
@@ -393,7 +402,7 @@ func TestWithPerms_ThreadSafety(t *testing.T) {
 		ctx = WithPermFilter(ctx, original)
 
 		checker := &mockChecker{feeds: []int{4, 5}, feedVersions: []int{30}}
-		_ = WithPerms(ctx, checker)
+		_ = WithPerms(ctx, checker, false)
 
 		// Verify original was not mutated
 		if !reflect.DeepEqual(original.AllowedFeeds, originalFeedsCopy) {
@@ -403,18 +412,13 @@ func TestWithPerms_ThreadSafety(t *testing.T) {
 }
 
 func TestCheckActive(t *testing.T) {
-	t.Run("nil checker returns empty filter", func(t *testing.T) {
-		ctx := context.Background()
-		pf, err := checkActive(ctx, nil)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 {
-			t.Error("expected empty AllowedFeeds")
-		}
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
+		_, _ = checkActive(context.Background(), nil)
 	})
 
 	t.Run("checker returns feeds and versions", func(t *testing.T) {
@@ -444,6 +448,27 @@ func TestCheckActive(t *testing.T) {
 		}
 		if !pf.IsGlobalAdmin {
 			t.Error("expected IsGlobalAdmin to be true")
+		}
+	})
+}
+
+func TestPermFilter_GetIncludePublic(t *testing.T) {
+	t.Run("nil receiver", func(t *testing.T) {
+		var pf *PermFilter
+		if pf.GetIncludePublic() {
+			t.Error("expected false for nil receiver")
+		}
+	})
+	t.Run("default false", func(t *testing.T) {
+		pf := &PermFilter{}
+		if pf.GetIncludePublic() {
+			t.Error("expected false")
+		}
+	})
+	t.Run("true", func(t *testing.T) {
+		pf := &PermFilter{IncludePublic: true}
+		if !pf.GetIncludePublic() {
+			t.Error("expected true")
 		}
 	})
 }

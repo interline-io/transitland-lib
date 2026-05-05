@@ -548,7 +548,8 @@ func TestRouteResolver_Segments(t *testing.T) {
 
 func TestRouteResolver_Cursor(t *testing.T) {
 	c, cfg := newTestClient(t)
-	allEnts, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+	allEnts, err := cfg.Finder.FindRoutes(ctx, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

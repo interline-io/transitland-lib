@@ -42,8 +42,8 @@ func (t *testWorker) Run(ctx context.Context) error {
 func TestGbfsFetch(t *testing.T) {
 	ts := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer ts.Close()
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
-		ctx := model.WithConfig(context.Background(), cfg)
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
 		if err := actions.GbfsFetch(ctx, "test-gbfs", ts.URL+"/gbfs.json"); err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +165,7 @@ func TestStaticFetchWorker(t *testing.T) {
 			// Setup job
 			feedUrl := ts.URL + "/" + tc.serveFile
 			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
-				ctx := model.WithConfig(context.Background(), cfg)
+				ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
 				// Run job
 				if result, err := actions.StaticFetch(ctx, tc.feedId, nil, feedUrl); err != nil && !tc.expectError {
 					_ = result

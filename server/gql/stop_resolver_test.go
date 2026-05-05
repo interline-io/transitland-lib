@@ -863,7 +863,8 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 func stopResolverCursorTestcases(t *testing.T, cfg model.Config) []testcase {
 	// First 1000 stops...
 	dbf := cfg.Finder
-	allEnts, err := dbf.FindStops(context.Background(), nil, nil, nil, nil)
+	ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+	allEnts, err := dbf.FindStops(ctx, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

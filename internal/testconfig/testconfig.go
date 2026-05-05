@@ -36,9 +36,10 @@ type Options struct {
 	FGAEndpoint    string
 	FGAModelFile   string
 	FGAModelTuples []authz.TupleKey
-	// AllowAll installs a permissive GlobalAdminChecker. Tests that exercise
-	// mutations need this because the library now denies mutations when no
-	// Checker is configured. Ignored when FGAEndpoint is set.
+	// AllowAll installs a permissive AllowAllChecker (every Check passes,
+	// IsGlobalAdmin returns true). Tests that exercise mutations need this.
+	// Default is a DenyAllChecker, paired with IncludePublic=true so read-side
+	// tests continue to see public feeds. Ignored when FGAEndpoint is set.
 	AllowAll bool
 }
 
@@ -101,13 +102,13 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	}
 	cl := &clock.Mock{T: when}
 
-	// Setup Checker. Default is nil so that read-side tests continue to
-	// see the "anonymous" view (only public feeds). Mutation tests must
-	// pass AllowAll: true — the library now fails closed on mutations
-	// when Checker is nil.
-	var checker model.Checker
+	// Setup Checker. model.Config requires a non-nil Checker, so the default
+	// is a DenyAllChecker (denies every per-feed check, IsGlobalAdmin=false).
+	// Read-side tests still see public feeds because IncludePublic defaults
+	// to true below. Mutation tests must pass AllowAll: true.
+	var checker model.Checker = &authz.DenyAllChecker{}
 	if opts.AllowAll {
-		checker = &authz.GlobalAdminChecker{}
+		checker = &authz.AllowAllChecker{}
 	}
 	if opts.FGAEndpoint != "" {
 		fgaClient, fgaErr := fga.NewFGAClient(opts.FGAEndpoint, "", "")
@@ -178,6 +179,7 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		RTFinder:                 rtf,
 		GbfsFinder:               gbf,
 		Checker:                  checker,
+		IncludePublic:            true,
 		JobQueue:                 jobQueue,
 		Actions:                  actionFinder,
 		Clock:                    cl,

@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFinder_FindFeedVersionServiceWindow(t *testing.T) {
-	ctx := context.Background()
+	ctx := model.WithPermFilter(context.Background(), &model.PermFilter{IsGlobalAdmin: true})
 	db := testutil.MustOpenTestDB(t)
 	dbf := NewFinder(dbutil.WithQueryLogger(db, false, 0))
 	testFinder := dbf

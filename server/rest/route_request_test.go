@@ -159,7 +159,8 @@ func TestRouteRequest_Format(t *testing.T) {
 
 func TestRouteRequest_Pagination(t *testing.T) {
 	cfg := testconfig.Config(t, testconfig.Options{})
-	allEnts, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+	allEnts, err := cfg.Finder.FindRoutes(ctx, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

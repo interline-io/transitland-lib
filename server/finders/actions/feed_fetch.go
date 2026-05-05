@@ -186,10 +186,6 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 
 func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
 	cfg := model.ForContext(ctx)
-	checker := cfg.Checker
-	if checker == nil {
-		return nil, authz.ErrUnauthorized
-	}
 
 	// Check feed exists
 	feeds, err := cfg.Finder.FindFeeds(ctx, nil, nil, nil, &model.FeedFilter{OnestopID: &feedId})
@@ -202,7 +198,7 @@ func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
 	feed := feeds[0]
 
 	// Check feed permissions
-	ok, err := checker.Check(ctx, authz.ObjectRef{Type: authz.FeedType, ID: int64(feed.ID)}, authz.CanCreateFeedVersion)
+	ok, err := cfg.Checker.Check(ctx, authz.ObjectRef{Type: authz.FeedType, ID: int64(feed.ID)}, authz.CanCreateFeedVersion)
 	if err != nil {
 		return nil, err
 	}

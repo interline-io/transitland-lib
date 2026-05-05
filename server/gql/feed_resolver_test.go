@@ -251,7 +251,8 @@ func TestFeedResolver(t *testing.T) {
 
 func TestFeedResolver_Cursor(t *testing.T) {
 	c, cfg := newTestClient(t)
-	allEnts, err := cfg.Finder.FindFeeds(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
+	allEnts, err := cfg.Finder.FindFeeds(ctx, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
