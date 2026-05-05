@@ -241,9 +241,11 @@ func TestValidateUpload(t *testing.T) {
 			ts := testutil.NewTestServer(testdata.Path())
 			defer ts.Close()
 
-			// Setup job
-			testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
-				ctx := model.WithConfig(context.Background(), cfg)
+			// Setup job. ValidateUpload does not consult Checker or PermFilter,
+			// but the testconfig invariant requires a non-nil Checker — AllowAll
+			// keeps the setup consistent with the other action tests.
+			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+				ctx := model.WithPerms(model.WithConfig(context.Background(), cfg), cfg.Checker, cfg.IncludePublic)
 				// Run job
 				feedUrl := ts.URL + "/" + tc.serveFile
 				var rturls []string
