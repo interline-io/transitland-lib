@@ -321,7 +321,7 @@ func TestStopRequest_License(t *testing.T) {
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "yes"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 2349,
+			expectLength: 4524,
 		},
 		{
 			name:         "license:share_alike_optional no",
@@ -335,14 +335,14 @@ func TestStopRequest_License(t *testing.T) {
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 2706,
+			expectLength: 4881,
 		},
 		{
 			name:         "license:commercial_use_allowed yes",
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "yes"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 2349,
+			expectLength: 4524,
 		},
 		{
 			name:         "license:commercial_use_allowed no",
@@ -356,14 +356,14 @@ func TestStopRequest_License(t *testing.T) {
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 2706,
+			expectLength: 4881,
 		},
 		{
 			name:         "license:create_derived_product yes",
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "yes"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 2349,
+			expectLength: 4524,
 		},
 		{
 			name:         "license:create_derived_product no",
@@ -377,7 +377,7 @@ func TestStopRequest_License(t *testing.T) {
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 2706,
+			expectLength: 4881,
 		},
 		{
 			name: "include_alerts:true",
