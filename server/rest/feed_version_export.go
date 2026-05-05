@@ -16,6 +16,7 @@ import (
 
 	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/util"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -47,6 +48,10 @@ type ExportTransforms struct {
 	UseBasicRouteTypes bool `json:"use_basic_route_types,omitempty"`
 	// Entity value overrides (filename.entity_id.field = value)
 	SetValues map[string]string `json:"set_values,omitempty"`
+	// Sort all CSV rows before zipping ("asc" or "desc"). Omit for no sort.
+	StandardizedSort string `json:"standardized_sort,omitempty"`
+	// Override the columns used for the sort; otherwise per-file defaults apply.
+	StandardizedSortColumns []string `json:"standardized_sort_columns,omitempty"`
 }
 
 // FeedVersionExportOpenAPIRequest defines OpenAPI schema for export endpoint
@@ -141,6 +146,24 @@ func (r FeedVersionExportOpenAPIRequest) RequestInfo() RequestInfo {
 																		Value: &oa.Schema{
 																			Type: &oa.Types{"string"},
 																		},
+																	},
+																},
+															},
+														},
+														"standardized_sort": &oa.SchemaRef{
+															Value: &oa.Schema{
+																Type:        &oa.Types{"string"},
+																Description: "Sort CSV rows before zipping. 'asc' or 'desc'; omit for no sort (default preserves copier order, modulo parent-before-child reordering). Empty cells in numeric/date columns rank as the greatest value (NULLS LAST in asc, NULLS FIRST in desc).",
+																Enum:        []any{"asc", "desc"},
+															},
+														},
+														"standardized_sort_columns": &oa.SchemaRef{
+															Value: &oa.Schema{
+																Type:        &oa.Types{"array"},
+																Description: "Optional specific columns to sort by. If empty, defaults are used based on file type.",
+																Items: &oa.SchemaRef{
+																	Value: &oa.Schema{
+																		Type: &oa.Types{"string"},
 																	},
 																},
 															},
@@ -259,6 +282,14 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	}
 	_ = cpResult
 
+	// Apply sorting if requested
+	if req.Transforms != nil && req.Transforms.StandardizedSort != "" {
+		csvWriter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
+			ApplySort:   req.Transforms.StandardizedSort,
+			SortColumns: req.Transforms.StandardizedSortColumns,
+		})
+	}
+
 	if err := csvWriter.Close(); err != nil {
 		log.For(ctx).Error().Err(err).Msg("failed to close CSV writer")
 		util.WriteJsonError(w, "failed to close CSV writer", http.StatusInternalServerError)
@@ -347,6 +378,12 @@ func validateExportRequest(req *FeedVersionExportRequest) error {
 	// Only support gtfs_zip for now
 	if req.Format != "gtfs_zip" {
 		return util.NewBadRequestError("only 'gtfs_zip' format is currently supported", nil)
+	}
+
+	if req.Transforms != nil {
+		if err := adapters.ValidateSortDirection(req.Transforms.StandardizedSort); err != nil {
+			return util.NewBadRequestError(fmt.Sprintf("standardized_sort: %s", err), nil)
+		}
 	}
 
 	return nil

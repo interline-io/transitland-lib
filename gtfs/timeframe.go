@@ -8,10 +8,10 @@ import (
 )
 
 type Timeframe struct {
-	TimeframeGroupID tt.String `csv:",required"`
-	StartTime        tt.Seconds
-	EndTime          tt.Seconds
-	ServiceID        tt.Key `csv:",required" target:"calendar.txt"`
+	TimeframeGroupID tt.String  `csv:",required" standardized_sort:"1"`
+	StartTime        tt.Seconds `standardized_sort:"2"`
+	EndTime          tt.Seconds `standardized_sort:"3"`
+	ServiceID        tt.Key     `csv:",required" target:"calendar.txt" standardized_sort:"4"`
 	tt.BaseEntity
 }
 

@@ -8,7 +8,7 @@ import (
 type Trip struct {
 	RouteID              tt.Key    `csv:",required" target:"routes.txt"`
 	ServiceID            tt.Key    `csv:",required" target:"calendar.txt"`
-	TripID               tt.String `csv:",required"`
+	TripID               tt.String `csv:",required" standardized_sort:"1"`
 	TripHeadsign         tt.String
 	TripShortName        tt.String
 	DirectionID          tt.Int `enum:"0,1"`
