@@ -29,7 +29,7 @@ func (cmd *CopyCommand) HelpDesc() (string, string) {
 	a := "Copy performs a basic copy from a reader to a writer."
 	b := `Entities with errors are skipped by default; use --allow-entity-errors and --allow-reference-errors to override.
 
-Output preserves input order (modulo associations like parent-before-child stops). Pass --standardized-sort (asc|desc) to apply an opinionated GTFS sort by primary keys, or override columns with --standardized-sort-columns.`
+Output preserves input order (with exceptions for stop relationships). Pass --standardized-sort (asc|desc) to apply an opinionated GTFS sort by primary keys, or override columns with --standardized-sort-columns.`
 	return a, b
 }
 
