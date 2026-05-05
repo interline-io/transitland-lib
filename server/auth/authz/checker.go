@@ -84,13 +84,9 @@ type AdminManager interface {
 	GroupSave(ctx context.Context, req *GroupSaveRequest) (*GroupSaveResponse, error)
 }
 
-// userInfoFromAuthn lets the convenience checkers expose authn identity
-// without coupling identity to authorization decisions.
-func userInfoFromAuthn(ctx context.Context) *UserInfo {
-	user := authn.ForContext(ctx)
-	if user == nil {
-		return &UserInfo{}
-	}
+// userInfoFromAuthn projects the authn identity into UserInfo for convenience
+// checkers. Caller must ensure user is non-nil.
+func userInfoFromAuthn(user authn.User) *UserInfo {
 	return &UserInfo{
 		ID:    user.ID(),
 		Name:  user.Name(),
@@ -106,7 +102,10 @@ func userInfoFromAuthn(ctx context.Context) *UserInfo {
 type AllowAllChecker struct{}
 
 func (c *AllowAllChecker) Me(ctx context.Context) (*UserInfo, error) {
-	return userInfoFromAuthn(ctx), nil
+	if user := authn.ForContext(ctx); user != nil {
+		return userInfoFromAuthn(user), nil
+	}
+	return &UserInfo{ID: "admin", Name: "admin", Roles: []string{"admin"}}, nil
 }
 
 func (c *AllowAllChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
@@ -127,7 +126,11 @@ func (c *AllowAllChecker) Check(ctx context.Context, obj ObjectRef, action Actio
 type DenyAllChecker struct{}
 
 func (c *DenyAllChecker) Me(ctx context.Context) (*UserInfo, error) {
-	return userInfoFromAuthn(ctx), nil
+	user := authn.ForContext(ctx)
+	if user == nil {
+		return nil, ErrUnauthorized
+	}
+	return userInfoFromAuthn(user), nil
 }
 
 func (c *DenyAllChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
