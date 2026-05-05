@@ -48,9 +48,9 @@ type ExportTransforms struct {
 	UseBasicRouteTypes bool `json:"use_basic_route_types,omitempty"`
 	// Entity value overrides (filename.entity_id.field = value)
 	SetValues map[string]string `json:"set_values,omitempty"`
-	// Standardized sort order for CSV files ("asc", "desc", or "none"). If set, all CSV files will be sorted before zipping.
+	// Sort all CSV rows before zipping ("asc" or "desc"). Omit for no sort.
 	StandardizedSort string `json:"standardized_sort,omitempty"`
-	// Optional specific columns to sort by. If empty, defaults are used based on file type.
+	// Override the columns used for the sort; otherwise per-file defaults apply.
 	StandardizedSortColumns []string `json:"standardized_sort_columns,omitempty"`
 }
 
@@ -153,8 +153,8 @@ func (r FeedVersionExportOpenAPIRequest) RequestInfo() RequestInfo {
 														"standardized_sort": &oa.SchemaRef{
 															Value: &oa.Schema{
 																Type:        &oa.Types{"string"},
-																Description: "Sort all CSV files before zipping. Use 'asc' (ascending), 'desc' (descending), or 'none' (default). This is an optional feature and is off by default. By default, transitland-lib's streaming architecture generally preserves input order, but may reorder some associated records (e.g., parent stations before children) to maintain integrity.",
-																Enum:        []any{"asc", "desc", "none"},
+																Description: "Sort CSV rows before zipping. 'asc' or 'desc'; omit for no sort (default preserves copier order, modulo parent-before-child reordering). Empty cells in numeric/date columns rank as the greatest value (NULLS LAST in asc, NULLS FIRST in desc).",
+																Enum:        []any{"asc", "desc"},
 															},
 														},
 														"standardized_sort_columns": &oa.SchemaRef{
@@ -283,7 +283,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	_ = cpResult
 
 	// Apply sorting if requested
-	if req.Transforms != nil && req.Transforms.StandardizedSort != "" && req.Transforms.StandardizedSort != adapters.SortNone {
+	if req.Transforms != nil && req.Transforms.StandardizedSort != "" {
 		csvWriter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
 			StandardizedSort:        req.Transforms.StandardizedSort,
 			StandardizedSortColumns: req.Transforms.StandardizedSortColumns,
@@ -383,9 +383,9 @@ func validateExportRequest(req *FeedVersionExportRequest) error {
 	// Validate standardized sort order if provided
 	if req.Transforms != nil && req.Transforms.StandardizedSort != "" {
 		switch req.Transforms.StandardizedSort {
-		case adapters.SortAsc, adapters.SortDesc, adapters.SortNone:
+		case adapters.SortAsc, adapters.SortDesc:
 		default:
-			return util.NewBadRequestError(fmt.Sprintf("invalid standardized_sort value: %s (must be 'asc', 'desc', or 'none')", req.Transforms.StandardizedSort), nil)
+			return util.NewBadRequestError(fmt.Sprintf("invalid standardized_sort value: %s (must be 'asc' or 'desc')", req.Transforms.StandardizedSort), nil)
 		}
 	}
 

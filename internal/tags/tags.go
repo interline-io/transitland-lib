@@ -15,8 +15,8 @@ import (
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
-// SortKind classifies the underlying primitive type of a struct field for
-// type-aware sorting. It looks through tt.Option[T] wrappers to the inner T.
+// SortKind is the underlying primitive class of a struct field, used
+// to drive type-aware sorting on serialized CSV cells.
 type SortKind int
 
 const (
@@ -27,9 +27,12 @@ const (
 	SortKindDate
 )
 
-// inferKind returns the SortKind for a struct field type. It handles plain
-// primitives, pointers, time.Time, and tt.Option[T]-style wrappers (any struct
-// with a "Val" field).
+// optionTypeHint is satisfied by wrappers (e.g., tt.Option[T]) that expose
+// their inner type. Defining the interface here keeps tt independent of tags.
+type optionTypeHint interface {
+	OptionType() reflect.Type
+}
+
 func inferKind(t reflect.Type) SortKind {
 	if t == nil {
 		return SortKindUnknown
@@ -50,8 +53,9 @@ func inferKind(t reflect.Type) SortKind {
 		if t == reflect.TypeOf(time.Time{}) {
 			return SortKindDate
 		}
-		if vf, ok := t.FieldByName("Val"); ok {
-			return inferKind(vf.Type)
+		zero := reflect.New(t).Elem().Interface()
+		if h, ok := zero.(optionTypeHint); ok {
+			return inferKind(h.OptionType())
 		}
 	}
 	return SortKindUnknown

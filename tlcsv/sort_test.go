@@ -75,38 +75,43 @@ func TestSortCSVFilesDescending(t *testing.T) {
 		[][]string{{"S3"}, {"S2"}, {"S1"}})
 }
 
-// Empty/unparseable cells must sort after valid values when the column kind
-// is numeric, regardless of sort direction.
-func TestSortCSVFilesEmptyNumericLast(t *testing.T) {
-	tmpdir := t.TempDir()
-	w, err := NewWriter(tmpdir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	stopTimes := []*gtfs.StopTime{
-		{TripID: tt.NewString("T1"), StopSequence: tt.NewInt(5)},
-		{TripID: tt.NewString("T1")}, // empty stop_sequence
-		{TripID: tt.NewString("T1"), StopSequence: tt.NewInt(2)},
-		{TripID: tt.NewString("T1")}, // empty stop_sequence
-	}
-	for _, st := range stopTimes {
-		if _, err := w.AddEntity(st); err != nil {
-			t.Fatal(err)
+// Empty cells in numeric columns rank as +∞: NULLS LAST in asc, NULLS FIRST in desc.
+func TestSortCSVFilesEmptyNumericSqlConvention(t *testing.T) {
+	stopTimes := func() []*gtfs.StopTime {
+		return []*gtfs.StopTime{
+			{TripID: tt.NewString("T1"), StopSequence: tt.NewInt(5)},
+			{TripID: tt.NewString("T1")}, // empty stop_sequence
+			{TripID: tt.NewString("T1"), StopSequence: tt.NewInt(2)},
+			{TripID: tt.NewString("T1")}, // empty stop_sequence
 		}
 	}
-
-	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortAsc})
-	if err := w.Close(); err != nil {
-		t.Fatal(err)
+	run := func(t *testing.T, direction string, want [][]string) {
+		dir := t.TempDir()
+		w, err := NewWriter(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range stopTimes() {
+			if _, err := w.AddEntity(st); err != nil {
+				t.Fatal(err)
+			}
+		}
+		w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: direction})
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+		verifyColumns(t, filepath.Join(dir, "stop_times.txt"), []string{"stop_sequence"}, want)
 	}
 
-	verifyColumns(t, filepath.Join(tmpdir, "stop_times.txt"),
-		[]string{"stop_sequence"},
-		[][]string{{"2"}, {"5"}, {""}, {""}})
+	t.Run("asc puts empties last", func(t *testing.T) {
+		run(t, adapters.SortAsc, [][]string{{"2"}, {"5"}, {""}, {""}})
+	})
+	t.Run("desc puts empties first", func(t *testing.T) {
+		run(t, adapters.SortDesc, [][]string{{""}, {""}, {"5"}, {"2"}})
+	})
 }
 
-// User-supplied StandardizedSortColumns work on any file even without
-// captured entity metadata.
+// User-supplied columns work on files without captured entity metadata.
 func TestCustomColumnSort(t *testing.T) {
 	tmpdir := t.TempDir()
 	adapter := NewDirAdapter(tmpdir)
@@ -134,8 +139,7 @@ func TestCustomColumnSort(t *testing.T) {
 	})
 }
 
-// Files written outside the typed Writer path are left alone when no user
-// override is supplied.
+// Files written outside the typed Writer path are left alone without an override.
 func TestSortCSVFilesSkipsUnknownFiles(t *testing.T) {
 	tmpdir := t.TempDir()
 	adapter := NewDirAdapter(tmpdir)
@@ -190,8 +194,7 @@ func verifyAllRows(t *testing.T, path string, want [][]string) {
 	}
 }
 
-// verifyColumns checks the values of a subset of columns, identified by
-// header name, against expected values for each data row.
+// verifyColumns checks values for a subset of columns by header name.
 func verifyColumns(t *testing.T, path string, names []string, want [][]string) {
 	t.Helper()
 	rows := readAll(t, path)

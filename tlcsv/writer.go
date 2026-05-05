@@ -224,10 +224,7 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 }
 
 func (writer *Writer) SetStandardizedSortOptions(opts adapters.StandardizedSortOptions) {
-	type setter interface {
-		SetStandardizedSortOptions(adapters.StandardizedSortOptions)
-	}
-	if s, ok := writer.WriterAdapter.(setter); ok {
+	if s, ok := writer.WriterAdapter.(adapters.SortableWriter); ok {
 		s.SetStandardizedSortOptions(opts)
 	}
 }

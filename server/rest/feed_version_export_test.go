@@ -170,28 +170,23 @@ func TestFeedVersionExportRequest(t *testing.T) {
 	})
 
 	t.Run("export without standardized sort", func(t *testing.T) {
+		// Caltrain's natural route order has TaSj before Gi (non-alphabetical),
+		// so this assertion fails if we ever silently sort by default.
 		reqBody := FeedVersionExportRequest{
 			FeedVersionKeys: []string{caltrainFv},
-			// Transforms: nil, should default to no sort
 		}
 		rr := makeExportRequest(t, reqBody, asAdmin)
-
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
-		// Verify stops are NOT sorted
 		if err := makeTempReader(t, rr.Body.Bytes(), func(t *testing.T, reader *tlcsv.Reader) {
-			var stopIds []string
-			for ent := range reader.Stops() {
-				stopIds = append(stopIds, ent.StopID.Val)
+			var ids []string
+			for ent := range reader.Routes() {
+				ids = append(ids, ent.RouteID.Val)
 			}
-			// Check that stops are NOT necessarily sorted ascending
-			isSorted := true
-			for i := 1; i < len(stopIds); i++ {
-				if stopIds[i-1] > stopIds[i] {
-					isSorted = false
-					break
-				}
-			}
-			assert.False(t, isSorted, "stops should not be automatically sorted")
+			assert.Equal(t,
+				[]string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
+				ids,
+				"routes should be in copier (natural input) order, not sorted",
+			)
 		}); err != nil {
 			t.Fatalf("test failed: %v", err)
 		}

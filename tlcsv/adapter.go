@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"archive/zip"
-	"cmp"
 	"context"
 	"crypto/sha1"
 	"encoding/csv"
@@ -14,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/interline-io/log"
@@ -386,9 +384,8 @@ func (adapter *ZipAdapter) findInternalPrefix() (string, error) {
 
 /////////////////////
 
-// sortColumnRegistrar lets a Writer hand captured sort metadata to whichever
-// adapter is sitting under it. Both DirAdapter and ZipWriterAdapter
-// (via embedding) implement it.
+// sortColumnRegistrar receives sort metadata from a Writer at file-write
+// time. ZipWriterAdapter inherits the implementation via embedded DirAdapter.
 type sortColumnRegistrar interface {
 	registerSortColumns(filename string, cols []*tags.FieldInfo)
 }
@@ -412,8 +409,6 @@ func NewDirAdapter(path string) *DirAdapter {
 	}
 }
 
-// registerSortColumns records the sort metadata an entity's tags imply,
-// captured by the Writer when a file's header is first generated.
 func (adapter *DirAdapter) registerSortColumns(filename string, cols []*tags.FieldInfo) {
 	adapter.sortColumnsByFile[filename] = cols
 }
@@ -486,17 +481,14 @@ func (adapter *DirAdapter) SetStandardizedSortOptions(opts adapters.Standardized
 	adapter.sortOptions = opts
 }
 
-// resolveSortColumns picks the sort columns for a file. A user-supplied
-// override (StandardizedSortColumns) wins; otherwise the columns captured
-// from the entity at file-write time are used. Returns nil if neither
-// applies — a signal to the sort step to skip the file.
+// resolveSortColumns returns the user-supplied override if set, otherwise
+// the captured per-file defaults; nil signals "skip this file".
 func (adapter *DirAdapter) resolveSortColumns(filename string) []*tags.FieldInfo {
 	captured := adapter.sortColumnsByFile[filename]
 	if len(adapter.sortOptions.StandardizedSortColumns) == 0 {
 		return captured
 	}
-	// Look up captured kinds so user-supplied names still get type-aware
-	// sorting when the file is one we know about.
+	// User-supplied column names still get type-aware sorting if we recognize them.
 	kindByName := map[string]tags.SortKind{}
 	for _, c := range captured {
 		kindByName[c.Name] = c.Kind
@@ -506,95 +498,6 @@ func (adapter *DirAdapter) resolveSortColumns(filename string) []*tags.FieldInfo
 		out = append(out, &tags.FieldInfo{Name: name, Kind: kindByName[name], SortOrder: i + 1})
 	}
 	return out
-}
-
-// compareCells returns -1, 0, or +1 comparing two raw CSV cell strings
-// under the given kind. For numeric/date kinds, empty or unparseable
-// values always sort after valid values regardless of direction.
-func compareCells(a, b string, kind tags.SortKind) int {
-	switch kind {
-	case tags.SortKindInt:
-		return compareNumeric(a, b, func(s string) (int64, error) {
-			return strconv.ParseInt(strings.TrimSpace(s), 10, 64)
-		})
-	case tags.SortKindFloat:
-		return compareNumeric(a, b, func(s string) (float64, error) {
-			return strconv.ParseFloat(strings.TrimSpace(s), 64)
-		})
-	case tags.SortKindDate:
-		// GTFS dates are YYYYMMDD which sorts correctly as a string;
-		// missing values go last.
-		return compareEmptyLast(a, b)
-	default:
-		return strings.Compare(a, b)
-	}
-}
-
-func compareNumeric[T cmp.Ordered](a, b string, parse func(string) (T, error)) int {
-	av, aerr := parse(a)
-	bv, berr := parse(b)
-	switch {
-	case aerr != nil && berr != nil:
-		return 0
-	case aerr != nil:
-		return 1
-	case berr != nil:
-		return -1
-	}
-	return cmp.Compare(av, bv)
-}
-
-func compareEmptyLast(a, b string) int {
-	switch {
-	case a == "" && b == "":
-		return 0
-	case a == "":
-		return 1
-	case b == "":
-		return -1
-	}
-	return strings.Compare(a, b)
-}
-
-type sortKey struct {
-	idx  int
-	kind tags.SortKind
-}
-
-func resolveHeaderKeys(header []string, cols []*tags.FieldInfo) []sortKey {
-	var keys []sortKey
-	for _, fi := range cols {
-		for i, h := range header {
-			if h == fi.Name {
-				keys = append(keys, sortKey{idx: i, kind: fi.Kind})
-				break
-			}
-		}
-	}
-	return keys
-}
-
-func sortRows(rows [][]string, keys []sortKey, descending bool) {
-	sort.SliceStable(rows, func(i, j int) bool {
-		for _, k := range keys {
-			a, b := "", ""
-			if k.idx < len(rows[i]) {
-				a = rows[i][k.idx]
-			}
-			if k.idx < len(rows[j]) {
-				b = rows[j][k.idx]
-			}
-			c := compareCells(a, b, k.kind)
-			if c == 0 {
-				continue
-			}
-			if descending {
-				return c > 0
-			}
-			return c < 0
-		}
-		return false
-	})
 }
 
 func (adapter *DirAdapter) StandardizedSortCSVFiles() error {

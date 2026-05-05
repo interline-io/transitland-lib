@@ -26,22 +26,9 @@ type CopyCommand struct {
 
 func (cmd *CopyCommand) HelpDesc() (string, string) {
 	a := "Copy performs a basic copy from a reader to a writer."
-	b := `By default, any entity with errors will be skipped and not written to output.
-This can be ignored with --allow-entity-errors to ignore simple errors and
---allow-reference-errors to ignore entity relationship errors, such as a
-reference to a non-existent stop.
+	b := `Entities with errors are skipped by default; use --allow-entity-errors and --allow-reference-errors to override.
 
-By default, the output order is determined by transitland-lib's streaming
-architecture. It generally preserves the input order, although some records
-may be reordered to maintain associations (such as ensuring parent stops are
-processed before child stops).
-
-Output can be automatically sorted using --standardized-sort (asc or desc).
-This is an optional feature and is off by default. When enabled, it applies
-an opinionated, standardized sort order to CSV files, which is useful for
-consistent diffing and human readability. By default, it uses logical primary
-GTFS columns (e.g., stop_id for stops.txt), but specific columns can be
-provided with --standardized-sort-columns.`
+Output preserves input order (modulo associations like parent-before-child stops). Pass --standardized-sort (asc|desc) to apply an opinionated GTFS sort by primary keys, or override columns with --standardized-sort-columns.`
 	return a, b
 }
 
@@ -68,7 +55,7 @@ func (cmd *CopyCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
-	fl.StringVar(&cmd.standardizedSort, "standardized-sort", "", "Standardized sort order for CSV files (asc, desc, or none)")
+	fl.StringVar(&cmd.standardizedSort, "standardized-sort", "", "Standardized sort order for CSV files (asc or desc; empty = no sort)")
 	fl.StringSliceVar(&cmd.standardizedSortColumns, "standardized-sort-columns", nil, "Comma-separated list of columns to sort by (optional; if empty, defaults are used)")
 }
 
