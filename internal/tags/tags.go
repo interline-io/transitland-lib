@@ -9,10 +9,53 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/jmoiron/sqlx/reflectx"
 )
+
+// SortKind classifies the underlying primitive type of a struct field for
+// type-aware sorting. It looks through tt.Option[T] wrappers to the inner T.
+type SortKind int
+
+const (
+	SortKindUnknown SortKind = iota
+	SortKindString
+	SortKindInt
+	SortKindFloat
+	SortKindDate
+)
+
+// inferKind returns the SortKind for a struct field type. It handles plain
+// primitives, pointers, time.Time, and tt.Option[T]-style wrappers (any struct
+// with a "Val" field).
+func inferKind(t reflect.Type) SortKind {
+	if t == nil {
+		return SortKindUnknown
+	}
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.String:
+		return SortKindString
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return SortKindInt
+	case reflect.Float32, reflect.Float64:
+		return SortKindFloat
+	}
+	if t.Kind() == reflect.Struct {
+		if t == reflect.TypeOf(time.Time{}) {
+			return SortKindDate
+		}
+		if vf, ok := t.FieldByName("Val"); ok {
+			return inferKind(vf.Type)
+		}
+	}
+	return SortKindUnknown
+}
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
@@ -35,6 +78,7 @@ type FieldInfo struct {
 	LessOrEqual    *float64
 	EnumValues     []int64
 	SortOrder      int
+	Kind           SortKind
 }
 
 // FieldMap contains all the parsed tags for a struct.
@@ -89,6 +133,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				Name:   fi.Name,
 				Index:  fi.Index,
 				Target: fi.Field.Tag.Get("target"),
+				Kind:   inferKind(fi.Field.Type),
 			}
 
 			_, mfi.Required = fi.Options["required"]

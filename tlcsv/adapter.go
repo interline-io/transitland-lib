@@ -13,14 +13,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
-	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/request"
-	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
@@ -385,21 +385,47 @@ func (adapter *ZipAdapter) findInternalPrefix() (string, error) {
 
 /////////////////////
 
+// sortColumn describes a single sort key captured from an entity's struct
+// tags at the time its file header was generated.
+type sortColumn struct {
+	Name  string
+	Kind  tags.SortKind
+	Order int
+}
+
+// sortColumnRegistrar is implemented by writer adapters that can remember
+// per-file sort metadata captured at header-generation time. The Writer
+// hands the captured columns to the adapter so the sort step can use them.
+type sortColumnRegistrar interface {
+	registerSortColumns(filename string, cols []sortColumn)
+}
+
 // DirAdapter supports plain directories of CSV files.
 type DirAdapter struct {
-	path            string
-	files           map[string]*os.File
-	geojsonFeatures map[string][]*geojson.Feature
-	sortOptions     adapters.StandardizedSortOptions
+	path              string
+	files             map[string]*os.File
+	geojsonFeatures   map[string][]*geojson.Feature
+	sortOptions       adapters.StandardizedSortOptions
+	sortColumnsByFile map[string][]sortColumn
 }
 
 // NewDirAdapter returns an initialized DirAdapter.
 func NewDirAdapter(path string) *DirAdapter {
 	return &DirAdapter{
-		path:            strings.TrimPrefix(path, "file://"),
-		files:           map[string]*os.File{},
-		geojsonFeatures: map[string][]*geojson.Feature{},
+		path:              strings.TrimPrefix(path, "file://"),
+		files:             map[string]*os.File{},
+		geojsonFeatures:   map[string][]*geojson.Feature{},
+		sortColumnsByFile: map[string][]sortColumn{},
 	}
+}
+
+// registerSortColumns is called by the Writer when a file's header is first
+// generated. The captured columns drive the per-file default sort.
+func (adapter *DirAdapter) registerSortColumns(filename string, cols []sortColumn) {
+	if adapter.sortColumnsByFile == nil {
+		adapter.sortColumnsByFile = map[string][]sortColumn{}
+	}
+	adapter.sortColumnsByFile[filename] = cols
 }
 
 // String
@@ -470,94 +496,88 @@ func (adapter *DirAdapter) SetStandardizedSortOptions(opts adapters.Standardized
 	adapter.sortOptions = opts
 }
 
-func (adapter *DirAdapter) getDefaultSortColumns(filename string) []string {
-	var ent tt.Entity
-	switch filename {
-	case "agency.txt":
-		ent = &gtfs.Agency{}
-	case "stops.txt":
-		ent = &gtfs.Stop{}
-	case "routes.txt":
-		ent = &gtfs.Route{}
-	case "trips.txt":
-		ent = &gtfs.Trip{}
-	case "stop_times.txt":
-		ent = &gtfs.StopTime{}
-	case "shapes.txt":
-		ent = &gtfs.Shape{}
-	case "calendar.txt":
-		ent = &gtfs.Calendar{}
-	case "calendar_dates.txt":
-		ent = &gtfs.CalendarDate{}
-	case "fare_attributes.txt":
-		ent = &gtfs.FareAttribute{}
-	case "fare_rules.txt":
-		ent = &gtfs.FareRule{}
-	case "fare_media.txt":
-		ent = &gtfs.FareMedia{}
-	case "fare_products.txt":
-		ent = &gtfs.FareProduct{}
-	case "fare_leg_rules.txt":
-		ent = &gtfs.FareLegRule{}
-	case "fare_transfer_rules.txt":
-		ent = &gtfs.FareTransferRule{}
-	case "feed_info.txt":
-		ent = &gtfs.FeedInfo{}
-	case "frequencies.txt":
-		ent = &gtfs.Frequency{}
-	case "transfers.txt":
-		ent = &gtfs.Transfer{}
-	case "levels.txt":
-		ent = &gtfs.Level{}
-	case "pathways.txt":
-		ent = &gtfs.Pathway{}
-	case "areas.txt":
-		ent = &gtfs.Area{}
-	case "attributions.txt":
-		ent = &gtfs.Attribution{}
-	case "locations.geojson":
-		ent = &gtfs.Location{}
-	case "location_groups.txt":
-		ent = &gtfs.LocationGroup{}
-	case "location_group_stops.txt":
-		ent = &gtfs.LocationGroupStop{}
-	case "networks.txt":
-		ent = &gtfs.Network{}
-	case "route_networks.txt":
-		ent = &gtfs.RouteNetwork{}
-	case "stop_areas.txt":
-		ent = &gtfs.StopArea{}
-	case "timeframes.txt":
-		ent = &gtfs.Timeframe{}
-	case "translations.txt":
-		ent = &gtfs.Translation{}
-	case "booking_rules.txt":
-		ent = &gtfs.BookingRule{}
-	}
-
-	if ent == nil {
-		return nil
-	}
-
-	fmap := MapperCache.GetStructTagMap(ent)
-	type sortCol struct {
-		name  string
-		order int
-	}
-	var cols []sortCol
-	for name, info := range fmap {
-		if info.SortOrder > 0 {
-			cols = append(cols, sortCol{name, info.SortOrder})
+// resolveSortColumns picks the sort columns to use for a given file. If the
+// caller supplied StandardizedSortColumns, those are used (with kinds looked
+// up from captured info when available, otherwise treated as strings). When
+// no override is given, the sort columns captured at file-write time drive
+// the default. Returns nil if there is nothing to sort by.
+func (adapter *DirAdapter) resolveSortColumns(filename string) []sortColumn {
+	captured := adapter.sortColumnsByFile[filename]
+	if len(adapter.sortOptions.StandardizedSortColumns) > 0 {
+		// Build a name → kind lookup from captured info so user-supplied
+		// columns still get type-aware sorting when possible.
+		kindByName := map[string]tags.SortKind{}
+		for _, c := range captured {
+			kindByName[c.Name] = c.Kind
 		}
+		out := make([]sortColumn, 0, len(adapter.sortOptions.StandardizedSortColumns))
+		for i, name := range adapter.sortOptions.StandardizedSortColumns {
+			out = append(out, sortColumn{Name: name, Kind: kindByName[name], Order: i + 1})
+		}
+		return out
 	}
-	sort.Slice(cols, func(i, j int) bool {
-		return cols[i].order < cols[j].order
-	})
-	var result []string
-	for _, c := range cols {
-		result = append(result, c.name)
+	return captured
+}
+
+// compareCells returns -1, 0, or +1 comparing two raw CSV cell strings under
+// the given kind. For numeric/date kinds, empty or unparseable values always
+// sort after valid values regardless of direction.
+func compareCells(a, b string, kind tags.SortKind) int {
+	switch kind {
+	case tags.SortKindInt:
+		ai, aerr := strconv.ParseInt(strings.TrimSpace(a), 10, 64)
+		bi, berr := strconv.ParseInt(strings.TrimSpace(b), 10, 64)
+		if aerr != nil && berr != nil {
+			return 0
+		}
+		if aerr != nil {
+			return 1
+		}
+		if berr != nil {
+			return -1
+		}
+		switch {
+		case ai < bi:
+			return -1
+		case ai > bi:
+			return 1
+		}
+		return 0
+	case tags.SortKindFloat:
+		af, aerr := strconv.ParseFloat(strings.TrimSpace(a), 64)
+		bf, berr := strconv.ParseFloat(strings.TrimSpace(b), 64)
+		if aerr != nil && berr != nil {
+			return 0
+		}
+		if aerr != nil {
+			return 1
+		}
+		if berr != nil {
+			return -1
+		}
+		switch {
+		case af < bf:
+			return -1
+		case af > bf:
+			return 1
+		}
+		return 0
+	case tags.SortKindDate:
+		// GTFS dates are YYYYMMDD which sorts correctly as a string. Treat
+		// empty/missing as last.
+		if a == "" && b == "" {
+			return 0
+		}
+		if a == "" {
+			return 1
+		}
+		if b == "" {
+			return -1
+		}
+		return strings.Compare(a, b)
+	default:
+		return strings.Compare(a, b)
 	}
-	return result
 }
 
 func (adapter *DirAdapter) StandardizedSortCSVFiles() error {
@@ -565,97 +585,94 @@ func (adapter *DirAdapter) StandardizedSortCSVFiles() error {
 	if sortOrder == "" {
 		return nil
 	}
+	descending := sortOrder == "desc"
 
 	// Collect .txt filenames and close only those files
 	var filenamesToSort []string
 	for filename, f := range adapter.files {
-		if strings.HasSuffix(filename, ".txt") {
-			filenamesToSort = append(filenamesToSort, filename)
-			// Close .txt files so we can read and rewrite them
-			if err := f.Close(); err != nil {
-				return fmt.Errorf("failed to close file %s: %w", filename, err)
-			}
-			delete(adapter.files, filename)
+		if !strings.HasSuffix(filename, ".txt") {
+			continue
 		}
+		// Skip files we have no captured sort metadata for and no
+		// caller-supplied override — sort is best-effort and only runs
+		// on files written through the typed entity path.
+		if len(adapter.resolveSortColumns(filename)) == 0 {
+			continue
+		}
+		filenamesToSort = append(filenamesToSort, filename)
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("failed to close file %s: %w", filename, err)
+		}
+		delete(adapter.files, filename)
 	}
 
-	// Sort each CSV file that was written
 	for _, filename := range filenamesToSort {
 		fullPath := filepath.Join(adapter.path, filename)
 
-		// Read all rows
 		file, err := os.Open(fullPath)
 		if err != nil {
 			return fmt.Errorf("failed to open file %s: %w", filename, err)
 		}
-
 		reader := csv.NewReader(file)
 		allRows, err := reader.ReadAll()
 		file.Close()
 		if err != nil {
 			return fmt.Errorf("failed to read file %s: %w", filename, err)
 		}
-
 		if len(allRows) == 0 {
 			continue
 		}
 
-		// Separate header from data rows
 		header := allRows[0]
 		dataRows := allRows[1:]
 
-		// Determine columns to sort by
-		sortColumns := adapter.sortOptions.StandardizedSortColumns
-		if len(sortColumns) == 0 {
-			sortColumns = adapter.getDefaultSortColumns(filename)
+		// Resolve sort columns against the actual on-disk header. Columns
+		// not present in the header are dropped.
+		type indexedSort struct {
+			idx  int
+			kind tags.SortKind
 		}
-
-		// Sort data rows
-		if len(sortColumns) > 0 {
-			// Sort by specific columns
-			colIndices := make([]int, 0, len(sortColumns))
-			for _, colName := range sortColumns {
-				index := -1
-				for i, h := range header {
-					if h == colName {
-						index = i
-						break
-					}
-				}
-				if index != -1 {
-					colIndices = append(colIndices, index)
+		var keys []indexedSort
+		for _, sc := range adapter.resolveSortColumns(filename) {
+			idx := -1
+			for i, h := range header {
+				if h == sc.Name {
+					idx = i
+					break
 				}
 			}
-
-			if sortOrder == "desc" {
-				sort.Slice(dataRows, func(i, j int) bool {
-					for _, idx := range colIndices {
-						if dataRows[i][idx] == dataRows[j][idx] {
-							continue
-						}
-						return dataRows[i][idx] > dataRows[j][idx]
-					}
-					return false
-				})
-			} else {
-				sort.Slice(dataRows, func(i, j int) bool {
-					for _, idx := range colIndices {
-						if dataRows[i][idx] == dataRows[j][idx] {
-							continue
-						}
-						return dataRows[i][idx] < dataRows[j][idx]
-					}
-					return false
-				})
+			if idx != -1 {
+				keys = append(keys, indexedSort{idx: idx, kind: sc.Kind})
 			}
 		}
 
-		// Write sorted rows back to file
+		if len(keys) > 0 {
+			sort.SliceStable(dataRows, func(i, j int) bool {
+				for _, k := range keys {
+					ai, bj := "", ""
+					if k.idx < len(dataRows[i]) {
+						ai = dataRows[i][k.idx]
+					}
+					if k.idx < len(dataRows[j]) {
+						bj = dataRows[j][k.idx]
+					}
+					cmp := compareCells(ai, bj, k.kind)
+					if cmp == 0 {
+						continue
+					}
+					if descending {
+						return cmp > 0
+					}
+					return cmp < 0
+				}
+				return false
+			})
+		}
+
 		file, err = os.Create(fullPath)
 		if err != nil {
 			return fmt.Errorf("failed to create file %s: %w", filename, err)
 		}
-
 		writer := csv.NewWriter(file)
 		if err := writer.Write(header); err != nil {
 			file.Close()
@@ -672,7 +689,6 @@ func (adapter *DirAdapter) StandardizedSortCSVFiles() error {
 		}
 		file.Close()
 
-		// Re-open the sorted file and add it back to the files map
 		reopenedFile, err := os.Open(fullPath)
 		if err != nil {
 			return fmt.Errorf("failed to re-open sorted file %s: %w", filename, err)
