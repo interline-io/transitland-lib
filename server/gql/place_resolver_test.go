@@ -29,14 +29,14 @@ func TestPlaceResolver(t *testing.T) {
 			query:        q,
 			vars:         hw{"level": "ADM0"},
 			selector:     "places.#.count",
-			selectExpect: []string{"3"},
+			selectExpect: []string{"4"},
 		},
 		{
 			name:         "ADM0 where",
 			query:        q,
 			vars:         hw{"level": "ADM0", "where": hw{"adm0_name": "United States of America"}},
 			selector:     "places.#.count",
-			selectExpect: []string{"3"},
+			selectExpect: []string{"4"},
 		},
 		{
 			name:         "ADM0 where 2",
@@ -50,14 +50,14 @@ func TestPlaceResolver(t *testing.T) {
 			query:        q,
 			vars:         hw{"level": "ADM0_ADM1"},
 			selector:     "places.#.adm1_name",
-			selectExpect: []string{"California", "Florida"},
+			selectExpect: []string{"California", "District of Columbia", "Florida", "Maryland", "Virginia"},
 		},
 		{
 			name:         "ADM0_ADM1 count",
 			query:        q,
 			vars:         hw{"level": "ADM0_ADM1"},
 			selector:     "places.#.count",
-			selectExpect: []string{"1", "2"},
+			selectExpect: []string{"2", "1", "1", "1", "1"},
 		},
 		{
 			name:         "ADM0_ADM1 where",
@@ -71,7 +71,7 @@ func TestPlaceResolver(t *testing.T) {
 			query:        q,
 			vars:         hw{"level": "ADM0_ADM1_CITY"},
 			selector:     "places.#.city_name",
-			selectExpect: []string{"Berkeley", "Oakland", "San Francisco", "San Jose", "San Mateo", "Tampa", "", ""},
+			selectExpect: []string{"Berkeley", "Oakland", "San Francisco", "San Jose", "San Mateo", "Tampa", "", "", "Washington,  D.C.", "Alexandria", "", "", ""},
 		},
 		{
 			name:         "ADM0_ADM1_CITY where",
@@ -86,7 +86,7 @@ func TestPlaceResolver(t *testing.T) {
 			query:        q,
 			vars:         hw{"level": "ADM0"},
 			selector:     "places.0.operators.#.onestop_id",
-			selectExpect: []string{"o-dhv-hillsborougharearegionaltransit", "o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+			selectExpect: []string{"o-dhv-hillsborougharearegionaltransit", "o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dqcj-wmata"},
 		},
 		{
 			name:         "ADM0_ADM1 operators",
