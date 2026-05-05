@@ -11,16 +11,8 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// TestSortCSVFiles drives the default-sort path through the typed Writer so
-// that sort metadata is captured at header-generation time, exercising the
-// real end-to-end flow.
 func TestSortCSVFiles(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "sort_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-
+	tmpdir := t.TempDir()
 	w, err := NewWriter(tmpdir)
 	if err != nil {
 		t.Fatal(err)
@@ -44,14 +36,14 @@ func TestSortCSVFiles(t *testing.T) {
 		}
 	}
 
-	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: "asc"})
+	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortAsc})
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	verifyColumn(t, filepath.Join(tmpdir, "stops.txt"), "stop_id", []string{"S1", "S2", "S3"})
-	// stop_times sorts by (trip_id asc, stop_sequence asc) with stop_sequence
-	// compared as int — so 10 sorts after 2 within trip T1.
+	verifyColumns(t, filepath.Join(tmpdir, "stops.txt"),
+		[]string{"stop_id"},
+		[][]string{{"S1"}, {"S2"}, {"S3"}})
 	verifyColumns(t, filepath.Join(tmpdir, "stop_times.txt"),
 		[]string{"trip_id", "stop_sequence"},
 		[][]string{
@@ -64,12 +56,7 @@ func TestSortCSVFiles(t *testing.T) {
 }
 
 func TestSortCSVFilesDescending(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "sort_desc_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-
+	tmpdir := t.TempDir()
 	w, err := NewWriter(tmpdir)
 	if err != nil {
 		t.Fatal(err)
@@ -79,29 +66,23 @@ func TestSortCSVFilesDescending(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: "desc"})
+	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortDesc})
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
-
-	verifyColumn(t, filepath.Join(tmpdir, "stops.txt"), "stop_id", []string{"S3", "S2", "S1"})
+	verifyColumns(t, filepath.Join(tmpdir, "stops.txt"),
+		[]string{"stop_id"},
+		[][]string{{"S3"}, {"S2"}, {"S1"}})
 }
 
-// TestSortCSVFilesEmptyNumericLast verifies that for numeric sort columns,
-// empty/unparseable cells sort after valid values regardless of direction.
+// Empty/unparseable cells must sort after valid values when the column kind
+// is numeric, regardless of sort direction.
 func TestSortCSVFilesEmptyNumericLast(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "sort_empty_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-
+	tmpdir := t.TempDir()
 	w, err := NewWriter(tmpdir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Two stop_times have a missing stop_sequence (zero value with !Valid
-	// renders as empty in CSV), one has a value.
 	stopTimes := []*gtfs.StopTime{
 		{TripID: tt.NewString("T1"), StopSequence: tt.NewInt(5)},
 		{TripID: tt.NewString("T1")}, // empty stop_sequence
@@ -114,36 +95,21 @@ func TestSortCSVFilesEmptyNumericLast(t *testing.T) {
 		}
 	}
 
-	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: "asc"})
+	w.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortAsc})
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	// Expect: 2, 5, then the two empties.
-	got := readColumn(t, filepath.Join(tmpdir, "stop_times.txt"), "stop_sequence")
-	want := []string{"2", "5", "", ""}
-	if len(got) != len(want) {
-		t.Fatalf("expected %d rows, got %d (%v)", len(want), len(got), got)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("row %d: expected %q, got %q (full: %v)", i, want[i], got[i], got)
-		}
-	}
+	verifyColumns(t, filepath.Join(tmpdir, "stop_times.txt"),
+		[]string{"stop_sequence"},
+		[][]string{{"2"}, {"5"}, {""}, {""}})
 }
 
-// TestCustomColumnSort exercises the user-supplied StandardizedSortColumns
-// override path, which works on any file regardless of whether the writer
-// captured metadata for it.
+// User-supplied StandardizedSortColumns work on any file even without
+// captured entity metadata.
 func TestCustomColumnSort(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "custom_sort_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-
+	tmpdir := t.TempDir()
 	adapter := NewDirAdapter(tmpdir)
-
 	data := [][]string{
 		{"id", "val", "custom"},
 		{"1", "A", "3"},
@@ -153,16 +119,14 @@ func TestCustomColumnSort(t *testing.T) {
 	if err := adapter.WriteRows("custom.txt", data); err != nil {
 		t.Fatal(err)
 	}
-
 	adapter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
-		StandardizedSort:        "asc",
+		StandardizedSort:        adapters.SortAsc,
 		StandardizedSortColumns: []string{"custom"},
 	})
 	if err := adapter.Close(); err != nil {
 		t.Fatal(err)
 	}
-
-	verifyFile(t, filepath.Join(tmpdir, "custom.txt"), [][]string{
+	verifyAllRows(t, filepath.Join(tmpdir, "custom.txt"), [][]string{
 		{"id", "val", "custom"},
 		{"2", "B", "1"},
 		{"3", "C", "2"},
@@ -170,16 +134,10 @@ func TestCustomColumnSort(t *testing.T) {
 	})
 }
 
-// TestSortCSVFilesSkipsUnknownFiles confirms that a file written via raw
-// WriteRows (without going through the typed Writer) is left untouched by
-// the sort step when no user override is supplied.
+// Files written outside the typed Writer path are left alone when no user
+// override is supplied.
 func TestSortCSVFilesSkipsUnknownFiles(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "sort_skip_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-
+	tmpdir := t.TempDir()
 	adapter := NewDirAdapter(tmpdir)
 	original := [][]string{
 		{"id", "val"},
@@ -190,41 +148,14 @@ func TestSortCSVFilesSkipsUnknownFiles(t *testing.T) {
 	if err := adapter.WriteRows("unknown.txt", original); err != nil {
 		t.Fatal(err)
 	}
-	adapter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: "asc"})
+	adapter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{StandardizedSort: adapters.SortAsc})
 	if err := adapter.Close(); err != nil {
 		t.Fatal(err)
 	}
-	verifyFile(t, filepath.Join(tmpdir, "unknown.txt"), original)
+	verifyAllRows(t, filepath.Join(tmpdir, "unknown.txt"), original)
 }
 
-// helpers ---
-
-func verifyFile(t *testing.T, path string, expected [][]string) {
-	t.Helper()
-	f, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-
-	reader := csv.NewReader(f)
-	actual, err := reader.ReadAll()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(actual) != len(expected) {
-		t.Errorf("expected %d rows, got %d for %s", len(expected), len(actual), path)
-		return
-	}
-	for i := range expected {
-		for j := range expected[i] {
-			if actual[i][j] != expected[i][j] {
-				t.Errorf("row %d col %d: expected %s, got %s for %s", i, j, expected[i][j], actual[i][j], path)
-			}
-		}
-	}
-}
+// helpers
 
 func readAll(t *testing.T, path string) [][]string {
 	t.Helper()
@@ -240,46 +171,27 @@ func readAll(t *testing.T, path string) [][]string {
 	return rows
 }
 
-func readColumn(t *testing.T, path, name string) []string {
+func verifyAllRows(t *testing.T, path string, want [][]string) {
 	t.Helper()
-	rows := readAll(t, path)
-	if len(rows) == 0 {
-		return nil
-	}
-	idx := -1
-	for i, h := range rows[0] {
-		if h == name {
-			idx = i
-			break
-		}
-	}
-	if idx == -1 {
-		t.Fatalf("column %q not found in %s (header: %v)", name, path, rows[0])
-	}
-	out := make([]string, 0, len(rows)-1)
-	for _, r := range rows[1:] {
-		if idx < len(r) {
-			out = append(out, r[idx])
-		} else {
-			out = append(out, "")
-		}
-	}
-	return out
-}
-
-func verifyColumn(t *testing.T, path, name string, want []string) {
-	t.Helper()
-	got := readColumn(t, path, name)
+	got := readAll(t, path)
 	if len(got) != len(want) {
-		t.Fatalf("%s: expected %d rows in column %q, got %d (%v)", path, len(want), name, len(got), got)
+		t.Fatalf("%s: expected %d rows, got %d", path, len(want), len(got))
 	}
 	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("%s column %q row %d: expected %q, got %q (full: %v)", path, name, i, want[i], got[i], got)
+		if len(got[i]) != len(want[i]) {
+			t.Errorf("%s row %d: expected %d cols, got %d", path, i, len(want[i]), len(got[i]))
+			continue
+		}
+		for j := range want[i] {
+			if got[i][j] != want[i][j] {
+				t.Errorf("%s row %d col %d: expected %q, got %q", path, i, j, want[i][j], got[i][j])
+			}
 		}
 	}
 }
 
+// verifyColumns checks the values of a subset of columns, identified by
+// header name, against expected values for each data row.
 func verifyColumns(t *testing.T, path string, names []string, want [][]string) {
 	t.Helper()
 	rows := readAll(t, path)
@@ -305,8 +217,12 @@ func verifyColumns(t *testing.T, path string, names []string, want [][]string) {
 	}
 	for i := range want {
 		for k, idx := range idxs {
-			if rows[i+1][idx] != want[i][k] {
-				t.Errorf("%s row %d col %s: expected %q, got %q", path, i, names[k], want[i][k], rows[i+1][idx])
+			cell := ""
+			if idx < len(rows[i+1]) {
+				cell = rows[i+1][idx]
+			}
+			if cell != want[i][k] {
+				t.Errorf("%s row %d col %s: expected %q, got %q", path, i, names[k], want[i][k], cell)
 			}
 		}
 	}

@@ -19,8 +19,15 @@ type WriterWithExtraColumns interface {
 	WriteExtraColumns(bool)
 }
 
+// Standardized sort directions. The empty string means no sort.
+const (
+	SortAsc  = "asc"
+	SortDesc = "desc"
+	SortNone = "none"
+)
+
 type SortOptions struct {
-	StandardizedSort        string   // "asc" or "desc"
+	StandardizedSort        string   // SortAsc, SortDesc, or "" (no sort).
 	StandardizedSortColumns []string // Optional: specific columns to sort by. If empty, defaults are used.
 }
 

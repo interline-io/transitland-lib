@@ -283,7 +283,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	_ = cpResult
 
 	// Apply sorting if requested
-	if req.Transforms != nil && req.Transforms.StandardizedSort != "" && req.Transforms.StandardizedSort != "none" {
+	if req.Transforms != nil && req.Transforms.StandardizedSort != "" && req.Transforms.StandardizedSort != adapters.SortNone {
 		csvWriter.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
 			StandardizedSort:        req.Transforms.StandardizedSort,
 			StandardizedSortColumns: req.Transforms.StandardizedSortColumns,
@@ -382,7 +382,9 @@ func validateExportRequest(req *FeedVersionExportRequest) error {
 
 	// Validate standardized sort order if provided
 	if req.Transforms != nil && req.Transforms.StandardizedSort != "" {
-		if req.Transforms.StandardizedSort != "asc" && req.Transforms.StandardizedSort != "desc" && req.Transforms.StandardizedSort != "none" {
+		switch req.Transforms.StandardizedSort {
+		case adapters.SortAsc, adapters.SortDesc, adapters.SortNone:
+		default:
 			return util.NewBadRequestError(fmt.Sprintf("invalid standardized_sort value: %s (must be 'asc', 'desc', or 'none')", req.Transforms.StandardizedSort), nil)
 		}
 	}

@@ -2,7 +2,6 @@ package tlcsv
 
 import (
 	"errors"
-	"sort"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -148,20 +147,8 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 		h2 := append([]string{}, header...)
 		h2 = append(h2, extraHeader...)
 		writer.WriterAdapter.WriteRows(efn, [][]string{h2})
-		// Capture sort columns + their underlying type kind from the
-		// entity's struct tags. Used by the adapter's sort step (if
-		// enabled) to drive type-aware comparisons. Files written
-		// without a registered entity simply won't be sorted.
 		if reg, ok3 := writer.WriterAdapter.(sortColumnRegistrar); ok3 {
-			fmap := MapperCache.GetStructTagMap(ent)
-			var cols []sortColumn
-			for name, info := range fmap {
-				if info.SortOrder > 0 {
-					cols = append(cols, sortColumn{Name: name, Kind: info.Kind, Order: info.SortOrder})
-				}
-			}
-			sort.Slice(cols, func(i, j int) bool { return cols[i].Order < cols[j].Order })
-			if len(cols) > 0 {
+			if cols := MapperCache.GetSortColumns(ent); len(cols) > 0 {
 				reg.registerSortColumns(efn, cols)
 			}
 		}

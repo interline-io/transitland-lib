@@ -216,6 +216,20 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 	return m
 }
 
+// GetSortColumns returns the entity's fields tagged with standardized_sort,
+// sorted ascending by SortOrder.
+func (c *Cache) GetSortColumns(ent interface{}) []*FieldInfo {
+	fmap := c.GetStructTagMap(ent)
+	var cols []*FieldInfo
+	for _, fi := range fmap {
+		if fi.SortOrder > 0 {
+			cols = append(cols, fi)
+		}
+	}
+	sort.Slice(cols, func(i, j int) bool { return cols[i].SortOrder < cols[j].SortOrder })
+	return cols
+}
+
 // Header returns the field names in the same order as the struct definition.
 func (c *Cache) GetHeader(ent interface{}) ([]string, error) {
 	row := []string{}
