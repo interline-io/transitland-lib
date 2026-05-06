@@ -506,7 +506,7 @@
                 "schema": {
                   "properties": {
                     "agencies": {
-                      "description": "List or search for Agencies from currently imported feeds. \nEach Agency represents a `agency.txt` record from a specific FeedVersion.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Agencies (each an `agency.txt` record from a specific FeedVersion); defaults to currently active feed versions when none is specified",
                       "items": {
                         "properties": {
                           "agency_email": {
@@ -857,7 +857,7 @@
                                       "x-order": 34
                                     },
                                     "name": {
-                                      "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                                      "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                                       "nullable": true,
                                       "title": "name",
                                       "type": "string",
@@ -1337,7 +1337,7 @@
                 "schema": {
                   "properties": {
                     "agencies": {
-                      "description": "List or search for Agencies from currently imported feeds. \nEach Agency represents a `agency.txt` record from a specific FeedVersion.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Agencies (each an `agency.txt` record from a specific FeedVersion); defaults to currently active feed versions when none is specified",
                       "items": {
                         "properties": {
                           "agency_email": {
@@ -1688,7 +1688,7 @@
                                       "x-order": 34
                                     },
                                     "name": {
-                                      "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                                      "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                                       "nullable": true,
                                       "title": "name",
                                       "type": "string",
@@ -2256,7 +2256,7 @@
                             "description": "Feed associated with this feed version",
                             "properties": {
                               "name": {
-                                "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                                "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                                 "nullable": true,
                                 "title": "name",
                                 "type": "string",
@@ -2867,7 +2867,7 @@
                             "description": "Feed associated with this feed version",
                             "properties": {
                               "name": {
-                                "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                                "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                                 "nullable": true,
                                 "title": "name",
                                 "type": "string",
@@ -3472,7 +3472,7 @@
                                 "x-order": 57
                               },
                               "param_name": {
-                                "description": "Name of the request parameter that carries the secret. For `query_param` it is the query string key; for `header` it is the header name; for `path_segment` it is the placeholder in the URL path that gets substituted. Unused for `basic_auth` and `replace_url`",
+                                "description": "Name of the request parameter that carries the secret (query string key, header name, or URL path placeholder, depending on `type`); unused for `basic_auth` and `replace_url`",
                                 "title": "param_name",
                                 "type": "string",
                                 "x-order": 55
@@ -3669,25 +3669,25 @@
                                 "x-order": 47
                               },
                               "commercial_use_allowed": {
-                                "description": "Whether feed consumers may use the feed for commercial purposes. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may use the feed for commercial purposes",
                                 "title": "commercial_use_allowed",
                                 "type": "string",
                                 "x-order": 43
                               },
                               "create_derived_product": {
-                                "description": "Whether feed consumers may create and share derived products. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may create and share derived products",
                                 "title": "create_derived_product",
                                 "type": "string",
                                 "x-order": 39
                               },
                               "redistribution_allowed": {
-                                "description": "Whether feed consumers may redistribute the feed in its entirety. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may redistribute the feed in its entirety",
                                 "title": "redistribution_allowed",
                                 "type": "string",
                                 "x-order": 41
                               },
                               "share_alike_optional": {
-                                "description": "Whether feed consumers may keep their modifications of this feed private. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may keep their modifications of this feed private",
                                 "title": "share_alike_optional",
                                 "type": "string",
                                 "x-order": 45
@@ -3705,7 +3705,7 @@
                                 "x-order": 35
                               },
                               "use_without_attribution": {
-                                "description": "Whether feed consumers may use the feed without attribution. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may use the feed without attribution",
                                 "title": "use_without_attribution",
                                 "type": "string",
                                 "x-order": 37
@@ -3717,7 +3717,7 @@
                             "x-order": 50
                           },
                           "name": {
-                            "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                            "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                             "nullable": true,
                             "title": "name",
                             "type": "string",
@@ -3744,14 +3744,14 @@
                             "x-order": 4
                           },
                           "tags": {
-                            "description": "Optional tags defined in Transitland Atlas providing more info about this feed",
+                            "description": "Atlas tags providing additional metadata for this feed",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
                             "x-order": 12
                           },
                           "urls": {
-                            "description": "URLs associated with this feed (static, realtime, etc.)",
+                            "description": "URLs associated with this feed",
                             "nullable": true,
                             "properties": {
                               "gbfs_auto_discovery": {
@@ -3803,7 +3803,7 @@
                                 "x-order": 17
                               },
                               "static_planned": {
-                                "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect a few weeks or months in the future",
+                                "description": "URLs for static feeds representing planned future service (typically schedule changes due to take effect)",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
@@ -3956,7 +3956,7 @@
                                 "x-order": 57
                               },
                               "param_name": {
-                                "description": "Name of the request parameter that carries the secret. For `query_param` it is the query string key; for `header` it is the header name; for `path_segment` it is the placeholder in the URL path that gets substituted. Unused for `basic_auth` and `replace_url`",
+                                "description": "Name of the request parameter that carries the secret (query string key, header name, or URL path placeholder, depending on `type`); unused for `basic_auth` and `replace_url`",
                                 "title": "param_name",
                                 "type": "string",
                                 "x-order": 55
@@ -4153,25 +4153,25 @@
                                 "x-order": 47
                               },
                               "commercial_use_allowed": {
-                                "description": "Whether feed consumers may use the feed for commercial purposes. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may use the feed for commercial purposes",
                                 "title": "commercial_use_allowed",
                                 "type": "string",
                                 "x-order": 43
                               },
                               "create_derived_product": {
-                                "description": "Whether feed consumers may create and share derived products. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may create and share derived products",
                                 "title": "create_derived_product",
                                 "type": "string",
                                 "x-order": 39
                               },
                               "redistribution_allowed": {
-                                "description": "Whether feed consumers may redistribute the feed in its entirety. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may redistribute the feed in its entirety",
                                 "title": "redistribution_allowed",
                                 "type": "string",
                                 "x-order": 41
                               },
                               "share_alike_optional": {
-                                "description": "Whether feed consumers may keep their modifications of this feed private. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may keep their modifications of this feed private",
                                 "title": "share_alike_optional",
                                 "type": "string",
                                 "x-order": 45
@@ -4189,7 +4189,7 @@
                                 "x-order": 35
                               },
                               "use_without_attribution": {
-                                "description": "Whether feed consumers may use the feed without attribution. Values: `yes`, `no`, `unknown`, or empty",
+                                "description": "Whether feed consumers may use the feed without attribution",
                                 "title": "use_without_attribution",
                                 "type": "string",
                                 "x-order": 37
@@ -4201,7 +4201,7 @@
                             "x-order": 50
                           },
                           "name": {
-                            "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                            "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                             "nullable": true,
                             "title": "name",
                             "type": "string",
@@ -4228,14 +4228,14 @@
                             "x-order": 4
                           },
                           "tags": {
-                            "description": "Optional tags defined in Transitland Atlas providing more info about this feed",
+                            "description": "Atlas tags providing additional metadata for this feed",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
                             "x-order": 12
                           },
                           "urls": {
-                            "description": "URLs associated with this feed (static, realtime, etc.)",
+                            "description": "URLs associated with this feed",
                             "nullable": true,
                             "properties": {
                               "gbfs_auto_discovery": {
@@ -4287,7 +4287,7 @@
                                 "x-order": 17
                               },
                               "static_planned": {
-                                "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect a few weeks or months in the future",
+                                "description": "URLs for static feeds representing planned future service (typically schedule changes due to take effect)",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
@@ -4659,7 +4659,7 @@
                 "schema": {
                   "properties": {
                     "operators": {
-                      "description": "List or search for Operators (higher-level groupings of one or more GTFS agencies, defined in the Transitland Atlas)",
+                      "description": "List or search for Operators (higher-level groupings of agencies)",
                       "items": {
                         "properties": {
                           "agencies": {
@@ -4959,7 +4959,7 @@
                                   "x-order": 15
                                 },
                                 "name": {
-                                  "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                                  "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                                   "nullable": true,
                                   "title": "name",
                                   "type": "string",
@@ -5162,7 +5162,7 @@
                 "schema": {
                   "properties": {
                     "operators": {
-                      "description": "List or search for Operators (higher-level groupings of one or more GTFS agencies, defined in the Transitland Atlas)",
+                      "description": "List or search for Operators (higher-level groupings of agencies)",
                       "items": {
                         "properties": {
                           "agencies": {
@@ -5462,7 +5462,7 @@
                                   "x-order": 15
                                 },
                                 "name": {
-                                  "description": "A common name for this feed. Optional. Alternatively use `associated_operators[].name`",
+                                  "description": "A common name for this feed; alternatively use `associated_operators[].name`",
                                   "nullable": true,
                                   "title": "name",
                                   "type": "string",
@@ -5823,7 +5823,7 @@
                 "schema": {
                   "properties": {
                     "routes": {
-                      "description": "List or search for Routes.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Routes",
                       "items": {
                         "properties": {
                           "agency": {
@@ -6793,7 +6793,7 @@
                 "schema": {
                   "properties": {
                     "routes": {
-                      "description": "List or search for Routes.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Routes",
                       "items": {
                         "properties": {
                           "agency": {
@@ -7877,7 +7877,7 @@
                 "schema": {
                   "properties": {
                     "trips": {
-                      "description": "List or search for Trips.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Trips",
                       "items": {
                         "properties": {
                           "alerts": {
@@ -9345,7 +9345,7 @@
                 "schema": {
                   "properties": {
                     "trips": {
-                      "description": "List or search for Trips.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Trips",
                       "items": {
                         "properties": {
                           "alerts": {
@@ -10923,7 +10923,7 @@
                 "schema": {
                   "properties": {
                     "stops": {
-                      "description": "List or search for Stops.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Stops",
                       "items": {
                         "properties": {
                           "alerts": {
@@ -11709,7 +11709,7 @@
                 "schema": {
                   "properties": {
                     "stops": {
-                      "description": "List or search for Stops.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Stops",
                       "items": {
                         "properties": {
                           "alerts": {
@@ -12607,7 +12607,7 @@
                 "schema": {
                   "properties": {
                     "stops": {
-                      "description": "List or search for Stops.\nIf no feed version is specified, defaults to active feed versions.",
+                      "description": "List or search for Stops",
                       "items": {
                         "properties": {
                           "alerts": {

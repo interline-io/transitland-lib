@@ -9749,7 +9749,7 @@ extend type FeedVersion {
 	{Name: "../../../schema/graphql/schema.graphqls", Input: `# Scalar types
 
 """
-Unordered map of integer counts keyed by name.
+Map of integer counts keyed by name.
 Keys are typically GTFS filenames (e.g. ` + "`" + `{"stops.txt": 5, "routes.txt": 2}` + "`" + `) or column names within a file.
 """
 scalar Counts
@@ -9808,7 +9808,7 @@ Note: GTFS times can exceed 24 hours (e.g., ` + "`" + `25:00:00` + "`" + `) for 
 scalar Seconds
 
 """
-Unordered map with arbitrary string keys and JSON values.
+Map with arbitrary string keys and JSON values.
 """
 scalar Map
 
@@ -9823,7 +9823,7 @@ File upload.
 scalar Upload
 
 """
-Lenient boolean for GBFS feeds; accepts ` + "`" + `true` + "`" + `/` + "`" + `false` + "`" + `, ` + "`" + `0` + "`" + `/` + "`" + `1` + "`" + `, or string equivalents from heterogeneous JSON sources.
+Lenient boolean for GBFS feeds; accepts ` + "`" + `true` + "`" + `/` + "`" + `false` + "`" + `, ` + "`" + `0` + "`" + `/` + "`" + `1` + "`" + `, or string equivalents.
 """
 scalar Bool
 
@@ -9843,12 +9843,12 @@ A BCP 47 language tag (e.g., ` + "`" + `en` + "`" + `, ` + "`" + `fr-CA` + "`" +
 scalar Language
 
 """
-A URL string (may be empty/null).
+A URL string.
 """
 scalar Url
 
 """
-An email address string (may be empty/null).
+An email address string.
 """
 scalar Email
 
@@ -9870,35 +9870,22 @@ type Query {
   "List or search for Feeds (metadata about data sources)"
   feeds(limit: Int, after: Int, ids: [Int!], where: FeedFilter): [Feed!]!
   
-  "List or search for Operators (higher-level groupings of one or more GTFS agencies, defined in the Transitland Atlas)"
+  "List or search for Operators (higher-level groupings of agencies)"
   operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
   
   "List or search for FeedVersions (specific archived import of a Feed)"
   feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
   
-  """
-  List or search for Agencies from currently imported feeds. 
-  Each Agency represents a ` + "`" + `agency.txt` + "`" + ` record from a specific FeedVersion.
-  If no feed version is specified, defaults to active feed versions.
-  """
+  "List or search for Agencies (each an ` + "`" + `agency.txt` + "`" + ` record from a specific FeedVersion); defaults to currently active feed versions when none is specified"
   agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
-  
-  """
-  List or search for Routes.
-  If no feed version is specified, defaults to active feed versions.
-  """
+
+  "List or search for Routes"
   routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
-  
-  """
-  List or search for Stops.
-  If no feed version is specified, defaults to active feed versions.
-  """
+
+  "List or search for Stops"
   stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
-  
-  """
-  List or search for Trips.
-  If no feed version is specified, defaults to active feed versions.
-  """
+
+  "List or search for Trips"
   trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
   
   "Aggregate operator counts by administrative place (City, State, Country)"
@@ -9913,10 +9900,10 @@ type Query {
   "Current GBFS dock data (Station Information)"
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
   
-  "Current user metadata. Requires authentication"
+  "Current user metadata; requires authentication"
   me: Me!
-  
-  "List available Census Datasets (US Census Bureau ACS, TIGER/Line geographic boundaries, US FTA National Transit Database)"
+
+  "List available Census Datasets"
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
 }
 
@@ -10013,7 +10000,7 @@ type Feed {
   """
   onestop_id: String!
   
-  "A common name for this feed. Optional. Alternatively use ` + "`" + `associated_operators[].name` + "`" + `"
+  "A common name for this feed; alternatively use ` + "`" + `associated_operators[].name` + "`" + `"
   name: String
   
   "Source DMFR file for this feed in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)"
@@ -10025,13 +10012,13 @@ type Feed {
   "Language(s) included in this feed (BCP 47 tags)"
   languages: [String!]
   
-  "Optional tags defined in Transitland Atlas providing more info about this feed"
+  "Atlas tags providing additional metadata for this feed"
   tags: Tags
   
   "Authorization metadata for fetching data from this feed (e.g., API keys, headers)"
   authorization: FeedAuthorization
   
-  "URLs associated with this feed (static, realtime, etc.)"
+  "URLs associated with this feed"
   urls: FeedUrls
   
   "Feed license metadata"
@@ -10054,7 +10041,7 @@ type Feed {
 }
 
 """
-Details on the current state of this feed, such as active version, last fetch time, etc.
+Current state pointer for a feed, exposing the active feed version.
 """
 type FeedState {
   "Internal integer ID"
@@ -10065,8 +10052,7 @@ type FeedState {
 }
 
 """
-Record of a feed fetch operation.
-Tracks individual attempts to download data from the feed URL.
+Record of a single feed fetch attempt.
 """
 type FeedFetch {
   "Internal integer ID"
@@ -10078,7 +10064,7 @@ type FeedFetch {
   "URL fetched"
   url: String
   
-  "Was the request successful?"
+  "True if the fetch succeeded"
   success: Boolean
   
   "Timestamp when the fetch occurred"
@@ -10087,7 +10073,7 @@ type FeedFetch {
   "Error message if the fetch did not succeed"
   fetch_error: String
   
-  "Server response size, in bytes"
+  "Response size in bytes"
   response_size: Int
   
   "Server response code (if HTTP)"
@@ -10105,7 +10091,7 @@ type FeedAuthorization {
   "Method for inserting the authorization secret into the request: ` + "`" + `header` + "`" + `, ` + "`" + `basic_auth` + "`" + `, ` + "`" + `query_param` + "`" + `, ` + "`" + `path_segment` + "`" + `, or ` + "`" + `replace_url` + "`" + `"
   type: String!
 
-  "Name of the request parameter that carries the secret. For ` + "`" + `query_param` + "`" + ` it is the query string key; for ` + "`" + `header` + "`" + ` it is the header name; for ` + "`" + `path_segment` + "`" + ` it is the placeholder in the URL path that gets substituted. Unused for ` + "`" + `basic_auth` + "`" + ` and ` + "`" + `replace_url` + "`" + `"
+  "Name of the request parameter that carries the secret (query string key, header name, or URL path placeholder, depending on ` + "`" + `type` + "`" + `); unused for ` + "`" + `basic_auth` + "`" + ` and ` + "`" + `replace_url` + "`" + `"
   param_name: String!
   
   "Website to visit to sign up for an account"
@@ -10115,6 +10101,8 @@ type FeedAuthorization {
 """
 License information for this feed, curated by Interline and contributors to the [Transitland Atlas](https://github.com/transitland/transitland-atlas) feed registry.
 Note that this does not constitute legal advice. Users are advised to review and confirm any terms and conditions attached to a source feed.
+
+Permission fields below take values ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty.
 """
 type FeedLicense {
   "SPDX identifier for a common license (see https://spdx.org/licenses/); empty if no SPDX license applies"
@@ -10123,19 +10111,19 @@ type FeedLicense {
   "URL to a custom license; empty if a SPDX license is used or no license is recorded"
   url: String!
 
-  "Whether feed consumers may use the feed without attribution. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
+  "Whether feed consumers may use the feed without attribution"
   use_without_attribution: String!
 
-  "Whether feed consumers may create and share derived products. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
+  "Whether feed consumers may create and share derived products"
   create_derived_product: String!
 
-  "Whether feed consumers may redistribute the feed in its entirety. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
+  "Whether feed consumers may redistribute the feed in its entirety"
   redistribution_allowed: String!
 
-  "Whether feed consumers may use the feed for commercial purposes. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
+  "Whether feed consumers may use the feed for commercial purposes"
   commercial_use_allowed: String!
 
-  "Whether feed consumers may keep their modifications of this feed private. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
+  "Whether feed consumers may keep their modifications of this feed private"
   share_alike_optional: String!
 
   "Attribution text that consumers must include when using this feed"
@@ -10150,7 +10138,7 @@ type FeedUrls {
   static_current: String!
   "URLs for static feeds that represent past service that is no longer in effect"
   static_historic: [String!]!
-  "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect a few weeks or months in the future"
+  "URLs for static feeds representing planned future service (typically schedule changes due to take effect)"
   static_planned: [String!]!
   "URL for GTFS-RT VehiclePosition messages"
   realtime_vehicle_positions: String!
