@@ -814,9 +814,9 @@ type Me struct {
 	Name *string `json:"name,omitempty"`
 	// User email
 	Email *string `json:"email,omitempty"`
-	// User associated roles
+	// Roles assigned to this user
 	Roles []string `json:"roles,omitempty"`
-	// User associated external data, e.g. metering service identifiers
+	// External identifiers and metadata associated with this user, e.g. metering service IDs
 	ExternalData tt.Map `json:"external_data"`
 }
 
@@ -983,8 +983,7 @@ type PointRadius struct {
 
 // Root Query type.
 //
-// **Authorization**: Some queries generally available to all users.
-// Management queries (e.g., specific user data) may be restricted based on user roles.
+// **Authorization**: Most queries are available to all callers. A few (e.g. user-specific data) require authentication or specific roles.
 type Query struct {
 }
 

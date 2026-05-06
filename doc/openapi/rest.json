@@ -4659,7 +4659,7 @@
                 "schema": {
                   "properties": {
                     "operators": {
-                      "description": "List or search for Operators (agencies provided by feeds)",
+                      "description": "List or search for Operators (higher-level groupings of one or more GTFS agencies, defined in the Transitland Atlas)",
                       "items": {
                         "properties": {
                           "agencies": {
@@ -5162,7 +5162,7 @@
                 "schema": {
                   "properties": {
                     "operators": {
-                      "description": "List or search for Operators (agencies provided by feeds)",
+                      "description": "List or search for Operators (higher-level groupings of one or more GTFS agencies, defined in the Transitland Atlas)",
                       "items": {
                         "properties": {
                           "agencies": {

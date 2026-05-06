@@ -9767,7 +9767,7 @@ Coordinates are in WGS84 (EPSG:4326).
 scalar Geometry
 
 """
-Date with time, in UTC (RFC3339).
+A date and time in UTC, formatted per RFC 3339.
 """
 scalar Time
 
@@ -9808,7 +9808,7 @@ Note: GTFS times can exceed 24 hours (e.g., ` + "`" + `25:00:00` + "`" + `) for 
 scalar Seconds
 
 """
-Map with arbitrary keys and values.
+Unordered map with arbitrary string keys and JSON values.
 """
 scalar Map
 
@@ -9823,12 +9823,7 @@ File upload.
 scalar Upload
 
 """
-Entity key.
-"""
-scalar Key
-
-"""
-Boolean value. Can be ` + "`" + `true` + "`" + `, ` + "`" + `false` + "`" + `, or ` + "`" + `null` + "`" + `.
+Lenient boolean for GBFS feeds; accepts ` + "`" + `true` + "`" + `/` + "`" + `false` + "`" + `, ` + "`" + `0` + "`" + `/` + "`" + `1` + "`" + `, or string equivalents from heterogeneous JSON sources.
 """
 scalar Bool
 
@@ -9838,7 +9833,7 @@ Array of strings.
 scalar Strings
 
 """
-A color in hex format (e.g., ` + "`" + `#FF0000` + "`" + `).
+A color in hex format (e.g., ` + "`" + `FF0000` + "`" + ` or ` + "`" + `#FF0000` + "`" + `).
 """
 scalar Color
 
@@ -9848,17 +9843,17 @@ A BCP 47 language tag (e.g., ` + "`" + `en` + "`" + `, ` + "`" + `fr-CA` + "`" +
 scalar Language
 
 """
-A valid URL string.
+A URL string (may be empty/null).
 """
 scalar Url
 
 """
-A valid email address string.
+An email address string (may be empty/null).
 """
 scalar Email
 
 """
-A valid timezone string (e.g., ` + "`" + `America/Los_Angeles` + "`" + `).
+An IANA timezone name (e.g., ` + "`" + `America/Los_Angeles` + "`" + `).
 """
 scalar Timezone
 
@@ -9869,14 +9864,13 @@ directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITI
 """
 Root Query type.
 
-**Authorization**: Some queries generally available to all users.
-Management queries (e.g., specific user data) may be restricted based on user roles.
+**Authorization**: Most queries are available to all callers. A few (e.g. user-specific data) require authentication or specific roles.
 """
 type Query {
   "List or search for Feeds (metadata about data sources)"
   feeds(limit: Int, after: Int, ids: [Int!], where: FeedFilter): [Feed!]!
   
-  "List or search for Operators (agencies provided by feeds)"
+  "List or search for Operators (higher-level groupings of one or more GTFS agencies, defined in the Transitland Atlas)"
   operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
   
   "List or search for FeedVersions (specific archived import of a Feed)"
@@ -9910,7 +9904,7 @@ type Query {
   "Aggregate operator counts by administrative place (City, State, Country)"
   places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]
   
-  "Directions requests API (routing)"
+  "Compute walking, transit, or driving directions; returns one or more itineraries"
   directions(where: DirectionRequest!): Directions!
   
   "Current GBFS floating bike data (Free Bike Status)"
@@ -9933,13 +9927,13 @@ Root Mutation type.
 **Authorization**: Most mutations require specific user roles and permissions (e.g. ` + "`" + `editor` + "`" + `, ` + "`" + `admin` + "`" + `).
 """
 type Mutation {
-  "Validate a GTFS feed from a URL or upload"
+  "Validate a GTFS static feed (URL or upload), optionally with associated GTFS-RT URLs"
   validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationReport
   
   "Update a feed version's metadata"
   feed_version_update(set: FeedVersionSetInput!): FeedVersion
   
-  "Trigger a fetch for a feed version"
+  "Fetch a new feed version for the given feed (from URL or upload)"
   feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult
   
   "Manually trigger an import for a feed version"
@@ -9949,7 +9943,7 @@ type Mutation {
   feed_version_unimport(id: Int!): FeedVersionUnimportResult!
   
   "Permanently delete a feed version"
-  feed_version_delete(id: Int!): FeedVersionDeleteResult!
+  feed_version_delete(id: Int!): FeedVersionDeleteResult! @deprecated(reason: "Temporarily unavailable; the resolver currently returns an error")
 
   "Create a new Stop"
   stop_create(set: StopSetInput!): Stop!
@@ -9995,9 +9989,9 @@ type Me {
   name: String
   "User email"
   email: String
-  "User associated roles"
+  "Roles assigned to this user"
   roles: [String!]
-  "User associated external data, e.g. metering service identifiers"
+  "External identifiers and metadata associated with this user, e.g. metering service IDs"
   external_data: Map!
 }
 
