@@ -12131,7 +12131,7 @@ input OperatorFilter {
   agency_id: String
   "Full-text search string"
   search: String
-  "Search for operators with this set of tag key/values"
+  "Search for operators matching these tags"
   tags: Tags
   "Search for operators by city name (provided by Natural Earth)"
   city_name: String
@@ -12157,15 +12157,15 @@ input OperatorFilter {
 input ValidationReportFilter {
   "Restrict to validation reports with these integer IDs"
   report_ids: [Int!]
-  "Filter by ` + "`" + `success` + "`" + ` flag: true returns only successful reports, false returns only failed reports"
+  "Filter by success: true for successful reports, false for failed"
   success: Boolean
   "Filter by validator name"
   validator: String
   "Filter by validator version"
   validator_version: String
-  "Filter by ` + "`" + `includes_rt` + "`" + ` flag: true returns reports that include GTFS-RT validation, false returns those that don't"
+  "Filter by ` + "`" + `includes_rt` + "`" + `: true for reports that include GTFS-RT validation, false for those that don't"
   includes_rt: Boolean
-  "Filter by ` + "`" + `includes_static` + "`" + ` flag: true returns reports that include GTFS static validation, false returns those that don't"
+  "Filter by ` + "`" + `includes_static` + "`" + `: true for reports that include GTFS static validation, false for those that don't"
   includes_static: Boolean
 }
 
@@ -12248,7 +12248,7 @@ input FeedFilter {
   onestop_id: String
   "Restrict to feeds matching any of the given data types"
   spec: [FeedSpecTypes!]
-  "Filter by latest-fetch outcome: true returns feeds whose most recent fetch failed, false returns those whose most recent fetch succeeded"
+  "Filter by latest-fetch outcome: true for feeds whose most recent fetch failed, false for those whose succeeded"
   fetch_error: Boolean
   "Filter by the import status of the feed's active feed version"
   import_status: ImportStatus
@@ -12270,7 +12270,7 @@ input FeedFilter {
 
 """Search options for feed fetches"""
 input FeedFetchFilter {
-  "Search for feed fetches with success (true) or failure (false) or unspecified (null)"
+  "Filter by fetch outcome: true for successful, false for failed"
   success: Boolean
 }
 
@@ -12320,7 +12320,7 @@ enum FeedSpecTypes {
 
 """Search options for agencies"""
 input AgencyFilter {
-  "Search for agencies whose resolved Onestop ID (operator's, when associated, otherwise the agency's) matches"
+  "Search by resolved Onestop ID (operator's when associated, else agency's)"
   onestop_id: String
   "Search for agencies with this feed version SHA1 hash"
   feed_version_sha1: String
@@ -12384,7 +12384,7 @@ input RouteFilter {
   route_type: Int
   "Search for routes with any of these GTFS route_types"
   route_types: [Int!]
-  "If true, restrict to routes that have at least one trip in the active feed version. If false or null, returns all routes regardless of trip count"
+  "If true, restrict to routes with at least one trip; false or null returns all routes"
   serviced: Boolean
   "Full text search"
   search: String
@@ -12463,7 +12463,7 @@ input StopFilter {
   stop_code: String
   "Search for stops with this GTFS location_type"
   location_type: Int
-  "If true, restrict to stops served by at least one trip in the active feed version. If false or null, returns all stops regardless of service"
+  "If true, restrict to stops served by at least one trip; false or null returns all stops"
   serviced: Boolean
   "Full text search"
   search: String
@@ -12681,7 +12681,7 @@ input SegmentFilter {
 
 """Search options for route segment patterns"""
 input SegmentPatternFilter {
-  "Search for segments patterns associated with this layer name"
+  "Search for segment patterns associated with this layer name"
   layer: String
 }
 
@@ -12714,17 +12714,17 @@ input ServiceCoversFilter {
   fetched_after: Time
   "Search for feed versions fetched before this time"
   fetched_before: Time
-  "Search using only feed_info.txt values"
+  "Lower bound on the feed's ` + "`" + `feed_info.feed_start_date` + "`" + `"
   feed_start_date: Date
-  "Search using only feed_info.txt values"
+  "Upper bound on the feed's ` + "`" + `feed_info.feed_end_date` + "`" + `"
   feed_end_date: Date
-  "Search using feed_info.txt values or calendar maximum service extent"
+  "Lower bound, evaluated against ` + "`" + `feed_info.feed_start_date` + "`" + ` or calculated earliest calendar date"
   start_date: Date
-  "Search using feed_info.txt values or calendar maximum service extent"
+  "Upper bound, evaluated against ` + "`" + `feed_info.feed_end_date` + "`" + ` or calculated latest calendar date"
   end_date: Date
-  "Search using calendar maximum service extent"
+  "Lower bound on the calculated earliest calendar service date"
   earliest_calendar_date: Date
-  "Search using calendar maximum service extent"
+  "Upper bound on the calculated latest calendar service date"
   latest_calendar_date: Date
 }
 
@@ -12792,9 +12792,9 @@ type FeedVersionFetchResult {
   feed_version: FeedVersion
   "Error message if the fetch failed"
   fetch_error: String
-  "True if the fetched archive's SHA1 hash already exists in the database (i.e. the same zip file was already imported)"
+  "True if the same zip file is already in the database (matched by SHA1)"
   found_sha1: Boolean!
-  "True if the fetched archive's unpacked directory contents hash already exists in the database (i.e. a different zip with identical contents was already imported)"
+  "True if a zip with identical unpacked contents is already in the database (matched by directory SHA1)"
   found_dir_sha1: Boolean!
 }
 
@@ -12839,29 +12839,29 @@ input StopSetInput {
   id: Int
   "Feed version this stop belongs to (required when creating a new stop)"
   feed_version: FeedVersionInput
-  "Set GTFS location_type to this value"
+  "Set GTFS location_type"
   location_type: Int
-  "Set GTFS stop_code to this value"
+  "Set GTFS stop_code"
   stop_code: String
-  "Set GTFS stop_desc to this value"
+  "Set GTFS stop_desc"
   stop_desc: String
-  "Set GTFS stop_id to this value"
+  "Set GTFS stop_id"
   stop_id: String
-  "Set GTFS stop_name to this value"
+  "Set GTFS stop_name"
   stop_name: String
-  "Set GTFS stop_timezone to this value"
+  "Set GTFS stop_timezone"
   stop_timezone: String
-  "Set GTFS stop_url to this value"
+  "Set GTFS stop_url"
   stop_url: String
-  "Set GTFS wheelchair_boarding to this value"
+  "Set GTFS wheelchair_boarding"
   wheelchair_boarding: Int
-  "Set GTFS zone_id to this value"
+  "Set GTFS zone_id"
   zone_id: String
-  "Set GTFS platform_code to this value"
+  "Set GTFS platform_code"
   platform_code: String
-  "Set GTFS tts_stop_name to this value"
+  "Set GTFS tts_stop_name"
   tts_stop_name: String
-  "Set stop geometry to this value"
+  "Set stop geometry"
   geometry: Point
   "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
   parent: StopSetInput
@@ -12885,13 +12885,13 @@ input LevelSetInput {
   id: Int
   "Feed version this level belongs to (required when creating a new level)"
   feed_version: FeedVersionInput
-  "Set GTFS level_id to this value"
+  "Set GTFS level_id"
   level_id: String
-  "Set GTFS level_name to this value"
+  "Set GTFS level_name"
   level_name: String
-  "Set GTFS level_index to this value"
+  "Set GTFS level_index"
   level_index: Float
-  "Set level geometry to this value"
+  "Set level geometry"
   geometry: MultiPolygon
   "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
   parent: StopSetInput
@@ -12903,25 +12903,25 @@ input PathwaySetInput {
   id: Int
   "Feed version this pathway belongs to (required when creating a new pathway)"
   feed_version: FeedVersionInput
-  "Set GTFS pathway_id to this value"
+  "Set GTFS pathway_id"
   pathway_id: String
-  "Set GTFS pathway_mode to this value"
+  "Set GTFS pathway_mode"
   pathway_mode: Int
-  "Set GTFS is_bidirectional to this value"
+  "Set GTFS is_bidirectional"
   is_bidirectional: Int
-  "Set GTFS length to this value"
+  "Set GTFS length"
   length: Float
-  "Set GTFS traversal_time to this value"
+  "Set GTFS traversal_time"
   traversal_time: Int
-  "Set GTFS stair_count to this value"
+  "Set GTFS stair_count"
   stair_count: Int
-  "Set GTFS max_slope to this value"
+  "Set GTFS max_slope"
   max_slope: Float
-  "Set GTFS min_width to this value"
+  "Set GTFS min_width"
   min_width: Float
-  "Set GTFS signposted_as to this value"
+  "Set GTFS signposted_as"
   signposted_as: String
-  "Set GTFS reverse_signposted_as to this value"
+  "Set GTFS reverse_signposted_as"
   reverse_signposted_as: String
   "Reference to an existing origin stop; only the ` + "`" + `id` + "`" + ` is used (the stop must already exist)"
   from_stop: StopSetInput

@@ -14,7 +14,7 @@ import (
 
 // Search options for agencies
 type AgencyFilter struct {
-	// Search for agencies whose resolved Onestop ID (operator's, when associated, otherwise the agency's) matches
+	// Search by resolved Onestop ID (operator's when associated, else agency's)
 	OnestopID *string `json:"onestop_id,omitempty"`
 	// Search for agencies with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
@@ -487,7 +487,7 @@ type Feature struct {
 
 // Search options for feed fetches
 type FeedFetchFilter struct {
-	// Search for feed fetches with success (true) or failure (false) or unspecified (null)
+	// Filter by fetch outcome: true for successful, false for failed
 	Success *bool `json:"success,omitempty"`
 }
 
@@ -497,7 +497,7 @@ type FeedFilter struct {
 	OnestopID *string `json:"onestop_id,omitempty"`
 	// Restrict to feeds matching any of the given data types
 	Spec []FeedSpecTypes `json:"spec,omitempty"`
-	// Filter by latest-fetch outcome: true returns feeds whose most recent fetch failed, false returns those whose most recent fetch succeeded
+	// Filter by latest-fetch outcome: true for feeds whose most recent fetch failed, false for those whose succeeded
 	FetchError *bool `json:"fetch_error,omitempty"`
 	// Filter by the import status of the feed's active feed version
 	ImportStatus *ImportStatus `json:"import_status,omitempty"`
@@ -539,9 +539,9 @@ type FeedVersionFetchResult struct {
 	FeedVersion *FeedVersion `json:"feed_version,omitempty"`
 	// Error message if the fetch failed
 	FetchError *string `json:"fetch_error,omitempty"`
-	// True if the fetched archive's SHA1 hash already exists in the database (i.e. the same zip file was already imported)
+	// True if the same zip file is already in the database (matched by SHA1)
 	FoundSha1 bool `json:"found_sha1"`
-	// True if the fetched archive's unpacked directory contents hash already exists in the database (i.e. a different zip with identical contents was already imported)
+	// True if a zip with identical unpacked contents is already in the database (matched by directory SHA1)
 	FoundDirSha1 bool `json:"found_dir_sha1"`
 }
 
@@ -764,13 +764,13 @@ type LevelSetInput struct {
 	ID *int `json:"id,omitempty"`
 	// Feed version this level belongs to (required when creating a new level)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
-	// Set GTFS level_id to this value
+	// Set GTFS level_id
 	LevelID *string `json:"level_id,omitempty"`
-	// Set GTFS level_name to this value
+	// Set GTFS level_name
 	LevelName *string `json:"level_name,omitempty"`
-	// Set GTFS level_index to this value
+	// Set GTFS level_index
 	LevelIndex *float64 `json:"level_index,omitempty"`
-	// Set level geometry to this value
+	// Set level geometry
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
 	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
 	Parent *StopSetInput `json:"parent,omitempty"`
@@ -838,7 +838,7 @@ type OperatorFilter struct {
 	AgencyID *string `json:"agency_id,omitempty"`
 	// Full-text search string
 	Search *string `json:"search,omitempty"`
-	// Search for operators with this set of tag key/values
+	// Search for operators matching these tags
 	Tags *tt.Tags `json:"tags,omitempty"`
 	// Search for operators by city name (provided by Natural Earth)
 	CityName *string `json:"city_name,omitempty"`
@@ -872,25 +872,25 @@ type PathwaySetInput struct {
 	ID *int `json:"id,omitempty"`
 	// Feed version this pathway belongs to (required when creating a new pathway)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
-	// Set GTFS pathway_id to this value
+	// Set GTFS pathway_id
 	PathwayID *string `json:"pathway_id,omitempty"`
-	// Set GTFS pathway_mode to this value
+	// Set GTFS pathway_mode
 	PathwayMode *int `json:"pathway_mode,omitempty"`
-	// Set GTFS is_bidirectional to this value
+	// Set GTFS is_bidirectional
 	IsBidirectional *int `json:"is_bidirectional,omitempty"`
-	// Set GTFS length to this value
+	// Set GTFS length
 	Length *float64 `json:"length,omitempty"`
-	// Set GTFS traversal_time to this value
+	// Set GTFS traversal_time
 	TraversalTime *int `json:"traversal_time,omitempty"`
-	// Set GTFS stair_count to this value
+	// Set GTFS stair_count
 	StairCount *int `json:"stair_count,omitempty"`
-	// Set GTFS max_slope to this value
+	// Set GTFS max_slope
 	MaxSlope *float64 `json:"max_slope,omitempty"`
-	// Set GTFS min_width to this value
+	// Set GTFS min_width
 	MinWidth *float64 `json:"min_width,omitempty"`
-	// Set GTFS signposted_as to this value
+	// Set GTFS signposted_as
 	SignpostedAs *string `json:"signposted_as,omitempty"`
-	// Set GTFS reverse_signposted_as to this value
+	// Set GTFS reverse_signposted_as
 	ReverseSignpostedAs *string `json:"reverse_signposted_as,omitempty"`
 	// Reference to an existing origin stop; only the `id` is used (the stop must already exist)
 	FromStop *StopSetInput `json:"from_stop,omitempty"`
@@ -1058,7 +1058,7 @@ type RouteFilter struct {
 	RouteType *int `json:"route_type,omitempty"`
 	// Search for routes with any of these GTFS route_types
 	RouteTypes []int `json:"route_types,omitempty"`
-	// If true, restrict to routes that have at least one trip in the active feed version. If false or null, returns all routes regardless of trip count
+	// If true, restrict to routes with at least one trip; false or null returns all routes
 	Serviced *bool `json:"serviced,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
@@ -1215,7 +1215,7 @@ type SegmentPattern struct {
 
 // Search options for route segment patterns
 type SegmentPatternFilter struct {
-	// Search for segments patterns associated with this layer name
+	// Search for segment patterns associated with this layer name
 	Layer *string `json:"layer,omitempty"`
 }
 
@@ -1225,17 +1225,17 @@ type ServiceCoversFilter struct {
 	FetchedAfter *time.Time `json:"fetched_after,omitempty"`
 	// Search for feed versions fetched before this time
 	FetchedBefore *time.Time `json:"fetched_before,omitempty"`
-	// Search using only feed_info.txt values
+	// Lower bound on the feed's `feed_info.feed_start_date`
 	FeedStartDate *tt.Date `json:"feed_start_date,omitempty"`
-	// Search using only feed_info.txt values
+	// Upper bound on the feed's `feed_info.feed_end_date`
 	FeedEndDate *tt.Date `json:"feed_end_date,omitempty"`
-	// Search using feed_info.txt values or calendar maximum service extent
+	// Lower bound, evaluated against `feed_info.feed_start_date` or calculated earliest calendar date
 	StartDate *tt.Date `json:"start_date,omitempty"`
-	// Search using feed_info.txt values or calendar maximum service extent
+	// Upper bound, evaluated against `feed_info.feed_end_date` or calculated latest calendar date
 	EndDate *tt.Date `json:"end_date,omitempty"`
-	// Search using calendar maximum service extent
+	// Lower bound on the calculated earliest calendar service date
 	EarliestCalendarDate *tt.Date `json:"earliest_calendar_date,omitempty"`
-	// Search using calendar maximum service extent
+	// Upper bound on the calculated latest calendar service date
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 }
 
@@ -1301,7 +1301,7 @@ type StopFilter struct {
 	StopCode *string `json:"stop_code,omitempty"`
 	// Search for stops with this GTFS location_type
 	LocationType *int `json:"location_type,omitempty"`
-	// If true, restrict to stops served by at least one trip in the active feed version. If false or null, returns all stops regardless of service
+	// If true, restrict to stops served by at least one trip; false or null returns all stops
 	Serviced *bool `json:"serviced,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
@@ -1403,29 +1403,29 @@ type StopSetInput struct {
 	ID *int `json:"id,omitempty"`
 	// Feed version this stop belongs to (required when creating a new stop)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
-	// Set GTFS location_type to this value
+	// Set GTFS location_type
 	LocationType *int `json:"location_type,omitempty"`
-	// Set GTFS stop_code to this value
+	// Set GTFS stop_code
 	StopCode *string `json:"stop_code,omitempty"`
-	// Set GTFS stop_desc to this value
+	// Set GTFS stop_desc
 	StopDesc *string `json:"stop_desc,omitempty"`
-	// Set GTFS stop_id to this value
+	// Set GTFS stop_id
 	StopID *string `json:"stop_id,omitempty"`
-	// Set GTFS stop_name to this value
+	// Set GTFS stop_name
 	StopName *string `json:"stop_name,omitempty"`
-	// Set GTFS stop_timezone to this value
+	// Set GTFS stop_timezone
 	StopTimezone *string `json:"stop_timezone,omitempty"`
-	// Set GTFS stop_url to this value
+	// Set GTFS stop_url
 	StopURL *string `json:"stop_url,omitempty"`
-	// Set GTFS wheelchair_boarding to this value
+	// Set GTFS wheelchair_boarding
 	WheelchairBoarding *int `json:"wheelchair_boarding,omitempty"`
-	// Set GTFS zone_id to this value
+	// Set GTFS zone_id
 	ZoneID *string `json:"zone_id,omitempty"`
-	// Set GTFS platform_code to this value
+	// Set GTFS platform_code
 	PlatformCode *string `json:"platform_code,omitempty"`
-	// Set GTFS tts_stop_name to this value
+	// Set GTFS tts_stop_name
 	TtsStopName *string `json:"tts_stop_name,omitempty"`
-	// Set stop geometry to this value
+	// Set stop geometry
 	Geometry *tt.Point `json:"geometry,omitempty"`
 	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
 	Parent *StopSetInput `json:"parent,omitempty"`
@@ -1689,15 +1689,15 @@ type ValidationReportErrorGroup struct {
 type ValidationReportFilter struct {
 	// Restrict to validation reports with these integer IDs
 	ReportIds []int `json:"report_ids,omitempty"`
-	// Filter by `success` flag: true returns only successful reports, false returns only failed reports
+	// Filter by success: true for successful reports, false for failed
 	Success *bool `json:"success,omitempty"`
 	// Filter by validator name
 	Validator *string `json:"validator,omitempty"`
 	// Filter by validator version
 	ValidatorVersion *string `json:"validator_version,omitempty"`
-	// Filter by `includes_rt` flag: true returns reports that include GTFS-RT validation, false returns those that don't
+	// Filter by `includes_rt`: true for reports that include GTFS-RT validation, false for those that don't
 	IncludesRt *bool `json:"includes_rt,omitempty"`
-	// Filter by `includes_static` flag: true returns reports that include GTFS static validation, false returns those that don't
+	// Filter by `includes_static`: true for reports that include GTFS static validation, false for those that don't
 	IncludesStatic *bool `json:"includes_static,omitempty"`
 }
 
