@@ -551,7 +551,7 @@
                             "x-order": 16
                           },
                           "agency_timezone": {
-                            "description": "GTFS `agency.agency_timezone`; timezone where the transit agency is located; stop times use this timezone unless overridden by stop_timezone",
+                            "description": "GTFS `agency.agency_timezone`; stop times use this timezone unless overridden by `stop_timezone`",
                             "title": "agency_timezone",
                             "type": "string",
                             "x-order": 12
@@ -909,14 +909,14 @@
                                 "x-order": 25
                               },
                               "short_name": {
-                                "description": "Operator short name, if available",
+                                "description": "Operator short name",
                                 "nullable": true,
                                 "title": "short_name",
                                 "type": "string",
                                 "x-order": 29
                               },
                               "tags": {
-                                "description": "Optional tags defined in Transitland Atlas providing more info about this operator",
+                                "description": "Atlas tags providing additional metadata for this operator",
                                 "nullable": true,
                                 "title": "tags",
                                 "type": "object",
@@ -1382,7 +1382,7 @@
                             "x-order": 16
                           },
                           "agency_timezone": {
-                            "description": "GTFS `agency.agency_timezone`; timezone where the transit agency is located; stop times use this timezone unless overridden by stop_timezone",
+                            "description": "GTFS `agency.agency_timezone`; stop times use this timezone unless overridden by `stop_timezone`",
                             "title": "agency_timezone",
                             "type": "string",
                             "x-order": 12
@@ -1740,14 +1740,14 @@
                                 "x-order": 25
                               },
                               "short_name": {
-                                "description": "Operator short name, if available",
+                                "description": "Operator short name",
                                 "nullable": true,
                                 "title": "short_name",
                                 "type": "string",
                                 "x-order": 29
                               },
                               "tags": {
-                                "description": "Optional tags defined in Transitland Atlas providing more info about this operator",
+                                "description": "Atlas tags providing additional metadata for this operator",
                                 "nullable": true,
                                 "title": "tags",
                                 "type": "object",
@@ -2289,7 +2289,7 @@
                             "x-order": 22
                           },
                           "feed_infos": {
-                            "description": "Records from this feed version's `feed_info.txt`, containing publisher metadata and the declared service date range",
+                            "description": "Records from this feed version's `feed_info.txt`",
                             "items": {
                               "properties": {
                                 "default_lang": {
@@ -2361,7 +2361,7 @@
                             "x-order": 74
                           },
                           "feed_version_gtfs_import": {
-                            "description": "Current database import status of this feed version",
+                            "description": "Database import status",
                             "nullable": true,
                             "properties": {
                               "exception_log": {
@@ -2396,7 +2396,7 @@
                                 "x-order": 87
                               },
                               "skip_entity_marked_count": {
-                                "description": "Counts of entities skipped because they were not selected by the marker filter, keyed by file name",
+                                "description": "Counts of entities skipped by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
                                 "x-order": 89
@@ -2428,7 +2428,7 @@
                             "x-order": 6
                           },
                           "files": {
-                            "description": "Metadata for each text file present in the main directory of the zip archive",
+                            "description": "Metadata for each file in the GTFS archive",
                             "items": {
                               "properties": {
                                 "csv_like": {
@@ -2510,19 +2510,19 @@
                                   "x-order": 41
                                 },
                                 "friday": {
-                                  "description": "Number of seconds of service scheduled on the Friday of this week",
+                                  "description": "Seconds of service scheduled on Friday",
                                   "title": "friday",
                                   "type": "integer",
                                   "x-order": 51
                                 },
                                 "monday": {
-                                  "description": "Number of seconds of service scheduled on the Monday of this week",
+                                  "description": "Seconds of service scheduled on Monday",
                                   "title": "monday",
                                   "type": "integer",
                                   "x-order": 43
                                 },
                                 "saturday": {
-                                  "description": "Number of seconds of service scheduled on the Saturday of this week",
+                                  "description": "Seconds of service scheduled on Saturday",
                                   "title": "saturday",
                                   "type": "integer",
                                   "x-order": 53
@@ -2536,25 +2536,25 @@
                                   "x-order": 39
                                 },
                                 "sunday": {
-                                  "description": "Number of seconds of service scheduled on the Sunday of this week",
+                                  "description": "Seconds of service scheduled on Sunday",
                                   "title": "sunday",
                                   "type": "integer",
                                   "x-order": 55
                                 },
                                 "thursday": {
-                                  "description": "Number of seconds of service scheduled on the Thursday of this week",
+                                  "description": "Seconds of service scheduled on Thursday",
                                   "title": "thursday",
                                   "type": "integer",
                                   "x-order": 49
                                 },
                                 "tuesday": {
-                                  "description": "Number of seconds of service scheduled on the Tuesday of this week",
+                                  "description": "Seconds of service scheduled on Tuesday",
                                   "title": "tuesday",
                                   "type": "integer",
                                   "x-order": 45
                                 },
                                 "wednesday": {
-                                  "description": "Number of seconds of service scheduled on the Wednesday of this week",
+                                  "description": "Seconds of service scheduled on Wednesday",
                                   "title": "wednesday",
                                   "type": "integer",
                                   "x-order": 47
@@ -2900,7 +2900,7 @@
                             "x-order": 22
                           },
                           "feed_infos": {
-                            "description": "Records from this feed version's `feed_info.txt`, containing publisher metadata and the declared service date range",
+                            "description": "Records from this feed version's `feed_info.txt`",
                             "items": {
                               "properties": {
                                 "default_lang": {
@@ -2972,7 +2972,7 @@
                             "x-order": 74
                           },
                           "feed_version_gtfs_import": {
-                            "description": "Current database import status of this feed version",
+                            "description": "Database import status",
                             "nullable": true,
                             "properties": {
                               "exception_log": {
@@ -3007,7 +3007,7 @@
                                 "x-order": 87
                               },
                               "skip_entity_marked_count": {
-                                "description": "Counts of entities skipped because they were not selected by the marker filter, keyed by file name",
+                                "description": "Counts of entities skipped by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
                                 "x-order": 89
@@ -3039,7 +3039,7 @@
                             "x-order": 6
                           },
                           "files": {
-                            "description": "Metadata for each text file present in the main directory of the zip archive",
+                            "description": "Metadata for each file in the GTFS archive",
                             "items": {
                               "properties": {
                                 "csv_like": {
@@ -3121,19 +3121,19 @@
                                   "x-order": 41
                                 },
                                 "friday": {
-                                  "description": "Number of seconds of service scheduled on the Friday of this week",
+                                  "description": "Seconds of service scheduled on Friday",
                                   "title": "friday",
                                   "type": "integer",
                                   "x-order": 51
                                 },
                                 "monday": {
-                                  "description": "Number of seconds of service scheduled on the Monday of this week",
+                                  "description": "Seconds of service scheduled on Monday",
                                   "title": "monday",
                                   "type": "integer",
                                   "x-order": 43
                                 },
                                 "saturday": {
-                                  "description": "Number of seconds of service scheduled on the Saturday of this week",
+                                  "description": "Seconds of service scheduled on Saturday",
                                   "title": "saturday",
                                   "type": "integer",
                                   "x-order": 53
@@ -3147,25 +3147,25 @@
                                   "x-order": 39
                                 },
                                 "sunday": {
-                                  "description": "Number of seconds of service scheduled on the Sunday of this week",
+                                  "description": "Seconds of service scheduled on Sunday",
                                   "title": "sunday",
                                   "type": "integer",
                                   "x-order": 55
                                 },
                                 "thursday": {
-                                  "description": "Number of seconds of service scheduled on the Thursday of this week",
+                                  "description": "Seconds of service scheduled on Thursday",
                                   "title": "thursday",
                                   "type": "integer",
                                   "x-order": 49
                                 },
                                 "tuesday": {
-                                  "description": "Number of seconds of service scheduled on the Tuesday of this week",
+                                  "description": "Seconds of service scheduled on Tuesday",
                                   "title": "tuesday",
                                   "type": "integer",
                                   "x-order": 45
                                 },
                                 "wednesday": {
-                                  "description": "Number of seconds of service scheduled on the Wednesday of this week",
+                                  "description": "Seconds of service scheduled on Wednesday",
                                   "title": "wednesday",
                                   "type": "integer",
                                   "x-order": 47
@@ -3498,7 +3498,7 @@
                                 "nullable": true,
                                 "properties": {
                                   "feed_version_gtfs_import": {
-                                    "description": "Current database import status of this feed version",
+                                    "description": "Database import status",
                                     "nullable": true,
                                     "properties": {
                                       "exception_log": {
@@ -3982,7 +3982,7 @@
                                 "nullable": true,
                                 "properties": {
                                   "feed_version_gtfs_import": {
-                                    "description": "Current database import status of this feed version",
+                                    "description": "Database import status",
                                     "nullable": true,
                                     "properties": {
                                       "exception_log": {
@@ -4663,7 +4663,7 @@
                       "items": {
                         "properties": {
                           "agencies": {
-                            "description": "Agencies associated with this operator from currently active (imported) feed versions",
+                            "description": "Agencies for this operator from active feed versions",
                             "items": {
                               "properties": {
                                 "agency_id": {
@@ -5017,21 +5017,21 @@
                             "x-order": 4
                           },
                           "short_name": {
-                            "description": "Operator short name, if available",
+                            "description": "Operator short name",
                             "nullable": true,
                             "title": "short_name",
                             "type": "string",
                             "x-order": 8
                           },
                           "tags": {
-                            "description": "Optional tags defined in Transitland Atlas providing more info about this operator",
+                            "description": "Atlas tags providing additional metadata for this operator",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
                             "x-order": 12
                           },
                           "website": {
-                            "description": "Operator website, if available",
+                            "description": "Operator website",
                             "nullable": true,
                             "title": "website",
                             "type": "string",
@@ -5166,7 +5166,7 @@
                       "items": {
                         "properties": {
                           "agencies": {
-                            "description": "Agencies associated with this operator from currently active (imported) feed versions",
+                            "description": "Agencies for this operator from active feed versions",
                             "items": {
                               "properties": {
                                 "agency_id": {
@@ -5520,21 +5520,21 @@
                             "x-order": 4
                           },
                           "short_name": {
-                            "description": "Operator short name, if available",
+                            "description": "Operator short name",
                             "nullable": true,
                             "title": "short_name",
                             "type": "string",
                             "x-order": 8
                           },
                           "tags": {
-                            "description": "Optional tags defined in Transitland Atlas providing more info about this operator",
+                            "description": "Atlas tags providing additional metadata for this operator",
                             "nullable": true,
                             "title": "tags",
                             "type": "object",
                             "x-order": 12
                           },
                           "website": {
-                            "description": "Operator website, if available",
+                            "description": "Operator website",
                             "nullable": true,
                             "title": "website",
                             "type": "string",
@@ -6407,7 +6407,7 @@
                             "x-order": 14
                           },
                           "route_stops": {
-                            "description": "Stops that this route serves, as RouteStop associations (includes route and agency context alongside each stop)",
+                            "description": "Stops on this route as RouteStop associations (with route and agency context)",
                             "items": {
                               "properties": {
                                 "stop": {
@@ -7377,7 +7377,7 @@
                             "x-order": 14
                           },
                           "route_stops": {
-                            "description": "Stops that this route serves, as RouteStop associations (includes route and agency context alongside each stop)",
+                            "description": "Stops on this route as RouteStop associations (with route and agency context)",
                             "items": {
                               "properties": {
                                 "stop": {
@@ -8099,7 +8099,7 @@
                             "x-order": 16
                           },
                           "block_id": {
-                            "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
+                            "description": "GTFS `trips.block_id`; trips with the same block_id are operated in sequence by the same vehicle",
                             "nullable": true,
                             "title": "block_id",
                             "type": "string",
@@ -8267,7 +8267,7 @@
                                   "x-order": 71
                                 },
                                 "exact_times": {
-                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
+                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]",
                                   "nullable": true,
                                   "title": "exact_times",
                                   "type": "integer",
@@ -9567,7 +9567,7 @@
                             "x-order": 16
                           },
                           "block_id": {
-                            "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
+                            "description": "GTFS `trips.block_id`; trips with the same block_id are operated in sequence by the same vehicle",
                             "nullable": true,
                             "title": "block_id",
                             "type": "string",
@@ -9735,7 +9735,7 @@
                                   "x-order": 71
                                 },
                                 "exact_times": {
-                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
+                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]",
                                   "nullable": true,
                                   "title": "exact_times",
                                   "type": "integer",
@@ -11200,7 +11200,7 @@
                             "x-order": 2
                           },
                           "level": {
-                            "description": "Level within the station that this stop/platform belongs to (used in multi-level stations with pathways)",
+                            "description": "Level within the station that this stop/platform belongs to",
                             "nullable": true,
                             "properties": {
                               "level_id": {
@@ -11210,13 +11210,13 @@
                                 "x-order": 55
                               },
                               "level_index": {
-                                "description": "GTFS `levels.level_index`; numeric index of the level; higher values indicate upper levels, 0 is ground level, negative values for underground",
+                                "description": "GTFS `levels.level_index`; higher values are upper levels, 0 is ground, negative values are underground",
                                 "title": "level_index",
                                 "type": "number",
                                 "x-order": 59
                               },
                               "level_name": {
-                                "description": "GTFS `levels.level_name`; optional name of the level as seen by the rider (e.g. `Mezzanine`, `Upper Level`)",
+                                "description": "GTFS `levels.level_name`; rider-facing level name (e.g. `Mezzanine`, `Upper Level`)",
                                 "nullable": true,
                                 "title": "level_name",
                                 "type": "string",
@@ -11527,7 +11527,7 @@
                             "x-order": 38
                           },
                           "platform_code": {
-                            "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
+                            "description": "GTFS `stops.platform_code`; platform identifier without a 'platform' prefix (e.g. `G` or `3`)",
                             "nullable": true,
                             "title": "platform_code",
                             "type": "string",
@@ -11564,7 +11564,7 @@
                             "x-order": 6
                           },
                           "stop_timezone": {
-                            "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
+                            "description": "GTFS `stops.stop_timezone`; overrides agency timezone; inherits from parent station if empty",
                             "example": "America/Los_Angeles",
                             "nullable": true,
                             "title": "stop_timezone",
@@ -11986,7 +11986,7 @@
                             "x-order": 2
                           },
                           "level": {
-                            "description": "Level within the station that this stop/platform belongs to (used in multi-level stations with pathways)",
+                            "description": "Level within the station that this stop/platform belongs to",
                             "nullable": true,
                             "properties": {
                               "level_id": {
@@ -11996,13 +11996,13 @@
                                 "x-order": 55
                               },
                               "level_index": {
-                                "description": "GTFS `levels.level_index`; numeric index of the level; higher values indicate upper levels, 0 is ground level, negative values for underground",
+                                "description": "GTFS `levels.level_index`; higher values are upper levels, 0 is ground, negative values are underground",
                                 "title": "level_index",
                                 "type": "number",
                                 "x-order": 59
                               },
                               "level_name": {
-                                "description": "GTFS `levels.level_name`; optional name of the level as seen by the rider (e.g. `Mezzanine`, `Upper Level`)",
+                                "description": "GTFS `levels.level_name`; rider-facing level name (e.g. `Mezzanine`, `Upper Level`)",
                                 "nullable": true,
                                 "title": "level_name",
                                 "type": "string",
@@ -12313,7 +12313,7 @@
                             "x-order": 38
                           },
                           "platform_code": {
-                            "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
+                            "description": "GTFS `stops.platform_code`; platform identifier without a 'platform' prefix (e.g. `G` or `3`)",
                             "nullable": true,
                             "title": "platform_code",
                             "type": "string",
@@ -12350,7 +12350,7 @@
                             "x-order": 6
                           },
                           "stop_timezone": {
-                            "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
+                            "description": "GTFS `stops.stop_timezone`; overrides agency timezone; inherits from parent station if empty",
                             "example": "America/Los_Angeles",
                             "nullable": true,
                             "title": "stop_timezone",
@@ -12822,7 +12822,7 @@
                             "x-order": 1195
                           },
                           "children": {
-                            "description": "Child stops belonging to this station; for a station (location_type 1), returns its platforms, entrances, and nodes",
+                            "description": "Child stops belonging to this station (platforms, entrances, generic nodes, boarding areas)",
                             "items": {
                               "properties": {
                                 "alerts": {
@@ -13037,11 +13037,11 @@
                                   "x-order": 704
                                 },
                                 "departures": {
-                                  "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range",
+                                  "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available",
                                   "items": {
                                     "properties": {
                                       "arrival": {
-                                        "description": "Detailed arrival information, including GTFS-RT updates and estimates",
+                                        "description": "Arrival data, including GTFS-RT updates and estimates",
                                         "properties": {
                                           "delay": {
                                             "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
@@ -13134,14 +13134,14 @@
                                         "x-order": 388
                                       },
                                       "continuous_drop_off": {
-                                        "description": "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
+                                        "description": "GTFS `stop_times.continuous_drop_off`; overrides `routes.continuous_drop_off` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                         "nullable": true,
                                         "title": "continuous_drop_off",
                                         "type": "integer",
                                         "x-order": 382
                                       },
                                       "continuous_pickup": {
-                                        "description": "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
+                                        "description": "GTFS `stop_times.continuous_pickup`; overrides `routes.continuous_pickup` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                         "nullable": true,
                                         "title": "continuous_pickup",
                                         "type": "integer",
@@ -13157,7 +13157,7 @@
                                         "x-order": 398
                                       },
                                       "departure": {
-                                        "description": "Detailed departure information, including GTFS-RT updates and estimates",
+                                        "description": "Departure data, including GTFS-RT updates and estimates",
                                         "properties": {
                                           "delay": {
                                             "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
@@ -13300,7 +13300,7 @@
                                         "x-order": 396
                                       },
                                       "shape_dist_traveled": {
-                                        "description": "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt",
+                                        "description": "GTFS `stop_times.shape_dist_traveled`; distance from the start of the shape, in the same units as `shapes.txt`",
                                         "nullable": true,
                                         "title": "shape_dist_traveled",
                                         "type": "number",
@@ -13548,7 +13548,7 @@
                                             "x-order": 456
                                           },
                                           "block_id": {
-                                            "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
+                                            "description": "GTFS `trips.block_id`; trips with the same block_id are operated in sequence by the same vehicle",
                                             "nullable": true,
                                             "title": "block_id",
                                             "type": "string",
@@ -13574,7 +13574,7 @@
                                                   "x-order": 607
                                                 },
                                                 "exact_times": {
-                                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
+                                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]",
                                                   "nullable": true,
                                                   "title": "exact_times",
                                                   "type": "integer",
@@ -14297,7 +14297,7 @@
                                   "x-order": 342
                                 },
                                 "platform_code": {
-                                  "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
+                                  "description": "GTFS `stops.platform_code`; platform identifier without a 'platform' prefix (e.g. `G` or `3`)",
                                   "nullable": true,
                                   "title": "platform_code",
                                   "type": "string",
@@ -14334,7 +14334,7 @@
                                   "x-order": 350
                                 },
                                 "stop_timezone": {
-                                  "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
+                                  "description": "GTFS `stops.stop_timezone`; overrides agency timezone; inherits from parent station if empty",
                                   "example": "America/Los_Angeles",
                                   "nullable": true,
                                   "title": "stop_timezone",
@@ -14381,11 +14381,11 @@
                             "x-order": 705
                           },
                           "departures": {
-                            "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range",
+                            "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available",
                             "items": {
                               "properties": {
                                 "arrival": {
-                                  "description": "Detailed arrival information, including GTFS-RT updates and estimates",
+                                  "description": "Arrival data, including GTFS-RT updates and estimates",
                                   "properties": {
                                     "delay": {
                                       "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
@@ -14478,14 +14478,14 @@
                                   "x-order": 65
                                 },
                                 "continuous_drop_off": {
-                                  "description": "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
+                                  "description": "GTFS `stop_times.continuous_drop_off`; overrides `routes.continuous_drop_off` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "continuous_drop_off",
                                   "type": "integer",
                                   "x-order": 59
                                 },
                                 "continuous_pickup": {
-                                  "description": "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
+                                  "description": "GTFS `stop_times.continuous_pickup`; overrides `routes.continuous_pickup` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                   "nullable": true,
                                   "title": "continuous_pickup",
                                   "type": "integer",
@@ -14501,7 +14501,7 @@
                                   "x-order": 75
                                 },
                                 "departure": {
-                                  "description": "Detailed departure information, including GTFS-RT updates and estimates",
+                                  "description": "Departure data, including GTFS-RT updates and estimates",
                                   "properties": {
                                     "delay": {
                                       "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
@@ -14644,7 +14644,7 @@
                                   "x-order": 73
                                 },
                                 "shape_dist_traveled": {
-                                  "description": "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt",
+                                  "description": "GTFS `stop_times.shape_dist_traveled`; distance from the start of the shape, in the same units as `shapes.txt`",
                                   "nullable": true,
                                   "title": "shape_dist_traveled",
                                   "type": "number",
@@ -14892,7 +14892,7 @@
                                       "x-order": 133
                                     },
                                     "block_id": {
-                                      "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
+                                      "description": "GTFS `trips.block_id`; trips with the same block_id are operated in sequence by the same vehicle",
                                       "nullable": true,
                                       "title": "block_id",
                                       "type": "string",
@@ -14918,7 +14918,7 @@
                                             "x-order": 284
                                           },
                                           "exact_times": {
-                                            "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
+                                            "description": "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]",
                                             "nullable": true,
                                             "title": "exact_times",
                                             "type": "integer",
@@ -15907,7 +15907,7 @@
                                 "x-order": 1149
                               },
                               "children": {
-                                "description": "Child stops belonging to this station; for a station (location_type 1), returns its platforms, entrances, and nodes",
+                                "description": "Child stops belonging to this station (platforms, entrances, generic nodes, boarding areas)",
                                 "items": {
                                   "properties": {
                                     "alerts": {
@@ -16122,11 +16122,11 @@
                                       "x-order": 1103
                                     },
                                     "departures": {
-                                      "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range",
+                                      "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available",
                                       "items": {
                                         "properties": {
                                           "arrival": {
-                                            "description": "Detailed arrival information, including GTFS-RT updates and estimates",
+                                            "description": "Arrival data, including GTFS-RT updates and estimates",
                                             "properties": {
                                               "delay": {
                                                 "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
@@ -16219,14 +16219,14 @@
                                             "x-order": 787
                                           },
                                           "continuous_drop_off": {
-                                            "description": "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
+                                            "description": "GTFS `stop_times.continuous_drop_off`; overrides `routes.continuous_drop_off` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                             "nullable": true,
                                             "title": "continuous_drop_off",
                                             "type": "integer",
                                             "x-order": 781
                                           },
                                           "continuous_pickup": {
-                                            "description": "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
+                                            "description": "GTFS `stop_times.continuous_pickup`; overrides `routes.continuous_pickup` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]",
                                             "nullable": true,
                                             "title": "continuous_pickup",
                                             "type": "integer",
@@ -16242,7 +16242,7 @@
                                             "x-order": 797
                                           },
                                           "departure": {
-                                            "description": "Detailed departure information, including GTFS-RT updates and estimates",
+                                            "description": "Departure data, including GTFS-RT updates and estimates",
                                             "properties": {
                                               "delay": {
                                                 "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
@@ -16385,7 +16385,7 @@
                                             "x-order": 795
                                           },
                                           "shape_dist_traveled": {
-                                            "description": "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt",
+                                            "description": "GTFS `stop_times.shape_dist_traveled`; distance from the start of the shape, in the same units as `shapes.txt`",
                                             "nullable": true,
                                             "title": "shape_dist_traveled",
                                             "type": "number",
@@ -16633,7 +16633,7 @@
                                                 "x-order": 855
                                               },
                                               "block_id": {
-                                                "description": "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle",
+                                                "description": "GTFS `trips.block_id`; trips with the same block_id are operated in sequence by the same vehicle",
                                                 "nullable": true,
                                                 "title": "block_id",
                                                 "type": "string",
@@ -16659,7 +16659,7 @@
                                                       "x-order": 1006
                                                     },
                                                     "exact_times": {
-                                                      "description": "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]",
+                                                      "description": "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]",
                                                       "nullable": true,
                                                       "title": "exact_times",
                                                       "type": "integer",
@@ -17382,7 +17382,7 @@
                                       "x-order": 741
                                     },
                                     "platform_code": {
-                                      "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
+                                      "description": "GTFS `stops.platform_code`; platform identifier without a 'platform' prefix (e.g. `G` or `3`)",
                                       "nullable": true,
                                       "title": "platform_code",
                                       "type": "string",
@@ -17419,7 +17419,7 @@
                                       "x-order": 749
                                     },
                                     "stop_timezone": {
-                                      "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
+                                      "description": "GTFS `stops.stop_timezone`; overrides agency timezone; inherits from parent station if empty",
                                       "example": "America/Los_Angeles",
                                       "nullable": true,
                                       "title": "stop_timezone",
@@ -17490,7 +17490,7 @@
                                 "x-order": 711
                               },
                               "platform_code": {
-                                "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
+                                "description": "GTFS `stops.platform_code`; platform identifier without a 'platform' prefix (e.g. `G` or `3`)",
                                 "nullable": true,
                                 "title": "platform_code",
                                 "type": "string",
@@ -17527,7 +17527,7 @@
                                 "x-order": 719
                               },
                               "stop_timezone": {
-                                "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
+                                "description": "GTFS `stops.stop_timezone`; overrides agency timezone; inherits from parent station if empty",
                                 "example": "America/Los_Angeles",
                                 "nullable": true,
                                 "title": "stop_timezone",
@@ -17569,7 +17569,7 @@
                             "x-order": 1150
                           },
                           "platform_code": {
-                            "description": "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)",
+                            "description": "GTFS `stops.platform_code`; platform identifier without a 'platform' prefix (e.g. `G` or `3`)",
                             "nullable": true,
                             "title": "platform_code",
                             "type": "string",
@@ -17606,7 +17606,7 @@
                             "x-order": 13
                           },
                           "stop_timezone": {
-                            "description": "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty",
+                            "description": "GTFS `stops.stop_timezone`; overrides agency timezone; inherits from parent station if empty",
                             "example": "America/Los_Angeles",
                             "nullable": true,
                             "title": "stop_timezone",

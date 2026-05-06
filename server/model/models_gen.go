@@ -146,17 +146,17 @@ type CensusDataset struct {
 	ID int `json:"id"`
 	// Dataset name (e.g. `acsdt5y2022`, `tiger2021`, `ntd-annual-2024`)
 	Name string `json:"name"`
-	// Human-readable description of this dataset
+	// Human-readable description
 	Description *string `json:"description,omitempty"`
-	// URL to the source or documentation for this dataset
+	// URL to the source or documentation
 	URL *tt.Url `json:"url,omitempty"`
-	// Earliest year of data coverage in this dataset
+	// Earliest year of data coverage
 	YearMin *int `json:"year_min,omitempty"`
-	// Latest year of data coverage in this dataset
+	// Latest year of data coverage
 	YearMax *int `json:"year_max,omitempty"`
-	// Individual source files or archives that make up this dataset
+	// Source files or archives that make up this dataset
 	Sources []*CensusSource `json:"sources,omitempty"`
-	// Geographic units in this dataset, optionally filtered by layer, location, or ID
+	// Geographic units in this dataset
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
 	// Data table definitions available in this dataset
 	Tables []*CensusTable `json:"tables,omitempty"`
@@ -258,7 +258,7 @@ type CensusGeography struct {
 	Geoid *string `json:"geoid,omitempty"`
 	// Human-readable name of this geography (e.g. a county or tract name)
 	Name *string `json:"name,omitempty"`
-	// Total area of this geography's geometry, in square meters
+	// Geometry area in square meters
 	GeometryArea *float64 `json:"geometry_area,omitempty"`
 	// Land area, in square meters (from TIGER/Line `ALAND` field)
 	Aland *float64 `json:"aland,omitempty"`
@@ -599,13 +599,13 @@ type FeedVersionServiceWindow struct {
 	FeedStartDate *tt.Date `json:"feed_start_date,omitempty"`
 	// Feed end date from feed_info.txt, if available
 	FeedEndDate *tt.Date `json:"feed_end_date,omitempty"`
-	// Calculated earliest calendar date in service schedule
+	// Earliest calendar date with scheduled service
 	EarliestCalendarDate *tt.Date `json:"earliest_calendar_date,omitempty"`
-	// Calculated latest calendar date in service schedule
+	// Latest calendar date with scheduled service
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 	// Start date (Monday) of a representative week with full or near-full service; used as a fallback when queries fall outside the regular service window
 	FallbackWeek *tt.Date `json:"fallback_week,omitempty"`
-	// Default timezone for this feed version
+	// Default timezone
 	DefaultTimezone *string `json:"default_timezone,omitempty"`
 	FeedVersionID   int     `json:"-"`
 }
@@ -1103,13 +1103,13 @@ type RouteHeadway struct {
 	DowCategory *int `json:"dow_category,omitempty"`
 	// GTFS direction_id (0 or 1)
 	DirectionID *int `json:"direction_id,omitempty"`
-	// Typical number of seconds between departing trips at this stop in this direction on this day of the week
+	// Typical seconds between departures at this stop, direction, and day-of-week
 	HeadwaySecs *int `json:"headway_secs,omitempty"`
 	// Date used for the headway calculation
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
 	// Number of departures on this stop, day, and direction
 	StopTripCount *int `json:"stop_trip_count,omitempty"`
-	// Actual departure times on this stop, day, and direction
+	// Departure times on this stop, day, and direction
 	DeparturesUnused []*tt.Seconds `json:"departures,omitempty"`
 	DepartureInts    tt.Ints       `db:"departures"`
 	RouteID          int           `json:"-"`
@@ -1132,11 +1132,11 @@ type RouteLocationFilter struct {
 type RouteStop struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Internal integer ID for this associated stop
+	// Database integer ID of the stop
 	StopID int `json:"stop_id"`
-	// Internal integer ID for this associated route
+	// Database integer ID of the route
 	RouteID int `json:"route_id"`
-	// Internal integer ID for this associated agency
+	// Database integer ID of the agency
 	AgencyID int `json:"agency_id"`
 	// Associated route
 	Route *Route `json:"route"`

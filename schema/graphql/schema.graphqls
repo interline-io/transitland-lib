@@ -449,10 +449,10 @@ type FeedVersion {
   "Feed associated with this feed version"
   feed: Feed!
   
-  "Current database import status of this feed version"
+  "Database import status"
   feed_version_gtfs_import: FeedVersionGtfsImport
-  
-  "Metadata for each text file present in the main directory of the zip archive"
+
+  "Metadata for each file in the GTFS archive"
   files(limit: Int): [FeedVersionFileInfo!]!
   
   "Service levels (in seconds per day) for this feed version"
@@ -482,7 +482,7 @@ type FeedVersion {
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
   
-  "Records from this feed version's `feed_info.txt`, containing publisher metadata and the declared service date range"
+  "Records from this feed version's `feed_info.txt`"
   feed_infos(limit: Int): [FeedInfo!]!
   
   "Validation reports associated with this feed version"
@@ -536,7 +536,7 @@ type FeedVersionGtfsImport {
   skip_entity_reference_count: Any
   "Counts of entities skipped due to import filters, keyed by file name"
   skip_entity_filter_count: Any
-  "Counts of entities skipped because they were not selected by the marker filter, keyed by file name"
+  "Counts of entities skipped by the marker filter, keyed by file name"
   skip_entity_marked_count: Any
   "Number of stop_times whose arrival/departure times were filled in by interpolation during import"
   interpolated_stop_time_count: Int
@@ -554,13 +554,13 @@ type FeedVersionServiceWindow {
   feed_start_date: Date
   "Feed end date from feed_info.txt, if available"
   feed_end_date: Date
-  "Calculated earliest calendar date in service schedule"
+  "Earliest calendar date with scheduled service"
   earliest_calendar_date: Date
-  "Calculated latest calendar date in service schedule"
+  "Latest calendar date with scheduled service"
   latest_calendar_date: Date
   "Start date (Monday) of a representative week with full or near-full service; used as a fallback when queries fall outside the regular service window"
   fallback_week: Date
-  "Default timezone for this feed version"
+  "Default timezone"
   default_timezone: String
 }
 
@@ -572,19 +572,19 @@ type FeedVersionServiceLevel {
   start_date: Date!
   "End date of this week"
   end_date: Date!
-  "Number of seconds of service scheduled on the Monday of this week"
+  "Seconds of service scheduled on Monday"
   monday: Int!
-  "Number of seconds of service scheduled on the Tuesday of this week"
+  "Seconds of service scheduled on Tuesday"
   tuesday: Int!
-  "Number of seconds of service scheduled on the Wednesday of this week"
+  "Seconds of service scheduled on Wednesday"
   wednesday: Int!
-  "Number of seconds of service scheduled on the Thursday of this week"
+  "Seconds of service scheduled on Thursday"
   thursday: Int!
-  "Number of seconds of service scheduled on the Friday of this week"
+  "Seconds of service scheduled on Friday"
   friday: Int!
-  "Number of seconds of service scheduled on the Saturday of this week"
+  "Seconds of service scheduled on Saturday"
   saturday: Int!
-  "Number of seconds of service scheduled on the Sunday of this week"
+  "Seconds of service scheduled on Sunday"
   sunday: Int!
 }
 
@@ -616,19 +616,19 @@ type Operator {
   "Operator name"
   name: String
   
-  "Operator short name, if available"
+  "Operator short name"
   short_name: String
-  
-  "Operator website, if available"
+
+  "Operator website"
   website: String
-  
-  "Optional tags defined in Transitland Atlas providing more info about this operator"
+
+  "Atlas tags providing additional metadata for this operator"
   tags: Tags
 
   "Internal search ranking weight; not intended for client use"
   search_rank: String @deprecated(reason: "Internal use only")
 
-  "Agencies associated with this operator from currently active (imported) feed versions"
+  "Agencies for this operator from active feed versions"
   agencies: [Agency!]
 
   "Feeds associated with this operator"
@@ -667,7 +667,7 @@ type Agency {
   "GTFS `agency.agency_phone`; voice telephone number for the agency's customer service"
   agency_phone: String
   
-  "GTFS `agency.agency_timezone`; timezone where the transit agency is located; stop times use this timezone unless overridden by stop_timezone"
+  "GTFS `agency.agency_timezone`; stop times use this timezone unless overridden by `stop_timezone`"
   agency_timezone: Timezone!
   
   "GTFS `agency.agency_url`"
@@ -773,13 +773,13 @@ type Route {
   "Trips associated with this route"
   trips(limit: Int, where: TripFilter): [Trip!]!
   
-  "Stops that this route serves (flat list of Stop objects)"
+  "Stops that this route serves"
   stops(limit: Int, where: StopFilter): [Stop!]!
-  
-  "Stops that this route serves, as RouteStop associations (includes route and agency context alongside each stop)"
+
+  "Stops on this route as RouteStop associations (with route and agency context)"
   route_stops(limit: Int): [RouteStop!]!
-  
-  "Typical service frequency for this route, grouped by direction and day-of-week category (1=weekday, 6=Saturday, 7=Sunday); includes departure times and headway in seconds"
+
+  "Typical service frequency for this route, by direction and day-of-week category"
   headways(limit: Int): [RouteHeadway!]!
   
   "Per-direction representative geometries for this route, derived from GTFS shapes (or stop points if shapes are absent)"
@@ -788,10 +788,10 @@ type Route {
   "Census geographies intersecting this route's stop locations; use with a `radius` filter and the `intersection_area` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
-  "Spatial buffer polygon around all stops on this route; the `radius` parameter (in meters) controls the buffer size; useful for geographic coverage and intersection queries"
+  "Spatial buffer polygon around all stops on this route; `radius` is in meters"
   route_stop_buffer(radius: Float): RouteStopBuffer!
-  
-  "Unique stop sequences operated on this route; each pattern has a direction, a count of trips using it, and access to representative trips with full stop_times"
+
+  "Unique stop sequences operated on this route"
   patterns: [RouteStopPattern!]
   
   "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts"
@@ -831,7 +831,7 @@ type Stop {
   "GTFS `stops.stop_name` [example:MADISON AV/E 68 ST]"
   stop_name: String
   
-  "GTFS `stops.stop_timezone`; timezone for this stop, overriding the agency timezone; inherits from parent station if empty [example:America/Los_Angeles]"
+  "GTFS `stops.stop_timezone`; overrides agency timezone; inherits from parent station if empty [example:America/Los_Angeles]"
   stop_timezone: Timezone
   
   "GTFS `stops.stop_url` [example:https://www.bart.gov/stations/ftvl]"
@@ -843,7 +843,7 @@ type Stop {
   "GTFS `stops.zone_id`; identifies the fare zone for a stop; required only on stops referenced by `fare_rules.txt`"
   zone_id: String
   
-  "GTFS `stops.platform_code`; platform identifier for a platform stop, without any word describing it as a platform (e.g. `G` or `3`)"
+  "GTFS `stops.platform_code`; platform identifier without a 'platform' prefix (e.g. `G` or `3`)"
   platform_code: String
   
   "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems"
@@ -864,19 +864,19 @@ type Stop {
   "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
   
-  "Level within the station that this stop/platform belongs to (used in multi-level stations with pathways)"
+  "Level within the station that this stop/platform belongs to"
   level: Level
   
   "Parent station for this stop; for platforms and entrances (location_type 2, 3, 4), this is the enclosing station (location_type 1)"
   parent: Stop
   
-  "Cross-feed stop reference linking this stop to a stop in a different feed; used to identify the same physical stop across multiple data sources"
+  "Cross-feed reference linking this stop to the same physical stop in another feed"
   external_reference: StopExternalReference
-  
-  "Archived real-time arrival/departure observations at this stop derived from GTFS-RT; used for on-time performance analysis; requires `source`, `feed_version_id`, and `trip_start_date` filters"
+
+  "Archived real-time arrival/departure observations at this stop, derived from GTFS-RT; requires `source`, `feed_version_id`, and `trip_start_date` filters"
   observations(limit: Int, where: StopObservationFilter): [StopObservation!]
-  
-  "Child stops belonging to this station; for a station (location_type 1), returns its platforms, entrances, and nodes"
+
+  "Child stops belonging to this station (platforms, entrances, generic nodes, boarding areas)"
   children(limit: Int): [Stop!]
   
   "Routes serving this stop, as RouteStop associations (includes route and agency context)"
@@ -891,13 +891,13 @@ type Stop {
   "Pathways that terminate at this stop"
   pathways_to_stop(limit: Int): [Pathway!]!
   
-  "Raw scheduled stop times for this stop from the GTFS schedule, without date or time filtering"
+  "Raw scheduled stop times for this stop, without date/time filtering"
   stop_times(limit: Int, where: StopTimeFilter): [StopTime!]!
-  
-  "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range"
+
+  "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available"
   departures(limit: Int, where: StopTimeFilter): [StopTime!]!
-  
-  "Scheduled arrivals at this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range"
+
+  "Scheduled arrivals at this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available"
   arrivals(limit: Int, where: StopTimeFilter): [StopTime!]!
   
   "Internal search ranking weight; not intended for client use"
@@ -912,7 +912,7 @@ type Stop {
   "Routing using this stop as the origin (when `to` is given) or as the destination (when `from` is given)"
   directions(to:WaypointInput, from: WaypointInput, mode: StepMode, depart_at: Time): Directions!
   
-  "Stops within a specified radius of this stop; `radius` is in meters; useful for identifying transfer opportunities between stops from different feeds or operators"
+  "Stops within a specified radius of this stop; `radius` is in meters"
   nearby_stops(limit: Int, radius: Float): [Stop!]
   
   "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts"
@@ -958,7 +958,7 @@ type Pathway {
   "GTFS `pathways.min_width`; minimum width of the pathway in meters"
   min_width: Float
   
-  "GTFS `pathways.signposted_as`; public signage text used for this pathway direction"
+  "GTFS `pathways.signposted_as`; signage text for this direction (from_stop → to_stop)"
   signposted_as: String
   
   "GTFS `pathways.reverse_signposted_as`; public signage text for the reverse (to_stop → from_stop) direction"
@@ -986,10 +986,10 @@ type Level {
   "GTFS `levels.level_id`"
   level_id: String!
   
-  "GTFS `levels.level_index`; numeric index of the level; higher values indicate upper levels, 0 is ground level, negative values for underground"
+  "GTFS `levels.level_index`; higher values are upper levels, 0 is ground, negative values are underground"
   level_index: Float!
-  
-  "GTFS `levels.level_name`; optional name of the level as seen by the rider (e.g. `Mezzanine`, `Upper Level`)"
+
+  "GTFS `levels.level_name`; rider-facing level name (e.g. `Mezzanine`, `Upper Level`)"
   level_name: String
   
   "Geometry describing the footprint of this level (Transitland extension; not part of the GTFS spec)"
@@ -1024,7 +1024,7 @@ type Trip {
   "GTFS `trips.direction_id`; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency"
   direction_id: Int
   
-  "GTFS `trips.block_id`; identifies the block to which the trip belongs; trips with the same block_id are operated in sequence by the same vehicle"
+  "GTFS `trips.block_id`; trips with the same block_id are operated in sequence by the same vehicle"
   block_id: String
   
   "GTFS `trips.wheelchair_accessible` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]"
@@ -1146,7 +1146,7 @@ type Frequency {
   "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip"
   headway_secs: Int!
   
-  "GTFS `frequencies.exact_times` [0=frequency-based trips, not exactly scheduled; 1=schedule-based trips with the same headway throughout the period]"
+  "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]"
   exact_times: Int
 }
 
@@ -1175,28 +1175,28 @@ type StopTime {
   "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]"
   timepoint: Int
   
-  "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
+  "GTFS `stop_times.continuous_drop_off`; overrides `routes.continuous_drop_off` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
-  
-  "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
+
+  "GTFS `stop_times.continuous_pickup`; overrides `routes.continuous_pickup` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
   
-  "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt"
+  "GTFS `stop_times.shape_dist_traveled`; distance from the start of the shape, in the same units as `shapes.txt`"
   shape_dist_traveled: Float
   
   "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
 
-  "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex demand-responsive service)"
+  "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex)"
   start_pickup_drop_off_window: Seconds
 
-  "GTFS `stop_times.end_pickup_drop_off_window`; latest time a rider may request service at this location (GTFS Flex demand-responsive service)"
+  "GTFS `stop_times.end_pickup_drop_off_window`; latest time a rider may request service at this location (GTFS Flex)"
   end_pickup_drop_off_window: Seconds
 
-  "Booking rule governing pickup at this stop, resolved from GTFS `stop_times.pickup_booking_rule_id` (GTFS Flex)"
+  "Booking rule governing pickup, resolved from GTFS `stop_times.pickup_booking_rule_id` (GTFS Flex)"
   pickup_booking_rule: BookingRule
 
-  "Booking rule governing drop-off at this stop, resolved from GTFS `stop_times.drop_off_booking_rule_id` (GTFS Flex)"
+  "Booking rule governing drop-off, resolved from GTFS `stop_times.drop_off_booking_rule_id` (GTFS Flex)"
   drop_off_booking_rule: BookingRule
 
   "Stop associated with this stop time"
@@ -1205,10 +1205,10 @@ type StopTime {
   "Trip associated with this stop time"
   trip: Trip!
 
-  "Detailed arrival information, including GTFS-RT updates and estimates"
+  "Arrival data, including GTFS-RT updates and estimates"
   arrival: StopTimeEvent!
 
-  "Detailed departure information, including GTFS-RT updates and estimates"
+  "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
   "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
@@ -1246,28 +1246,28 @@ type FlexStopTime {
   "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]"
   timepoint: Int
   
-  "GTFS `stop_times.continuous_drop_off`; overrides route-level continuous_drop_off for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
+  "GTFS `stop_times.continuous_drop_off`; overrides `routes.continuous_drop_off` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
-  
-  "GTFS `stop_times.continuous_pickup`; overrides route-level continuous_pickup for the segment from this stop to the next [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
+
+  "GTFS `stop_times.continuous_pickup`; overrides `routes.continuous_pickup` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
   
-  "GTFS `stop_times.shape_dist_traveled`; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt"
+  "GTFS `stop_times.shape_dist_traveled`; distance from the start of the shape, in the same units as `shapes.txt`"
   shape_dist_traveled: Float
   
   "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
 
-  "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex demand-responsive service)"
+  "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex)"
   start_pickup_drop_off_window: Seconds
 
-  "GTFS `stop_times.end_pickup_drop_off_window`; latest time a rider may request service at this location (GTFS Flex demand-responsive service)"
+  "GTFS `stop_times.end_pickup_drop_off_window`; latest time a rider may request service at this location (GTFS Flex)"
   end_pickup_drop_off_window: Seconds
 
-  "Booking rule governing pickup at this stop, resolved from GTFS `stop_times.pickup_booking_rule_id` (GTFS Flex)"
+  "Booking rule governing pickup, resolved from GTFS `stop_times.pickup_booking_rule_id` (GTFS Flex)"
   pickup_booking_rule: BookingRule
 
-  "Booking rule governing drop-off at this stop, resolved from GTFS `stop_times.drop_off_booking_rule_id` (GTFS Flex)"
+  "Booking rule governing drop-off, resolved from GTFS `stop_times.drop_off_booking_rule_id` (GTFS Flex)"
   drop_off_booking_rule: BookingRule
 
   "Location associated with this stop time (mutually exclusive with `location_group`)"
@@ -1279,10 +1279,10 @@ type FlexStopTime {
   "Trip associated with this stop time"
   trip: Trip!
 
-  "Detailed arrival information, including GTFS-RT updates and estimates"
+  "Arrival data, including GTFS-RT updates and estimates"
   arrival: StopTimeEvent!
 
-  "Detailed departure information, including GTFS-RT updates and estimates"
+  "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
   "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
@@ -1381,10 +1381,10 @@ type BookingRule {
   "GTFS `booking_rules.booking_type` [0=real-time booking, 1=same-day booking with prior notice, 2=advance booking with prior notice]"
   booking_type: Int!
   
-  "GTFS `booking_rules.prior_notice_duration_min`; minimum number of minutes before travel when a booking request may be made"
+  "GTFS `booking_rules.prior_notice_duration_min`; minimum minutes before travel for a booking request"
   prior_notice_duration_min: Int
-  
-  "GTFS `booking_rules.prior_notice_duration_max`; maximum number of minutes before travel when a booking request may be made"
+
+  "GTFS `booking_rules.prior_notice_duration_max`; maximum minutes before travel for a booking request"
   prior_notice_duration_max: Int
   
   "GTFS `booking_rules.prior_notice_last_day`; last day before travel when a booking may be made (e.g. 1 = must book by the day before)"
@@ -1411,7 +1411,7 @@ type BookingRule {
   "GTFS `booking_rules.drop_off_message`; message shown to riders when booking a drop-off at a specific stop"
   drop_off_message: String
   
-  "GTFS `booking_rules.phone_number`; phone number to call to make a booking for this service"
+  "GTFS `booking_rules.phone_number`; phone number to call to make a booking"
   phone_number: String
   
   "GTFS `booking_rules.info_url`; URL with more information about this booking rule"
@@ -1670,13 +1670,13 @@ type RouteStop {
   "Internal integer ID"
   id: Int!
   
-  "Internal integer ID for this associated stop"
+  "Database integer ID of the stop"
   stop_id: Int!
-  
-  "Internal integer ID for this associated route"
+
+  "Database integer ID of the route"
   route_id: Int!
-  
-  "Internal integer ID for this associated agency"
+
+  "Database integer ID of the agency"
   agency_id: Int!
   
   "Associated route"
@@ -1742,7 +1742,7 @@ type RouteHeadway {
   "GTFS direction_id (0 or 1)"
   direction_id: Int
   
-  "Typical number of seconds between departing trips at this stop in this direction on this day of the week"
+  "Typical seconds between departures at this stop, direction, and day-of-week"
   headway_secs: Int
   
   "Date used for the headway calculation"
@@ -1751,7 +1751,7 @@ type RouteHeadway {
   "Number of departures on this stop, day, and direction"
   stop_trip_count: Int
   
-  "Actual departure times on this stop, day, and direction"
+  "Departure times on this stop, day, and direction"
   departures: [Seconds!]
 }
 
@@ -1830,22 +1830,22 @@ type CensusDataset {
   "Dataset name (e.g. `acsdt5y2022`, `tiger2021`, `ntd-annual-2024`)"
   name: String!
 
-  "Human-readable description of this dataset"
+  "Human-readable description"
   description: String
 
-  "URL to the source or documentation for this dataset"
+  "URL to the source or documentation"
   url: Url
 
-  "Earliest year of data coverage in this dataset"
+  "Earliest year of data coverage"
   year_min: Int
 
-  "Latest year of data coverage in this dataset"
+  "Latest year of data coverage"
   year_max: Int
 
-  "Individual source files or archives that make up this dataset"
+  "Source files or archives that make up this dataset"
   sources(limit: Int, where: CensusSourceFilter): [CensusSource!]
 
-  "Geographic units in this dataset, optionally filtered by layer, location, or ID"
+  "Geographic units in this dataset"
   geographies(limit: Int, where: CensusDatasetGeographyFilter): [CensusGeography!]
 
   "Data table definitions available in this dataset"
@@ -1941,7 +1941,7 @@ type CensusGeography {
   "Human-readable name of this geography (e.g. a county or tract name)"
   name: String
 
-  "Total area of this geography's geometry, in square meters"
+  "Geometry area in square meters"
   geometry_area: Float
 
   "Land area, in square meters (from TIGER/Line `ALAND` field)"
