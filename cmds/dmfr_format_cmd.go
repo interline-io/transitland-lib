@@ -55,8 +55,8 @@ func (cmd *DmfrFormatCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	rr, err := dmfr.ReadRawRegistry(r)
-	r.Close()
 	if err != nil {
 		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
 		return err
@@ -67,20 +67,10 @@ func (cmd *DmfrFormatCommand) Run(ctx context.Context) error {
 	}
 	byteValue := buf.Bytes()
 	if cmd.Save {
-		// Write json
-		f, err := os.Create(filename)
-		if err != nil {
-			return err
-		}
-		_, err = f.Write(byteValue)
-		if closeErr := f.Close(); err == nil {
-			err = closeErr
-		}
-		if err != nil {
+		if err := os.WriteFile(filename, byteValue, 0644); err != nil {
 			return err
 		}
 	} else {
-		// Print
 		fmt.Println(string(byteValue))
 	}
 	return nil

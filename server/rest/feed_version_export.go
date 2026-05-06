@@ -261,7 +261,7 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 	} else {
 		tmpFilename = tmpfile.Name()
 		tmpfile.Close()
-		defer func() { os.Remove(tmpFilename) }()
+		defer os.Remove(tmpFilename)
 	}
 
 	// Create CSV writer for ZIP output
