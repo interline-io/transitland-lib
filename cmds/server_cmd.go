@@ -52,7 +52,6 @@ type ServerCommand struct {
 	LoadAdmins              bool
 	ValidateLargeFiles      bool
 	UseMaterialized         bool
-	DisableAuth             bool
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	SecretsFile             string
@@ -88,7 +87,6 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
 	fl.BoolVar(&cmd.UseMaterialized, "use-materialized", false, "Use materialized views for active entities")
-	fl.BoolVar(&cmd.DisableAuth, "disable-auth", false, "Disable feed authorization checks (treat all feeds as public)")
 }
 
 func (cmd *ServerCommand) Parse(args []string) error {
@@ -130,6 +128,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		defer redisClient.Close()
 	}
 
 	// Create Finder
@@ -143,7 +142,9 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	var gbfsFinder model.GbfsFinder
 	if redisClient != nil {
 		// Use redis backed finders
-		rtFinder = rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		rtf := rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		defer rtf.Close()
+		rtFinder = rtf
 		gbfsFinder = gbfsfinder.NewFinder(redisClient)
 	} else {
 		// Default to in-memory cache
@@ -153,11 +154,14 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 
 	var actionFinder model.Actions = &actions.Actions{}
 
-	// Setup config
+	// Demo binary: authorization disabled. Production deployments should
+	// compose their own binary with a real Checker.
+	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
 	cfg := model.Config{
 		Finder:                  dbFinder,
 		RTFinder:                rtFinder,
 		GbfsFinder:              gbfsFinder,
+		Checker:                 allowAllCheckerInstance,
 		Actions:                 actionFinder,
 		Secrets:                 cmd.secrets,
 		Storage:                 cmd.Storage,
@@ -168,11 +172,6 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		LoaderBatchSize:         cmd.LoaderBatchSize,
 		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,
 		MaxRadius:               cmd.MaxRadius,
-	}
-
-	// Disable auth if requested
-	if cmd.DisableAuth {
-		cfg.Checker = &globalAdminChecker{}
 	}
 
 	// Setup router
@@ -250,12 +249,4 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	return srv.ListenAndServe()
 }
 
-// globalAdminChecker is a simple checker that always returns true for CheckGlobalAdmin,
-// effectively disabling all feed authorization checks.
-type globalAdminChecker struct {
-	authz.UnimplementedCheckerServer
-}
-
-func (c *globalAdminChecker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
-	return true, nil
-}
+var allowAllCheckerInstance = &authz.AllowAllChecker{}

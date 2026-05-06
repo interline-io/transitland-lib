@@ -1,0 +1,141 @@
+"""Authorization permissions for an entity"""
+type Permissions {
+  "Actions the current user can perform on this entity"
+  actions: [String!]!
+  "Users and groups with direct access to this entity"
+  subjects: [PermissionSubject!]!
+  "Parent entity in the authorization hierarchy"
+  parent: PermissionRef
+  "Child entities in the authorization hierarchy"
+  children: [PermissionRef!]!
+}
+
+"""A user or group that has been granted access to an entity"""
+type PermissionSubject {
+  "Type of subject (e.g. user, tenant, group)"
+  type: String!
+  "Subject identifier"
+  id: String!
+  "Display name"
+  name: String!
+  "Relationship type (e.g. admin, member, viewer, editor, manager)"
+  relation: String!
+}
+
+"""Reference to a related entity in the authorization hierarchy"""
+type PermissionRef {
+  "Entity type (e.g. tenant, group, feed, feed_version)"
+  type: String!
+  "Entity ID"
+  id: Int!
+  "Display name"
+  name: String!
+}
+
+"""A tenant organization that owns groups and feeds"""
+type Tenant {
+  "Internal integer ID"
+  id: Int!
+  "Tenant name"
+  name: String!
+  "Groups owned by this tenant"
+  groups(limit: Int): [Group!]!
+  "Authorization permissions for this tenant"
+  permissions: Permissions
+}
+
+"""A group that organizes feeds within a tenant"""
+type Group {
+  "Internal integer ID"
+  id: Int!
+  "Group name"
+  name: String!
+  "Parent tenant"
+  tenant: Tenant
+  "Feeds assigned to this group"
+  feeds(limit: Int): [Feed!]!
+  "Authorization permissions for this group"
+  permissions: Permissions
+}
+
+"""Input for adding or removing a permission"""
+input PermissionInput {
+  "Subject type (e.g. user, tenant, group)"
+  subject_type: String!
+  "Subject identifier"
+  subject_id: String!
+  "Relationship to grant (e.g. viewer, editor, manager, admin, member)"
+  relation: String!
+}
+
+"""Input for setting an entity's parent"""
+input SetParentInput {
+  "Parent entity type"
+  parent_type: String!
+  "Parent entity ID"
+  parent_id: Int!
+}
+
+"""Input for saving a tenant"""
+input TenantInput {
+  "Tenant name"
+  name: String!
+}
+
+"""Input for saving a group"""
+input GroupInput {
+  "Group name"
+  name: String!
+}
+
+"""A user in the authorization system"""
+type User {
+  "User identifier"
+  id: String!
+  "Display name"
+  name: String!
+  "Email address"
+  email: String!
+}
+
+"""Search options for users"""
+input UserFilter {
+  "Search for a user by ID"
+  id: String
+  "Full text search"
+  q: String
+}
+
+extend type Query {
+  "List tenants accessible to the current user"
+  tenants(limit: Int, ids: [Int!]): [Tenant!]!
+  "List groups accessible to the current user"
+  groups(limit: Int, ids: [Int!]): [Group!]!
+  "Search for users"
+  users(limit: Int, where: UserFilter): [User!]!
+}
+
+extend type Mutation {
+  "Add a permission to an entity"
+  permission_add(type: String!, id: Int!, input: PermissionInput!): Boolean!
+  "Remove a permission from an entity"
+  permission_remove(type: String!, id: Int!, input: PermissionInput!): Boolean!
+  "Set an entity's parent in the authorization hierarchy"
+  permission_set_parent(type: String!, id: Int!, input: SetParentInput!): Boolean!
+  "Update a tenant's name"
+  tenant_save(id: Int!, input: TenantInput!): Tenant!
+  "Create a group within a tenant"
+  tenant_create_group(id: Int!, input: GroupInput!): Group!
+  "Update a group's name"
+  group_save(id: Int!, input: GroupInput!): Group!
+}
+
+extend type Feed {
+  "Authorization permissions for this feed"
+  permissions: Permissions
+}
+
+extend type FeedVersion {
+  "Authorization permissions for this feed version"
+  permissions: Permissions
+}

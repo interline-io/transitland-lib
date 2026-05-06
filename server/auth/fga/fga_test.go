@@ -75,11 +75,7 @@ func (tk *testCase) String() string {
 }
 
 func TestFGAClient(t *testing.T) {
-	fgaUrl, a, ok := testutil.CheckEnv("TL_TEST_FGA_ENDPOINT")
-	if !ok {
-		t.Skip(a)
-		return
-	}
+	fgaUrl := testutil.FGAServer(t)
 
 	testData := []testCase{
 		// Assign users to tenants

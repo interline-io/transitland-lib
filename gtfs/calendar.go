@@ -9,7 +9,7 @@ import (
 
 // Calendar calendar.txt
 type Calendar struct {
-	ServiceID     tt.String      `csv:",required"`
+	ServiceID     tt.String      `csv:",required" standardized_sort:"1"`
 	Monday        tt.Int         `csv:",required" enum:"0,1"`
 	Tuesday       tt.Int         `csv:",required" enum:"0,1"`
 	Wednesday     tt.Int         `csv:",required" enum:"0,1"`

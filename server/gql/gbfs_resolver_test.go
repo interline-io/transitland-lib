@@ -18,6 +18,7 @@ func setupGbfs(ctx context.Context, gbf model.GbfsFinder) error {
 	defer ts.Close()
 	opts := gbfs.Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
+	opts.AllowHTTPFetchUnfiltered = true
 	feeds, _, err := gbfs.Fetch(ctx, nil, opts)
 	if err != nil {
 		return err

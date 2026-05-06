@@ -54,4 +54,3 @@ func (e *FlexLocationGroupEmptyCheck) Validate(ent tt.Entity) []error {
 
 	return nil
 }
-

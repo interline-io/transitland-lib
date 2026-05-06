@@ -9,39 +9,42 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
-// mockChecker implements the Checker interface for testing
+// mockChecker implements the Checker interface (4 methods) for testing
 type mockChecker struct {
-	authz.UnimplementedCheckerServer
 	feeds        []int
 	feedVersions []int
 	isAdmin      bool
 	shouldError  bool
 }
 
-func (m *mockChecker) FeedList(ctx context.Context, req *authz.FeedListRequest) (*authz.FeedListResponse, error) {
-	if m.shouldError {
-		return nil, context.DeadlineExceeded
-	}
-	resp := &authz.FeedListResponse{}
-	for _, id := range m.feeds {
-		resp.Feeds = append(resp.Feeds, &authz.Feed{Id: int64(id)})
-	}
-	return resp, nil
+func (m *mockChecker) Me(ctx context.Context) (*authz.UserInfo, error) {
+	return &authz.UserInfo{}, nil
 }
 
-func (m *mockChecker) FeedVersionList(ctx context.Context, req *authz.FeedVersionListRequest) (*authz.FeedVersionListResponse, error) {
-	if m.shouldError {
-		return nil, context.DeadlineExceeded
-	}
-	resp := &authz.FeedVersionListResponse{}
-	for _, id := range m.feedVersions {
-		resp.FeedVersions = append(resp.FeedVersions, &authz.FeedVersion{Id: int64(id)})
-	}
-	return resp, nil
-}
-
-func (m *mockChecker) CheckGlobalAdmin(ctx context.Context) (bool, error) {
+func (m *mockChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
 	return m.isAdmin, nil
+}
+
+func (m *mockChecker) ListObjects(ctx context.Context, objType authz.ObjectType) ([]authz.ObjectRef, error) {
+	if m.shouldError {
+		return nil, context.DeadlineExceeded
+	}
+	var ids []int
+	switch objType {
+	case authz.FeedType:
+		ids = m.feeds
+	case authz.FeedVersionType:
+		ids = m.feedVersions
+	}
+	refs := make([]authz.ObjectRef, len(ids))
+	for i, id := range ids {
+		refs[i] = authz.ObjectRef{Type: objType, ID: int64(id)}
+	}
+	return refs, nil
+}
+
+func (m *mockChecker) Check(ctx context.Context, obj authz.ObjectRef, action authz.Action) (bool, error) {
+	return true, nil
 }
 
 func sortedInts(s []int) []int {
@@ -329,31 +332,13 @@ func TestWithPerms(t *testing.T) {
 		}
 	})
 
-	t.Run("nil checker - returns empty filter", func(t *testing.T) {
-		ctx := context.Background()
-		ctx = WithPerms(ctx, nil)
-
-		pf := PermsForContext(ctx)
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 || len(pf.AllowedFeedVersions) != 0 {
-			t.Error("expected empty PermFilter")
-		}
-	})
-
-	t.Run("nil checker with existing filter - merges empty", func(t *testing.T) {
-		ctx := context.Background()
-		existing := &PermFilter{AllowedFeeds: []int{1, 2}, AllowedFeedVersions: []int{10}}
-		ctx = WithPermFilter(ctx, existing)
-
-		ctx = WithPerms(ctx, nil)
-
-		pf := PermsForContext(ctx)
-		// Should merge existing with empty checker result
-		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
-			t.Errorf("expected feeds [1, 2], got %v", pf.AllowedFeeds)
-		}
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
+		WithPerms(context.Background(), nil)
 	})
 
 	t.Run("existing admin + non-admin checker preserves admin", func(t *testing.T) {
@@ -400,18 +385,13 @@ func TestWithPerms_ThreadSafety(t *testing.T) {
 }
 
 func TestCheckActive(t *testing.T) {
-	t.Run("nil checker returns empty filter", func(t *testing.T) {
-		ctx := context.Background()
-		pf, err := checkActive(ctx, nil)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 {
-			t.Error("expected empty AllowedFeeds")
-		}
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
+		_, _ = checkActive(context.Background(), nil)
 	})
 
 	t.Run("checker returns feeds and versions", func(t *testing.T) {

@@ -61,4 +61,3 @@ func (e *FlexLocationGeometryCheck) Validate(ent tt.Entity) []error {
 
 	return errs
 }
-

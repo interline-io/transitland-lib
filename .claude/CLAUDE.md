@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `transitland-lib` is a Go library and CLI tool for reading, writing, and processing transit data in GTFS and related formats. It provides CSV/database readers and writers, a transformation pipeline (copier), GTFS validation, a GraphQL/REST web API, and DMFR (Distributed Mobility Feed Registry) support.
 
-**Go 1.24.2** | PostgreSQL/PostGIS | SQLite (requires CGO) | GraphQL (gqlgen) | Cobra CLI
+**Go 1.26** | PostgreSQL/PostGIS | SQLite (requires CGO) | GraphQL (gqlgen) | Cobra CLI
 
 ## Build & Test Commands
 

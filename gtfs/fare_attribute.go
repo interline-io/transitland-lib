@@ -6,7 +6,7 @@ import (
 
 // FareAttribute fare_attributes.txt
 type FareAttribute struct {
-	FareID           tt.String   `csv:",required"`
+	FareID           tt.String   `csv:",required" standardized_sort:"1"`
 	Price            tt.Float    `csv:",required" range:"0,"`
 	CurrencyType     tt.Currency `csv:",required"`
 	PaymentMethod    tt.Int      `csv:",required" enum:"0,1"`

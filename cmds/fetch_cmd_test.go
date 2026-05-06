@@ -101,6 +101,7 @@ func TestFetchCommand(t *testing.T) {
 			c.Adapter = adapter
 			tmpDir := t.TempDir()
 			c.Options.Storage = tmpDir
+			c.Options.AllowHTTPFetchUnfiltered = true
 			c.Options.StrictValidation = exp.strict
 			c.Fail = exp.fail
 			if err := c.Parse(exp.command); err != nil {
@@ -168,6 +169,7 @@ func TestFetchCommand_FetchJobs(t *testing.T) {
 		c.Adapter = adapter
 		tmpDir := t.TempDir()
 		c.Options.Storage = tmpDir
+		c.Options.AllowHTTPFetchUnfiltered = true
 		// Provide URLs via FetchJobs instead of FeedIDs or database lookup
 		c.FetchJobs = []FetchJob{
 			{FeedID: "f-job1", FeedURL: fmt.Sprintf("%s/gtfs-examples/example.zip", ts.URL)},
@@ -197,6 +199,7 @@ func TestFetchCommand_FetchJobs(t *testing.T) {
 		c.CreateFeed = true
 		tmpDir := t.TempDir()
 		c.Options.Storage = tmpDir
+		c.Options.AllowHTTPFetchUnfiltered = true
 		// Provide a feed that doesn't exist yet
 		c.FetchJobs = []FetchJob{
 			{FeedID: "f-new-feed", FeedURL: fmt.Sprintf("%s/gtfs-examples/example.zip", ts.URL)},

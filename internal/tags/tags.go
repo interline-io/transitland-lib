@@ -9,10 +9,57 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/jmoiron/sqlx/reflectx"
 )
+
+// SortKind is the underlying primitive class of a struct field, used
+// to drive type-aware sorting on serialized CSV cells.
+type SortKind int
+
+const (
+	SortKindUnknown SortKind = iota
+	SortKindString
+	SortKindInt
+	SortKindFloat
+	SortKindDate
+)
+
+// optionTypeHint is satisfied by wrappers (e.g., tt.Option[T]) that expose
+// their inner type. Defining the interface here keeps tt independent of tags.
+type optionTypeHint interface {
+	OptionType() reflect.Type
+}
+
+func inferKind(t reflect.Type) SortKind {
+	if t == nil {
+		return SortKindUnknown
+	}
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.String:
+		return SortKindString
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return SortKindInt
+	case reflect.Float32, reflect.Float64:
+		return SortKindFloat
+	}
+	if t.Kind() == reflect.Struct {
+		if t == reflect.TypeOf(time.Time{}) {
+			return SortKindDate
+		}
+		zero := reflect.New(t).Elem().Interface()
+		if h, ok := zero.(optionTypeHint); ok {
+			return inferKind(h.OptionType())
+		}
+	}
+	return SortKindUnknown
+}
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
@@ -34,6 +81,8 @@ type FieldInfo struct {
 	GreaterOrEqual *float64
 	LessOrEqual    *float64
 	EnumValues     []int64
+	SortOrder      int
+	Kind           SortKind
 }
 
 // FieldMap contains all the parsed tags for a struct.
@@ -88,6 +137,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				Name:   fi.Name,
 				Index:  fi.Index,
 				Target: fi.Field.Tag.Get("target"),
+				Kind:   inferKind(fi.Field.Type),
 			}
 
 			_, mfi.Required = fi.Options["required"]
@@ -150,12 +200,38 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 					}
 				}
 			}
+			if optVal := fi.Field.Tag.Get("standardized_sort"); optVal != "" {
+				if optParse, err := strconv.Atoi(optVal); err != nil {
+					log.For(ctx).Error().Msgf(
+						"error constructing field map for type %T: could not parse tag 'standardized_sort' with value '%s' as int: %s",
+						ent,
+						optVal,
+						err.Error(),
+					)
+				} else {
+					mfi.SortOrder = optParse
+				}
+			}
 			m[fi.Name] = &mfi
 		}
 		c.typemap[t] = m
 	}
 	c.lock.Unlock()
 	return m
+}
+
+// GetSortColumns returns the entity's fields tagged with standardized_sort,
+// sorted ascending by SortOrder.
+func (c *Cache) GetSortColumns(ent interface{}) []*FieldInfo {
+	fmap := c.GetStructTagMap(ent)
+	var cols []*FieldInfo
+	for _, fi := range fmap {
+		if fi.SortOrder > 0 {
+			cols = append(cols, fi)
+		}
+	}
+	sort.Slice(cols, func(i, j int) bool { return cols[i].SortOrder < cols[j].SortOrder })
+	return cols
 }
 
 // Header returns the field names in the same order as the struct definition.
