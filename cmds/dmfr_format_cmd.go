@@ -59,6 +59,7 @@ func (cmd *DmfrFormatCommand) Run(ctx context.Context) error {
 	r.Close()
 	if err != nil {
 		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
+		return err
 	}
 	var buf bytes.Buffer
 	if err := rr.Write(&buf); err != nil {

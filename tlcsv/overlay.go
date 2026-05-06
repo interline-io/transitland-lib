@@ -118,8 +118,11 @@ func (adapter OverlayAdapter) DirSHA1() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		io.Copy(h, f)
+		_, copyErr := io.Copy(h, f)
 		f.Close()
+		if copyErr != nil {
+			return "", copyErr
+		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
