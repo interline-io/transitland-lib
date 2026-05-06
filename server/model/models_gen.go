@@ -85,7 +85,7 @@ type AgencyPlaceFilter struct {
 
 // [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
 type Alert struct {
-	// GTFS-RT Alert active alert period. See https://gtfs.org/realtime/reference/#message-timerange
+	// Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange
 	ActivePeriod []*RTTimeRange `json:"active_period,omitempty"`
 	// GTFS-RT Alert [cause](https://gtfs.org/realtime/reference/#enum-cause)
 	Cause *string `json:"cause,omitempty"`
@@ -99,7 +99,7 @@ type Alert struct {
 	TtsHeaderText []*RTTranslation `json:"tts_header_text,omitempty"`
 	// Description text optimized for text-to-speech (TTS) systems
 	TtsDescriptionText []*RTTranslation `json:"tts_description_text,omitempty"`
-	// GTFS-RT Alert URL for more information
+	// URL for more information
 	URL []*RTTranslation `json:"url,omitempty"`
 	// Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`
 	SeverityLevel *string `json:"severity_level,omitempty"`
@@ -989,17 +989,17 @@ type Query struct {
 
 // A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange
 type RTTimeRange struct {
-	// GTFS-RT TimeRange start time, in Unix epoch seconds
+	// Start of the range, in Unix epoch seconds
 	Start *int `json:"start,omitempty"`
-	// GTFS-RT TimeRange end time, in Unix epoch seconds
+	// End of the range, in Unix epoch seconds
 	End *int `json:"end,omitempty"`
 }
 
 // A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring
 type RTTranslation struct {
-	// GTFS-RT TranslatedString translated text
+	// Translated text
 	Text string `json:"text"`
-	// GTFS-RT TranslatedString language for this translation
+	// BCP 47 language tag for this translation
 	Language *string `json:"language,omitempty"`
 }
 
@@ -1021,11 +1021,11 @@ type RTTripDescriptor struct {
 
 // Identification information for the vehicle running a trip. See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor
 type RTVehicleDescriptor struct {
-	// GTFS-RT VehicleDescriptor vehicle ID
+	// Vehicle ID
 	ID *string `json:"id,omitempty"`
-	// GTFS-RT VehicleDescriptor vehicle label
+	// Vehicle label
 	Label *string `json:"label,omitempty"`
-	// GTFS-RT VehicleDescriptor vehicle license plate
+	// Vehicle license plate
 	LicensePlate *string `json:"license_plate,omitempty"`
 }
 
@@ -1470,9 +1470,9 @@ type StopTimeEvent struct {
 	TimeUtc *time.Time `json:"time_utc,omitempty"`
 	// Time in Unix epoch seconds sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)
 	TimeUnix *int `json:"time_unix,omitempty"`
-	// Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)
+	// Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant
 	Delay *int `json:"delay,omitempty"`
-	// Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is
+	// Estimation uncertainty in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is
 	Uncertainty *int `json:"uncertainty,omitempty"`
 }
 
@@ -1600,9 +1600,9 @@ type ValidationReport struct {
 	IncludesStatic *bool `json:"includes_static,omitempty"`
 	// True if the report includes GTFS-RT validation results
 	IncludesRt *bool `json:"includes_rt,omitempty"`
-	// Name of validator used
+	// Validator name
 	Validator *string `json:"validator,omitempty"`
-	// Version of validator used
+	// Validator version
 	ValidatorVersion *string `json:"validator_version,omitempty"`
 	// Validation errors, grouped by filename, if present
 	Errors []*ValidationReportErrorGroup `json:"errors"`
@@ -1617,13 +1617,13 @@ type ValidationReport struct {
 type ValidationReportDetails struct {
 	// SHA1 hash of the validated feed
 	Sha1 string `json:"sha1"`
-	// Calculated earliest calendar date in service schedule
+	// Earliest calendar date with scheduled service
 	EarliestCalendarDate *tt.Date `json:"earliest_calendar_date,omitempty"`
-	// Calculated latest calendar date in service schedule
+	// Latest calendar date with scheduled service
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 	// Details for each file contained in the feed
 	Files []*FeedVersionFileInfo `json:"files"`
-	// Calculated weekly service levels for the feed
+	// Calculated weekly service levels
 	ServiceLevels []*FeedVersionServiceLevel `json:"service_levels"`
 	// Sample of agencies in the feed (truncated; not a complete list)
 	Agencies []*Agency `json:"agencies"`
@@ -1631,7 +1631,7 @@ type ValidationReportDetails struct {
 	Routes []*Route `json:"routes"`
 	// Sample of stops in the feed (truncated; not a complete list)
 	Stops []*Stop `json:"stops"`
-	// Records from `feed_info.txt` in the feed
+	// Records from `feed_info.txt`
 	FeedInfos []*FeedInfo `json:"feed_infos"`
 	// Detailed information about GTFS-RT sources used in validation
 	Realtime []*ValidationRealtimeResult `json:"realtime,omitempty"`
@@ -1653,7 +1653,7 @@ type ValidationReportError struct {
 	Field string `json:"field"`
 	// Line number in the source CSV file where the error occurred (static validation only; 0 for realtime)
 	Line int `json:"line"`
-	// Value of the affected field, as a string
+	// Value of the affected field
 	Value string `json:"value"`
 	// Human-readable message describing the problem
 	Message string `json:"message"`
@@ -1709,7 +1709,7 @@ type VehiclePosition struct {
 	Position *tt.Point `json:"position,omitempty"`
 	// Sequence index of the stop the vehicle is approaching or stopped at, within the trip
 	CurrentStopSequence *int `json:"current_stop_sequence,omitempty"`
-	// Stop the vehicle is approaching or stopped at, resolved from the GTFS-RT `stop_id` (despite the field name, this returns the resolved Stop entity)
+	// Stop the vehicle is approaching or stopped at; despite the field name, returns the resolved `Stop` entity
 	StopID *Stop `json:"stop_id,omitempty"`
 	// Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`
 	CurrentStatus *string `json:"current_status,omitempty"`
@@ -2350,7 +2350,7 @@ const (
 	ScheduleRelationshipUnscheduled ScheduleRelationship = "UNSCHEDULED"
 	// Trip has been canceled
 	ScheduleRelationshipCanceled ScheduleRelationship = "CANCELED"
-	// No real-time information is available; only the static schedule applies (Transitland-specific value, not part of the GTFS-RT spec)
+	// No GTFS-RT data matched; only the static schedule applies (Transitland-specific, not in the GTFS-RT spec)
 	ScheduleRelationshipStatic ScheduleRelationship = "STATIC"
 	// Stop is skipped on this trip; the trip itself runs as scheduled
 	ScheduleRelationshipSkipped ScheduleRelationship = "SKIPPED"

@@ -11853,7 +11853,7 @@ enum ScheduleRelationship {
   UNSCHEDULED
   "Trip has been canceled"
   CANCELED
-  "No real-time information is available; only the static schedule applies (Transitland-specific value, not part of the GTFS-RT spec)"
+  "No GTFS-RT data matched; only the static schedule applies (Transitland-specific, not in the GTFS-RT spec)"
   STATIC
   "Stop is skipped on this trip; the trip itself runs as scheduled"
   SKIPPED
@@ -11906,9 +11906,9 @@ type StopTimeEvent {
   time_utc: Time
   "Time in Unix epoch seconds sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)"
   time_unix: Int
-  "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with ` + "`" + `estimated_delay` + "`" + ` for the inferred-fallback variant)"
+  "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see ` + "`" + `estimated_delay` + "`" + ` for the inferred-fallback variant"
   delay: Int
-  "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is"
+  "Estimation uncertainty in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is"
   uncertainty: Int
 }
 
@@ -11920,7 +11920,7 @@ type VehiclePosition {
   position: Point
   "Sequence index of the stop the vehicle is approaching or stopped at, within the trip"
   current_stop_sequence: Int
-  "Stop the vehicle is approaching or stopped at, resolved from the GTFS-RT ` + "`" + `stop_id` + "`" + ` (despite the field name, this returns the resolved Stop entity)"
+  "Stop the vehicle is approaching or stopped at; despite the field name, returns the resolved ` + "`" + `Stop` + "`" + ` entity"
   stop_id: Stop
   "Vehicle status relative to ` + "`" + `stop_id` + "`" + `: ` + "`" + `INCOMING_AT` + "`" + `, ` + "`" + `STOPPED_AT` + "`" + `, or ` + "`" + `IN_TRANSIT_TO` + "`" + `"
   current_status: String
@@ -11934,7 +11934,7 @@ type VehiclePosition {
 [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
 """
 type Alert {
-  "GTFS-RT Alert active alert period. See https://gtfs.org/realtime/reference/#message-timerange"
+  "Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange"
   active_period: [RTTimeRange!]
   "GTFS-RT Alert [cause](https://gtfs.org/realtime/reference/#enum-cause)"
   cause: String
@@ -11948,7 +11948,7 @@ type Alert {
   tts_header_text: [RTTranslation!]
   "Description text optimized for text-to-speech (TTS) systems"
   tts_description_text: [RTTranslation!]
-  "GTFS-RT Alert URL for more information"
+  "URL for more information"
   url: [RTTranslation!]
   "Alert severity: ` + "`" + `UNKNOWN_SEVERITY` + "`" + `, ` + "`" + `INFO` + "`" + `, ` + "`" + `WARNING` + "`" + `, or ` + "`" + `SEVERE` + "`" + `"
   severity_level: String
@@ -11956,19 +11956,19 @@ type Alert {
 
 """A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange"""
 type RTTimeRange {
-  "GTFS-RT TimeRange start time, in Unix epoch seconds"
+  "Start of the range, in Unix epoch seconds"
   start: Int
-  "GTFS-RT TimeRange end time, in Unix epoch seconds"
+  "End of the range, in Unix epoch seconds"
   end: Int
 }
 
 """Identification information for the vehicle running a trip. See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor"""
 type RTVehicleDescriptor {
-  "GTFS-RT VehicleDescriptor vehicle ID"
+  "Vehicle ID"
   id: String
-  "GTFS-RT VehicleDescriptor vehicle label"
+  "Vehicle label"
   label: String
-  "GTFS-RT VehicleDescriptor vehicle license plate"
+  "Vehicle license plate"
   license_plate: String
 }
 
@@ -11990,9 +11990,9 @@ type RTTripDescriptor {
 
 """A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""
 type RTTranslation {
-  "GTFS-RT TranslatedString translated text"
+  "Translated text"
   text: String!
-  "GTFS-RT TranslatedString language for this translation"
+  "BCP 47 language tag for this translation"
   language: String
 }
 
@@ -12029,9 +12029,9 @@ type ValidationReport {
   includes_static: Boolean
   "True if the report includes GTFS-RT validation results"
   includes_rt: Boolean
-  "Name of validator used"
+  "Validator name"
   validator: String
-  "Version of validator used"
+  "Validator version"
   validator_version: String
   "Validation errors, grouped by filename, if present"
   errors(limit: Int): [ValidationReportErrorGroup!]! @goField(forceResolver: true)
@@ -12045,13 +12045,13 @@ type ValidationReport {
 type ValidationReportDetails {
   "SHA1 hash of the validated feed"
   sha1: String!
-  "Calculated earliest calendar date in service schedule"
+  "Earliest calendar date with scheduled service"
   earliest_calendar_date: Date
-  "Calculated latest calendar date in service schedule"
+  "Latest calendar date with scheduled service"
   latest_calendar_date: Date
   "Details for each file contained in the feed"
   files: [FeedVersionFileInfo!]!
-  "Calculated weekly service levels for the feed"
+  "Calculated weekly service levels"
   service_levels(limit: Int, route_id: String): [FeedVersionServiceLevel!]!
   "Sample of agencies in the feed (truncated; not a complete list)"
   agencies(limit: Int): [Agency!]!
@@ -12059,7 +12059,7 @@ type ValidationReportDetails {
   routes(limit: Int): [Route!]!
   "Sample of stops in the feed (truncated; not a complete list)"
   stops(limit: Int): [Stop!]!
-  "Records from ` + "`" + `feed_info.txt` + "`" + ` in the feed"
+  "Records from ` + "`" + `feed_info.txt` + "`" + `"
   feed_infos(limit: Int): [FeedInfo!]!
   "Detailed information about GTFS-RT sources used in validation"
   realtime: [ValidationRealtimeResult!]
@@ -12107,7 +12107,7 @@ type ValidationReportError {
   field: String!
   "Line number in the source CSV file where the error occurred (static validation only; 0 for realtime)"
   line: Int!
-  "Value of the affected field, as a string"
+  "Value of the affected field"
   value: String!
   "Human-readable message describing the problem"
   message: String!
