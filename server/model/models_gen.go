@@ -406,7 +406,7 @@ type DirectionRequest struct {
 	To *WaypointInput `json:"to"`
 	// Origin waypoint
 	From *WaypointInput `json:"from"`
-	// Travel mode (e.g. `WALK`, `TRANSIT`, `BICYCLE`)
+	// Travel mode: `WALK`, `AUTO`, `BICYCLE`, `TRANSIT`, or `LINE`
 	Mode StepMode `json:"mode"`
 	// Departure time; treated as arrival time when arrive_by is true. Defaults to now
 	DepartAt *time.Time `json:"depart_at,omitempty"`
@@ -436,7 +436,7 @@ type Directions struct {
 	StartTime *time.Time `json:"start_time,omitempty"`
 	// Arrival time of the first itinerary
 	EndTime *time.Time `json:"end_time,omitempty"`
-	// All available itineraries for this request, ordered from best to worst
+	// Itineraries as returned by the routing provider, typically in preference order
 	Itineraries []*Itinerary `json:"itineraries,omitempty"`
 }
 
@@ -687,7 +687,7 @@ type Leg struct {
 	Mode *StepMode `json:"mode,omitempty"`
 	// Turn-by-turn steps for this leg (non-transit modes)
 	Steps []*Step `json:"steps,omitempty"`
-	// Intermediate transit stops for this leg (transit mode only)
+	// Stops served by this leg, from origin to destination, including any intermediate stops (transit mode only)
 	Stops []*WaypointDeparture `json:"stops,omitempty"`
 	// Path geometry for this leg as a LineString
 	Geometry tt.LineString `json:"geometry"`
@@ -1244,7 +1244,7 @@ type Step struct {
 	To *Waypoint `json:"to,omitempty"`
 	// Travel mode for this step
 	Mode StepMode `json:"mode"`
-	// Human-readable navigation instruction (e.g. `Turn left on Main St`)
+	// Human-readable navigation instruction (e.g. `Turn left on Main St`); may be empty depending on the routing provider
 	Instruction string `json:"instruction"`
 	// Offset into the parent leg geometry where this step begins
 	GeometryOffset int `json:"geometry_offset"`
@@ -1433,7 +1433,7 @@ type StopTimeEvent struct {
 	EstimatedLocal *time.Time `json:"estimated_local,omitempty"`
 	// Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.
 	//
-	// This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.
+	// This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.
 	EstimatedDelay *int `json:"estimated_delay,omitempty"`
 	// Estimated time in local time HH:MM:SS
 	Estimated *tt.Seconds `json:"estimated,omitempty"`
@@ -2318,16 +2318,26 @@ func (e RelativeDate) MarshalJSON() ([]byte, error) {
 type ScheduleRelationship string
 
 const (
-	ScheduleRelationshipScheduled   ScheduleRelationship = "SCHEDULED"
-	ScheduleRelationshipAdded       ScheduleRelationship = "ADDED"
+	// Trip or stop is following the normal schedule with real-time updates applied
+	ScheduleRelationshipScheduled ScheduleRelationship = "SCHEDULED"
+	// Extra trip that was added in addition to a running schedule (no static counterpart)
+	ScheduleRelationshipAdded ScheduleRelationship = "ADDED"
+	// Trip is running with no associated static schedule (e.g. unscheduled or on-demand service)
 	ScheduleRelationshipUnscheduled ScheduleRelationship = "UNSCHEDULED"
-	ScheduleRelationshipCanceled    ScheduleRelationship = "CANCELED"
-	ScheduleRelationshipStatic      ScheduleRelationship = "STATIC"
-	ScheduleRelationshipSkipped     ScheduleRelationship = "SKIPPED"
-	ScheduleRelationshipNoData      ScheduleRelationship = "NO_DATA"
+	// Trip has been canceled
+	ScheduleRelationshipCanceled ScheduleRelationship = "CANCELED"
+	// No real-time information is available; only the static schedule applies (Transitland-specific value, not part of the GTFS-RT spec)
+	ScheduleRelationshipStatic ScheduleRelationship = "STATIC"
+	// Stop is skipped on this trip; the trip itself runs as scheduled
+	ScheduleRelationshipSkipped ScheduleRelationship = "SKIPPED"
+	// No real-time data is available for this stop; arrival/departure times are unknown
+	ScheduleRelationshipNoData ScheduleRelationship = "NO_DATA"
+	// Deprecated GTFS-RT value: this trip replaces a different scheduled trip
 	ScheduleRelationshipReplacement ScheduleRelationship = "REPLACEMENT"
-	ScheduleRelationshipDuplicated  ScheduleRelationship = "DUPLICATED"
-	ScheduleRelationshipDeleted     ScheduleRelationship = "DELETED"
+	// A trip created at runtime from a static schedule trip (e.g. an extra run of a regularly scheduled trip)
+	ScheduleRelationshipDuplicated ScheduleRelationship = "DUPLICATED"
+	// Trip should be removed; clients that previously received it should drop it
+	ScheduleRelationshipDeleted ScheduleRelationship = "DELETED"
 )
 
 var AllScheduleRelationship = []ScheduleRelationship{

@@ -126,7 +126,7 @@ type GbfsStationInformation {
 	station_area: Geometry
 	"Type of parking facility at this station (e.g. `parking_lot`, `street_parking`)"
 	parking_type: String
-	"True if parking hoops are present at this station"
+	"Number of parking hoops installed at this station"
 	parking_hoop: Int
 	"Contact phone number for this station"
 	contact_phone: String

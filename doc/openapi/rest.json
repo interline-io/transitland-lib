@@ -3472,13 +3472,13 @@
                                 "x-order": 57
                               },
                               "param_name": {
-                                "description": "When `type=query_param`, this specifies the name of the query parameter. When `type=header`, this specifies the name of the header",
+                                "description": "Name of the request parameter that carries the secret. For `query_param` it is the query string key; for `header` it is the header name; for `path_segment` it is the placeholder in the URL path that gets substituted. Unused for `basic_auth` and `replace_url`",
                                 "title": "param_name",
                                 "type": "string",
                                 "x-order": 55
                               },
                               "type": {
-                                "description": "Method for inserting authorization secret into request (e.g., `query_param`, `header`)",
+                                "description": "Method for inserting the authorization secret into the request: `header`, `basic_auth`, `query_param`, `path_segment`, or `replace_url`",
                                 "title": "type",
                                 "type": "string",
                                 "x-order": 53
@@ -3956,13 +3956,13 @@
                                 "x-order": 57
                               },
                               "param_name": {
-                                "description": "When `type=query_param`, this specifies the name of the query parameter. When `type=header`, this specifies the name of the header",
+                                "description": "Name of the request parameter that carries the secret. For `query_param` it is the query string key; for `header` it is the header name; for `path_segment` it is the placeholder in the URL path that gets substituted. Unused for `basic_auth` and `replace_url`",
                                 "title": "param_name",
                                 "type": "string",
                                 "x-order": 55
                               },
                               "type": {
-                                "description": "Method for inserting authorization secret into request (e.g., `query_param`, `header`)",
+                                "description": "Method for inserting the authorization secret into the request: `header`, `basic_auth`, `query_param`, `path_segment`, or `replace_url`",
                                 "title": "type",
                                 "type": "string",
                                 "x-order": 53
@@ -11593,7 +11593,7 @@
                             "x-order": 22
                           },
                           "zone_id": {
-                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
+                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required only on stops referenced by `fare_rules.txt`",
                             "nullable": true,
                             "title": "zone_id",
                             "type": "string",
@@ -12379,7 +12379,7 @@
                             "x-order": 22
                           },
                           "zone_id": {
-                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
+                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required only on stops referenced by `fare_rules.txt`",
                             "nullable": true,
                             "title": "zone_id",
                             "type": "string",
@@ -13060,7 +13060,7 @@
                                             "x-order": 407
                                           },
                                           "estimated_delay": {
-                                            "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.",
+                                            "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.",
                                             "nullable": true,
                                             "title": "estimated_delay",
                                             "type": "integer",
@@ -13176,7 +13176,7 @@
                                             "x-order": 427
                                           },
                                           "estimated_delay": {
-                                            "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.",
+                                            "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.",
                                             "nullable": true,
                                             "title": "estimated_delay",
                                             "type": "integer",
@@ -14363,7 +14363,7 @@
                                   "x-order": 364
                                 },
                                 "zone_id": {
-                                  "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
+                                  "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required only on stops referenced by `fare_rules.txt`",
                                   "nullable": true,
                                   "title": "zone_id",
                                   "type": "string",
@@ -14404,7 +14404,7 @@
                                       "x-order": 84
                                     },
                                     "estimated_delay": {
-                                      "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.",
+                                      "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.",
                                       "nullable": true,
                                       "title": "estimated_delay",
                                       "type": "integer",
@@ -14520,7 +14520,7 @@
                                       "x-order": 104
                                     },
                                     "estimated_delay": {
-                                      "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.",
+                                      "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.",
                                       "nullable": true,
                                       "title": "estimated_delay",
                                       "type": "integer",
@@ -16145,7 +16145,7 @@
                                                 "x-order": 806
                                               },
                                               "estimated_delay": {
-                                                "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.",
+                                                "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.",
                                                 "nullable": true,
                                                 "title": "estimated_delay",
                                                 "type": "integer",
@@ -16261,7 +16261,7 @@
                                                 "x-order": 826
                                               },
                                               "estimated_delay": {
-                                                "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.",
+                                                "description": "Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.\n\nThis value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.",
                                                 "nullable": true,
                                                 "title": "estimated_delay",
                                                 "type": "integer",
@@ -17448,7 +17448,7 @@
                                       "x-order": 763
                                     },
                                     "zone_id": {
-                                      "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
+                                      "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required only on stops referenced by `fare_rules.txt`",
                                       "nullable": true,
                                       "title": "zone_id",
                                       "type": "string",
@@ -17556,7 +17556,7 @@
                                 "x-order": 733
                               },
                               "zone_id": {
-                                "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
+                                "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required only on stops referenced by `fare_rules.txt`",
                                 "nullable": true,
                                 "title": "zone_id",
                                 "type": "string",
@@ -17635,7 +17635,7 @@
                             "x-order": 27
                           },
                           "zone_id": {
-                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required for fare rules",
+                            "description": "GTFS `stops.zone_id`; identifies the fare zone for a stop; required only on stops referenced by `fare_rules.txt`",
                             "nullable": true,
                             "title": "zone_id",
                             "type": "string",

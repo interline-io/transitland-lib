@@ -8804,7 +8804,7 @@ input DirectionRequest {
   to: WaypointInput!
   "Origin waypoint"
   from: WaypointInput!
-  "Travel mode (e.g. ` + "`" + `WALK` + "`" + `, ` + "`" + `TRANSIT` + "`" + `, ` + "`" + `BICYCLE` + "`" + `)"
+  "Travel mode: ` + "`" + `WALK` + "`" + `, ` + "`" + `AUTO` + "`" + `, ` + "`" + `BICYCLE` + "`" + `, ` + "`" + `TRANSIT` + "`" + `, or ` + "`" + `LINE` + "`" + `"
   mode: StepMode!
   "Departure time; treated as arrival time when arrive_by is true. Defaults to now"
   depart_at: Time
@@ -8958,7 +8958,7 @@ type Directions {
   start_time: Time
   "Arrival time of the first itinerary"
   end_time: Time
-  "All available itineraries for this request, ordered from best to worst"
+  "Itineraries as returned by the routing provider, typically in preference order"
   itineraries: [Itinerary!]
 }
 
@@ -9004,7 +9004,7 @@ type Leg {
   mode: StepMode
   "Turn-by-turn steps for this leg (non-transit modes)"
   steps: [Step!]
-  "Intermediate transit stops for this leg (transit mode only)"
+  "Stops served by this leg, from origin to destination, including any intermediate stops (transit mode only)"
   stops: [WaypointDeparture!]
   "Path geometry for this leg as a LineString"
   geometry: LineString!
@@ -9028,7 +9028,7 @@ type Step {
   to: Waypoint
   "Travel mode for this step"
   mode: StepMode!
-  "Human-readable navigation instruction (e.g. ` + "`" + `Turn left on Main St` + "`" + `)"
+  "Human-readable navigation instruction (e.g. ` + "`" + `Turn left on Main St` + "`" + `); may be empty depending on the routing provider"
   instruction: String!
   "Offset into the parent leg geometry where this step begins"
   geometry_offset: Int!
@@ -9215,7 +9215,7 @@ type GbfsStationInformation {
 	station_area: Geometry
 	"Type of parking facility at this station (e.g. ` + "`" + `parking_lot` + "`" + `, ` + "`" + `street_parking` + "`" + `)"
 	parking_type: String
-	"True if parking hoops are present at this station"
+	"Number of parking hoops installed at this station"
 	parking_hoop: Int
 	"Contact phone number for this station"
 	contact_phone: String
@@ -9746,9 +9746,8 @@ extend type FeedVersion {
 	{Name: "../../../schema/graphql/schema.graphqls", Input: `# Scalar types
 
 """
-Unordered map of entity counts by filename.
-Example: ` + "`" + `{"stops.txt": 5, "routes.txt": 2}` + "`" + `.
-Structure matches the source GTFS filenames.
+Unordered map of integer counts keyed by name.
+Keys are typically GTFS filenames (e.g. ` + "`" + `{"stops.txt": 5, "routes.txt": 2}` + "`" + `) or column names within a file.
 """
 scalar Counts
 
@@ -10106,10 +10105,10 @@ Details on how to construct an HTTP request to access a protected resource.
 Defined in the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) spec.
 """
 type FeedAuthorization {
-  "Method for inserting authorization secret into request (e.g., ` + "`" + `query_param` + "`" + `, ` + "`" + `header` + "`" + `)"
+  "Method for inserting the authorization secret into the request: ` + "`" + `header` + "`" + `, ` + "`" + `basic_auth` + "`" + `, ` + "`" + `query_param` + "`" + `, ` + "`" + `path_segment` + "`" + `, or ` + "`" + `replace_url` + "`" + `"
   type: String!
-  
-  "When ` + "`" + `type=query_param` + "`" + `, this specifies the name of the query parameter. When ` + "`" + `type=header` + "`" + `, this specifies the name of the header"
+
+  "Name of the request parameter that carries the secret. For ` + "`" + `query_param` + "`" + ` it is the query string key; for ` + "`" + `header` + "`" + ` it is the header name; for ` + "`" + `path_segment` + "`" + ` it is the placeholder in the URL path that gets substituted. Unused for ` + "`" + `basic_auth` + "`" + ` and ` + "`" + `replace_url` + "`" + `"
   param_name: String!
   
   "Website to visit to sign up for an account"
@@ -10606,7 +10605,7 @@ type Stop {
   "GTFS ` + "`" + `stops.wheelchair_boarding` + "`" + ` [0=no information, 1=some accessible path exists, 2=no accessible path]"
   wheelchair_boarding: Int
   
-  "GTFS ` + "`" + `stops.zone_id` + "`" + `; identifies the fare zone for a stop; required for fare rules"
+  "GTFS ` + "`" + `stops.zone_id` + "`" + `; identifies the fare zone for a stop; required only on stops referenced by ` + "`" + `fare_rules.txt` + "`" + `"
   zone_id: String
   
   "GTFS ` + "`" + `stops.platform_code` + "`" + `; platform identifier for a platform stop, without any word describing it as a platform (e.g. ` + "`" + `G` + "`" + ` or ` + "`" + `3` + "`" + `)"
@@ -10675,7 +10674,7 @@ type Stop {
   "Census geographies intersecting this stop's location; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field for population-within-service-area analysis"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
-  "Directions from this stop"
+  "Routing using this stop as the origin (when ` + "`" + `to` + "`" + ` is given) or as the destination (when ` + "`" + `from` + "`" + ` is given)"
   directions(to:WaypointInput, from: WaypointInput, mode: StepMode, depart_at: Time): Directions!
   
   "Stops within a specified radius of this stop; ` + "`" + `radius` + "`" + ` is in meters; useful for identifying transfer opportunities between stops from different feeds or operators"
@@ -11867,15 +11866,25 @@ See:
 - [ScheduleRelationship](https://gtfs.org/realtime/reference/#enum-schedulerelationship-1)
 """
 enum ScheduleRelationship {
+  "Trip or stop is following the normal schedule with real-time updates applied"
   SCHEDULED
+  "Extra trip that was added in addition to a running schedule (no static counterpart)"
   ADDED
+  "Trip is running with no associated static schedule (e.g. unscheduled or on-demand service)"
   UNSCHEDULED
+  "Trip has been canceled"
   CANCELED
+  "No real-time information is available; only the static schedule applies (Transitland-specific value, not part of the GTFS-RT spec)"
   STATIC
+  "Stop is skipped on this trip; the trip itself runs as scheduled"
   SKIPPED
+  "No real-time data is available for this stop; arrival/departure times are unknown"
   NO_DATA
+  "Deprecated GTFS-RT value: this trip replaces a different scheduled trip"
   REPLACEMENT
+  "A trip created at runtime from a static schedule trip (e.g. an extra run of a regularly scheduled trip)"
   DUPLICATED
+  "Trip should be removed; clients that previously received it should drop it"
   DELETED
 }
 
@@ -11901,7 +11910,7 @@ type StopTimeEvent {
   """
   Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.
 
-  This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.
+  This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.
   """
   estimated_delay: Int
   "Estimated time in local time HH:MM:SS"

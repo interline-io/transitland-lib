@@ -11,7 +11,7 @@ input DirectionRequest {
   to: WaypointInput!
   "Origin waypoint"
   from: WaypointInput!
-  "Travel mode (e.g. `WALK`, `TRANSIT`, `BICYCLE`)"
+  "Travel mode: `WALK`, `AUTO`, `BICYCLE`, `TRANSIT`, or `LINE`"
   mode: StepMode!
   "Departure time; treated as arrival time when arrive_by is true. Defaults to now"
   depart_at: Time
@@ -165,7 +165,7 @@ type Directions {
   start_time: Time
   "Arrival time of the first itinerary"
   end_time: Time
-  "All available itineraries for this request, ordered from best to worst"
+  "Itineraries as returned by the routing provider, typically in preference order"
   itineraries: [Itinerary!]
 }
 
@@ -211,7 +211,7 @@ type Leg {
   mode: StepMode
   "Turn-by-turn steps for this leg (non-transit modes)"
   steps: [Step!]
-  "Intermediate transit stops for this leg (transit mode only)"
+  "Stops served by this leg, from origin to destination, including any intermediate stops (transit mode only)"
   stops: [WaypointDeparture!]
   "Path geometry for this leg as a LineString"
   geometry: LineString!
@@ -235,7 +235,7 @@ type Step {
   to: Waypoint
   "Travel mode for this step"
   mode: StepMode!
-  "Human-readable navigation instruction (e.g. `Turn left on Main St`)"
+  "Human-readable navigation instruction (e.g. `Turn left on Main St`); may be empty depending on the routing provider"
   instruction: String!
   "Offset into the parent leg geometry where this step begins"
   geometry_offset: Int!
