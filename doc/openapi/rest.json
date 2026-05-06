@@ -8109,7 +8109,7 @@
                             "description": "Calendar for this trip",
                             "properties": {
                               "added_dates": {
-                                "description": "Added dates, derived from GTFS `calendar_dates`",
+                                "description": "Service-added dates derived from `calendar_dates.txt` records with exception_type=1",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "Date",
@@ -8141,7 +8141,7 @@
                                 "x-order": 49
                               },
                               "removed_dates": {
-                                "description": "Removed dates, derived from GTFS `calendar_dates`",
+                                "description": "Service-removed dates derived from `calendar_dates.txt` records with exception_type=2",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "Date",
@@ -8801,7 +8801,7 @@
                             "x-order": 233
                           },
                           "schedule_relationship": {
-                            "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                            "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See `ScheduleRelationship` for per-value semantics",
                             "enum": [
                               "SCHEDULED",
                               "ADDED",
@@ -8825,13 +8825,13 @@
                             "nullable": true,
                             "properties": {
                               "generated": {
-                                "description": "Was this geometry automatically generated from stop locations?",
+                                "description": "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`",
                                 "title": "generated",
                                 "type": "boolean",
                                 "x-order": 39
                               },
                               "geometry": {
-                                "description": "Geometry for this shape",
+                                "description": "Path geometry for this shape as a LineString",
                                 "title": "geometry",
                                 "x-order": 37
                               },
@@ -8883,7 +8883,7 @@
                                   "x-order": 246
                                 },
                                 "interpolated": {
-                                  "description": "Set if this arrival/departure time was interpolated during import",
+                                  "description": "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise",
                                   "nullable": true,
                                   "title": "interpolated",
                                   "type": "integer",
@@ -9577,7 +9577,7 @@
                             "description": "Calendar for this trip",
                             "properties": {
                               "added_dates": {
-                                "description": "Added dates, derived from GTFS `calendar_dates`",
+                                "description": "Service-added dates derived from `calendar_dates.txt` records with exception_type=1",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "Date",
@@ -9609,7 +9609,7 @@
                                 "x-order": 49
                               },
                               "removed_dates": {
-                                "description": "Removed dates, derived from GTFS `calendar_dates`",
+                                "description": "Service-removed dates derived from `calendar_dates.txt` records with exception_type=2",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "Date",
@@ -10269,7 +10269,7 @@
                             "x-order": 233
                           },
                           "schedule_relationship": {
-                            "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                            "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See `ScheduleRelationship` for per-value semantics",
                             "enum": [
                               "SCHEDULED",
                               "ADDED",
@@ -10293,13 +10293,13 @@
                             "nullable": true,
                             "properties": {
                               "generated": {
-                                "description": "Was this geometry automatically generated from stop locations?",
+                                "description": "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`",
                                 "title": "generated",
                                 "type": "boolean",
                                 "x-order": 39
                               },
                               "geometry": {
-                                "description": "Geometry for this shape",
+                                "description": "Path geometry for this shape as a LineString",
                                 "title": "geometry",
                                 "x-order": 37
                               },
@@ -10351,7 +10351,7 @@
                                   "x-order": 246
                                 },
                                 "interpolated": {
-                                  "description": "Set if this arrival/departure time was interpolated during import",
+                                  "description": "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise",
                                   "nullable": true,
                                   "title": "interpolated",
                                   "type": "integer",
@@ -13148,7 +13148,7 @@
                                         "x-order": 380
                                       },
                                       "date": {
-                                        "description": "If part of an arrival/departure query, the calendar date for this scheduled stop time",
+                                        "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time",
                                         "example": "2019-11-15",
                                         "format": "date",
                                         "nullable": true,
@@ -13257,7 +13257,7 @@
                                         "x-order": 378
                                       },
                                       "interpolated": {
-                                        "description": "Set if this arrival/departure time was interpolated during import",
+                                        "description": "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise",
                                         "nullable": true,
                                         "title": "interpolated",
                                         "type": "integer",
@@ -13271,7 +13271,7 @@
                                         "x-order": 376
                                       },
                                       "schedule_relationship": {
-                                        "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                                        "description": "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics",
                                         "enum": [
                                           "SCHEDULED",
                                           "ADDED",
@@ -13291,7 +13291,7 @@
                                         "x-order": 394
                                       },
                                       "service_date": {
-                                        "description": "If part of an arrival/departure query, the GTFS service date for this scheduled stop time",
+                                        "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time",
                                         "example": "2019-11-15",
                                         "format": "date",
                                         "nullable": true,
@@ -14162,7 +14162,7 @@
                                             "x-order": 590
                                           },
                                           "schedule_relationship": {
-                                            "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                                            "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See `ScheduleRelationship` for per-value semantics",
                                             "enum": [
                                               "SCHEDULED",
                                               "ADDED",
@@ -14186,13 +14186,13 @@
                                             "nullable": true,
                                             "properties": {
                                               "generated": {
-                                                "description": "Was this geometry automatically generated from stop locations?",
+                                                "description": "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`",
                                                 "title": "generated",
                                                 "type": "boolean",
                                                 "x-order": 599
                                               },
                                               "geometry": {
-                                                "description": "Geometry for this shape",
+                                                "description": "Path geometry for this shape as a LineString",
                                                 "title": "geometry",
                                                 "x-order": 597
                                               },
@@ -14221,7 +14221,7 @@
                                             "x-order": 458
                                           },
                                           "timestamp": {
-                                            "description": "GTFS-RT TripUpdate timestamp",
+                                            "description": "Timestamp from the matching GTFS-RT TripUpdate, if any",
                                             "example": "2019-11-15T00:45:55.409906",
                                             "format": "datetime",
                                             "nullable": true,
@@ -14492,7 +14492,7 @@
                                   "x-order": 57
                                 },
                                 "date": {
-                                  "description": "If part of an arrival/departure query, the calendar date for this scheduled stop time",
+                                  "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time",
                                   "example": "2019-11-15",
                                   "format": "date",
                                   "nullable": true,
@@ -14601,7 +14601,7 @@
                                   "x-order": 55
                                 },
                                 "interpolated": {
-                                  "description": "Set if this arrival/departure time was interpolated during import",
+                                  "description": "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise",
                                   "nullable": true,
                                   "title": "interpolated",
                                   "type": "integer",
@@ -14615,7 +14615,7 @@
                                   "x-order": 53
                                 },
                                 "schedule_relationship": {
-                                  "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                                  "description": "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics",
                                   "enum": [
                                     "SCHEDULED",
                                     "ADDED",
@@ -14635,7 +14635,7 @@
                                   "x-order": 71
                                 },
                                 "service_date": {
-                                  "description": "If part of an arrival/departure query, the GTFS service date for this scheduled stop time",
+                                  "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time",
                                   "example": "2019-11-15",
                                   "format": "date",
                                   "nullable": true,
@@ -15506,7 +15506,7 @@
                                       "x-order": 267
                                     },
                                     "schedule_relationship": {
-                                      "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                                      "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See `ScheduleRelationship` for per-value semantics",
                                       "enum": [
                                         "SCHEDULED",
                                         "ADDED",
@@ -15530,13 +15530,13 @@
                                       "nullable": true,
                                       "properties": {
                                         "generated": {
-                                          "description": "Was this geometry automatically generated from stop locations?",
+                                          "description": "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`",
                                           "title": "generated",
                                           "type": "boolean",
                                           "x-order": 276
                                         },
                                         "geometry": {
-                                          "description": "Geometry for this shape",
+                                          "description": "Path geometry for this shape as a LineString",
                                           "title": "geometry",
                                           "x-order": 274
                                         },
@@ -15565,7 +15565,7 @@
                                       "x-order": 135
                                     },
                                     "timestamp": {
-                                      "description": "GTFS-RT TripUpdate timestamp",
+                                      "description": "Timestamp from the matching GTFS-RT TripUpdate, if any",
                                       "example": "2019-11-15T00:45:55.409906",
                                       "format": "datetime",
                                       "nullable": true,
@@ -16233,7 +16233,7 @@
                                             "x-order": 779
                                           },
                                           "date": {
-                                            "description": "If part of an arrival/departure query, the calendar date for this scheduled stop time",
+                                            "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time",
                                             "example": "2019-11-15",
                                             "format": "date",
                                             "nullable": true,
@@ -16342,7 +16342,7 @@
                                             "x-order": 777
                                           },
                                           "interpolated": {
-                                            "description": "Set if this arrival/departure time was interpolated during import",
+                                            "description": "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise",
                                             "nullable": true,
                                             "title": "interpolated",
                                             "type": "integer",
@@ -16356,7 +16356,7 @@
                                             "x-order": 775
                                           },
                                           "schedule_relationship": {
-                                            "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                                            "description": "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics",
                                             "enum": [
                                               "SCHEDULED",
                                               "ADDED",
@@ -16376,7 +16376,7 @@
                                             "x-order": 793
                                           },
                                           "service_date": {
-                                            "description": "If part of an arrival/departure query, the GTFS service date for this scheduled stop time",
+                                            "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time",
                                             "example": "2019-11-15",
                                             "format": "date",
                                             "nullable": true,
@@ -17247,7 +17247,7 @@
                                                 "x-order": 989
                                               },
                                               "schedule_relationship": {
-                                                "description": "A status flag for real-time information about this trip.\n\nIf no real-time information is available, the value will be `STATIC` and the estimated arrival/departure times will be empty. A trip with real-time information available will be `SCHEDULED`; a canceled trip will be `CANCELED`, and an added trip that is not present in the static GTFS will be `ADDED`.",
+                                                "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See `ScheduleRelationship` for per-value semantics",
                                                 "enum": [
                                                   "SCHEDULED",
                                                   "ADDED",
@@ -17271,13 +17271,13 @@
                                                 "nullable": true,
                                                 "properties": {
                                                   "generated": {
-                                                    "description": "Was this geometry automatically generated from stop locations?",
+                                                    "description": "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`",
                                                     "title": "generated",
                                                     "type": "boolean",
                                                     "x-order": 998
                                                   },
                                                   "geometry": {
-                                                    "description": "Geometry for this shape",
+                                                    "description": "Path geometry for this shape as a LineString",
                                                     "title": "geometry",
                                                     "x-order": 996
                                                   },
@@ -17306,7 +17306,7 @@
                                                 "x-order": 857
                                               },
                                               "timestamp": {
-                                                "description": "GTFS-RT TripUpdate timestamp",
+                                                "description": "Timestamp from the matching GTFS-RT TripUpdate, if any",
                                                 "example": "2019-11-15T00:45:55.409906",
                                                 "format": "datetime",
                                                 "nullable": true,

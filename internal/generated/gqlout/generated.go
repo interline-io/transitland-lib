@@ -10764,7 +10764,7 @@ type Level {
 }
 
 """
-Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file optionally enriched with by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages.
+Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file, optionally enriched by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages.
 
 See [Concepts: Trips & Schedules](https://www.transit.land/documentation/concepts/trips-schedules).
 """
@@ -10819,15 +10819,11 @@ type Trip {
   
   "GTFS-RT service alerts for this trip; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
-  
-  """
-  A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be ` + "`" + `STATIC` + "`" + ` and the estimated arrival/departure times will be empty. A trip with real-time information available will be ` + "`" + `SCHEDULED` + "`" + `; a canceled trip will be ` + "`" + `CANCELED` + "`" + `, and an added trip that is not present in the static GTFS will be ` + "`" + `ADDED` + "`" + `.
-  """
+  "Real-time status of this trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
-  
-  "GTFS-RT TripUpdate timestamp"
+
+  "Timestamp from the matching GTFS-RT TripUpdate, if any"
   timestamp: Time
 }
 
@@ -10870,10 +10866,10 @@ type Calendar {
   "GTFS ` + "`" + `calendar.sunday` + "`" + ` [1=service runs on Sundays, 0=service does not run]"
   sunday: Int!
   
-  "Added dates, derived from GTFS ` + "`" + `calendar_dates` + "`" + `"
+  "Service-added dates derived from ` + "`" + `calendar_dates.txt` + "`" + ` records with exception_type=1"
   added_dates(limit: Int): [Date!]!
-  
-  "Removed dates, derived from GTFS ` + "`" + `calendar_dates` + "`" + `"
+
+  "Service-removed dates derived from ` + "`" + `calendar_dates.txt` + "`" + ` records with exception_type=2"
   removed_dates(limit: Int): [Date!]!
 }
 
@@ -10887,10 +10883,10 @@ type Shape {
   "GTFS ` + "`" + `shapes.shape_id` + "`" + `"
   shape_id: String!
   
-  "Geometry for this shape"
+  "Path geometry for this shape as a LineString"
   geometry: LineString!
-  
-  "Was this geometry automatically generated from stop locations?"
+
+  "True if this geometry was generated from stop locations because the source feed lacks a ` + "`" + `shapes.txt` + "`" + `"
   generated: Boolean!
 }
 
@@ -10948,49 +10944,45 @@ type StopTime {
   "GTFS ` + "`" + `stop_times.shape_dist_traveled` + "`" + `; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt"
   shape_dist_traveled: Float
   
-  "Set if this arrival/departure time was interpolated during import"
+  "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
-  
+
   "GTFS ` + "`" + `stop_times.start_pickup_drop_off_window` + "`" + `; earliest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   start_pickup_drop_off_window: Seconds
-  
+
   "GTFS ` + "`" + `stop_times.end_pickup_drop_off_window` + "`" + `; latest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   end_pickup_drop_off_window: Seconds
-  
-  "GTFS ` + "`" + `stop_times.pickup_booking_rule_id` + "`" + `; booking rule governing pickup at this stop (GTFS Flex)"
+
+  "Booking rule governing pickup at this stop, resolved from GTFS ` + "`" + `stop_times.pickup_booking_rule_id` + "`" + ` (GTFS Flex)"
   pickup_booking_rule: BookingRule
-  
-  "GTFS ` + "`" + `stop_times.drop_off_booking_rule_id` + "`" + `; booking rule governing drop-off at this stop (GTFS Flex)"
+
+  "Booking rule governing drop-off at this stop, resolved from GTFS ` + "`" + `stop_times.drop_off_booking_rule_id` + "`" + ` (GTFS Flex)"
   drop_off_booking_rule: BookingRule
-  
+
   "Stop associated with this stop time"
   stop: Stop!
-  
+
   "Trip associated with this stop time"
   trip: Trip!
-  
+
   "Detailed arrival information, including GTFS-RT updates and estimates"
   arrival: StopTimeEvent!
-  
+
   "Detailed departure information, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
-  
-  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
-  service_date: Date
-  
-  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
-  date: Date
-  
-  """
-  A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be ` + "`" + `STATIC` + "`" + ` and the estimated arrival/departure times will be empty. A trip with real-time information available will be ` + "`" + `SCHEDULED` + "`" + `; a canceled trip will be ` + "`" + `CANCELED` + "`" + `, and an added trip that is not present in the static GTFS will be ` + "`" + `ADDED` + "`" + `.
-  """
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  service_date: Date
+
+  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  date: Date
+
+  "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
 }
 
 """
-Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a service at a Location or Location Group.
+Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a Flex (demand-responsive) service stop where the destination is a ` + "`" + `Location` + "`" + ` or ` + "`" + `LocationGroup` + "`" + ` rather than a fixed ` + "`" + `Stop` + "`" + `.
 """
 type FlexStopTime {
   "GTFS ` + "`" + `stop_times.arrival_time` + "`" + `"
@@ -11023,47 +11015,43 @@ type FlexStopTime {
   "GTFS ` + "`" + `stop_times.shape_dist_traveled` + "`" + `; distance traveled along the associated shape from the first shape point, in the same units as shapes.txt"
   shape_dist_traveled: Float
   
-  "Set if this arrival/departure time was interpolated during import"
+  "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
-  
+
   "GTFS ` + "`" + `stop_times.start_pickup_drop_off_window` + "`" + `; earliest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   start_pickup_drop_off_window: Seconds
-  
+
   "GTFS ` + "`" + `stop_times.end_pickup_drop_off_window` + "`" + `; latest time a rider may request service at this location (GTFS Flex demand-responsive service)"
   end_pickup_drop_off_window: Seconds
-  
-  "GTFS ` + "`" + `stop_times.pickup_booking_rule_id` + "`" + `; booking rule governing pickup at this stop (GTFS Flex)"
+
+  "Booking rule governing pickup at this stop, resolved from GTFS ` + "`" + `stop_times.pickup_booking_rule_id` + "`" + ` (GTFS Flex)"
   pickup_booking_rule: BookingRule
-  
-  "GTFS ` + "`" + `stop_times.drop_off_booking_rule_id` + "`" + `; booking rule governing drop-off at this stop (GTFS Flex)"
+
+  "Booking rule governing drop-off at this stop, resolved from GTFS ` + "`" + `stop_times.drop_off_booking_rule_id` + "`" + ` (GTFS Flex)"
   drop_off_booking_rule: BookingRule
-  
-  "Location associated with this stop time"
+
+  "Location associated with this stop time (mutually exclusive with ` + "`" + `location_group` + "`" + `)"
   location: Location
-  
-  "Location Group associated with this stop time"
+
+  "Location group associated with this stop time (mutually exclusive with ` + "`" + `location` + "`" + `)"
   location_group: LocationGroup
-  
+
   "Trip associated with this stop time"
   trip: Trip!
-  
+
   "Detailed arrival information, including GTFS-RT updates and estimates"
   arrival: StopTimeEvent!
-  
+
   "Detailed departure information, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
-  
-  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
-  service_date: Date
-  
-  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
-  date: Date
-  
-  """
-  A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be ` + "`" + `STATIC` + "`" + ` and the estimated arrival/departure times will be empty. A trip with real-time information available will be ` + "`" + `SCHEDULED` + "`" + `; a canceled trip will be ` + "`" + `CANCELED` + "`" + `, and an added trip that is not present in the static GTFS will be ` + "`" + `ADDED` + "`" + `.
-  """
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  service_date: Date
+
+  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  date: Date
+
+  "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
 }
 
