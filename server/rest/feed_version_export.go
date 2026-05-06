@@ -259,9 +259,9 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 		util.WriteJsonError(w, "failed to create temp file for zip", http.StatusInternalServerError)
 		return
 	} else {
-		defer os.Remove(tmpFilename)
 		tmpFilename = tmpfile.Name()
 		tmpfile.Close()
+		defer os.Remove(tmpFilename)
 	}
 
 	// Create CSV writer for ZIP output

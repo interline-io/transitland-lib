@@ -288,6 +288,7 @@ func (adapter *ZipAdapter) SHA1() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 	h := sha1.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return "", err
@@ -439,7 +440,11 @@ func (adapter *DirAdapter) DirSHA1() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		io.Copy(h, f)
+		_, copyErr := io.Copy(h, f)
+		f.Close()
+		if copyErr != nil {
+			return "", copyErr
+		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
