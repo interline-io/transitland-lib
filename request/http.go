@@ -63,6 +63,10 @@ const (
 	//   Attempt 4: after ~90s (90s + jitter)
 	// Total max wait time: ~130s (~2 minutes)
 	defaultMaxRetries = 3
+
+	// defaultMaxRedirects matches the Go net/http default, which is otherwise
+	// replaced when a custom CheckRedirect is set.
+	defaultMaxRedirects = 10
 )
 
 // defaultBackoffSchedule defines the backoff duration for each retry attempt.
@@ -77,6 +81,12 @@ type Http struct {
 	// MaxRetries sets the maximum number of retry attempts for a request.
 	// If MaxRetries is zero or negative, a default value (defaultMaxRetries) is used.
 	MaxRetries int
+	// MaxRedirects follows Go net/http CheckRedirect semantics and limits the
+	// total number of requests in a redirect chain, including the initial
+	// request — a value of N therefore allows up to N-1 redirects to be
+	// followed. If MaxRedirects is zero or negative, defaultMaxRedirects (10)
+	// is used, matching the net/http default.
+	MaxRedirects int
 	// BackoffSchedule defines the backoff duration for each retry attempt.
 	// If nil or empty, defaultBackoffSchedule is used.
 	BackoffSchedule []time.Duration
@@ -103,6 +113,13 @@ func (r *Http) getBackoffSchedule() []time.Duration {
 		return r.BackoffSchedule
 	}
 	return defaultBackoffSchedule
+}
+
+func (r *Http) getMaxRedirects() int {
+	if r.MaxRedirects > 0 {
+		return r.MaxRedirects
+	}
+	return defaultMaxRedirects
 }
 
 // isRetryableStatus returns true for HTTP status codes that indicate
@@ -227,8 +244,12 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	// may break pre-signed S3 URLs or other systems that rely on the host header
 	removeDefaultPortFromHost(req)
 
+	maxRedirects := r.getMaxRedirects()
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("stopped after %d redirects", maxRedirects)
+			}
 			removeDefaultPortFromHost(req)
 			return nil
 		},
