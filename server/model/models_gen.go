@@ -48,6 +48,7 @@ type AgencyFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// Geographic search options for agencies
 type AgencyLocationFilter struct {
 	// Search for agencies within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
@@ -104,6 +105,7 @@ type Alert struct {
 	SeverityLevel *string `json:"severity_level,omitempty"`
 }
 
+// Search options for GTFS Flex booking rules
 type BookingRuleFilter struct {
 	// Restrict to specific ids
 	Ids []int `json:"ids,omitempty"`
@@ -294,10 +296,14 @@ type CensusGeography struct {
 //
 // Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusGeographyFilter struct {
-	Dataset *string  `json:"dataset,omitempty"`
-	Layer   *string  `json:"layer,omitempty"`
-	Radius  *float64 `json:"radius,omitempty"`
-	Search  *string  `json:"search,omitempty"`
+	// Search within this dataset
+	Dataset *string `json:"dataset,omitempty"`
+	// Search within this layer
+	Layer *string `json:"layer,omitempty"`
+	// Buffer radius in meters around the parent entity's geometry (e.g. stop or route stops)
+	Radius *float64 `json:"radius,omitempty"`
+	// Search for geographies matching this string
+	Search *string `json:"search,omitempty"`
 }
 
 // A named category of geographic boundaries within a dataset, grouping geometries of the same type (e.g. all census tracts, all states).
@@ -336,8 +342,11 @@ type CensusSource struct {
 	DatasetID int            `json:"-"`
 }
 
+// Search options for census source files
 type CensusSourceFilter struct {
-	Name   *string `json:"name,omitempty"`
+	// Search for sources with this exact name
+	Name *string `json:"name,omitempty"`
+	// Search for sources matching this string
 	Search *string `json:"search,omitempty"`
 }
 
@@ -371,7 +380,9 @@ type CensusTable struct {
 	DatasetID int            `json:"-"`
 }
 
+// Search options for census tables
 type CensusTableFilter struct {
+	// Search for tables matching this string (matches on table name and title)
 	Search *string `json:"search,omitempty"`
 }
 
@@ -462,11 +473,16 @@ type EntityDeleteResult struct {
 	ID int `json:"id"`
 }
 
+// A GeoJSON-style feature used as a search-area input. Stops contained in the feature are returned with the feature's `id` echoed back via `Stop.within_features`
 type Feature struct {
-	ID         *string      `json:"id,omitempty"`
-	Geometry   *tt.Geometry `json:"geometry,omitempty"`
-	Properties *tt.Map      `json:"properties,omitempty"`
-	Type       *string      `json:"type,omitempty"`
+	// Caller-supplied identifier echoed back on matched stops
+	ID *string `json:"id,omitempty"`
+	// Boundary geometry for the feature (GeoJSON)
+	Geometry *tt.Geometry `json:"geometry,omitempty"`
+	// Arbitrary key/value metadata associated with the feature
+	Properties *tt.Map `json:"properties,omitempty"`
+	// GeoJSON type, typically `Feature`
+	Type *string `json:"type,omitempty"`
 }
 
 // Search options for feed fetches
@@ -610,6 +626,7 @@ type FeedVersionUnimportResult struct {
 	Success bool `json:"success"`
 }
 
+// A point used to bias result ordering by distance, without otherwise filtering results
 type FocusPoint struct {
 	// Latitude
 	Lat float64 `json:"lat"`
@@ -1100,6 +1117,7 @@ type RouteHeadway struct {
 	SelectedStopID   int           `json:"-"`
 }
 
+// Geographic search options for routes
 type RouteLocationFilter struct {
 	// Search for routes within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
@@ -1258,9 +1276,12 @@ type StopBuffer struct {
 	Radius *float64 `json:"radius,omitempty"`
 }
 
+// Set or update a cross-feed stop reference linking this stop to a stop in another feed
 type StopExternalReferenceSetInput struct {
+	// Onestop ID of the target stop's feed
 	TargetFeedOnestopID *string `json:"target_feed_onestop_id,omitempty"`
-	TargetStopID        *string `json:"target_stop_id,omitempty"`
+	// GTFS `stop_id` of the target stop within that feed
+	TargetStopID *string `json:"target_stop_id,omitempty"`
 }
 
 // Search options for stops
@@ -1305,6 +1326,7 @@ type StopFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// Geographic search options for stops
 type StopLocationFilter struct {
 	// Search for stops within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
@@ -1764,9 +1786,12 @@ type WaypointStop struct {
 type DistanceUnit string
 
 const (
+	// Distance in kilometers
 	DistanceUnitKilometers DistanceUnit = "KILOMETERS"
-	DistanceUnitMeters     DistanceUnit = "METERS"
-	DistanceUnitMiles      DistanceUnit = "MILES"
+	// Distance in meters
+	DistanceUnitMeters DistanceUnit = "METERS"
+	// Distance in miles
+	DistanceUnitMiles DistanceUnit = "MILES"
 )
 
 var AllDistanceUnit = []DistanceUnit{

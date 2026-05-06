@@ -273,8 +273,11 @@ enum DurationUnit {
 Unit of distance measurement.
 """
 enum DistanceUnit {
+  "Distance in kilometers"
   KILOMETERS
+  "Distance in meters"
   METERS
+  "Distance in miles"
   MILES
 }
 

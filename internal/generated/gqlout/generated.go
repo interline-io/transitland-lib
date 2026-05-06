@@ -9066,8 +9066,11 @@ enum DurationUnit {
 Unit of distance measurement.
 """
 enum DistanceUnit {
+  "Distance in kilometers"
   KILOMETERS
+  "Distance in meters"
   METERS
+  "Distance in miles"
   MILES
 }
 
@@ -11795,21 +11798,29 @@ Relay-style cursor-paginated connection for census values.
 Use ` + "`" + `values_relay` + "`" + ` on ` + "`" + `CensusDataset` + "`" + ` when fetching large result sets (e.g. full NTD datasets).
 """
 type CensusValueConnection {
+  "Page of result edges; each edge contains a ` + "`" + `CensusValue` + "`" + ` node and its cursor"
   edges: [CensusValueEdge!]!
+  "Pagination metadata for this page"
   pageInfo: PageInfo!
 }
 
 """A single edge in a CensusValueConnection."""
 type CensusValueEdge {
+  "The CensusValue at this position in the result set"
   node: CensusValue!
+  "Opaque cursor identifying this edge; pass to ` + "`" + `after` + "`" + ` to continue paging from here"
   cursor: String!
 }
 
 """Relay-style pagination metadata."""
 type PageInfo {
+  "True if there are more results after ` + "`" + `endCursor` + "`" + `"
   hasNextPage: Boolean!
+  "True if there are more results before ` + "`" + `startCursor` + "`" + `"
   hasPreviousPage: Boolean!
+  "Cursor of the first edge in this page; use as ` + "`" + `before` + "`" + ` to page backward"
   startCursor: String
+  "Cursor of the last edge in this page; use as ` + "`" + `after` + "`" + ` to page forward"
   endCursor: String
 }
 
@@ -12225,6 +12236,7 @@ input LocationFilter {
   location_id: String
 }
 
+"""Search options for GTFS Flex booking rules"""
 input BookingRuleFilter {
   "Restrict to specific ids"
   ids: [Int!]
@@ -12374,6 +12386,7 @@ input AgencyFilter {
   near: PointRadius
 }
 
+"""Geographic search options for agencies"""
 input AgencyLocationFilter {
   "Search for agencies within this bounding box"
   bbox: BoundingBox
@@ -12424,6 +12437,7 @@ input RouteFilter {
 
 }
 
+"""Geographic search options for routes"""
 input RouteLocationFilter {
   "Search for routes within this bounding box"
   bbox: BoundingBox
@@ -12435,13 +12449,19 @@ input RouteLocationFilter {
   focus: FocusPoint
 }
 
+"""A GeoJSON-style feature used as a search-area input. Stops contained in the feature are returned with the feature's ` + "`" + `id` + "`" + ` echoed back via ` + "`" + `Stop.within_features` + "`" + `"""
 input Feature {
+  "Caller-supplied identifier echoed back on matched stops"
   id: String
+  "Boundary geometry for the feature (GeoJSON)"
   geometry: Geometry
+  "Arbitrary key/value metadata associated with the feature"
   properties: Map
+  "GeoJSON type, typically ` + "`" + `Feature` + "`" + `"
   type: String
 }
 
+"""Geographic search options for stops"""
 input StopLocationFilter {
   "Search for stops within this bounding box"
   bbox: BoundingBox
@@ -12590,9 +12610,13 @@ input CensusDatasetFilter {
 Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 """
 input CensusGeographyFilter {
+  "Search within this dataset"
   dataset: String
+  "Search within this layer"
   layer: String
+  "Buffer radius in meters around the parent entity's geometry (e.g. stop or route stops)"
   radius: Float
+  "Search for geographies matching this string"
   search: String
 }
 
@@ -12657,7 +12681,9 @@ input StopBuffer {
   radius: Float
 }
 
+"""Search options for census tables"""
 input CensusTableFilter {
+  "Search for tables matching this string (matches on table name and title)"
   search: String
 }
 
@@ -12671,8 +12697,11 @@ input CensusDatasetValueFilter {
   geoid_prefix: String
 }
 
+"""Search options for census source files"""
 input CensusSourceFilter {
+  "Search for sources with this exact name"
   name: String
+  "Search for sources matching this string"
   search: String
 }
 
@@ -12767,6 +12796,7 @@ input PointRadius {
   radius: Float!
 }
 
+"""A point used to bias result ordering by distance, without otherwise filtering results"""
 input FocusPoint {
   "Latitude"
   lat: Float!
@@ -12873,8 +12903,11 @@ input StopSetInput {
   external_reference: StopExternalReferenceSetInput
 }
 
+"""Set or update a cross-feed stop reference linking this stop to a stop in another feed"""
 input StopExternalReferenceSetInput {
+  "Onestop ID of the target stop's feed"
   target_feed_onestop_id: String
+  "GTFS ` + "`" + `stop_id` + "`" + ` of the target stop within that feed"
   target_stop_id: String
 }
 
