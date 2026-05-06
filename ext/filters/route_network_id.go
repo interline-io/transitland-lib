@@ -32,7 +32,7 @@ func (e *RouteNetworkIDFilter) Expand(ent tt.Entity, emap *tt.EntityMap) ([]tt.E
 	return ret, true, nil
 }
 
-func (e *RouteNetworkIDFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *RouteNetworkIDFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	// Unset any set NetworkID
 	if v, ok := ent.(*gtfs.Route); ok {
 		v.NetworkID = tt.String{}

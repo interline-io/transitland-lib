@@ -61,7 +61,7 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 }
 
 // Counts the number of times a shape is used for each route,direction_id
-func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *service.ShapeLine:
 		pts := make([]tlxy.Point, v.Geometry.Val.NumCoords())
