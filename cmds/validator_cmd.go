@@ -110,7 +110,6 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 	if cmd.readerPath == "" && cmd.DMFRFile == "" {
 		return errors.New("requires input reader or --dmfr with --feed-id")
 	}
-	// Load secrets from file
 	if cmd.SecretsFile != "" {
 		r, err := dmfr.LoadAndParseRegistry(cmd.SecretsFile)
 		if err != nil {
@@ -118,7 +117,6 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 		}
 		cmd.secrets = r.Secrets
 	}
-	// Parse --secret-env arguments
 	for _, se := range cmd.SecretEnv {
 		secret, err := parseSecretEnv(se)
 		if err != nil {
@@ -152,13 +150,12 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 }
 
 func (cmd *ValidatorCommand) Run(ctx context.Context) error {
-	// If --dmfr is set, look up feed auth/URL and download to a temp file with auth
 	if cmd.DMFRFile != "" {
 		tmpfile, err := cmd.fetchWithAuth(ctx)
 		if err != nil {
 			return err
 		}
-		// Strip any URL fragment preserved for the reader before removing the file.
+		// tmpfile may carry a "#fragment" for the reader; strip it before unlinking.
 		removePath, _, _ := strings.Cut(tmpfile, "#")
 		defer os.Remove(removePath)
 		cmd.readerPath = tmpfile
@@ -223,9 +220,8 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 	return nil
 }
 
-// fetchWithAuth resolves feed URL and authorization from the DMFR file, downloads
-// the feed with auth applied (if configured), and returns the path to a temp file
-// that the caller is responsible for removing.
+// fetchWithAuth downloads the feed with DMFR auth applied and returns a temp
+// path the caller must remove.
 func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) {
 	reg, err := dmfr.LoadAndParseRegistry(cmd.DMFRFile)
 	if err != nil {
@@ -241,10 +237,9 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 	if feed == nil {
 		return "", fmt.Errorf("feed %q not found in %s", cmd.FeedID, cmd.DMFRFile)
 	}
-	// LoadAndParseRegistry doesn't populate feed.File; set it so secrets that
-	// match by filename (e.g. {"filename": "wmata.com.dmfr.json"}) resolve.
+	// LoadAndParseRegistry doesn't populate feed.File; set it so filename-keyed
+	// secrets (e.g. {"filename": "wmata.com.dmfr.json"}) resolve.
 	feed.File = filepath.Base(cmd.DMFRFile)
-	// Determine URL: explicit positional arg overrides DMFR lookup
 	feedURL := cmd.readerPath
 	if feedURL == "" {
 		feedURL, err = urlForType(feed.URLs, cmd.URLType)
@@ -255,9 +250,8 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 	if feedURL == "" {
 		return "", fmt.Errorf("no %s URL found for feed %q", cmd.URLType, cmd.FeedID)
 	}
-	// Split off any URL fragment (e.g. "archive.zip#subdir") so the download
-	// targets just the URL; re-attach the fragment to the temp path so
-	// tlcsv.URLAdapter's internal-zip-path semantics are preserved.
+	// Strip any "#subdir" fragment for the download and re-attach it to the
+	// temp path so tlcsv's internal-zip-path semantics are preserved.
 	fetchURL, fragment, hasFragment := strings.Cut(feedURL, "#")
 	var reqOpts []request.RequestOption
 	if cmd.AllowFTPFetch {
