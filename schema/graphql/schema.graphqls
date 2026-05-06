@@ -825,7 +825,7 @@ type Stop {
   "Internal integer ID"
   id: Int!
   
-  "Onestop ID for this stop, if available [example:s-dr5ruvgnyk-madisonav~e69st]"
+  "Onestop ID for this stop, or empty string if not registered [example:s-dr5ruvgnyk-madisonav~e69st]"
   onestop_id: String!
   
   "GTFS `stops.location_type` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]"
@@ -861,16 +861,16 @@ type Stop {
   "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems"
   tts_stop_name: String
   
-  "Stop geometry"
+  "Geographic location of this stop as a GeoJSON Point"
   geometry: Point!
-  
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  
-  "Feed Onestop ID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
   
   "GTFS Flex location groups associated with this stop"
@@ -894,13 +894,13 @@ type Stop {
   "Routes serving this stop, as RouteStop associations (includes route and agency context)"
   route_stops(limit: Int): [RouteStop!]!
   
-  "Levels defined within this station (multi-level stations only)"
+  "Levels defined within this station; meaningful only when this stop is a station (location_type=1)"
   child_levels(limit: Int): [Level!]!
-  
-  "Pathways that begin at this stop; traverse the full graph to map station accessibility (entrances, escalators, fare gates, etc.)"
+
+  "Pathways that originate at this stop; combine with `pathways_to_stop` and traverse to map station accessibility (entrances, escalators, fare gates, etc.)"
   pathways_from_stop(limit: Int): [Pathway!]!
-  
-  "Pathways that end at this stop"
+
+  "Pathways that terminate at this stop"
   pathways_to_stop(limit: Int): [Pathway!]!
   
   "Raw scheduled stop times for this stop from the GTFS schedule, without date or time filtering"
@@ -912,10 +912,10 @@ type Stop {
   "Scheduled arrivals at this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available; use `StopTimeFilter` to specify a date and time range"
   arrivals(limit: Int, where: StopTimeFilter): [StopTime!]!
   
-  "Search Rank: Internal usage for search result ordering"
-  search_rank: String
-  
-  "State/Province associated with this stop"
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
+  "Administrative place (country and state/province) associated with this stop's location"
   place: StopPlace
   
   "Census geographies intersecting this stop's location; use with a `radius` filter and the `intersection_area` field for population-within-service-area analysis"
@@ -930,7 +930,7 @@ type Stop {
   "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
   
-  "Matching feature ids from polygon search"
+  "When this stop was returned by a `StopFilter.location.features` search, the IDs of the input features that contain this stop; otherwise empty"
   within_features: Strings
   "Time this stop record was created (typically the feed version import time)"
   created_at: Time
@@ -940,7 +940,7 @@ type Stop {
 
 """
 Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaystxt).
-Pathways are a graph representation of a subway or train station, with nodes (entrances, platforms, etc) and edges (the pathways).
+Pathways form a graph representation of a transit station: stops (entrances, platforms, generic nodes, boarding areas) are the nodes and Pathway records are the edges.
 """
 type Pathway {
   "Internal integer ID"
@@ -989,7 +989,7 @@ type Pathway {
 
 """
 Record from a static GTFS [levels.txt](https://gtfs.org/reference/static/#levelstxt).
-Levels describes different levels of a station; used in conjunction with pathways.
+Describes a single level of a multi-level station; used together with `Pathway` records.
 """
 type Level {
   "Internal integer ID"
@@ -1004,7 +1004,7 @@ type Level {
   "GTFS `levels.level_name`; optional name of the level as seen by the rider (e.g. `Mezzanine`, `Upper Level`)"
   level_name: String
   
-  "An optional geometry describing the footprint of this level"
+  "Geometry describing the footprint of this level (Transitland extension; not part of the GTFS spec)"
   geometry: MultiPolygon!
   
   "Stops associated with this level"

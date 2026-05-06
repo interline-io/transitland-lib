@@ -6625,7 +6625,7 @@
                                       "x-order": 197
                                     },
                                     "geometry": {
-                                      "description": "Stop geometry",
+                                      "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
                                       "x-order": 152
                                     },
@@ -7595,7 +7595,7 @@
                                       "x-order": 197
                                     },
                                     "geometry": {
-                                      "description": "Stop geometry",
+                                      "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
                                       "x-order": 152
                                     },
@@ -9111,7 +9111,7 @@
                                       "x-order": 304
                                     },
                                     "geometry": {
-                                      "description": "Stop geometry",
+                                      "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
                                       "x-order": 259
                                     },
@@ -10579,7 +10579,7 @@
                                       "x-order": 304
                                     },
                                     "geometry": {
-                                      "description": "Stop geometry",
+                                      "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
                                       "x-order": 259
                                     },
@@ -11138,7 +11138,7 @@
                             "x-order": 160
                           },
                           "feed_version": {
-                            "description": "Feed version",
+                            "description": "Source feed version for this entity",
                             "properties": {
                               "feed": {
                                 "description": "Feed associated with this feed version",
@@ -11189,7 +11189,7 @@
                             "x-order": 52
                           },
                           "geometry": {
-                            "description": "Stop geometry",
+                            "description": "Geographic location of this stop as a GeoJSON Point",
                             "title": "geometry",
                             "x-order": 28
                           },
@@ -11235,7 +11235,7 @@
                             "x-order": 24
                           },
                           "onestop_id": {
-                            "description": "Onestop ID for this stop, if available",
+                            "description": "Onestop ID for this stop, or empty string if not registered",
                             "example": "s-dr5ruvgnyk-madisonav~e69st",
                             "title": "onestop_id",
                             "type": "string",
@@ -11457,7 +11457,7 @@
                                 "x-order": 114
                               },
                               "geometry": {
-                                "description": "Stop geometry",
+                                "description": "Geographic location of this stop as a GeoJSON Point",
                                 "title": "geometry",
                                 "x-order": 69
                               },
@@ -11489,7 +11489,7 @@
                             "x-order": 115
                           },
                           "place": {
-                            "description": "State/Province associated with this stop",
+                            "description": "Administrative place (country and state/province) associated with this stop's location",
                             "nullable": true,
                             "properties": {
                               "adm0_iso": {
@@ -11924,7 +11924,7 @@
                             "x-order": 160
                           },
                           "feed_version": {
-                            "description": "Feed version",
+                            "description": "Source feed version for this entity",
                             "properties": {
                               "feed": {
                                 "description": "Feed associated with this feed version",
@@ -11975,7 +11975,7 @@
                             "x-order": 52
                           },
                           "geometry": {
-                            "description": "Stop geometry",
+                            "description": "Geographic location of this stop as a GeoJSON Point",
                             "title": "geometry",
                             "x-order": 28
                           },
@@ -12021,7 +12021,7 @@
                             "x-order": 24
                           },
                           "onestop_id": {
-                            "description": "Onestop ID for this stop, if available",
+                            "description": "Onestop ID for this stop, or empty string if not registered",
                             "example": "s-dr5ruvgnyk-madisonav~e69st",
                             "title": "onestop_id",
                             "type": "string",
@@ -12243,7 +12243,7 @@
                                 "x-order": 114
                               },
                               "geometry": {
-                                "description": "Stop geometry",
+                                "description": "Geographic location of this stop as a GeoJSON Point",
                                 "title": "geometry",
                                 "x-order": 69
                               },
@@ -12275,7 +12275,7 @@
                             "x-order": 115
                           },
                           "place": {
-                            "description": "State/Province associated with this stop",
+                            "description": "Administrative place (country and state/province) associated with this stop's location",
                             "nullable": true,
                             "properties": {
                               "adm0_iso": {
@@ -14273,7 +14273,7 @@
                                   "x-order": 659
                                 },
                                 "geometry": {
-                                  "description": "Stop geometry",
+                                  "description": "Geographic location of this stop as a GeoJSON Point",
                                   "title": "geometry",
                                   "x-order": 356
                                 },
@@ -14290,7 +14290,7 @@
                                   "x-order": 358
                                 },
                                 "onestop_id": {
-                                  "description": "Onestop ID for this stop, if available",
+                                  "description": "Onestop ID for this stop, or empty string if not registered",
                                   "example": "s-dr5ruvgnyk-madisonav~e69st",
                                   "title": "onestop_id",
                                   "type": "string",
@@ -15617,7 +15617,7 @@
                             "x-order": 336
                           },
                           "feed_version": {
-                            "description": "Feed version",
+                            "description": "Source feed version for this entity",
                             "properties": {
                               "feed": {
                                 "description": "Feed associated with this feed version",
@@ -15668,7 +15668,7 @@
                             "x-order": 43
                           },
                           "geometry": {
-                            "description": "Stop geometry",
+                            "description": "Geographic location of this stop as a GeoJSON Point",
                             "title": "geometry",
                             "x-order": 19
                           },
@@ -15685,7 +15685,7 @@
                             "x-order": 21
                           },
                           "onestop_id": {
-                            "description": "Onestop ID for this stop, if available",
+                            "description": "Onestop ID for this stop, or empty string if not registered",
                             "example": "s-dr5ruvgnyk-madisonav~e69st",
                             "title": "onestop_id",
                             "type": "string",
@@ -17358,7 +17358,7 @@
                                       "x-order": 1058
                                     },
                                     "geometry": {
-                                      "description": "Stop geometry",
+                                      "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
                                       "x-order": 755
                                     },
@@ -17375,7 +17375,7 @@
                                       "x-order": 757
                                     },
                                     "onestop_id": {
-                                      "description": "Onestop ID for this stop, if available",
+                                      "description": "Onestop ID for this stop, or empty string if not registered",
                                       "example": "s-dr5ruvgnyk-madisonav~e69st",
                                       "title": "onestop_id",
                                       "type": "string",
@@ -17466,7 +17466,7 @@
                                 "x-order": 1104
                               },
                               "geometry": {
-                                "description": "Stop geometry",
+                                "description": "Geographic location of this stop as a GeoJSON Point",
                                 "title": "geometry",
                                 "x-order": 725
                               },
@@ -17483,7 +17483,7 @@
                                 "x-order": 727
                               },
                               "onestop_id": {
-                                "description": "Onestop ID for this stop, if available",
+                                "description": "Onestop ID for this stop, or empty string if not registered",
                                 "example": "s-dr5ruvgnyk-madisonav~e69st",
                                 "title": "onestop_id",
                                 "type": "string",
