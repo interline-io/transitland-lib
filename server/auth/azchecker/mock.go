@@ -2,10 +2,10 @@ package azchecker
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/server/auth/authn"
+	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
 type MockUserProvider struct {
@@ -26,7 +26,7 @@ func (c *MockUserProvider) UserByID(ctx context.Context, id string) (authn.User,
 	if user, ok := c.users[id]; ok {
 		return user, nil
 	}
-	return nil, errors.New("unauthorized")
+	return nil, authz.ErrUnauthorized
 }
 
 func (c *MockUserProvider) Users(ctx context.Context, userQuery string) ([]authn.User, error) {

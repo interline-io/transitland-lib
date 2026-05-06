@@ -21,7 +21,7 @@ import (
 // Entity mutation tests
 
 func TestStopCreate(t *testing.T) {
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
@@ -48,7 +48,7 @@ func TestStopCreate(t *testing.T) {
 }
 
 func TestStopUpdate(t *testing.T) {
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
@@ -82,7 +82,7 @@ func TestStopUpdate(t *testing.T) {
 }
 
 func TestStopUpdate_BumpsUpdatedAt(t *testing.T) {
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
@@ -131,7 +131,7 @@ func TestStopUpdate_GraphQLBumpsUpdatedAt(t *testing.T) {
 	// End-to-end check that the stop_update GraphQL mutation
 	// (the one called by Station Editor) actually persists an
 	// advancing updated_at, observable via a follow-up GraphQL query.
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		srv, _ := NewServer()
 		srv = model.AddConfigAndPerms(cfg, srv)
 		srv = usercheck.AdminDefaultMiddleware("test")(srv)
@@ -177,7 +177,7 @@ func TestStopUpdate_GraphQLBumpsUpdatedAt(t *testing.T) {
 }
 
 func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
@@ -238,7 +238,7 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 }
 
 func TestLevelUpdate_BumpsUpdatedAt(t *testing.T) {
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
@@ -285,7 +285,7 @@ func TestStopReference(t *testing.T) {
 		TargetFeedOnestopID tt.String `db:"target_feed_onestop_id"`
 		TargetStopID        tt.String `db:"target_stop_id"`
 	}
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
