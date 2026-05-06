@@ -24,27 +24,27 @@ import (
 
 // ValidatorCommand
 type ValidatorCommand struct {
-	Options                 validator.Options
-	rtFiles                 []string
-	OutputFile              string
-	Quiet                   bool
-	DBURL                   string
-	FVID                    int
-	extensionDefs           []string
-	SaveValidationReport    bool
-	ValidationReportStorage string
-	readerPath              string
-	errorThresholds         []string
-	SecretsFile             string
-	SecretEnv               []string
-	DMFRFile                string
-	FeedID                  string
-	URLType                 string
-	AllowFTPFetch           bool
-	AllowLocalFetch         bool
-	AllowS3Fetch            bool
+	Options                  validator.Options
+	rtFiles                  []string
+	OutputFile               string
+	Quiet                    bool
+	DBURL                    string
+	FVID                     int
+	extensionDefs            []string
+	SaveValidationReport     bool
+	ValidationReportStorage  string
+	readerPath               string
+	errorThresholds          []string
+	SecretsFile              string
+	SecretEnv                []string
+	DMFRFile                 string
+	FeedID                   string
+	URLType                  string
+	AllowFTPFetch            bool
+	AllowLocalFetch          bool
+	AllowS3Fetch             bool
 	AllowHTTPFetchUnfiltered bool
-	secrets                 []dmfr.Secret
+	secrets                  []dmfr.Secret
 }
 
 func (cmd *ValidatorCommand) HelpDesc() (string, string) {
