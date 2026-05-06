@@ -129,7 +129,7 @@ type BoundingBox struct {
 type CalendarDateFilter struct {
 	// Search for calendar date exceptions on this date
 	Date *tt.Date `json:"date,omitempty"`
-	// Search for calendar date exceptions with this GTFS exception_type
+	// Search for calendar date exceptions with this GTFS exception_type [1=service added, 2=service removed]
 	ExceptionType *int `json:"exception_type,omitempty"`
 }
 
@@ -170,9 +170,9 @@ type CensusDataset struct {
 
 // Search options for census datasets
 type CensusDatasetFilter struct {
-	// Search for datasets with this name
+	// Search for the dataset with this exact name (e.g. `acsdt5y2022`)
 	Name *string `json:"name,omitempty"`
-	// Search for datasets matching this string
+	// Full-text search across dataset name and description
 	Search *string `json:"search,omitempty"`
 }
 
@@ -180,15 +180,15 @@ type CensusDatasetFilter struct {
 //
 // Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusDatasetGeographyFilter struct {
-	// Geographies with these integer IDs
+	// Restrict to geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
-	// Search within this dataset
+	// Search within this dataset (e.g. `tiger2021`)
 	Dataset *string `json:"dataset,omitempty"`
-	// Search within this layer
+	// Search within this layer (e.g. `tract`, `state`)
 	Layer *string `json:"layer,omitempty"`
-	// Search for geographies matching this string
+	// Search for geographies matching this string (matches on name)
 	Search *string `json:"search,omitempty"`
-	// Location search
+	// Geographic search options
 	Location *CensusDatasetGeographyLocationFilter `json:"location,omitempty"`
 }
 
@@ -209,7 +209,7 @@ type CensusDatasetGeographyLocationFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 	// Focus search on this point; results will be sorted by distance
 	Focus *FocusPoint `json:"focus,omitempty"`
-	// Search based on a buffer around these stop ids
+	// Search based on a buffer around these stop IDs
 	StopBuffer *StopBuffer `json:"stop_buffer,omitempty"`
 }
 
@@ -354,11 +354,11 @@ type CensusSourceFilter struct {
 //
 // Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusSourceGeographyFilter struct {
-	// Geographies with these integer IDs
+	// Restrict to geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
-	// Search for geographies matching this string
+	// Search for geographies matching this string (matches on name)
 	Search *string `json:"search,omitempty"`
-	// Location search
+	// Geographic search options
 	Location *CensusDatasetGeographyLocationFilter `json:"location,omitempty"`
 }
 
@@ -977,7 +977,7 @@ type PointRadius struct {
 	Lat float64 `json:"lat"`
 	// Longitude
 	Lon float64 `json:"lon"`
-	// Radius around specified point
+	// Search radius in meters
 	Radius float64 `json:"radius"`
 }
 
@@ -1267,11 +1267,11 @@ type Step struct {
 	GeometryOffset int `json:"geometry_offset"`
 }
 
-// Search options for census geographies based on stop IDs
+// A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer
 type StopBuffer struct {
-	// Search for geographies with these stop IDs
+	// Stop integer IDs to buffer around
 	StopIds []int `json:"stop_ids,omitempty"`
-	// Stop ID search radius, in meters
+	// Buffer radius in meters around each stop
 	Radius *float64 `json:"radius,omitempty"`
 }
 
@@ -1478,31 +1478,31 @@ type StopTimeEvent struct {
 
 // Search options for stop times, optionally on a given date
 type StopTimeFilter struct {
-	// Search for trips scheduled on the specified calendar date
+	// Calendar date for which to return stop times
 	Date *tt.Date `json:"date,omitempty"`
-	// Search for trips scheduled on the specified relative date
+	// Calendar date relative to today (e.g. `MONDAY`, `NEXT_FRIDAY`); see `RelativeDate` for semantics
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
-	// Search for trips scheduled on the specified GTFS calendar service date
+	// GTFS service date (which may differ from the calendar date for trips that cross midnight)
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// Use the feed version fallback week for dates outside the normal service window for that feed version
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
-	// Search for stop times with departure times later than the specified time, in seconds since midnight
+	// Lower bound for departure time, in seconds since midnight
 	StartTime *int `json:"start_time,omitempty"`
-	// Search for stop times with arrival times before the specified time, in seconds since midnight
+	// Upper bound for arrival time, in seconds since midnight
 	EndTime *int `json:"end_time,omitempty"`
-	// Search for stop times with departure times later than the specified time, in local time HH:MM:SS
+	// Lower bound for departure time, in local `HH:MM:SS`
 	Start *tt.Seconds `json:"start,omitempty"`
-	// Search for stop times with arrival times before the specified time, in local time HH:MM:SS
+	// Upper bound for arrival time, in local `HH:MM:SS`
 	End *tt.Seconds `json:"end,omitempty"`
-	// Search for stop times with departures within the specified number of seconds (in local time)
+	// Return stop times with departures within the next N seconds from now (local time)
 	Next *int `json:"next,omitempty"`
-	// Search for stop times with service by routes with the specified route Onestop IDs
+	// Restrict to stop times on routes matching any of these Onestop IDs
 	RouteOnestopIds []string `json:"route_onestop_ids,omitempty"`
-	// Include previously used route Onestop IDs that match the same (feed,route_id)
+	// Include previously used route Onestop IDs that map to the same (feed, route_id)
 	AllowPreviousRouteOnestopIds *bool `json:"allow_previous_route_onestop_ids,omitempty"`
-	// Exclude the first stop_time in a trip
+	// Exclude the first stop_time of each trip
 	ExcludeFirst *bool `json:"exclude_first,omitempty"`
-	// Exclude the last stop_time in a trip
+	// Exclude the last stop_time of each trip
 	ExcludeLast *bool `json:"exclude_last,omitempty"`
 }
 
@@ -1526,21 +1526,21 @@ type TenantInput struct {
 
 // Search options for trips
 type TripFilter struct {
-	// Search for trips scheduled on the specified GTFS calendar service date
+	// GTFS service date on which trips run
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// Search for trips scheduled on the specified relative date
+	// Calendar date relative to today; see `RelativeDate`
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
-	// Use the feed version fallback week for dates outside the normal service window for that feed version
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Search for trips with this GTFS trip_id
 	TripID *string `json:"trip_id,omitempty"`
-	// Search for trips with this stop pattern ID
+	// Search for trips with this stop pattern ID (scoped to feed version)
 	StopPatternID *int `json:"stop_pattern_id,omitempty"`
 	// Search for trips with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Search for trips associated with these route integer IDs. Deprecated
+	// Search for trips on these routes (database integer IDs)
 	RouteIds []int `json:"route_ids,omitempty"`
-	// Search for trips associated with these route Onestop IDs
+	// Search for trips on routes matching any of these Onestop IDs
 	RouteOnestopIds []string `json:"route_onestop_ids,omitempty"`
 	// Search for trips with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
@@ -1548,11 +1548,11 @@ type TripFilter struct {
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 }
 
-// Search options for stop times for a trip with no date specified
+// Search options for stop times within a single trip (no date filter applies, since the parent trip determines the schedule)
 type TripStopTimeFilter struct {
-	// Search for stop times with departure times later than the specified time, in local time HH:MM:SS
+	// Lower bound for departure time, in local `HH:MM:SS`
 	Start *tt.Seconds `json:"start,omitempty"`
-	// Search for stop times with arrival times before the specified time, in local time HH:MM:SS
+	// Upper bound for arrival time, in local `HH:MM:SS`
 	End *tt.Seconds `json:"end,omitempty"`
 }
 

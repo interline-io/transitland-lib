@@ -2753,39 +2753,39 @@ input StopFilter {
 
 """Search options for stop times, optionally on a given date"""
 input StopTimeFilter {
-  "Search for trips scheduled on the specified calendar date"
+  "Calendar date for which to return stop times"
   date: Date
-  "Search for trips scheduled on the specified relative date"
+  "Calendar date relative to today (e.g. `MONDAY`, `NEXT_FRIDAY`); see `RelativeDate` for semantics"
   relative_date: RelativeDate
-  "Search for trips scheduled on the specified GTFS calendar service date"
+  "GTFS service date (which may differ from the calendar date for trips that cross midnight)"
   service_date: Date
-  "Use the feed version fallback week for dates outside the normal service window for that feed version"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
   use_service_window: Boolean
-  "Search for stop times with departure times later than the specified time, in seconds since midnight"
+  "Lower bound for departure time, in seconds since midnight"
   start_time: Int
-  "Search for stop times with arrival times before the specified time, in seconds since midnight"
+  "Upper bound for arrival time, in seconds since midnight"
   end_time: Int
-  "Search for stop times with departure times later than the specified time, in local time HH:MM:SS"
+  "Lower bound for departure time, in local `HH:MM:SS`"
   start: Seconds
-  "Search for stop times with arrival times before the specified time, in local time HH:MM:SS"
+  "Upper bound for arrival time, in local `HH:MM:SS`"
   end: Seconds
-  "Search for stop times with departures within the specified number of seconds (in local time)"
+  "Return stop times with departures within the next N seconds from now (local time)"
   next: Int
-  "Search for stop times with service by routes with the specified route Onestop IDs"
-  route_onestop_ids: [String!] # keep?
-  "Include previously used route Onestop IDs that match the same (feed,route_id)"
+  "Restrict to stop times on routes matching any of these Onestop IDs"
+  route_onestop_ids: [String!]
+  "Include previously used route Onestop IDs that map to the same (feed, route_id)"
   allow_previous_route_onestop_ids: Boolean
-  "Exclude the first stop_time in a trip"
+  "Exclude the first stop_time of each trip"
   exclude_first: Boolean
-  "Exclude the last stop_time in a trip"
+  "Exclude the last stop_time of each trip"
   exclude_last: Boolean
 }
 
-"""Search options for stop times for a trip with no date specified"""
+"""Search options for stop times within a single trip (no date filter applies, since the parent trip determines the schedule)"""
 input TripStopTimeFilter {
-  "Search for stop times with departure times later than the specified time, in local time HH:MM:SS"
+  "Lower bound for departure time, in local `HH:MM:SS`"
   start: Seconds
-  "Search for stop times with arrival times before the specified time, in local time HH:MM:SS"
+  "Upper bound for arrival time, in local `HH:MM:SS`"
   end: Seconds
 }
 
@@ -2807,22 +2807,22 @@ input PathwayFilter {
 
 """Search options for trips"""
 input TripFilter {
-  "Search for trips scheduled on the specified GTFS calendar service date"
+  "GTFS service date on which trips run"
   service_date: Date
-  "Search for trips scheduled on the specified relative date"
+  "Calendar date relative to today; see `RelativeDate`"
   relative_date: RelativeDate
-  "Use the feed version fallback week for dates outside the normal service window for that feed version"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
   use_service_window: Boolean
   "Search for trips with this GTFS trip_id"
   trip_id: String
-  "Search for trips with this stop pattern ID"
+  "Search for trips with this stop pattern ID (scoped to feed version)"
   stop_pattern_id: Int
   "Search for trips with these license details"
   license: LicenseFilter
-  "Search for trips associated with these route integer IDs. Deprecated"
-  route_ids: [Int!]
-  "Search for trips associated with these route Onestop IDs"
-  route_onestop_ids: [String!] # keep?
+  "Search for trips on these routes (database integer IDs)"
+  route_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer `route_onestop_ids` or query via `Route.trips`")
+  "Search for trips on routes matching any of these Onestop IDs"
+  route_onestop_ids: [String!]
   "Search for trips with this feed version SHA1 hash"
   feed_version_sha1: String
   "Search for trips with this feed Onestop ID"
@@ -2831,9 +2831,9 @@ input TripFilter {
 
 """Search options for census datasets"""
 input CensusDatasetFilter {
-  "Search for datasets with this name"
+  "Search for the dataset with this exact name (e.g. `acsdt5y2022`)"
   name: String
-  "Search for datasets matching this string"
+  "Full-text search across dataset name and description"
   search: String
 }
 
@@ -2857,15 +2857,15 @@ input CensusGeographyFilter {
 Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 """
 input CensusDatasetGeographyFilter {
-  "Geographies with these integer IDs"
+  "Restrict to geographies with these integer IDs"
   ids: [Int!]
-  "Search within this dataset"
+  "Search within this dataset (e.g. `tiger2021`)"
   dataset: String
-  "Search within this layer"
+  "Search within this layer (e.g. `tract`, `state`)"
   layer: String
-  "Search for geographies matching this string"
+  "Search for geographies matching this string (matches on name)"
   search: String
-  "Location search"
+  "Geographic search options"
   location: CensusDatasetGeographyLocationFilter
 }
 
@@ -2874,11 +2874,11 @@ input CensusDatasetGeographyFilter {
 Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 """
 input CensusSourceGeographyFilter {
-  "Geographies with these integer IDs"
+  "Restrict to geographies with these integer IDs"
   ids: [Int!]
-  "Search for geographies matching this string"
+  "Search for geographies matching this string (matches on name)"
   search: String
-  "Location search"
+  "Geographic search options"
   location: CensusDatasetGeographyLocationFilter
 }
 
@@ -2900,16 +2900,16 @@ input CensusDatasetGeographyLocationFilter {
   "Search within specified radius of a point"
   near: PointRadius
   "Focus search on this point; results will be sorted by distance"
-  focus: FocusPoint  
-  "Search based on a buffer around these stop ids"
+  focus: FocusPoint
+  "Search based on a buffer around these stop IDs"
   stop_buffer: StopBuffer
 }
 
-"""Search options for census geographies based on stop IDs"""
+"""A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer"""
 input StopBuffer {
-  "Search for geographies with these stop IDs"
+  "Stop integer IDs to buffer around"
   stop_ids: [Int!]
-  "Stop ID search radius, in meters"
+  "Buffer radius in meters around each stop"
   radius: Float
 }
 
@@ -3014,7 +3014,7 @@ input PlaceFilter {
 input CalendarDateFilter {
   "Search for calendar date exceptions on this date"
   date: Date
-  "Search for calendar date exceptions with this GTFS exception_type"
+  "Search for calendar date exceptions with this GTFS exception_type [1=service added, 2=service removed]"
   exception_type: Int
 }
 
@@ -3024,7 +3024,7 @@ input PointRadius {
   lat: Float!
   "Longitude"
   lon: Float!
-  "Radius around specified point"
+  "Search radius in meters"
   radius: Float!
 }
 
