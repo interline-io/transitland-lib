@@ -603,7 +603,7 @@ type FeedVersionServiceWindow struct {
 	EarliestCalendarDate *tt.Date `json:"earliest_calendar_date,omitempty"`
 	// Calculated latest calendar date in service schedule
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
-	// Week with most typical service patterns inside the service window
+	// Start date (Monday) of a representative week with full or near-full service; used as a fallback when queries fall outside the regular service window
 	FallbackWeek *tt.Date `json:"fallback_week,omitempty"`
 	// Default timezone for this feed version
 	DefaultTimezone *string `json:"default_timezone,omitempty"`

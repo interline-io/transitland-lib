@@ -798,7 +798,7 @@
                                 "x-order": 108
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -1629,7 +1629,7 @@
                                 "x-order": 108
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -2365,50 +2365,50 @@
                             "nullable": true,
                             "properties": {
                               "exception_log": {
-                                "description": "Exception log if any errors occurred during import",
+                                "description": "Error log accumulated during import; empty on success",
                                 "title": "exception_log",
                                 "type": "string",
                                 "x-order": 81
                               },
                               "in_progress": {
-                                "description": "Is the import currently in-progress",
+                                "description": "True if the import is currently running",
                                 "title": "in_progress",
                                 "type": "boolean",
                                 "x-order": 77
                               },
                               "interpolated_stop_time_count": {
-                                "description": "Number of stop times with arrival/departure times set by interpolation during import process",
+                                "description": "Number of stop_times whose arrival/departure times were filled in by interpolation during import",
                                 "nullable": true,
                                 "title": "interpolated_stop_time_count",
                                 "type": "integer",
                                 "x-order": 91
                               },
                               "skip_entity_error_count": {
-                                "description": "Counts of entities skipped due to errors",
+                                "description": "Counts of entities skipped due to errors, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_error_count",
                                 "x-order": 85
                               },
                               "skip_entity_filter_count": {
-                                "description": "Counts of entities skipped due to import filters",
+                                "description": "Counts of entities skipped due to import filters, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_filter_count",
                                 "x-order": 87
                               },
                               "skip_entity_marked_count": {
-                                "description": "Counts of entities skipped due to marker filters",
+                                "description": "Counts of entities skipped because they were not selected by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
                                 "x-order": 89
                               },
                               "success": {
-                                "description": "Did the import complete successfully",
+                                "description": "True if the import completed successfully",
                                 "title": "success",
                                 "type": "boolean",
                                 "x-order": 79
                               },
                               "warning_count": {
-                                "description": "Counts of warnings by file name",
+                                "description": "Counts of warnings raised during import, keyed by file name",
                                 "nullable": true,
                                 "title": "warning_count",
                                 "x-order": 83
@@ -2420,7 +2420,7 @@
                             "x-order": 92
                           },
                           "fetched_at": {
-                            "description": "Time when the file was fetched from the url",
+                            "description": "Time when the file was fetched from the URL",
                             "example": "2019-11-15T00:45:55.409906",
                             "format": "datetime",
                             "title": "fetched_at",
@@ -2432,25 +2432,25 @@
                             "items": {
                               "properties": {
                                 "csv_like": {
-                                  "description": "Is the file CSV-like?",
+                                  "description": "True if the file is parseable as CSV",
                                   "title": "csv_like",
                                   "type": "boolean",
                                   "x-order": 33
                                 },
                                 "header": {
-                                  "description": "Normalized header row of the file, if CSV-like",
+                                  "description": "Comma-joined column header row of the file (CSV files only)",
                                   "title": "header",
                                   "type": "string",
                                   "x-order": 31
                                 },
                                 "name": {
-                                  "description": "Name of the file",
+                                  "description": "GTFS file name (e.g. `stops.txt`)",
                                   "title": "name",
                                   "type": "string",
                                   "x-order": 25
                                 },
                                 "rows": {
-                                  "description": "Number of rows in the file",
+                                  "description": "Number of data rows in the file (CSV files only)",
                                   "title": "rows",
                                   "type": "integer",
                                   "x-order": 27
@@ -2478,7 +2478,7 @@
                             "x-order": 36
                           },
                           "geometry": {
-                            "description": "Convex hull around all active stops in the feed version",
+                            "description": "Convex hull of all stop coordinates in this feed version",
                             "nullable": true,
                             "title": "geometry",
                             "x-order": 14
@@ -2976,50 +2976,50 @@
                             "nullable": true,
                             "properties": {
                               "exception_log": {
-                                "description": "Exception log if any errors occurred during import",
+                                "description": "Error log accumulated during import; empty on success",
                                 "title": "exception_log",
                                 "type": "string",
                                 "x-order": 81
                               },
                               "in_progress": {
-                                "description": "Is the import currently in-progress",
+                                "description": "True if the import is currently running",
                                 "title": "in_progress",
                                 "type": "boolean",
                                 "x-order": 77
                               },
                               "interpolated_stop_time_count": {
-                                "description": "Number of stop times with arrival/departure times set by interpolation during import process",
+                                "description": "Number of stop_times whose arrival/departure times were filled in by interpolation during import",
                                 "nullable": true,
                                 "title": "interpolated_stop_time_count",
                                 "type": "integer",
                                 "x-order": 91
                               },
                               "skip_entity_error_count": {
-                                "description": "Counts of entities skipped due to errors",
+                                "description": "Counts of entities skipped due to errors, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_error_count",
                                 "x-order": 85
                               },
                               "skip_entity_filter_count": {
-                                "description": "Counts of entities skipped due to import filters",
+                                "description": "Counts of entities skipped due to import filters, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_filter_count",
                                 "x-order": 87
                               },
                               "skip_entity_marked_count": {
-                                "description": "Counts of entities skipped due to marker filters",
+                                "description": "Counts of entities skipped because they were not selected by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
                                 "x-order": 89
                               },
                               "success": {
-                                "description": "Did the import complete successfully",
+                                "description": "True if the import completed successfully",
                                 "title": "success",
                                 "type": "boolean",
                                 "x-order": 79
                               },
                               "warning_count": {
-                                "description": "Counts of warnings by file name",
+                                "description": "Counts of warnings raised during import, keyed by file name",
                                 "nullable": true,
                                 "title": "warning_count",
                                 "x-order": 83
@@ -3031,7 +3031,7 @@
                             "x-order": 92
                           },
                           "fetched_at": {
-                            "description": "Time when the file was fetched from the url",
+                            "description": "Time when the file was fetched from the URL",
                             "example": "2019-11-15T00:45:55.409906",
                             "format": "datetime",
                             "title": "fetched_at",
@@ -3043,25 +3043,25 @@
                             "items": {
                               "properties": {
                                 "csv_like": {
-                                  "description": "Is the file CSV-like?",
+                                  "description": "True if the file is parseable as CSV",
                                   "title": "csv_like",
                                   "type": "boolean",
                                   "x-order": 33
                                 },
                                 "header": {
-                                  "description": "Normalized header row of the file, if CSV-like",
+                                  "description": "Comma-joined column header row of the file (CSV files only)",
                                   "title": "header",
                                   "type": "string",
                                   "x-order": 31
                                 },
                                 "name": {
-                                  "description": "Name of the file",
+                                  "description": "GTFS file name (e.g. `stops.txt`)",
                                   "title": "name",
                                   "type": "string",
                                   "x-order": 25
                                 },
                                 "rows": {
-                                  "description": "Number of rows in the file",
+                                  "description": "Number of data rows in the file (CSV files only)",
                                   "title": "rows",
                                   "type": "integer",
                                   "x-order": 27
@@ -3089,7 +3089,7 @@
                             "x-order": 36
                           },
                           "geometry": {
-                            "description": "Convex hull around all active stops in the feed version",
+                            "description": "Convex hull of all stop coordinates in this feed version",
                             "nullable": true,
                             "title": "geometry",
                             "x-order": 14
@@ -3502,7 +3502,7 @@
                                     "nullable": true,
                                     "properties": {
                                       "exception_log": {
-                                        "description": "Exception log if any errors occurred during import",
+                                        "description": "Error log accumulated during import; empty on success",
                                         "title": "exception_log",
                                         "type": "string",
                                         "x-order": 79
@@ -3514,13 +3514,13 @@
                                         "x-order": 73
                                       },
                                       "in_progress": {
-                                        "description": "Is the import currently in-progress",
+                                        "description": "True if the import is currently running",
                                         "title": "in_progress",
                                         "type": "boolean",
                                         "x-order": 75
                                       },
                                       "success": {
-                                        "description": "Did the import complete successfully",
+                                        "description": "True if the import completed successfully",
                                         "title": "success",
                                         "type": "boolean",
                                         "x-order": 77
@@ -3532,7 +3532,7 @@
                                     "x-order": 80
                                   },
                                   "fetched_at": {
-                                    "description": "Time when the file was fetched from the url",
+                                    "description": "Time when the file was fetched from the URL",
                                     "example": "2019-11-15T00:45:55.409906",
                                     "format": "datetime",
                                     "title": "fetched_at",
@@ -3540,7 +3540,7 @@
                                     "x-order": 68
                                   },
                                   "geometry": {
-                                    "description": "Convex hull around all active stops in the feed version",
+                                    "description": "Convex hull of all stop coordinates in this feed version",
                                     "nullable": true,
                                     "title": "geometry",
                                     "x-order": 70
@@ -3589,7 +3589,7 @@
                                   "x-order": 93
                                 },
                                 "fetched_at": {
-                                  "description": "Time when the file was fetched from the url",
+                                  "description": "Time when the file was fetched from the URL",
                                   "example": "2019-11-15T00:45:55.409906",
                                   "format": "datetime",
                                   "title": "fetched_at",
@@ -3986,7 +3986,7 @@
                                     "nullable": true,
                                     "properties": {
                                       "exception_log": {
-                                        "description": "Exception log if any errors occurred during import",
+                                        "description": "Error log accumulated during import; empty on success",
                                         "title": "exception_log",
                                         "type": "string",
                                         "x-order": 79
@@ -3998,13 +3998,13 @@
                                         "x-order": 73
                                       },
                                       "in_progress": {
-                                        "description": "Is the import currently in-progress",
+                                        "description": "True if the import is currently running",
                                         "title": "in_progress",
                                         "type": "boolean",
                                         "x-order": 75
                                       },
                                       "success": {
-                                        "description": "Did the import complete successfully",
+                                        "description": "True if the import completed successfully",
                                         "title": "success",
                                         "type": "boolean",
                                         "x-order": 77
@@ -4016,7 +4016,7 @@
                                     "x-order": 80
                                   },
                                   "fetched_at": {
-                                    "description": "Time when the file was fetched from the url",
+                                    "description": "Time when the file was fetched from the URL",
                                     "example": "2019-11-15T00:45:55.409906",
                                     "format": "datetime",
                                     "title": "fetched_at",
@@ -4024,7 +4024,7 @@
                                     "x-order": 68
                                   },
                                   "geometry": {
-                                    "description": "Convex hull around all active stops in the feed version",
+                                    "description": "Convex hull of all stop coordinates in this feed version",
                                     "nullable": true,
                                     "title": "geometry",
                                     "x-order": 70
@@ -4073,7 +4073,7 @@
                                   "x-order": 93
                                 },
                                 "fetched_at": {
-                                  "description": "Time when the file was fetched from the url",
+                                  "description": "Time when the file was fetched from the URL",
                                   "example": "2019-11-15T00:45:55.409906",
                                   "format": "datetime",
                                   "title": "fetched_at",
@@ -6320,7 +6320,7 @@
                                 "x-order": 141
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -7290,7 +7290,7 @@
                                 "x-order": 141
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -8234,7 +8234,7 @@
                                 "x-order": 31
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -9702,7 +9702,7 @@
                                 "x-order": 31
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -11162,7 +11162,7 @@
                                 "x-order": 51
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -11948,7 +11948,7 @@
                                 "x-order": 51
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",
@@ -15641,7 +15641,7 @@
                                 "x-order": 42
                               },
                               "fetched_at": {
-                                "description": "Time when the file was fetched from the url",
+                                "description": "Time when the file was fetched from the URL",
                                 "example": "2019-11-15T00:45:55.409906",
                                 "format": "datetime",
                                 "title": "fetched_at",

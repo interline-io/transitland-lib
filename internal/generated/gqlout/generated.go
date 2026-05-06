@@ -10176,7 +10176,7 @@ type FeedVersion {
   "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]"
   sha1: String!
   
-  "Time when the file was fetched from the url [example:2021-07-09T05:11:00Z]"
+  "Time when the file was fetched from the URL [example:2021-07-09T05:11:00Z]"
   fetched_at: Time!
   
   "URL used to fetch the file"
@@ -10200,10 +10200,10 @@ type FeedVersion {
   "An optional description for this feed version"
   description: String
   
-  "Reference to file storage location"
+  "Server-side reference to the archived feed file (e.g. an object-store path); not generally a publicly fetchable URL"
   file: String
-  
-  "Convex hull around all active stops in the feed version"
+
+  "Convex hull of all stop coordinates in this feed version"
   geometry: Polygon
   
   "Feed associated with this feed version"
@@ -10256,21 +10256,21 @@ type FeedVersion {
 type FeedVersionFileInfo {
   "Internal integer ID"
   id: Int!
-  "Name of the file"
+  "GTFS file name (e.g. ` + "`" + `stops.txt` + "`" + `)"
   name: String!
-  "Number of rows in the file"
+  "Number of data rows in the file (CSV files only)"
   rows: Int!
   "SHA1 hash of the file"
   sha1: String!
-  "Normalized header row of the file, if CSV-like"
+  "Comma-joined column header row of the file (CSV files only)"
   header: String!
-  "Is the file CSV-like?"
+  "True if the file is parseable as CSV"
   csv_like: Boolean!
   "File size, in bytes"
   size: Int!
-  "Counts of values for each column"
+  "Number of populated values for each column, keyed by column name"
   values_count: Counts!
-  "Counts of number of unique values for each column"
+  "Number of distinct values for each column, keyed by column name"
   values_unique: Counts!
 }
 
@@ -10278,31 +10278,31 @@ type FeedVersionFileInfo {
 type FeedVersionGtfsImport {
   "Internal integer ID"
   id: Int!
-  "Is the import currently in-progress"
+  "True if the import is currently running"
   in_progress: Boolean!
-  "Did the import complete successfully"
+  "True if the import completed successfully"
   success: Boolean!
-  "Has the schedule (stop times, trips) been archived"
+  "True if the schedule data (stop_times, trips) has been removed from the database (e.g. via un-import)"
   schedule_removed: Boolean!
-  "Exception log if any errors occurred during import"
+  "Error log accumulated during import; empty on success"
   exception_log: String!
-  "Counts of entities skipped due to errors"
+  "Counts of entities skipped due to errors, keyed by file name"
   skip_entity_error_count: Any
-  "Counts of successfully imported entities by file name"
+  "Counts of successfully imported entities, keyed by file name"
   entity_count: Any
-  "Counts of warnings by file name"
+  "Counts of warnings raised during import, keyed by file name"
   warning_count: Any
-  "Counts of entities skipped due to reference errors"
+  "Counts of entities skipped due to reference errors (missing related entities), keyed by file name"
   skip_entity_reference_count: Any
-  "Counts of entities skipped due to import filters"
+  "Counts of entities skipped due to import filters, keyed by file name"
   skip_entity_filter_count: Any
-  "Counts of entities skipped due to marker filters"
+  "Counts of entities skipped because they were not selected by the marker filter, keyed by file name"
   skip_entity_marked_count: Any
-  "Number of stop times with arrival/departure times set by interpolation during import process"
+  "Number of stop_times whose arrival/departure times were filled in by interpolation during import"
   interpolated_stop_time_count: Int
-  "Created at"
+  "Time the import record was created"
   created_at: Time
-  "Updated at"
+  "Time the import record was last updated"
   updated_at: Time
 }
 
@@ -10318,13 +10318,13 @@ type FeedVersionServiceWindow {
   earliest_calendar_date: Date
   "Calculated latest calendar date in service schedule"
   latest_calendar_date: Date
-  "Week with most typical service patterns inside the service window"
+  "Start date (Monday) of a representative week with full or near-full service; used as a fallback when queries fall outside the regular service window"
   fallback_week: Date
   "Default timezone for this feed version"
   default_timezone: String
 }
 
-"""Number of seconds of service scheduled for each day in a feed version"""
+"""Weekly service summary: total seconds of scheduled service for each day-of-week within a single week of a feed version"""
 type FeedVersionServiceLevel {
   "Internal integer ID"
   id: Int!
