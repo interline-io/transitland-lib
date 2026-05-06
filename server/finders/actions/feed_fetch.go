@@ -185,26 +185,31 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 }
 
 func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
-	// Check feed exists
 	cfg := model.ForContext(ctx)
+
+	// Both not-found and not-authorized return ErrUnauthorized — distinguishing
+	// them would let unauthorized callers probe feed existence.
 	feeds, err := cfg.Finder.FindFeeds(ctx, nil, nil, nil, &model.FeedFilter{OnestopID: &feedId})
 	if err != nil {
 		return nil, err
 	}
 	if len(feeds) == 0 {
-		return nil, errors.New("feed not found")
+		log.For(ctx).Debug().Str("feed_id", feedId).Msg("fetchCheckFeed: feed not found")
+		return nil, authz.ErrUnauthorized
 	}
 	feed := feeds[0]
 
-	// Check feed permissions
-	if checker := cfg.Checker; checker != nil {
-		ok, err := checker.Check(ctx, authz.ObjectRef{Type: authz.FeedType, ID: int64(feed.ID)}, authz.CanCreateFeedVersion)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			return nil, errors.New("unauthorized")
-		}
+	if cfg.Checker == nil {
+		log.For(ctx).Debug().Str("feed_id", feedId).Msg("fetchCheckFeed: no Checker configured")
+		return nil, authz.ErrUnauthorized
+	}
+	ok, err := cfg.Checker.Check(ctx, authz.ObjectRef{Type: authz.FeedType, ID: int64(feed.ID)}, authz.CanCreateFeedVersion)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		log.For(ctx).Debug().Str("feed_id", feedId).Int("feed_db_id", feed.ID).Msg("fetchCheckFeed: caller not authorized")
+		return nil, authz.ErrUnauthorized
 	}
 	return feed, nil
 }

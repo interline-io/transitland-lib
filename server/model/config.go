@@ -50,6 +50,9 @@ func WithConfig(ctx context.Context, cfg Config) context.Context {
 }
 
 func AddConfig(cfg Config) func(http.Handler) http.Handler {
+	if cfg.Checker == nil {
+		panic("model.AddConfig: Config.Checker must be set; install authz.AllowAllChecker or authz.DenyAllChecker for demo/test, or a real Checker for production")
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
