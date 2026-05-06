@@ -1146,13 +1146,13 @@ type RouteStop struct {
 	Agency *Agency `json:"agency"`
 }
 
-// Geographic buffer around a route
+// Spatial buffer derived from the stops served by a route, using the requested radius (in meters)
 type RouteStopBuffer struct {
-	// Geographic buffer around route, based on requested meters
+	// Buffer polygon constructed by unioning circles of the requested radius around each stop
 	StopBuffer *tt.Geometry `json:"stop_buffer,omitempty"`
-	// Matching set of points (e.g. stops) found inside buffer
+	// MultiPoint of the route's stop locations used to build the buffer
 	StopPoints *tt.Geometry `json:"stop_points,omitempty"`
-	// Convex hull of matching points
+	// Convex hull of the route's stop locations
 	StopConvexhull *tt.Polygon `json:"stop_convexhull,omitempty"`
 }
 
@@ -1576,9 +1576,9 @@ type UserFilter struct {
 
 // Source URL and JSON representation of GTFS-RT data used for validation
 type ValidationRealtimeResult struct {
-	// Source URL
+	// URL the GTFS-RT message was fetched from
 	URL string `json:"url"`
-	// JSON representation of GTFS-RT data
+	// JSON-decoded representation of the GTFS-RT message
 	JSON tt.Map `json:"json"`
 }
 
@@ -1588,17 +1588,17 @@ type ValidationReport struct {
 	ID int `json:"id"`
 	// Time the report was generated, in UTC
 	ReportedAt *time.Time `json:"reported_at,omitempty"`
-	// Time the reported was generated, in feed local time
+	// Time the report was generated, in the feed's local time
 	ReportedAtLocal *time.Time `json:"reported_at_local,omitempty"`
-	// Time the report was generated, local timezone
+	// IANA timezone name corresponding to `reported_at_local`
 	ReportedAtLocalTimezone *string `json:"reported_at_local_timezone,omitempty"`
-	// Validation completed successfully
+	// True if validation completed successfully
 	Success bool `json:"success"`
-	// Exception log if feed failed to validate
+	// Error message if the feed failed to validate
 	FailureReason *string `json:"failure_reason,omitempty"`
-	// The report includes GTFS static data
+	// True if the report includes GTFS static validation results
 	IncludesStatic *bool `json:"includes_static,omitempty"`
-	// The report includes GTFS-RT data
+	// True if the report includes GTFS-RT validation results
 	IncludesRt *bool `json:"includes_rt,omitempty"`
 	// Name of validator used
 	Validator *string `json:"validator,omitempty"`
@@ -1623,15 +1623,15 @@ type ValidationReportDetails struct {
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 	// Details for each file contained in the feed
 	Files []*FeedVersionFileInfo `json:"files"`
-	// Calculated service levels for feed
+	// Calculated weekly service levels for the feed
 	ServiceLevels []*FeedVersionServiceLevel `json:"service_levels"`
-	// Selected agencies contained in feed
+	// Sample of agencies in the feed (truncated; not a complete list)
 	Agencies []*Agency `json:"agencies"`
-	// Selected routes contained in feed
+	// Sample of routes in the feed (truncated; not a complete list)
 	Routes []*Route `json:"routes"`
-	// Selected stops contained in feed
+	// Sample of stops in the feed (truncated; not a complete list)
 	Stops []*Stop `json:"stops"`
-	// Feed info data contained in feed
+	// Records from `feed_info.txt` in the feed
 	FeedInfos []*FeedInfo `json:"feed_infos"`
 	// Detailed information about GTFS-RT sources used in validation
 	Realtime []*ValidationRealtimeResult `json:"realtime,omitempty"`
@@ -1639,47 +1639,47 @@ type ValidationReportDetails struct {
 
 // An individual validation error or warning.
 type ValidationReportError struct {
-	// Source filename
+	// Source filename (e.g. `stops.txt`, or the GTFS-RT URL for realtime issues)
 	Filename string `json:"filename"`
-	// Error type
+	// Validation rule or error class identifier (e.g. `MissingRequiredFieldError`)
 	ErrorType string `json:"error_type"`
-	// Error code (for GTFS-RT)
+	// GTFS-RT error code (set only for realtime validation errors)
 	ErrorCode string `json:"error_code"`
-	// Key for this error group
+	// Stable grouping key shared with the parent `ValidationReportErrorGroup`
 	GroupKey string `json:"group_key"`
-	// Affected entity ID
+	// Identifier of the affected entity (e.g. the `stop_id` or `trip_id`)
 	EntityID string `json:"entity_id"`
-	// Affected entity field
+	// Field name on which the error was raised
 	Field string `json:"field"`
-	// Affected entity line number (for static)
+	// Line number in the source CSV file where the error occurred (static validation only; 0 for realtime)
 	Line int `json:"line"`
-	// Value of affected field
+	// Value of the affected field, as a string
 	Value string `json:"value"`
-	// Error message describing problem
+	// Human-readable message describing the problem
 	Message string `json:"message"`
-	// Entity geometry, if available
+	// Geometry of the affected entity, if available
 	Geometry *tt.Geometry `json:"geometry,omitempty"`
-	// JSON representation of entity, if available
+	// JSON representation of the affected entity (empty map if not available)
 	EntityJSON                   tt.Map `json:"entity_json"`
 	ID                           int    `json:"-"`
 	ValidationReportErrorGroupID int    `json:"-"`
 }
 
-// Validation errors and warnings for a particular file or RT source
+// Group of validation errors or warnings sharing the same file, type, and grouping key; useful for summarizing repeated issues
 type ValidationReportErrorGroup struct {
-	// Filename for error group
+	// Source filename for this group (e.g. `stops.txt`, or the GTFS-RT URL for realtime issues)
 	Filename string `json:"filename"`
-	// Error type
+	// Validation rule or error class identifier (e.g. `MissingRequiredFieldError`)
 	ErrorType string `json:"error_type"`
-	// Error code (for GTFS-RT)
+	// GTFS-RT error code (set only for realtime validation errors)
 	ErrorCode string `json:"error_code"`
-	// Key for this error group
+	// Stable grouping key used to aggregate equivalent errors
 	GroupKey string `json:"group_key"`
-	// Affected entity field for this error group
+	// Field name on which the error was raised
 	Field string `json:"field"`
-	// Number of affected entities for this error group
+	// Total number of errors in this group
 	Count int `json:"count"`
-	// Examples of this error
+	// Sample of individual errors from this group
 	Errors             []*ValidationReportError `json:"errors"`
 	ID                 int                      `json:"-"`
 	ValidationReportID int                      `json:"-"`

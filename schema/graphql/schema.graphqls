@@ -2263,13 +2263,13 @@ type RTTranslation {
 
 # Analysis tools
 
-"""Geographic buffer around a route"""
+"""Spatial buffer derived from the stops served by a route, using the requested radius (in meters)"""
 type RouteStopBuffer {
-  "Geographic buffer around route, based on requested meters"
+  "Buffer polygon constructed by unioning circles of the requested radius around each stop"
   stop_buffer: Geometry
-  "Matching set of points (e.g. stops) found inside buffer"
+  "MultiPoint of the route's stop locations used to build the buffer"
   stop_points: Geometry
-  "Convex hull of matching points"
+  "Convex hull of the route's stop locations"
   stop_convexhull: Polygon
 }
 
@@ -2281,17 +2281,17 @@ type ValidationReport {
   id: Int!
   "Time the report was generated, in UTC"
   reported_at: Time
-  "Time the reported was generated, in feed local time"
+  "Time the report was generated, in the feed's local time"
   reported_at_local: Time
-  "Time the report was generated, local timezone"
+  "IANA timezone name corresponding to `reported_at_local`"
   reported_at_local_timezone: String
-  "Validation completed successfully"
+  "True if validation completed successfully"
   success: Boolean!
-  "Exception log if feed failed to validate"
+  "Error message if the feed failed to validate"
   failure_reason: String
-  "The report includes GTFS static data"
+  "True if the report includes GTFS static validation results"
   includes_static: Boolean
-  "The report includes GTFS-RT data"
+  "True if the report includes GTFS-RT validation results"
   includes_rt: Boolean
   "Name of validator used"
   validator: String
@@ -2315,15 +2315,15 @@ type ValidationReportDetails {
   latest_calendar_date: Date
   "Details for each file contained in the feed"
   files: [FeedVersionFileInfo!]!
-  "Calculated service levels for feed"
+  "Calculated weekly service levels for the feed"
   service_levels(limit: Int, route_id: String): [FeedVersionServiceLevel!]!
-  "Selected agencies contained in feed"
+  "Sample of agencies in the feed (truncated; not a complete list)"
   agencies(limit: Int): [Agency!]!
-  "Selected routes contained in feed"
+  "Sample of routes in the feed (truncated; not a complete list)"
   routes(limit: Int): [Route!]!
-  "Selected stops contained in feed"
+  "Sample of stops in the feed (truncated; not a complete list)"
   stops(limit: Int): [Stop!]!
-  "Feed info data contained in feed"
+  "Records from `feed_info.txt` in the feed"
   feed_infos(limit: Int): [FeedInfo!]!
   "Detailed information about GTFS-RT sources used in validation"
   realtime: [ValidationRealtimeResult!]
@@ -2331,53 +2331,53 @@ type ValidationReportDetails {
 
 """Source URL and JSON representation of GTFS-RT data used for validation"""
 type ValidationRealtimeResult {
-  "Source URL"
+  "URL the GTFS-RT message was fetched from"
   url: String!
-  "JSON representation of GTFS-RT data"
+  "JSON-decoded representation of the GTFS-RT message"
   json: Map!
 }
 
-"""Validation errors and warnings for a particular file or RT source"""
+"""Group of validation errors or warnings sharing the same file, type, and grouping key; useful for summarizing repeated issues"""
 type ValidationReportErrorGroup {
-  "Filename for error group"
+  "Source filename for this group (e.g. `stops.txt`, or the GTFS-RT URL for realtime issues)"
   filename: String!
-  "Error type"
+  "Validation rule or error class identifier (e.g. `MissingRequiredFieldError`)"
   error_type: String!
-  "Error code (for GTFS-RT)"
+  "GTFS-RT error code (set only for realtime validation errors)"
   error_code: String!
-  "Key for this error group"
+  "Stable grouping key used to aggregate equivalent errors"
   group_key: String!
-  "Affected entity field for this error group"
+  "Field name on which the error was raised"
   field: String!
-  "Number of affected entities for this error group"
+  "Total number of errors in this group"
   count: Int!
-  "Examples of this error"
+  "Sample of individual errors from this group"
   errors(limit: Int): [ValidationReportError!]! @goField(forceResolver: true)
 }
 
 """An individual validation error or warning."""
 type ValidationReportError {
-  "Source filename"
+  "Source filename (e.g. `stops.txt`, or the GTFS-RT URL for realtime issues)"
   filename: String!
-  "Error type"
+  "Validation rule or error class identifier (e.g. `MissingRequiredFieldError`)"
   error_type: String!
-  "Error code (for GTFS-RT)"
+  "GTFS-RT error code (set only for realtime validation errors)"
   error_code: String!
-  "Key for this error group"
+  "Stable grouping key shared with the parent `ValidationReportErrorGroup`"
   group_key: String!
-  "Affected entity ID"
+  "Identifier of the affected entity (e.g. the `stop_id` or `trip_id`)"
   entity_id: String!
-  "Affected entity field"
+  "Field name on which the error was raised"
   field: String!
-  "Affected entity line number (for static)"
+  "Line number in the source CSV file where the error occurred (static validation only; 0 for realtime)"
   line: Int!
-  "Value of affected field"
+  "Value of the affected field, as a string"
   value: String!
-  "Error message describing problem"
+  "Human-readable message describing the problem"
   message: String!
-  "Entity geometry, if available"
+  "Geometry of the affected entity, if available"
   geometry: Geometry
-  "JSON representation of entity, if available"
+  "JSON representation of the affected entity (empty map if not available)"
   entity_json: Map!
 }
 
