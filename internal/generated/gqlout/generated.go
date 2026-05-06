@@ -10019,7 +10019,7 @@ type Feed {
   "Source DMFR file for this feed in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)"
   file: String!
   
-  "Type of feed (e.g., ` + "`" + `gtfs` + "`" + `, ` + "`" + `gtfs-rt` + "`" + `, ` + "`" + `gbfs` + "`" + `, ` + "`" + `mds` + "`" + `)"
+  "Type of feed: ` + "`" + `GTFS` + "`" + `, ` + "`" + `GTFS_RT` + "`" + `, ` + "`" + `GBFS` + "`" + `, or ` + "`" + `MDS` + "`" + `"
   spec: FeedSpecTypes
   
   "Language(s) included in this feed (BCP 47 tags)"
@@ -10037,13 +10037,13 @@ type Feed {
   "Feed license metadata"
   license: FeedLicense
   
-  "Search rank: internal usage for search result ordering"
-  search_rank: String 
-  
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
   "Operators associated with this feed"
   associated_operators: [Operator!]
-  
-  "Current feed state (active version, last fetch status)"
+
+  "Current state of this feed (e.g. the active feed version)"
   feed_state: FeedState
   
   "History of fetch attempts for this feed; filter with ` + "`" + `where: {success: true}` + "`" + ` to find the most recent successful download"
@@ -10084,7 +10084,7 @@ type FeedFetch {
   "Timestamp when the fetch occurred"
   fetched_at: Time
   
-  "Exception log if the fetch did not succeed"
+  "Error message if the fetch did not succeed"
   fetch_error: String
   
   "Server response size, in bytes"
@@ -10117,30 +10117,30 @@ License information for this feed, curated by Interline and contributors to the 
 Note that this does not constitute legal advice. Users are advised to review and confirm any terms and conditions attached to a source feed.
 """
 type FeedLicense {
-  "SPDX identifier for a common license. See https://spdx.org/licenses/"
+  "SPDX identifier for a common license (see https://spdx.org/licenses/); empty if no SPDX license applies"
   spdx_identifier: String!
-  
-  "URL for a custom license"
+
+  "URL to a custom license; empty if a SPDX license is used or no license is recorded"
   url: String!
-  
-  "Are feed consumers allowed to use the feed contents without including attribution text in their app or map?"
+
+  "Whether feed consumers may use the feed without attribution. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
   use_without_attribution: String!
-  
-  "Are feed consumers allowed to create and share derived products from the feed?"
+
+  "Whether feed consumers may create and share derived products. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
   create_derived_product: String!
-  
-  "Are feed consumers allowed to redistribute the feed in its entirety?"
+
+  "Whether feed consumers may redistribute the feed in its entirety. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
   redistribution_allowed: String!
-  
-  "Are feed consumers allowed to use the feed for commercial purposes?"
+
+  "Whether feed consumers may use the feed for commercial purposes. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
   commercial_use_allowed: String!
-  
-  "Are feed consumers allowed to keep their modifications of this feed private?"
+
+  "Whether feed consumers may keep their modifications of this feed private. Values: ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty"
   share_alike_optional: String!
-  
-  "Feed consumers must include this particular text when using this feed"
+
+  "Attribution text that consumers must include when using this feed"
   attribution_text: String!
-  "Feed consumers must follow these instructions for how to provide attribution"
+  "Instructions for how consumers must provide attribution"
   attribution_instructions: String!
 }
 
@@ -10148,9 +10148,9 @@ type FeedLicense {
 type FeedUrls {
   "URL for the static feed that represents today's service"
   static_current: String!
-  "URLs for static feeds that represent past service that is no longer in effect "
+  "URLs for static feeds that represent past service that is no longer in effect"
   static_historic: [String!]!
-  "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect few weeks or months in the future"
+  "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect a few weeks or months in the future"
   static_planned: [String!]!
   "URL for GTFS-RT VehiclePosition messages"
   realtime_vehicle_positions: String!
@@ -10158,9 +10158,9 @@ type FeedUrls {
   realtime_trip_updates: String!
   "URL for GTFS-RT Alert messages"
   realtime_alerts: String!
-  "URL for GBFS feed ` + "`" + `gbfs.json` + "`" + ` auto-discovery file"
+  "URL for the GBFS auto-discovery file (` + "`" + `gbfs.json` + "`" + `)"
   gbfs_auto_discovery: String!
-  "URL for MDS feed provider endpoint"
+  "URL for the MDS (Mobility Data Specification) provider endpoint"
   mds_provider: String!
 }
 

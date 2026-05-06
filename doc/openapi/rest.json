@@ -870,7 +870,7 @@
                                       "x-order": 36
                                     },
                                     "spec": {
-                                      "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                                      "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                                       "enum": [
                                         "GTFS",
                                         "GTFS_RT",
@@ -1701,7 +1701,7 @@
                                       "x-order": 36
                                     },
                                     "spec": {
-                                      "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                                      "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                                       "enum": [
                                         "GTFS",
                                         "GTFS_RT",
@@ -2269,7 +2269,7 @@
                                 "x-order": 17
                               },
                               "spec": {
-                                "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                                "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                                 "enum": [
                                   "GTFS",
                                   "GTFS_RT",
@@ -2880,7 +2880,7 @@
                                 "x-order": 17
                               },
                               "spec": {
-                                "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                                "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                                 "enum": [
                                   "GTFS",
                                   "GTFS_RT",
@@ -3490,7 +3490,7 @@
                             "x-order": 58
                           },
                           "feed_state": {
-                            "description": "Current feed state (active version, last fetch status)",
+                            "description": "Current state of this feed (e.g. the active feed version)",
                             "nullable": true,
                             "properties": {
                               "feed_version": {
@@ -3657,55 +3657,55 @@
                             "nullable": true,
                             "properties": {
                               "attribution_instructions": {
-                                "description": "Feed consumers must follow these instructions for how to provide attribution",
+                                "description": "Instructions for how consumers must provide attribution",
                                 "title": "attribution_instructions",
                                 "type": "string",
                                 "x-order": 49
                               },
                               "attribution_text": {
-                                "description": "Feed consumers must include this particular text when using this feed",
+                                "description": "Attribution text that consumers must include when using this feed",
                                 "title": "attribution_text",
                                 "type": "string",
                                 "x-order": 47
                               },
                               "commercial_use_allowed": {
-                                "description": "Are feed consumers allowed to use the feed for commercial purposes?",
+                                "description": "Whether feed consumers may use the feed for commercial purposes. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "commercial_use_allowed",
                                 "type": "string",
                                 "x-order": 43
                               },
                               "create_derived_product": {
-                                "description": "Are feed consumers allowed to create and share derived products from the feed?",
+                                "description": "Whether feed consumers may create and share derived products. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "create_derived_product",
                                 "type": "string",
                                 "x-order": 39
                               },
                               "redistribution_allowed": {
-                                "description": "Are feed consumers allowed to redistribute the feed in its entirety?",
+                                "description": "Whether feed consumers may redistribute the feed in its entirety. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "redistribution_allowed",
                                 "type": "string",
                                 "x-order": 41
                               },
                               "share_alike_optional": {
-                                "description": "Are feed consumers allowed to keep their modifications of this feed private?",
+                                "description": "Whether feed consumers may keep their modifications of this feed private. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "share_alike_optional",
                                 "type": "string",
                                 "x-order": 45
                               },
                               "spdx_identifier": {
-                                "description": "SPDX identifier for a common license. See https://spdx.org/licenses/",
+                                "description": "SPDX identifier for a common license (see https://spdx.org/licenses/); empty if no SPDX license applies",
                                 "title": "spdx_identifier",
                                 "type": "string",
                                 "x-order": 33
                               },
                               "url": {
-                                "description": "URL for a custom license",
+                                "description": "URL to a custom license; empty if a SPDX license is used or no license is recorded",
                                 "title": "url",
                                 "type": "string",
                                 "x-order": 35
                               },
                               "use_without_attribution": {
-                                "description": "Are feed consumers allowed to use the feed contents without including attribution text in their app or map?",
+                                "description": "Whether feed consumers may use the feed without attribution. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "use_without_attribution",
                                 "type": "string",
                                 "x-order": 37
@@ -3730,7 +3730,7 @@
                             "x-order": 8
                           },
                           "spec": {
-                            "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                            "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                             "enum": [
                               "GTFS",
                               "GTFS_RT",
@@ -3755,13 +3755,13 @@
                             "nullable": true,
                             "properties": {
                               "gbfs_auto_discovery": {
-                                "description": "URL for GBFS feed `gbfs.json` auto-discovery file",
+                                "description": "URL for the GBFS auto-discovery file (`gbfs.json`)",
                                 "title": "gbfs_auto_discovery",
                                 "type": "string",
                                 "x-order": 27
                               },
                               "mds_provider": {
-                                "description": "URL for MDS feed provider endpoint",
+                                "description": "URL for the MDS (Mobility Data Specification) provider endpoint",
                                 "title": "mds_provider",
                                 "type": "string",
                                 "x-order": 29
@@ -3803,7 +3803,7 @@
                                 "x-order": 17
                               },
                               "static_planned": {
-                                "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect few weeks or months in the future",
+                                "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect a few weeks or months in the future",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
@@ -3974,7 +3974,7 @@
                             "x-order": 58
                           },
                           "feed_state": {
-                            "description": "Current feed state (active version, last fetch status)",
+                            "description": "Current state of this feed (e.g. the active feed version)",
                             "nullable": true,
                             "properties": {
                               "feed_version": {
@@ -4141,55 +4141,55 @@
                             "nullable": true,
                             "properties": {
                               "attribution_instructions": {
-                                "description": "Feed consumers must follow these instructions for how to provide attribution",
+                                "description": "Instructions for how consumers must provide attribution",
                                 "title": "attribution_instructions",
                                 "type": "string",
                                 "x-order": 49
                               },
                               "attribution_text": {
-                                "description": "Feed consumers must include this particular text when using this feed",
+                                "description": "Attribution text that consumers must include when using this feed",
                                 "title": "attribution_text",
                                 "type": "string",
                                 "x-order": 47
                               },
                               "commercial_use_allowed": {
-                                "description": "Are feed consumers allowed to use the feed for commercial purposes?",
+                                "description": "Whether feed consumers may use the feed for commercial purposes. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "commercial_use_allowed",
                                 "type": "string",
                                 "x-order": 43
                               },
                               "create_derived_product": {
-                                "description": "Are feed consumers allowed to create and share derived products from the feed?",
+                                "description": "Whether feed consumers may create and share derived products. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "create_derived_product",
                                 "type": "string",
                                 "x-order": 39
                               },
                               "redistribution_allowed": {
-                                "description": "Are feed consumers allowed to redistribute the feed in its entirety?",
+                                "description": "Whether feed consumers may redistribute the feed in its entirety. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "redistribution_allowed",
                                 "type": "string",
                                 "x-order": 41
                               },
                               "share_alike_optional": {
-                                "description": "Are feed consumers allowed to keep their modifications of this feed private?",
+                                "description": "Whether feed consumers may keep their modifications of this feed private. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "share_alike_optional",
                                 "type": "string",
                                 "x-order": 45
                               },
                               "spdx_identifier": {
-                                "description": "SPDX identifier for a common license. See https://spdx.org/licenses/",
+                                "description": "SPDX identifier for a common license (see https://spdx.org/licenses/); empty if no SPDX license applies",
                                 "title": "spdx_identifier",
                                 "type": "string",
                                 "x-order": 33
                               },
                               "url": {
-                                "description": "URL for a custom license",
+                                "description": "URL to a custom license; empty if a SPDX license is used or no license is recorded",
                                 "title": "url",
                                 "type": "string",
                                 "x-order": 35
                               },
                               "use_without_attribution": {
-                                "description": "Are feed consumers allowed to use the feed contents without including attribution text in their app or map?",
+                                "description": "Whether feed consumers may use the feed without attribution. Values: `yes`, `no`, `unknown`, or empty",
                                 "title": "use_without_attribution",
                                 "type": "string",
                                 "x-order": 37
@@ -4214,7 +4214,7 @@
                             "x-order": 8
                           },
                           "spec": {
-                            "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                            "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                             "enum": [
                               "GTFS",
                               "GTFS_RT",
@@ -4239,13 +4239,13 @@
                             "nullable": true,
                             "properties": {
                               "gbfs_auto_discovery": {
-                                "description": "URL for GBFS feed `gbfs.json` auto-discovery file",
+                                "description": "URL for the GBFS auto-discovery file (`gbfs.json`)",
                                 "title": "gbfs_auto_discovery",
                                 "type": "string",
                                 "x-order": 27
                               },
                               "mds_provider": {
-                                "description": "URL for MDS feed provider endpoint",
+                                "description": "URL for the MDS (Mobility Data Specification) provider endpoint",
                                 "title": "mds_provider",
                                 "type": "string",
                                 "x-order": 29
@@ -4287,7 +4287,7 @@
                                 "x-order": 17
                               },
                               "static_planned": {
-                                "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect few weeks or months in the future",
+                                "description": "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect a few weeks or months in the future",
                                 "items": {
                                   "type": "object",
                                   "x-graphql-type": "String",
@@ -4972,7 +4972,7 @@
                                   "x-order": 17
                                 },
                                 "spec": {
-                                  "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                                  "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                                   "enum": [
                                     "GTFS",
                                     "GTFS_RT",
@@ -5475,7 +5475,7 @@
                                   "x-order": 17
                                 },
                                 "spec": {
-                                  "description": "Type of feed (e.g., `gtfs`, `gtfs-rt`, `gbfs`, `mds`)",
+                                  "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
                                   "enum": [
                                     "GTFS",
                                     "GTFS_RT",
