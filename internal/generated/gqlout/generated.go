@@ -11112,19 +11112,19 @@ type Location {
   "GTFS ` + "`" + `locations.stop_url` + "`" + `"
   stop_url: Url
   
-  "Geometry for this location"
+  "Geometry for this location, typically a Polygon or MultiPolygon defining the service area"
   geometry: Geometry!
-  
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  
-  "Feed Onestop ID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
-  
-  "Stop times associated with this location"
+
+  "Flex stop times that reference this location"
   stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
@@ -11179,14 +11179,14 @@ type BookingRule {
   
   "GTFS ` + "`" + `booking_rules.booking_url` + "`" + `; URL to the booking system or interface for this service"
   booking_url: Url
-  
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  
-  "Feed Onestop ID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
 }
 
@@ -11202,20 +11202,20 @@ type LocationGroup {
   
   "GTFS ` + "`" + `location_groups.location_group_name` + "`" + `"
   location_group_name: String
-  
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  
-  "Feed Onestop ID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
-  
-  "Stops associated with this location group"
+
+  "Stops belonging to this location group, resolved via ` + "`" + `location_group_stops.txt` + "`" + `"
   stops(limit: Int): [Stop!]!
-  
-  "Stop times associated with this location group"
+
+  "Flex stop times that reference this location group"
   stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
@@ -11225,11 +11225,11 @@ Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/r
 type LocationGroupStop {
   "Internal integer ID"
   id: Int!
-  
-  "Location group"
+
+  "Location group this association belongs to"
   location_group: LocationGroup!
-  
-  "Stop"
+
+  "Stop included in the location group"
   stop: Stop!
 }
 
@@ -11240,46 +11240,46 @@ An archived real-time arrival/departure measurement at a stop, derived from GTFS
 Compare ` + "`" + `scheduled_arrival_time` + "`" + `/` + "`" + `scheduled_departure_time` + "`" + ` against ` + "`" + `observed_arrival_time` + "`" + `/` + "`" + `observed_departure_time` + "`" + ` for on-time performance analysis.
 """
 type StopObservation {
-  "GTFS-RT TripUpdate schedule relationship"
+  "GTFS-RT TripUpdate schedule_relationship value (string form: e.g. ` + "`" + `SCHEDULED` + "`" + `, ` + "`" + `ADDED` + "`" + `, ` + "`" + `CANCELED` + "`" + `)"
   schedule_relationship: String
-  
-  "GTFS-RT TripUpdate trip start date"
+
+  "GTFS-RT TripDescriptor.start_date for the observed trip"
   trip_start_date: Date
-  
-  "GTFS-RT TripUpdate trip start time"
+
+  "GTFS-RT TripDescriptor.start_time for the observed trip"
   trip_start_time: Seconds
-  
-  "GTFS static origin stop id"
+
+  "GTFS stop_id of the previous stop in the trip (origin of the observed segment)"
   from_stop_id: String
-  
-  "GTFS static destination stop id"
+
+  "GTFS stop_id of this stop (destination of the observed segment)"
   to_stop_id: String
-  
-  "Agency ID for route"
+
+  "GTFS agency_id of the agency operating the trip's route"
   agency_id: String
-  
-  "Route ID for trip"
+
+  "GTFS route_id of the trip's route"
   route_id: String
-  
-  "Trip ID"
+
+  "GTFS trip_id of the observed trip"
   trip_id: String
-  
-  "Stop sequence for origin stop"
+
+  "GTFS stop_times.stop_sequence value for the from_stop"
   stop_sequence: Int
-  
-  "Source data used to calculate this stop observation. Can be trip update or vehicle positions"
+
+  "GTFS-RT message used to derive this observation: ` + "`" + `TripUpdate` + "`" + ` or ` + "`" + `VehiclePosition` + "`" + `"
   source: String
-  
-  "GTFS static scheduled arrival time"
+
+  "Scheduled arrival time at to_stop, from GTFS static ` + "`" + `stop_times` + "`" + `"
   scheduled_arrival_time: Seconds
-  
-  "GTFS static scheduled departure time"
+
+  "Scheduled departure time at to_stop, from GTFS static ` + "`" + `stop_times` + "`" + `"
   scheduled_departure_time: Seconds
-  
-  "GTFS-RT calculated arrival time"
+
+  "Observed arrival time at to_stop, derived from GTFS-RT"
   observed_arrival_time: Seconds
-  
-  "GTFS-RT calculated departure time"
+
+  "Observed departure time at to_stop, derived from GTFS-RT"
   observed_departure_time: Seconds
 }
 
@@ -11293,16 +11293,16 @@ type StopExternalReference {
   "Internal integer ID"
   id: Int!
   
-  "Target stop's feed Onestop ID"
+  "Onestop ID of the target stop's feed"
   target_feed_onestop_id: String
-  
-  "Target stop's stop_id"
+
+  "GTFS stop_id of the target stop within that feed"
   target_stop_id: String
-  
-  "Is this reference active"
+
+  "True if this cross-feed reference is marked inactive (e.g. the target stop no longer exists in current feed versions)"
   inactive: Boolean
-  
-  "Resolved target stop, if matched and available"
+
+  "Resolved target stop, if it exists in a currently active feed version"
   target_active_stop: Stop
 }
 

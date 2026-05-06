@@ -1344,33 +1344,33 @@ type StopLocationFilter struct {
 // An archived real-time arrival/departure measurement at a stop, derived from GTFS-RT TripUpdate or VehiclePosition data.
 // Compare `scheduled_arrival_time`/`scheduled_departure_time` against `observed_arrival_time`/`observed_departure_time` for on-time performance analysis.
 type StopObservation struct {
-	// GTFS-RT TripUpdate schedule relationship
+	// GTFS-RT TripUpdate schedule_relationship value (string form: e.g. `SCHEDULED`, `ADDED`, `CANCELED`)
 	ScheduleRelationship *string `json:"schedule_relationship,omitempty"`
-	// GTFS-RT TripUpdate trip start date
+	// GTFS-RT TripDescriptor.start_date for the observed trip
 	TripStartDate *tt.Date `json:"trip_start_date,omitempty"`
-	// GTFS-RT TripUpdate trip start time
+	// GTFS-RT TripDescriptor.start_time for the observed trip
 	TripStartTime *tt.Seconds `json:"trip_start_time,omitempty"`
-	// GTFS static origin stop id
+	// GTFS stop_id of the previous stop in the trip (origin of the observed segment)
 	FromStopID *string `json:"from_stop_id,omitempty"`
-	// GTFS static destination stop id
+	// GTFS stop_id of this stop (destination of the observed segment)
 	ToStopID *string `json:"to_stop_id,omitempty"`
-	// Agency ID for route
+	// GTFS agency_id of the agency operating the trip's route
 	AgencyID *string `json:"agency_id,omitempty"`
-	// Route ID for trip
+	// GTFS route_id of the trip's route
 	RouteID *string `json:"route_id,omitempty"`
-	// Trip ID
+	// GTFS trip_id of the observed trip
 	TripID *string `json:"trip_id,omitempty"`
-	// Stop sequence for origin stop
+	// GTFS stop_times.stop_sequence value for the from_stop
 	StopSequence *int `json:"stop_sequence,omitempty"`
-	// Source data used to calculate this stop observation. Can be trip update or vehicle positions
+	// GTFS-RT message used to derive this observation: `TripUpdate` or `VehiclePosition`
 	Source *string `json:"source,omitempty"`
-	// GTFS static scheduled arrival time
+	// Scheduled arrival time at to_stop, from GTFS static `stop_times`
 	ScheduledArrivalTime *tt.Seconds `json:"scheduled_arrival_time,omitempty"`
-	// GTFS static scheduled departure time
+	// Scheduled departure time at to_stop, from GTFS static `stop_times`
 	ScheduledDepartureTime *tt.Seconds `json:"scheduled_departure_time,omitempty"`
-	// GTFS-RT calculated arrival time
+	// Observed arrival time at to_stop, derived from GTFS-RT
 	ObservedArrivalTime *tt.Seconds `json:"observed_arrival_time,omitempty"`
-	// GTFS-RT calculated departure time
+	// Observed departure time at to_stop, derived from GTFS-RT
 	ObservedDepartureTime *tt.Seconds `json:"observed_departure_time,omitempty"`
 	StopID                int         `json:"-"`
 }
