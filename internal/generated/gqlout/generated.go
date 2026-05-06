@@ -12800,56 +12800,56 @@ input BoundingBox {
 
 """Result of a feed fetch operation"""
 type FeedVersionFetchResult {
-  "Details of fetched feed version, if successful"
+  "Details of the fetched feed version, if the fetch succeeded"
   feed_version: FeedVersion
-  "Exception log if fetch failed"
+  "Error message if the fetch failed"
   fetch_error: String
-  "Set if the fetched feed version is already present in the database with the same directory contents"
+  "True if the fetched archive's SHA1 hash already exists in the database (i.e. the same zip file was already imported)"
   found_sha1: Boolean!
-  "Set if the fetched feed version is already present in the database with the same SHA1 hash"
+  "True if the fetched archive's unpacked directory contents hash already exists in the database (i.e. a different zip with identical contents was already imported)"
   found_dir_sha1: Boolean!
 }
 
 """Result of feed version import operation"""
 type FeedVersionImportResult {
-  "Did the import succeed"
+  "True if the import succeeded"
   success: Boolean!
 }
 
 """Result of feed version unimport operation"""
 type FeedVersionUnimportResult {
-  "Did the unimport succeed"
+  "True if the unimport succeeded"
   success: Boolean!
 }
 
 """Result of feed version delete operation"""
 type FeedVersionDeleteResult {
-  "Did the delete succeed"
+  "True if the delete succeeded"
   success: Boolean!
 }
 
 
 """Update a feed version entity"""
 input FeedVersionSetInput {
-  "Entity ID to update"
+  "Integer ID of the feed version to update; required"
   id: Int
-  "Set entity name to this value"
+  "New name for the feed version"
   name: String
-  "Set entity description to this value"
+  "New description for the feed version"
   description: String
 }
 
-"""Specify a feed version"""
+"""Reference to an existing feed version"""
 input FeedVersionInput {
-  "Feed version integer ID"
+  "Integer ID of the feed version"
   id: Int
 }
 
-"""Update a stop entity"""
+"""Create or update a stop entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
 input StopSetInput {
-  "Entity ID to update"
+  "Integer ID of the stop to update; omit when creating a new stop"
   id: Int
-  "Feed version of entity to update"
+  "Feed version this stop belongs to (required when creating a new stop)"
   feed_version: FeedVersionInput
   "Set GTFS location_type to this value"
   location_type: Int
@@ -12875,11 +12875,11 @@ input StopSetInput {
   tts_stop_name: String
   "Set stop geometry to this value"
   geometry: Point
-  "Set stop parent station to this stop"
+  "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
   parent: StopSetInput
-  "Set stop level to this level"
+  "Reference to an existing level; only the ` + "`" + `id` + "`" + ` is used (the level must already exist)"
   level: LevelSetInput
-  "Set or update external reference for this stop"
+  "Set or update the cross-feed external reference for this stop"
   external_reference: StopExternalReferenceSetInput
 }
 
@@ -12891,11 +12891,11 @@ input StopExternalReferenceSetInput {
   target_stop_id: String
 }
 
-"""Update a level entity"""
+"""Create or update a level entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
 input LevelSetInput {
-  "Entity ID to update"
+  "Integer ID of the level to update; omit when creating a new level"
   id: Int
-  "Feed version of entity to update"
+  "Feed version this level belongs to (required when creating a new level)"
   feed_version: FeedVersionInput
   "Set GTFS level_id to this value"
   level_id: String
@@ -12905,15 +12905,15 @@ input LevelSetInput {
   level_index: Float
   "Set level geometry to this value"
   geometry: MultiPolygon
-  "Set level parent station to this stop"
+  "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
   parent: StopSetInput
 }
 
-"""Update a pathway entity"""
+"""Create or update a pathway entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
 input PathwaySetInput {
-  "Entity ID to update"
+  "Integer ID of the pathway to update; omit when creating a new pathway"
   id: Int
-  "Feed version of entity to update"
+  "Feed version this pathway belongs to (required when creating a new pathway)"
   feed_version: FeedVersionInput
   "Set GTFS pathway_id to this value"
   pathway_id: String
@@ -12935,9 +12935,9 @@ input PathwaySetInput {
   signposted_as: String
   "Set GTFS reverse_signposted_as to this value"
   reverse_signposted_as: String
-  "Set pathway origin to this stop"
+  "Reference to an existing origin stop; only the ` + "`" + `id` + "`" + ` is used (the stop must already exist)"
   from_stop: StopSetInput
-  "Set pathway destination to this stop"
+  "Reference to an existing destination stop; only the ` + "`" + `id` + "`" + ` is used (the stop must already exist)"
   to_stop: StopSetInput
 }`, BuiltIn: false},
 }

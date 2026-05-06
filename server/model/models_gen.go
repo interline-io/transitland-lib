@@ -529,19 +529,19 @@ type FeedSourceURL struct {
 
 // Result of feed version delete operation
 type FeedVersionDeleteResult struct {
-	// Did the delete succeed
+	// True if the delete succeeded
 	Success bool `json:"success"`
 }
 
 // Result of a feed fetch operation
 type FeedVersionFetchResult struct {
-	// Details of fetched feed version, if successful
+	// Details of the fetched feed version, if the fetch succeeded
 	FeedVersion *FeedVersion `json:"feed_version,omitempty"`
-	// Exception log if fetch failed
+	// Error message if the fetch failed
 	FetchError *string `json:"fetch_error,omitempty"`
-	// Set if the fetched feed version is already present in the database with the same directory contents
+	// True if the fetched archive's SHA1 hash already exists in the database (i.e. the same zip file was already imported)
 	FoundSha1 bool `json:"found_sha1"`
-	// Set if the fetched feed version is already present in the database with the same SHA1 hash
+	// True if the fetched archive's unpacked directory contents hash already exists in the database (i.e. a different zip with identical contents was already imported)
 	FoundDirSha1 bool `json:"found_dir_sha1"`
 }
 
@@ -573,13 +573,13 @@ type FeedVersionFilter struct {
 
 // Result of feed version import operation
 type FeedVersionImportResult struct {
-	// Did the import succeed
+	// True if the import succeeded
 	Success bool `json:"success"`
 }
 
-// Specify a feed version
+// Reference to an existing feed version
 type FeedVersionInput struct {
-	// Feed version integer ID
+	// Integer ID of the feed version
 	ID *int `json:"id,omitempty"`
 }
 
@@ -612,17 +612,17 @@ type FeedVersionServiceWindow struct {
 
 // Update a feed version entity
 type FeedVersionSetInput struct {
-	// Entity ID to update
+	// Integer ID of the feed version to update; required
 	ID *int `json:"id,omitempty"`
-	// Set entity name to this value
+	// New name for the feed version
 	Name *string `json:"name,omitempty"`
-	// Set entity description to this value
+	// New description for the feed version
 	Description *string `json:"description,omitempty"`
 }
 
 // Result of feed version unimport operation
 type FeedVersionUnimportResult struct {
-	// Did the unimport succeed
+	// True if the unimport succeeded
 	Success bool `json:"success"`
 }
 
@@ -758,11 +758,11 @@ type LegTrip struct {
 	Route *LegRoute `json:"route"`
 }
 
-// Update a level entity
+// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`
 type LevelSetInput struct {
-	// Entity ID to update
+	// Integer ID of the level to update; omit when creating a new level
 	ID *int `json:"id,omitempty"`
-	// Feed version of entity to update
+	// Feed version this level belongs to (required when creating a new level)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS level_id to this value
 	LevelID *string `json:"level_id,omitempty"`
@@ -772,7 +772,7 @@ type LevelSetInput struct {
 	LevelIndex *float64 `json:"level_index,omitempty"`
 	// Set level geometry to this value
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
-	// Set level parent station to this stop
+	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
 	Parent *StopSetInput `json:"parent,omitempty"`
 }
 
@@ -866,11 +866,11 @@ type PathwayFilter struct {
 	PathwayMode *int `json:"pathway_mode,omitempty"`
 }
 
-// Update a pathway entity
+// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`
 type PathwaySetInput struct {
-	// Entity ID to update
+	// Integer ID of the pathway to update; omit when creating a new pathway
 	ID *int `json:"id,omitempty"`
-	// Feed version of entity to update
+	// Feed version this pathway belongs to (required when creating a new pathway)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS pathway_id to this value
 	PathwayID *string `json:"pathway_id,omitempty"`
@@ -892,9 +892,9 @@ type PathwaySetInput struct {
 	SignpostedAs *string `json:"signposted_as,omitempty"`
 	// Set GTFS reverse_signposted_as to this value
 	ReverseSignpostedAs *string `json:"reverse_signposted_as,omitempty"`
-	// Set pathway origin to this stop
+	// Reference to an existing origin stop; only the `id` is used (the stop must already exist)
 	FromStop *StopSetInput `json:"from_stop,omitempty"`
-	// Set pathway destination to this stop
+	// Reference to an existing destination stop; only the `id` is used (the stop must already exist)
 	ToStop *StopSetInput `json:"to_stop,omitempty"`
 }
 
@@ -1397,11 +1397,11 @@ type StopPlace struct {
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
 }
 
-// Update a stop entity
+// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`
 type StopSetInput struct {
-	// Entity ID to update
+	// Integer ID of the stop to update; omit when creating a new stop
 	ID *int `json:"id,omitempty"`
-	// Feed version of entity to update
+	// Feed version this stop belongs to (required when creating a new stop)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS location_type to this value
 	LocationType *int `json:"location_type,omitempty"`
@@ -1427,11 +1427,11 @@ type StopSetInput struct {
 	TtsStopName *string `json:"tts_stop_name,omitempty"`
 	// Set stop geometry to this value
 	Geometry *tt.Point `json:"geometry,omitempty"`
-	// Set stop parent station to this stop
+	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
 	Parent *StopSetInput `json:"parent,omitempty"`
-	// Set stop level to this level
+	// Reference to an existing level; only the `id` is used (the level must already exist)
 	Level *LevelSetInput `json:"level,omitempty"`
-	// Set or update external reference for this stop
+	// Set or update the cross-feed external reference for this stop
 	ExternalReference *StopExternalReferenceSetInput `json:"external_reference,omitempty"`
 }
 
