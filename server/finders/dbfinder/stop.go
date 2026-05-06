@@ -290,6 +290,8 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 		"gtfs_stops.level_id",
 		"gtfs_stops.parent_station",
 		"gtfs_stops.area_id",
+		"gtfs_stops.created_at",
+		"gtfs_stops.updated_at",
 		"current_feeds.id AS feed_id",
 		"current_feeds.onestop_id AS feed_onestop_id",
 		"feed_versions.sha1 AS feed_version_sha1",

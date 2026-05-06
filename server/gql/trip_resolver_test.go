@@ -206,8 +206,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  14718,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
 		},
 		{
 			name:               "license filter: share_alike_optional = no",
@@ -222,8 +222,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  16292,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
 		},
 		// license: create_derived_product
 		{
@@ -231,8 +231,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  14718,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
 		},
 		{
 			name:               "license filter: create_derived_product = no",
@@ -247,8 +247,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  16292,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
 		},
 		// license: commercial_use_allowed
 		{
@@ -256,8 +256,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  14718,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = no",
@@ -272,8 +272,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  16292,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
 		},
 		// license: redistribution_allowed
 		{
@@ -281,8 +281,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  14718,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
 		},
 		{
 			name:               "license filter: redistribution_allowed = no",
@@ -297,8 +297,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  16292,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
 		},
 		// license: use_without_attribution
 		{
@@ -306,8 +306,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  14718,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
 		},
 		{
 			name:               "license filter: use_without_attribution = no",
@@ -322,8 +322,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  16292,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
 		},
 	}
 	c, _ := newTestClient(t)
