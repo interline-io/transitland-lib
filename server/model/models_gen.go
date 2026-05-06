@@ -163,7 +163,7 @@ type CensusDataset struct {
 	// Geographic layers (boundary types) available in this dataset, e.g. `tract`, `blockgroup`, `state`
 	Layers []*CensusLayer `json:"layers,omitempty"`
 	// Cursor-paginated data values for this dataset.
-	// Use for large datasets (e.g. NTD) where result sets exceed practical limits for the standard `values` field.
+	// Use for large datasets (e.g. NTD) where result sets exceed practical limits for the per-geography `CensusGeography.values` field.
 	// Filter by `geoid`, `geoid_prefix`, or `table`.
 	ValuesRelay *CensusValueConnection `json:"values_relay,omitempty"`
 }
@@ -272,7 +272,7 @@ type CensusGeography struct {
 	Adm0Name *string `json:"adm0_name,omitempty"`
 	// Country ISO 3166-1 alpha-2 code (e.g. `US`)
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
-	// Boundary polygon for this geography
+	// Boundary geometry for this geography as a MultiPolygon
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
 	// When this geography was returned by a spatial query (e.g. `stop_buffer` or `bbox`), the area of overlap between this geography and the search area, in square meters.
 	// Divide by `geometry_area` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.

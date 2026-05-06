@@ -1868,7 +1868,7 @@ type CensusDataset {
 
   """
   Cursor-paginated data values for this dataset.
-  Use for large datasets (e.g. NTD) where result sets exceed practical limits for the standard `values` field.
+  Use for large datasets (e.g. NTD) where result sets exceed practical limits for the per-geography `CensusGeography.values` field.
   Filter by `geoid`, `geoid_prefix`, or `table`.
   """
   values_relay(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
@@ -1974,7 +1974,7 @@ type CensusGeography {
   "Country ISO 3166-1 alpha-2 code (e.g. `US`)"
   adm0_iso: String
 
-  "Boundary polygon for this geography"
+  "Boundary geometry for this geography as a MultiPolygon"
   geometry: MultiPolygon
 
   """
