@@ -43,6 +43,7 @@ type ValidatorCommand struct {
 	AllowFTPFetch           bool
 	AllowLocalFetch         bool
 	AllowS3Fetch            bool
+	AllowHTTPFetchUnfiltered bool
 	secrets                 []dmfr.Secret
 }
 
@@ -88,6 +89,7 @@ func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls when --dmfr is used")
 	fl.BoolVar(&cmd.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem paths when --dmfr is used")
 	fl.BoolVar(&cmd.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls when --dmfr is used")
+	fl.BoolVar(&cmd.AllowHTTPFetchUnfiltered, "allow-http-fetch-unfiltered", false, "Disable SSRF protection for http(s) fetches; allow private/loopback/metadata IPs (use only for local CLI runs)")
 }
 
 func (cmd *ValidatorCommand) Parse(args []string) error {
@@ -262,6 +264,9 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 	}
 	if cmd.AllowS3Fetch {
 		reqOpts = append(reqOpts, request.WithAllowS3)
+	}
+	if cmd.AllowHTTPFetchUnfiltered {
+		reqOpts = append(reqOpts, request.WithAllowHTTPUnfiltered)
 	}
 	if feed.Authorization.Type != "" {
 		secret, err := feed.MatchSecrets(cmd.secrets, cmd.URLType)

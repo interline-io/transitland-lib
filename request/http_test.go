@@ -421,7 +421,7 @@ func TestHttp_DownloadAuth_RedirectLoop(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	h := &Http{MaxRedirects: 3}
+	h := &Http{MaxRedirects: 3, AllowHTTPUnfiltered: true}
 
 	ctx := context.Background()
 	body, _, err := h.DownloadAuth(ctx, ts.URL, dmfr.FeedAuthorization{})

@@ -85,10 +85,11 @@ func TestValidatorCommand_DMFRAuth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dmfrPath, secretsPath := writeFiles(t, tc.secrets)
 			cmd := ValidatorCommand{
-				Quiet:       true,
-				DMFRFile:    dmfrPath,
-				FeedID:      feed.FeedID,
-				SecretsFile: secretsPath,
+				Quiet:                    true,
+				DMFRFile:                 dmfrPath,
+				FeedID:                   feed.FeedID,
+				SecretsFile:              secretsPath,
+				AllowHTTPFetchUnfiltered: true,
 			}
 			if err := cmd.Parse(nil); err != nil {
 				t.Fatalf("Parse: %v", err)

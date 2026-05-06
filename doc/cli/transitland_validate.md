@@ -24,6 +24,7 @@ transitland validate [flags] [<reader>]
 
 ```
       --allow-ftp-fetch                    Allow fetching from FTP urls when --dmfr is used
+      --allow-http-fetch-unfiltered        Disable SSRF protection for http(s) fetches; allow private/loopback/metadata IPs (use only for local CLI runs)
       --allow-local-fetch                  Allow fetching from filesystem paths when --dmfr is used
       --allow-s3-fetch                     Allow fetching from S3 urls when --dmfr is used
       --best-practices                     Include Best Practices validations
