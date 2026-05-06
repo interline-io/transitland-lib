@@ -72,7 +72,7 @@ type AgencyPlace struct {
 	Adm0Name *string `json:"adm0_name,omitempty"`
 	// Best-matched country ISO code
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
-	// Relative weight of this place association
+	// Relative weight of this place association; higher values indicate stronger association (e.g. greater stop overlap)
 	Rank     *float64 `json:"rank,omitempty"`
 	AgencyID int      `json:"-"`
 }
@@ -1029,13 +1029,13 @@ type RTVehicleDescriptor struct {
 	LicensePlate *string `json:"license_plate,omitempty"`
 }
 
-// MTC GTFS+ Extension: `route_attributes.txt`.
+// Extended route metadata from the [MTC GTFS+ extension](https://github.com/MobilityData/gtfs-plus-spec) `route_attributes.txt` file. Values are integer codes defined by the extension; consult that spec for the meaning of each code.
 type RouteAttribute struct {
-	// Route category
+	// Route category code (e.g. service tier such as local, express, rapid)
 	Category *int `json:"category,omitempty"`
-	// Route subcategory
+	// Route subcategory code (further subdivision within `category`)
 	Subcategory *int `json:"subcategory,omitempty"`
-	// Route running way category
+	// Running-way category code (e.g. dedicated lane, mixed traffic, grade-separated)
 	RunningWay *int `json:"running_way,omitempty"`
 	RouteID    int  `json:"-"`
 }
@@ -1078,30 +1078,30 @@ type RouteFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 }
 
-// Representative route geometries.
+// Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 type RouteGeometry struct {
-	// If true, the source GTFS feed provides no shapes. This route geometry is based on straight lines between stop points
+	// True if the source feed has no `shapes.txt` and this geometry was generated from straight lines between stop points
 	Generated bool `json:"generated"`
-	// A single LineString of this most common shape
+	// Single LineString representing the most common shape for this route
 	Geometry *tt.LineString `json:"geometry,omitempty"`
-	// MultiLineString ensemble of the most common shapes for each direction
+	// MultiLineString ensemble combining the most common shape for each direction
 	CombinedGeometry *tt.Geometry `json:"combined_geometry,omitempty"`
-	// Length (in meters) of the simple geometry
+	// Length of the `geometry` LineString, in meters
 	Length *float64 `json:"length,omitempty"`
-	// Maximum point-to-point distance in the geometry
+	// Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps
 	MaxSegmentLength *float64 `json:"max_segment_length,omitempty"`
-	// First point max distance
+	// Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route
 	FirstPointMaxDistance *float64 `json:"first_point_max_distance,omitempty"`
 	RouteID               int      `json:"-"`
 }
 
-// Calculated route headways.
+// Calculated typical service frequency at a representative stop, broken down by day-of-week category and direction.
 type RouteHeadway struct {
-	// Stop used for the headway calculation
+	// Representative stop used for the headway calculation
 	Stop *Stop `json:"stop"`
 	// Day of week category; 1=Weekday, 6=Saturday, 7=Sunday
 	DowCategory *int `json:"dow_category,omitempty"`
-	// Trip direction
+	// GTFS direction_id (0 or 1)
 	DirectionID *int `json:"direction_id,omitempty"`
 	// Typical number of seconds between departing trips at this stop in this direction on this day of the week
 	HeadwaySecs *int `json:"headway_secs,omitempty"`
@@ -1128,7 +1128,7 @@ type RouteLocationFilter struct {
 	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
-// RouteStops describe associations between stops, routes, and agencies.
+// Association between a stop, the route that serves it, and the operating agency. Provides the route and agency context alongside each stop on a route.
 type RouteStop struct {
 	// Internal integer ID
 	ID int `json:"id"`
@@ -1156,28 +1156,28 @@ type RouteStopBuffer struct {
 	StopConvexhull *tt.Polygon `json:"stop_convexhull,omitempty"`
 }
 
-// RouteStopPattern describes a unique pattern of stops for a route.
+// A unique sequence of stops served by trips on a route, in a single direction. Multiple trips may share the same RouteStopPattern.
 type RouteStopPattern struct {
-	// An identifier for this stop pattern; an integer scoped to this particular feed version
+	// Identifier for this stop pattern; an integer scoped to a single feed version
 	StopPatternID int `json:"stop_pattern_id"`
-	// Direction ID of the trip
+	// GTFS direction_id (0 or 1) of the trips using this pattern
 	DirectionID int `json:"direction_id"`
 	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
-	// Representative trips for this stop pattern
+	// Representative trips that follow this stop pattern; useful for fetching full stop_times
 	Trips   []*Trip `json:"trips,omitempty"`
 	RouteID int     `json:"-"`
 }
 
-// Normalized route segments.
+// A normalized, reusable piece of route geometry, optionally aligned with an OpenStreetMap way. Multiple route patterns may reference the same Segment.
 type Segment struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// OSM Way ID, if any, associated with this segment
+	// OSM Way ID, if the segment was matched to an OpenStreetMap way (0 if unmatched)
 	WayID int `json:"way_id"`
-	// Geometry for this segment
+	// Path geometry for this segment as a LineString
 	Geometry tt.LineString `json:"geometry"`
-	// Routes and stop patterns associated with this segment
+	// Pattern associations for this segment, each linking it to a route and stop pattern
 	SegmentPatterns []*SegmentPattern `json:"segment_patterns,omitempty"`
 	FeedVersionID   int               `json:"-"`
 	WithRouteID     int               `json:"-"`
@@ -1189,25 +1189,25 @@ type SegmentFilter struct {
 	Layer *string `json:"layer,omitempty"`
 }
 
-// Normalized route segment patterns.
+// Association linking a route's stop pattern to a single normalized segment within its full path. Used to assemble route geometries from reusable segment pieces.
 type SegmentPattern struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Route for this segment pattern
+	// Route this segment pattern belongs to
 	Route *Route `json:"route"`
-	// Stop pattern for this segment pattern
+	// Stop pattern ID this segment belongs to; scoped to the feed version
 	StopPatternID int `json:"stop_pattern_id"`
-	// Direction ID of the trip
+	// GTFS direction_id (0 or 1) of trips using this pattern
 	DirectionID int `json:"direction_id"`
-	// Sequence order of this segment within the pattern
+	// Position of this segment within the full path of the pattern (0-indexed)
 	SequenceIdx int `json:"sequence_idx"`
-	// Shape ID for this segment pattern
+	// Internal integer ID of the source shape
 	ShapeID int `json:"shape_id"`
-	// OSM Way ID, if any, associated with this segment pattern
+	// OSM Way ID, if the segment was matched to an OpenStreetMap way
 	WayID *int `json:"way_id,omitempty"`
-	// Shape associated with this segment pattern
+	// Shape this segment was derived from
 	Shape *Shape `json:"shape"`
-	// Segment geometry for this pattern
+	// Normalized segment associated with this pattern
 	Segment   *Segment `json:"segment"`
 	RouteID   int      `json:"-"`
 	SegmentID int      `json:"-"`

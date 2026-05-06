@@ -1594,7 +1594,7 @@ type AgencyPlace {
   "Best-matched country ISO code"
   adm0_iso: String
 
-  "Relative weight of this place association"
+  "Relative weight of this place association; higher values indicate stronger association (e.g. greater stop overlap)"
   rank: Float
 }
 
@@ -1676,7 +1676,7 @@ enum PlaceAggregationLevel {
 
 
 """
-RouteStops describe associations between stops, routes, and agencies.
+Association between a stop, the route that serves it, and the operating agency. Provides the route and agency context alongside each stop on a route.
 """
 type RouteStop {
   "Internal integer ID"
@@ -1702,56 +1702,56 @@ type RouteStop {
 }
 
 """
-RouteStopPattern describes a unique pattern of stops for a route.
+A unique sequence of stops served by trips on a route, in a single direction. Multiple trips may share the same RouteStopPattern.
 """
 type RouteStopPattern {
-  "An identifier for this stop pattern; an integer scoped to this particular feed version"
+  "Identifier for this stop pattern; an integer scoped to a single feed version"
   stop_pattern_id: Int!
-  
-  "Direction ID of the trip"
+
+  "GTFS direction_id (0 or 1) of the trips using this pattern"
   direction_id: Int!
-  
+
   "Number of trips that operate this stop pattern"
   count: Int!
 
-  "Representative trips for this stop pattern"
+  "Representative trips that follow this stop pattern; useful for fetching full stop_times"
   trips(limit: Int): [Trip!]
 }
 
 """
-Representative route geometries.
+Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 """
 type RouteGeometry {
-  "If true, the source GTFS feed provides no shapes. This route geometry is based on straight lines between stop points"
+  "True if the source feed has no `shapes.txt` and this geometry was generated from straight lines between stop points"
   generated: Boolean!
-  
-  "A single LineString of this most common shape"
+
+  "Single LineString representing the most common shape for this route"
   geometry: LineString
-  
-  "MultiLineString ensemble of the most common shapes for each direction"
+
+  "MultiLineString ensemble combining the most common shape for each direction"
   combined_geometry: Geometry
-  
-  "Length (in meters) of the simple geometry"
+
+  "Length of the `geometry` LineString, in meters"
   length: Float
-  
-  "Maximum point-to-point distance in the geometry"
+
+  "Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps"
   max_segment_length: Float
-  
-  "First point max distance"
+
+  "Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route"
   first_point_max_distance: Float
 }
 
 """
-Calculated route headways.
+Calculated typical service frequency at a representative stop, broken down by day-of-week category and direction.
 """
 type RouteHeadway {
-  "Stop used for the headway calculation"
+  "Representative stop used for the headway calculation"
   stop: Stop!
-  
+
   "Day of week category; 1=Weekday, 6=Saturday, 7=Sunday"
   dow_category: Int
-  
-  "Trip direction"
+
+  "GTFS direction_id (0 or 1)"
   direction_id: Int
   
   "Typical number of seconds between departing trips at this stop in this direction on this day of the week"
@@ -1768,58 +1768,58 @@ type RouteHeadway {
 }
 
 """
-Normalized route segment patterns.
+Association linking a route's stop pattern to a single normalized segment within its full path. Used to assemble route geometries from reusable segment pieces.
 """
 type SegmentPattern {
   "Internal integer ID"
   id: Int!
-  
-  "Route for this segment pattern"
+
+  "Route this segment pattern belongs to"
   route: Route!
-  
-  "Stop pattern for this segment pattern"
+
+  "Stop pattern ID this segment belongs to; scoped to the feed version"
   stop_pattern_id: Int!
-  "Direction ID of the trip"
+  "GTFS direction_id (0 or 1) of trips using this pattern"
   direction_id: Int!
-  "Sequence order of this segment within the pattern"
+  "Position of this segment within the full path of the pattern (0-indexed)"
   sequence_idx: Int!
-  "Shape ID for this segment pattern"
+  "Internal integer ID of the source shape"
   shape_id: Int!
-  "OSM Way ID, if any, associated with this segment pattern"
+  "OSM Way ID, if the segment was matched to an OpenStreetMap way"
   way_id: Int
-  "Shape associated with this segment pattern"
+  "Shape this segment was derived from"
   shape: Shape!
-  
-  "Segment geometry for this pattern"
+
+  "Normalized segment associated with this pattern"
   segment: Segment!
 }
 
 """
-Normalized route segments.
+A normalized, reusable piece of route geometry, optionally aligned with an OpenStreetMap way. Multiple route patterns may reference the same Segment.
 """
 type Segment {
   "Internal integer ID"
   id: Int!
-  "OSM Way ID, if any, associated with this segment"
+  "OSM Way ID, if the segment was matched to an OpenStreetMap way (0 if unmatched)"
   way_id: Int!
-  "Geometry for this segment"
+  "Path geometry for this segment as a LineString"
   geometry: LineString!
-  
-  "Routes and stop patterns associated with this segment"
+
+  "Pattern associations for this segment, each linking it to a route and stop pattern"
   segment_patterns: [SegmentPattern!]
 }
 
 """
-MTC GTFS+ Extension: `route_attributes.txt`.
+Extended route metadata from the [MTC GTFS+ extension](https://github.com/MobilityData/gtfs-plus-spec) `route_attributes.txt` file. Values are integer codes defined by the extension; consult that spec for the meaning of each code.
 """
 type RouteAttribute {
-  "Route category"
+  "Route category code (e.g. service tier such as local, express, rapid)"
   category: Int
-  
-  "Route subcategory"
+
+  "Route subcategory code (further subdivision within `category`)"
   subcategory: Int
-  
-  "Route running way category"
+
+  "Running-way category code (e.g. dedicated lane, mixed traffic, grade-separated)"
   running_way: Int
 }
 
