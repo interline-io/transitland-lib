@@ -187,6 +187,11 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
 	cfg := model.ForContext(ctx)
 
+	if cfg.Checker == nil {
+		log.For(ctx).Debug().Str("feed_id", feedId).Msg("fetchCheckFeed: no Checker configured")
+		return nil, authz.ErrUnauthorized
+	}
+
 	// Both not-found and not-authorized return ErrUnauthorized — distinguishing
 	// them would let unauthorized callers probe feed existence.
 	feeds, err := cfg.Finder.FindFeeds(ctx, nil, nil, nil, &model.FeedFilter{OnestopID: &feedId})
@@ -199,10 +204,6 @@ func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
 	}
 	feed := feeds[0]
 
-	if cfg.Checker == nil {
-		log.For(ctx).Debug().Str("feed_id", feedId).Msg("fetchCheckFeed: no Checker configured")
-		return nil, authz.ErrUnauthorized
-	}
 	ok, err := cfg.Checker.Check(ctx, authz.ObjectRef{Type: authz.FeedType, ID: int64(feed.ID)}, authz.CanCreateFeedVersion)
 	if err != nil {
 		return nil, err
