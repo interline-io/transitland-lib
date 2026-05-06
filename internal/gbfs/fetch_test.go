@@ -15,6 +15,7 @@ func TestGbfsFetch(t *testing.T) {
 	defer ts.Close()
 	opts := Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
+	opts.AllowHTTPFetchUnfiltered = true
 	feeds, _, err := Fetch(context.Background(), nil, opts)
 	if err != nil {
 		t.Fatal(err)

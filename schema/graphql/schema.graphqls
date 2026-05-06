@@ -646,6 +646,10 @@ type Stop {
   alerts(active: Boolean, limit: Int): [Alert!]
   "Matching feature ids from polygon search"
   within_features: Strings
+  "Time this stop record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this stop record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
 """Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaysstxt). Pathways are a graph representation of a subway or train station, with nodes (entrances, platforms, etc) and edges (the pathways). See https://gtfs.org/reference/static/#pathwaystxt"""
@@ -676,6 +680,10 @@ type Pathway {
   from_stop: Stop!
   "Pathway ends at this stop"
   to_stop: Stop!
+  "Time this pathway record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this pathway record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
 """Record from a static GTFS [levels.txt](https://gtfs.org/reference/static/#levelstxt). Levels describes different levels of a station; used in conjunction with pathways."""
@@ -692,6 +700,10 @@ type Level {
   geometry: MultiPolygon!
   "Stops associated with this level"
   stops: [Stop!]
+  "Time this level record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this level record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
 """Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file optionally enriched with by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages."""

@@ -4,7 +4,7 @@ import "github.com/interline-io/transitland-lib/tt"
 
 // Agency agency.txt
 type Agency struct {
-	AgencyID       tt.String
+	AgencyID       tt.String   `standardized_sort:"1"`
 	AgencyName     tt.String   `csv:",required"`
 	AgencyURL      tt.Url      `csv:",required"`
 	AgencyTimezone tt.Timezone `csv:",required"`

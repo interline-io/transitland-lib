@@ -42,7 +42,7 @@ func (t *testWorker) Run(ctx context.Context) error {
 func TestGbfsFetch(t *testing.T) {
 	ts := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer ts.Close()
-	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
 		if err := actions.GbfsFetch(ctx, "test-gbfs", ts.URL+"/gbfs.json"); err != nil {
 			t.Fatal(err)
@@ -164,8 +164,7 @@ func TestStaticFetchWorker(t *testing.T) {
 
 			// Setup job
 			feedUrl := ts.URL + "/" + tc.serveFile
-			testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
-				cfg.Checker = nil // disable checker for this test
+			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 				ctx := model.WithConfig(context.Background(), cfg)
 				// Run job
 				if result, err := actions.StaticFetch(ctx, tc.feedId, nil, feedUrl); err != nil && !tc.expectError {
@@ -242,9 +241,8 @@ func TestValidateUpload(t *testing.T) {
 			ts := testutil.NewTestServer(testdata.Path())
 			defer ts.Close()
 
-			// Setup job
-			testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
-				cfg.Checker = nil // disable checker for this test
+			// AllowAll for setup-consistency; ValidateUpload doesn't consult Checker.
+			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 				ctx := model.WithConfig(context.Background(), cfg)
 				// Run job
 				feedUrl := ts.URL + "/" + tc.serveFile

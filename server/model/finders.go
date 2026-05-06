@@ -170,9 +170,7 @@ type GbfsFinder interface {
 	FindDocks(context.Context, *int, *GbfsDockRequest) ([]*GbfsStationInformation, error)
 }
 
-type Checker interface {
-	authz.CheckerServer
-}
+type Checker = authz.Checker
 
 type Actions interface {
 	StaticFetch(context.Context, string, io.Reader, string) (*FeedVersionFetchResult, error)

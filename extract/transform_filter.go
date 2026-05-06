@@ -46,6 +46,7 @@ func (tx *TransformFilter) AddValuesFromFile(filename string) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	tlcsv.ReadRows(f, func(row tlcsv.Row) {
 		efn, _ := row.Get("filename")
 		eid, _ := row.Get("entity_id")

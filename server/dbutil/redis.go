@@ -40,5 +40,5 @@ func getRedisOpts(v string) (*redis.Options, error) {
 			return nil, err
 		}
 	}
-	return &redis.Options{Addr: addr, DB: dbNo}, nil
+	return &redis.Options{Addr: addr, DB: dbNo, PoolSize: 50, MinIdleConns: 5}, nil
 }

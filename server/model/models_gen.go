@@ -358,10 +358,13 @@ type CensusValue struct {
 }
 
 type DirectionRequest struct {
-	To       *WaypointInput `json:"to"`
-	From     *WaypointInput `json:"from"`
-	Mode     StepMode       `json:"mode"`
-	DepartAt *time.Time     `json:"depart_at,omitempty"`
+	To   *WaypointInput `json:"to"`
+	From *WaypointInput `json:"from"`
+	Mode StepMode       `json:"mode"`
+	// Departure time; treated as arrival time when arrive_by is true. Defaults to now.
+	DepartAt *time.Time `json:"depart_at,omitempty"`
+	// If true, treat depart_at as the desired arrival time rather than departure time. Support depends on the configured routing provider.
+	ArriveBy *bool `json:"arrive_by,omitempty"`
 }
 
 type Directions struct {
@@ -556,6 +559,26 @@ type GbfsDockRequest struct {
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// A group that organizes feeds within a tenant
+type Group struct {
+	// Internal integer ID
+	ID int `json:"id"`
+	// Group name
+	Name string `json:"name"`
+	// Parent tenant
+	Tenant *Tenant `json:"tenant,omitempty"`
+	// Feeds assigned to this group
+	Feeds []*Feed `json:"feeds"`
+	// Authorization permissions for this group
+	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Input for saving a group
+type GroupInput struct {
+	// Group name
+	Name string `json:"name"`
+}
+
 type Itinerary struct {
 	Duration  *Duration `json:"duration"`
 	Distance  *Distance `json:"distance"`
@@ -741,6 +764,50 @@ type PathwaySetInput struct {
 	FromStop *StopSetInput `json:"from_stop,omitempty"`
 	// Set pathway destination to this stop
 	ToStop *StopSetInput `json:"to_stop,omitempty"`
+}
+
+// Input for adding or removing a permission
+type PermissionInput struct {
+	// Subject type (e.g. user, tenant, group)
+	SubjectType string `json:"subject_type"`
+	// Subject identifier
+	SubjectID string `json:"subject_id"`
+	// Relationship to grant (e.g. viewer, editor, manager, admin, member)
+	Relation string `json:"relation"`
+}
+
+// Reference to a related entity in the authorization hierarchy
+type PermissionRef struct {
+	// Entity type (e.g. tenant, group, feed, feed_version)
+	Type string `json:"type"`
+	// Entity ID
+	ID int `json:"id"`
+	// Display name
+	Name string `json:"name"`
+}
+
+// A user or group that has been granted access to an entity
+type PermissionSubject struct {
+	// Type of subject (e.g. user, tenant, group)
+	Type string `json:"type"`
+	// Subject identifier
+	ID string `json:"id"`
+	// Display name
+	Name string `json:"name"`
+	// Relationship type (e.g. admin, member, viewer, editor, manager)
+	Relation string `json:"relation"`
+}
+
+// Authorization permissions for an entity
+type Permissions struct {
+	// Actions the current user can perform on this entity
+	Actions []string `json:"actions"`
+	// Users and groups with direct access to this entity
+	Subjects []*PermissionSubject `json:"subjects"`
+	// Parent entity in the authorization hierarchy
+	Parent *PermissionRef `json:"parent,omitempty"`
+	// Child entities in the authorization hierarchy
+	Children []*PermissionRef `json:"children"`
 }
 
 // Place name and associated operators
@@ -1036,6 +1103,14 @@ type ServiceCoversFilter struct {
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 }
 
+// Input for setting an entity's parent
+type SetParentInput struct {
+	// Parent entity type
+	ParentType string `json:"parent_type"`
+	// Parent entity ID
+	ParentID int `json:"parent_id"`
+}
+
 type Step struct {
 	Duration       *Duration `json:"duration"`
 	Distance       *Distance `json:"distance"`
@@ -1284,6 +1359,24 @@ type StopTimeFilter struct {
 	ExcludeLast *bool `json:"exclude_last,omitempty"`
 }
 
+// A tenant organization that owns groups and feeds
+type Tenant struct {
+	// Internal integer ID
+	ID int `json:"id"`
+	// Tenant name
+	Name string `json:"name"`
+	// Groups owned by this tenant
+	Groups []*Group `json:"groups"`
+	// Authorization permissions for this tenant
+	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Input for saving a tenant
+type TenantInput struct {
+	// Tenant name
+	Name string `json:"name"`
+}
+
 // Search options for trips
 type TripFilter struct {
 	// Search for trips scheduled on the specified GTFS calendar service date
@@ -1314,6 +1407,24 @@ type TripStopTimeFilter struct {
 	Start *tt.Seconds `json:"start,omitempty"`
 	// Search for stop times with arrival times before the specified time, in local time HH:MM:SS
 	End *tt.Seconds `json:"end,omitempty"`
+}
+
+// A user in the authorization system
+type User struct {
+	// User identifier
+	ID string `json:"id"`
+	// Display name
+	Name string `json:"name"`
+	// Email address
+	Email string `json:"email"`
+}
+
+// Search options for users
+type UserFilter struct {
+	// Search for a user by ID
+	ID *string `json:"id,omitempty"`
+	// Full text search
+	Q *string `json:"q,omitempty"`
 }
 
 // Source URL and JSON representation of GTFS-RT data used for validation

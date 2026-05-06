@@ -2749,6 +2749,21 @@
                         "description": "Tolerance value for shape simplification (in meters)",
                         "type": "number"
                       },
+                      "standardized_sort": {
+                        "description": "Sort CSV rows before zipping. 'asc' or 'desc'; omit for no sort (default preserves copier order, modulo parent-before-child reordering). Empty cells in numeric/date columns rank as the greatest value (NULLS LAST in asc, NULLS FIRST in desc).",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ],
+                        "type": "string"
+                      },
+                      "standardized_sort_columns": {
+                        "description": "Optional specific columns to sort by. If empty, defaults are used based on file type.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
                       "use_basic_route_types": {
                         "description": "Convert extended route types to basic GTFS route types",
                         "type": "boolean"
@@ -10791,6 +10806,20 @@
               {
                 "description": "served_by_route_types=1,2",
                 "url": "served_by_route_types=1,2"
+              }
+            ]
+          },
+          {
+            "description": "Filter by location_type: 0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area",
+            "in": "query",
+            "name": "location_type",
+            "schema": {
+              "type": "integer"
+            },
+            "x-example-requests": [
+              {
+                "description": "location_type=1",
+                "url": "location_type=1"
               }
             ]
           },
