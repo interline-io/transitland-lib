@@ -95,13 +95,13 @@ type Alert struct {
 	HeaderText []*RTTranslation `json:"header_text"`
 	// GTFS-RT Alert description text
 	DescriptionText []*RTTranslation `json:"description_text"`
-	// GTFS-RT Alert TTS header text
+	// Header text optimized for text-to-speech (TTS) systems
 	TtsHeaderText []*RTTranslation `json:"tts_header_text,omitempty"`
-	// GTFS-RT Alert TTS description text
+	// Description text optimized for text-to-speech (TTS) systems
 	TtsDescriptionText []*RTTranslation `json:"tts_description_text,omitempty"`
 	// GTFS-RT Alert URL for more information
 	URL []*RTTranslation `json:"url,omitempty"`
-	// GTFS-RT Alert severity level
+	// Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`
 	SeverityLevel *string `json:"severity_level,omitempty"`
 }
 
@@ -987,7 +987,7 @@ type PointRadius struct {
 type Query struct {
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-timerange
+// A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange
 type RTTimeRange struct {
 	// GTFS-RT TimeRange start time, in Unix epoch seconds
 	Start *int `json:"start,omitempty"`
@@ -995,7 +995,7 @@ type RTTimeRange struct {
 	End *int `json:"end,omitempty"`
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-translatedstring
+// A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring
 type RTTranslation struct {
 	// GTFS-RT TranslatedString translated text
 	Text string `json:"text"`
@@ -1003,23 +1003,23 @@ type RTTranslation struct {
 	Language *string `json:"language,omitempty"`
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor
+// Identification of a trip in a GTFS-RT message, used to match the trip back to the static GTFS schedule. See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor
 type RTTripDescriptor struct {
-	// GTFS-RT TripDescriptor trip ID
+	// GTFS `trip_id` identifying the trip
 	TripID *string `json:"trip_id,omitempty"`
-	// GTFS-RT TripDescriptor route ID
+	// GTFS `route_id` of the trip's route
 	RouteID *string `json:"route_id,omitempty"`
-	// GTFS-RT TripDescriptor trip direction
+	// GTFS direction_id (0 or 1)
 	DirectionID *int `json:"direction_id,omitempty"`
-	// GTFS-RT TripDescriptor trip start time, in local time HH:MM:SS
+	// Scheduled start time of the trip in local time `HH:MM:SS`
 	StartTime *tt.Seconds `json:"start_time,omitempty"`
-	// GTFS-RT TripDescriptor trip start time, in local date
+	// Service date on which this trip runs (local time)
 	StartDate *tt.Date `json:"start_date,omitempty"`
-	// GTFS-RT TripDescriptor schedule relationship. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1
+	// GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1
 	ScheduleRelationship *string `json:"schedule_relationship,omitempty"`
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor
+// Identification information for the vehicle running a trip. See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor
 type RTVehicleDescriptor struct {
 	// GTFS-RT VehicleDescriptor vehicle ID
 	ID *string `json:"id,omitempty"`
@@ -1444,7 +1444,7 @@ type StopSetInput struct {
 //
 // See https://gtfs.org/realtime/reference/#message-stoptimeevent.
 type StopTimeEvent struct {
-	// Local time for stop
+	// IANA timezone name for this stop, used to interpret the `*_local` fields
 	StopTimezone string `json:"stop_timezone"`
 	// Estimated time in UTC
 	EstimatedUtc *time.Time `json:"estimated_utc,omitempty"`
@@ -1466,13 +1466,13 @@ type StopTimeEvent struct {
 	ScheduledLocal *time.Time `json:"scheduled_local,omitempty"`
 	// Scheduled time local time HH:MM:SS
 	Scheduled *tt.Seconds `json:"scheduled,omitempty"`
-	// Estimated time in UTC, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Time in UTC sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)
 	TimeUtc *time.Time `json:"time_utc,omitempty"`
-	// Estimated time in Unix epoch seconds, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Time in Unix epoch seconds sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)
 	TimeUnix *int `json:"time_unix,omitempty"`
-	// Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)
 	Delay *int `json:"delay,omitempty"`
-	// Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is
 	Uncertainty *int `json:"uncertainty,omitempty"`
 }
 
@@ -1703,19 +1703,19 @@ type ValidationReportFilter struct {
 
 // [Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed.
 type VehiclePosition struct {
-	// GTFS-RT VehiclePosition vehicle. See https://gtfs.org/realtime/reference/#message-vehicledescriptor
+	// Vehicle descriptor from the GTFS-RT VehiclePosition
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`
-	// GTFS-RT VehiclePosition current vehicle position
+	// Current vehicle position
 	Position *tt.Point `json:"position,omitempty"`
-	// GTFS-RT VehiclePosition current stop sequence in trip
+	// Sequence index of the stop the vehicle is approaching or stopped at, within the trip
 	CurrentStopSequence *int `json:"current_stop_sequence,omitempty"`
-	// GTFS-RT VehiclePosition current stop in trip
+	// Stop the vehicle is approaching or stopped at, resolved from the GTFS-RT `stop_id` (despite the field name, this returns the resolved Stop entity)
 	StopID *Stop `json:"stop_id,omitempty"`
-	// GTFS-RT VehiclePosition current status string
+	// Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`
 	CurrentStatus *string `json:"current_status,omitempty"`
-	// GTFS-RT VehiclePosition timestamp
+	// Timestamp of this vehicle position update
 	Timestamp *time.Time `json:"timestamp,omitempty"`
-	// GTFS-RT VehiclePosition congestion level estimate
+	// Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`
 	CongestionLevel *string `json:"congestion_level,omitempty"`
 }
 

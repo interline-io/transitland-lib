@@ -2142,7 +2142,7 @@ If the Trip is ADDED and does not match a static schedule StopTime, the schedule
 See https://gtfs.org/realtime/reference/#message-stoptimeevent.
 """
 type StopTimeEvent {
-  "Local time for stop"
+  "IANA timezone name for this stop, used to interpret the `*_local` fields"
   stop_timezone: String!
   "Estimated time in UTC"
   estimated_utc: Time
@@ -2166,31 +2166,31 @@ type StopTimeEvent {
   scheduled_local: Time
   "Scheduled time local time HH:MM:SS"
   scheduled: Seconds
-  "Estimated time in UTC, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Time in UTC sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)"
   time_utc: Time
-  "Estimated time in Unix epoch seconds, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Time in Unix epoch seconds sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)"
   time_unix: Int
-  "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)"
   delay: Int
-  "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is"
   uncertainty: Int
 }
 
 """[Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed."""
 type VehiclePosition {
-  "GTFS-RT VehiclePosition vehicle. See https://gtfs.org/realtime/reference/#message-vehicledescriptor"
+  "Vehicle descriptor from the GTFS-RT VehiclePosition"
   vehicle: RTVehicleDescriptor
-  "GTFS-RT VehiclePosition current vehicle position"
+  "Current vehicle position"
   position: Point
-  "GTFS-RT VehiclePosition current stop sequence in trip"
+  "Sequence index of the stop the vehicle is approaching or stopped at, within the trip"
   current_stop_sequence: Int
-  "GTFS-RT VehiclePosition current stop in trip"
+  "Stop the vehicle is approaching or stopped at, resolved from the GTFS-RT `stop_id` (despite the field name, this returns the resolved Stop entity)"
   stop_id: Stop
-  "GTFS-RT VehiclePosition current status string"
+  "Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`"
   current_status: String
-  "GTFS-RT VehiclePosition timestamp"
+  "Timestamp of this vehicle position update"
   timestamp: Time
-  "GTFS-RT VehiclePosition congestion level estimate"
+  "Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`"
   congestion_level: String
 }
 
@@ -2208,17 +2208,17 @@ type Alert {
   header_text: [RTTranslation!]!
   "GTFS-RT Alert description text"
   description_text: [RTTranslation!]!
-  "GTFS-RT Alert TTS header text"
+  "Header text optimized for text-to-speech (TTS) systems"
   tts_header_text: [RTTranslation!]
-  "GTFS-RT Alert TTS description text"
+  "Description text optimized for text-to-speech (TTS) systems"
   tts_description_text: [RTTranslation!]
   "GTFS-RT Alert URL for more information"
   url: [RTTranslation!]
-  "GTFS-RT Alert severity level"
+  "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`"
   severity_level: String
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-timerange"""
+"""A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange"""
 type RTTimeRange {
   "GTFS-RT TimeRange start time, in Unix epoch seconds"
   start: Int
@@ -2226,7 +2226,7 @@ type RTTimeRange {
   end: Int
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor"""
+"""Identification information for the vehicle running a trip. See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor"""
 type RTVehicleDescriptor {
   "GTFS-RT VehicleDescriptor vehicle ID"
   id: String
@@ -2236,23 +2236,23 @@ type RTVehicleDescriptor {
   license_plate: String
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor"""
+"""Identification of a trip in a GTFS-RT message, used to match the trip back to the static GTFS schedule. See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor"""
 type RTTripDescriptor {
-  "GTFS-RT TripDescriptor trip ID"
+  "GTFS `trip_id` identifying the trip"
   trip_id: String
-  "GTFS-RT TripDescriptor route ID"
+  "GTFS `route_id` of the trip's route"
   route_id: String
-  "GTFS-RT TripDescriptor trip direction"
+  "GTFS direction_id (0 or 1)"
   direction_id: Int
-  "GTFS-RT TripDescriptor trip start time, in local time HH:MM:SS"
+  "Scheduled start time of the trip in local time `HH:MM:SS`"
   start_time: Seconds
-  "GTFS-RT TripDescriptor trip start time, in local date"
+  "Service date on which this trip runs (local time)"
   start_date: Date
-  "GTFS-RT TripDescriptor schedule relationship. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
+  "GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
   schedule_relationship: String
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""
+"""A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""
 type RTTranslation {
   "GTFS-RT TranslatedString translated text"
   text: String!

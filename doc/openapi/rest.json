@@ -672,14 +672,14 @@
                                   "x-order": 62
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 50
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -707,7 +707,7 @@
                                   "x-order": 80
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -1078,14 +1078,14 @@
                                         "x-order": 138
                                       },
                                       "severity_level": {
-                                        "description": "GTFS-RT Alert severity level",
+                                        "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                         "nullable": true,
                                         "title": "severity_level",
                                         "type": "string",
                                         "x-order": 126
                                       },
                                       "tts_description_text": {
-                                        "description": "GTFS-RT Alert TTS description text",
+                                        "description": "Description text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -1113,7 +1113,7 @@
                                         "x-order": 156
                                       },
                                       "tts_header_text": {
-                                        "description": "GTFS-RT Alert TTS header text",
+                                        "description": "Header text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -1503,14 +1503,14 @@
                                   "x-order": 62
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 50
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -1538,7 +1538,7 @@
                                   "x-order": 80
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -1909,14 +1909,14 @@
                                         "x-order": 138
                                       },
                                       "severity_level": {
-                                        "description": "GTFS-RT Alert severity level",
+                                        "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                         "nullable": true,
                                         "title": "severity_level",
                                         "type": "string",
                                         "x-order": 126
                                       },
                                       "tts_description_text": {
-                                        "description": "GTFS-RT Alert TTS description text",
+                                        "description": "Description text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -1944,7 +1944,7 @@
                                         "x-order": 156
                                       },
                                       "tts_header_text": {
-                                        "description": "GTFS-RT Alert TTS header text",
+                                        "description": "Header text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -4788,14 +4788,14 @@
                                         "x-order": 51
                                       },
                                       "severity_level": {
-                                        "description": "GTFS-RT Alert severity level",
+                                        "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                         "nullable": true,
                                         "title": "severity_level",
                                         "type": "string",
                                         "x-order": 39
                                       },
                                       "tts_description_text": {
-                                        "description": "GTFS-RT Alert TTS description text",
+                                        "description": "Description text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -4823,7 +4823,7 @@
                                         "x-order": 69
                                       },
                                       "tts_header_text": {
-                                        "description": "GTFS-RT Alert TTS header text",
+                                        "description": "Header text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -5291,14 +5291,14 @@
                                         "x-order": 51
                                       },
                                       "severity_level": {
-                                        "description": "GTFS-RT Alert severity level",
+                                        "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                         "nullable": true,
                                         "title": "severity_level",
                                         "type": "string",
                                         "x-order": 39
                                       },
                                       "tts_description_text": {
-                                        "description": "GTFS-RT Alert TTS description text",
+                                        "description": "Description text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -5326,7 +5326,7 @@
                                         "x-order": 69
                                       },
                                       "tts_header_text": {
-                                        "description": "GTFS-RT Alert TTS header text",
+                                        "description": "Header text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -5951,14 +5951,14 @@
                                       "x-order": 102
                                     },
                                     "severity_level": {
-                                      "description": "GTFS-RT Alert severity level",
+                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                       "nullable": true,
                                       "title": "severity_level",
                                       "type": "string",
                                       "x-order": 90
                                     },
                                     "tts_description_text": {
-                                      "description": "GTFS-RT Alert TTS description text",
+                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -5986,7 +5986,7 @@
                                       "x-order": 120
                                     },
                                     "tts_header_text": {
-                                      "description": "GTFS-RT Alert TTS header text",
+                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -6180,14 +6180,14 @@
                                   "x-order": 48
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 36
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -6215,7 +6215,7 @@
                                   "x-order": 66
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -6523,14 +6523,14 @@
                                             "x-order": 172
                                           },
                                           "severity_level": {
-                                            "description": "GTFS-RT Alert severity level",
+                                            "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                             "nullable": true,
                                             "title": "severity_level",
                                             "type": "string",
                                             "x-order": 160
                                           },
                                           "tts_description_text": {
-                                            "description": "GTFS-RT Alert TTS description text",
+                                            "description": "Description text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -6558,7 +6558,7 @@
                                             "x-order": 190
                                           },
                                           "tts_header_text": {
-                                            "description": "GTFS-RT Alert TTS header text",
+                                            "description": "Header text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -6921,14 +6921,14 @@
                                       "x-order": 102
                                     },
                                     "severity_level": {
-                                      "description": "GTFS-RT Alert severity level",
+                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                       "nullable": true,
                                       "title": "severity_level",
                                       "type": "string",
                                       "x-order": 90
                                     },
                                     "tts_description_text": {
-                                      "description": "GTFS-RT Alert TTS description text",
+                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -6956,7 +6956,7 @@
                                       "x-order": 120
                                     },
                                     "tts_header_text": {
-                                      "description": "GTFS-RT Alert TTS header text",
+                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -7150,14 +7150,14 @@
                                   "x-order": 48
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 36
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -7185,7 +7185,7 @@
                                   "x-order": 66
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -7493,14 +7493,14 @@
                                             "x-order": 172
                                           },
                                           "severity_level": {
-                                            "description": "GTFS-RT Alert severity level",
+                                            "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                             "nullable": true,
                                             "title": "severity_level",
                                             "type": "string",
                                             "x-order": 160
                                           },
                                           "tts_description_text": {
-                                            "description": "GTFS-RT Alert TTS description text",
+                                            "description": "Description text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -7528,7 +7528,7 @@
                                             "x-order": 190
                                           },
                                           "tts_header_text": {
-                                            "description": "GTFS-RT Alert TTS header text",
+                                            "description": "Header text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -7990,14 +7990,14 @@
                                   "x-order": 96
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 84
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -8025,7 +8025,7 @@
                                   "x-order": 114
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -8431,14 +8431,14 @@
                                           "x-order": 206
                                         },
                                         "severity_level": {
-                                          "description": "GTFS-RT Alert severity level",
+                                          "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                           "nullable": true,
                                           "title": "severity_level",
                                           "type": "string",
                                           "x-order": 194
                                         },
                                         "tts_description_text": {
-                                          "description": "GTFS-RT Alert TTS description text",
+                                          "description": "Description text optimized for text-to-speech (TTS) systems",
                                           "items": {
                                             "properties": {
                                               "language": {
@@ -8466,7 +8466,7 @@
                                           "x-order": 224
                                         },
                                         "tts_header_text": {
-                                          "description": "GTFS-RT Alert TTS header text",
+                                          "description": "Header text optimized for text-to-speech (TTS) systems",
                                           "items": {
                                             "properties": {
                                               "language": {
@@ -8660,14 +8660,14 @@
                                       "x-order": 152
                                     },
                                     "severity_level": {
-                                      "description": "GTFS-RT Alert severity level",
+                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                       "nullable": true,
                                       "title": "severity_level",
                                       "type": "string",
                                       "x-order": 140
                                     },
                                     "tts_description_text": {
-                                      "description": "GTFS-RT Alert TTS description text",
+                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -8695,7 +8695,7 @@
                                       "x-order": 170
                                     },
                                     "tts_header_text": {
-                                      "description": "GTFS-RT Alert TTS header text",
+                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -9009,14 +9009,14 @@
                                             "x-order": 279
                                           },
                                           "severity_level": {
-                                            "description": "GTFS-RT Alert severity level",
+                                            "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                             "nullable": true,
                                             "title": "severity_level",
                                             "type": "string",
                                             "x-order": 267
                                           },
                                           "tts_description_text": {
-                                            "description": "GTFS-RT Alert TTS description text",
+                                            "description": "Description text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -9044,7 +9044,7 @@
                                             "x-order": 297
                                           },
                                           "tts_header_text": {
-                                            "description": "GTFS-RT Alert TTS header text",
+                                            "description": "Header text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -9458,14 +9458,14 @@
                                   "x-order": 96
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 84
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -9493,7 +9493,7 @@
                                   "x-order": 114
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -9899,14 +9899,14 @@
                                           "x-order": 206
                                         },
                                         "severity_level": {
-                                          "description": "GTFS-RT Alert severity level",
+                                          "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                           "nullable": true,
                                           "title": "severity_level",
                                           "type": "string",
                                           "x-order": 194
                                         },
                                         "tts_description_text": {
-                                          "description": "GTFS-RT Alert TTS description text",
+                                          "description": "Description text optimized for text-to-speech (TTS) systems",
                                           "items": {
                                             "properties": {
                                               "language": {
@@ -9934,7 +9934,7 @@
                                           "x-order": 224
                                         },
                                         "tts_header_text": {
-                                          "description": "GTFS-RT Alert TTS header text",
+                                          "description": "Header text optimized for text-to-speech (TTS) systems",
                                           "items": {
                                             "properties": {
                                               "language": {
@@ -10128,14 +10128,14 @@
                                       "x-order": 152
                                     },
                                     "severity_level": {
-                                      "description": "GTFS-RT Alert severity level",
+                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                       "nullable": true,
                                       "title": "severity_level",
                                       "type": "string",
                                       "x-order": 140
                                     },
                                     "tts_description_text": {
-                                      "description": "GTFS-RT Alert TTS description text",
+                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -10163,7 +10163,7 @@
                                       "x-order": 170
                                     },
                                     "tts_header_text": {
-                                      "description": "GTFS-RT Alert TTS header text",
+                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -10477,14 +10477,14 @@
                                             "x-order": 279
                                           },
                                           "severity_level": {
-                                            "description": "GTFS-RT Alert severity level",
+                                            "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                             "nullable": true,
                                             "title": "severity_level",
                                             "type": "string",
                                             "x-order": 267
                                           },
                                           "tts_description_text": {
-                                            "description": "GTFS-RT Alert TTS description text",
+                                            "description": "Description text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -10512,7 +10512,7 @@
                                             "x-order": 297
                                           },
                                           "tts_header_text": {
-                                            "description": "GTFS-RT Alert TTS header text",
+                                            "description": "Header text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -11036,14 +11036,14 @@
                                   "x-order": 135
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 123
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -11071,7 +11071,7 @@
                                   "x-order": 153
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -11355,14 +11355,14 @@
                                       "x-order": 89
                                     },
                                     "severity_level": {
-                                      "description": "GTFS-RT Alert severity level",
+                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                       "nullable": true,
                                       "title": "severity_level",
                                       "type": "string",
                                       "x-order": 77
                                     },
                                     "tts_description_text": {
-                                      "description": "GTFS-RT Alert TTS description text",
+                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -11390,7 +11390,7 @@
                                       "x-order": 107
                                     },
                                     "tts_header_text": {
-                                      "description": "GTFS-RT Alert TTS header text",
+                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -11822,14 +11822,14 @@
                                   "x-order": 135
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 123
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -11857,7 +11857,7 @@
                                   "x-order": 153
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -12141,14 +12141,14 @@
                                       "x-order": 89
                                     },
                                     "severity_level": {
-                                      "description": "GTFS-RT Alert severity level",
+                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                       "nullable": true,
                                       "title": "severity_level",
                                       "type": "string",
                                       "x-order": 77
                                     },
                                     "tts_description_text": {
-                                      "description": "GTFS-RT Alert TTS description text",
+                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -12176,7 +12176,7 @@
                                       "x-order": 107
                                     },
                                     "tts_header_text": {
-                                      "description": "GTFS-RT Alert TTS header text",
+                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -12720,14 +12720,14 @@
                                   "x-order": 1170
                                 },
                                 "severity_level": {
-                                  "description": "GTFS-RT Alert severity level",
+                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                   "nullable": true,
                                   "title": "severity_level",
                                   "type": "string",
                                   "x-order": 1158
                                 },
                                 "tts_description_text": {
-                                  "description": "GTFS-RT Alert TTS description text",
+                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -12755,7 +12755,7 @@
                                   "x-order": 1188
                                 },
                                 "tts_header_text": {
-                                  "description": "GTFS-RT Alert TTS header text",
+                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                   "items": {
                                     "properties": {
                                       "language": {
@@ -12935,14 +12935,14 @@
                                         "x-order": 679
                                       },
                                       "severity_level": {
-                                        "description": "GTFS-RT Alert severity level",
+                                        "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                         "nullable": true,
                                         "title": "severity_level",
                                         "type": "string",
                                         "x-order": 667
                                       },
                                       "tts_description_text": {
-                                        "description": "GTFS-RT Alert TTS description text",
+                                        "description": "Description text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -12970,7 +12970,7 @@
                                         "x-order": 697
                                       },
                                       "tts_header_text": {
-                                        "description": "GTFS-RT Alert TTS header text",
+                                        "description": "Header text optimized for text-to-speech (TTS) systems",
                                         "items": {
                                           "properties": {
                                             "language": {
@@ -13044,7 +13044,7 @@
                                         "description": "Detailed arrival information, including GTFS-RT updates and estimates",
                                         "properties": {
                                           "delay": {
-                                            "description": "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                            "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
                                             "nullable": true,
                                             "title": "delay",
                                             "type": "integer",
@@ -13112,7 +13112,7 @@
                                             "x-order": 403
                                           },
                                           "uncertainty": {
-                                            "description": "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                            "description": "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is",
                                             "nullable": true,
                                             "title": "uncertainty",
                                             "type": "integer",
@@ -13160,7 +13160,7 @@
                                         "description": "Detailed departure information, including GTFS-RT updates and estimates",
                                         "properties": {
                                           "delay": {
-                                            "description": "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                            "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
                                             "nullable": true,
                                             "title": "delay",
                                             "type": "integer",
@@ -13228,7 +13228,7 @@
                                             "x-order": 423
                                           },
                                           "uncertainty": {
-                                            "description": "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                            "description": "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is",
                                             "nullable": true,
                                             "title": "uncertainty",
                                             "type": "integer",
@@ -13439,14 +13439,14 @@
                                                   "x-order": 632
                                                 },
                                                 "severity_level": {
-                                                  "description": "GTFS-RT Alert severity level",
+                                                  "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                   "nullable": true,
                                                   "title": "severity_level",
                                                   "type": "string",
                                                   "x-order": 620
                                                 },
                                                 "tts_description_text": {
-                                                  "description": "GTFS-RT Alert TTS description text",
+                                                  "description": "Description text optimized for text-to-speech (TTS) systems",
                                                   "items": {
                                                     "properties": {
                                                       "language": {
@@ -13474,7 +13474,7 @@
                                                   "x-order": 650
                                                 },
                                                 "tts_header_text": {
-                                                  "description": "GTFS-RT Alert TTS header text",
+                                                  "description": "Header text optimized for text-to-speech (TTS) systems",
                                                   "items": {
                                                     "properties": {
                                                       "language": {
@@ -13744,14 +13744,14 @@
                                                           "x-order": 563
                                                         },
                                                         "severity_level": {
-                                                          "description": "GTFS-RT Alert severity level",
+                                                          "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                           "nullable": true,
                                                           "title": "severity_level",
                                                           "type": "string",
                                                           "x-order": 551
                                                         },
                                                         "tts_description_text": {
-                                                          "description": "GTFS-RT Alert TTS description text",
+                                                          "description": "Description text optimized for text-to-speech (TTS) systems",
                                                           "items": {
                                                             "properties": {
                                                               "language": {
@@ -13779,7 +13779,7 @@
                                                           "x-order": 581
                                                         },
                                                         "tts_header_text": {
-                                                          "description": "GTFS-RT Alert TTS header text",
+                                                          "description": "Header text optimized for text-to-speech (TTS) systems",
                                                           "items": {
                                                             "properties": {
                                                               "language": {
@@ -13973,14 +13973,14 @@
                                                       "x-order": 508
                                                     },
                                                     "severity_level": {
-                                                      "description": "GTFS-RT Alert severity level",
+                                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                       "nullable": true,
                                                       "title": "severity_level",
                                                       "type": "string",
                                                       "x-order": 496
                                                     },
                                                     "tts_description_text": {
-                                                      "description": "GTFS-RT Alert TTS description text",
+                                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                                       "items": {
                                                         "properties": {
                                                           "language": {
@@ -14008,7 +14008,7 @@
                                                       "x-order": 526
                                                     },
                                                     "tts_header_text": {
-                                                      "description": "GTFS-RT Alert TTS header text",
+                                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                                       "items": {
                                                         "properties": {
                                                           "language": {
@@ -14388,7 +14388,7 @@
                                   "description": "Detailed arrival information, including GTFS-RT updates and estimates",
                                   "properties": {
                                     "delay": {
-                                      "description": "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                      "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
                                       "nullable": true,
                                       "title": "delay",
                                       "type": "integer",
@@ -14456,7 +14456,7 @@
                                       "x-order": 80
                                     },
                                     "uncertainty": {
-                                      "description": "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                      "description": "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is",
                                       "nullable": true,
                                       "title": "uncertainty",
                                       "type": "integer",
@@ -14504,7 +14504,7 @@
                                   "description": "Detailed departure information, including GTFS-RT updates and estimates",
                                   "properties": {
                                     "delay": {
-                                      "description": "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                      "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
                                       "nullable": true,
                                       "title": "delay",
                                       "type": "integer",
@@ -14572,7 +14572,7 @@
                                       "x-order": 100
                                     },
                                     "uncertainty": {
-                                      "description": "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                      "description": "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is",
                                       "nullable": true,
                                       "title": "uncertainty",
                                       "type": "integer",
@@ -14783,14 +14783,14 @@
                                             "x-order": 309
                                           },
                                           "severity_level": {
-                                            "description": "GTFS-RT Alert severity level",
+                                            "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                             "nullable": true,
                                             "title": "severity_level",
                                             "type": "string",
                                             "x-order": 297
                                           },
                                           "tts_description_text": {
-                                            "description": "GTFS-RT Alert TTS description text",
+                                            "description": "Description text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -14818,7 +14818,7 @@
                                             "x-order": 327
                                           },
                                           "tts_header_text": {
-                                            "description": "GTFS-RT Alert TTS header text",
+                                            "description": "Header text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -15088,14 +15088,14 @@
                                                     "x-order": 240
                                                   },
                                                   "severity_level": {
-                                                    "description": "GTFS-RT Alert severity level",
+                                                    "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                     "nullable": true,
                                                     "title": "severity_level",
                                                     "type": "string",
                                                     "x-order": 228
                                                   },
                                                   "tts_description_text": {
-                                                    "description": "GTFS-RT Alert TTS description text",
+                                                    "description": "Description text optimized for text-to-speech (TTS) systems",
                                                     "items": {
                                                       "properties": {
                                                         "language": {
@@ -15123,7 +15123,7 @@
                                                     "x-order": 258
                                                   },
                                                   "tts_header_text": {
-                                                    "description": "GTFS-RT Alert TTS header text",
+                                                    "description": "Header text optimized for text-to-speech (TTS) systems",
                                                     "items": {
                                                       "properties": {
                                                         "language": {
@@ -15317,14 +15317,14 @@
                                                 "x-order": 185
                                               },
                                               "severity_level": {
-                                                "description": "GTFS-RT Alert severity level",
+                                                "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                 "nullable": true,
                                                 "title": "severity_level",
                                                 "type": "string",
                                                 "x-order": 173
                                               },
                                               "tts_description_text": {
-                                                "description": "GTFS-RT Alert TTS description text",
+                                                "description": "Description text optimized for text-to-speech (TTS) systems",
                                                 "items": {
                                                   "properties": {
                                                     "language": {
@@ -15352,7 +15352,7 @@
                                                 "x-order": 203
                                               },
                                               "tts_header_text": {
-                                                "description": "GTFS-RT Alert TTS header text",
+                                                "description": "Header text optimized for text-to-speech (TTS) systems",
                                                 "items": {
                                                   "properties": {
                                                     "language": {
@@ -15805,14 +15805,14 @@
                                       "x-order": 1124
                                     },
                                     "severity_level": {
-                                      "description": "GTFS-RT Alert severity level",
+                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                       "nullable": true,
                                       "title": "severity_level",
                                       "type": "string",
                                       "x-order": 1112
                                     },
                                     "tts_description_text": {
-                                      "description": "GTFS-RT Alert TTS description text",
+                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -15840,7 +15840,7 @@
                                       "x-order": 1142
                                     },
                                     "tts_header_text": {
-                                      "description": "GTFS-RT Alert TTS header text",
+                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                       "items": {
                                         "properties": {
                                           "language": {
@@ -16020,14 +16020,14 @@
                                             "x-order": 1078
                                           },
                                           "severity_level": {
-                                            "description": "GTFS-RT Alert severity level",
+                                            "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                             "nullable": true,
                                             "title": "severity_level",
                                             "type": "string",
                                             "x-order": 1066
                                           },
                                           "tts_description_text": {
-                                            "description": "GTFS-RT Alert TTS description text",
+                                            "description": "Description text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -16055,7 +16055,7 @@
                                             "x-order": 1096
                                           },
                                           "tts_header_text": {
-                                            "description": "GTFS-RT Alert TTS header text",
+                                            "description": "Header text optimized for text-to-speech (TTS) systems",
                                             "items": {
                                               "properties": {
                                                 "language": {
@@ -16129,7 +16129,7 @@
                                             "description": "Detailed arrival information, including GTFS-RT updates and estimates",
                                             "properties": {
                                               "delay": {
-                                                "description": "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                                "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
                                                 "nullable": true,
                                                 "title": "delay",
                                                 "type": "integer",
@@ -16197,7 +16197,7 @@
                                                 "x-order": 802
                                               },
                                               "uncertainty": {
-                                                "description": "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                                "description": "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is",
                                                 "nullable": true,
                                                 "title": "uncertainty",
                                                 "type": "integer",
@@ -16245,7 +16245,7 @@
                                             "description": "Detailed departure information, including GTFS-RT updates and estimates",
                                             "properties": {
                                               "delay": {
-                                                "description": "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                                "description": "Schedule delay in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is (compare with `estimated_delay` for the inferred-fallback variant)",
                                                 "nullable": true,
                                                 "title": "delay",
                                                 "type": "integer",
@@ -16313,7 +16313,7 @@
                                                 "x-order": 822
                                               },
                                               "uncertainty": {
-                                                "description": "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent",
+                                                "description": "Estimation uncertainty in seconds, sourced directly from a matching GTFS-RT StopTimeUpdate and passed through as-is",
                                                 "nullable": true,
                                                 "title": "uncertainty",
                                                 "type": "integer",
@@ -16524,14 +16524,14 @@
                                                       "x-order": 1031
                                                     },
                                                     "severity_level": {
-                                                      "description": "GTFS-RT Alert severity level",
+                                                      "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                       "nullable": true,
                                                       "title": "severity_level",
                                                       "type": "string",
                                                       "x-order": 1019
                                                     },
                                                     "tts_description_text": {
-                                                      "description": "GTFS-RT Alert TTS description text",
+                                                      "description": "Description text optimized for text-to-speech (TTS) systems",
                                                       "items": {
                                                         "properties": {
                                                           "language": {
@@ -16559,7 +16559,7 @@
                                                       "x-order": 1049
                                                     },
                                                     "tts_header_text": {
-                                                      "description": "GTFS-RT Alert TTS header text",
+                                                      "description": "Header text optimized for text-to-speech (TTS) systems",
                                                       "items": {
                                                         "properties": {
                                                           "language": {
@@ -16829,14 +16829,14 @@
                                                               "x-order": 962
                                                             },
                                                             "severity_level": {
-                                                              "description": "GTFS-RT Alert severity level",
+                                                              "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                               "nullable": true,
                                                               "title": "severity_level",
                                                               "type": "string",
                                                               "x-order": 950
                                                             },
                                                             "tts_description_text": {
-                                                              "description": "GTFS-RT Alert TTS description text",
+                                                              "description": "Description text optimized for text-to-speech (TTS) systems",
                                                               "items": {
                                                                 "properties": {
                                                                   "language": {
@@ -16864,7 +16864,7 @@
                                                               "x-order": 980
                                                             },
                                                             "tts_header_text": {
-                                                              "description": "GTFS-RT Alert TTS header text",
+                                                              "description": "Header text optimized for text-to-speech (TTS) systems",
                                                               "items": {
                                                                 "properties": {
                                                                   "language": {
@@ -17058,14 +17058,14 @@
                                                           "x-order": 907
                                                         },
                                                         "severity_level": {
-                                                          "description": "GTFS-RT Alert severity level",
+                                                          "description": "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`",
                                                           "nullable": true,
                                                           "title": "severity_level",
                                                           "type": "string",
                                                           "x-order": 895
                                                         },
                                                         "tts_description_text": {
-                                                          "description": "GTFS-RT Alert TTS description text",
+                                                          "description": "Description text optimized for text-to-speech (TTS) systems",
                                                           "items": {
                                                             "properties": {
                                                               "language": {
@@ -17093,7 +17093,7 @@
                                                           "x-order": 925
                                                         },
                                                         "tts_header_text": {
-                                                          "description": "GTFS-RT Alert TTS header text",
+                                                          "description": "Header text optimized for text-to-speech (TTS) systems",
                                                           "items": {
                                                             "properties": {
                                                               "language": {
