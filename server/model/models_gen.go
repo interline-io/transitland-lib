@@ -14,7 +14,7 @@ import (
 
 // Search options for agencies
 type AgencyFilter struct {
-	// Search for agencies with this operator Onestop ID
+	// Search for agencies whose resolved Onestop ID (operator's, when associated, otherwise the agency's) matches
 	OnestopID *string `json:"onestop_id,omitempty"`
 	// Search for agencies with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
@@ -22,7 +22,7 @@ type AgencyFilter struct {
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for agencies with this GTFS agency_id
 	AgencyID *string `json:"agency_id,omitempty"`
-	// Search for records with this GTFS agency_name
+	// Search for agencies with this GTFS agency_name
 	AgencyName *string `json:"agency_name,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
@@ -38,13 +38,13 @@ type AgencyFilter struct {
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Search for agencies with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Location
+	// Geographic search options
 	Location *AgencyLocationFilter `json:"location,omitempty"`
-	// Backwards compat: Search for agencies within this bounding box
+	// Search for agencies within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Backwards compat: Search for agencies within this geographic polygon
+	// Search for agencies within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
-	// Backwards compat: Search for agencies within specified radius of a point
+	// Search for agencies within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
@@ -493,13 +493,13 @@ type FeedFetchFilter struct {
 
 // Search options for feeds
 type FeedFilter struct {
-	// Search for feed with a specific Onestop ID
+	// Search for a feed with this specific Onestop ID
 	OnestopID *string `json:"onestop_id,omitempty"`
-	// Search for feeds of certain data types
+	// Restrict to feeds matching any of the given data types
 	Spec []FeedSpecTypes `json:"spec,omitempty"`
-	// Search for feeds with or without a fetch error
+	// Filter by latest-fetch outcome: true returns feeds whose most recent fetch failed, false returns those whose most recent fetch succeeded
 	FetchError *bool `json:"fetch_error,omitempty"`
-	// Search for feeds by their import status
+	// Filter by the import status of the feed's active feed version
 	ImportStatus *ImportStatus `json:"import_status,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
@@ -519,11 +519,11 @@ type FeedFilter struct {
 
 // Search options for searching by source URL
 type FeedSourceURL struct {
-	// URL
+	// URL to match against feed source URLs
 	URL *string `json:"url,omitempty"`
-	// URL type
+	// Restrict the URL match to a specific URL type (e.g. `static_current`)
 	Type *FeedSourceURLTypes `json:"type,omitempty"`
-	// Case sensitive search (true) or case insensitive search (false or null)
+	// If true, match the URL case-sensitively; default is case-insensitive
 	CaseSensitive *bool `json:"case_sensitive,omitempty"`
 }
 
@@ -1058,7 +1058,7 @@ type RouteFilter struct {
 	RouteType *int `json:"route_type,omitempty"`
 	// Search for routes with any of these GTFS route_types
 	RouteTypes []int `json:"route_types,omitempty"`
-	// Search for routes with 1 or more trips (true) or 0 or more trips (false or null)
+	// If true, restrict to routes that have at least one trip in the active feed version. If false or null, returns all routes regardless of trip count
 	Serviced *bool `json:"serviced,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
@@ -1066,15 +1066,15 @@ type RouteFilter struct {
 	OperatorOnestopID *string `json:"operator_onestop_id,omitempty"`
 	// Search for routes with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Search for routes with these agency integer IDs. Deprecated
+	// Search for routes operated by these agencies (database integer IDs)
 	AgencyIds []int `json:"agency_ids,omitempty"`
-	// Location
+	// Geographic search options
 	Location *RouteLocationFilter `json:"location,omitempty"`
-	// Backwards compat: Search for routes within this bounding box
+	// Search for routes within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Backwards compat: Search for routes within this geographic polygon
+	// Search for routes within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
-	// Backwards compat: Search for routes within specified radius of a point
+	// Search for routes within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
@@ -1289,7 +1289,7 @@ type StopFilter struct {
 	OnestopID *string `json:"onestop_id,omitempty"`
 	// Search for stops with these Onestop IDs
 	OnestopIds []string `json:"onestop_ids,omitempty"`
-	// Include previous used Onestop IDs that match the same (feed,stop_id)
+	// Include previously used Onestop IDs that match the same (feed, stop_id)
 	AllowPreviousOnestopIds *bool `json:"allow_previous_onestop_ids,omitempty"`
 	// Search for stops with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
@@ -1301,27 +1301,27 @@ type StopFilter struct {
 	StopCode *string `json:"stop_code,omitempty"`
 	// Search for stops with this GTFS location_type
 	LocationType *int `json:"location_type,omitempty"`
-	// Search for stops with 1 or more trips (true) or 0 or more trips (false or null)
+	// If true, restrict to stops served by at least one trip in the active feed version. If false or null, returns all stops regardless of service
 	Serviced *bool `json:"serviced,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
 	// Search for stops with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Search for stops with service by routes or operators with these Onestop IDs
+	// Search for stops served by routes or operators with any of these Onestop IDs
 	ServedByOnestopIds []string `json:"served_by_onestop_ids,omitempty"`
-	// Search for stops with service by routes with the specified GTFS route_type
+	// Search for stops served by routes with the specified GTFS route_type
 	ServedByRouteType *int `json:"served_by_route_type,omitempty"`
-	// Search for stops with service by routes with any of the specified GTFS route_types
+	// Search for stops served by routes with any of the specified GTFS route_types
 	ServedByRouteTypes []int `json:"served_by_route_types,omitempty"`
-	// Search for stops with these agency integer IDs. Deprecated
+	// Search for stops served by these agencies (database integer IDs)
 	AgencyIds []int `json:"agency_ids,omitempty"`
-	// Search geographically
+	// Geographic search options
 	Location *StopLocationFilter `json:"location,omitempty"`
-	// Backwards compat: Search for stops within this bounding box
+	// Search for stops within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Backwards compat: Search for stops within this geographic polygon
+	// Search for stops within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
-	// Backwards compat: Search for stops within specified radius of a point
+	// Search for stops within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
@@ -1331,11 +1331,11 @@ type StopLocationFilter struct {
 	Bbox *BoundingBox `json:"bbox,omitempty"`
 	// Search for stops within this geographic polygon
 	Polygon *tt.Polygon `json:"polygon,omitempty"`
-	// Search within these enclosing features, and return the matching feature ids
+	// Search for stops contained in any of the given features; matching feature `id`s are echoed back via `Stop.within_features`
 	Features []*Feature `json:"features,omitempty"`
 	// Search for stops within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
-	// Search within these geography ids
+	// Search for stops within any of the given `CensusGeography` integer IDs
 	GeographyIds []*int `json:"geography_ids,omitempty"`
 	// Focus search on this point; results will be sorted by distance
 	Focus *FocusPoint `json:"focus,omitempty"`
@@ -1980,13 +1980,13 @@ func (e FeedSourceURLTypes) MarshalJSON() ([]byte, error) {
 type FeedSpecTypes string
 
 const (
-	// Static data
+	// GTFS Schedule (static)
 	FeedSpecTypesGtfs FeedSpecTypes = "GTFS"
-	// GTFS-RT data
+	// GTFS Realtime
 	FeedSpecTypesGtfsRt FeedSpecTypes = "GTFS_RT"
-	// GBFS data
+	// General Bikeshare Feed Specification
 	FeedSpecTypesGbfs FeedSpecTypes = "GBFS"
-	// MDS data
+	// Mobility Data Specification
 	FeedSpecTypesMds FeedSpecTypes = "MDS"
 )
 

@@ -12256,13 +12256,13 @@ enum LicenseValue {
 
 """Search options for feeds"""
 input FeedFilter {
-  "Search for feed with a specific Onestop ID"
+  "Search for a feed with this specific Onestop ID"
   onestop_id: String
-  "Search for feeds of certain data types"
+  "Restrict to feeds matching any of the given data types"
   spec: [FeedSpecTypes!]
-  "Search for feeds with or without a fetch error"
+  "Filter by latest-fetch outcome: true returns feeds whose most recent fetch failed, false returns those whose most recent fetch succeeded"
   fetch_error: Boolean
-  "Search for feeds by their import status"
+  "Filter by the import status of the feed's active feed version"
   import_status: ImportStatus
   "Full text search"
   search: String
@@ -12288,11 +12288,11 @@ input FeedFetchFilter {
 
 """Search options for searching by source URL"""
 input FeedSourceUrl {
-  "URL"
+  "URL to match against feed source URLs"
   url: String
-  "URL type"
+  "Restrict the URL match to a specific URL type (e.g. ` + "`" + `static_current` + "`" + `)"
   type: FeedSourceUrlTypes
-  "Case sensitive search (true) or case insensitive search (false or null)"
+  "If true, match the URL case-sensitively; default is case-insensitive"
   case_sensitive: Boolean
 }
 
@@ -12320,19 +12320,19 @@ enum FeedSourceUrlTypes {
 
 """Type of data contained in a source feed"""
 enum FeedSpecTypes {
-  "Static data"
+  "GTFS Schedule (static)"
   GTFS
-  "GTFS-RT data"
+  "GTFS Realtime"
   GTFS_RT
-  "GBFS data"
+  "General Bikeshare Feed Specification"
   GBFS
-  "MDS data"
+  "Mobility Data Specification"
   MDS
 }
 
 """Search options for agencies"""
 input AgencyFilter {
-  "Search for agencies with this operator Onestop ID"
+  "Search for agencies whose resolved Onestop ID (operator's, when associated, otherwise the agency's) matches"
   onestop_id: String
   "Search for agencies with this feed version SHA1 hash"
   feed_version_sha1: String
@@ -12340,7 +12340,7 @@ input AgencyFilter {
   feed_onestop_id: String
   "Search for agencies with this GTFS agency_id"
   agency_id: String
-  "Search for records with this GTFS agency_name"
+  "Search for agencies with this GTFS agency_name"
   agency_name: String
   "Full text search"
   search: String
@@ -12356,14 +12356,14 @@ input AgencyFilter {
   adm1_iso: String
   "Search for agencies with these license details"
   license: LicenseFilter
-  "Location"
+  "Geographic search options"
   location: AgencyLocationFilter
-  "Backwards compat: Search for agencies within this bounding box"
-  bbox: BoundingBox
-  "Backwards compat: Search for agencies within this geographic polygon"
-  within: Polygon
-  "Backwards compat: Search for agencies within specified radius of a point"
-  near: PointRadius
+  "Search for agencies within this bounding box"
+  bbox: BoundingBox @deprecated(reason: "Use ` + "`" + `location.bbox` + "`" + ` instead")
+  "Search for agencies within this geographic polygon"
+  within: Polygon @deprecated(reason: "Use ` + "`" + `location.polygon` + "`" + ` instead")
+  "Search for agencies within specified radius of a point"
+  near: PointRadius @deprecated(reason: "Use ` + "`" + `location.near` + "`" + ` instead")
 }
 
 """Geographic search options for agencies"""
@@ -12396,7 +12396,7 @@ input RouteFilter {
   route_type: Int
   "Search for routes with any of these GTFS route_types"
   route_types: [Int!]
-  "Search for routes with 1 or more trips (true) or 0 or more trips (false or null)"
+  "If true, restrict to routes that have at least one trip in the active feed version. If false or null, returns all routes regardless of trip count"
   serviced: Boolean
   "Full text search"
   search: String
@@ -12404,16 +12404,16 @@ input RouteFilter {
   operator_onestop_id: String
   "Search for routes with these license details"
   license: LicenseFilter
-  "Search for routes with these agency integer IDs. Deprecated"
-  agency_ids: [Int!]
-  "Location"
+  "Search for routes operated by these agencies (database integer IDs)"
+  agency_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer querying via ` + "`" + `Agency.routes` + "`" + ` or ` + "`" + `operator_onestop_id` + "`" + `")
+  "Geographic search options"
   location: RouteLocationFilter
-  "Backwards compat: Search for routes within this bounding box"
-  bbox: BoundingBox
-  "Backwards compat: Search for routes within this geographic polygon"
-  within: Polygon
-  "Backwards compat: Search for routes within specified radius of a point"
-  near: PointRadius
+  "Search for routes within this bounding box"
+  bbox: BoundingBox @deprecated(reason: "Use ` + "`" + `location.bbox` + "`" + ` instead")
+  "Search for routes within this geographic polygon"
+  within: Polygon @deprecated(reason: "Use ` + "`" + `location.polygon` + "`" + ` instead")
+  "Search for routes within specified radius of a point"
+  near: PointRadius @deprecated(reason: "Use ` + "`" + `location.near` + "`" + ` instead")
 
 }
 
@@ -12447,14 +12447,14 @@ input StopLocationFilter {
   bbox: BoundingBox
   "Search for stops within this geographic polygon"
   polygon: Polygon
-  "Search within these enclosing features, and return the matching feature ids"
+  "Search for stops contained in any of the given features; matching feature ` + "`" + `id` + "`" + `s are echoed back via ` + "`" + `Stop.within_features` + "`" + `"
   features: [Feature]
   "Search for stops within specified radius of a point"
   near: PointRadius
-  "Search within these geography ids"
+  "Search for stops within any of the given ` + "`" + `CensusGeography` + "`" + ` integer IDs"
   geography_ids: [Int]
   "Focus search on this point; results will be sorted by distance"
-  focus: FocusPoint  
+  focus: FocusPoint
 }
 
 """Search options for stops"""
@@ -12463,7 +12463,7 @@ input StopFilter {
   onestop_id: String
   "Search for stops with these Onestop IDs"
   onestop_ids: [String!]
-  "Include previous used Onestop IDs that match the same (feed,stop_id)"
+  "Include previously used Onestop IDs that match the same (feed, stop_id)"
   allow_previous_onestop_ids: Boolean
   "Search for stops with this feed version SHA1 hash"
   feed_version_sha1: String
@@ -12475,28 +12475,28 @@ input StopFilter {
   stop_code: String
   "Search for stops with this GTFS location_type"
   location_type: Int
-  "Search for stops with 1 or more trips (true) or 0 or more trips (false or null)"
+  "If true, restrict to stops served by at least one trip in the active feed version. If false or null, returns all stops regardless of service"
   serviced: Boolean
   "Full text search"
   search: String
   "Search for stops with these license details"
   license: LicenseFilter
-  "Search for stops with service by routes or operators with these Onestop IDs"
+  "Search for stops served by routes or operators with any of these Onestop IDs"
   served_by_onestop_ids: [String!]
-  "Search for stops with service by routes with the specified GTFS route_type"
+  "Search for stops served by routes with the specified GTFS route_type"
   served_by_route_type: Int
-  "Search for stops with service by routes with any of the specified GTFS route_types"
+  "Search for stops served by routes with any of the specified GTFS route_types"
   served_by_route_types: [Int!]
-  "Search for stops with these agency integer IDs. Deprecated"
-  agency_ids: [Int!]
-  "Search geographically"
+  "Search for stops served by these agencies (database integer IDs)"
+  agency_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer querying via ` + "`" + `Agency.routes` + "`" + ` chained to stops")
+  "Geographic search options"
   location: StopLocationFilter
-  "Backwards compat: Search for stops within this bounding box"
-  bbox: BoundingBox
-  "Backwards compat: Search for stops within this geographic polygon"
-  within: Polygon
-  "Backwards compat: Search for stops within specified radius of a point"
-  near: PointRadius
+  "Search for stops within this bounding box"
+  bbox: BoundingBox @deprecated(reason: "Use ` + "`" + `location.bbox` + "`" + ` instead")
+  "Search for stops within this geographic polygon"
+  within: Polygon @deprecated(reason: "Use ` + "`" + `location.polygon` + "`" + ` instead")
+  "Search for stops within specified radius of a point"
+  near: PointRadius @deprecated(reason: "Use ` + "`" + `location.near` + "`" + ` instead")
 }
 
 """Search options for stop times, optionally on a given date"""
