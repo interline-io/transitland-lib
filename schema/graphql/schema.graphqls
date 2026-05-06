@@ -428,10 +428,10 @@ type FeedVersion {
   "The latest date with scheduled service [example:2020-12-31]"
   latest_calendar_date: Date!
   
-  "Email of the user who created this record"
+  "Identifier (typically username or email) of the user who created this record"
   created_by: String
 
-  "Email of the user who last updated this record"
+  "Identifier (typically username or email) of the user who last updated this record"
   updated_by: String
 
   "Name for this feed version"
