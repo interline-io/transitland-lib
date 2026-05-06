@@ -98,7 +98,9 @@ func userInfoFromAuthn(user authn.User) *UserInfo {
 // AllowAllChecker is the explicit "allow all" Checker — install it when a
 // deployment wants to opt out of authorization. Pairs with DenyAllChecker.
 // Use only in demo binaries or tests; never in a deployment that enforces
-// per-feed permissions.
+// per-feed permissions. When no authn user is present, Me() returns a
+// synthetic identity with the "admin" role, so anonymous callers also pass
+// any handler gated on RoleRequired("admin").
 type AllowAllChecker struct{}
 
 func (c *AllowAllChecker) Me(ctx context.Context) (*UserInfo, error) {

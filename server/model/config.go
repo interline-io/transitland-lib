@@ -44,6 +44,9 @@ func ForContext(ctx context.Context) Config {
 	return raw
 }
 
+// WithConfig stores cfg in ctx for non-HTTP entry points (background jobs,
+// tests). Unlike AddConfig, this does not enforce a non-nil Checker — test
+// scaffolding (testconfig) is responsible for providing one.
 func WithConfig(ctx context.Context, cfg Config) context.Context {
 	r := context.WithValue(ctx, finderCtxKey, cfg)
 	return r
