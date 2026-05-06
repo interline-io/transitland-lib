@@ -825,7 +825,7 @@
                             "x-order": 109
                           },
                           "geometry": {
-                            "description": "Geometry for this agency, generated as the convex hull of all stops",
+                            "description": "Convex hull of all stops served by this agency",
                             "nullable": true,
                             "title": "geometry",
                             "x-order": 22
@@ -929,7 +929,7 @@
                             "x-order": 42
                           },
                           "places": {
-                            "description": "Places associated with this agency through a matching process",
+                            "description": "Administrative places (city, state, country) matched to this agency by overlap with stop locations, ranked by association strength",
                             "items": {
                               "properties": {
                                 "adm0_name": {
@@ -1656,7 +1656,7 @@
                             "x-order": 109
                           },
                           "geometry": {
-                            "description": "Geometry for this agency, generated as the convex hull of all stops",
+                            "description": "Convex hull of all stops served by this agency",
                             "nullable": true,
                             "title": "geometry",
                             "x-order": 22
@@ -1760,7 +1760,7 @@
                             "x-order": 42
                           },
                           "places": {
-                            "description": "Places associated with this agency through a matching process",
+                            "description": "Administrative places (city, state, country) matched to this agency by overlap with stop locations, ranked by association strength",
                             "items": {
                               "properties": {
                                 "adm0_name": {
@@ -4663,7 +4663,7 @@
                       "items": {
                         "properties": {
                           "agencies": {
-                            "description": "Currently imported and active agencies associated with this operator",
+                            "description": "Agencies associated with this operator from currently active (imported) feed versions",
                             "items": {
                               "properties": {
                                 "agency_id": {
@@ -4890,7 +4890,7 @@
                                   "x-order": 76
                                 },
                                 "geometry": {
-                                  "description": "Geometry for this agency, generated as the convex hull of all stops",
+                                  "description": "Convex hull of all stops served by this agency",
                                   "nullable": true,
                                   "title": "geometry",
                                   "x-order": 31
@@ -4902,7 +4902,7 @@
                                   "x-order": 25
                                 },
                                 "places": {
-                                  "description": "Places associated with this agency through a matching process",
+                                  "description": "Administrative places (city, state, country) matched to this agency by overlap with stop locations, ranked by association strength",
                                   "items": {
                                     "properties": {
                                       "adm0_name": {
@@ -5166,7 +5166,7 @@
                       "items": {
                         "properties": {
                           "agencies": {
-                            "description": "Currently imported and active agencies associated with this operator",
+                            "description": "Agencies associated with this operator from currently active (imported) feed versions",
                             "items": {
                               "properties": {
                                 "agency_id": {
@@ -5393,7 +5393,7 @@
                                   "x-order": 76
                                 },
                                 "geometry": {
-                                  "description": "Geometry for this agency, generated as the convex hull of all stops",
+                                  "description": "Convex hull of all stops served by this agency",
                                   "nullable": true,
                                   "title": "geometry",
                                   "x-order": 31
@@ -5405,7 +5405,7 @@
                                   "x-order": 25
                                 },
                                 "places": {
-                                  "description": "Places associated with this agency through a matching process",
+                                  "description": "Administrative places (city, state, country) matched to this agency by overlap with stop locations, ranked by association strength",
                                   "items": {
                                     "properties": {
                                       "adm0_name": {
@@ -6347,7 +6347,7 @@
                             "x-order": 142
                           },
                           "geometry": {
-                            "description": "Representative geometry for this route",
+                            "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`",
                             "nullable": true,
                             "title": "geometry",
                             "x-order": 28
@@ -7317,7 +7317,7 @@
                             "x-order": 142
                           },
                           "geometry": {
-                            "description": "Representative geometry for this route",
+                            "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`",
                             "nullable": true,
                             "title": "geometry",
                             "x-order": 28

@@ -602,11 +602,9 @@ type FeedVersionServiceLevel {
 
 # Operator
 """
-An agency represents a single GTFS `agencies.txt` entity that was imported from a single feed version. The metadata, routes, etc., for an agency include only the data for that specific agency in that specific feed version.
+An Operator is a higher-level abstraction over one or more GTFS agencies, defined by an entry in the [Transitland Atlas](https://github.com/transitland/transitland-atlas). Operators enrich basic GTFS agency data and group agencies that span multiple source feeds. They are matched to GTFS agencies via `associated_feeds`, a list of Feed Onestop IDs and GTFS `agency_id`s.
 
-Operators are a higher-level abstraction over agencies, with each operator defined by an entry in the [Transitland Atlas](https://github.com/transitland/transitland-atlas). Operators provide a method for enriching the basic GTFS agency data, as well as grouping agencies that span across multiple source feeds. Operators are matched with GTFS agencies using `associated_feeds`, a simple list of Feed Onestop IDs and GTFS `agency_id`s.
-
-For instance, the [Atlas operator record](https://github.com/transitland/transitland-atlas/blob/master/operators/o-dr5r-nyct.json) for the [New York City MTA](https://www.transit.land/operators/o-dr5r-nyct) has `associated_feeds` values for 8 different GTFS feeds. A query for this operator Onestop ID thus represents the union of data from all 8 feeds, and includes routes for the subway, bus service for all 5 boroughs, commuter rail agencies, etc., operated by the MTA. This record also includes additional metadata about the MTA, such as the United States National Transit Database ID, Wikidata IDs, and alternate names for the agency. Operator records are created and maintained through pull requests to the Atlas json files and synchronized with the Transitland database on each commit.
+For example, the [Atlas operator record](https://github.com/transitland/transitland-atlas/blob/master/operators/o-dr5r-nyct.json) for the [New York City MTA](https://www.transit.land/operators/o-dr5r-nyct) associates several GTFS feeds (subway, buses across the five boroughs, commuter rail). Querying that operator Onestop ID returns the union of data from all associated feeds, plus extra metadata such as NTD ID, Wikidata IDs, and alternate names. Operator records are maintained as pull requests to the Atlas JSON files and synced into the Transitland database on each commit.
 
 See [Concepts: Agencies and Operators](https://www.transit.land/documentation/concepts/agencies-and-operators).
 """
@@ -614,7 +612,7 @@ type Operator {
   "Internal integer ID"
   id: Int!
   
-  "Was this operator generated automatically from GTFS data"
+  "True if this operator was generated automatically from GTFS data rather than defined in the Atlas"
   generated: Boolean!
   
   "Source DMFR file for this operator in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)"
@@ -638,13 +636,13 @@ type Operator {
   
   "Optional tags defined in Transitland Atlas providing more info about this operator"
   tags: Tags
-  
-  "Search rank: internal usage for search result ordering"
-  search_rank: String
-  
-  "Currently imported and active agencies associated with this operator"
+
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
+  "Agencies associated with this operator from currently active (imported) feed versions"
   agencies: [Agency!]
-  
+
   "Feeds associated with this operator"
   feeds(limit: Int, where: FeedFilter): [Feed!]
 }
@@ -652,7 +650,7 @@ type Operator {
 # GTFS Entities
 
 """
-Record from a static GTFS [agency.txt](https://gtfs.org/reference/static/#agencytxt).
+Record from a static GTFS [agency.txt](https://gtfs.org/reference/static/#agencytxt). Each Agency belongs to a specific FeedVersion; its routes and metadata reflect only that feed version. See `Operator` for a higher-level grouping that spans feeds.
 
 See [Concepts: Agencies and Operators](https://www.transit.land/documentation/concepts/agencies-and-operators).
 """
@@ -696,22 +694,22 @@ type Agency {
   "Source feed version for this entity"
   feed_version: FeedVersion!
   
-  "Geometry for this agency, generated as the convex hull of all stops"
+  "Convex hull of all stops served by this agency"
   geometry: Polygon
-  
-  "Search rank: internal usage for search result ordering"
-  search_rank: String
-  
+
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
   "Operator associated with this agency"
   operator: Operator
-  
-  "Places associated with this agency through a matching process"
+
+  "Administrative places (city, state, country) matched to this agency by overlap with stop locations, ranked by association strength"
   places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
-  
+
   "Routes associated with this agency"
   routes(limit: Int, where: RouteFilter): [Route!]!
-  
-  "Census geographies associated with this agency"
+
+  "Census geographies intersecting this agency's stop locations; use with a `radius` filter and the `intersection_area` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
   "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts"
@@ -763,7 +761,7 @@ type Route {
   "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
   
-  "Representative geometry for this route"
+  "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`"
   geometry: Geometry @goField(forceResolver: true)
   
   "Agency associated with this route"
@@ -777,10 +775,10 @@ type Route {
   
   "Source feed version for this entity"
   feed_version: FeedVersion!
-  
-  "Search rank: internal usage for search result ordering"
-  search_rank: String
-  
+
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
   "Extended route attributes, based on MTC GTFS+ extension"
   route_attribute: RouteAttribute
   
@@ -796,7 +794,7 @@ type Route {
   "Typical service frequency for this route, grouped by direction and day-of-week category (1=weekday, 6=Saturday, 7=Sunday); includes departure times and headway in seconds"
   headways(limit: Int): [RouteHeadway!]!
   
-  "Representative geometries for this route"
+  "Per-direction representative geometries for this route, derived from GTFS shapes (or stop points if shapes are absent)"
   geometries(limit: Int): [RouteGeometry!]!
   
   "Census geographies intersecting this route's stop locations; use with a `radius` filter and the `intersection_area` field to estimate population within the service area"
