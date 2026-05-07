@@ -217,6 +217,27 @@ func TestRouteResolver(t *testing.T) {
 				assert.EqualValues(t, 1, gjson.Get(jj, "routes.0.route_attribute.running_way").Int())
 			},
 		},
+		// serves_stop_onestop_id
+		{
+			name: "serves_stop_onestop_id",
+			query: `{
+				routes(where: {serves_stop_onestop_id: "s-9q8yyufxmv-sanfranciscocaltrain"}) {
+					route_id
+				}
+			}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Gi-130", "Li-130", "Lo-130", "Sp-130"},
+		},
+		{
+			name: "serves_stop_onestop_id:none",
+			query: `{
+				routes(where: {serves_stop_onestop_id: "s-invalid-stop"}) {
+					route_id
+				}
+			}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
 		// route serviced
 		{
 			name: "route serviced=true",

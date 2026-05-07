@@ -114,7 +114,7 @@
         }
       },
       "includeRoutesParam": {
-        "description": "Include routes that serve this stop (requires tl_user_pro role)",
+        "description": "Include routes that serve this stop",
         "in": "query",
         "name": "include_routes",
         "schema": {
@@ -129,8 +129,7 @@
             "description": "include_routes=true",
             "url": "include_routes=true"
           }
-        ],
-        "x-required-role": "tl_user_pro"
+        ]
       },
       "includeStopsParam": {
         "description": "Include stops in response",

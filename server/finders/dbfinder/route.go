@@ -283,7 +283,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		}
 		if where.ServesStopOnestopID != nil {
 			q = q.JoinClause(`JOIN (
-				SELECT tlrs.route_id
+				SELECT DISTINCT ON (tlrs.route_id) tlrs.route_id
 				FROM feed_version_stop_onestop_ids fvsoid
 				JOIN gtfs_stops gs ON gs.stop_id = fvsoid.entity_id AND gs.feed_version_id = fvsoid.feed_version_id
 				JOIN tl_route_stops tlrs ON tlrs.stop_id = gs.id
