@@ -2,6 +2,7 @@ package dbfinder
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -268,6 +269,9 @@ func createUpdateEnt[T hasTableName](
 		// Do not use the provided fvid value
 		baseEnt.SetID(*entId)
 		if err := atx.Find(ctx, baseEnt); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return 0, fmt.Errorf("record not found (id=%d): %w", *entId, err)
+			}
 			return 0, err
 		}
 	} else if fvid != nil {
@@ -326,6 +330,9 @@ func deleteEnt(ctx context.Context, ent hasTableName, deleteRefs ...deleteRef) e
 			Where(sq.Eq{"id": entId}),
 		&fvid,
 	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("record not found (id=%d): %w", entId, err)
+		}
 		return err
 	}
 
@@ -351,11 +358,14 @@ func checkFeedEdit(ctx context.Context, fvid int) error {
 		return errors.New("invalid feed version id")
 	}
 	cfg := model.ForContext(ctx)
-	if checker := cfg.Checker; checker == nil {
-		return nil
-	} else if check, err := checker.FeedVersionPermissions(ctx, &authz.FeedVersionRequest{Id: int64(fvid)}); err != nil {
+	if cfg.Checker == nil {
+		return authz.ErrUnauthorized
+	}
+	ok, err := cfg.Checker.Check(ctx, authz.ObjectRef{Type: authz.FeedVersionType, ID: int64(fvid)}, authz.CanEdit)
+	if err != nil {
 		return err
-	} else if !check.Actions.CanEdit {
+	}
+	if !ok {
 		return authz.ErrUnauthorized
 	}
 	return nil

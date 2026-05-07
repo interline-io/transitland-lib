@@ -78,7 +78,7 @@
     },
     {
       "spec": "gtfs",
-      "id": "HA",  
+      "id": "HA",
       "license": {
         "spdx_identifier": "test-permissive",
         "use_without_attribution": "yes",
@@ -86,11 +86,27 @@
         "redistribution_allowed": "yes",
         "commercial_use_allowed": "yes",
         "share_alike_optional": "yes"
-      },    
+      },
       "urls": {
         "static_current": "file://testdata/server/gtfs/hart.zip"
       }
-    },    
+    },
+    {
+      "spec": "gtfs",
+      "id": "WMATA",
+      "license": {
+        "spdx_identifier": "test-permissive",
+        "use_without_attribution": "yes",
+        "create_derived_product": "yes",
+        "redistribution_allowed": "yes",
+        "commercial_use_allowed": "yes",
+        "share_alike_optional": "yes"
+      },
+      "urls": {
+        "static_current": "file://testdata/server/gtfs/wmata.zip"
+      }
+    },
+
     {
       "spec": "gtfs-rt",
       "id": "BA~rt",

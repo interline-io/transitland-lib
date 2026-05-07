@@ -71,13 +71,14 @@ type FetchResponse struct {
 }
 
 type Request struct {
-	URL        string
-	AllowFTP   bool
-	AllowLocal bool
-	AllowS3    bool
-	MaxSize    uint64
-	Secret     dmfr.Secret
-	Auth       dmfr.FeedAuthorization
+	URL                 string
+	AllowFTP            bool
+	AllowLocal          bool
+	AllowS3             bool
+	AllowHTTPUnfiltered bool
+	MaxSize             uint64
+	Secret              dmfr.Secret
+	Auth                dmfr.FeedAuthorization
 }
 
 func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
@@ -103,9 +104,9 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 	reqUrl := req.URL
 	switch u.Scheme {
 	case "http":
-		downloader = &Http{}
+		downloader = &Http{AllowHTTPUnfiltered: req.AllowHTTPUnfiltered}
 	case "https":
-		downloader = &Http{}
+		downloader = &Http{AllowHTTPUnfiltered: req.AllowHTTPUnfiltered}
 	case "ftp":
 		if req.AllowFTP {
 			downloader = &Ftp{}
@@ -155,6 +156,10 @@ func WithAllowLocal(req *Request) {
 
 func WithAllowS3(req *Request) {
 	req.AllowS3 = true
+}
+
+func WithAllowHTTPUnfiltered(req *Request) {
+	req.AllowHTTPUnfiltered = true
 }
 
 func WithMaxSize(s uint64) RequestOption {

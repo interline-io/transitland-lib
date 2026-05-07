@@ -25,7 +25,7 @@ func TestFeedVersionFetchResolver(t *testing.T) {
 		w.Write(buf)
 	}))
 	t.Run("found sha1", func(t *testing.T) {
-		testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+		testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 			srv, _ := NewServer()
 			srv = model.AddConfigAndPerms(cfg, srv)
 			srv = usercheck.AdminDefaultMiddleware("test")(srv) // Run all requests as admin

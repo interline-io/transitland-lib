@@ -100,6 +100,13 @@ func Update(ctx context.Context, adapter Adapter, ent interface{}, columns ...st
 	if err != nil {
 		return err
 	}
+	// When the entity carries timestamps, always persist updated_at so
+	// the in-memory bump from UpdateTimestamps() (called by the adapter
+	// before this point) actually reaches SQL. Otherwise the explicit
+	// columns list would filter it out.
+	if _, ok := ent.(CanUpdateTimestamps); ok && len(columns) > 0 && !Contains("updated_at", columns) {
+		columns = append(columns, "updated_at")
+	}
 	colmap := make(map[string]interface{})
 	for i, col := range header {
 		if len(columns) > 0 && !Contains(col, columns) {
@@ -133,6 +140,10 @@ func check(err error) {
 }
 
 func getFvids(dburl string) ([]int, string, error) {
+	// See adapter.go for why this one DSN form is carved out.
+	if dburl == sqliteMemoryDBURL {
+		return []int{}, dburl, nil
+	}
 	fvids := []int{}
 	u, err := url.Parse(dburl)
 	if err != nil {

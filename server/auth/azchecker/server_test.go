@@ -14,11 +14,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	fgaUrl, a, ok := testutil.CheckEnv("TL_TEST_FGA_ENDPOINT")
-	if !ok {
-		t.Skip(a)
-		return
-	}
+	fgaUrl := testutil.FGAServer(t)
 	dbx := testutil.MustOpenTestDB(t)
 	serverTestData := []testCase{
 		{
@@ -270,19 +266,19 @@ func TestServer(t *testing.T) {
 		checks := []testCase{
 			{
 				Subject:    newEntityKey(UserType, "tl-tenant-admin"),
-				ExpectKeys: newEntityKeys(TenantType, "BA", "CT"),
+				ExpectKeys: newEntityKeys(FeedType, "BA", "CT"),
 			},
 			{
 				Subject:    newEntityKey(UserType, "ian"),
-				ExpectKeys: newEntityKeys(TenantType, "BA"),
+				ExpectKeys: newEntityKeys(FeedType, "BA"),
 			},
 			{
 				Subject:    newEntityKey(UserType, "drew"),
-				ExpectKeys: newEntityKeys(TenantType, "CT"),
+				ExpectKeys: newEntityKeys(FeedType, "CT"),
 			},
 			{
 				Subject:    newEntityKey(UserType, "unknown"),
-				ExpectKeys: newEntityKeys(TenantType),
+				ExpectKeys: newEntityKeys(FeedType),
 			},
 		}
 		for _, tc := range checks {

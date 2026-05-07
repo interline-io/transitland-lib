@@ -14,15 +14,15 @@ import (
 
 // Search options for agencies
 type AgencyFilter struct {
-	// Search for agencies with this operator OnestopID
+	// Search by resolved Onestop ID (operator's when associated, else agency's)
 	OnestopID *string `json:"onestop_id,omitempty"`
 	// Search for agencies with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
-	// Search for agencies with this feed OnestopID
+	// Search for agencies with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for agencies with this GTFS agency_id
 	AgencyID *string `json:"agency_id,omitempty"`
-	// Search for records with this GTFS agency_name
+	// Search for agencies with this GTFS agency_name
 	AgencyName *string `json:"agency_name,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
@@ -38,16 +38,17 @@ type AgencyFilter struct {
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Search for agencies with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Location
+	// Geographic search options
 	Location *AgencyLocationFilter `json:"location,omitempty"`
-	// Backwards compat: Search for agencies within this bounding box
+	// Search for agencies within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Backwards compat: Search for agencies within this geographic polygon
+	// Search for agencies within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
-	// Backwards compat: Search for agencies within specified radius of a point
+	// Search for agencies within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// Geographic search options for agencies
 type AgencyLocationFilter struct {
 	// Search for agencies within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
@@ -59,7 +60,7 @@ type AgencyLocationFilter struct {
 	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
-// Place associated with an agency
+// Place associated with an agency.
 type AgencyPlace struct {
 	// Best-matched city name
 	CityName *string `json:"city_name,omitempty"`
@@ -69,9 +70,9 @@ type AgencyPlace struct {
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Best-matched country name
 	Adm0Name *string `json:"adm0_name,omitempty"`
-	// Best-mached country ISO code
+	// Best-matched country ISO code
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
-	// Relative weight of this place association
+	// Relative weight of this place association; higher values indicate stronger association (e.g. greater stop overlap)
 	Rank     *float64 `json:"rank,omitempty"`
 	AgencyID int      `json:"-"`
 }
@@ -84,7 +85,7 @@ type AgencyPlaceFilter struct {
 
 // [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
 type Alert struct {
-	// GTFS-RT Alert active alert period. See https://gtfs.org/realtime/reference/#message-timerange
+	// Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange
 	ActivePeriod []*RTTimeRange `json:"active_period,omitempty"`
 	// GTFS-RT Alert [cause](https://gtfs.org/realtime/reference/#enum-cause)
 	Cause *string `json:"cause,omitempty"`
@@ -94,16 +95,17 @@ type Alert struct {
 	HeaderText []*RTTranslation `json:"header_text"`
 	// GTFS-RT Alert description text
 	DescriptionText []*RTTranslation `json:"description_text"`
-	// GTFS-RT Alert TTS header text
+	// Header text optimized for text-to-speech (TTS) systems
 	TtsHeaderText []*RTTranslation `json:"tts_header_text,omitempty"`
-	// GTFS-RT Alert TTS description text
+	// Description text optimized for text-to-speech (TTS) systems
 	TtsDescriptionText []*RTTranslation `json:"tts_description_text,omitempty"`
-	// GTFS-RT Alert uRL for more information
+	// URL for more information
 	URL []*RTTranslation `json:"url,omitempty"`
-	// GTFS-RT Alert severity level
+	// Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`
 	SeverityLevel *string `json:"severity_level,omitempty"`
 }
 
+// Search options for GTFS Flex booking rules
 type BookingRuleFilter struct {
 	// Restrict to specific ids
 	Ids []int `json:"ids,omitempty"`
@@ -127,34 +129,50 @@ type BoundingBox struct {
 type CalendarDateFilter struct {
 	// Search for calendar date exceptions on this date
 	Date *tt.Date `json:"date,omitempty"`
-	// Search for calendar date exceptions with this GTFS exception_type
+	// Search for calendar date exceptions with this GTFS exception_type [1=service added, 2=service removed]
 	ExceptionType *int `json:"exception_type,omitempty"`
 }
 
+// A named collection of geographic and/or statistical data from a single source.
+//
+// Datasets currently include:
+// - **US Census Bureau ACS** (e.g. `acsdt5y2022`): American Community Survey 5-year estimates; contains demographic and socioeconomic data (population, income, etc.) keyed to standard FIPS geographic identifiers
+// - **US Census Bureau TIGER/Line** (e.g. `tiger2021`): geographic boundary files for census tracts, block groups, states, and other administrative units
+// - **US Federal Transit Administration NTD** (e.g. `ntd-annual-2024`): National Transit Database annual reporting data; contains operational metrics (vehicle revenue miles, operating expenses) by agency and mode
+//
+// Each dataset contains one or more `CensusLayer`s (geographic boundary types), `CensusSource`s (individual source files), `CensusTable`s (data table definitions), and queryable `CensusGeography` records with associated `CensusValue` data.
 type CensusDataset struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Dataset name, e.g. acsdt5y2022
+	// Dataset name (e.g. `acsdt5y2022`, `tiger2021`, `ntd-annual-2024`)
 	Name string `json:"name"`
-	// Dataset description
+	// Human-readable description
 	Description *string `json:"description,omitempty"`
-	// Dataset url
+	// URL to the source or documentation
 	URL *tt.Url `json:"url,omitempty"`
-	// Minimum year of data in this dataset
+	// Earliest year of data coverage
 	YearMin *int `json:"year_min,omitempty"`
-	// Maximum year of data in this dataset
-	YearMax     *int               `json:"year_max,omitempty"`
-	Sources     []*CensusSource    `json:"sources,omitempty"`
+	// Latest year of data coverage
+	YearMax *int `json:"year_max,omitempty"`
+	// Source files or archives that make up this dataset
+	Sources []*CensusSource `json:"sources,omitempty"`
+	// Geographic units in this dataset
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
-	Tables      []*CensusTable     `json:"tables,omitempty"`
-	Layers      []*CensusLayer     `json:"layers,omitempty"`
+	// Data table definitions available in this dataset
+	Tables []*CensusTable `json:"tables,omitempty"`
+	// Geographic layers (boundary types) available in this dataset, e.g. `tract`, `blockgroup`, `state`
+	Layers []*CensusLayer `json:"layers,omitempty"`
+	// Cursor-paginated data values for this dataset.
+	// Use for large datasets (e.g. NTD) where result sets exceed practical limits for the per-geography `CensusGeography.values` field.
+	// Filter by `geoid`, `geoid_prefix`, or `table`.
+	ValuesRelay *CensusValueConnection `json:"values_relay,omitempty"`
 }
 
 // Search options for census datasets
 type CensusDatasetFilter struct {
-	// Search for datasets with this name
+	// Search for the dataset with this exact name (e.g. `acsdt5y2022`)
 	Name *string `json:"name,omitempty"`
-	// Search for datasets matching this string
+	// Full-text search across dataset name and description
 	Search *string `json:"search,omitempty"`
 }
 
@@ -162,15 +180,15 @@ type CensusDatasetFilter struct {
 //
 // Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusDatasetGeographyFilter struct {
-	// Geographies with these integer IDs
+	// Restrict to geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
-	// Search within this dataset
+	// Search within this dataset (e.g. `tiger2021`)
 	Dataset *string `json:"dataset,omitempty"`
-	// Search within this layer
+	// Search within this layer (e.g. `tract`, `state`)
 	Layer *string `json:"layer,omitempty"`
-	// Search for geographies matching this string
+	// Search for geographies matching this string (matches on name)
 	Search *string `json:"search,omitempty"`
-	// Location search
+	// Geographic search options
 	Location *CensusDatasetGeographyLocationFilter `json:"location,omitempty"`
 }
 
@@ -191,60 +209,82 @@ type CensusDatasetGeographyLocationFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 	// Focus search on this point; results will be sorted by distance
 	Focus *FocusPoint `json:"focus,omitempty"`
-	// Search based on a buffer around these stop ids
+	// Search based on a buffer around these stop IDs
 	StopBuffer *StopBuffer `json:"stop_buffer,omitempty"`
 }
 
+// Search options for census values within a dataset
+type CensusDatasetValueFilter struct {
+	// Filter by table name
+	Table *string `json:"table,omitempty"`
+	// Filter by exact geoid
+	Geoid *string `json:"geoid,omitempty"`
+	// Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)
+	GeoidPrefix *string `json:"geoid_prefix,omitempty"`
+}
+
+// Schema definition for a single column within a `CensusTable`.
+// Field names from this type correspond to keys in the `CensusValue.values` map.
 type CensusField struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Census field name
+	// Column name as it appears in `CensusValue.values` (e.g. `b01001_001`)
 	FieldName string `json:"field_name"`
-	// Census field title
+	// Human-readable label for this column (e.g. `Total`)
 	FieldTitle string `json:"field_title"`
-	// Census field column order
+	// Display order of this column within the table
 	ColumnOrder *float64 `json:"column_order,omitempty"`
 	TableID     int      `json:"-"`
 }
 
-// Census geography data
+// A single spatial unit within a layer — for example, a specific Census Tract, a US State, or an NTD agency record.
+//
+// Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via `values`. When queried with a spatial filter (e.g. `stop_buffer` or `bbox`), the `intersection_area` and `intersection_geometry` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
+//
+// Note: spatial queries may return the same geography multiple times when it intersects a search area in multiple places (e.g. two separate stop buffers within the same tract). Use `geoid` to deduplicate if needed.
 type CensusGeography struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Dataset name, e.g. acsdt5y2022
+	// Name of the parent dataset (e.g. `tiger2021`)
 	DatasetName string `json:"dataset_name"`
-	// Source name, e.g. tl_2024_01_tract.zip
+	// Name of the source file this geography was loaded from (e.g. `tl_2024_01_tract.zip`)
 	SourceName string `json:"source_name"`
-	// Census geography source layer
+	// Name of the layer this geography belongs to (e.g. `tract`, `state`)
 	LayerName string `json:"layer_name"`
-	// Census geography GEOID
+	// Standard identifier for this geography.
+	// For ACS/TIGER geographies this is the FIPS code (e.g. `06075` for San Francisco County).
+	// For NTD geographies this is the NTD agency ID.
+	// Use this field to deduplicate results from spatial queries.
 	Geoid *string `json:"geoid,omitempty"`
-	// Census geography name
+	// Human-readable name of this geography (e.g. a county or tract name)
 	Name *string `json:"name,omitempty"`
-	// Geometry total area, in square meters
+	// Geometry area in square meters
 	GeometryArea *float64 `json:"geometry_area,omitempty"`
-	// Land area, in square meters
+	// Land area, in square meters (from TIGER/Line `ALAND` field)
 	Aland *float64 `json:"aland,omitempty"`
-	// Water area, in square meters
+	// Water area, in square meters (from TIGER/Line `AWATER` field)
 	Awater *float64 `json:"awater,omitempty"`
 	// State or province name
 	Adm1Name *string `json:"adm1_name,omitempty"`
-	// State or province ISO code
+	// State or province ISO 3166-2 code (e.g. `US-CA`)
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Country name
 	Adm0Name *string `json:"adm0_name,omitempty"`
-	// Country ISO code
+	// Country ISO 3166-1 alpha-2 code (e.g. `US`)
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
-	// Census geography polygon
+	// Boundary geometry for this geography as a MultiPolygon
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
-	// Intersection area with a given geometry, in square meters
-	IntersectionArea     *float64     `json:"intersection_area,omitempty"`
+	// When this geography was returned by a spatial query (e.g. `stop_buffer` or `bbox`), the area of overlap between this geography and the search area, in square meters.
+	// Divide by `geometry_area` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
+	IntersectionArea *float64 `json:"intersection_area,omitempty"`
+	// When this geography was returned by a spatial query, the geometry of the intersection between this geography and the search area.
+	// Only populated when explicitly requested; may be expensive to compute.
 	IntersectionGeometry *tt.Geometry `json:"intersection_geometry,omitempty"`
-	// Census tables containing data for this geography
+	// Statistical data values for this geography from the specified tables
 	Values []*CensusValue `json:"values"`
-	// Layer
+	// The layer this geography belongs to
 	Layer *CensusLayer `json:"layer,omitempty"`
-	// Source
+	// The source file this geography was loaded from
 	Source        *CensusSource `json:"source,omitempty"`
 	DatasetID     int           `json:"-"`
 	LayerID       int           `json:"-"`
@@ -256,43 +296,57 @@ type CensusGeography struct {
 //
 // Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusGeographyFilter struct {
-	Dataset *string  `json:"dataset,omitempty"`
-	Layer   *string  `json:"layer,omitempty"`
-	Radius  *float64 `json:"radius,omitempty"`
-	Search  *string  `json:"search,omitempty"`
+	// Search within this dataset
+	Dataset *string `json:"dataset,omitempty"`
+	// Search within this layer
+	Layer *string `json:"layer,omitempty"`
+	// Buffer radius in meters around the parent entity's geometry (e.g. stop or route stops)
+	Radius *float64 `json:"radius,omitempty"`
+	// Search for geographies matching this string
+	Search *string `json:"search,omitempty"`
 }
 
-// "Census layer metadata
+// A named category of geographic boundaries within a dataset, grouping geometries of the same type (e.g. all census tracts, all states).
+//
+// Common layer names include `tract` (census tracts), `blockgroup` (block groups), and `state`. Layers are used as the primary filter when querying `CensusGeography` records to select the desired level of geographic aggregation.
 type CensusLayer struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Layer name, e.g. tl_2024_01_tract
+	// Layer name used as a filter key (e.g. `tract`, `blockgroup`, `state`)
 	Name string `json:"name"`
-	// Layer description
-	Description *string            `json:"description,omitempty"`
+	// Human-readable description of this layer
+	Description *string `json:"description,omitempty"`
+	// Geographic units belonging to this layer
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
 	DatasetID   int                `json:"-"`
 }
 
+// A specific source file or archive that was imported to populate part of a dataset (e.g. a single state's TIGER/Line shapefile, or one year's ACS data release).
 type CensusSource struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Source name, e.g. tl_2024_01_tract.zip
+	// Source file name (e.g. `tl_2024_01_tract.zip`)
 	Name string `json:"name"`
-	// Source description
+	// Description of this source file
 	Description *string `json:"description,omitempty"`
-	// Source url
+	// URL to the original source file
 	URL tt.Url `json:"url"`
-	// Source checksum
-	Sha1        string             `json:"sha1"`
+	// SHA1 checksum of the source file
+	Sha1 string `json:"sha1"`
+	// Geographic units loaded from this source file
 	Geographies []*CensusGeography `json:"geographies,omitempty"`
-	Tables      []*CensusTable     `json:"tables,omitempty"`
-	Layers      []*CensusLayer     `json:"layers,omitempty"`
-	DatasetID   int                `json:"-"`
+	// Data tables loaded from this source file
+	Tables []*CensusTable `json:"tables,omitempty"`
+	// Geographic layers defined by this source file
+	Layers    []*CensusLayer `json:"layers,omitempty"`
+	DatasetID int            `json:"-"`
 }
 
+// Search options for census source files
 type CensusSourceFilter struct {
-	Name   *string `json:"name,omitempty"`
+	// Search for sources with this exact name
+	Name *string `json:"name,omitempty"`
+	// Search for sources matching this string
 	Search *string `json:"search,omitempty"`
 }
 
@@ -300,79 +354,117 @@ type CensusSourceFilter struct {
 //
 // Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 type CensusSourceGeographyFilter struct {
-	// Geographies with these integer IDs
+	// Restrict to geographies with these integer IDs
 	Ids []int `json:"ids,omitempty"`
-	// Search for geographies matching this string
+	// Search for geographies matching this string (matches on name)
 	Search *string `json:"search,omitempty"`
-	// Location search
+	// Geographic search options
 	Location *CensusDatasetGeographyLocationFilter `json:"location,omitempty"`
 }
 
-// Census table metadata
+// Schema definition for a data table within a dataset.
+// Describes the available columns and their metadata; the actual data is returned via `CensusValue`.
 type CensusTable struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Census table name
+	// Table identifier used when querying values (e.g. `b01001`, `service_data_and_operating_expenses_by_mode`)
 	TableName string `json:"table_name"`
-	// Census table title
+	// Human-readable title of this table (e.g. `Sex By Age`)
 	TableTitle string `json:"table_title"`
-	// Census table group
+	// Grouping category for this table within the dataset
 	TableGroup *string `json:"table_group,omitempty"`
-	// Additional details, e.g. population universe
+	// Additional descriptive details, such as the population universe (e.g. `Total population`)
 	TableDetails *string `json:"table_details,omitempty"`
-	// Individial field definitions for this table
+	// Field (column) definitions for this table
 	Fields    []*CensusField `json:"fields"`
 	DatasetID int            `json:"-"`
 }
 
+// Search options for census tables
 type CensusTableFilter struct {
+	// Search for tables matching this string (matches on table name and title)
 	Search *string `json:"search,omitempty"`
 }
 
-// Census values
+// Statistical data values for a specific geography and table row.
+//
+// The `values` field is an unstructured map of column names to their values for this geography. Column names and types vary by dataset and table — consult the associated `CensusTable` and `CensusField` records for schema information.
+//
+// Examples:
+// - ACS table `b01001`: `{ "b01001_001": 42381 }` (total population estimate)
+// - NTD table `service_data_and_operating_expenses_by_mode`: `{ "Vehicle Revenue Miles": 1234567, "Operating Expenses": 9876543, "mode": "MB", "ntd_id": "90001" }`
 type CensusValue struct {
-	// Dataset name, e.g. acsdt5y2022
+	// Name of the dataset this value belongs to (e.g. `acsdt5y2022`)
 	DatasetName string `json:"dataset_name"`
-	// Source name, e.g. tl_2024_01_tract.zip
+	// Name of the source file this value was loaded from
 	SourceName string `json:"source_name"`
-	// Source table
+	// Table definition describing the columns in `values`
 	Table *CensusTable `json:"table"`
-	// Column:Value for this table
+	// Map of column names to their values for this geography and table
 	Values tt.Map `json:"values"`
-	// GEOID of associated census geography
+	// GEOID of the associated geography (FIPS code, NTD ID, etc.)
 	Geoid       string `json:"geoid"`
 	GeographyID int    `json:"-"`
 	TableID     int    `json:"-"`
 }
 
+// Input parameters for a directions (routing) request.
+//
+// Specifies an origin, destination, travel mode, and optional departure time.
+// Results are returned as a `Directions` object containing one or more `Itinerary` options.
 type DirectionRequest struct {
-	To       *WaypointInput `json:"to"`
-	From     *WaypointInput `json:"from"`
-	Mode     StepMode       `json:"mode"`
-	DepartAt *time.Time     `json:"depart_at,omitempty"`
+	// Destination waypoint
+	To *WaypointInput `json:"to"`
+	// Origin waypoint
+	From *WaypointInput `json:"from"`
+	// Travel mode: `WALK`, `AUTO`, `BICYCLE`, `TRANSIT`, or `LINE`
+	Mode StepMode `json:"mode"`
+	// Departure time; treated as arrival time when arrive_by is true. Defaults to now
+	DepartAt *time.Time `json:"depart_at,omitempty"`
+	// If true, treat depart_at as the desired arrival time rather than departure time. Support depends on the configured routing provider
+	ArriveBy *bool `json:"arrive_by,omitempty"`
 }
 
+// Result of a directions (routing) request.
+//
+// Contains one or more `Itinerary` options from origin to destination, along with summary information for the first (best) itinerary.
 type Directions struct {
-	Success     bool         `json:"success"`
-	Exception   *string      `json:"exception,omitempty"`
-	DataSource  *string      `json:"data_source,omitempty"`
-	Origin      *Waypoint    `json:"origin,omitempty"`
-	Destination *Waypoint    `json:"destination,omitempty"`
-	Duration    *Duration    `json:"duration,omitempty"`
-	Distance    *Distance    `json:"distance,omitempty"`
-	StartTime   *time.Time   `json:"start_time,omitempty"`
-	EndTime     *time.Time   `json:"end_time,omitempty"`
+	// Whether the routing request succeeded
+	Success bool `json:"success"`
+	// Error message if the request did not succeed
+	Exception *string `json:"exception,omitempty"`
+	// Identifier for the routing data source or provider
+	DataSource *string `json:"data_source,omitempty"`
+	// Resolved origin waypoint
+	Origin *Waypoint `json:"origin,omitempty"`
+	// Resolved destination waypoint
+	Destination *Waypoint `json:"destination,omitempty"`
+	// Total duration of the first itinerary
+	Duration *Duration `json:"duration,omitempty"`
+	// Total distance of the first itinerary
+	Distance *Distance `json:"distance,omitempty"`
+	// Departure time of the first itinerary
+	StartTime *time.Time `json:"start_time,omitempty"`
+	// Arrival time of the first itinerary
+	EndTime *time.Time `json:"end_time,omitempty"`
+	// Itineraries as returned by the routing provider, typically in preference order
 	Itineraries []*Itinerary `json:"itineraries,omitempty"`
 }
 
+// A distance value with units.
 type Distance struct {
-	Distance float64      `json:"distance"`
-	Units    DistanceUnit `json:"units"`
+	// Numeric distance value
+	Distance float64 `json:"distance"`
+	// Unit of measurement
+	Units DistanceUnit `json:"units"`
 }
 
+// A duration value with units.
 type Duration struct {
-	Duration float64      `json:"duration"`
-	Units    DurationUnit `json:"units"`
+	// Numeric duration value
+	Duration float64 `json:"duration"`
+	// Unit of measurement
+	Units DurationUnit `json:"units"`
 }
 
 // Result of entity delete operation
@@ -381,28 +473,33 @@ type EntityDeleteResult struct {
 	ID int `json:"id"`
 }
 
+// A GeoJSON-style feature used as a search-area input. Stops contained in the feature are returned with the feature's `id` echoed back via `Stop.within_features`
 type Feature struct {
-	ID         *string      `json:"id,omitempty"`
-	Geometry   *tt.Geometry `json:"geometry,omitempty"`
-	Properties *tt.Map      `json:"properties,omitempty"`
-	Type       *string      `json:"type,omitempty"`
+	// Caller-supplied identifier echoed back on matched stops
+	ID *string `json:"id,omitempty"`
+	// Boundary geometry for the feature (GeoJSON)
+	Geometry *tt.Geometry `json:"geometry,omitempty"`
+	// Arbitrary key/value metadata associated with the feature
+	Properties *tt.Map `json:"properties,omitempty"`
+	// GeoJSON type, typically `Feature`
+	Type *string `json:"type,omitempty"`
 }
 
 // Search options for feed fetches
 type FeedFetchFilter struct {
-	// Search for feed fetches with success (true) or failure (false) or unspecified (null)
+	// Filter by fetch outcome: true for successful, false for failed
 	Success *bool `json:"success,omitempty"`
 }
 
 // Search options for feeds
 type FeedFilter struct {
-	// Search for feed with a specific OnestopID
+	// Search for a feed with this specific Onestop ID
 	OnestopID *string `json:"onestop_id,omitempty"`
-	// Search for feeds of certain data types
+	// Restrict to feeds matching any of the given data types
 	Spec []FeedSpecTypes `json:"spec,omitempty"`
-	// Search for feeds with or without a fetch error
+	// Filter by latest-fetch outcome: true for feeds whose most recent fetch failed, false for those whose succeeded
 	FetchError *bool `json:"fetch_error,omitempty"`
-	// Search for feeds by their import status
+	// Filter by the import status of the feed's active feed version
 	ImportStatus *ImportStatus `json:"import_status,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
@@ -422,29 +519,29 @@ type FeedFilter struct {
 
 // Search options for searching by source URL
 type FeedSourceURL struct {
-	// URL
+	// URL to match against feed source URLs
 	URL *string `json:"url,omitempty"`
-	// URL type
+	// Restrict the URL match to a specific URL type (e.g. `static_current`)
 	Type *FeedSourceURLTypes `json:"type,omitempty"`
-	// Case sensitive search (true) or case insensitive search (false or null)
+	// If true, match the URL case-sensitively; default is case-insensitive
 	CaseSensitive *bool `json:"case_sensitive,omitempty"`
 }
 
 // Result of feed version delete operation
 type FeedVersionDeleteResult struct {
-	// Did the delete succeed
+	// True if the delete succeeded
 	Success bool `json:"success"`
 }
 
 // Result of a feed fetch operation
 type FeedVersionFetchResult struct {
-	// Details of fetched feed version, if successful
+	// Details of the fetched feed version, if the fetch succeeded
 	FeedVersion *FeedVersion `json:"feed_version,omitempty"`
-	// Exception log if fetch failed
+	// Error message if the fetch failed
 	FetchError *string `json:"fetch_error,omitempty"`
-	// Set if the fetched feed version is already present in the database with the same directory contents
+	// True if the same zip file is already in the database (matched by SHA1)
 	FoundSha1 bool `json:"found_sha1"`
-	// Set if the fetched feed version is already present in the database with the same SHA1 hash
+	// True if a zip with identical unpacked contents is already in the database (matched by directory SHA1)
 	FoundDirSha1 bool `json:"found_dir_sha1"`
 }
 
@@ -454,7 +551,7 @@ type FeedVersionFilter struct {
 	Ids []int `json:"ids,omitempty"`
 	// Search for feed versions with the specified import status
 	ImportStatus *ImportStatus `json:"import_status,omitempty"`
-	// Search for feed versions with this feed OnestopID
+	// Search for feed versions with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for feed versions with this SHA1 hash
 	Sha1 *string `json:"sha1,omitempty"`
@@ -470,19 +567,19 @@ type FeedVersionFilter struct {
 	Within *tt.Polygon `json:"within,omitempty"`
 	// Search for feed versions within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
-	// Search for stops with these license details
+	// Search for feed versions with these license details
 	License *LicenseFilter `json:"license,omitempty"`
 }
 
 // Result of feed version import operation
 type FeedVersionImportResult struct {
-	// Did the import succeed
+	// True if the import succeeded
 	Success bool `json:"success"`
 }
 
-// Specify a feed version
+// Reference to an existing feed version
 type FeedVersionInput struct {
-	// Feed version integer ID
+	// Integer ID of the feed version
 	ID *int `json:"id,omitempty"`
 }
 
@@ -502,33 +599,34 @@ type FeedVersionServiceWindow struct {
 	FeedStartDate *tt.Date `json:"feed_start_date,omitempty"`
 	// Feed end date from feed_info.txt, if available
 	FeedEndDate *tt.Date `json:"feed_end_date,omitempty"`
-	// Calculated earliest calendar date in service schedule
+	// Earliest calendar date with scheduled service
 	EarliestCalendarDate *tt.Date `json:"earliest_calendar_date,omitempty"`
-	// Calculated latest calendar date in service schedule
+	// Latest calendar date with scheduled service
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
-	// Week with most typical service patterns inside the service window
+	// Start date (Monday) of a representative week with full or near-full service; used as a fallback when queries fall outside the regular service window
 	FallbackWeek *tt.Date `json:"fallback_week,omitempty"`
-	// Default timezone for this feed version
+	// Default timezone
 	DefaultTimezone *string `json:"default_timezone,omitempty"`
 	FeedVersionID   int     `json:"-"`
 }
 
 // Update a feed version entity
 type FeedVersionSetInput struct {
-	// Entity ID to update
+	// Integer ID of the feed version to update; required
 	ID *int `json:"id,omitempty"`
-	// Set entity name to this value
+	// New name for the feed version
 	Name *string `json:"name,omitempty"`
-	// Set entity description to this value
+	// New description for the feed version
 	Description *string `json:"description,omitempty"`
 }
 
 // Result of feed version unimport operation
 type FeedVersionUnimportResult struct {
-	// Did the unimport succeed
+	// True if the unimport succeeded
 	Success bool `json:"success"`
 }
 
+// A point used to bias result ordering by distance, without otherwise filtering results
 type FocusPoint struct {
 	// Latitude
 	Lat float64 `json:"lat"`
@@ -536,79 +634,145 @@ type FocusPoint struct {
 	Lon float64 `json:"lon"`
 }
 
+// Request parameters for querying nearby free-floating bikes/scooters.
 type GbfsBikeRequest struct {
+	// Search for vehicles within this radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// Request parameters for querying nearby docking stations.
 type GbfsDockRequest struct {
+	// Search for stations within this radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// A group that organizes feeds within a tenant
+type Group struct {
+	// Internal integer ID
+	ID int `json:"id"`
+	// Group name
+	Name string `json:"name"`
+	// Parent tenant
+	Tenant *Tenant `json:"tenant,omitempty"`
+	// Feeds assigned to this group
+	Feeds []*Feed `json:"feeds"`
+	// Authorization permissions for this group
+	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Input for saving a group
+type GroupInput struct {
+	// Group name
+	Name string `json:"name"`
+}
+
+// A single trip option from origin to destination, composed of one or more `Leg`s.
 type Itinerary struct {
-	Duration  *Duration `json:"duration"`
-	Distance  *Distance `json:"distance"`
+	// Total duration of this itinerary
+	Duration *Duration `json:"duration"`
+	// Total distance of this itinerary
+	Distance *Distance `json:"distance"`
+	// Departure time of this itinerary
 	StartTime time.Time `json:"start_time"`
-	EndTime   time.Time `json:"end_time"`
-	From      *Waypoint `json:"from"`
-	To        *Waypoint `json:"to"`
-	Legs      []*Leg    `json:"legs,omitempty"`
+	// Arrival time of this itinerary
+	EndTime time.Time `json:"end_time"`
+	// Origin waypoint
+	From *Waypoint `json:"from"`
+	// Destination waypoint
+	To *Waypoint `json:"to"`
+	// Ordered list of legs making up this itinerary
+	Legs []*Leg `json:"legs,omitempty"`
 }
 
+// A single segment of an itinerary, traveled by a single mode (e.g. walk, transit vehicle).
+//
+// A transit leg includes the route, trip, and intermediate stops. A walk leg includes turn-by-turn steps.
 type Leg struct {
-	Duration  *Duration            `json:"duration"`
-	Distance  *Distance            `json:"distance"`
-	StartTime time.Time            `json:"start_time"`
-	EndTime   time.Time            `json:"end_time"`
-	From      *Waypoint            `json:"from,omitempty"`
-	To        *Waypoint            `json:"to,omitempty"`
-	Mode      *StepMode            `json:"mode,omitempty"`
-	Steps     []*Step              `json:"steps,omitempty"`
-	Stops     []*WaypointDeparture `json:"stops,omitempty"`
-	Geometry  tt.LineString        `json:"geometry"`
-	Trip      *LegTrip             `json:"trip,omitempty"`
+	// Duration of this leg
+	Duration *Duration `json:"duration"`
+	// Distance of this leg
+	Distance *Distance `json:"distance"`
+	// Start time of this leg
+	StartTime time.Time `json:"start_time"`
+	// End time of this leg
+	EndTime time.Time `json:"end_time"`
+	// Origin waypoint for this leg
+	From *Waypoint `json:"from,omitempty"`
+	// Destination waypoint for this leg
+	To *Waypoint `json:"to,omitempty"`
+	// Travel mode for this leg
+	Mode *StepMode `json:"mode,omitempty"`
+	// Turn-by-turn steps for this leg (non-transit modes)
+	Steps []*Step `json:"steps,omitempty"`
+	// Stops served by this leg, from origin to destination, including any intermediate stops (transit mode only)
+	Stops []*WaypointDeparture `json:"stops,omitempty"`
+	// Path geometry for this leg as a LineString
+	Geometry tt.LineString `json:"geometry"`
+	// Transit trip details for this leg (transit mode only)
+	Trip *LegTrip `json:"trip,omitempty"`
 }
 
+// Summary of the route used within a leg.
 type LegRoute struct {
-	RouteID        string          `json:"route_id"`
-	RouteShortName string          `json:"route_short_name"`
-	RouteLongName  string          `json:"route_long_name"`
-	RouteOnestopID string          `json:"route_onestop_id"`
-	RouteType      int             `json:"route_type"`
-	RouteColor     *string         `json:"route_color,omitempty"`
-	RouteTextColor *string         `json:"route_text_color,omitempty"`
-	Agency         *LegRouteAgency `json:"agency"`
+	// GTFS route_id
+	RouteID string `json:"route_id"`
+	// GTFS route_short_name
+	RouteShortName string `json:"route_short_name"`
+	// GTFS route_long_name
+	RouteLongName string `json:"route_long_name"`
+	// Onestop ID for this route
+	RouteOnestopID string `json:"route_onestop_id"`
+	// GTFS route_type
+	RouteType int `json:"route_type"`
+	// Route color in hex format (e.g. `FF0000`)
+	RouteColor *string `json:"route_color,omitempty"`
+	// Route text color in hex format
+	RouteTextColor *string `json:"route_text_color,omitempty"`
+	// Agency operating this route
+	Agency *LegRouteAgency `json:"agency"`
 }
 
+// Summary of the agency operating the route within a leg.
 type LegRouteAgency struct {
-	AgencyID        string `json:"agency_id"`
-	AgencyName      string `json:"agency_name"`
+	// GTFS agency_id
+	AgencyID string `json:"agency_id"`
+	// Agency name
+	AgencyName string `json:"agency_name"`
+	// Onestop ID for this agency
 	AgencyOnestopID string `json:"agency_onestop_id"`
 }
 
+// Summary of the transit trip used within a leg.
 type LegTrip struct {
-	TripID          string    `json:"trip_id"`
-	TripShortName   string    `json:"trip_short_name"`
-	Headsign        string    `json:"headsign"`
-	FeedID          string    `json:"feed_id"`
-	FeedVersionSha1 string    `json:"feed_version_sha1"`
-	Route           *LegRoute `json:"route"`
+	// GTFS trip_id
+	TripID string `json:"trip_id"`
+	// GTFS trip_short_name
+	TripShortName string `json:"trip_short_name"`
+	// Trip headsign
+	Headsign string `json:"headsign"`
+	// Feed Onestop ID for the source feed
+	FeedID string `json:"feed_id"`
+	// SHA1 hash of the source feed version
+	FeedVersionSha1 string `json:"feed_version_sha1"`
+	// Route information for this trip
+	Route *LegRoute `json:"route"`
 }
 
-// Update a level entity
+// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`
 type LevelSetInput struct {
-	// Entity ID to update
+	// Integer ID of the level to update; omit when creating a new level
 	ID *int `json:"id,omitempty"`
-	// Feed version of entity to update
+	// Feed version this level belongs to (required when creating a new level)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
-	// Set GTFS level_id to this value
+	// Set GTFS level_id
 	LevelID *string `json:"level_id,omitempty"`
-	// Set GTFS level_name to this value
+	// Set GTFS level_name
 	LevelName *string `json:"level_name,omitempty"`
-	// Set GTFS level_index to this value
+	// Set GTFS level_index
 	LevelIndex *float64 `json:"level_index,omitempty"`
-	// Set level geometry to this value
+	// Set level geometry
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
-	// Set level parent station to this stop
+	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
 	Parent *StopSetInput `json:"parent,omitempty"`
 }
 
@@ -650,28 +814,31 @@ type Me struct {
 	Name *string `json:"name,omitempty"`
 	// User email
 	Email *string `json:"email,omitempty"`
-	// User associated roles
+	// Roles assigned to this user
 	Roles []string `json:"roles,omitempty"`
-	// User associated external data, e.g. metering service identifiers
+	// External identifiers and metadata associated with this user, e.g. metering service IDs
 	ExternalData tt.Map `json:"external_data"`
 }
 
+// Root Mutation type.
+//
+// **Authorization**: Most mutations require specific user roles and permissions (e.g. `editor`, `admin`).
 type Mutation struct {
 }
 
 // Search options for operators
 type OperatorFilter struct {
-	// Merge multiple agency-operator associations into single operator results
+	// If true, collapse multiple agency-operator associations into a single result per operator
 	Merged *bool `json:"merged,omitempty"`
-	// Search for operators with this OnestopID
+	// Search for operators with this Onestop ID
 	OnestopID *string `json:"onestop_id,omitempty"`
-	// Search for operators with this feed OnestopID
+	// Search for operators with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for operators with agencies having this GTFS agency_id
 	AgencyID *string `json:"agency_id,omitempty"`
 	// Full-text search string
 	Search *string `json:"search,omitempty"`
-	// Search for operators with this set of tag key/values
+	// Search for operators matching these tags
 	Tags *tt.Tags `json:"tags,omitempty"`
 	// Search for operators by city name (provided by Natural Earth)
 	CityName *string `json:"city_name,omitempty"`
@@ -699,39 +866,85 @@ type PathwayFilter struct {
 	PathwayMode *int `json:"pathway_mode,omitempty"`
 }
 
-// Update a pathway entity
+// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`
 type PathwaySetInput struct {
-	// Entity ID to update
+	// Integer ID of the pathway to update; omit when creating a new pathway
 	ID *int `json:"id,omitempty"`
-	// Feed version of entity to update
+	// Feed version this pathway belongs to (required when creating a new pathway)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
-	// Set GTFS pathway_id to this value
+	// Set GTFS pathway_id
 	PathwayID *string `json:"pathway_id,omitempty"`
-	// Set GTFS pathway_mode to this value
+	// Set GTFS pathway_mode
 	PathwayMode *int `json:"pathway_mode,omitempty"`
-	// Set GTFS is_bidirectional to this value
+	// Set GTFS is_bidirectional
 	IsBidirectional *int `json:"is_bidirectional,omitempty"`
-	// Set GTFS length to this value
+	// Set GTFS length
 	Length *float64 `json:"length,omitempty"`
-	// Set GTFS traversal_time to this value
+	// Set GTFS traversal_time
 	TraversalTime *int `json:"traversal_time,omitempty"`
-	// Set GTFS stair_count to this value
+	// Set GTFS stair_count
 	StairCount *int `json:"stair_count,omitempty"`
-	// Set GTFS max_slope to this value
+	// Set GTFS max_slope
 	MaxSlope *float64 `json:"max_slope,omitempty"`
-	// Set GTFS min_width to this value
+	// Set GTFS min_width
 	MinWidth *float64 `json:"min_width,omitempty"`
-	// Set GTFS signposted_as to this value
+	// Set GTFS signposted_as
 	SignpostedAs *string `json:"signposted_as,omitempty"`
-	// Set GTFS reverse_signposted_as to this value
+	// Set GTFS reverse_signposted_as
 	ReverseSignpostedAs *string `json:"reverse_signposted_as,omitempty"`
-	// Set pathway origin to this stop
+	// Reference to an existing origin stop; only the `id` is used (the stop must already exist)
 	FromStop *StopSetInput `json:"from_stop,omitempty"`
-	// Set pathway destination to this stop
+	// Reference to an existing destination stop; only the `id` is used (the stop must already exist)
 	ToStop *StopSetInput `json:"to_stop,omitempty"`
 }
 
-// Place name and associated operators
+// Input for adding or removing a permission
+type PermissionInput struct {
+	// Subject type (e.g. user, tenant, group)
+	SubjectType string `json:"subject_type"`
+	// Subject identifier
+	SubjectID string `json:"subject_id"`
+	// Relationship to grant (e.g. viewer, editor, manager, admin, member)
+	Relation string `json:"relation"`
+}
+
+// Reference to a related entity in the authorization hierarchy
+type PermissionRef struct {
+	// Entity type (e.g. tenant, group, feed, feed_version)
+	Type string `json:"type"`
+	// Entity ID
+	ID int `json:"id"`
+	// Display name
+	Name string `json:"name"`
+}
+
+// A user or group that has been granted access to an entity
+type PermissionSubject struct {
+	// Type of subject (e.g. user, tenant, group)
+	Type string `json:"type"`
+	// Subject identifier
+	ID string `json:"id"`
+	// Display name
+	Name string `json:"name"`
+	// Relationship type (e.g. admin, member, viewer, editor, manager)
+	Relation string `json:"relation"`
+}
+
+// Authorization permissions for an entity
+type Permissions struct {
+	// Actions the current user can perform on this entity
+	Actions []string `json:"actions"`
+	// Users and groups with direct access to this entity
+	Subjects []*PermissionSubject `json:"subjects"`
+	// Parent entity in the authorization hierarchy
+	Parent *PermissionRef `json:"parent,omitempty"`
+	// Child entities in the authorization hierarchy
+	Children []*PermissionRef `json:"children"`
+}
+
+// Place name and associated operators.
+//
+// See [Concepts: Places](https://www.transit.land/documentation/concepts/places).
 type Place struct {
 	// Country name
 	Adm0Name *string `json:"adm0_name,omitempty"`
@@ -764,77 +977,80 @@ type PointRadius struct {
 	Lat float64 `json:"lat"`
 	// Longitude
 	Lon float64 `json:"lon"`
-	// Radius around specified point
+	// Search radius in meters
 	Radius float64 `json:"radius"`
 }
 
+// Root Query type.
+//
+// **Authorization**: Most queries are available to all callers. A few (e.g. user-specific data) require authentication or specific roles.
 type Query struct {
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-timerange
+// A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange
 type RTTimeRange struct {
-	// GTFS-RT TimeRange start time, in Unix epoch seconds
+	// Start of the range, in Unix epoch seconds
 	Start *int `json:"start,omitempty"`
-	// GTFS-RT TimeRange end time, in Unix epoch seconds
+	// End of the range, in Unix epoch seconds
 	End *int `json:"end,omitempty"`
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-translatedstring
+// A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring
 type RTTranslation struct {
-	// GTFS-RT TranslatedString translated text
+	// Translated text
 	Text string `json:"text"`
-	// GTFS-RT TranslatedString language for this translation
+	// BCP 47 language tag for this translation
 	Language *string `json:"language,omitempty"`
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor
+// Identification of a trip in a GTFS-RT message, used to match the trip back to the static GTFS schedule. See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor
 type RTTripDescriptor struct {
-	// GTFS-RT TripDescriptor trip ID
+	// GTFS `trip_id` identifying the trip
 	TripID *string `json:"trip_id,omitempty"`
-	// GTFS-RT TripDescriptor route ID
+	// GTFS `route_id` of the trip's route
 	RouteID *string `json:"route_id,omitempty"`
-	// GTFS-RT TripDescriptor trip direction
+	// GTFS direction_id (0 or 1)
 	DirectionID *int `json:"direction_id,omitempty"`
-	// GTFS-RT TripDescriptor trip start time, in local time HH:MM:SS
+	// Scheduled start time of the trip in local time `HH:MM:SS`
 	StartTime *tt.Seconds `json:"start_time,omitempty"`
-	// GTFS-RT TripDescriptor trip start time, in local date
+	// Service date on which this trip runs (local time)
 	StartDate *tt.Date `json:"start_date,omitempty"`
-	// GTFS-RT TripDescriptor schedule relationship. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1
+	// GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1
 	ScheduleRelationship *string `json:"schedule_relationship,omitempty"`
 }
 
-// See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor
+// Identification information for the vehicle running a trip. See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor
 type RTVehicleDescriptor struct {
-	// GTFS-RT VehicleDescriptor vehicle ID
+	// Vehicle ID
 	ID *string `json:"id,omitempty"`
-	// GTFS-RT VehicleDescriptor vehicle label
+	// Vehicle label
 	Label *string `json:"label,omitempty"`
-	// GTFS-RT VehicleDescriptor vehicle license plate
+	// Vehicle license plate
 	LicensePlate *string `json:"license_plate,omitempty"`
 }
 
-// MTC GTFS+ Extension: route_attributes.txt
+// Extended route metadata from the [MTC GTFS+ extension](https://github.com/MobilityData/gtfs-plus-spec) `route_attributes.txt` file. Values are integer codes defined by the extension; consult that spec for the meaning of each code.
 type RouteAttribute struct {
-	// Route category
+	// Route category code (e.g. service tier such as local, express, rapid)
 	Category *int `json:"category,omitempty"`
-	// Route subcategory
+	// Route subcategory code (further subdivision within `category`)
 	Subcategory *int `json:"subcategory,omitempty"`
-	// Route running way category
+	// Running-way category code (e.g. dedicated lane, mixed traffic, grade-separated)
 	RunningWay *int `json:"running_way,omitempty"`
 	RouteID    int  `json:"-"`
 }
 
 // Search options for routes
 type RouteFilter struct {
-	// Search for routes with this OnestopID
+	// Search for routes with this Onestop ID
 	OnestopID *string `json:"onestop_id,omitempty"`
-	// Search for routes with these OnestopIDs
+	// Search for routes with these Onestop IDs
 	OnestopIds []string `json:"onestop_ids,omitempty"`
-	// Include previously used OnestopIDs that match the same (feed,route_id)
+	// Include previously used Onestop IDs that match the same (feed,route_id)
 	AllowPreviousOnestopIds *bool `json:"allow_previous_onestop_ids,omitempty"`
 	// Search for routes with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
-	// Search for routes with this feed OnestopID
+	// Search for routes with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for routes with this GTFS route_id
 	RouteID *string `json:"route_id,omitempty"`
@@ -842,64 +1058,67 @@ type RouteFilter struct {
 	RouteType *int `json:"route_type,omitempty"`
 	// Search for routes with any of these GTFS route_types
 	RouteTypes []int `json:"route_types,omitempty"`
-	// Search for routes with 1 or more trips (true) or 0 or more trips (false or null)
+	// If true, restrict to routes with at least one trip; false or null returns all routes
 	Serviced *bool `json:"serviced,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
-	// Search for routes operated by operators with this OnestopID
+	// Search for routes operated by operators with this Onestop ID
 	OperatorOnestopID *string `json:"operator_onestop_id,omitempty"`
+	// Search for routes that serve a stop with this Onestop ID
+	ServesStopOnestopID *string `json:"serves_stop_onestop_id,omitempty"`
 	// Search for routes with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Search for routes with these agency integer IDs. Deprecated.
+	// Search for routes operated by these agencies (database integer IDs)
 	AgencyIds []int `json:"agency_ids,omitempty"`
-	// Location
+	// Geographic search options
 	Location *RouteLocationFilter `json:"location,omitempty"`
-	// Backwards compat:Search for routes within this bounding box
+	// Search for routes within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Backwards compat: Search for routes within this geographic polygon
+	// Search for routes within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
-	// Backwards compat: Search for routes within specified radius of a point
+	// Search for routes within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
-// Representative route geometries
+// Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 type RouteGeometry struct {
-	// If true, the source GTFS feed provides no shapes. This route geometry is based on straight lines between stop points.
+	// True if the source feed has no `shapes.txt` and this geometry was generated from straight lines between stop points
 	Generated bool `json:"generated"`
-	// A single LineString of this most common shape
+	// Single LineString representing the most common shape for this route
 	Geometry *tt.LineString `json:"geometry,omitempty"`
-	// MultiLineString ensemble of the most common shapes for each direction
+	// MultiLineString ensemble combining the most common shape for each direction
 	CombinedGeometry *tt.Geometry `json:"combined_geometry,omitempty"`
-	// Length (in meters) of the simple geometry
+	// Length of the `geometry` LineString, in meters
 	Length *float64 `json:"length,omitempty"`
-	// Maximum point-to-point distance in the geometry
+	// Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps
 	MaxSegmentLength *float64 `json:"max_segment_length,omitempty"`
-	// First point max distance
+	// Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route
 	FirstPointMaxDistance *float64 `json:"first_point_max_distance,omitempty"`
 	RouteID               int      `json:"-"`
 }
 
-// Calculated route headways
+// Calculated typical service frequency at a representative stop, broken down by day-of-week category and direction.
 type RouteHeadway struct {
-	// Stop used for the headway calculation
+	// Representative stop used for the headway calculation
 	Stop *Stop `json:"stop"`
 	// Day of week category; 1=Weekday, 6=Saturday, 7=Sunday
 	DowCategory *int `json:"dow_category,omitempty"`
-	// Trip direction
+	// GTFS direction_id (0 or 1)
 	DirectionID *int `json:"direction_id,omitempty"`
-	// Typical number of seconds between departing trips at this stop in this direction on this day of the week
+	// Typical seconds between departures at this stop, direction, and day-of-week
 	HeadwaySecs *int `json:"headway_secs,omitempty"`
 	// Date used for the headway calculation
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
 	// Number of departures on this stop, day, and direction
 	StopTripCount *int `json:"stop_trip_count,omitempty"`
-	// Actual departure times on this stop, day, and direction
+	// Departure times on this stop, day, and direction
 	DeparturesUnused []*tt.Seconds `json:"departures,omitempty"`
 	DepartureInts    tt.Ints       `db:"departures"`
 	RouteID          int           `json:"-"`
 	SelectedStopID   int           `json:"-"`
 }
 
+// Geographic search options for routes
 type RouteLocationFilter struct {
 	// Search for routes within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
@@ -911,15 +1130,15 @@ type RouteLocationFilter struct {
 	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
-// RouteStops describe associations between stops, routes, and agencies.
+// Association between a stop, the route that serves it, and the operating agency. Provides the route and agency context alongside each stop on a route.
 type RouteStop struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Internal integer ID for this associated stop
+	// Database integer ID of the stop
 	StopID int `json:"stop_id"`
-	// Internal integer ID for this associated route
+	// Database integer ID of the route
 	RouteID int `json:"route_id"`
-	// Internal integer ID for this associated agency
+	// Database integer ID of the agency
 	AgencyID int `json:"agency_id"`
 	// Associated route
 	Route *Route `json:"route"`
@@ -929,38 +1148,38 @@ type RouteStop struct {
 	Agency *Agency `json:"agency"`
 }
 
-// Geographic buffer around a route
+// Spatial buffer derived from the stops served by a route, using the requested radius (in meters)
 type RouteStopBuffer struct {
-	// Geographic buffer around route, based on requested meters
+	// Buffer polygon constructed by unioning circles of the requested radius around each stop
 	StopBuffer *tt.Geometry `json:"stop_buffer,omitempty"`
-	// Matching set of points (e.g. stops) found inside buffer
+	// MultiPoint of the route's stop locations used to build the buffer
 	StopPoints *tt.Geometry `json:"stop_points,omitempty"`
-	// Convex hull of matching points
+	// Convex hull of the route's stop locations
 	StopConvexhull *tt.Polygon `json:"stop_convexhull,omitempty"`
 }
 
-// RouteStopPattern describes a unique pattern of stops for a route
+// A unique sequence of stops served by trips on a route, in a single direction. Multiple trips may share the same RouteStopPattern.
 type RouteStopPattern struct {
-	// An identifier for this stop pattern; an integer scoped to this particular feed version
+	// Identifier for this stop pattern; an integer scoped to a single feed version
 	StopPatternID int `json:"stop_pattern_id"`
-	// Direction ID of the trip
+	// GTFS direction_id (0 or 1) of the trips using this pattern
 	DirectionID int `json:"direction_id"`
-	// Count of trips for this stop pattern
+	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
-	// Trips for this stop pattern
+	// Representative trips that follow this stop pattern; useful for fetching full stop_times
 	Trips   []*Trip `json:"trips,omitempty"`
 	RouteID int     `json:"-"`
 }
 
-// Normalized route segments
+// A normalized, reusable piece of route geometry, optionally aligned with an OpenStreetMap way. Multiple route patterns may reference the same Segment.
 type Segment struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// OSM Way ID, if any, associated with this segment
+	// OSM Way ID, if the segment was matched to an OpenStreetMap way (0 if unmatched)
 	WayID int `json:"way_id"`
-	// Geometry for this segment
+	// Path geometry for this segment as a LineString
 	Geometry tt.LineString `json:"geometry"`
-	// Routes and stop patterns associated with this segment
+	// Pattern associations for this segment, each linking it to a route and stop pattern
 	SegmentPatterns []*SegmentPattern `json:"segment_patterns,omitempty"`
 	FeedVersionID   int               `json:"-"`
 	WithRouteID     int               `json:"-"`
@@ -972,15 +1191,25 @@ type SegmentFilter struct {
 	Layer *string `json:"layer,omitempty"`
 }
 
-// Normalized route segment patterns
+// Association linking a route's stop pattern to a single normalized segment within its full path. Used to assemble route geometries from reusable segment pieces.
 type SegmentPattern struct {
 	// Internal integer ID
 	ID int `json:"id"`
-	// Route for this segment pattern
+	// Route this segment pattern belongs to
 	Route *Route `json:"route"`
-	// Stop pattern for this segment pattern
+	// Stop pattern ID this segment belongs to; scoped to the feed version
 	StopPatternID int `json:"stop_pattern_id"`
-	// Segment geometry for this pattern
+	// GTFS direction_id (0 or 1) of trips using this pattern
+	DirectionID int `json:"direction_id"`
+	// Position of this segment within the full path of the pattern (0-indexed)
+	SequenceIdx int `json:"sequence_idx"`
+	// Internal integer ID of the source shape
+	ShapeID int `json:"shape_id"`
+	// OSM Way ID, if the segment was matched to an OpenStreetMap way
+	WayID *int `json:"way_id,omitempty"`
+	// Shape this segment was derived from
+	Shape *Shape `json:"shape"`
+	// Normalized segment associated with this pattern
 	Segment   *Segment `json:"segment"`
 	RouteID   int      `json:"-"`
 	SegmentID int      `json:"-"`
@@ -988,7 +1217,7 @@ type SegmentPattern struct {
 
 // Search options for route segment patterns
 type SegmentPatternFilter struct {
-	// Search for segments patterns associated with this layer name
+	// Search for segment patterns associated with this layer name
 	Layer *string `json:"layer,omitempty"`
 }
 
@@ -998,55 +1227,75 @@ type ServiceCoversFilter struct {
 	FetchedAfter *time.Time `json:"fetched_after,omitempty"`
 	// Search for feed versions fetched before this time
 	FetchedBefore *time.Time `json:"fetched_before,omitempty"`
-	// Search using only feed_info.txt values
+	// Lower bound on the feed's `feed_info.feed_start_date`
 	FeedStartDate *tt.Date `json:"feed_start_date,omitempty"`
-	// Search using only feed_info.txt values
+	// Upper bound on the feed's `feed_info.feed_end_date`
 	FeedEndDate *tt.Date `json:"feed_end_date,omitempty"`
-	// Search using feed_info.txt values or calendar maximum service extent
+	// Lower bound, evaluated against `feed_info.feed_start_date` or calculated earliest calendar date
 	StartDate *tt.Date `json:"start_date,omitempty"`
-	// Search using feed_info.txt values or calendar maximum service extent
+	// Upper bound, evaluated against `feed_info.feed_end_date` or calculated latest calendar date
 	EndDate *tt.Date `json:"end_date,omitempty"`
-	// Search using calendar maximum service extent
+	// Lower bound on the calculated earliest calendar service date
 	EarliestCalendarDate *tt.Date `json:"earliest_calendar_date,omitempty"`
-	// Search using calendar maximum service extent
+	// Upper bound on the calculated latest calendar service date
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 }
 
-type Step struct {
-	Duration       *Duration `json:"duration"`
-	Distance       *Distance `json:"distance"`
-	StartTime      time.Time `json:"start_time"`
-	EndTime        time.Time `json:"end_time"`
-	To             *Waypoint `json:"to,omitempty"`
-	Mode           StepMode  `json:"mode"`
-	Instruction    string    `json:"instruction"`
-	GeometryOffset int       `json:"geometry_offset"`
+// Input for setting an entity's parent
+type SetParentInput struct {
+	// Parent entity type
+	ParentType string `json:"parent_type"`
+	// Parent entity ID
+	ParentID int `json:"parent_id"`
 }
 
-// Search options for census geographies based on stop IDs
+// A single turn-by-turn navigation instruction within a walking or cycling leg.
+type Step struct {
+	// Duration of this step
+	Duration *Duration `json:"duration"`
+	// Distance of this step
+	Distance *Distance `json:"distance"`
+	// Start time of this step
+	StartTime time.Time `json:"start_time"`
+	// End time of this step
+	EndTime time.Time `json:"end_time"`
+	// Destination waypoint of this step
+	To *Waypoint `json:"to,omitempty"`
+	// Travel mode for this step
+	Mode StepMode `json:"mode"`
+	// Human-readable navigation instruction (e.g. `Turn left on Main St`); may be empty depending on the routing provider
+	Instruction string `json:"instruction"`
+	// Offset into the parent leg geometry where this step begins
+	GeometryOffset int `json:"geometry_offset"`
+}
+
+// A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer
 type StopBuffer struct {
-	// Search for geographies with these stop IDs
+	// Stop integer IDs to buffer around
 	StopIds []int `json:"stop_ids,omitempty"`
-	// Stop ID search radius, in meters
+	// Buffer radius in meters around each stop
 	Radius *float64 `json:"radius,omitempty"`
 }
 
+// Set or update a cross-feed stop reference linking this stop to a stop in another feed
 type StopExternalReferenceSetInput struct {
+	// Onestop ID of the target stop's feed
 	TargetFeedOnestopID *string `json:"target_feed_onestop_id,omitempty"`
-	TargetStopID        *string `json:"target_stop_id,omitempty"`
+	// GTFS `stop_id` of the target stop within that feed
+	TargetStopID *string `json:"target_stop_id,omitempty"`
 }
 
 // Search options for stops
 type StopFilter struct {
-	// Search for stops with this OnestopID
+	// Search for stops with this Onestop ID
 	OnestopID *string `json:"onestop_id,omitempty"`
-	// Search for stops with these OnestopIDs
+	// Search for stops with these Onestop IDs
 	OnestopIds []string `json:"onestop_ids,omitempty"`
-	// Include previous used OnestopIDs that match the same (feed,stop_id)
+	// Include previously used Onestop IDs that match the same (feed, stop_id)
 	AllowPreviousOnestopIds *bool `json:"allow_previous_onestop_ids,omitempty"`
 	// Search for stops with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
-	// Search for stops with this feed OnestopID
+	// Search for stops with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for stops with this GTFS stop_id
 	StopID *string `json:"stop_id,omitempty"`
@@ -1054,89 +1303,91 @@ type StopFilter struct {
 	StopCode *string `json:"stop_code,omitempty"`
 	// Search for stops with this GTFS location_type
 	LocationType *int `json:"location_type,omitempty"`
-	// Search for stops with 1 or more trips (true) or 0 or more trips (false or null)
+	// If true, restrict to stops served by at least one trip; false or null returns all stops
 	Serviced *bool `json:"serviced,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
 	// Search for stops with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Search for stops with service by routes or operators with these OnestopIDs
+	// Search for stops served by routes or operators with any of these Onestop IDs
 	ServedByOnestopIds []string `json:"served_by_onestop_ids,omitempty"`
-	// Search for stopswith service by routes with the specified GTFS route_type
+	// Search for stops served by routes with the specified GTFS route_type
 	ServedByRouteType *int `json:"served_by_route_type,omitempty"`
-	// Search for stopswith service by routes with any of the specified GTFS route_types
+	// Search for stops served by routes with any of the specified GTFS route_types
 	ServedByRouteTypes []int `json:"served_by_route_types,omitempty"`
-	// Search for stops with these agency integer IDs. Deprecated.
+	// Search for stops served by these agencies (database integer IDs)
 	AgencyIds []int `json:"agency_ids,omitempty"`
-	// Search geographically
+	// Geographic search options
 	Location *StopLocationFilter `json:"location,omitempty"`
-	// Backwards compat: Search for stops within this bounding box
+	// Search for stops within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Backwards compat: Search for stops within this geographic polygon
+	// Search for stops within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
-	// Backwards compat: Search for stops within specified radius of a point
+	// Search for stops within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 }
 
+// Geographic search options for stops
 type StopLocationFilter struct {
 	// Search for stops within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
 	// Search for stops within this geographic polygon
 	Polygon *tt.Polygon `json:"polygon,omitempty"`
-	// Search within these enclosing features, and return the matching feature ids
+	// Search for stops contained in any of the given features; matching feature `id`s are echoed back via `Stop.within_features`
 	Features []*Feature `json:"features,omitempty"`
 	// Search for stops within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
-	// Search within these geography ids
+	// Search for stops within any of the given `CensusGeography` integer IDs
 	GeographyIds []*int `json:"geography_ids,omitempty"`
 	// Focus search on this point; results will be sorted by distance
 	Focus *FocusPoint `json:"focus,omitempty"`
 }
 
-// Measurements of observed arrival times based on GTFS-RT data
+// An archived real-time arrival/departure measurement at a stop, derived from GTFS-RT TripUpdate or VehiclePosition data.
+// Compare `scheduled_arrival_time`/`scheduled_departure_time` against `observed_arrival_time`/`observed_departure_time` for on-time performance analysis.
 type StopObservation struct {
-	// GTFS-RT TripUpdate schedule relationship
+	// GTFS-RT TripUpdate schedule_relationship value (string form: e.g. `SCHEDULED`, `ADDED`, `CANCELED`)
 	ScheduleRelationship *string `json:"schedule_relationship,omitempty"`
-	// GTFS-RT TripUpdate trip start date
+	// GTFS-RT TripDescriptor.start_date for the observed trip
 	TripStartDate *tt.Date `json:"trip_start_date,omitempty"`
-	// GTFS-RT TripUpdate trip start time
+	// GTFS-RT TripDescriptor.start_time for the observed trip
 	TripStartTime *tt.Seconds `json:"trip_start_time,omitempty"`
-	// GTFS static origin stop id
+	// GTFS stop_id of the previous stop in the trip (origin of the observed segment)
 	FromStopID *string `json:"from_stop_id,omitempty"`
-	// GTFS static destination stop id
+	// GTFS stop_id of this stop (destination of the observed segment)
 	ToStopID *string `json:"to_stop_id,omitempty"`
-	// Agency ID for route
+	// GTFS agency_id of the agency operating the trip's route
 	AgencyID *string `json:"agency_id,omitempty"`
-	// Route ID for trip
+	// GTFS route_id of the trip's route
 	RouteID *string `json:"route_id,omitempty"`
-	// Trip ID
+	// GTFS trip_id of the observed trip
 	TripID *string `json:"trip_id,omitempty"`
-	// Stop sequence for origin stop
+	// GTFS stop_times.stop_sequence value for the from_stop
 	StopSequence *int `json:"stop_sequence,omitempty"`
-	// Source data used to calculate this stop observation. Can be trip update or vehicle positions.
+	// GTFS-RT message used to derive this observation: `TripUpdate` or `VehiclePosition`
 	Source *string `json:"source,omitempty"`
-	// GTFS static scheduled arrival time
+	// Scheduled arrival time at to_stop, from GTFS static `stop_times`
 	ScheduledArrivalTime *tt.Seconds `json:"scheduled_arrival_time,omitempty"`
-	// GTFS static scheduled departure time
+	// Scheduled departure time at to_stop, from GTFS static `stop_times`
 	ScheduledDepartureTime *tt.Seconds `json:"scheduled_departure_time,omitempty"`
-	// GTFS-RT calculated arrival time
+	// Observed arrival time at to_stop, derived from GTFS-RT
 	ObservedArrivalTime *tt.Seconds `json:"observed_arrival_time,omitempty"`
-	// GTFS-RT calculated departure time
+	// Observed departure time at to_stop, derived from GTFS-RT
 	ObservedDepartureTime *tt.Seconds `json:"observed_departure_time,omitempty"`
 	StopID                int         `json:"-"`
 }
 
-// Search options for stop observations
+// Filters for querying archived stop observations. All three fields are required.
 type StopObservationFilter struct {
-	// Search for stop observations derived from the specified source
+	// Data source to filter by; typically `TripUpdate` or `VehiclePosition`
 	Source string `json:"source"`
-	// Search for stop observations associated with this feed version integer ID
+	// Feed version integer ID to filter by
 	FeedVersionID int `json:"feed_version_id"`
-	// Search for stop observations made on this trip start date
+	// Trip start date to filter by
 	TripStartDate tt.Date `json:"trip_start_date"`
 }
 
-// Place associated with a stop
+// Place associated with a stop.
 type StopPlace struct {
 	// Best-matched state or province name
 	Adm1Name *string `json:"adm1_name,omitempty"`
@@ -1144,61 +1395,58 @@ type StopPlace struct {
 	Adm1Iso *string `json:"adm1_iso,omitempty"`
 	// Best-matched country name
 	Adm0Name *string `json:"adm0_name,omitempty"`
-	// Best-mached country ISO code
+	// Best-matched country ISO code
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
 }
 
-// Update a stop entity
+// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`
 type StopSetInput struct {
-	// Entity ID to update
+	// Integer ID of the stop to update; omit when creating a new stop
 	ID *int `json:"id,omitempty"`
-	// Feed version of entity to update
+	// Feed version this stop belongs to (required when creating a new stop)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
-	// Set GTFS location_type to this value
+	// Set GTFS location_type
 	LocationType *int `json:"location_type,omitempty"`
-	// Set GTFS stop_code to this value
+	// Set GTFS stop_code
 	StopCode *string `json:"stop_code,omitempty"`
-	// Set GTFS stop_desc to this value
+	// Set GTFS stop_desc
 	StopDesc *string `json:"stop_desc,omitempty"`
-	// Set GTFS stop_id to this value
+	// Set GTFS stop_id
 	StopID *string `json:"stop_id,omitempty"`
-	// Set GTFS stop_name to this value
+	// Set GTFS stop_name
 	StopName *string `json:"stop_name,omitempty"`
-	// Set GTFS stop_timezone to this value
+	// Set GTFS stop_timezone
 	StopTimezone *string `json:"stop_timezone,omitempty"`
-	// Set GTFS stop_url to this value
+	// Set GTFS stop_url
 	StopURL *string `json:"stop_url,omitempty"`
-	// Set GTFS wheelchair_boarding to this value
+	// Set GTFS wheelchair_boarding
 	WheelchairBoarding *int `json:"wheelchair_boarding,omitempty"`
-	// Set GTFS zone_id to this value
+	// Set GTFS zone_id
 	ZoneID *string `json:"zone_id,omitempty"`
-	// Set GTFS platform_code to this value
+	// Set GTFS platform_code
 	PlatformCode *string `json:"platform_code,omitempty"`
-	// Set GTFS tts_stop_name to this value
+	// Set GTFS tts_stop_name
 	TtsStopName *string `json:"tts_stop_name,omitempty"`
-	// Set stop geometry to this value
+	// Set stop geometry
 	Geometry *tt.Point `json:"geometry,omitempty"`
-	// Set stop parent station to this stop
+	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
 	Parent *StopSetInput `json:"parent,omitempty"`
-	// Set stop level to this level
+	// Reference to an existing level; only the `id` is used (the level must already exist)
 	Level *LevelSetInput `json:"level,omitempty"`
-	// Set or update external reference for this stop
+	// Set or update the cross-feed external reference for this stop
 	ExternalReference *StopExternalReferenceSetInput `json:"external_reference,omitempty"`
 }
 
-// StopTimeEvent combines scheduled arrival/departure data with data sourced from GTFS-RT
+// StopTimeEvent combines scheduled arrival/departure data with data sourced from GTFS-RT.
 //
 // Each scheduled StopTime will try to be matched with a relevant GTFS-RT TripUpdate and StopTimeUpdate.
 // If the StopTime has a matching TripUpdate (based on trip_id) and StopTimeUpdate (stop_sequence and/or stop_id), the estimated times will be used directly.
 // If a TripUpdate is matched, but no StopTimeUpdate, the last available delay value in the trip will be applied to later StopTimes in that trip.
 // If the Trip is ADDED and does not match a static schedule StopTime, the scheduled times will be absent.
 //
-// See:
-// - https://gtfs.org/realtime/reference/#message-tripupdate
-// - https://gtfs.org/realtime/reference/#message-stoptimeupdate
-// - https://gtfs.org/realtime/reference/#message-stoptimeevent
+// See https://gtfs.org/realtime/reference/#message-stoptimeevent.
 type StopTimeEvent struct {
-	// Local time for stop
+	// IANA timezone name for this stop, used to interpret the `*_local` fields
 	StopTimezone string `json:"stop_timezone"`
 	// Estimated time in UTC
 	EstimatedUtc *time.Time `json:"estimated_utc,omitempty"`
@@ -1208,7 +1456,7 @@ type StopTimeEvent struct {
 	EstimatedLocal *time.Time `json:"estimated_local,omitempty"`
 	// Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.
 	//
-	// This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.
+	// This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.
 	EstimatedDelay *int `json:"estimated_delay,omitempty"`
 	// Estimated time in local time HH:MM:SS
 	Estimated *tt.Seconds `json:"estimated,omitempty"`
@@ -1216,87 +1464,123 @@ type StopTimeEvent struct {
 	ScheduledUtc *time.Time `json:"scheduled_utc,omitempty"`
 	// Scheduled time in Unix epoch seconds
 	ScheduledUnix *int `json:"scheduled_unix,omitempty"`
-	// Sceduled time in the local time zone
+	// Scheduled time in the local time zone
 	ScheduledLocal *time.Time `json:"scheduled_local,omitempty"`
 	// Scheduled time local time HH:MM:SS
 	Scheduled *tt.Seconds `json:"scheduled,omitempty"`
-	// Estimated time in UTC, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Time in UTC sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)
 	TimeUtc *time.Time `json:"time_utc,omitempty"`
-	// Estimated time in Unix epoch seconds, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Time in Unix epoch seconds sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)
 	TimeUnix *int `json:"time_unix,omitempty"`
-	// Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant
 	Delay *int `json:"delay,omitempty"`
-	// Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent
+	// Estimation uncertainty in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is
 	Uncertainty *int `json:"uncertainty,omitempty"`
 }
 
 // Search options for stop times, optionally on a given date
 type StopTimeFilter struct {
-	// Search for trips scheduled on the specified calendar date
+	// Calendar date for which to return stop times
 	Date *tt.Date `json:"date,omitempty"`
-	// Search for trips scheduled on the specified relative date
+	// Calendar date relative to today (e.g. `MONDAY`, `NEXT_FRIDAY`); see `RelativeDate` for semantics
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
-	// Search for trips scheduled on the specified GTFS calendar service date
+	// GTFS service date (which may differ from the calendar date for trips that cross midnight)
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// Use the feed version fallback week for dates outside the normal service window for that feed version
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
-	// Search for stop times with departure times later than the specified time, in seconds since midnight
+	// Lower bound for departure time, in seconds since midnight
 	StartTime *int `json:"start_time,omitempty"`
-	// Search for stop times with arrival times before the specified time, in seconds since midnight
+	// Upper bound for arrival time, in seconds since midnight
 	EndTime *int `json:"end_time,omitempty"`
-	// Search for stop times with departure times later than the specified time, in local time HH:MM:SS
+	// Lower bound for departure time, in local `HH:MM:SS`
 	Start *tt.Seconds `json:"start,omitempty"`
-	// Search for stop times with arrival times before the specified time, in local time HH:MM:SS
+	// Upper bound for arrival time, in local `HH:MM:SS`
 	End *tt.Seconds `json:"end,omitempty"`
-	// Search for stop times with departures within the specified number of seconds (in local time)
+	// Return stop times with departures within the next N seconds from now (local time)
 	Next *int `json:"next,omitempty"`
-	// Search for stop times with service by routes with the specified route OnestopIDs
+	// Restrict to stop times on routes matching any of these Onestop IDs
 	RouteOnestopIds []string `json:"route_onestop_ids,omitempty"`
-	// Include previously used route OnestopIDs that match the same (feed,route_id)
+	// Include previously used route Onestop IDs that map to the same (feed, route_id)
 	AllowPreviousRouteOnestopIds *bool `json:"allow_previous_route_onestop_ids,omitempty"`
-	// Exclude the first stop_time in a trip
+	// Exclude the first stop_time of each trip
 	ExcludeFirst *bool `json:"exclude_first,omitempty"`
-	// Exclude the last stop_time in a trip
+	// Exclude the last stop_time of each trip
 	ExcludeLast *bool `json:"exclude_last,omitempty"`
+}
+
+// A tenant organization that owns groups and feeds
+type Tenant struct {
+	// Internal integer ID
+	ID int `json:"id"`
+	// Tenant name
+	Name string `json:"name"`
+	// Groups owned by this tenant
+	Groups []*Group `json:"groups"`
+	// Authorization permissions for this tenant
+	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Input for saving a tenant
+type TenantInput struct {
+	// Tenant name
+	Name string `json:"name"`
 }
 
 // Search options for trips
 type TripFilter struct {
-	// Search for trips scheduled on the specified GTFS calendar service date
+	// GTFS service date on which trips run
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// Search for trips scheduled on the specified relative date
+	// Calendar date relative to today; see `RelativeDate`
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
-	// Use the feed version fallback week for dates outside the normal service window for that feed version
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Search for trips with this GTFS trip_id
 	TripID *string `json:"trip_id,omitempty"`
-	// Search for trips with this stop pattern ID
+	// Search for trips with this stop pattern ID (scoped to feed version)
 	StopPatternID *int `json:"stop_pattern_id,omitempty"`
 	// Search for trips with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Search for trips associated with these route integer IDs. Deprecated.
+	// Search for trips on these routes (database integer IDs)
 	RouteIds []int `json:"route_ids,omitempty"`
-	// Search for trips associated with these route OnestopIDs
+	// Search for trips on routes matching any of these Onestop IDs
 	RouteOnestopIds []string `json:"route_onestop_ids,omitempty"`
 	// Search for trips with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
-	// Search for trips with this feed OnestopID
+	// Search for trips with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 }
 
-// Search options for stop times for a trip with no date specified
+// Search options for stop times within a single trip (no date filter applies, since the parent trip determines the schedule)
 type TripStopTimeFilter struct {
-	// Search for stop times with departure times later than the specified time, in local time HH:MM:SS
+	// Lower bound for departure time, in local `HH:MM:SS`
 	Start *tt.Seconds `json:"start,omitempty"`
-	// Search for stop times with arrival times before the specified time, in local time HH:MM:SS
+	// Upper bound for arrival time, in local `HH:MM:SS`
 	End *tt.Seconds `json:"end,omitempty"`
+}
+
+// A user in the authorization system
+type User struct {
+	// User identifier
+	ID string `json:"id"`
+	// Display name
+	Name string `json:"name"`
+	// Email address
+	Email string `json:"email"`
+}
+
+// Search options for users
+type UserFilter struct {
+	// Search for a user by ID
+	ID *string `json:"id,omitempty"`
+	// Full text search
+	Q *string `json:"q,omitempty"`
 }
 
 // Source URL and JSON representation of GTFS-RT data used for validation
 type ValidationRealtimeResult struct {
-	// Source URL
+	// URL the GTFS-RT message was fetched from
 	URL string `json:"url"`
-	// JSON representation of GTFS-RT data
+	// JSON-decoded representation of the GTFS-RT message
 	JSON tt.Map `json:"json"`
 }
 
@@ -1306,21 +1590,21 @@ type ValidationReport struct {
 	ID int `json:"id"`
 	// Time the report was generated, in UTC
 	ReportedAt *time.Time `json:"reported_at,omitempty"`
-	// Time the reported was generated, in feed local time
+	// Time the report was generated, in the feed's local time
 	ReportedAtLocal *time.Time `json:"reported_at_local,omitempty"`
-	// Time the report was generated, local timezone
+	// IANA timezone name corresponding to `reported_at_local`
 	ReportedAtLocalTimezone *string `json:"reported_at_local_timezone,omitempty"`
-	// Validation completed successfully
+	// True if validation completed successfully
 	Success bool `json:"success"`
-	// Exception log if feed failed to validate
+	// Error message if the feed failed to validate
 	FailureReason *string `json:"failure_reason,omitempty"`
-	// The report includes GTFS static data
+	// True if the report includes GTFS static validation results
 	IncludesStatic *bool `json:"includes_static,omitempty"`
-	// The report includes GTFS-RT data
+	// True if the report includes GTFS-RT validation results
 	IncludesRt *bool `json:"includes_rt,omitempty"`
-	// Name of validator used
+	// Validator name
 	Validator *string `json:"validator,omitempty"`
-	// Version of validator used
+	// Validator version
 	ValidatorVersion *string `json:"validator_version,omitempty"`
 	// Validation errors, grouped by filename, if present
 	Errors []*ValidationReportErrorGroup `json:"errors"`
@@ -1335,21 +1619,21 @@ type ValidationReport struct {
 type ValidationReportDetails struct {
 	// SHA1 hash of the validated feed
 	Sha1 string `json:"sha1"`
-	// Calculated earliest calendar date in service schedule
+	// Earliest calendar date with scheduled service
 	EarliestCalendarDate *tt.Date `json:"earliest_calendar_date,omitempty"`
-	// Calculated latest calendar date in service schedule
+	// Latest calendar date with scheduled service
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 	// Details for each file contained in the feed
 	Files []*FeedVersionFileInfo `json:"files"`
-	// Calculated service levels for feed
+	// Calculated weekly service levels
 	ServiceLevels []*FeedVersionServiceLevel `json:"service_levels"`
-	// Selected agencies contained in feed
+	// Sample of agencies in the feed (truncated; not a complete list)
 	Agencies []*Agency `json:"agencies"`
-	// Selected routes contained in feed
+	// Sample of routes in the feed (truncated; not a complete list)
 	Routes []*Route `json:"routes"`
-	// Selected stops contained in feed
+	// Sample of stops in the feed (truncated; not a complete list)
 	Stops []*Stop `json:"stops"`
-	// Feed info data contained in feed
+	// Records from `feed_info.txt`
 	FeedInfos []*FeedInfo `json:"feed_infos"`
 	// Detailed information about GTFS-RT sources used in validation
 	Realtime []*ValidationRealtimeResult `json:"realtime,omitempty"`
@@ -1357,47 +1641,47 @@ type ValidationReportDetails struct {
 
 // An individual validation error or warning.
 type ValidationReportError struct {
-	// Source filename
+	// Source filename (e.g. `stops.txt`, or the GTFS-RT URL for realtime issues)
 	Filename string `json:"filename"`
-	// Error type
+	// Validation rule or error class identifier (e.g. `MissingRequiredFieldError`)
 	ErrorType string `json:"error_type"`
-	// Error code (for GTFS-RT)
+	// GTFS-RT error code (set only for realtime validation errors)
 	ErrorCode string `json:"error_code"`
-	// Key for this error group
+	// Stable grouping key shared with the parent `ValidationReportErrorGroup`
 	GroupKey string `json:"group_key"`
-	// Affected entity ID
+	// Identifier of the affected entity (e.g. the `stop_id` or `trip_id`)
 	EntityID string `json:"entity_id"`
-	// Affected entity field
+	// Field name on which the error was raised
 	Field string `json:"field"`
-	// Affected entity line number (for static)
+	// Line number in the source CSV file where the error occurred (static validation only; 0 for realtime)
 	Line int `json:"line"`
-	// Value of affected field
+	// Value of the affected field
 	Value string `json:"value"`
-	// Error message describing problem
+	// Human-readable message describing the problem
 	Message string `json:"message"`
-	// Entity geometry, if available
+	// Geometry of the affected entity, if available
 	Geometry *tt.Geometry `json:"geometry,omitempty"`
-	// JSON representation of entity, if available
+	// JSON representation of the affected entity (empty map if not available)
 	EntityJSON                   tt.Map `json:"entity_json"`
 	ID                           int    `json:"-"`
 	ValidationReportErrorGroupID int    `json:"-"`
 }
 
-// Validation errors and warnings for a particular file or RT source
+// Group of validation errors or warnings sharing the same file, type, and grouping key; useful for summarizing repeated issues
 type ValidationReportErrorGroup struct {
-	// Filename for error group
+	// Source filename for this group (e.g. `stops.txt`, or the GTFS-RT URL for realtime issues)
 	Filename string `json:"filename"`
-	// Error type
+	// Validation rule or error class identifier (e.g. `MissingRequiredFieldError`)
 	ErrorType string `json:"error_type"`
-	// Error code (for GTFS-RT)
+	// GTFS-RT error code (set only for realtime validation errors)
 	ErrorCode string `json:"error_code"`
-	// Key for this error group
+	// Stable grouping key used to aggregate equivalent errors
 	GroupKey string `json:"group_key"`
-	// Affected entity field for this error group
+	// Field name on which the error was raised
 	Field string `json:"field"`
-	// Number of affected entities for this error group
+	// Total number of errors in this group
 	Count int `json:"count"`
-	// Examples of this error
+	// Sample of individual errors from this group
 	Errors             []*ValidationReportError `json:"errors"`
 	ID                 int                      `json:"-"`
 	ValidationReportID int                      `json:"-"`
@@ -1405,79 +1689,110 @@ type ValidationReportErrorGroup struct {
 
 // Search options for validation reports
 type ValidationReportFilter struct {
-	// Search for validation reports with the following integer IDs
+	// Restrict to validation reports with these integer IDs
 	ReportIds []int `json:"report_ids,omitempty"`
-	// Search for successful validation reports
+	// Filter by success: true for successful reports, false for failed
 	Success *bool `json:"success,omitempty"`
-	// Search for validation reports generated by the specified validator
+	// Filter by validator name
 	Validator *string `json:"validator,omitempty"`
-	// Search for validation reports generated using the specified validator version
+	// Filter by validator version
 	ValidatorVersion *string `json:"validator_version,omitempty"`
-	// Search for validation reports that include/exclude GTFS-RT data
+	// Filter by `includes_rt`: true for reports that include GTFS-RT validation, false for those that don't
 	IncludesRt *bool `json:"includes_rt,omitempty"`
-	// Search for validation reports that include/exclude GTFS static data
+	// Filter by `includes_static`: true for reports that include GTFS static validation, false for those that don't
 	IncludesStatic *bool `json:"includes_static,omitempty"`
 }
 
 // [Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed.
 type VehiclePosition struct {
-	// GTFS-RT VehiclePosition vehicle. See https://gtfs.org/realtime/reference/#message-vehicledescriptor
+	// Vehicle descriptor from the GTFS-RT VehiclePosition
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`
-	// GTFS-RT VehiclePosition current vehicle position
+	// Current vehicle position
 	Position *tt.Point `json:"position,omitempty"`
-	// GTFS-RT VehiclePosition current stop sequence in trip
+	// Sequence index of the stop the vehicle is approaching or stopped at, within the trip
 	CurrentStopSequence *int `json:"current_stop_sequence,omitempty"`
-	// GTFS-RT VehiclePosition current stop in trip
+	// Stop the vehicle is approaching or stopped at; despite the field name, returns the resolved `Stop` entity
 	StopID *Stop `json:"stop_id,omitempty"`
-	// GTFS-RT VehiclePosition current status string
+	// Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`
 	CurrentStatus *string `json:"current_status,omitempty"`
-	// GTFS-RT VehiclePosition timestamp
+	// Timestamp of this vehicle position update
 	Timestamp *time.Time `json:"timestamp,omitempty"`
-	// GTFS-RT VehiclePosition congestion level estimate
+	// Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`
 	CongestionLevel *string `json:"congestion_level,omitempty"`
 }
 
+// A resolved waypoint in a routing response, including optional matched stop information.
 type Waypoint struct {
-	Lon  float64       `json:"lon"`
-	Lat  float64       `json:"lat"`
-	Name *string       `json:"name,omitempty"`
+	// Longitude of the waypoint
+	Lon float64 `json:"lon"`
+	// Latitude of the waypoint
+	Lat float64 `json:"lat"`
+	// Display name for the waypoint
+	Name *string `json:"name,omitempty"`
+	// Matched transit stop at this waypoint, if any
 	Stop *WaypointStop `json:"stop,omitempty"`
 }
 
+// A transit stop with departure information within a leg, including sequence details.
 type WaypointDeparture struct {
-	Lon           float64   `json:"lon"`
-	Lat           float64   `json:"lat"`
-	Departure     time.Time `json:"departure"`
-	StopID        string    `json:"stop_id"`
-	StopName      string    `json:"stop_name"`
-	StopCode      string    `json:"stop_code"`
-	StopOnestopID string    `json:"stop_onestop_id"`
-	StopIndex     *int      `json:"stop_index,omitempty"`
-	StopSequence  *int      `json:"stop_sequence,omitempty"`
+	// Longitude of the stop
+	Lon float64 `json:"lon"`
+	// Latitude of the stop
+	Lat float64 `json:"lat"`
+	// Scheduled departure time at this stop
+	Departure time.Time `json:"departure"`
+	// GTFS stop_id
+	StopID string `json:"stop_id"`
+	// Stop name
+	StopName string `json:"stop_name"`
+	// Stop code
+	StopCode string `json:"stop_code"`
+	// Onestop ID for this stop
+	StopOnestopID string `json:"stop_onestop_id"`
+	// Index of this stop within the leg
+	StopIndex *int `json:"stop_index,omitempty"`
+	// GTFS stop_sequence value
+	StopSequence *int `json:"stop_sequence,omitempty"`
 }
 
+// A geographic waypoint used as an origin or destination in a routing request.
 type WaypointInput struct {
-	Lon  float64 `json:"lon"`
-	Lat  float64 `json:"lat"`
+	// Longitude of the waypoint
+	Lon float64 `json:"lon"`
+	// Latitude of the waypoint
+	Lat float64 `json:"lat"`
+	// Optional display name for the waypoint
 	Name *string `json:"name,omitempty"`
 }
 
+// A transit stop matched to a waypoint, with departure information.
 type WaypointStop struct {
-	Lon           float64   `json:"lon"`
-	Lat           float64   `json:"lat"`
-	Departure     time.Time `json:"departure"`
-	StopID        string    `json:"stop_id"`
-	StopName      string    `json:"stop_name"`
-	StopCode      string    `json:"stop_code"`
-	StopOnestopID string    `json:"stop_onestop_id"`
+	// Longitude of the stop
+	Lon float64 `json:"lon"`
+	// Latitude of the stop
+	Lat float64 `json:"lat"`
+	// Scheduled departure time at this stop
+	Departure time.Time `json:"departure"`
+	// GTFS stop_id
+	StopID string `json:"stop_id"`
+	// Stop name
+	StopName string `json:"stop_name"`
+	// Stop code
+	StopCode string `json:"stop_code"`
+	// Onestop ID for this stop
+	StopOnestopID string `json:"stop_onestop_id"`
 }
 
+// Unit of distance measurement.
 type DistanceUnit string
 
 const (
+	// Distance in kilometers
 	DistanceUnitKilometers DistanceUnit = "KILOMETERS"
-	DistanceUnitMeters     DistanceUnit = "METERS"
-	DistanceUnitMiles      DistanceUnit = "MILES"
+	// Distance in meters
+	DistanceUnitMeters DistanceUnit = "METERS"
+	// Distance in miles
+	DistanceUnitMiles DistanceUnit = "MILES"
 )
 
 var AllDistanceUnit = []DistanceUnit{
@@ -1529,9 +1844,11 @@ func (e DistanceUnit) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Unit of time duration.
 type DurationUnit string
 
 const (
+	// Duration in seconds
 	DurationUnitSeconds DurationUnit = "SECONDS"
 )
 
@@ -1665,13 +1982,13 @@ func (e FeedSourceURLTypes) MarshalJSON() ([]byte, error) {
 type FeedSpecTypes string
 
 const (
-	// Static data
+	// GTFS Schedule (static)
 	FeedSpecTypesGtfs FeedSpecTypes = "GTFS"
-	// GTFS-RT data
+	// GTFS Realtime
 	FeedSpecTypesGtfsRt FeedSpecTypes = "GTFS_RT"
-	// GBFS data
+	// General Bikeshare Feed Specification
 	FeedSpecTypesGbfs FeedSpecTypes = "GBFS"
-	// MDS data
+	// Mobility Data Specification
 	FeedSpecTypesMds FeedSpecTypes = "MDS"
 )
 
@@ -1786,7 +2103,7 @@ func (e ImportStatus) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Permissable and impermissable actions for a given license use
+// Permissible and impermissible actions for a given license use
 type LicenseValue string
 
 const (
@@ -1794,7 +2111,7 @@ const (
 	LicenseValueYes LicenseValue = "YES"
 	// Use is not allowed
 	LicenseValueNo LicenseValue = "NO"
-	// Use is YES or UNKNOWN
+	// Match any value that is not `NO` (i.e. `YES` or `UNKNOWN`); used in license filters
 	LicenseValueExcludeNo LicenseValue = "EXCLUDE_NO"
 	// Use is not known
 	LicenseValueUnknown LicenseValue = "UNKNOWN"
@@ -1850,7 +2167,7 @@ func (e LicenseValue) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PlaceAggregationLevel controls the level of aggregation in a places query
+// PlaceAggregationLevel controls the level of aggregation in a places query.
 type PlaceAggregationLevel string
 
 const (
@@ -1920,7 +2237,7 @@ func (e PlaceAggregationLevel) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// RelativeDate specifies a calendar date relative to the current local time
+// RelativeDate specifies a calendar date relative to the current local time.
 type RelativeDate string
 
 const (
@@ -2027,16 +2344,26 @@ func (e RelativeDate) MarshalJSON() ([]byte, error) {
 type ScheduleRelationship string
 
 const (
-	ScheduleRelationshipScheduled   ScheduleRelationship = "SCHEDULED"
-	ScheduleRelationshipAdded       ScheduleRelationship = "ADDED"
+	// Trip or stop is following the normal schedule with real-time updates applied
+	ScheduleRelationshipScheduled ScheduleRelationship = "SCHEDULED"
+	// Extra trip that was added in addition to a running schedule (no static counterpart)
+	ScheduleRelationshipAdded ScheduleRelationship = "ADDED"
+	// Trip is running with no associated static schedule (e.g. unscheduled or on-demand service)
 	ScheduleRelationshipUnscheduled ScheduleRelationship = "UNSCHEDULED"
-	ScheduleRelationshipCanceled    ScheduleRelationship = "CANCELED"
-	ScheduleRelationshipStatic      ScheduleRelationship = "STATIC"
-	ScheduleRelationshipSkipped     ScheduleRelationship = "SKIPPED"
-	ScheduleRelationshipNoData      ScheduleRelationship = "NO_DATA"
+	// Trip has been canceled
+	ScheduleRelationshipCanceled ScheduleRelationship = "CANCELED"
+	// No GTFS-RT data matched; only the static schedule applies (Transitland-specific, not in the GTFS-RT spec)
+	ScheduleRelationshipStatic ScheduleRelationship = "STATIC"
+	// Stop is skipped on this trip; the trip itself runs as scheduled
+	ScheduleRelationshipSkipped ScheduleRelationship = "SKIPPED"
+	// No real-time data is available for this stop; arrival/departure times are unknown
+	ScheduleRelationshipNoData ScheduleRelationship = "NO_DATA"
+	// Deprecated GTFS-RT value: this trip replaces a different scheduled trip
 	ScheduleRelationshipReplacement ScheduleRelationship = "REPLACEMENT"
-	ScheduleRelationshipDuplicated  ScheduleRelationship = "DUPLICATED"
-	ScheduleRelationshipDeleted     ScheduleRelationship = "DELETED"
+	// A trip created at runtime from a static schedule trip (e.g. an extra run of a regularly scheduled trip)
+	ScheduleRelationshipDuplicated ScheduleRelationship = "DUPLICATED"
+	// Trip should be removed; clients that previously received it should drop it
+	ScheduleRelationshipDeleted ScheduleRelationship = "DELETED"
 )
 
 var AllScheduleRelationship = []ScheduleRelationship{
@@ -2095,14 +2422,20 @@ func (e ScheduleRelationship) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Travel mode for a routing leg or step.
 type StepMode string
 
 const (
-	StepModeWalk    StepMode = "WALK"
-	StepModeAuto    StepMode = "AUTO"
+	// On foot
+	StepModeWalk StepMode = "WALK"
+	// Private vehicle (car)
+	StepModeAuto StepMode = "AUTO"
+	// Bicycle
 	StepModeBicycle StepMode = "BICYCLE"
+	// Public transit vehicle
 	StepModeTransit StepMode = "TRANSIT"
-	StepModeLine    StepMode = "LINE"
+	// Straight-line connection (e.g. for display purposes)
+	StepModeLine StepMode = "LINE"
 )
 
 var AllStepMode = []StepMode{

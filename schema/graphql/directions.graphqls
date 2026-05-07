@@ -1,149 +1,298 @@
 # Directions API
 
+"""
+Input parameters for a directions (routing) request.
+
+Specifies an origin, destination, travel mode, and optional departure time.
+Results are returned as a `Directions` object containing one or more `Itinerary` options.
+"""
 input DirectionRequest {
+  "Destination waypoint"
   to: WaypointInput!
+  "Origin waypoint"
   from: WaypointInput!
+  "Travel mode: `WALK`, `AUTO`, `BICYCLE`, `TRANSIT`, or `LINE`"
   mode: StepMode!
+  "Departure time; treated as arrival time when arrive_by is true. Defaults to now"
   depart_at: Time
+  "If true, treat depart_at as the desired arrival time rather than departure time. Support depends on the configured routing provider"
+  arrive_by: Boolean
 }
 
+"""
+A geographic waypoint used as an origin or destination in a routing request.
+"""
 input WaypointInput {
+  "Longitude of the waypoint"
   lon: Float!
+  "Latitude of the waypoint"
   lat: Float!
+  "Optional display name for the waypoint"
   name: String
 }
 
+"""
+A resolved waypoint in a routing response, including optional matched stop information.
+"""
 type Waypoint {
+  "Longitude of the waypoint"
   lon: Float!
+  "Latitude of the waypoint"
   lat: Float!
+  "Display name for the waypoint"
   name: String
+  "Matched transit stop at this waypoint, if any"
   stop: WaypointStop
 }
 
+"""
+A transit stop matched to a waypoint, with departure information.
+"""
 type WaypointStop {
+  "Longitude of the stop"
   lon: Float!
+  "Latitude of the stop"
   lat: Float!
+  "Scheduled departure time at this stop"
   departure: Time!
+  "GTFS stop_id"
   stop_id: String!
+  "Stop name"
   stop_name: String!
+  "Stop code"
   stop_code: String!
+  "Onestop ID for this stop"
   stop_onestop_id: String!
 }
 
+"""
+A transit stop with departure information within a leg, including sequence details.
+"""
 type WaypointDeparture {
+  "Longitude of the stop"
   lon: Float!
+  "Latitude of the stop"
   lat: Float!
+  "Scheduled departure time at this stop"
   departure: Time!
+  "GTFS stop_id"
   stop_id: String!
+  "Stop name"
   stop_name: String!
+  "Stop code"
   stop_code: String!
+  "Onestop ID for this stop"
   stop_onestop_id: String!
+  "Index of this stop within the leg"
   stop_index: Int
+  "GTFS stop_sequence value"
   stop_sequence: Int
 }
 
+"""
+Summary of the transit trip used within a leg.
+"""
 type LegTrip {
+  "GTFS trip_id"
   trip_id: String!
+  "GTFS trip_short_name"
   trip_short_name: String!
+  "Trip headsign"
   headsign: String!
+  "Feed Onestop ID for the source feed"
   feed_id: String!
+  "SHA1 hash of the source feed version"
   feed_version_sha1: String!
+  "Route information for this trip"
   route: LegRoute!
 }
 
+"""
+Summary of the route used within a leg.
+"""
 type LegRoute {
+  "GTFS route_id"
   route_id: String!
+  "GTFS route_short_name"
   route_short_name: String!
+  "GTFS route_long_name"
   route_long_name: String!
+  "Onestop ID for this route"
   route_onestop_id: String!
+  "GTFS route_type"
   route_type: Int!
+  "Route color in hex format (e.g. `FF0000`)"
   route_color: String
+  "Route text color in hex format"
   route_text_color: String
+  "Agency operating this route"
   agency: LegRouteAgency!
 }
 
+"""
+Summary of the agency operating the route within a leg.
+"""
 type LegRouteAgency {
+  "GTFS agency_id"
   agency_id: String!
+  "Agency name"
   agency_name: String!
+  "Onestop ID for this agency"
   agency_onestop_id: String!
 }
 
+"""
+Result of a directions (routing) request.
+
+Contains one or more `Itinerary` options from origin to destination, along with summary information for the first (best) itinerary.
+"""
 type Directions {
-  # metadata
+  "Whether the routing request succeeded"
   success: Boolean!
+  "Error message if the request did not succeed"
   exception: String
+  "Identifier for the routing data source or provider"
   data_source: String
-  # input
+  "Resolved origin waypoint"
   origin: Waypoint
+  "Resolved destination waypoint"
   destination: Waypoint
-  # first itin summary
+  "Total duration of the first itinerary"
   duration: Duration
+  "Total distance of the first itinerary"
   distance: Distance
+  "Departure time of the first itinerary"
   start_time: Time
+  "Arrival time of the first itinerary"
   end_time: Time
-  # itineraries
+  "Itineraries as returned by the routing provider, typically in preference order"
   itineraries: [Itinerary!]
 }
 
+"""
+A single trip option from origin to destination, composed of one or more `Leg`s.
+"""
 type Itinerary {
+  "Total duration of this itinerary"
   duration: Duration!
+  "Total distance of this itinerary"
   distance: Distance!
+  "Departure time of this itinerary"
   start_time: Time!
+  "Arrival time of this itinerary"
   end_time: Time!
+  "Origin waypoint"
   from: Waypoint!
+  "Destination waypoint"
   to: Waypoint!
+  "Ordered list of legs making up this itinerary"
   legs: [Leg!]
 }
 
+"""
+A single segment of an itinerary, traveled by a single mode (e.g. walk, transit vehicle).
+
+A transit leg includes the route, trip, and intermediate stops. A walk leg includes turn-by-turn steps.
+"""
 type Leg {
+  "Duration of this leg"
   duration: Duration!
+  "Distance of this leg"
   distance: Distance!
+  "Start time of this leg"
   start_time: Time!
+  "End time of this leg"
   end_time: Time!
+  "Origin waypoint for this leg"
   from: Waypoint
+  "Destination waypoint for this leg"
   to: Waypoint
+  "Travel mode for this leg"
   mode: StepMode
+  "Turn-by-turn steps for this leg (non-transit modes)"
   steps: [Step!]
+  "Stops served by this leg, from origin to destination, including any intermediate stops (transit mode only)"
   stops: [WaypointDeparture!]
+  "Path geometry for this leg as a LineString"
   geometry: LineString!
+  "Transit trip details for this leg (transit mode only)"
   trip: LegTrip
 }
 
+"""
+A single turn-by-turn navigation instruction within a walking or cycling leg.
+"""
 type Step {
+  "Duration of this step"
   duration: Duration!
+  "Distance of this step"
   distance: Distance!
+  "Start time of this step"
   start_time: Time!
+  "End time of this step"
   end_time: Time!
+  "Destination waypoint of this step"
   to: Waypoint
+  "Travel mode for this step"
   mode: StepMode!
+  "Human-readable navigation instruction (e.g. `Turn left on Main St`); may be empty depending on the routing provider"
   instruction: String!
+  "Offset into the parent leg geometry where this step begins"
   geometry_offset: Int!
 }
 
+"""
+A distance value with units.
+"""
 type Distance {
+  "Numeric distance value"
   distance: Float!
+  "Unit of measurement"
   units: DistanceUnit!
 }
 
+"""
+A duration value with units.
+"""
 type Duration {
+  "Numeric duration value"
   duration: Float!
+  "Unit of measurement"
   units: DurationUnit!
 }
 
+"""
+Unit of time duration.
+"""
 enum DurationUnit {
+  "Duration in seconds"
   SECONDS
 }
 
+"""
+Unit of distance measurement.
+"""
 enum DistanceUnit {
+  "Distance in kilometers"
   KILOMETERS
+  "Distance in meters"
   METERS
+  "Distance in miles"
   MILES
 }
 
+"""
+Travel mode for a routing leg or step.
+"""
 enum StepMode {
+  "On foot"
   WALK
+  "Private vehicle (car)"
   AUTO
+  "Bicycle"
   BICYCLE
+  "Public transit vehicle"
   TRANSIT
+  "Straight-line connection (e.g. for display purposes)"
   LINE
 }

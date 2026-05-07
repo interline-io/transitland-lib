@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
@@ -14,17 +15,21 @@ import (
 // CopyCommand
 type CopyCommand struct {
 	copier.Options
-	fvid              int
-	create            bool
-	extensionDefs     []string
-	readerPath        string
-	writerPath        string
-	writeExtraColumns bool
+	fvid                    int
+	create                  bool
+	extensionDefs           []string
+	readerPath              string
+	writerPath              string
+	writeExtraColumns       bool
+	standardizedSort        string
+	standardizedSortColumns []string
 }
 
 func (cmd *CopyCommand) HelpDesc() (string, string) {
 	a := "Copy performs a basic copy from a reader to a writer."
-	b := "By default, any entity with errors will be skipped and not written to output. This can be ignored with `--allow-entity-errors` to ignore simple errors and `--allow-reference-errors` to ignore entity relationship errors, such as a reference to a non-existent stop."
+	b := `Entities with errors are skipped by default; use --allow-entity-errors and --allow-reference-errors to override.
+
+Output preserves input order (with exceptions for stop relationships). Pass --standardized-sort (asc|desc) to apply an opinionated GTFS sort by primary keys, or override columns with --standardized-sort-columns.`
 	return a, b
 }
 
@@ -51,6 +56,8 @@ func (cmd *CopyCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
+	fl.StringVar(&cmd.standardizedSort, "standardized-sort", "", "Standardized sort order for CSV files (asc or desc; empty = no sort)")
+	fl.StringSliceVar(&cmd.standardizedSortColumns, "standardized-sort-columns", nil, "Comma-separated list of columns to sort by (optional; if empty, defaults are used)")
 }
 
 func (cmd *CopyCommand) Parse(args []string) error {
@@ -79,6 +86,19 @@ func (cmd *CopyCommand) Run(ctx context.Context) error {
 			v.WriteExtraColumns(true)
 		} else {
 			return errors.New("writer does not support extra output columns")
+		}
+	}
+	if cmd.standardizedSort != "" {
+		if err := adapters.ValidateSortDirection(cmd.standardizedSort); err != nil {
+			return fmt.Errorf("--standardized-sort: %w", err)
+		}
+		if v, ok := writer.(adapters.WriterWithStandardizedSort); ok {
+			v.SetStandardizedSortOptions(adapters.StandardizedSortOptions{
+				ApplySort:   cmd.standardizedSort,
+				SortColumns: cmd.standardizedSortColumns,
+			})
+		} else {
+			return errors.New("writer does not support standardized sort")
 		}
 	}
 

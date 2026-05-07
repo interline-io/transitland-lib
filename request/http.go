@@ -6,16 +6,49 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"code.dny.dev/ssrf"
 	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
+
+// defaultGuardian denies connections to IP ranges in the IANA Special-Purpose
+// Registries (loopback, RFC1918, link-local, multicast, the cloud metadata
+// address, etc.) and restricts IPv6 to global unicast. It runs as a
+// net.Dialer.Control hook, so it sees the resolved IP rather than the
+// hostname, closing basic DNS rebinding and multi-A-record gaps. Connections
+// to private destinations require opting out via Http.AllowHTTPUnfiltered.
+//
+// Port restriction is disabled (WithAnyPort): legitimate public GTFS feeds
+// commonly serve from non-standard HTTPS ports (8443, 4443, etc.). The
+// library only ever uses http.Client, so the dial port doesn't change the
+// protocol — port allowlisting would block real feeds without preventing
+// any attack the IP-based filter doesn't already cover.
+var defaultGuardian = ssrf.New(ssrf.WithAnyPort())
+
+// safeTransport is shared across all DownloadAuth calls so that connection
+// pooling and HTTP/2 reuse work across feed fetches.
+var safeTransport = func() *http.Transport {
+	var t *http.Transport
+	if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+		t = dt.Clone()
+	} else {
+		t = &http.Transport{}
+	}
+	t.DialContext = (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		Control:   defaultGuardian.Safe,
+	}).DialContext
+	return t
+}()
 
 func init() {
 	var _ Downloader = &Http{}
@@ -30,6 +63,10 @@ const (
 	//   Attempt 4: after ~90s (90s + jitter)
 	// Total max wait time: ~130s (~2 minutes)
 	defaultMaxRetries = 3
+
+	// defaultMaxRedirects matches the Go net/http default, which is otherwise
+	// replaced when a custom CheckRedirect is set.
+	defaultMaxRedirects = 10
 )
 
 // defaultBackoffSchedule defines the backoff duration for each retry attempt.
@@ -44,9 +81,19 @@ type Http struct {
 	// MaxRetries sets the maximum number of retry attempts for a request.
 	// If MaxRetries is zero or negative, a default value (defaultMaxRetries) is used.
 	MaxRetries int
+	// MaxRedirects follows Go net/http CheckRedirect semantics and limits the
+	// total number of requests in a redirect chain, including the initial
+	// request — a value of N therefore allows up to N-1 redirects to be
+	// followed. If MaxRedirects is zero or negative, defaultMaxRedirects (10)
+	// is used, matching the net/http default.
+	MaxRedirects int
 	// BackoffSchedule defines the backoff duration for each retry attempt.
 	// If nil or empty, defaultBackoffSchedule is used.
 	BackoffSchedule []time.Duration
+	// AllowHTTPUnfiltered disables SSRF protection (private/loopback/metadata
+	// IPs are allowed). Off by default — only set in CLI contexts where the
+	// operator legitimately fetches from internal addresses.
+	AllowHTTPUnfiltered bool
 }
 
 func (r *Http) SetSecret(secret dmfr.Secret) error {
@@ -66,6 +113,13 @@ func (r *Http) getBackoffSchedule() []time.Duration {
 		return r.BackoffSchedule
 	}
 	return defaultBackoffSchedule
+}
+
+func (r *Http) getMaxRedirects() int {
+	if r.MaxRedirects > 0 {
+		return r.MaxRedirects
+	}
+	return defaultMaxRedirects
 }
 
 // isRetryableStatus returns true for HTTP status codes that indicate
@@ -190,11 +244,18 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	// may break pre-signed S3 URLs or other systems that rely on the host header
 	removeDefaultPortFromHost(req)
 
+	maxRedirects := r.getMaxRedirects()
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("stopped after %d redirects", maxRedirects)
+			}
 			removeDefaultPortFromHost(req)
 			return nil
 		},
+	}
+	if !r.AllowHTTPUnfiltered {
+		client.Transport = safeTransport
 	}
 
 	maxRetries := r.getMaxRetries()

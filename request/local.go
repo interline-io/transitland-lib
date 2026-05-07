@@ -62,7 +62,7 @@ func (r *Local) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 	return ret, nil
 }
 
-func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
+func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) (err error) {
 	outfn := filepath.Join(r.Directory, key)
 	log.Debug().Msgf("local store: uploading to key '%s', full path is '%s'", key, outfn)
 	// Check if directory exists
@@ -74,6 +74,11 @@ func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) err
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if cerr := outf.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	_, err = io.Copy(outf, uploadFile)
 	return err
 }

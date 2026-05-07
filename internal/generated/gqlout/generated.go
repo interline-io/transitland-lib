@@ -54,6 +54,7 @@ type ResolverRoot interface {
 	FeedVersion() FeedVersionResolver
 	FeedVersionGtfsImport() FeedVersionGtfsImportResolver
 	FlexStopTime() FlexStopTimeResolver
+	Group() GroupResolver
 	Level() LevelResolver
 	Location() LocationResolver
 	LocationGroup() LocationGroupResolver
@@ -72,6 +73,7 @@ type ResolverRoot interface {
 	Stop() StopResolver
 	StopExternalReference() StopExternalReferenceResolver
 	StopTime() StopTimeResolver
+	Tenant() TenantResolver
 	Trip() TripResolver
 	ValidationReport() ValidationReportResolver
 	ValidationReportErrorGroup() ValidationReportErrorGroupResolver
@@ -172,6 +174,7 @@ type ComplexityRoot struct {
 		Sources     func(childComplexity int, limit *int, where *model.CensusSourceFilter) int
 		Tables      func(childComplexity int, limit *int, where *model.CensusTableFilter) int
 		URL         func(childComplexity int) int
+		ValuesRelay func(childComplexity int, first *int, after *string, where *model.CensusDatasetValueFilter) int
 		YearMax     func(childComplexity int) int
 		YearMin     func(childComplexity int) int
 	}
@@ -240,6 +243,16 @@ type ComplexityRoot struct {
 		Values      func(childComplexity int) int
 	}
 
+	CensusValueConnection struct {
+		Edges    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
+	CensusValueEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
+	}
+
 	Directions struct {
 		DataSource  func(childComplexity int) int
 		Destination func(childComplexity int) int
@@ -279,6 +292,7 @@ type ComplexityRoot struct {
 		Languages           func(childComplexity int) int
 		License             func(childComplexity int) int
 		Name                func(childComplexity int) int
+		Permissions         func(childComplexity int) int
 		SearchRank          func(childComplexity int) int
 		Spec                func(childComplexity int) int
 		Tags                func(childComplexity int) int
@@ -362,6 +376,7 @@ type ComplexityRoot struct {
 		LocationGroups        func(childComplexity int, limit *int, where *model.LocationGroupFilter) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
+		Permissions           func(childComplexity int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SHA1                  func(childComplexity int) int
 		Segments              func(childComplexity int, limit *int) int
@@ -722,6 +737,14 @@ type ComplexityRoot struct {
 		VehicleType       func(childComplexity int) int
 	}
 
+	Group struct {
+		Feeds       func(childComplexity int, limit *int) int
+		ID          func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Permissions func(childComplexity int) int
+		Tenant      func(childComplexity int) int
+	}
+
 	Itinerary struct {
 		Distance  func(childComplexity int) int
 		Duration  func(childComplexity int) int
@@ -773,12 +796,14 @@ type ComplexityRoot struct {
 	}
 
 	Level struct {
+		CreatedAt  func(childComplexity int) int
 		Geometry   func(childComplexity int) int
 		ID         func(childComplexity int) int
 		LevelID    func(childComplexity int) int
 		LevelIndex func(childComplexity int) int
 		LevelName  func(childComplexity int) int
 		Stops      func(childComplexity int) int
+		UpdatedAt  func(childComplexity int) int
 	}
 
 	Location struct {
@@ -826,15 +851,21 @@ type ComplexityRoot struct {
 		FeedVersionImport   func(childComplexity int, id int) int
 		FeedVersionUnimport func(childComplexity int, id int) int
 		FeedVersionUpdate   func(childComplexity int, set model.FeedVersionSetInput) int
+		GroupSave           func(childComplexity int, id int, input model.GroupInput) int
 		LevelCreate         func(childComplexity int, set model.LevelSetInput) int
 		LevelDelete         func(childComplexity int, id int) int
 		LevelUpdate         func(childComplexity int, set model.LevelSetInput) int
 		PathwayCreate       func(childComplexity int, set model.PathwaySetInput) int
 		PathwayDelete       func(childComplexity int, id int) int
 		PathwayUpdate       func(childComplexity int, set model.PathwaySetInput) int
+		PermissionAdd       func(childComplexity int, typeArg string, id int, input model.PermissionInput) int
+		PermissionRemove    func(childComplexity int, typeArg string, id int, input model.PermissionInput) int
+		PermissionSetParent func(childComplexity int, typeArg string, id int, input model.SetParentInput) int
 		StopCreate          func(childComplexity int, set model.StopSetInput) int
 		StopDelete          func(childComplexity int, id int) int
 		StopUpdate          func(childComplexity int, set model.StopSetInput) int
+		TenantCreateGroup   func(childComplexity int, id int, input model.GroupInput) int
+		TenantSave          func(childComplexity int, id int, input model.TenantInput) int
 		ValidateGtfs        func(childComplexity int, file *graphql.Upload, url *string, realtimeUrls []string) int
 	}
 
@@ -852,7 +883,15 @@ type ComplexityRoot struct {
 		Website    func(childComplexity int) int
 	}
 
+	PageInfo struct {
+		EndCursor       func(childComplexity int) int
+		HasNextPage     func(childComplexity int) int
+		HasPreviousPage func(childComplexity int) int
+		StartCursor     func(childComplexity int) int
+	}
+
 	Pathway struct {
+		CreatedAt           func(childComplexity int) int
 		FromStop            func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		IsBidirectional     func(childComplexity int) int
@@ -866,6 +905,27 @@ type ComplexityRoot struct {
 		StairCount          func(childComplexity int) int
 		ToStop              func(childComplexity int) int
 		TraversalTime       func(childComplexity int) int
+		UpdatedAt           func(childComplexity int) int
+	}
+
+	PermissionRef struct {
+		ID   func(childComplexity int) int
+		Name func(childComplexity int) int
+		Type func(childComplexity int) int
+	}
+
+	PermissionSubject struct {
+		ID       func(childComplexity int) int
+		Name     func(childComplexity int) int
+		Relation func(childComplexity int) int
+		Type     func(childComplexity int) int
+	}
+
+	Permissions struct {
+		Actions  func(childComplexity int) int
+		Children func(childComplexity int) int
+		Parent   func(childComplexity int) int
+		Subjects func(childComplexity int) int
 	}
 
 	Place struct {
@@ -884,12 +944,15 @@ type ComplexityRoot struct {
 		Docks          func(childComplexity int, limit *int, where *model.GbfsDockRequest) int
 		FeedVersions   func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedVersionFilter) int
 		Feeds          func(childComplexity int, limit *int, after *int, ids []int, where *model.FeedFilter) int
+		Groups         func(childComplexity int, limit *int, ids []int) int
 		Me             func(childComplexity int) int
 		Operators      func(childComplexity int, limit *int, after *int, ids []int, where *model.OperatorFilter) int
 		Places         func(childComplexity int, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) int
 		Routes         func(childComplexity int, limit *int, after *int, ids []int, where *model.RouteFilter) int
 		Stops          func(childComplexity int, limit *int, after *int, ids []int, where *model.StopFilter) int
+		Tenants        func(childComplexity int, limit *int, ids []int) int
 		Trips          func(childComplexity int, limit *int, after *int, ids []int, where *model.TripFilter) int
+		Users          func(childComplexity int, limit *int, where *model.UserFilter) int
 	}
 
 	RTTimeRange struct {
@@ -1007,10 +1070,15 @@ type ComplexityRoot struct {
 	}
 
 	SegmentPattern struct {
+		DirectionID   func(childComplexity int) int
 		ID            func(childComplexity int) int
 		Route         func(childComplexity int) int
 		Segment       func(childComplexity int) int
+		SequenceIdx   func(childComplexity int) int
+		Shape         func(childComplexity int) int
+		ShapeID       func(childComplexity int) int
 		StopPatternID func(childComplexity int) int
+		WayID         func(childComplexity int) int
 	}
 
 	Shape struct {
@@ -1037,6 +1105,7 @@ type ComplexityRoot struct {
 		CensusGeographies  func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		ChildLevels        func(childComplexity int, limit *int) int
 		Children           func(childComplexity int, limit *int) int
+		CreatedAt          func(childComplexity int) int
 		Departures         func(childComplexity int, limit *int, where *model.StopTimeFilter) int
 		Directions         func(childComplexity int, to *model.WaypointInput, from *model.WaypointInput, mode *model.StepMode, departAt *time.Time) int
 		ExternalReference  func(childComplexity int) int
@@ -1066,6 +1135,7 @@ type ComplexityRoot struct {
 		StopTimezone       func(childComplexity int) int
 		StopURL            func(childComplexity int) int
 		TtsStopName        func(childComplexity int) int
+		UpdatedAt          func(childComplexity int) int
 		WheelchairBoarding func(childComplexity int) int
 		WithinFeatures     func(childComplexity int) int
 		ZoneID             func(childComplexity int) int
@@ -1145,6 +1215,13 @@ type ComplexityRoot struct {
 		Uncertainty    func(childComplexity int) int
 	}
 
+	Tenant struct {
+		Groups      func(childComplexity int, limit *int) int
+		ID          func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Permissions func(childComplexity int) int
+	}
+
 	Trip struct {
 		Alerts               func(childComplexity int, active *bool, limit *int) int
 		BikesAllowed         func(childComplexity int) int
@@ -1165,6 +1242,12 @@ type ComplexityRoot struct {
 		TripID               func(childComplexity int) int
 		TripShortName        func(childComplexity int) int
 		WheelchairAccessible func(childComplexity int) int
+	}
+
+	User struct {
+		Email func(childComplexity int) int
+		ID    func(childComplexity int) int
+		Name  func(childComplexity int) int
 	}
 
 	ValidationRealtimeResult struct {
@@ -1288,6 +1371,7 @@ type CensusDatasetResolver interface {
 	Geographies(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusDatasetGeographyFilter) ([]*model.CensusGeography, error)
 	Tables(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusTableFilter) ([]*model.CensusTable, error)
 	Layers(ctx context.Context, obj *model.CensusDataset) ([]*model.CensusLayer, error)
+	ValuesRelay(ctx context.Context, obj *model.CensusDataset, first *int, after *string, where *model.CensusDatasetValueFilter) (*model.CensusValueConnection, error)
 }
 type CensusGeographyResolver interface {
 	Values(ctx context.Context, obj *model.CensusGeography, tableNames []string, dataset *string, limit *int) ([]*model.CensusValue, error)
@@ -1320,6 +1404,7 @@ type FeedResolver interface {
 	FeedState(ctx context.Context, obj *model.Feed) (*model.FeedState, error)
 	FeedFetches(ctx context.Context, obj *model.Feed, limit *int, where *model.FeedFetchFilter) ([]*model.FeedFetch, error)
 	FeedVersions(ctx context.Context, obj *model.Feed, limit *int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error)
+	Permissions(ctx context.Context, obj *model.Feed) (*model.Permissions, error)
 }
 type FeedStateResolver interface {
 	FeedVersion(ctx context.Context, obj *model.FeedState) (*model.FeedVersion, error)
@@ -1341,6 +1426,7 @@ type FeedVersionResolver interface {
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
+	Permissions(ctx context.Context, obj *model.FeedVersion) (*model.Permissions, error)
 }
 type FeedVersionGtfsImportResolver interface {
 	SkipEntityErrorCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
@@ -1360,6 +1446,11 @@ type FlexStopTimeResolver interface {
 	Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
 
 	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
+}
+type GroupResolver interface {
+	Tenant(ctx context.Context, obj *model.Group) (*model.Tenant, error)
+	Feeds(ctx context.Context, obj *model.Group, limit *int) ([]*model.Feed, error)
+	Permissions(ctx context.Context, obj *model.Group) (*model.Permissions, error)
 }
 type LevelResolver interface {
 	Stops(ctx context.Context, obj *model.Level) ([]*model.Stop, error)
@@ -1393,6 +1484,12 @@ type MutationResolver interface {
 	PathwayCreate(ctx context.Context, set model.PathwaySetInput) (*model.Pathway, error)
 	PathwayUpdate(ctx context.Context, set model.PathwaySetInput) (*model.Pathway, error)
 	PathwayDelete(ctx context.Context, id int) (*model.EntityDeleteResult, error)
+	PermissionAdd(ctx context.Context, typeArg string, id int, input model.PermissionInput) (bool, error)
+	PermissionRemove(ctx context.Context, typeArg string, id int, input model.PermissionInput) (bool, error)
+	PermissionSetParent(ctx context.Context, typeArg string, id int, input model.SetParentInput) (bool, error)
+	TenantSave(ctx context.Context, id int, input model.TenantInput) (*model.Tenant, error)
+	TenantCreateGroup(ctx context.Context, id int, input model.GroupInput) (*model.Group, error)
+	GroupSave(ctx context.Context, id int, input model.GroupInput) (*model.Group, error)
 }
 type OperatorResolver interface {
 	Agencies(ctx context.Context, obj *model.Operator) ([]*model.Agency, error)
@@ -1420,6 +1517,9 @@ type QueryResolver interface {
 	Docks(ctx context.Context, limit *int, where *model.GbfsDockRequest) ([]*model.GbfsStationInformation, error)
 	Me(ctx context.Context) (*model.Me, error)
 	CensusDatasets(ctx context.Context, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) ([]*model.CensusDataset, error)
+	Tenants(ctx context.Context, limit *int, ids []int) ([]*model.Tenant, error)
+	Groups(ctx context.Context, limit *int, ids []int) ([]*model.Group, error)
+	Users(ctx context.Context, limit *int, where *model.UserFilter) ([]*model.User, error)
 }
 type RouteResolver interface {
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
@@ -1459,6 +1559,7 @@ type SegmentResolver interface {
 type SegmentPatternResolver interface {
 	Route(ctx context.Context, obj *model.SegmentPattern) (*model.Route, error)
 
+	Shape(ctx context.Context, obj *model.SegmentPattern) (*model.Shape, error)
 	Segment(ctx context.Context, obj *model.SegmentPattern) (*model.Segment, error)
 }
 type StopResolver interface {
@@ -1495,6 +1596,10 @@ type StopTimeResolver interface {
 	Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
 
 	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
+}
+type TenantResolver interface {
+	Groups(ctx context.Context, obj *model.Tenant, limit *int) ([]*model.Group, error)
+	Permissions(ctx context.Context, obj *model.Tenant) (*model.Permissions, error)
 }
 type TripResolver interface {
 	Calendar(ctx context.Context, obj *model.Trip) (*model.Calendar, error)
@@ -2106,6 +2211,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CensusDataset.URL(childComplexity), true
 
+	case "CensusDataset.values_relay":
+		if e.complexity.CensusDataset.ValuesRelay == nil {
+			break
+		}
+
+		args, err := ec.field_CensusDataset_values_relay_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.CensusDataset.ValuesRelay(childComplexity, args["first"].(*int), args["after"].(*string), args["where"].(*model.CensusDatasetValueFilter)), true
+
 	case "CensusDataset.year_max":
 		if e.complexity.CensusDataset.YearMax == nil {
 			break
@@ -2462,6 +2579,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CensusValue.Values(childComplexity), true
 
+	case "CensusValueConnection.edges":
+		if e.complexity.CensusValueConnection.Edges == nil {
+			break
+		}
+
+		return e.complexity.CensusValueConnection.Edges(childComplexity), true
+
+	case "CensusValueConnection.pageInfo":
+		if e.complexity.CensusValueConnection.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.CensusValueConnection.PageInfo(childComplexity), true
+
+	case "CensusValueEdge.cursor":
+		if e.complexity.CensusValueEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.CensusValueEdge.Cursor(childComplexity), true
+
+	case "CensusValueEdge.node":
+		if e.complexity.CensusValueEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.CensusValueEdge.Node(childComplexity), true
+
 	case "Directions.data_source":
 		if e.complexity.Directions.DataSource == nil {
 			break
@@ -2653,6 +2798,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Feed.Name(childComplexity), true
+
+	case "Feed.permissions":
+		if e.complexity.Feed.Permissions == nil {
+			break
+		}
+
+		return e.complexity.Feed.Permissions(childComplexity), true
 
 	case "Feed.search_rank":
 		if e.complexity.Feed.SearchRank == nil {
@@ -3117,6 +3269,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.FeedVersion.Name(childComplexity), true
+
+	case "FeedVersion.permissions":
+		if e.complexity.FeedVersion.Permissions == nil {
+			break
+		}
+
+		return e.complexity.FeedVersion.Permissions(childComplexity), true
 
 	case "FeedVersion.routes":
 		if e.complexity.FeedVersion.Routes == nil {
@@ -4919,6 +5078,46 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.GbfsVehicleTypeAvailable.VehicleType(childComplexity), true
 
+	case "Group.feeds":
+		if e.complexity.Group.Feeds == nil {
+			break
+		}
+
+		args, err := ec.field_Group_feeds_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Group.Feeds(childComplexity, args["limit"].(*int)), true
+
+	case "Group.id":
+		if e.complexity.Group.ID == nil {
+			break
+		}
+
+		return e.complexity.Group.ID(childComplexity), true
+
+	case "Group.name":
+		if e.complexity.Group.Name == nil {
+			break
+		}
+
+		return e.complexity.Group.Name(childComplexity), true
+
+	case "Group.permissions":
+		if e.complexity.Group.Permissions == nil {
+			break
+		}
+
+		return e.complexity.Group.Permissions(childComplexity), true
+
+	case "Group.tenant":
+		if e.complexity.Group.Tenant == nil {
+			break
+		}
+
+		return e.complexity.Group.Tenant(childComplexity), true
+
 	case "Itinerary.distance":
 		if e.complexity.Itinerary.Distance == nil {
 			break
@@ -5164,6 +5363,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.LegTrip.TripShortName(childComplexity), true
 
+	case "Level.created_at":
+		if e.complexity.Level.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Level.CreatedAt(childComplexity), true
+
 	case "Level.geometry":
 		if e.complexity.Level.Geometry == nil {
 			break
@@ -5205,6 +5411,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Level.Stops(childComplexity), true
+
+	case "Level.updated_at":
+		if e.complexity.Level.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Level.UpdatedAt(childComplexity), true
 
 	case "Location.feed_onestop_id":
 		if e.complexity.Location.FeedOnestopID == nil {
@@ -5470,6 +5683,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.FeedVersionUpdate(childComplexity, args["set"].(model.FeedVersionSetInput)), true
 
+	case "Mutation.group_save":
+		if e.complexity.Mutation.GroupSave == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_group_save_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.GroupSave(childComplexity, args["id"].(int), args["input"].(model.GroupInput)), true
+
 	case "Mutation.level_create":
 		if e.complexity.Mutation.LevelCreate == nil {
 			break
@@ -5542,6 +5767,42 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.PathwayUpdate(childComplexity, args["set"].(model.PathwaySetInput)), true
 
+	case "Mutation.permission_add":
+		if e.complexity.Mutation.PermissionAdd == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_permission_add_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PermissionAdd(childComplexity, args["type"].(string), args["id"].(int), args["input"].(model.PermissionInput)), true
+
+	case "Mutation.permission_remove":
+		if e.complexity.Mutation.PermissionRemove == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_permission_remove_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PermissionRemove(childComplexity, args["type"].(string), args["id"].(int), args["input"].(model.PermissionInput)), true
+
+	case "Mutation.permission_set_parent":
+		if e.complexity.Mutation.PermissionSetParent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_permission_set_parent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PermissionSetParent(childComplexity, args["type"].(string), args["id"].(int), args["input"].(model.SetParentInput)), true
+
 	case "Mutation.stop_create":
 		if e.complexity.Mutation.StopCreate == nil {
 			break
@@ -5577,6 +5838,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.StopUpdate(childComplexity, args["set"].(model.StopSetInput)), true
+
+	case "Mutation.tenant_create_group":
+		if e.complexity.Mutation.TenantCreateGroup == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_tenant_create_group_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.TenantCreateGroup(childComplexity, args["id"].(int), args["input"].(model.GroupInput)), true
+
+	case "Mutation.tenant_save":
+		if e.complexity.Mutation.TenantSave == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_tenant_save_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.TenantSave(childComplexity, args["id"].(int), args["input"].(model.TenantInput)), true
 
 	case "Mutation.validate_gtfs":
 		if e.complexity.Mutation.ValidateGtfs == nil {
@@ -5672,6 +5957,41 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Operator.Website(childComplexity), true
 
+	case "PageInfo.endCursor":
+		if e.complexity.PageInfo.EndCursor == nil {
+			break
+		}
+
+		return e.complexity.PageInfo.EndCursor(childComplexity), true
+
+	case "PageInfo.hasNextPage":
+		if e.complexity.PageInfo.HasNextPage == nil {
+			break
+		}
+
+		return e.complexity.PageInfo.HasNextPage(childComplexity), true
+
+	case "PageInfo.hasPreviousPage":
+		if e.complexity.PageInfo.HasPreviousPage == nil {
+			break
+		}
+
+		return e.complexity.PageInfo.HasPreviousPage(childComplexity), true
+
+	case "PageInfo.startCursor":
+		if e.complexity.PageInfo.StartCursor == nil {
+			break
+		}
+
+		return e.complexity.PageInfo.StartCursor(childComplexity), true
+
+	case "Pathway.created_at":
+		if e.complexity.Pathway.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Pathway.CreatedAt(childComplexity), true
+
 	case "Pathway.from_stop":
 		if e.complexity.Pathway.FromStop == nil {
 			break
@@ -5762,6 +6082,90 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Pathway.TraversalTime(childComplexity), true
+
+	case "Pathway.updated_at":
+		if e.complexity.Pathway.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Pathway.UpdatedAt(childComplexity), true
+
+	case "PermissionRef.id":
+		if e.complexity.PermissionRef.ID == nil {
+			break
+		}
+
+		return e.complexity.PermissionRef.ID(childComplexity), true
+
+	case "PermissionRef.name":
+		if e.complexity.PermissionRef.Name == nil {
+			break
+		}
+
+		return e.complexity.PermissionRef.Name(childComplexity), true
+
+	case "PermissionRef.type":
+		if e.complexity.PermissionRef.Type == nil {
+			break
+		}
+
+		return e.complexity.PermissionRef.Type(childComplexity), true
+
+	case "PermissionSubject.id":
+		if e.complexity.PermissionSubject.ID == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.ID(childComplexity), true
+
+	case "PermissionSubject.name":
+		if e.complexity.PermissionSubject.Name == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.Name(childComplexity), true
+
+	case "PermissionSubject.relation":
+		if e.complexity.PermissionSubject.Relation == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.Relation(childComplexity), true
+
+	case "PermissionSubject.type":
+		if e.complexity.PermissionSubject.Type == nil {
+			break
+		}
+
+		return e.complexity.PermissionSubject.Type(childComplexity), true
+
+	case "Permissions.actions":
+		if e.complexity.Permissions.Actions == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Actions(childComplexity), true
+
+	case "Permissions.children":
+		if e.complexity.Permissions.Children == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Children(childComplexity), true
+
+	case "Permissions.parent":
+		if e.complexity.Permissions.Parent == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Parent(childComplexity), true
+
+	case "Permissions.subjects":
+		if e.complexity.Permissions.Subjects == nil {
+			break
+		}
+
+		return e.complexity.Permissions.Subjects(childComplexity), true
 
 	case "Place.adm0_name":
 		if e.complexity.Place.Adm0Name == nil {
@@ -5882,6 +6286,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Feeds(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.FeedFilter)), true
 
+	case "Query.groups":
+		if e.complexity.Query.Groups == nil {
+			break
+		}
+
+		args, err := ec.field_Query_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Groups(childComplexity, args["limit"].(*int), args["ids"].([]int)), true
+
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
 			break
@@ -5937,6 +6353,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Stops(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.StopFilter)), true
 
+	case "Query.tenants":
+		if e.complexity.Query.Tenants == nil {
+			break
+		}
+
+		args, err := ec.field_Query_tenants_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Tenants(childComplexity, args["limit"].(*int), args["ids"].([]int)), true
+
 	case "Query.trips":
 		if e.complexity.Query.Trips == nil {
 			break
@@ -5948,6 +6376,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Trips(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.TripFilter)), true
+
+	case "Query.users":
+		if e.complexity.Query.Users == nil {
+			break
+		}
+
+		args, err := ec.field_Query_users_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Users(childComplexity, args["limit"].(*int), args["where"].(*model.UserFilter)), true
 
 	case "RTTimeRange.end":
 		if e.complexity.RTTimeRange.End == nil {
@@ -6550,6 +6990,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Segment.WayID(childComplexity), true
 
+	case "SegmentPattern.direction_id":
+		if e.complexity.SegmentPattern.DirectionID == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.DirectionID(childComplexity), true
+
 	case "SegmentPattern.id":
 		if e.complexity.SegmentPattern.ID == nil {
 			break
@@ -6571,12 +7018,40 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.SegmentPattern.Segment(childComplexity), true
 
+	case "SegmentPattern.sequence_idx":
+		if e.complexity.SegmentPattern.SequenceIdx == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.SequenceIdx(childComplexity), true
+
+	case "SegmentPattern.shape":
+		if e.complexity.SegmentPattern.Shape == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.Shape(childComplexity), true
+
+	case "SegmentPattern.shape_id":
+		if e.complexity.SegmentPattern.ShapeID == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.ShapeID(childComplexity), true
+
 	case "SegmentPattern.stop_pattern_id":
 		if e.complexity.SegmentPattern.StopPatternID == nil {
 			break
 		}
 
 		return e.complexity.SegmentPattern.StopPatternID(childComplexity), true
+
+	case "SegmentPattern.way_id":
+		if e.complexity.SegmentPattern.WayID == nil {
+			break
+		}
+
+		return e.complexity.SegmentPattern.WayID(childComplexity), true
 
 	case "Shape.generated":
 		if e.complexity.Shape.Generated == nil {
@@ -6721,6 +7196,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Stop.Children(childComplexity, args["limit"].(*int)), true
+
+	case "Stop.created_at":
+		if e.complexity.Stop.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Stop.CreatedAt(childComplexity), true
 
 	case "Stop.departures":
 		if e.complexity.Stop.Departures == nil {
@@ -6969,6 +7451,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Stop.TtsStopName(childComplexity), true
+
+	case "Stop.updated_at":
+		if e.complexity.Stop.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Stop.UpdatedAt(childComplexity), true
 
 	case "Stop.wheelchair_boarding":
 		if e.complexity.Stop.WheelchairBoarding == nil {
@@ -7404,6 +7893,39 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.StopTimeEvent.Uncertainty(childComplexity), true
 
+	case "Tenant.groups":
+		if e.complexity.Tenant.Groups == nil {
+			break
+		}
+
+		args, err := ec.field_Tenant_groups_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Tenant.Groups(childComplexity, args["limit"].(*int)), true
+
+	case "Tenant.id":
+		if e.complexity.Tenant.ID == nil {
+			break
+		}
+
+		return e.complexity.Tenant.ID(childComplexity), true
+
+	case "Tenant.name":
+		if e.complexity.Tenant.Name == nil {
+			break
+		}
+
+		return e.complexity.Tenant.Name(childComplexity), true
+
+	case "Tenant.permissions":
+		if e.complexity.Tenant.Permissions == nil {
+			break
+		}
+
+		return e.complexity.Tenant.Permissions(childComplexity), true
+
 	case "Trip.alerts":
 		if e.complexity.Trip.Alerts == nil {
 			break
@@ -7556,6 +8078,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Trip.WheelchairAccessible(childComplexity), true
+
+	case "User.email":
+		if e.complexity.User.Email == nil {
+			break
+		}
+
+		return e.complexity.User.Email(childComplexity), true
+
+	case "User.id":
+		if e.complexity.User.ID == nil {
+			break
+		}
+
+		return e.complexity.User.ID(childComplexity), true
+
+	case "User.name":
+		if e.complexity.User.Name == nil {
+			break
+		}
+
+		return e.complexity.User.Name(childComplexity), true
 
 	case "ValidationRealtimeResult.json":
 		if e.complexity.ValidationRealtimeResult.JSON == nil {
@@ -8104,6 +8647,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCensusDatasetFilter,
 		ec.unmarshalInputCensusDatasetGeographyFilter,
 		ec.unmarshalInputCensusDatasetGeographyLocationFilter,
+		ec.unmarshalInputCensusDatasetValueFilter,
 		ec.unmarshalInputCensusGeographyFilter,
 		ec.unmarshalInputCensusSourceFilter,
 		ec.unmarshalInputCensusSourceGeographyFilter,
@@ -8120,6 +8664,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputFocusPoint,
 		ec.unmarshalInputGbfsBikeRequest,
 		ec.unmarshalInputGbfsDockRequest,
+		ec.unmarshalInputGroupInput,
 		ec.unmarshalInputLevelSetInput,
 		ec.unmarshalInputLicenseFilter,
 		ec.unmarshalInputLocationFilter,
@@ -8127,6 +8672,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputOperatorFilter,
 		ec.unmarshalInputPathwayFilter,
 		ec.unmarshalInputPathwaySetInput,
+		ec.unmarshalInputPermissionInput,
 		ec.unmarshalInputPlaceFilter,
 		ec.unmarshalInputPointRadius,
 		ec.unmarshalInputRouteFilter,
@@ -8134,6 +8680,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSegmentFilter,
 		ec.unmarshalInputSegmentPatternFilter,
 		ec.unmarshalInputServiceCoversFilter,
+		ec.unmarshalInputSetParentInput,
 		ec.unmarshalInputStopBuffer,
 		ec.unmarshalInputStopExternalReferenceSetInput,
 		ec.unmarshalInputStopFilter,
@@ -8141,8 +8688,10 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputStopObservationFilter,
 		ec.unmarshalInputStopSetInput,
 		ec.unmarshalInputStopTimeFilter,
+		ec.unmarshalInputTenantInput,
 		ec.unmarshalInputTripFilter,
 		ec.unmarshalInputTripStopTimeFilter,
+		ec.unmarshalInputUserFilter,
 		ec.unmarshalInputValidationReportFilter,
 		ec.unmarshalInputWaypointInput,
 	)
@@ -8244,547 +8793,1172 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "../../../schema/graphql/directions.graphqls", Input: `# Directions API
 
+"""
+Input parameters for a directions (routing) request.
+
+Specifies an origin, destination, travel mode, and optional departure time.
+Results are returned as a ` + "`" + `Directions` + "`" + ` object containing one or more ` + "`" + `Itinerary` + "`" + ` options.
+"""
 input DirectionRequest {
+  "Destination waypoint"
   to: WaypointInput!
+  "Origin waypoint"
   from: WaypointInput!
+  "Travel mode: ` + "`" + `WALK` + "`" + `, ` + "`" + `AUTO` + "`" + `, ` + "`" + `BICYCLE` + "`" + `, ` + "`" + `TRANSIT` + "`" + `, or ` + "`" + `LINE` + "`" + `"
   mode: StepMode!
+  "Departure time; treated as arrival time when arrive_by is true. Defaults to now"
   depart_at: Time
+  "If true, treat depart_at as the desired arrival time rather than departure time. Support depends on the configured routing provider"
+  arrive_by: Boolean
 }
 
+"""
+A geographic waypoint used as an origin or destination in a routing request.
+"""
 input WaypointInput {
+  "Longitude of the waypoint"
   lon: Float!
+  "Latitude of the waypoint"
   lat: Float!
+  "Optional display name for the waypoint"
   name: String
 }
 
+"""
+A resolved waypoint in a routing response, including optional matched stop information.
+"""
 type Waypoint {
+  "Longitude of the waypoint"
   lon: Float!
+  "Latitude of the waypoint"
   lat: Float!
+  "Display name for the waypoint"
   name: String
+  "Matched transit stop at this waypoint, if any"
   stop: WaypointStop
 }
 
+"""
+A transit stop matched to a waypoint, with departure information.
+"""
 type WaypointStop {
+  "Longitude of the stop"
   lon: Float!
+  "Latitude of the stop"
   lat: Float!
+  "Scheduled departure time at this stop"
   departure: Time!
+  "GTFS stop_id"
   stop_id: String!
+  "Stop name"
   stop_name: String!
+  "Stop code"
   stop_code: String!
+  "Onestop ID for this stop"
   stop_onestop_id: String!
 }
 
+"""
+A transit stop with departure information within a leg, including sequence details.
+"""
 type WaypointDeparture {
+  "Longitude of the stop"
   lon: Float!
+  "Latitude of the stop"
   lat: Float!
+  "Scheduled departure time at this stop"
   departure: Time!
+  "GTFS stop_id"
   stop_id: String!
+  "Stop name"
   stop_name: String!
+  "Stop code"
   stop_code: String!
+  "Onestop ID for this stop"
   stop_onestop_id: String!
+  "Index of this stop within the leg"
   stop_index: Int
+  "GTFS stop_sequence value"
   stop_sequence: Int
 }
 
+"""
+Summary of the transit trip used within a leg.
+"""
 type LegTrip {
+  "GTFS trip_id"
   trip_id: String!
+  "GTFS trip_short_name"
   trip_short_name: String!
+  "Trip headsign"
   headsign: String!
+  "Feed Onestop ID for the source feed"
   feed_id: String!
+  "SHA1 hash of the source feed version"
   feed_version_sha1: String!
+  "Route information for this trip"
   route: LegRoute!
 }
 
+"""
+Summary of the route used within a leg.
+"""
 type LegRoute {
+  "GTFS route_id"
   route_id: String!
+  "GTFS route_short_name"
   route_short_name: String!
+  "GTFS route_long_name"
   route_long_name: String!
+  "Onestop ID for this route"
   route_onestop_id: String!
+  "GTFS route_type"
   route_type: Int!
+  "Route color in hex format (e.g. ` + "`" + `FF0000` + "`" + `)"
   route_color: String
+  "Route text color in hex format"
   route_text_color: String
+  "Agency operating this route"
   agency: LegRouteAgency!
 }
 
+"""
+Summary of the agency operating the route within a leg.
+"""
 type LegRouteAgency {
+  "GTFS agency_id"
   agency_id: String!
+  "Agency name"
   agency_name: String!
+  "Onestop ID for this agency"
   agency_onestop_id: String!
 }
 
+"""
+Result of a directions (routing) request.
+
+Contains one or more ` + "`" + `Itinerary` + "`" + ` options from origin to destination, along with summary information for the first (best) itinerary.
+"""
 type Directions {
-  # metadata
+  "Whether the routing request succeeded"
   success: Boolean!
+  "Error message if the request did not succeed"
   exception: String
+  "Identifier for the routing data source or provider"
   data_source: String
-  # input
+  "Resolved origin waypoint"
   origin: Waypoint
+  "Resolved destination waypoint"
   destination: Waypoint
-  # first itin summary
+  "Total duration of the first itinerary"
   duration: Duration
+  "Total distance of the first itinerary"
   distance: Distance
+  "Departure time of the first itinerary"
   start_time: Time
+  "Arrival time of the first itinerary"
   end_time: Time
-  # itineraries
+  "Itineraries as returned by the routing provider, typically in preference order"
   itineraries: [Itinerary!]
 }
 
+"""
+A single trip option from origin to destination, composed of one or more ` + "`" + `Leg` + "`" + `s.
+"""
 type Itinerary {
+  "Total duration of this itinerary"
   duration: Duration!
+  "Total distance of this itinerary"
   distance: Distance!
+  "Departure time of this itinerary"
   start_time: Time!
+  "Arrival time of this itinerary"
   end_time: Time!
+  "Origin waypoint"
   from: Waypoint!
+  "Destination waypoint"
   to: Waypoint!
+  "Ordered list of legs making up this itinerary"
   legs: [Leg!]
 }
 
+"""
+A single segment of an itinerary, traveled by a single mode (e.g. walk, transit vehicle).
+
+A transit leg includes the route, trip, and intermediate stops. A walk leg includes turn-by-turn steps.
+"""
 type Leg {
+  "Duration of this leg"
   duration: Duration!
+  "Distance of this leg"
   distance: Distance!
+  "Start time of this leg"
   start_time: Time!
+  "End time of this leg"
   end_time: Time!
+  "Origin waypoint for this leg"
   from: Waypoint
+  "Destination waypoint for this leg"
   to: Waypoint
+  "Travel mode for this leg"
   mode: StepMode
+  "Turn-by-turn steps for this leg (non-transit modes)"
   steps: [Step!]
+  "Stops served by this leg, from origin to destination, including any intermediate stops (transit mode only)"
   stops: [WaypointDeparture!]
+  "Path geometry for this leg as a LineString"
   geometry: LineString!
+  "Transit trip details for this leg (transit mode only)"
   trip: LegTrip
 }
 
+"""
+A single turn-by-turn navigation instruction within a walking or cycling leg.
+"""
 type Step {
+  "Duration of this step"
   duration: Duration!
+  "Distance of this step"
   distance: Distance!
+  "Start time of this step"
   start_time: Time!
+  "End time of this step"
   end_time: Time!
+  "Destination waypoint of this step"
   to: Waypoint
+  "Travel mode for this step"
   mode: StepMode!
+  "Human-readable navigation instruction (e.g. ` + "`" + `Turn left on Main St` + "`" + `); may be empty depending on the routing provider"
   instruction: String!
+  "Offset into the parent leg geometry where this step begins"
   geometry_offset: Int!
 }
 
+"""
+A distance value with units.
+"""
 type Distance {
+  "Numeric distance value"
   distance: Float!
+  "Unit of measurement"
   units: DistanceUnit!
 }
 
+"""
+A duration value with units.
+"""
 type Duration {
+  "Numeric duration value"
   duration: Float!
+  "Unit of measurement"
   units: DurationUnit!
 }
 
+"""
+Unit of time duration.
+"""
 enum DurationUnit {
+  "Duration in seconds"
   SECONDS
 }
 
+"""
+Unit of distance measurement.
+"""
 enum DistanceUnit {
+  "Distance in kilometers"
   KILOMETERS
+  "Distance in meters"
   METERS
+  "Distance in miles"
   MILES
 }
 
+"""
+Travel mode for a routing leg or step.
+"""
 enum StepMode {
+  "On foot"
   WALK
+  "Private vehicle (car)"
   AUTO
+  "Bicycle"
   BICYCLE
+  "Public transit vehicle"
   TRANSIT
+  "Straight-line connection (e.g. for display purposes)"
   LINE
 }
 `, BuiltIn: false},
-	{Name: "../../../schema/graphql/gbfs.graphqls", Input: `# GBFS
+	{Name: "../../../schema/graphql/gbfs.graphqls", Input: `# GBFS - General Bikeshare Feed Specification
 
+"""
+Top-level container for a [GBFS](https://gbfs.org) (General Bikeshare Feed Specification) feed.
+
+GBFS is an open data standard for shared mobility (bikes, scooters, and other micromobility vehicles).
+"""
 type GbfsFeed {
+	"System information for this feed"
 	system_information:  GbfsSystemInformation
+	"Station information for all stations in this system"
 	station_information: [GbfsStationInformation!]
+	"Hours of rental operation for this system"
 	rental_hours:  [GbfsSystemHour!]
+	"Seasonal or weekly service calendar for this system"
 	calendars: [GbfsSystemCalendar!]
+	"Active service alerts for this system"
 	alerts: [GbfsSystemAlert!]
 }
 
+"""
+System-level metadata for a GBFS feed, corresponding to the GBFS ` + "`" + `system_information.json` + "`" + ` file.
+"""
 type GbfsSystemInformation  {
+  "Globally unique identifier for the vehicle share system"
   system_id: String
+  "BCP 47 language tag for the language used in this feed"
   language: String
+  "Full name of the system, suitable for display to customers"
   name: String
+  "Short name or abbreviation for the system"
   short_name: String
+  "Name of the system operator"
   operator: String
+  "System website URL"
   url: String
+  "URL where customers can purchase memberships"
   purchase_url: String
+  "Date the system began operations"
   start_date: Date
+  "Customer service phone number"
   phone_number: String
+  "Customer service email address"
   email: String
+  "Contact email for feed consumers to report technical issues"
   feed_contact_email: String
+  "IANA timezone where the system is located (e.g. ` + "`" + `America/Los_Angeles` + "`" + `)"
   timezone: String
+  "URL to the system's custom license terms"
   license_url: String
+  "URL to the system's terms of service"
   terms_url: String
+  "Date the terms of service were last updated"
   terms_last_updated: Date
+  "URL to the system's privacy policy"
   privacy_url: String
+  "Date the privacy policy was last updated"
   privacy_last_updated: Date
+  "Brand asset information including logos and colors"
   brand_assets: GbfsBrandAsset
+  "Deep links to the rental app for iOS and Android"
   rental_apps: GbfsRentalApps
 }
 
+"""
+Deep links to the operator's rental app for iOS and Android platforms.
+"""
 type GbfsRentalApps {
+	"iOS app information"
 	ios: GbfsRentalApp
+	"Android app information"
 	android: GbfsRentalApp
 }
 
+"""
+App store and discovery URIs for a rental app on a specific platform.
+"""
 type GbfsRentalApp {
+	"URI to the app in the relevant platform app store"
 	store_uri: String
+	"URI used to discover the app on the platform"
 	discovery_uri: String
 }
 
+"""
+Brand asset information for the system, including logo URLs and brand color.
+"""
 type GbfsBrandAsset {
+	"Date the brand assets were last updated"
 	brand_last_modified: Date
+	"URL to the brand's terms of use"
 	brand_terms_url: String
+	"URL to the brand's main logo image (SVG)"
 	brand_image_url: String
+	"URL to the dark-mode variant of the brand logo"
 	brand_image_url_dark: String
+	"Brand color as a 6-digit hex code (e.g. ` + "`" + `FF0000` + "`" + `)"
 	color: String
 }
 
+"""
+Information about a single docking station, corresponding to a record in the GBFS ` + "`" + `station_information.json` + "`" + ` file.
+"""
 type GbfsStationInformation {
+	"Unique identifier for this station"
 	station_id: String
+	"Public name of the station"
 	name: String
+	"Short name or code for the station"
 	short_name: String
+	"Latitude of the station"
 	lat: Float
+	"Longitude of the station"
 	lon: Float
+	"Street address of the station"
 	address: String
+	"Cross street or nearby landmark"
 	cross_street: String
+	"Postal code of the station location"
 	post_code: String
+	"Payment methods accepted at this station (e.g. ` + "`" + `KEY` + "`" + `, ` + "`" + `CREDITCARD` + "`" + `)"
 	rental_methods: Strings
+	"True if this is a virtual station without physical smart-dock infrastructure"
 	is_virtual_station: Bool
+	"GeoJSON geometry describing the area of a virtual station"
 	station_area: Geometry
+	"Type of parking facility at this station (e.g. ` + "`" + `parking_lot` + "`" + `, ` + "`" + `street_parking` + "`" + `)"
 	parking_type: String
+	"Number of parking hoops installed at this station"
 	parking_hoop: Int
+	"Contact phone number for this station"
 	contact_phone: String
+	"Total number of docking points installed at this station"
 	capacity: Int
+	"True if valet services are provided at this station"
 	is_valet_station: Bool
+	"True if this station supports charging of electric vehicles"
 	is_charging_station: Bool
-	# vehicle_capacity: map[string]int
+	"The GBFS feed this station belongs to"
 	feed: GbfsFeed
+	"Region this station belongs to, per ` + "`" + `system_regions.json` + "`" + `"
 	region: GbfsSystemRegion
+	"Real-time status of this station"
 	status: GbfsStationStatus
 }
 
+"""
+Real-time status of a docking station, corresponding to the GBFS ` + "`" + `station_status.json` + "`" + ` file.
+"""
 type GbfsStationStatus  {
-	station_id: String                
-	num_bikes_available: Int                
-	num_bikes_disabled: Int                
-	num_docks_available: Int                
-	num_docks_disabled:  Int                
-	is_returning: Bool               
-	is_renting: Bool               
-	is_installed: Bool               
-	last_reported: Int               
+	"Station identifier, referencing ` + "`" + `station_information.json` + "`" + `"
+	station_id: String
+	"Number of functional vehicles physically at the station and available for rental"
+	num_bikes_available: Int
+	"Number of disabled vehicles of any type at the station"
+	num_bikes_disabled: Int
+	"Number of functional docks able to accept vehicle returns"
+	num_docks_available: Int
+	"Number of disabled docking points at the station"
+	num_docks_disabled:  Int
+	"True if the station is currently accepting vehicle returns"
+	is_returning: Bool
+	"True if the station is currently renting vehicles"
+	is_renting: Bool
+	"True if the station is currently on the street"
+	is_installed: Bool
+	"Unix timestamp of the last time this station reported its status"
+	last_reported: Int
+	"Number of available vehicles broken down by vehicle type"
 	vehicle_types_available: [GbfsVehicleTypeAvailable!]
+	"Number of available docks broken down by vehicle type"
 	vehicle_docks_available: [GbfsVehicleDockAvailable!]
 }
 
+"""
+Count of available vehicles of a particular type at a station.
+"""
 type GbfsVehicleTypeAvailable  {
-	num_bikes_disabled: Int 
-	num_docks_available: Int 
-	count: Int 
+	"Number of disabled vehicles of this type"
+	num_bikes_disabled: Int
+	"Number of docks available for this vehicle type"
+	num_docks_available: Int
+	"Count of vehicles of this type currently available"
+	count: Int
+	"Vehicle type details"
 	vehicle_type: GbfsVehicleType
 }
 
+"""
+Count of available docks for a set of compatible vehicle types at a station.
+"""
 type GbfsVehicleDockAvailable  {
-	count: Int     
+	"Count of docks available for these vehicle types"
+	count: Int
+	"Vehicle types that can use these docks"
 	vehicle_types: [GbfsVehicleType!]
 }
 
+"""
+GBFS specification version information.
+"""
 type GbfsSystemVersion  {
-	version: String 
-	url: String 
+	"GBFS version string"
+	version: String
+	"URL to this version's feed"
+	url: String
 }
 
+"""
+Metadata describing a class of vehicle in the system, corresponding to the GBFS ` + "`" + `vehicle_types.json` + "`" + ` file.
+"""
 type GbfsVehicleType  {
-	vehicle_type_id: String     
-	form_factor: String  
-	rider_capacity: Int     
-	cargo_volume_capacity: Int     
-	cargo_load_capacity: Int     
-	propulsion_type: String  
-	eco_label: String  
-	country_code: String  
-	eco_sticker: String  
-	max_range_meters: Float   
-	name: String  
+	"Unique identifier for this vehicle type"
+	vehicle_type_id: String
+	"General form factor of the vehicle (e.g. ` + "`" + `bicycle` + "`" + `, ` + "`" + `scooter_standing` + "`" + `, ` + "`" + `cargo_bicycle` + "`" + `, ` + "`" + `moped` + "`" + `)"
+	form_factor: String
+	"Number of riders the vehicle can legally accommodate"
+	rider_capacity: Int
+	"Cargo volume available in the vehicle, in liters"
+	cargo_volume_capacity: Int
+	"Maximum cargo load capacity, in kilograms"
+	cargo_load_capacity: Int
+	"Primary propulsion type (e.g. ` + "`" + `human` + "`" + `, ` + "`" + `electric` + "`" + `, ` + "`" + `electric_assist` + "`" + `, ` + "`" + `combustion` + "`" + `)"
+	propulsion_type: String
+	"Eco label or air quality certificate name"
+	eco_label: String
+	"Country code where the eco label applies"
+	country_code: String
+	"Name of the eco sticker or certification"
+	eco_sticker: String
+	"Maximum distance the vehicle can travel on a full charge or tank, in meters"
+	max_range_meters: Float
+	"Customer-facing name for this vehicle type"
+	name: String
+	"List of accessories available on this vehicle"
 	vehicle_accessories: Strings
-	gco_2_km: Int     
-	vehicle_image: String  
-	make: String  
-	model: String  
-	color: String  
-	wheel_count: Int     
-	max_permitted_speed: Int     
-	rated_power: Int     
-	default_reserve_time: Int     
-	return_constraint: String  
+	"Maximum CO2 emitted per kilometer, in grams"
+	gco_2_km: Int
+	"URL to an image of the vehicle (JPEG or PNG)"
+	vehicle_image: String
+	"Manufacturer name"
+	make: String
+	"Model name"
+	model: String
+	"Vehicle color, as a lowercase string (e.g. ` + "`" + `red` + "`" + `, ` + "`" + `blue` + "`" + `)"
+	color: String
+	"Number of wheels on this vehicle type"
+	wheel_count: Int
+	"Maximum speed permitted for this vehicle type, in km/h"
+	max_permitted_speed: Int
+	"Rated motor power in watts"
+	rated_power: Int
+	"Maximum duration a vehicle can be reserved before the reservation expires, in minutes"
+	default_reserve_time: Int
+	"Return constraint for this vehicle type (e.g. ` + "`" + `free_floating` + "`" + `, ` + "`" + `roundtrip_station` + "`" + `, ` + "`" + `any_station` + "`" + `)"
+	return_constraint: String
+	"Default pricing plan for this vehicle type"
 	default_pricing_plan: GbfsSystemPricingPlan
+	"All pricing plans applicable to this vehicle type"
 	pricing_plans: [GbfsSystemPricingPlan!]
+	"Deep links for renting this vehicle type"
 	rental_uris: GbfsRentalUris
+	"Brand asset information for this vehicle type"
 	vehicle_assets: GbfsVehicleAssets
 }
 
+"""
+Visual asset information for a vehicle type.
+"""
 type GbfsVehicleAssets {
+	"URL to the vehicle type icon (SVG)"
 	icon_url: String
+	"URL to the dark-mode variant of the vehicle type icon"
 	icon_url_dark: String
+	"Date the icon was last modified"
 	icon_last_modified: Date
 }
 
+"""
+Real-time status of a single free-floating vehicle (bike, scooter, etc.), corresponding to the GBFS ` + "`" + `free_bike_status.json` + "`" + ` file.
+"""
 type GbfsFreeBikeStatus {
+	"Unique identifier for this vehicle. May be rotated between trips for privacy"
 	bike_id: String
-	lat: Float   
-	lon: Float   
-	is_reserved: Bool    
-	is_disabled: Bool    
+	"Latitude of the vehicle"
+	lat: Float
+	"Longitude of the vehicle"
+	lon: Float
+	"True if the vehicle is currently reserved"
+	is_reserved: Bool
+	"True if the vehicle is currently disabled"
+	is_disabled: Bool
+	"Unix timestamp of the last time this vehicle reported its status"
 	last_reported: Int
-	current_range_meters: Float   
-	current_fuel_percent: Float   
+	"Furthest distance this vehicle can travel with its current charge or fuel, in meters"
+	current_range_meters: Float
+	"Current battery or fuel level as a percentage (0.0–1.0)"
+	current_fuel_percent: Float
+	"List of equipment present on this vehicle (e.g. ` + "`" + `child_seat_a` + "`" + `, ` + "`" + `cargo_hook` + "`" + `)"
 	vehicle_equipment: Strings
-	available_until: Int    
-	station: GbfsStationInformation    
-	home_station: GbfsStationInformation    
+	"Unix timestamp after which any active rental must be completed"
+	available_until: Int
+	"Station this vehicle is currently docked at, if any"
+	station: GbfsStationInformation
+	"Home station this vehicle must be returned to, if applicable"
+	home_station: GbfsStationInformation
+	"Pricing plan currently applicable to this vehicle"
 	pricing_plan: GbfsSystemPricingPlan
+	"Vehicle type of this vehicle"
 	vehicle_type: GbfsVehicleType
+	"Deep links for renting this vehicle"
 	rental_uris: GbfsRentalUris
+	"The GBFS feed this vehicle belongs to"
 	feed: GbfsFeed
 }
 
+"""
+Deep links for renting a vehicle or accessing a station, for Android, iOS, and web.
+"""
 type GbfsRentalUris {
+	"Android deep link URI for rental"
 	android: String
+	"iOS deep link URI for rental"
 	ios: String
+	"Web URL for rental information"
 	web: String
 }
 
+"""
+Hours of operation for the rental system on specific days.
+Corresponds to data in the GBFS ` + "`" + `system_hours.json` + "`" + ` file.
+"""
 type GbfsSystemHour  {
-	user_types: Strings 
+	"User types these hours apply to (e.g. ` + "`" + `member` + "`" + `, ` + "`" + `nonmember` + "`" + `)"
+	user_types: Strings
+	"Days of the week these hours apply to (e.g. ` + "`" + `mon` + "`" + `, ` + "`" + `tue` + "`" + `)"
 	days: Strings
-	start_time: String  
-	end_time: String  
+	"Opening time in ` + "`" + `HH:MM:SS` + "`" + ` format"
+	start_time: String
+	"Closing time in ` + "`" + `HH:MM:SS` + "`" + ` format"
+	end_time: String
 }
 
+"""
+Seasonal calendar dates when the system is open for operation.
+Corresponds to data in the GBFS ` + "`" + `system_calendar.json` + "`" + ` file.
+"""
 type GbfsSystemCalendar  {
-	start_month: Int 
-	start_day: Int 
-	start_year: Int 
-	end_month: Int 
-	end_day: Int 
-	end_year: Int 
+	"Month the system begins operation (1–12)"
+	start_month: Int
+	"Day of the month the system begins operation"
+	start_day: Int
+	"Year the system begins operation, if applicable"
+	start_year: Int
+	"Month the system ends operation (1–12)"
+	end_month: Int
+	"Day of the month the system ends operation"
+	end_day: Int
+	"Year the system ends operation, if applicable"
+	end_year: Int
 }
 
+"""
+A geographic region within the system, used to group stations.
+Corresponds to data in the GBFS ` + "`" + `system_regions.json` + "`" + ` file.
+"""
 type GbfsSystemRegion  {
-	region_id: String    
-	name: String 
+	"Unique identifier for this region"
+	region_id: String
+	"Public name of the region"
+	name: String
 }
 
+"""
+A pricing plan available in the system.
+Corresponds to data in the GBFS ` + "`" + `system_pricing_plans.json` + "`" + ` file.
+"""
 type GbfsSystemPricingPlan  {
-	plan_id: String      
-	url: String   
-	name: String   
-	currency: String   
-	price: Float    
-	is_taxable: Bool     
-	description: String   
-	surge_pricing: Bool     
-	per_km_pricing: [GbfsPlanPrice!] 
+	"Unique identifier for this pricing plan"
+	plan_id: String
+	"URL to a page describing this pricing plan"
+	url: String
+	"Customer-facing name of this plan"
+	name: String
+	"ISO 4217 currency code (e.g. ` + "`" + `USD` + "`" + `, ` + "`" + `EUR` + "`" + `)"
+	currency: String
+	"Unlock or base price for this plan"
+	price: Float
+	"True if this plan is subject to local taxation"
+	is_taxable: Bool
+	"Human-readable description of this pricing plan"
+	description: String
+	"True if surge pricing may apply"
+	surge_pricing: Bool
+	"Per-kilometer pricing tiers for this plan"
+	per_km_pricing: [GbfsPlanPrice!]
+	"Per-minute pricing tiers for this plan"
 	per_min_pricing: [GbfsPlanPrice!]
 }
 
+"""
+A single pricing tier, defining a rate that applies within a range of time or distance.
+"""
 type GbfsPlanPrice  {
-	start: Int 
-	rate: Float
-	interval: Int 
-	end: Int 
-}
-
-type GbfsSystemAlert  {
-	alert_id: String      
-	type: String   
-	url: String   
-	summary: String   
-	description: String   
-	last_updated: Int     
-	# station_ids: Strings
-	# region_ids: Strings
-	times: [GbfsAlertTime!]
-}
-
-type GbfsAlertTime  {
+	"Start of the range (in minutes or km) where this rate applies"
 	start: Int
+	"Price per unit (per minute or per km) in this tier"
+	rate: Float
+	"Interval size for this pricing tier (in minutes or km)"
+	interval: Int
+	"End of the range (in minutes or km); null means the rate continues indefinitely"
 	end: Int
 }
 
+"""
+A service alert for the system or specific stations.
+Corresponds to data in the GBFS ` + "`" + `system_alerts.json` + "`" + ` file.
+"""
+type GbfsSystemAlert  {
+	"Unique identifier for this alert"
+	alert_id: String
+	"Type of alert (e.g. ` + "`" + `system_closure` + "`" + `, ` + "`" + `station_closure` + "`" + `, ` + "`" + `station_move` + "`" + `, ` + "`" + `other` + "`" + `)"
+	type: String
+	"URL to a page with more details about this alert"
+	url: String
+	"Short summary of the alert"
+	summary: String
+	"Detailed description of the alert"
+	description: String
+	"Unix timestamp of the last time this alert was updated"
+	last_updated: Int
+	"Time ranges during which this alert is in effect"
+	times: [GbfsAlertTime!]
+}
+
+"""
+A time range during which a service alert is active.
+"""
+type GbfsAlertTime  {
+	"Unix timestamp for the start of the alert period"
+	start: Int
+	"Unix timestamp for the end of the alert period"
+	end: Int
+}
+
+"""
+A GeoJSON FeatureCollection representing geofencing zones in the system.
+Corresponds to data in the GBFS ` + "`" + `geofencing_zones.json` + "`" + ` file.
+"""
 type GbfsGeofenceZone  {
+	"GeoJSON type; always ` + "`" + `FeatureCollection` + "`" + `"
 	type:     String
+	"Array of geofenced areas as GeoJSON features"
 	features: [GbfsGeofenceFeature!]
 }
 
+"""
+A GeoJSON Feature representing a single geofenced area.
+"""
 type GbfsGeofenceFeature  {
-	type: String           
-	geometry: Geometry         
-	# properties: map[string]GbfsGeofenceProperty 
+	"GeoJSON type; always ` + "`" + `Feature` + "`" + `"
+	type: String
+	"GeoJSON MultiPolygon geometry defining the boundary of this zone"
+	geometry: Geometry
 }
 
+"""
+Properties associated with a geofenced area.
+"""
 type GbfsGeofenceProperty  {
-	name: String      
-	start: Int        
-	end: Int        
+	"Name of the geofencing zone"
+	name: String
+	"Unix timestamp for the start of the geofencing rule"
+	start: Int
+	"Unix timestamp for the end of the geofencing rule"
+	end: Int
+	"Rules governing vehicle behavior within this zone"
 	rules: [GbfsGeofenceRule]
 }
 
+"""
+Rules governing vehicle behavior within a geofenced zone.
+"""
 type GbfsGeofenceRule  {
-	ride_allowed: Bool    
-	ride_through_allowed: Bool    
-	maximum_speed_kph: Int     
-	station_parking: Bool    
+	"True if vehicles are allowed to begin a ride in this zone"
+	ride_allowed: Bool
+	"True if vehicles are allowed to pass through this zone without starting or ending a trip"
+	ride_through_allowed: Bool
+	"Maximum speed permitted in this zone, in km/h"
+	maximum_speed_kph: Int
+	"True if vehicles must be returned to a station within this zone"
+	station_parking: Bool
+	"Vehicle type subject to this rule"
 	vehicle_type: GbfsVehicleType
 }
 
 ########
 
+"""
+Request parameters for querying nearby free-floating bikes/scooters.
+"""
 input GbfsBikeRequest {
+	"Search for vehicles within this radius of a point"
 	near: PointRadius
 }
 
+"""
+Request parameters for querying nearby docking stations.
+"""
 input GbfsDockRequest {
+	"Search for stations within this radius of a point"
 	near: PointRadius
+}
+`, BuiltIn: false},
+	{Name: "../../../schema/graphql/permissions.graphqls", Input: `"""Authorization permissions for an entity"""
+type Permissions {
+  "Actions the current user can perform on this entity"
+  actions: [String!]!
+  "Users and groups with direct access to this entity"
+  subjects: [PermissionSubject!]!
+  "Parent entity in the authorization hierarchy"
+  parent: PermissionRef
+  "Child entities in the authorization hierarchy"
+  children: [PermissionRef!]!
+}
+
+"""A user or group that has been granted access to an entity"""
+type PermissionSubject {
+  "Type of subject (e.g. user, tenant, group)"
+  type: String!
+  "Subject identifier"
+  id: String!
+  "Display name"
+  name: String!
+  "Relationship type (e.g. admin, member, viewer, editor, manager)"
+  relation: String!
+}
+
+"""Reference to a related entity in the authorization hierarchy"""
+type PermissionRef {
+  "Entity type (e.g. tenant, group, feed, feed_version)"
+  type: String!
+  "Entity ID"
+  id: Int!
+  "Display name"
+  name: String!
+}
+
+"""A tenant organization that owns groups and feeds"""
+type Tenant {
+  "Internal integer ID"
+  id: Int!
+  "Tenant name"
+  name: String!
+  "Groups owned by this tenant"
+  groups(limit: Int): [Group!]!
+  "Authorization permissions for this tenant"
+  permissions: Permissions
+}
+
+"""A group that organizes feeds within a tenant"""
+type Group {
+  "Internal integer ID"
+  id: Int!
+  "Group name"
+  name: String!
+  "Parent tenant"
+  tenant: Tenant
+  "Feeds assigned to this group"
+  feeds(limit: Int): [Feed!]!
+  "Authorization permissions for this group"
+  permissions: Permissions
+}
+
+"""Input for adding or removing a permission"""
+input PermissionInput {
+  "Subject type (e.g. user, tenant, group)"
+  subject_type: String!
+  "Subject identifier"
+  subject_id: String!
+  "Relationship to grant (e.g. viewer, editor, manager, admin, member)"
+  relation: String!
+}
+
+"""Input for setting an entity's parent"""
+input SetParentInput {
+  "Parent entity type"
+  parent_type: String!
+  "Parent entity ID"
+  parent_id: Int!
+}
+
+"""Input for saving a tenant"""
+input TenantInput {
+  "Tenant name"
+  name: String!
+}
+
+"""Input for saving a group"""
+input GroupInput {
+  "Group name"
+  name: String!
+}
+
+"""A user in the authorization system"""
+type User {
+  "User identifier"
+  id: String!
+  "Display name"
+  name: String!
+  "Email address"
+  email: String!
+}
+
+"""Search options for users"""
+input UserFilter {
+  "Search for a user by ID"
+  id: String
+  "Full text search"
+  q: String
+}
+
+extend type Query {
+  "List tenants accessible to the current user"
+  tenants(limit: Int, ids: [Int!]): [Tenant!]!
+  "List groups accessible to the current user"
+  groups(limit: Int, ids: [Int!]): [Group!]!
+  "Search for users"
+  users(limit: Int, where: UserFilter): [User!]!
+}
+
+extend type Mutation {
+  "Add a permission to an entity"
+  permission_add(type: String!, id: Int!, input: PermissionInput!): Boolean!
+  "Remove a permission from an entity"
+  permission_remove(type: String!, id: Int!, input: PermissionInput!): Boolean!
+  "Set an entity's parent in the authorization hierarchy"
+  permission_set_parent(type: String!, id: Int!, input: SetParentInput!): Boolean!
+  "Update a tenant's name"
+  tenant_save(id: Int!, input: TenantInput!): Tenant!
+  "Create a group within a tenant"
+  tenant_create_group(id: Int!, input: GroupInput!): Group!
+  "Update a group's name"
+  group_save(id: Int!, input: GroupInput!): Group!
+}
+
+extend type Feed {
+  "Authorization permissions for this feed"
+  permissions: Permissions
+}
+
+extend type FeedVersion {
+  "Authorization permissions for this feed version"
+  permissions: Permissions
 }
 `, BuiltIn: false},
 	{Name: "../../../schema/graphql/schema.graphqls", Input: `# Scalar types
 
-"""Counts of entities by filename"""
+"""
+Map of integer counts keyed by name.
+Keys are typically GTFS filenames (e.g. ` + "`" + `{"stops.txt": 5, "routes.txt": 2}` + "`" + `) or column names within a file.
+"""
 scalar Counts
 
-"""String key/value pairs"""
+"""
+Unordered map of string key/value pairs.
+Used for [Transitland Atlas](https://github.com/transitland/transitland-atlas) tags and other variable metadata.
+"""
 scalar Tags
 
-"""GeoJSON style geometry"""
+"""
+Geometry in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar Geometry
 
-"""Date with time, in UTC"""
+"""
+A date and time in UTC, formatted per RFC 3339.
+"""
 scalar Time
 
-"""Date"""
+"""
+Date string (YYYY-MM-DD).
+"""
 scalar Date
 
-"""Geographic point (longitude,latitude)"""
+"""
+Geographic point in [GeoJSON](https://geojson.org/) format.
+Coordinates are [longitude, latitude] in WGS84 (EPSG:4326).
+"""
 scalar Point
 
-"""Geographic points comprising a line"""
+"""
+Geographic linestring in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar LineString
 
-"""Geographic polygon"""
+"""
+Geographic polygon in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar Polygon
 
-"""Geographic MultiPolygon"""
+"""
+Geographic multipolygon in [GeoJSON](https://geojson.org/) format.
+Coordinates are in WGS84 (EPSG:4326).
+"""
 scalar MultiPolygon
 
-"""Local time since midnight, in HH:MM:SS. May also be input as integer seconds."""
+"""
+Local time since midnight, in ` + "`" + `HH:MM:SS` + "`" + ` format.
+Can also be input as integer seconds since midnight.
+Note: GTFS times can exceed 24 hours (e.g., ` + "`" + `25:00:00` + "`" + `) for service extending into the next day.
+"""
 scalar Seconds
 
-"""Map with arbitrary keys and values"""
+"""
+Map with arbitrary string keys and JSON values.
+"""
 scalar Map
 
-"""Any value"""
+"""
+Any value (scalar, object, etc.).
+"""
 scalar Any
 
-"""File upload"""
+"""
+File upload.
+"""
 scalar Upload
 
-"""Entity key"""
-scalar Key
-
-"""Boolean (true, false, null)"""
+"""
+Lenient boolean for GBFS feeds; accepts ` + "`" + `true` + "`" + `/` + "`" + `false` + "`" + `, ` + "`" + `0` + "`" + `/` + "`" + `1` + "`" + `, or string equivalents.
+"""
 scalar Bool
 
-"""Array of strings"""
+"""
+Array of strings.
+"""
 scalar Strings
 
-"""A color"""
+"""
+A color in hex format (e.g., ` + "`" + `FF0000` + "`" + ` or ` + "`" + `#FF0000` + "`" + `).
+"""
 scalar Color
 
-"""A Language"""
+"""
+A BCP 47 language tag (e.g., ` + "`" + `en` + "`" + `, ` + "`" + `fr-CA` + "`" + `).
+"""
 scalar Language
 
-"""URL"""
+"""
+A URL string.
+"""
 scalar Url
 
-"""Email"""
+"""
+An email address string.
+"""
 scalar Email
 
-"""Timezone"""
+"""
+An IANA timezone name (e.g., ` + "`" + `America/Los_Angeles` + "`" + `).
+"""
 scalar Timezone
 
 # Force resolver
 directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 # Root query
+"""
+Root Query type.
+
+**Authorization**: Most queries are available to all callers. A few (e.g. user-specific data) require authentication or specific roles.
+"""
 type Query {
-  "Feeds"
+  "List or search for Feeds (metadata about data sources)"
   feeds(limit: Int, after: Int, ids: [Int!], where: FeedFilter): [Feed!]!
-  "Operators"
+  
+  "List or search for Operators (higher-level groupings of agencies)"
   operators(limit: Int, after: Int, ids: [Int!], where: OperatorFilter): [Operator!]!
-  "Feed versions"
+  
+  "List or search for FeedVersions (specific archived import of a Feed)"
   feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
-  "Currently imported agencies. If no feed version is specified, defaults to active feed versions."
+  
+  "List or search for Agencies (each an ` + "`" + `agency.txt` + "`" + ` record from a specific FeedVersion); defaults to currently active feed versions when none is specified"
   agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
-  "Currently imported routes. If no feed version is specified, defaults to active feed versions."
+
+  "List or search for Routes"
   routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
-  "Currently imported stops. If no feed version is specified, defaults to active feed versions."
+
+  "List or search for Stops"
   stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
-  "Currently imported trips. If no feed version is specified, defaults to active feed versions."
+
+  "List or search for Trips"
   trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
-  "Operator counts by administrative place"
+  
+  "Aggregate operator counts by administrative place (City, State, Country)"
   places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]
-  "Directions requests API"
+  
+  "Compute walking, transit, or driving directions; returns one or more itineraries"
   directions(where: DirectionRequest!): Directions!
-  "Current GBFS floating bike data"
+  
+  "Current GBFS floating bike data (Free Bike Status)"
   bikes(limit: Int, where: GbfsBikeRequest): [GbfsFreeBikeStatus!]
-  "Current GBFS dock data"
+  
+  "Current GBFS dock data (Station Information)"
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
-  "Current user metadata"
+  
+  "Current user metadata; requires authentication"
   me: Me!
-  """Census datasets"""
+
+  "List available Census Datasets"
   census_datasets(limit: Int, after: Int, ids: [Int!], where: CensusDatasetFilter): [CensusDataset!]
 }
 
 # Root mutation
-type Mutation {
-  "Validate GTFS"
-  validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationReport
-  "Update a feed version"
-  feed_version_update(set: FeedVersionSetInput!): FeedVersion
-  "Fetch a feed version"
-  feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult
-  "Import a feed version"
-  feed_version_import(id: Int!): FeedVersionImportResult!
-  "Unimport a feed version"
-  feed_version_unimport(id: Int!): FeedVersionUnimportResult!
-  "Delete a feed version"
-  feed_version_delete(id: Int!): FeedVersionDeleteResult!
+"""
+Root Mutation type.
 
-  "Create a stop"
+**Authorization**: Most mutations require specific user roles and permissions (e.g. ` + "`" + `editor` + "`" + `, ` + "`" + `admin` + "`" + `).
+"""
+type Mutation {
+  "Validate a GTFS static feed (URL or upload), optionally with associated GTFS-RT URLs"
+  validate_gtfs(file: Upload, url: String, realtime_urls: [String!]): ValidationReport
+  
+  "Update a feed version's metadata"
+  feed_version_update(set: FeedVersionSetInput!): FeedVersion
+  
+  "Fetch a new feed version for the given feed (from URL or upload)"
+  feed_version_fetch(file: Upload, url: String, feed_onestop_id: String!): FeedVersionFetchResult
+  
+  "Manually trigger an import for a feed version"
+  feed_version_import(id: Int!): FeedVersionImportResult!
+  
+  "Un-import (delete imported data) for a feed version"
+  feed_version_unimport(id: Int!): FeedVersionUnimportResult!
+  
+  "Permanently delete a feed version"
+  feed_version_delete(id: Int!): FeedVersionDeleteResult! @deprecated(reason: "Temporarily unavailable; the resolver currently returns an error")
+
+  "Create a new Stop"
   stop_create(set: StopSetInput!): Stop!
-  "Update a stop"
+  
+  "Update an existing Stop"
   stop_update(set: StopSetInput!): Stop!
-  "Delete a stop"
+  
+  "Delete a Stop"
   stop_delete(id: Int!): EntityDeleteResult!
 
   # levels
-  "Create a level"
+  "Create a new Level"
   level_create(set: LevelSetInput!): Level!
-  "Update a level"
+  
+  "Update an existing Level"
   level_update(set: LevelSetInput!): Level!
-  "Delete a level"
+  
+  "Delete a Level"
   level_delete(id: Int!): EntityDeleteResult!
 
   # pathways
-  "Create a pathway"
+  "Create a new Pathway"
   pathway_create(set: PathwaySetInput!): Pathway!
-  "Update a pathway"
+  
+  "Update an existing Pathway"
   pathway_update(set: PathwaySetInput!): Pathway!
-  "Delete a pathway"
+  
+  "Delete a Pathway"
   pathway_delete(id: Int!): EntityDeleteResult!
 }
 
@@ -8802,107 +9976,159 @@ type Me {
   name: String
   "User email"
   email: String
-  "User associated roles"
+  "Roles assigned to this user"
   roles: [String!]
-  "User associated external data, e.g. metering service identifiers"
+  "External identifiers and metadata associated with this user, e.g. metering service IDs"
   external_data: Map!
 }
 
-"""Feeds contain details on how to access transit information, including URLs to data sources in various formats (GTFS, GTFS-RT, GBFS, etc), license information, related feeds, details on how to make authorized requests, and current and archived feed versions.
+"""
+Feeds contain details on how to access transit information, including URLs to data sources in various formats (GTFS, GTFS-RT, GBFS, etc), license information, related feeds, details on how to make authorized requests, and current and archived feed versions.
 
-Feed versions are archived (as ` + "`" + `.zip` + "`" + ` files) and imported into the database for querying agencies, stops, routes, trips, etc."""
+A ` + "`" + `Feed` + "`" + ` represents the source itself (registered in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)), while ` + "`" + `FeedVersion` + "`" + `s represent specific, immutable snapshots of the data fetched from that source over time.
+
+See [Concepts: Source Feeds](https://www.transit.land/documentation/concepts/source-feeds).
+"""
 type Feed {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this feed"
+  
+  """
+  Onestop ID for this feed.
+  Format: ` + "`" + `f-geohash-name` + "`" + `.
+  Example: ` + "`" + `f-9q9-bart` + "`" + `.
+  """
   onestop_id: String!
-  "A common name for this feed. Optional. Alternatively use ` + "`" + `associated_operators[].name` + "`" + `"
+  
+  "A common name for this feed; alternatively use ` + "`" + `associated_operators[].name` + "`" + `"
   name: String
-  "Source DMFR file for this feed"
+  
+  "Source DMFR file for this feed in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)"
   file: String!
-  "Type of feed"
+  
+  "Type of feed: ` + "`" + `GTFS` + "`" + `, ` + "`" + `GTFS_RT` + "`" + `, ` + "`" + `GBFS` + "`" + `, or ` + "`" + `MDS` + "`" + `"
   spec: FeedSpecTypes
-  "Language(s) included in this feed"
+  
+  "Language(s) included in this feed (BCP 47 tags)"
   languages: [String!]
-  "Optional tags defined in Transitlant Atlas providing more info about this feed"
+  
+  "Atlas tags providing additional metadata for this feed"
   tags: Tags
-  "Authorization metadata for fetching data from this feed"
+  
+  "Authorization metadata for fetching data from this feed (e.g., API keys, headers)"
   authorization: FeedAuthorization
+  
   "URLs associated with this feed"
   urls: FeedUrls
+  
   "Feed license metadata"
   license: FeedLicense
-  "Search rank: internal"
-  search_rank: String # only for search results
+  
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
   "Operators associated with this feed"
   associated_operators: [Operator!]
-  "Current feed state"
+
+  "Current state of this feed (e.g. the active feed version)"
   feed_state: FeedState
-  "Fetch attempts for this feed"
+  
+  "History of fetch attempts for this feed; filter with ` + "`" + `where: {success: true}` + "`" + ` to find the most recent successful download"
   feed_fetches(limit: Int, where: FeedFetchFilter): [FeedFetch!]
+  
   "Versions of this feed that have been fetched, archived, and imported"
   feed_versions(limit: Int, where: FeedVersionFilter): [FeedVersion!]!
 }
 
-"""Details on the current state of this feed, such as active version, last fetch time, etc."""
+"""
+Current state pointer for a feed, exposing the active feed version.
+"""
 type FeedState {
   "Internal integer ID"
   id: Int!
-  "The active feed version for this feed"
+  
+  "The active feed version for this feed. This is the version currently used for queries"
   feed_version: FeedVersion
 }
 
-"""Record of a feed fetch operation"""
+"""
+Record of a single feed fetch attempt.
+"""
 type FeedFetch {
   "Internal integer ID"
   id: Int!
-  "URL type, e.g. static_current, realtime_alerts..."
+  
+  "URL type, e.g. ` + "`" + `static_current` + "`" + `, ` + "`" + `realtime_alerts` + "`" + `, ` + "`" + `realtime_trip_updates` + "`" + `"
   url_type: String
+  
   "URL fetched"
   url: String
-  "Was the request successful?"
+  
+  "True if the fetch succeeded"
   success: Boolean
-  "Fetched at"
+  
+  "Timestamp when the fetch occurred"
   fetched_at: Time
-  "Exception log if the fetch did not succeed"
+  
+  "Error message if the fetch did not succeed"
   fetch_error: String
-  "Server response size, in bytes"
+  
+  "Response size in bytes"
   response_size: Int
+  
   "Server response code (if HTTP)"
   response_code: Int
-  "SHA1 sum of the server response"
+  
+  "SHA1 sum of the server response body"
   response_sha1: String
 }
 
-"""Details on how to construct an HTTP request to access a protected resource"""
+"""
+Details on how to construct an HTTP request to access a protected resource.
+Defined in the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) spec.
+"""
 type FeedAuthorization {
-  "Method for inserting authorization secret into request"
+  "Method for inserting the authorization secret into the request: ` + "`" + `header` + "`" + `, ` + "`" + `basic_auth` + "`" + `, ` + "`" + `query_param` + "`" + `, ` + "`" + `path_segment` + "`" + `, or ` + "`" + `replace_url` + "`" + `"
   type: String!
-  "When ` + "`" + `type=query_param` + "`" + `, this specifies the name of the query parameter. When ` + "`" + `type=header` + "`" + `, this specifies the name of the header"
+
+  "Name of the request parameter that carries the secret (query string key, header name, or URL path placeholder, depending on ` + "`" + `type` + "`" + `); unused for ` + "`" + `basic_auth` + "`" + ` and ` + "`" + `replace_url` + "`" + `"
   param_name: String!
+  
   "Website to visit to sign up for an account"
   info_url: String!
 }
 
-"""License information for this feed, curated by Interline and contributors to the Transitland Atlas feed registry. Note that this does not constitute legal advice. Users are advised to review and confirm any terms and conditions attached to a source feed."""
+"""
+License information for this feed, curated by Interline and contributors to the [Transitland Atlas](https://github.com/transitland/transitland-atlas) feed registry.
+Note that this does not constitute legal advice. Users are advised to review and confirm any terms and conditions attached to a source feed.
+
+Permission fields below take values ` + "`" + `yes` + "`" + `, ` + "`" + `no` + "`" + `, ` + "`" + `unknown` + "`" + `, or empty.
+"""
 type FeedLicense {
-  "SPDX identifier for a common license. See https://spdx.org/licenses/"
+  "SPDX identifier for a common license (see https://spdx.org/licenses/); empty if no SPDX license applies"
   spdx_identifier: String!
-  "URL for a custom license"
+
+  "URL to a custom license; empty if a SPDX license is used or no license is recorded"
   url: String!
-  "Are feed consumers allowed to use the feed contents without including attribution text in their app or map?"
+
+  "Whether feed consumers may use the feed without attribution"
   use_without_attribution: String!
-  "Are feed consumers allowed to create and share derived products from the feed?"
+
+  "Whether feed consumers may create and share derived products"
   create_derived_product: String!
-  "Are feed consumers allowed to redistribute the feed in its entirety?"
+
+  "Whether feed consumers may redistribute the feed in its entirety"
   redistribution_allowed: String!
-  "Are feed consumers allowed to use the feed for commercial purposes?"
+
+  "Whether feed consumers may use the feed for commercial purposes"
   commercial_use_allowed: String!
-  "Are feed consumers allowed to keep their modifications of this feed private?"
+
+  "Whether feed consumers may keep their modifications of this feed private"
   share_alike_optional: String!
-  "Feed consumers must include this particular text when using this feed"
+
+  "Attribution text that consumers must include when using this feed"
   attribution_text: String!
-  "Feed consumers must follow these instructions for how to provide attribution"
+  "Instructions for how consumers must provide attribution"
   attribution_instructions: String!
 }
 
@@ -8910,9 +10136,9 @@ type FeedLicense {
 type FeedUrls {
   "URL for the static feed that represents today's service"
   static_current: String!
-  "URLs for static feeds that represent past service that is no longer in effect "
+  "URLs for static feeds that represent past service that is no longer in effect"
   static_historic: [String!]!
-  "URLs for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect few weeks or months in the future"
+  "URLs for static feeds representing planned future service (typically schedule changes due to take effect)"
   static_planned: [String!]!
   "URL for GTFS-RT VehiclePosition messages"
   realtime_vehicle_positions: String!
@@ -8920,66 +10146,96 @@ type FeedUrls {
   realtime_trip_updates: String!
   "URL for GTFS-RT Alert messages"
   realtime_alerts: String!
-  "URL for GBFS feed ` + "`" + `gbfs.json` + "`" + ` auto-discovery file"
+  "URL for the GBFS auto-discovery file (` + "`" + `gbfs.json` + "`" + `)"
   gbfs_auto_discovery: String!
-  "URL for MDS feed provider endpoint"
+  "URL for the MDS (Mobility Data Specification) provider endpoint"
   mds_provider: String!
 }
 
-"""Feed versions represent a specific static GTFS file that was published at a particular point in time, and are generally accessed and referenced using the [SHA1 checksum](https://en.wikipedia.org/wiki/SHA-1) of the GTFS archive."""
+"""
+An immutable archive of a GTFS feed at a point in time, identified by its [SHA1 checksum](https://en.wikipedia.org/wiki/SHA-1).
+
+See [Concepts: Static GTFS Feed Versions](https://www.transit.land/documentation/concepts/static-gtfs-feed-versions).
+"""
 type FeedVersion {
   "Internal integer ID"
   id: Int!
+  
   "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]"
   sha1: String!
-  "Time when the file was fetched from the url [example:2021-07-09T05:11:00Z]"
+  
+  "Time when the file was fetched from the URL [example:2021-07-09T05:11:00Z]"
   fetched_at: Time!
+  
   "URL used to fetch the file"
   url: String!
+  
   "The earliest date with scheduled service [example:2020-01-01]"
   earliest_calendar_date: Date!
+  
   "The latest date with scheduled service [example:2020-12-31]"
   latest_calendar_date: Date!
-  "Record created by user"
+  
+  "Identifier (typically username or email) of the user who created this record"
   created_by: String
-  "Record updated by user"
+
+  "Identifier (typically username or email) of the user who last updated this record"
   updated_by: String
-  "An optional name for this feed version"
+
+  "Name for this feed version"
   name: String
-  "An optional description for this feed version"
+
+  "Description for this feed version"
   description: String
-  "Reference to file storage location"
+  
+  "Server-side reference to the archived feed file (e.g. an object-store path); not generally a publicly fetchable URL"
   file: String
-  "Convex hull around all active stops in the feed version"
+
+  "Convex hull of all stop coordinates in this feed version"
   geometry: Polygon
+  
   "Feed associated with this feed version"
   feed: Feed!
-  "Current database import status of this feed version"
+  
+  "Database import status"
   feed_version_gtfs_import: FeedVersionGtfsImport
-  "Metadata for each text file present in the main directory of the zip archive"
+
+  "Metadata for each file in the GTFS archive"
   files(limit: Int): [FeedVersionFileInfo!]!
+  
   "Service levels (in seconds per day) for this feed version"
   service_levels(limit: Int, where: FeedVersionServiceLevelFilter): [FeedVersionServiceLevel!]!
+  
   "Summary details on service dates for this feed version"
   service_window: FeedVersionServiceWindow
+  
   "Agencies associated with this feed version, if imported"
   agencies(limit: Int, where: AgencyFilter): [Agency!]!
+  
   "Routes associated with this feed version, if imported"
   routes(limit: Int, where: RouteFilter): [Route!]!
+  
   "Stops associated with this feed version, if imported"
   stops(limit: Int, where: StopFilter): [Stop!]!
+  
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
+  
   "GTFS Flex locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
+  
   "GTFS Flex booking rules associated with this feed version, if imported"
   booking_rules(limit: Int, where: BookingRuleFilter): [BookingRule!]!
+  
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
-  "Feed infos associated with this feed version, if imported"
+  
+  "Records from this feed version's ` + "`" + `feed_info.txt` + "`" + `"
   feed_infos(limit: Int): [FeedInfo!]!
+  
   "Validation reports associated with this feed version"
   validation_reports(limit: Int, where: ValidationReportFilter): [ValidationReport!]
+  
   "Normalized route segment data associated with this feed version, if available"
   segments(limit: Int): [Segment!]
 }
@@ -8988,21 +10244,21 @@ type FeedVersion {
 type FeedVersionFileInfo {
   "Internal integer ID"
   id: Int!
-  "Name of the file"
+  "GTFS file name (e.g. ` + "`" + `stops.txt` + "`" + `)"
   name: String!
-  "Number of rows in the file"
+  "Number of data rows in the file (CSV files only)"
   rows: Int!
   "SHA1 hash of the file"
   sha1: String!
-  "Normalized header row of the file, if CSV-like"
+  "Comma-joined column header row of the file (CSV files only)"
   header: String!
-  "Is the file CSV-like?"
+  "True if the file is parseable as CSV"
   csv_like: Boolean!
   "File size, in bytes"
   size: Int!
-  "Counts of values for each column"
+  "Number of populated values for each column, keyed by column name"
   values_count: Counts!
-  "Counts of number of unique values for each column"
+  "Number of distinct values for each column, keyed by column name"
   values_unique: Counts!
 }
 
@@ -9010,31 +10266,31 @@ type FeedVersionFileInfo {
 type FeedVersionGtfsImport {
   "Internal integer ID"
   id: Int!
-  "Is the import currently in-progress"
+  "True if the import is currently running"
   in_progress: Boolean!
-  "Did the import complete successfully"
+  "True if the import completed successfully"
   success: Boolean!
-  "Has the schedule (stop times, trips) been archived"
+  "True if the schedule data (stop_times, trips) has been removed from the database (e.g. via un-import)"
   schedule_removed: Boolean!
-  "Exception log if any errors occurred during import"
+  "Error log accumulated during import; empty on success"
   exception_log: String!
-  "Counts of entities skipped due to errors"
+  "Counts of entities skipped due to errors, keyed by file name"
   skip_entity_error_count: Any
-  "Counts of successfully imported entities by file name"
+  "Counts of successfully imported entities, keyed by file name"
   entity_count: Any
-  "Counts of warnings by file name"
+  "Counts of warnings raised during import, keyed by file name"
   warning_count: Any
-  "Counts of entities skipped due to reference errors"
+  "Counts of entities skipped due to reference errors (missing related entities), keyed by file name"
   skip_entity_reference_count: Any
-  "Counts of entities skipped due to import filters"
+  "Counts of entities skipped due to import filters, keyed by file name"
   skip_entity_filter_count: Any
-  "Counts of entities skipped due to marker filters"
+  "Counts of entities skipped by the marker filter, keyed by file name"
   skip_entity_marked_count: Any
-  "Number of stop times with arrival/departure times set by interpolation during import process"
+  "Number of stop_times whose arrival/departure times were filled in by interpolation during import"
   interpolated_stop_time_count: Int
-  "Created at"
+  "Time the import record was created"
   created_at: Time
-  "Updated at"
+  "Time the import record was last updated"
   updated_at: Time
 }
 
@@ -9046,17 +10302,17 @@ type FeedVersionServiceWindow {
   feed_start_date: Date
   "Feed end date from feed_info.txt, if available"
   feed_end_date: Date
-  "Calculated earliest calendar date in service schedule"
+  "Earliest calendar date with scheduled service"
   earliest_calendar_date: Date
-  "Calculated latest calendar date in service schedule"
+  "Latest calendar date with scheduled service"
   latest_calendar_date: Date
-  "Week with most typical service patterns inside the service window"
+  "Start date (Monday) of a representative week with full or near-full service; used as a fallback when queries fall outside the regular service window"
   fallback_week: Date
-  "Default timezone for this feed version"
+  "Default timezone"
   default_timezone: String
 }
 
-"""Number of seconds of service scheduled for each day in a feed version"""
+"""Weekly service summary: total seconds of scheduled service for each day-of-week within a single week of a feed version"""
 type FeedVersionServiceLevel {
   "Internal integer ID"
   id: Int!
@@ -9064,709 +10320,1045 @@ type FeedVersionServiceLevel {
   start_date: Date!
   "End date of this week"
   end_date: Date!
-  "Number of seconds of service scheduled on the Monday of this week"
+  "Seconds of service scheduled on Monday"
   monday: Int!
-  "Number of seconds of service scheduled on the Tuesday of this week"
+  "Seconds of service scheduled on Tuesday"
   tuesday: Int!
-  "Number of seconds of service scheduled on the Wednesday of this week"
+  "Seconds of service scheduled on Wednesday"
   wednesday: Int!
-  "Number of seconds of service scheduled on the Thursday of this week"
+  "Seconds of service scheduled on Thursday"
   thursday: Int!
-  "Number of seconds of service scheduled on the Friday of this week"
+  "Seconds of service scheduled on Friday"
   friday: Int!
-  "Number of seconds of service scheduled on the Saturday of this week"
+  "Seconds of service scheduled on Saturday"
   saturday: Int!
-  "Number of seconds of service scheduled on the Sunday of this week"
+  "Seconds of service scheduled on Sunday"
   sunday: Int!
 }
 
 # Operator
 """
-An agency represents a single GTFS ` + "`" + `agencies.txt` + "`" + ` entity that was imported from a single feed version. The metadata, routes, etc., for an agency include only the data for that specific agency in that specific feed version.
+An Operator is a higher-level abstraction over one or more GTFS agencies, defined by an entry in the [Transitland Atlas](https://github.com/transitland/transitland-atlas). Operators enrich basic GTFS agency data and group agencies that span multiple source feeds. They are matched to GTFS agencies via ` + "`" + `associated_feeds` + "`" + `, a list of Feed Onestop IDs and GTFS ` + "`" + `agency_id` + "`" + `s.
 
-Operators are a higher-level abstraction over agencies, with each operator defined by an entry in the [Transitland Atlas](/documentation/atlas). Operators provide a method for enriching the basic GTFS agency data, as well as grouping agencies that span across multiple source feeds. Operators are matched with GTFS agencies using ` + "`" + `associated_feeds` + "`" + `, a simple list of Feed OnestopIDs and GTFS ` + "`" + `agency_id` + "`" + `s. For instance, the [Atlas operator record](https://github.com/transitland/transitland-atlas/blob/master/operators/o-dr5r-nyct.json) for the [New York City MTA](/operators/o-dr5r-nyct) has ` + "`" + `associated_feeds` + "`" + ` values for 8 different GTFS feeds. A query for this operator OnestopID thus represents the union of data from all 8 feeds, and includes routes for the subway, bus service for all 5 boroughs, commuter rail agencies, etc., operated by the MTA. This record also includes additional metadata about the MTA, such as the United States National Transit Database ID, Wikidata IDs, and alternate names for the agency. Operator records are created and maintained through pull requests to the Atlas json files and synchronized with the Transitland database on each commit.
+For example, the [Atlas operator record](https://github.com/transitland/transitland-atlas/blob/master/operators/o-dr5r-nyct.json) for the [New York City MTA](https://www.transit.land/operators/o-dr5r-nyct) associates several GTFS feeds (subway, buses across the five boroughs, commuter rail). Querying that operator Onestop ID returns the union of data from all associated feeds, plus extra metadata such as NTD ID, Wikidata IDs, and alternate names. Operator records are maintained as pull requests to the Atlas JSON files and synced into the Transitland database on each commit.
+
+See [Concepts: Agencies and Operators](https://www.transit.land/documentation/concepts/agencies-and-operators).
 """
 type Operator {
   "Internal integer ID"
   id: Int!
-  "Was this operator generated automatically from GTFS data"
+  
+  "True if this operator was generated automatically from GTFS data rather than defined in the Atlas"
   generated: Boolean!
-  "Source DMFR file for this operator"
+  
+  "Source DMFR file for this operator in the [Transitland Atlas](https://github.com/transitland/transitland-atlas)"
   file: String
-  "OnestopID for this operator"
+  
+  """
+  Onestop ID for this operator.
+  Format: ` + "`" + `o-geohash-name` + "`" + `.
+  Example: ` + "`" + `o-dr5r-nyct` + "`" + `.
+  """
   onestop_id: String
+  
   "Operator name"
   name: String
-  "Operator short name, if available"
+  
+  "Operator short name"
   short_name: String
-  "Operator website, if available"
+
+  "Operator website"
   website: String
-  "Optional tags defined in Transitlant Atlas providing more info about this operator"
+
+  "Atlas tags providing additional metadata for this operator"
   tags: Tags
-  "Search rank: internal"
-  search_rank: String
-  "Currently imported and active agencies associated with this operator"
+
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
+  "Agencies for this operator from active feed versions"
   agencies: [Agency!]
+
   "Feeds associated with this operator"
   feeds(limit: Int, where: FeedFilter): [Feed!]
 }
 
 # GTFS Entities
 
-"""Record from a static GTFS [agency.txt](https://gtfs.org/reference/static/#agencytxt)"""
+"""
+Record from a static GTFS [agency.txt](https://gtfs.org/reference/static/#agencytxt). Each Agency belongs to a specific FeedVersion; its routes and metadata reflect only that feed version. See ` + "`" + `Operator` + "`" + ` for a higher-level grouping that spans feeds.
+
+See [Concepts: Agencies and Operators](https://www.transit.land/documentation/concepts/agencies-and-operators).
+"""
 type Agency {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this agency (or its associated operator)"
+  
+  "Onestop ID for this agency (or its associated operator)"
   onestop_id: String!
-  "GTFS agency.agency_email"
+  
+  "GTFS ` + "`" + `agency.agency_email` + "`" + `; email address actively monitored by the agency's customer service department"
   agency_email: Email
-  "GTFS agency.agency_fare_url"
+  
+  "GTFS ` + "`" + `agency.agency_fare_url` + "`" + `; URL of a web page where a rider can purchase tickets or passes"
   agency_fare_url: Url
-  "GTFS agency.agency_id"
+  
+  "GTFS ` + "`" + `agency.agency_id` + "`" + `"
   agency_id: String!
-  "GTFS agency.agency_lang"
+  
+  "GTFS ` + "`" + `agency.agency_lang` + "`" + `; primary language used by this transit agency, as a BCP 47 language tag"
   agency_lang: Language
-  "GTFS agency.agency_name"
+  
+  "GTFS ` + "`" + `agency.agency_name` + "`" + `"
   agency_name: String!
-  "GTFS agency.agency_phone"
+  
+  "GTFS ` + "`" + `agency.agency_phone` + "`" + `; voice telephone number for the agency's customer service"
   agency_phone: String
-  "GTFS agency.agency_timezone"
+  
+  "GTFS ` + "`" + `agency.agency_timezone` + "`" + `; stop times use this timezone unless overridden by ` + "`" + `stop_timezone` + "`" + `"
   agency_timezone: Timezone!
-  "GTFS agency.agency_url"
+  
+  "GTFS ` + "`" + `agency.agency_url` + "`" + `"
   agency_url: Url!
+  
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String
-  "Feed OnestopID associated with this entity"
+  
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String
+  
   "Source feed version for this entity"
   feed_version: FeedVersion!
-  "Geometry for this agency, generated as the convex hull of all stops"
+  
+  "Convex hull of all stops served by this agency"
   geometry: Polygon
-  "Search rank: internal"
-  search_rank: String
+
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
   "Operator associated with this agency"
   operator: Operator
-  "Places associated with this agency through a matching process"
+
+  "Administrative places (city, state, country) matched to this agency by overlap with stop locations, ranked by association strength"
   places(limit: Int, where: AgencyPlaceFilter): [AgencyPlace!]
+
   "Routes associated with this agency"
   routes(limit: Int, where: RouteFilter): [Route!]!
-  "Census geographies associated with this agency"
+
+  "Census geographies intersecting this agency's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
-  "GTFS-RT alerts for this agency"
+  
+  "GTFS-RT service alerts for this agency; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 }
 
-"""Record from a static GTFS [routes.txt](https://gtfs.org/reference/static/#routestxt)"""
+"""
+Record from a static GTFS [routes.txt](https://gtfs.org/reference/static/#routestxt).
+
+See [Concepts: Routes](https://www.transit.land/documentation/concepts/routes).
+"""
 type Route {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this route"
+  
+  "Onestop ID for this route"
   onestop_id: String
-  "GTFS routes.route_id"
+  
+  "GTFS ` + "`" + `routes.route_id` + "`" + `"
   route_id: String!
-  "GTFS routes.route_short_name"
+  
+  "GTFS ` + "`" + `routes.route_short_name` + "`" + `; short name of a route, such as a line number or abbreviation"
   route_short_name: String
-  "GTFS routes.route_long_name"
+  
+  "GTFS ` + "`" + `routes.route_long_name` + "`" + `; full descriptive name of a route"
   route_long_name: String
-  "GTFS routes.route_type"
+  
+  "GTFS ` + "`" + `routes.route_type` + "`" + `; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported"
   route_type: Int!
-  "GTFS routes.route_color"
+  
+  "GTFS ` + "`" + `routes.route_color` + "`" + `; color that corresponds to a route, as a six-digit hexadecimal number (e.g. ` + "`" + `FF0000` + "`" + `)"
   route_color: Color
-  "GTFS routes.route_text_color"
+  
+  "GTFS ` + "`" + `routes.route_text_color` + "`" + `; legible color to use for text drawn against the route_color background, as a six-digit hexadecimal number"
   route_text_color: Color
-  "GTFS routes.route_sort_order"
+  
+  "GTFS ` + "`" + `routes.route_sort_order` + "`" + `; orders routes for display; routes with a lower value should be displayed first"
   route_sort_order: Int
-  "GTFS routes.route_url"
+  
+  "GTFS ` + "`" + `routes.route_url` + "`" + `; URL of a web page about the particular route"
   route_url: Url
-  "GTFS routes.route_desc"
+  
+  "GTFS ` + "`" + `routes.route_desc` + "`" + `; description of a route that provides useful, quality information"
   route_desc: String
-  "GTFS routes.continuous_pickup"
+  
+  "GTFS ` + "`" + `routes.continuous_pickup` + "`" + `; indicates whether a rider can board along the route between stops [0=continuous stopping pickup, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
-  "GTFS routes.continuous_drop_off"
+  
+  "GTFS ` + "`" + `routes.continuous_drop_off` + "`" + `; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
-  "Representative geometry for this route"
+  
+  "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see ` + "`" + `geometries` + "`" + `"
   geometry: Geometry @goField(forceResolver: true)
+  
   "Agency associated with this route"
   agency: Agency!
+  
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String
-  "Feed OnestopID associated with this entity"
+  
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String
+  
   "Source feed version for this entity"
   feed_version: FeedVersion!
-  "Search rank: internal"
-  search_rank: String
+
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
   "Extended route attributes, based on MTC GTFS+ extension"
   route_attribute: RouteAttribute
+  
   "Trips associated with this route"
   trips(limit: Int, where: TripFilter): [Trip!]!
-  "Stops associated with this route"
+  
+  "Stops that this route serves"
   stops(limit: Int, where: StopFilter): [Stop!]!
-  "Stops associated with this route"
+
+  "Stops on this route as RouteStop associations (with route and agency context)"
   route_stops(limit: Int): [RouteStop!]!
-  "Calculated headways for this route"
+
+  "Typical service frequency for this route, by direction and day-of-week category"
   headways(limit: Int): [RouteHeadway!]!
-  "Representative geometries for this route"
+  
+  "Per-direction representative geometries for this route, derived from GTFS shapes (or stop points if shapes are absent)"
   geometries(limit: Int): [RouteGeometry!]!
-  "Census geographies associated with this route"
+  
+  "Census geographies intersecting this route's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
-  "Calculated spatial buffer geometry around this route"
+  
+  "Spatial buffer polygon around all stops on this route; ` + "`" + `radius` + "`" + ` is in meters"
   route_stop_buffer(radius: Float): RouteStopBuffer!
-  "Stop patterns for this route"
+
+  "Unique stop sequences operated on this route"
   patterns: [RouteStopPattern!]
-  "GTFS-RT alerts for this route"
+  
+  "GTFS-RT service alerts for this route; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
+  
   "Normalized route segment data for this route, if available"
   segments(limit: Int, where: SegmentFilter): [Segment!]
+  
   "Normalized route segment patterns for this route, if available"
   segment_patterns(limit: Int, where: SegmentPatternFilter): [SegmentPattern!]
 }
 
-"""Record from a static GTFS [stops.txt](https://gtfs.org/reference/static/#stopstxt)"""
+"""
+Record from a static GTFS [stops.txt](https://gtfs.org/reference/static/#stopstxt).
+
+See [Concepts: Stops](https://www.transit.land/documentation/concepts/stops).
+"""
 type Stop {
   "Internal integer ID"
   id: Int!
-  "OnestopID for this stop, if available [example:s-dr5ruvgnyk-madisonav~e69st]"
+  
+  "Onestop ID for this stop, or empty string if not registered [example:s-dr5ruvgnyk-madisonav~e69st]"
   onestop_id: String!
-  "GTFS stops.location_type; this is optional in GTFS spec [enum:0,1,2,3,4]"
+  
+  "GTFS ` + "`" + `stops.location_type` + "`" + ` [0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area]"
   location_type: Int!
-  "GTFS stops.stop_code"
+  
+  "GTFS ` + "`" + `stops.stop_code` + "`" + `; short text or number identifying the location for riders"
   stop_code: String
-  "GTFS stops.stop_desc [example:NW Corner of Broadway and 14th]"
+  
+  "GTFS ` + "`" + `stops.stop_desc` + "`" + ` [example:NW Corner of Broadway and 14th]"
   stop_desc: String
-  "GTFS stops.stop_id [example:400029]"
+  
+  "GTFS ` + "`" + `stops.stop_id` + "`" + ` [example:400029]"
   stop_id: String!
-  "GTFS stops.stop_name [example:MADISON AV/E 68 ST]"
+  
+  "GTFS ` + "`" + `stops.stop_name` + "`" + ` [example:MADISON AV/E 68 ST]"
   stop_name: String
-  "GTFS stops.stop_timezone; if overriding agency/route timezone [example:America/Los_Angeles]"
+  
+  "GTFS ` + "`" + `stops.stop_timezone` + "`" + `; overrides agency timezone; inherits from parent station if empty [example:America/Los_Angeles]"
   stop_timezone: Timezone
-  "GTFS stops.stop_url [example:https://www.bart.gov/stations/ftvl]"
+  
+  "GTFS ` + "`" + `stops.stop_url` + "`" + ` [example:https://www.bart.gov/stations/ftvl]"
   stop_url: Url
-  "GTFS stops.wheelchair_boarding [enum:0,1,2]"
+  
+  "GTFS ` + "`" + `stops.wheelchair_boarding` + "`" + ` [0=no information, 1=some accessible path exists, 2=no accessible path]"
   wheelchair_boarding: Int
-  "GTFS stops.zone_id"
+  
+  "GTFS ` + "`" + `stops.zone_id` + "`" + `; identifies the fare zone for a stop; required only on stops referenced by ` + "`" + `fare_rules.txt` + "`" + `"
   zone_id: String
-  "GTFS stops.platform_code"
+  
+  "GTFS ` + "`" + `stops.platform_code` + "`" + `; platform identifier without a 'platform' prefix (e.g. ` + "`" + `G` + "`" + ` or ` + "`" + `3` + "`" + `)"
   platform_code: String
-  "GTFS stops.tts_stop_name"
+  
+  "GTFS ` + "`" + `stops.tts_stop_name` + "`" + `; readable version of stop_name for use with text-to-speech systems"
   tts_stop_name: String
-  "Stop geometry"
+  
+  "Geographic location of this stop as a GeoJSON Point"
   geometry: Point!
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  "Feed OnestopID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
+  
   "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
-  "Stop level"
+  
+  "Level within the station that this stop/platform belongs to"
   level: Level
-  "Stop parent station"
+  
+  "Parent station for this stop; for platforms and entrances (location_type 2, 3, 4), this is the enclosing station (location_type 1)"
   parent: Stop
-  "Stop external reference"
+  
+  "Cross-feed reference linking this stop to the same physical stop in another feed"
   external_reference: StopExternalReference
-  "Stop observations"
+
+  "Archived real-time arrival/departure observations at this stop, derived from GTFS-RT; requires ` + "`" + `source` + "`" + `, ` + "`" + `feed_version_id` + "`" + `, and ` + "`" + `trip_start_date` + "`" + ` filters"
   observations(limit: Int, where: StopObservationFilter): [StopObservation!]
-  "Stop children"
+
+  "Child stops belonging to this station (platforms, entrances, generic nodes, boarding areas)"
   children(limit: Int): [Stop!]
-  "Associated routes"
+  
+  "Routes serving this stop, as RouteStop associations (includes route and agency context)"
   route_stops(limit: Int): [RouteStop!]!
-  "Dependent levels"
+  
+  "Levels defined within this station; meaningful only when this stop is a station (location_type=1)"
   child_levels(limit: Int): [Level!]!
-  "Pathways from this stop"
+
+  "Pathways that originate at this stop; combine with ` + "`" + `pathways_to_stop` + "`" + ` and traverse to map station accessibility (entrances, escalators, fare gates, etc.)"
   pathways_from_stop(limit: Int): [Pathway!]!
-  "Pathways to this stop"
+
+  "Pathways that terminate at this stop"
   pathways_to_stop(limit: Int): [Pathway!]!
-  "Stop times for this stop"
+  
+  "Raw scheduled stop times for this stop, without date/time filtering"
   stop_times(limit: Int, where: StopTimeFilter): [StopTime!]!
-  "Departures from this stop for a given date and time"
+
+  "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available"
   departures(limit: Int, where: StopTimeFilter): [StopTime!]!
-  "Arrivals from this stop for a given date and time"
+
+  "Scheduled arrivals at this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available"
   arrivals(limit: Int, where: StopTimeFilter): [StopTime!]!
-  "Search Rank: Internal"
-  search_rank: String
-  "State/Province associated with this stop"
+  
+  "Internal search ranking weight; not intended for client use"
+  search_rank: String @deprecated(reason: "Internal use only")
+
+  "Administrative place (country and state/province) associated with this stop's location"
   place: StopPlace
-  "Census geographies associated with this stop"
+  
+  "Census geographies intersecting this stop's location; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field for population-within-service-area analysis"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
-  "Directions from this stop"
+  
+  "Routing using this stop as the origin (when ` + "`" + `to` + "`" + ` is given) or as the destination (when ` + "`" + `from` + "`" + ` is given)"
   directions(to:WaypointInput, from: WaypointInput, mode: StepMode, depart_at: Time): Directions!
-  "Stops within a specified radius of this stop"
+  
+  "Stops within a specified radius of this stop; ` + "`" + `radius` + "`" + ` is in meters"
   nearby_stops(limit: Int, radius: Float): [Stop!]
-  "GTFS-RT Alerts for this stop"
+  
+  "GTFS-RT service alerts for this stop; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
-  "Matching feature ids from polygon search"
+  
+  "When this stop was returned by a ` + "`" + `StopFilter.location.features` + "`" + ` search, the IDs of the input features that contain this stop; otherwise empty"
   within_features: Strings
+  "Time this stop record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this stop record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
-"""Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaysstxt). Pathways are a graph representation of a subway or train station, with nodes (entrances, platforms, etc) and edges (the pathways). See https://gtfs.org/reference/static/#pathwaystxt"""
+"""
+Record from a static GTFS [pathways.txt](https://gtfs.org/reference/static/#pathwaystxt).
+Pathways form a graph representation of a transit station: stops (entrances, platforms, generic nodes, boarding areas) are the nodes and Pathway records are the edges.
+"""
 type Pathway {
   "Internal integer ID"
   id: Int!
-  "GTFS pathways.pathway_id"
+  
+  "GTFS ` + "`" + `pathways.pathway_id` + "`" + `"
   pathway_id: String!
-  "GTFS pathways.pathway_mode"
+  
+  "GTFS ` + "`" + `pathways.pathway_mode` + "`" + ` [1=walkway, 2=stairs, 3=moving sidewalk/travelator, 4=escalator, 5=elevator, 6=fare gate, 7=exit gate]"
   pathway_mode: Int!
-  "GTFS pathways.is_bidirectional"
+  
+  "GTFS ` + "`" + `pathways.is_bidirectional` + "`" + ` [0=unidirectional, from_stop to to_stop only; 1=bidirectional]"
   is_bidirectional: Int!
-  "GTFS pathways.length"
+  
+  "GTFS ` + "`" + `pathways.length` + "`" + `; horizontal length of the pathway in meters"
   length: Float
-  "GTFS pathways.traversal_time"
+  
+  "GTFS ` + "`" + `pathways.traversal_time` + "`" + `; average time in seconds needed to traverse the pathway"
   traversal_time: Int
-  "GTFS pathways.stair_count"
+  
+  "GTFS ` + "`" + `pathways.stair_count` + "`" + `; number of stairs; positive for upward travel, negative for downward"
   stair_count: Int
-  "GTFS pathways.max_slope"
+  
+  "GTFS ` + "`" + `pathways.max_slope` + "`" + `; maximum slope ratio; positive for upward, negative for downward (e.g. 0.083 = 8.3%)"
   max_slope: Float
-  "GTFS pathways.min_width"
+  
+  "GTFS ` + "`" + `pathways.min_width` + "`" + `; minimum width of the pathway in meters"
   min_width: Float
-  "GTFS pathways.signposted_ss"
+  
+  "GTFS ` + "`" + `pathways.signposted_as` + "`" + `; signage text for this direction (from_stop → to_stop)"
   signposted_as: String
-  "GTFS pathways.reverse_signposted_as"
+  
+  "GTFS ` + "`" + `pathways.reverse_signposted_as` + "`" + `; public signage text for the reverse (to_stop → from_stop) direction"
   reverse_signposted_as: String
+  
   "Pathway begins at this stop"
   from_stop: Stop!
+  
   "Pathway ends at this stop"
   to_stop: Stop!
+  "Time this pathway record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this pathway record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
-"""Record from a static GTFS [levels.txt](https://gtfs.org/reference/static/#levelstxt). Levels describes different levels of a station; used in conjunction with pathways."""
+"""
+Record from a static GTFS [levels.txt](https://gtfs.org/reference/static/#levelstxt).
+Describes a single level of a multi-level station; used together with ` + "`" + `Pathway` + "`" + ` records.
+"""
 type Level {
   "Internal integer ID"
   id: Int!
-  "GTFS levels.level_id"
+  
+  "GTFS ` + "`" + `levels.level_id` + "`" + `"
   level_id: String!
-  "GTFS levels.level_index"
+  
+  "GTFS ` + "`" + `levels.level_index` + "`" + `; higher values are upper levels, 0 is ground, negative values are underground"
   level_index: Float!
-  "GTFS levels.level_name"
+
+  "GTFS ` + "`" + `levels.level_name` + "`" + `; rider-facing level name (e.g. ` + "`" + `Mezzanine` + "`" + `, ` + "`" + `Upper Level` + "`" + `)"
   level_name: String
-  "An optional geometry describing the footprint of this level"
+  
+  "Geometry describing the footprint of this level (Transitland extension; not part of the GTFS spec)"
   geometry: MultiPolygon!
+  
   "Stops associated with this level"
   stops: [Stop!]
+  "Time this level record was created (typically the feed version import time)"
+  created_at: Time
+  "Time this level record was last updated (import time, or the last edit if edited since)"
+  updated_at: Time
 }
 
-"""Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file optionally enriched with by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages."""
+"""
+Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#tripstxt) file, optionally enriched by GTFS Realtime [TripUpdate](https://gtfs.org/reference/realtime/v2/#message-tripupdate) and [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) messages.
+
+See [Concepts: Trips & Schedules](https://www.transit.land/documentation/concepts/trips-schedules).
+"""
 type Trip {
   "Internal integer ID"
   id: Int!
-  "GTFS trips.trip_id"
+  
+  "GTFS ` + "`" + `trips.trip_id` + "`" + `"
   trip_id: String!
-  "GTFS trips.trip_headsign"
+  
+  "GTFS ` + "`" + `trips.trip_headsign` + "`" + `; text that appears on signage identifying the trip's destination to riders"
   trip_headsign: String
-  "GTFS trips.trip_short_name"
+  
+  "GTFS ` + "`" + `trips.trip_short_name` + "`" + `; public-facing text used to identify the trip to riders, such as a train number"
   trip_short_name: String
-  "GTFS trips.direction_id"
+  
+  "GTFS ` + "`" + `trips.direction_id` + "`" + `; binary indicator of travel direction [0=outbound, 1=inbound]; meaning depends on the agency"
   direction_id: Int
-  "GTFS trips.block_id"
+  
+  "GTFS ` + "`" + `trips.block_id` + "`" + `; trips with the same block_id are operated in sequence by the same vehicle"
   block_id: String
-  "GTFS trips.wheelchair_accessible"
+  
+  "GTFS ` + "`" + `trips.wheelchair_accessible` + "`" + ` [0=no information, 1=vehicle can accommodate at least one rider in a wheelchair, 2=no riders in wheelchairs can be accommodated]"
   wheelchair_accessible: Int
-  "GTFS trips.bikes_allowed"
+  
+  "GTFS ` + "`" + `trips.bikes_allowed` + "`" + ` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]"
   bikes_allowed: Int
+  
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
+  
   "Calendar for this trip"
   calendar: Calendar!
+  
   "Route for this trip"
   route: Route!
+  
   "Shape for this trip"
   shape: Shape
+  
   "Feed version for this entity"
   feed_version: FeedVersion!
+  
   "Stop times for this trip"
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
+  
   "GTFS Flex stop times for this trip (Locations and Location Groups)"
   flex_stop_times(limit: Int, where: TripStopTimeFilter): [FlexStopTime!]!
+  
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
-  "GTFS-RT alerts for this trip"
+  
+  "GTFS-RT service alerts for this trip; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
-  """A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
-  """
+  "Real-time status of this trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
-  "GTFS-RT TripUpdate timestamp"
+
+  "Timestamp from the matching GTFS-RT TripUpdate, if any"
   timestamp: Time
 }
 
-"""Record from a static GTFS [calendars.txt](https://gtfs.org/schedule/reference/#calendarstxt) file, plus associated [calendar_dates.txt](https://gtfs.org/schedule/reference/#calendar_datestxt)."""
+"""
+Record from a static GTFS [calendars.txt](https://gtfs.org/schedule/reference/#calendarstxt) file, plus associated [calendar_dates.txt](https://gtfs.org/schedule/reference/#calendar_datestxt).
+
+See [Concepts: Trips & Schedules](https://www.transit.land/documentation/concepts/trips-schedules).
+"""
 type Calendar {
   "Internal integer ID"
   id: Int!
-  "GTFS calendar.service_id"
+  
+  "GTFS ` + "`" + `calendar.service_id` + "`" + `"
   service_id: String!
-  "GTFS calendar.start_date"
+  
+  "GTFS ` + "`" + `calendar.start_date` + "`" + `"
   start_date: Date!
-  "GTFS calendar.end_date"
+  
+  "GTFS ` + "`" + `calendar.end_date` + "`" + `"
   end_date: Date!
-  "GTFS calendar.monday"
+  
+  "GTFS ` + "`" + `calendar.monday` + "`" + ` [1=service runs on Mondays, 0=service does not run]"
   monday: Int!
-  "GTFS calendar.tuesday"
+  
+  "GTFS ` + "`" + `calendar.tuesday` + "`" + ` [1=service runs on Tuesdays, 0=service does not run]"
   tuesday: Int!
-  "GTFS calendar.wednesday"
+  
+  "GTFS ` + "`" + `calendar.wednesday` + "`" + ` [1=service runs on Wednesdays, 0=service does not run]"
   wednesday: Int!
-  "GTFS calendar.thursday"
+  
+  "GTFS ` + "`" + `calendar.thursday` + "`" + ` [1=service runs on Thursdays, 0=service does not run]"
   thursday: Int!
-  "GTFS calendar.friday"
+  
+  "GTFS ` + "`" + `calendar.friday` + "`" + ` [1=service runs on Fridays, 0=service does not run]"
   friday: Int!
-  "GTFS calendar.saturday"
+  
+  "GTFS ` + "`" + `calendar.saturday` + "`" + ` [1=service runs on Saturdays, 0=service does not run]"
   saturday: Int!
-  "GTFS calendar.sunday"
+  
+  "GTFS ` + "`" + `calendar.sunday` + "`" + ` [1=service runs on Sundays, 0=service does not run]"
   sunday: Int!
-  "Added dates, derived from GTFS calendar_dates"
+  
+  "Service-added dates derived from ` + "`" + `calendar_dates.txt` + "`" + ` records with exception_type=1"
   added_dates(limit: Int): [Date!]!
-  "Removed dates, derived from GTFS calendar_dates"
+
+  "Service-removed dates derived from ` + "`" + `calendar_dates.txt` + "`" + ` records with exception_type=2"
   removed_dates(limit: Int): [Date!]!
 }
 
-"""Record from a static GTFS [shapes.txt](https://gtfs.org/schedule/reference/#shapestxt) file."""
+"""
+Record from a static GTFS [shapes.txt](https://gtfs.org/schedule/reference/#shapestxt) file.
+"""
 type Shape {
   "Internal integer ID"
   id: Int!
-  "GTFS shapes.shape_id"
+  
+  "GTFS ` + "`" + `shapes.shape_id` + "`" + `"
   shape_id: String!
-  "Geometry for this shape"
+  
+  "Path geometry for this shape as a LineString"
   geometry: LineString!
-  "Was this geometry automatically generated from stop locations?"
+
+  "True if this geometry was generated from stop locations because the source feed lacks a ` + "`" + `shapes.txt` + "`" + `"
   generated: Boolean!
 }
 
-"""Record from a static GTFS [frequencies.txt](https://gtfs.org/schedule/reference/#frequenciestxt) file."""
+"""
+Record from a static GTFS [frequencies.txt](https://gtfs.org/schedule/reference/#frequenciestxt) file.
+"""
 type Frequency {
   "Internal integer ID"
   id: Int!
-  "GTFS frequencies.start_time"
+  
+  "GTFS ` + "`" + `frequencies.start_time` + "`" + `"
   start_time: Seconds!
-  "GTFS frequencies.end_time"
+  
+  "GTFS ` + "`" + `frequencies.end_time` + "`" + `"
   end_time: Seconds!
-  "GTFS frequencies.headway_secs"
+  
+  "GTFS ` + "`" + `frequencies.headway_secs` + "`" + `; time in seconds between departures from the same stop for this trip"
   headway_secs: Int!
-  "GTFS frequencies.exact_times"
+  
+  "GTFS ` + "`" + `frequencies.exact_times` + "`" + ` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]"
   exact_times: Int
 }
 
-"""Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file."""
+"""
+Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file.
+"""
 type StopTime {
-  "GTFS stop_times.arrival_time"
+  "GTFS ` + "`" + `stop_times.arrival_time` + "`" + `"
   arrival_time: Seconds
-  "GTFS stop_times.departure_time"
+  
+  "GTFS ` + "`" + `stop_times.departure_time` + "`" + `"
   departure_time: Seconds
-  "GTFS stop_times.stop_sequence"
+  
+  "GTFS ` + "`" + `stop_times.stop_sequence` + "`" + `; order of stops for this trip; values must increase along the trip but need not be consecutive"
   stop_sequence: Int!
-  "GTFS stop_times.stop_headsign"
+  
+  "GTFS ` + "`" + `stop_times.stop_headsign` + "`" + `; overrides the trip-level headsign for passengers boarding at this stop"
   stop_headsign: String
-  "GTFS stop_times.pickup_type"
+  
+  "GTFS ` + "`" + `stop_times.pickup_type` + "`" + ` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   pickup_type: Int
-  "GTFS stop_times.drop_off_type"
+  
+  "GTFS ` + "`" + `stop_times.drop_off_type` + "`" + ` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   drop_off_type: Int
-  "GTFS stop_times.timepoint"
+  
+  "GTFS ` + "`" + `stop_times.timepoint` + "`" + ` [0=times are approximate, 1=times are exact]"
   timepoint: Int
-  "GTFS stop_times.continuous_drop_off"
+  
+  "GTFS ` + "`" + `stop_times.continuous_drop_off` + "`" + `; overrides ` + "`" + `routes.continuous_drop_off` + "`" + ` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
-  "GTFS stop_times.continuous_pickup"
+
+  "GTFS ` + "`" + `stop_times.continuous_pickup` + "`" + `; overrides ` + "`" + `routes.continuous_pickup` + "`" + ` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
-  "GTFS stop_times.shape_dist_traveled"
+  
+  "GTFS ` + "`" + `stop_times.shape_dist_traveled` + "`" + `; distance from the start of the shape, in the same units as ` + "`" + `shapes.txt` + "`" + `"
   shape_dist_traveled: Float
-  "Set if this arrival/departure time was interpolated during import"
+  
+  "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
-  "GTFS stop_times.start_pickup_drop_off_window"
+
+  "GTFS ` + "`" + `stop_times.start_pickup_drop_off_window` + "`" + `; earliest time a rider may request service at this location (GTFS Flex)"
   start_pickup_drop_off_window: Seconds
-  "GTFS stop_times.end_pickup_drop_off_window"
+
+  "GTFS ` + "`" + `stop_times.end_pickup_drop_off_window` + "`" + `; latest time a rider may request service at this location (GTFS Flex)"
   end_pickup_drop_off_window: Seconds
-  "GTFS stop_times.pickup_booking_rule_id"
+
+  "Booking rule governing pickup, resolved from GTFS ` + "`" + `stop_times.pickup_booking_rule_id` + "`" + ` (GTFS Flex)"
   pickup_booking_rule: BookingRule
-  "GTFS stop_times.drop_off_booking_rule_id"
+
+  "Booking rule governing drop-off, resolved from GTFS ` + "`" + `stop_times.drop_off_booking_rule_id` + "`" + ` (GTFS Flex)"
   drop_off_booking_rule: BookingRule
+
   "Stop associated with this stop time"
   stop: Stop!
+
   "Trip associated with this stop time"
   trip: Trip!
-  "Detailed arrival information, including GTFS-RT updates and estimates"
-  arrival: StopTimeEvent!
-  "Detailed departure information, including GTFS-RT updates and estimates"
-  departure: StopTimeEvent!
-  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
-  service_date: Date
-  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
-  date: Date
-  """A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
-  """
+  "Arrival data, including GTFS-RT updates and estimates"
+  arrival: StopTimeEvent!
+
+  "Departure data, including GTFS-RT updates and estimates"
+  departure: StopTimeEvent!
+
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  service_date: Date
+
+  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  date: Date
+
+  "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
 }
 
-"""Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a service at a Location or Location Group."""
+"""
+Record from a static GTFS [stop_times.txt](https://gtfs.org/schedule/reference/#stop_timestxt) file, representing a Flex (demand-responsive) service stop where the destination is a ` + "`" + `Location` + "`" + ` or ` + "`" + `LocationGroup` + "`" + ` rather than a fixed ` + "`" + `Stop` + "`" + `.
+"""
 type FlexStopTime {
-  "GTFS stop_times.arrival_time"
+  "GTFS ` + "`" + `stop_times.arrival_time` + "`" + `"
   arrival_time: Seconds
-  "GTFS stop_times.departure_time"
+  
+  "GTFS ` + "`" + `stop_times.departure_time` + "`" + `"
   departure_time: Seconds
-  "GTFS stop_times.stop_sequence"
+  
+  "GTFS ` + "`" + `stop_times.stop_sequence` + "`" + `; order of stops for this trip; values must increase along the trip but need not be consecutive"
   stop_sequence: Int!
-  "GTFS stop_times.stop_headsign"
+  
+  "GTFS ` + "`" + `stop_times.stop_headsign` + "`" + `; overrides the trip-level headsign for passengers boarding at this stop"
   stop_headsign: String
-  "GTFS stop_times.pickup_type"
+  
+  "GTFS ` + "`" + `stop_times.pickup_type` + "`" + ` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   pickup_type: Int
-  "GTFS stop_times.drop_off_type"
+  
+  "GTFS ` + "`" + `stop_times.drop_off_type` + "`" + ` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]"
   drop_off_type: Int
-  "GTFS stop_times.timepoint"
+  
+  "GTFS ` + "`" + `stop_times.timepoint` + "`" + ` [0=times are approximate, 1=times are exact]"
   timepoint: Int
-  "GTFS stop_times.continuous_drop_off"
+  
+  "GTFS ` + "`" + `stop_times.continuous_drop_off` + "`" + `; overrides ` + "`" + `routes.continuous_drop_off` + "`" + ` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
-  "GTFS stop_times.continuous_pickup"
+
+  "GTFS ` + "`" + `stop_times.continuous_pickup` + "`" + `; overrides ` + "`" + `routes.continuous_pickup` + "`" + ` for the segment to the next stop [0=continuous, 1=none, 2=must phone agency, 3=must coordinate with driver]"
   continuous_pickup: Int
-  "GTFS stop_times.shape_dist_traveled"
+  
+  "GTFS ` + "`" + `stop_times.shape_dist_traveled` + "`" + `; distance from the start of the shape, in the same units as ` + "`" + `shapes.txt` + "`" + `"
   shape_dist_traveled: Float
-  "Set if this arrival/departure time was interpolated during import"
+  
+  "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
-  "GTFS stop_times.start_pickup_drop_off_window"
+
+  "GTFS ` + "`" + `stop_times.start_pickup_drop_off_window` + "`" + `; earliest time a rider may request service at this location (GTFS Flex)"
   start_pickup_drop_off_window: Seconds
-  "GTFS stop_times.end_pickup_drop_off_window"
+
+  "GTFS ` + "`" + `stop_times.end_pickup_drop_off_window` + "`" + `; latest time a rider may request service at this location (GTFS Flex)"
   end_pickup_drop_off_window: Seconds
-  "GTFS stop_times.pickup_booking_rule_id"
+
+  "Booking rule governing pickup, resolved from GTFS ` + "`" + `stop_times.pickup_booking_rule_id` + "`" + ` (GTFS Flex)"
   pickup_booking_rule: BookingRule
-  "GTFS stop_times.drop_off_booking_rule_id"
+
+  "Booking rule governing drop-off, resolved from GTFS ` + "`" + `stop_times.drop_off_booking_rule_id` + "`" + ` (GTFS Flex)"
   drop_off_booking_rule: BookingRule
-  "Location associated with this stop time"
+
+  "Location associated with this stop time (mutually exclusive with ` + "`" + `location_group` + "`" + `)"
   location: Location
-  "Location Group associated with this stop time"
+
+  "Location group associated with this stop time (mutually exclusive with ` + "`" + `location` + "`" + `)"
   location_group: LocationGroup
+
   "Trip associated with this stop time"
   trip: Trip!
-  "Detailed arrival information, including GTFS-RT updates and estimates"
-  arrival: StopTimeEvent!
-  "Detailed departure information, including GTFS-RT updates and estimates"
-  departure: StopTimeEvent!
-  "If part of an arrival/departure query, the GTFS service date for this scheduled stop time"
-  service_date: Date
-  "If part of an arrival/departure query, the calendar date for this scheduled stop time"
-  date: Date
-  """A status flag for real-time information about this trip.
 
-  If no real-time information is available, the value will be STATIC and the estimated arrival/departure times will be empty. A trip with real-time information available will be SCHEDULED; a canceled trip will be CANCELED, and an added trip that is not present in the static GTFS will be ADDED.
-  """
+  "Arrival data, including GTFS-RT updates and estimates"
+  arrival: StopTimeEvent!
+
+  "Departure data, including GTFS-RT updates and estimates"
+  departure: StopTimeEvent!
+
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  service_date: Date
+
+  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  date: Date
+
+  "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
 }
 
-"""Record from a static GTFS [feed_info.txt](https://gtfs.org/schedule/reference/#feed_infotxt) file."""
+"""
+Record from a static GTFS [feed_info.txt](https://gtfs.org/schedule/reference/#feed_infotxt) file.
+"""
 type FeedInfo {
   "Internal integer ID"
   id: Int!
-  "GTFS feed_info.feed_publisher_name"
+  
+  "GTFS ` + "`" + `feed_info.feed_publisher_name` + "`" + `"
   feed_publisher_name: String!
-  "GTFS feed_info.feed_publisher_url"
+  
+  "GTFS ` + "`" + `feed_info.feed_publisher_url` + "`" + `"
   feed_publisher_url: Url!
-  "GTFS feed_info.feed_lang"
+  
+  "GTFS ` + "`" + `feed_info.feed_lang` + "`" + `"
   feed_lang: Language!
-  "GTFS feed_info.default_lang"
+  
+  "GTFS ` + "`" + `feed_info.default_lang` + "`" + `"
   default_lang: Language
-  "GTFS feed_info.feed_version"
+  
+  "GTFS ` + "`" + `feed_info.feed_version` + "`" + `"
   feed_version: String
-  "GTFS feed_info.feed_start_date"
+  
+  "GTFS ` + "`" + `feed_info.feed_start_date` + "`" + `"
   feed_start_date: Date
-  "GTFS feed_info.feed_end_date"
+  
+  "GTFS ` + "`" + `feed_info.feed_end_date` + "`" + `"
   feed_end_date: Date
-  "GTFS feed_info.feed_contact_email"
+  
+  "GTFS ` + "`" + `feed_info.feed_contact_email` + "`" + `"
   feed_contact_email: Email
-  "GTFS feed_info.feed_contact_url"
+  
+  "GTFS ` + "`" + `feed_info.feed_contact_url` + "`" + `"
   feed_contact_url: Url
 }
 
-"""Record from a static GTFS [locations.geojson](https://gtfs.org/schedule/reference/#locationsgeojson) file."""
+"""
+Record from a static GTFS [locations.geojson](https://gtfs.org/schedule/reference/#locationsgeojson) file.
+"""
 type Location {
   "Internal integer ID"
   id: Int!
-  "GTFS locations.location_id"
+  
+  "GTFS ` + "`" + `locations.location_id` + "`" + `"
   location_id: String!
-  "GTFS locations.stop_name"
+  
+  "GTFS ` + "`" + `locations.stop_name` + "`" + `"
   stop_name: String
-  "GTFS locations.stop_desc"
+  
+  "GTFS ` + "`" + `locations.stop_desc` + "`" + `"
   stop_desc: String
-  "GTFS locations.zone_id"
+  
+  "GTFS ` + "`" + `locations.zone_id` + "`" + `"
   zone_id: String
-  "GTFS locations.stop_url"
+  
+  "GTFS ` + "`" + `locations.stop_url` + "`" + `"
   stop_url: Url
-  "Geometry for this location"
+  
+  "Geometry for this location, typically a Polygon or MultiPolygon defining the service area"
   geometry: Geometry!
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  "Feed OnestopID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
-  "Stop times associated with this location"
+
+  "Flex stop times that reference this location"
   stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
-"""Record from a static GTFS [booking_rules.txt](https://gtfs.org/schedule/reference/#booking_rulestxt) file."""
+"""
+Record from a static GTFS [booking_rules.txt](https://gtfs.org/schedule/reference/#booking_rulestxt) file.
+"""
 type BookingRule {
   "Internal integer ID"
   id: Int!
-  "GTFS booking_rules.booking_rule_id"
+  
+  "GTFS ` + "`" + `booking_rules.booking_rule_id` + "`" + `"
   booking_rule_id: String!
-  "GTFS booking_rules.booking_type"
+  
+  "GTFS ` + "`" + `booking_rules.booking_type` + "`" + ` [0=real-time booking, 1=same-day booking with prior notice, 2=advance booking with prior notice]"
   booking_type: Int!
-  "GTFS booking_rules.prior_notice_duration_min"
+  
+  "GTFS ` + "`" + `booking_rules.prior_notice_duration_min` + "`" + `; minimum minutes before travel for a booking request"
   prior_notice_duration_min: Int
-  "GTFS booking_rules.prior_notice_duration_max"
+
+  "GTFS ` + "`" + `booking_rules.prior_notice_duration_max` + "`" + `; maximum minutes before travel for a booking request"
   prior_notice_duration_max: Int
-  "GTFS booking_rules.prior_notice_last_day"
+  
+  "GTFS ` + "`" + `booking_rules.prior_notice_last_day` + "`" + `; last day before travel when a booking may be made (e.g. 1 = must book by the day before)"
   prior_notice_last_day: Int
-  "GTFS booking_rules.prior_notice_last_time"
+  
+  "GTFS ` + "`" + `booking_rules.prior_notice_last_time` + "`" + `; latest time on prior_notice_last_day when a booking may be made"
   prior_notice_last_time: Seconds
-  "GTFS booking_rules.prior_notice_start_day"
+  
+  "GTFS ` + "`" + `booking_rules.prior_notice_start_day` + "`" + `; earliest day before travel when a booking may be made"
   prior_notice_start_day: Int
-  "GTFS booking_rules.prior_notice_start_time"
+  
+  "GTFS ` + "`" + `booking_rules.prior_notice_start_time` + "`" + `; earliest time on prior_notice_start_day when a booking may be made"
   prior_notice_start_time: Seconds
-  "Prior notice service calendar"
+  
+  "GTFS ` + "`" + `booking_rules.prior_notice_service_id` + "`" + `; calendar defining the days to which prior notice requirements apply"
   prior_notice_service: Calendar
-  "GTFS booking_rules.message"
+  
+  "GTFS ` + "`" + `booking_rules.message` + "`" + `; general message shown to riders when booking this service"
   message: String
-  "GTFS booking_rules.pickup_message"
+  
+  "GTFS ` + "`" + `booking_rules.pickup_message` + "`" + `; message shown to riders when booking a pickup at a specific stop"
   pickup_message: String
-  "GTFS booking_rules.drop_off_message"
+  
+  "GTFS ` + "`" + `booking_rules.drop_off_message` + "`" + `; message shown to riders when booking a drop-off at a specific stop"
   drop_off_message: String
-  "GTFS booking_rules.phone_number"
+  
+  "GTFS ` + "`" + `booking_rules.phone_number` + "`" + `; phone number to call to make a booking"
   phone_number: String
-  "GTFS booking_rules.info_url"
+  
+  "GTFS ` + "`" + `booking_rules.info_url` + "`" + `; URL with more information about this booking rule"
   info_url: Url
-  "GTFS booking_rules.booking_url"
+  
+  "GTFS ` + "`" + `booking_rules.booking_url` + "`" + `; URL to the booking system or interface for this service"
   booking_url: Url
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  "Feed OnestopID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
 }
 
-"""Record from a static GTFS [location_groups.txt](https://gtfs.org/schedule/reference/#location_groupstxt) file."""
+"""
+Record from a static GTFS [location_groups.txt](https://gtfs.org/schedule/reference/#location_groupstxt) file.
+"""
 type LocationGroup {
   "Internal integer ID"
   id: Int!
-  "GTFS location_groups.location_group_id"
+  
+  "GTFS ` + "`" + `location_groups.location_group_id` + "`" + `"
   location_group_id: String!
-  "GTFS location_groups.location_group_name"
+  
+  "GTFS ` + "`" + `location_groups.location_group_name` + "`" + `"
   location_group_name: String
-  "Feed version SHA1 identifier"
+
+  "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
-  "Feed OnestopID"
+
+  "Feed Onestop ID associated with this entity"
   feed_onestop_id: String!
-  "Feed version"
+
+  "Source feed version for this entity"
   feed_version: FeedVersion!
-  "Stops associated with this location group"
+
+  "Stops belonging to this location group, resolved via ` + "`" + `location_group_stops.txt` + "`" + `"
   stops(limit: Int): [Stop!]!
-  "Stop times associated with this location group"
+
+  "Flex stop times that reference this location group"
   stop_times(limit: Int, where: StopTimeFilter): [FlexStopTime!]!
 }
 
-"""Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file."""
+"""
+Record from a static GTFS [location_group_stops.txt](https://gtfs.org/schedule/reference/#location_group_stopstxt) file.
+"""
 type LocationGroupStop {
   "Internal integer ID"
   id: Int!
-  "Location group"
+
+  "Location group this association belongs to"
   location_group: LocationGroup!
-  "Stop"
+
+  "Stop included in the location group"
   stop: Stop!
 }
 
 # Archived observed stop-times
 
-"""Measurements of observed arrival times based on GTFS-RT data"""
+"""
+An archived real-time arrival/departure measurement at a stop, derived from GTFS-RT TripUpdate or VehiclePosition data.
+Compare ` + "`" + `scheduled_arrival_time` + "`" + `/` + "`" + `scheduled_departure_time` + "`" + ` against ` + "`" + `observed_arrival_time` + "`" + `/` + "`" + `observed_departure_time` + "`" + ` for on-time performance analysis.
+"""
 type StopObservation {
-  "GTFS-RT TripUpdate schedule relationship"
+  "GTFS-RT TripUpdate schedule_relationship value (string form: e.g. ` + "`" + `SCHEDULED` + "`" + `, ` + "`" + `ADDED` + "`" + `, ` + "`" + `CANCELED` + "`" + `)"
   schedule_relationship: String
-  "GTFS-RT TripUpdate trip start date"
+
+  "GTFS-RT TripDescriptor.start_date for the observed trip"
   trip_start_date: Date
-  "GTFS-RT TripUpdate trip start time"
+
+  "GTFS-RT TripDescriptor.start_time for the observed trip"
   trip_start_time: Seconds
-  "GTFS static origin stop id"
+
+  "GTFS stop_id of the previous stop in the trip (origin of the observed segment)"
   from_stop_id: String
-  "GTFS static destination stop id"
+
+  "GTFS stop_id of this stop (destination of the observed segment)"
   to_stop_id: String
-  "Agency ID for route"
+
+  "GTFS agency_id of the agency operating the trip's route"
   agency_id: String
-  "Route ID for trip"
+
+  "GTFS route_id of the trip's route"
   route_id: String
-  "Trip ID"
+
+  "GTFS trip_id of the observed trip"
   trip_id: String
-  "Stop sequence for origin stop"
+
+  "GTFS stop_times.stop_sequence value for the from_stop"
   stop_sequence: Int
-  "Source data used to calculate this stop observation. Can be trip update or vehicle positions."
+
+  "GTFS-RT message used to derive this observation: ` + "`" + `TripUpdate` + "`" + ` or ` + "`" + `VehiclePosition` + "`" + `"
   source: String
-  "GTFS static scheduled arrival time"
+
+  "Scheduled arrival time at to_stop, from GTFS static ` + "`" + `stop_times` + "`" + `"
   scheduled_arrival_time: Seconds
-  "GTFS static scheduled departure time"
+
+  "Scheduled departure time at to_stop, from GTFS static ` + "`" + `stop_times` + "`" + `"
   scheduled_departure_time: Seconds
-  "GTFS-RT calculated arrival time"
+
+  "Observed arrival time at to_stop, derived from GTFS-RT"
   observed_arrival_time: Seconds
-  "GTFS-RT calculated departure time"
+
+  "Observed departure time at to_stop, derived from GTFS-RT"
   observed_departure_time: Seconds
 }
 
 # GTFS Support Entities
 
-"""Additional metadata for a stop to reference an externally defined stop"""
+"""
+A cross-feed reference linking a stop in one feed to the same physical stop in a different feed.
+The ` + "`" + `target_active_stop` + "`" + ` field resolves the matched stop and its current routes, enabling cross-feed service lookups at shared stops (e.g. a bus stop that also appears in a rail feed).
+"""
 type StopExternalReference {
   "Internal integer ID"
   id: Int!
-  "Target stop's feed OnestopID"
+  
+  "Onestop ID of the target stop's feed"
   target_feed_onestop_id: String
-  "Target stop's stop_id"
+
+  "GTFS stop_id of the target stop within that feed"
   target_stop_id: String
-  "Is this reference active"
+
+  "True if this cross-feed reference is marked inactive (e.g. the target stop no longer exists in current feed versions)"
   inactive: Boolean
-  "Resolved target stop, if matched and available"
+
+  "Resolved target stop, if it exists in a currently active feed version"
   target_active_stop: Stop
 }
 
-"""Place associated with a stop"""
+"""
+Place associated with a stop.
+"""
 type StopPlace {
   "Best-matched state or province name"
   adm1_name: String
+  
   "Best-matched state or province ISO code"
   adm1_iso: String
+  
   "Best-matched country name"
   adm0_name: String
-  "Best-mached country ISO code"
+  
+  "Best-matched country ISO code"
   adm0_iso: String
 }
 
-"""Place associated with an agency"""
+"""
+Place associated with an agency.
+"""
 type AgencyPlace {
   "Best-matched city name"
   city_name: String
+  
   "Best-matched state or province name"
   adm1_name: String
+  
   "Best-matched state or province ISO code"
   adm1_iso: String
+  
   "Best-matched country name"
   adm0_name: String
-  "Best-mached country ISO code"
+  
+  "Best-matched country ISO code"
   adm0_iso: String
-  "Relative weight of this place association"
+
+  "Relative weight of this place association; higher values indicate stronger association (e.g. greater stop overlap)"
   rank: Float
 }
 
-"""Place name and associated operators"""
+"""
+Place name and associated operators.
+
+See [Concepts: Places](https://www.transit.land/documentation/concepts/places).
+"""
 type Place {
   "Country name"
   adm0_name: String
+  
   "State or province name"
   adm1_name: String
+  
   "City name"
   city_name: String
+  
   "Number of associated operators"
   count: Int!
+  
   "Operators associated with this place"
   operators: [Operator!]
 }
 
-"""RelativeDate specifies a calendar date relative to the current local time"""
+"""
+RelativeDate specifies a calendar date relative to the current local time.
+"""
 enum RelativeDate {
   "The current date"
   TODAY
@@ -9800,7 +11392,9 @@ enum RelativeDate {
   NEXT_SUNDAY
 }
 
-"""PlaceAggregationLevel controls the level of aggregation in a places query"""
+"""
+PlaceAggregationLevel controls the level of aggregation in a places query.
+"""
 enum PlaceAggregationLevel {
   "Aggregate places based on country"
   ADM0
@@ -9817,238 +11411,426 @@ enum PlaceAggregationLevel {
 }
 
 
-"""RouteStops describe associations between stops, routes, and agencies."""
+"""
+Association between a stop, the route that serves it, and the operating agency. Provides the route and agency context alongside each stop on a route.
+"""
 type RouteStop {
   "Internal integer ID"
   id: Int!
-  "Internal integer ID for this associated stop"
+  
+  "Database integer ID of the stop"
   stop_id: Int!
-  "Internal integer ID for this associated route"
+
+  "Database integer ID of the route"
   route_id: Int!
-  "Internal integer ID for this associated agency"
+
+  "Database integer ID of the agency"
   agency_id: Int!
+  
   "Associated route"
   route: Route!
+  
   "Associated stop"
   stop: Stop!
+  
   "Associated agency"
   agency: Agency!
 }
 
-"""RouteStopPattern describes a unique pattern of stops for a route"""
+"""
+A unique sequence of stops served by trips on a route, in a single direction. Multiple trips may share the same RouteStopPattern.
+"""
 type RouteStopPattern {
-  "An identifier for this stop pattern; an integer scoped to this particular feed version"
+  "Identifier for this stop pattern; an integer scoped to a single feed version"
   stop_pattern_id: Int!
-  "Direction ID of the trip"
+
+  "GTFS direction_id (0 or 1) of the trips using this pattern"
   direction_id: Int!
-  "Count of trips for this stop pattern"
+
+  "Number of trips that operate this stop pattern"
   count: Int!
-  "Trips for this stop pattern"
+
+  "Representative trips that follow this stop pattern; useful for fetching full stop_times"
   trips(limit: Int): [Trip!]
 }
 
-"""Representative route geometries"""
+"""
+Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
+"""
 type RouteGeometry {
-  "If true, the source GTFS feed provides no shapes. This route geometry is based on straight lines between stop points."
+  "True if the source feed has no ` + "`" + `shapes.txt` + "`" + ` and this geometry was generated from straight lines between stop points"
   generated: Boolean!
-  "A single LineString of this most common shape"
+
+  "Single LineString representing the most common shape for this route"
   geometry: LineString
-  "MultiLineString ensemble of the most common shapes for each direction"
+
+  "MultiLineString ensemble combining the most common shape for each direction"
   combined_geometry: Geometry
-  "Length (in meters) of the simple geometry"
+
+  "Length of the ` + "`" + `geometry` + "`" + ` LineString, in meters"
   length: Float
-  "Maximum point-to-point distance in the geometry"
+
+  "Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps"
   max_segment_length: Float
-  "First point max distance"
+
+  "Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route"
   first_point_max_distance: Float
 }
 
-"""Calculated route headways"""
+"""
+Calculated typical service frequency at a representative stop, broken down by day-of-week category and direction.
+"""
 type RouteHeadway {
-  "Stop used for the headway calculation"
+  "Representative stop used for the headway calculation"
   stop: Stop!
+
   "Day of week category; 1=Weekday, 6=Saturday, 7=Sunday"
   dow_category: Int
-  "Trip direction"
+
+  "GTFS direction_id (0 or 1)"
   direction_id: Int
-  "Typical number of seconds between departing trips at this stop in this direction on this day of the week"
+  
+  "Typical seconds between departures at this stop, direction, and day-of-week"
   headway_secs: Int
+  
   "Date used for the headway calculation"
   service_date: Date
+  
   "Number of departures on this stop, day, and direction"
   stop_trip_count: Int
-  "Actual departure times on this stop, day, and direction"
+  
+  "Departure times on this stop, day, and direction"
   departures: [Seconds!]
 }
 
-"""Normalized route segment patterns"""
+"""
+Association linking a route's stop pattern to a single normalized segment within its full path. Used to assemble route geometries from reusable segment pieces.
+"""
 type SegmentPattern {
   "Internal integer ID"
   id: Int!
-  "Route for this segment pattern"
+
+  "Route this segment pattern belongs to"
   route: Route!
-  "Stop pattern for this segment pattern"
+
+  "Stop pattern ID this segment belongs to; scoped to the feed version"
   stop_pattern_id: Int!
-  "Segment geometry for this pattern"
+  "GTFS direction_id (0 or 1) of trips using this pattern"
+  direction_id: Int!
+  "Position of this segment within the full path of the pattern (0-indexed)"
+  sequence_idx: Int!
+  "Internal integer ID of the source shape"
+  shape_id: Int!
+  "OSM Way ID, if the segment was matched to an OpenStreetMap way"
+  way_id: Int
+  "Shape this segment was derived from"
+  shape: Shape!
+
+  "Normalized segment associated with this pattern"
   segment: Segment!
 }
 
-"""Normalized route segments"""
+"""
+A normalized, reusable piece of route geometry, optionally aligned with an OpenStreetMap way. Multiple route patterns may reference the same Segment.
+"""
 type Segment {
   "Internal integer ID"
   id: Int!
-  "OSM Way ID, if any, associated with this segment"
+  "OSM Way ID, if the segment was matched to an OpenStreetMap way (0 if unmatched)"
   way_id: Int!
-  "Geometry for this segment"
+  "Path geometry for this segment as a LineString"
   geometry: LineString!
-  "Routes and stop patterns associated with this segment"
+
+  "Pattern associations for this segment, each linking it to a route and stop pattern"
   segment_patterns: [SegmentPattern!]
 }
 
-"""MTC GTFS+ Extension: route_attributes.txt"""
+"""
+Extended route metadata from the [MTC GTFS+ extension](https://github.com/MobilityData/gtfs-plus-spec) ` + "`" + `route_attributes.txt` + "`" + ` file. Values are integer codes defined by the extension; consult that spec for the meaning of each code.
+"""
 type RouteAttribute {
-  "Route category"
+  "Route category code (e.g. service tier such as local, express, rapid)"
   category: Int
-  "Route subcategory"
+
+  "Route subcategory code (further subdivision within ` + "`" + `category` + "`" + `)"
   subcategory: Int
-  "Route running way category"
+
+  "Running-way category code (e.g. dedicated lane, mixed traffic, grade-separated)"
   running_way: Int
 }
 
 # Census entities
 
+"""
+A named collection of geographic and/or statistical data from a single source.
+
+Datasets currently include:
+- **US Census Bureau ACS** (e.g. ` + "`" + `acsdt5y2022` + "`" + `): American Community Survey 5-year estimates; contains demographic and socioeconomic data (population, income, etc.) keyed to standard FIPS geographic identifiers
+- **US Census Bureau TIGER/Line** (e.g. ` + "`" + `tiger2021` + "`" + `): geographic boundary files for census tracts, block groups, states, and other administrative units
+- **US Federal Transit Administration NTD** (e.g. ` + "`" + `ntd-annual-2024` + "`" + `): National Transit Database annual reporting data; contains operational metrics (vehicle revenue miles, operating expenses) by agency and mode
+
+Each dataset contains one or more ` + "`" + `CensusLayer` + "`" + `s (geographic boundary types), ` + "`" + `CensusSource` + "`" + `s (individual source files), ` + "`" + `CensusTable` + "`" + `s (data table definitions), and queryable ` + "`" + `CensusGeography` + "`" + ` records with associated ` + "`" + `CensusValue` + "`" + ` data.
+"""
 type CensusDataset {
   "Internal integer ID"
   id: Int!
-  "Dataset name, e.g. acsdt5y2022"
+
+  "Dataset name (e.g. ` + "`" + `acsdt5y2022` + "`" + `, ` + "`" + `tiger2021` + "`" + `, ` + "`" + `ntd-annual-2024` + "`" + `)"
   name: String!
-  "Dataset description"
+
+  "Human-readable description"
   description: String
-  "Dataset url"
+
+  "URL to the source or documentation"
   url: Url
-  "Minimum year of data in this dataset"
+
+  "Earliest year of data coverage"
   year_min: Int
-  "Maximum year of data in this dataset"
+
+  "Latest year of data coverage"
   year_max: Int
-  # Sources in this dataset
+
+  "Source files or archives that make up this dataset"
   sources(limit: Int, where: CensusSourceFilter): [CensusSource!]
-  # Census geographies in this dataset
+
+  "Geographic units in this dataset"
   geographies(limit: Int, where: CensusDatasetGeographyFilter): [CensusGeography!]
-  # Census tables in this dataset
+
+  "Data table definitions available in this dataset"
   tables(limit: Int, where: CensusTableFilter): [CensusTable!]
+
+  "Geographic layers (boundary types) available in this dataset, e.g. ` + "`" + `tract` + "`" + `, ` + "`" + `blockgroup` + "`" + `, ` + "`" + `state` + "`" + `"
   layers: [CensusLayer!]
+
+  """
+  Cursor-paginated data values for this dataset.
+  Use for large datasets (e.g. NTD) where result sets exceed practical limits for the per-geography ` + "`" + `CensusGeography.values` + "`" + ` field.
+  Filter by ` + "`" + `geoid` + "`" + `, ` + "`" + `geoid_prefix` + "`" + `, or ` + "`" + `table` + "`" + `.
+  """
+  values_relay(first: Int, after: String, where: CensusDatasetValueFilter): CensusValueConnection
 }
 
+"""
+A specific source file or archive that was imported to populate part of a dataset (e.g. a single state's TIGER/Line shapefile, or one year's ACS data release).
+"""
 type CensusSource {
   "Internal integer ID"
   id: Int!
-  "Source name, e.g. tl_2024_01_tract.zip"
+
+  "Source file name (e.g. ` + "`" + `tl_2024_01_tract.zip` + "`" + `)"
   name: String!
-  "Source description"
+
+  "Description of this source file"
   description: String
-  "Source url"
+
+  "URL to the original source file"
   url: Url!
-  "Source checksum"
+
+  "SHA1 checksum of the source file"
   sha1: String!
-  # Census geographies in this layer
+
+  "Geographic units loaded from this source file"
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
-  # Census tables in this source
+
+  "Data tables loaded from this source file"
   tables(limit: Int): [CensusTable!]
-  # Layers
+
+  "Geographic layers defined by this source file"
   layers: [CensusLayer!]
 }
 
-""""Census layer metadata"""
+"""
+A named category of geographic boundaries within a dataset, grouping geometries of the same type (e.g. all census tracts, all states).
+
+Common layer names include ` + "`" + `tract` + "`" + ` (census tracts), ` + "`" + `blockgroup` + "`" + ` (block groups), and ` + "`" + `state` + "`" + `. Layers are used as the primary filter when querying ` + "`" + `CensusGeography` + "`" + ` records to select the desired level of geographic aggregation.
+"""
 type CensusLayer {
   "Internal integer ID"
   id: Int!
-  "Layer name, e.g. tl_2024_01_tract"
+
+  "Layer name used as a filter key (e.g. ` + "`" + `tract` + "`" + `, ` + "`" + `blockgroup` + "`" + `, ` + "`" + `state` + "`" + `)"
   name: String!
-  "Layer description"
+
+  "Human-readable description of this layer"
   description: String
-  # Census geographies in this layer
+
+  "Geographic units belonging to this layer"
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
 }
 
-"""Census geography data"""
+"""
+A single spatial unit within a layer — for example, a specific Census Tract, a US State, or an NTD agency record.
+
+Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via ` + "`" + `values` + "`" + `. When queried with a spatial filter (e.g. ` + "`" + `stop_buffer` + "`" + ` or ` + "`" + `bbox` + "`" + `), the ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
+
+Note: spatial queries may return the same geography multiple times when it intersects a search area in multiple places (e.g. two separate stop buffers within the same tract). Use ` + "`" + `geoid` + "`" + ` to deduplicate if needed.
+"""
 type CensusGeography {
   "Internal integer ID"
   id: Int!
-  "Dataset name, e.g. acsdt5y2022"
+
+  "Name of the parent dataset (e.g. ` + "`" + `tiger2021` + "`" + `)"
   dataset_name: String!
-  "Source name, e.g. tl_2024_01_tract.zip"
+
+  "Name of the source file this geography was loaded from (e.g. ` + "`" + `tl_2024_01_tract.zip` + "`" + `)"
   source_name: String!
-  "Census geography source layer"
+
+  "Name of the layer this geography belongs to (e.g. ` + "`" + `tract` + "`" + `, ` + "`" + `state` + "`" + `)"
   layer_name: String!
-  "Census geography GEOID"
+
+  """
+  Standard identifier for this geography.
+  For ACS/TIGER geographies this is the FIPS code (e.g. ` + "`" + `06075` + "`" + ` for San Francisco County).
+  For NTD geographies this is the NTD agency ID.
+  Use this field to deduplicate results from spatial queries.
+  """
   geoid: String
-  "Census geography name"
+
+  "Human-readable name of this geography (e.g. a county or tract name)"
   name: String
-  "Geometry total area, in square meters"
+
+  "Geometry area in square meters"
   geometry_area: Float
-  "Land area, in square meters"
+
+  "Land area, in square meters (from TIGER/Line ` + "`" + `ALAND` + "`" + ` field)"
   aland: Float
-  "Water area, in square meters"
+
+  "Water area, in square meters (from TIGER/Line ` + "`" + `AWATER` + "`" + ` field)"
   awater: Float
+
   "State or province name"
   adm1_name: String
-  "State or province ISO code"
+
+  "State or province ISO 3166-2 code (e.g. ` + "`" + `US-CA` + "`" + `)"
   adm1_iso: String
+
   "Country name"
   adm0_name: String
-  "Country ISO code"
+
+  "Country ISO 3166-1 alpha-2 code (e.g. ` + "`" + `US` + "`" + `)"
   adm0_iso: String
-  "Census geography polygon"
+
+  "Boundary geometry for this geography as a MultiPolygon"
   geometry: MultiPolygon
-  "Intersection area with a given geometry, in square meters"
+
+  """
+  When this geography was returned by a spatial query (e.g. ` + "`" + `stop_buffer` + "`" + ` or ` + "`" + `bbox` + "`" + `), the area of overlap between this geography and the search area, in square meters.
+  Divide by ` + "`" + `geometry_area` + "`" + ` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
+  """
   intersection_area: Float
+
+  """
+  When this geography was returned by a spatial query, the geometry of the intersection between this geography and the search area.
+  Only populated when explicitly requested; may be expensive to compute.
+  """
   intersection_geometry: Geometry
-  "Census tables containing data for this geography"
+
+  "Statistical data values for this geography from the specified tables"
   values(table_names: [String!]!, dataset: String, limit: Int): [CensusValue]!
-  "Layer"
+
+  "The layer this geography belongs to"
   layer: CensusLayer
-  "Source"
+
+  "The source file this geography was loaded from"
   source: CensusSource
 }
 
-"""Census values"""
+"""
+Statistical data values for a specific geography and table row.
+
+The ` + "`" + `values` + "`" + ` field is an unstructured map of column names to their values for this geography. Column names and types vary by dataset and table — consult the associated ` + "`" + `CensusTable` + "`" + ` and ` + "`" + `CensusField` + "`" + ` records for schema information.
+
+Examples:
+- ACS table ` + "`" + `b01001` + "`" + `: ` + "`" + `{ "b01001_001": 42381 }` + "`" + ` (total population estimate)
+- NTD table ` + "`" + `service_data_and_operating_expenses_by_mode` + "`" + `: ` + "`" + `{ "Vehicle Revenue Miles": 1234567, "Operating Expenses": 9876543, "mode": "MB", "ntd_id": "90001" }` + "`" + `
+"""
 type CensusValue {
-  "Dataset name, e.g. acsdt5y2022"
+  "Name of the dataset this value belongs to (e.g. ` + "`" + `acsdt5y2022` + "`" + `)"
   dataset_name: String!
-  "Source name, e.g. tl_2024_01_tract.zip"
+
+  "Name of the source file this value was loaded from"
   source_name: String!
-  "Source table"
+
+  "Table definition describing the columns in ` + "`" + `values` + "`" + `"
   table: CensusTable!
-  "Column:Value for this table"
+
+  "Map of column names to their values for this geography and table"
   values: Map!
-  "GEOID of associated census geography"
+
+  "GEOID of the associated geography (FIPS code, NTD ID, etc.)"
   geoid: String!
 }
 
-"""Census table metadata"""
+"""
+Relay-style cursor-paginated connection for census values.
+Use ` + "`" + `values_relay` + "`" + ` on ` + "`" + `CensusDataset` + "`" + ` when fetching large result sets (e.g. full NTD datasets).
+"""
+type CensusValueConnection {
+  "Page of result edges; each edge contains a ` + "`" + `CensusValue` + "`" + ` node and its cursor"
+  edges: [CensusValueEdge!]!
+  "Pagination metadata for this page"
+  pageInfo: PageInfo!
+}
+
+"""A single edge in a CensusValueConnection."""
+type CensusValueEdge {
+  "The CensusValue at this position in the result set"
+  node: CensusValue!
+  "Opaque cursor identifying this edge; pass to ` + "`" + `after` + "`" + ` to continue paging from here"
+  cursor: String!
+}
+
+"""Relay-style pagination metadata."""
+type PageInfo {
+  "True if there are more results after ` + "`" + `endCursor` + "`" + `"
+  hasNextPage: Boolean!
+  "True if there are more results before ` + "`" + `startCursor` + "`" + `"
+  hasPreviousPage: Boolean!
+  "Cursor of the first edge in this page; use as ` + "`" + `before` + "`" + ` to page backward"
+  startCursor: String
+  "Cursor of the last edge in this page; use as ` + "`" + `after` + "`" + ` to page forward"
+  endCursor: String
+}
+
+"""
+Schema definition for a data table within a dataset.
+Describes the available columns and their metadata; the actual data is returned via ` + "`" + `CensusValue` + "`" + `.
+"""
 type CensusTable {
   "Internal integer ID"
   id: Int!
-  "Census table name"
+
+  "Table identifier used when querying values (e.g. ` + "`" + `b01001` + "`" + `, ` + "`" + `service_data_and_operating_expenses_by_mode` + "`" + `)"
   table_name: String!
-  "Census table title"
+
+  "Human-readable title of this table (e.g. ` + "`" + `Sex By Age` + "`" + `)"
   table_title: String!
-  "Census table group"
+
+  "Grouping category for this table within the dataset"
   table_group: String
-  "Additional details, e.g. population universe"
+
+  "Additional descriptive details, such as the population universe (e.g. ` + "`" + `Total population` + "`" + `)"
   table_details: String
-  "Individial field definitions for this table"
+
+  "Field (column) definitions for this table"
   fields: [CensusField!]!
 }
 
+"""
+Schema definition for a single column within a ` + "`" + `CensusTable` + "`" + `.
+Field names from this type correspond to keys in the ` + "`" + `CensusValue.values` + "`" + ` map.
+"""
 type CensusField {
   "Internal integer ID"
   id: Int!
-  "Census field name"
+
+  "Column name as it appears in ` + "`" + `CensusValue.values` + "`" + ` (e.g. ` + "`" + `b01001_001` + "`" + `)"
   field_name: String!
-  "Census field title"
+
+  "Human-readable label for this column (e.g. ` + "`" + `Total` + "`" + `)"
   field_title: String!
-  "Census field column order"
+
+  "Display order of this column within the table"
   column_order: Float
 }
 
@@ -10063,33 +11845,40 @@ See:
 - [ScheduleRelationship](https://gtfs.org/realtime/reference/#enum-schedulerelationship-1)
 """
 enum ScheduleRelationship {
+  "Trip or stop is following the normal schedule with real-time updates applied"
   SCHEDULED
+  "Extra trip that was added in addition to a running schedule (no static counterpart)"
   ADDED
+  "Trip is running with no associated static schedule (e.g. unscheduled or on-demand service)"
   UNSCHEDULED
+  "Trip has been canceled"
   CANCELED
+  "No GTFS-RT data matched; only the static schedule applies (Transitland-specific, not in the GTFS-RT spec)"
   STATIC
+  "Stop is skipped on this trip; the trip itself runs as scheduled"
   SKIPPED
+  "No real-time data is available for this stop; arrival/departure times are unknown"
   NO_DATA
+  "Deprecated GTFS-RT value: this trip replaces a different scheduled trip"
   REPLACEMENT
+  "A trip created at runtime from a static schedule trip (e.g. an extra run of a regularly scheduled trip)"
   DUPLICATED
+  "Trip should be removed; clients that previously received it should drop it"
   DELETED
 }
 
 """
-StopTimeEvent combines scheduled arrival/departure data with data sourced from GTFS-RT
+StopTimeEvent combines scheduled arrival/departure data with data sourced from GTFS-RT.
 
 Each scheduled StopTime will try to be matched with a relevant GTFS-RT TripUpdate and StopTimeUpdate.
 If the StopTime has a matching TripUpdate (based on trip_id) and StopTimeUpdate (stop_sequence and/or stop_id), the estimated times will be used directly.
 If a TripUpdate is matched, but no StopTimeUpdate, the last available delay value in the trip will be applied to later StopTimes in that trip.
 If the Trip is ADDED and does not match a static schedule StopTime, the scheduled times will be absent.
 
-See:
-- https://gtfs.org/realtime/reference/#message-tripupdate
-- https://gtfs.org/realtime/reference/#message-stoptimeupdate
-- https://gtfs.org/realtime/reference/#message-stoptimeevent
+See https://gtfs.org/realtime/reference/#message-stoptimeevent.
 """
 type StopTimeEvent {
-  "Local time for stop"
+  "IANA timezone name for this stop, used to interpret the ` + "`" + `*_local` + "`" + ` fields"
   stop_timezone: String!
   "Estimated time in UTC"
   estimated_utc: Time
@@ -10100,7 +11889,7 @@ type StopTimeEvent {
   """
   Estimated schedule delay, in seconds, based on either a timestamp or overall trip delay.
 
-  This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value or set via an estimated overall trip delay. The value is capped at +/- 86,400 seconds (24 hours). Values larger than that are are likely erroneous and will be set to null.
+  This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.
   """
   estimated_delay: Int
   "Estimated time in local time HH:MM:SS"
@@ -10109,41 +11898,43 @@ type StopTimeEvent {
   scheduled_utc: Time
   "Scheduled time in Unix epoch seconds"
   scheduled_unix: Int
-  "Sceduled time in the local time zone"
+  "Scheduled time in the local time zone"
   scheduled_local: Time
   "Scheduled time local time HH:MM:SS"
   scheduled: Seconds
-  "Estimated time in UTC, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Time in UTC sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)"
   time_utc: Time
-  "Estimated time in Unix epoch seconds, source directly from matching GTFS-RT StopTimeUpdate. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Time in Unix epoch seconds sourced directly from a matching GTFS-RT StopTimeUpdate (no fallback)"
   time_unix: Int
-  "Estimated schedule delay, in seconds. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See GTFS Realtime documentation. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see ` + "`" + `estimated_delay` + "`" + ` for the inferred-fallback variant"
   delay: Int
-  "Estimation uncertainty. This value is set when there is a directly matching GTFS-RT StopTimeUpdate for this stop and passed through as-is. See https://gtfs.org/realtime/reference/#message-stoptimeevent"
+  "Estimation uncertainty in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is"
   uncertainty: Int
 }
 
 """[Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed."""
 type VehiclePosition {
-  "GTFS-RT VehiclePosition vehicle. See https://gtfs.org/realtime/reference/#message-vehicledescriptor"
+  "Vehicle descriptor from the GTFS-RT VehiclePosition"
   vehicle: RTVehicleDescriptor
-  "GTFS-RT VehiclePosition current vehicle position"
+  "Current vehicle position"
   position: Point
-  "GTFS-RT VehiclePosition current stop sequence in trip"
+  "Sequence index of the stop the vehicle is approaching or stopped at, within the trip"
   current_stop_sequence: Int
-  "GTFS-RT VehiclePosition current stop in trip"
+  "Stop the vehicle is approaching or stopped at; despite the field name, returns the resolved ` + "`" + `Stop` + "`" + ` entity"
   stop_id: Stop
-  "GTFS-RT VehiclePosition current status string"
+  "Vehicle status relative to ` + "`" + `stop_id` + "`" + `: ` + "`" + `INCOMING_AT` + "`" + `, ` + "`" + `STOPPED_AT` + "`" + `, or ` + "`" + `IN_TRANSIT_TO` + "`" + `"
   current_status: String
-  "GTFS-RT VehiclePosition timestamp"
+  "Timestamp of this vehicle position update"
   timestamp: Time
-  "GTFS-RT VehiclePosition congestion level estimate"
+  "Estimated congestion level: ` + "`" + `UNKNOWN_CONGESTION_LEVEL` + "`" + `, ` + "`" + `RUNNING_SMOOTHLY` + "`" + `, ` + "`" + `STOP_AND_GO` + "`" + `, ` + "`" + `CONGESTION` + "`" + `, or ` + "`" + `SEVERE_CONGESTION` + "`" + `"
   congestion_level: String
 }
 
-"""[Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed."""
+"""
+[Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
+"""
 type Alert {
-  "GTFS-RT Alert active alert period. See https://gtfs.org/realtime/reference/#message-timerange"
+  "Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange"
   active_period: [RTTimeRange!]
   "GTFS-RT Alert [cause](https://gtfs.org/realtime/reference/#enum-cause)"
   cause: String
@@ -10153,68 +11944,68 @@ type Alert {
   header_text: [RTTranslation!]!
   "GTFS-RT Alert description text"
   description_text: [RTTranslation!]!
-  "GTFS-RT Alert TTS header text"
+  "Header text optimized for text-to-speech (TTS) systems"
   tts_header_text: [RTTranslation!]
-  "GTFS-RT Alert TTS description text"
+  "Description text optimized for text-to-speech (TTS) systems"
   tts_description_text: [RTTranslation!]
-  "GTFS-RT Alert uRL for more information"
+  "URL for more information"
   url: [RTTranslation!]
-  "GTFS-RT Alert severity level"
+  "Alert severity: ` + "`" + `UNKNOWN_SEVERITY` + "`" + `, ` + "`" + `INFO` + "`" + `, ` + "`" + `WARNING` + "`" + `, or ` + "`" + `SEVERE` + "`" + `"
   severity_level: String
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-timerange"""
+"""A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange"""
 type RTTimeRange {
-  "GTFS-RT TimeRange start time, in Unix epoch seconds"
+  "Start of the range, in Unix epoch seconds"
   start: Int
-  "GTFS-RT TimeRange end time, in Unix epoch seconds"
+  "End of the range, in Unix epoch seconds"
   end: Int
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor"""
+"""Identification information for the vehicle running a trip. See https://gtfs.org/reference/realtime/v2/#message-vehicledescriptor"""
 type RTVehicleDescriptor {
-  "GTFS-RT VehicleDescriptor vehicle ID"
+  "Vehicle ID"
   id: String
-  "GTFS-RT VehicleDescriptor vehicle label"
+  "Vehicle label"
   label: String
-  "GTFS-RT VehicleDescriptor vehicle license plate"
+  "Vehicle license plate"
   license_plate: String
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor"""
+"""Identification of a trip in a GTFS-RT message, used to match the trip back to the static GTFS schedule. See https://gtfs.org/reference/realtime/v2/#message-tripdescriptor"""
 type RTTripDescriptor {
-  "GTFS-RT TripDescriptor trip ID"
+  "GTFS ` + "`" + `trip_id` + "`" + ` identifying the trip"
   trip_id: String
-  "GTFS-RT TripDescriptor route ID"
+  "GTFS ` + "`" + `route_id` + "`" + ` of the trip's route"
   route_id: String
-  "GTFS-RT TripDescriptor trip direction"
+  "GTFS direction_id (0 or 1)"
   direction_id: Int
-  "GTFS-RT TripDescriptor trip start time, in local time HH:MM:SS"
+  "Scheduled start time of the trip in local time ` + "`" + `HH:MM:SS` + "`" + `"
   start_time: Seconds
-  "GTFS-RT TripDescriptor trip start time, in local date"
+  "Service date on which this trip runs (local time)"
   start_date: Date
-  "GTFS-RT TripDescriptor schedule relationship. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
+  "GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
   schedule_relationship: String
 }
 
-"""See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""
+"""A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""
 type RTTranslation {
-  "GTFS-RT TranslatedString translated text"
+  "Translated text"
   text: String!
-  "GTFS-RT TranslatedString language for this translation"
+  "BCP 47 language tag for this translation"
   language: String
 }
 
 
 # Analysis tools
 
-"""Geographic buffer around a route"""
+"""Spatial buffer derived from the stops served by a route, using the requested radius (in meters)"""
 type RouteStopBuffer {
-  "Geographic buffer around route, based on requested meters"
+  "Buffer polygon constructed by unioning circles of the requested radius around each stop"
   stop_buffer: Geometry
-  "Matching set of points (e.g. stops) found inside buffer"
+  "MultiPoint of the route's stop locations used to build the buffer"
   stop_points: Geometry
-  "Convex hull of matching points"
+  "Convex hull of the route's stop locations"
   stop_convexhull: Polygon
 }
 
@@ -10226,21 +12017,21 @@ type ValidationReport {
   id: Int!
   "Time the report was generated, in UTC"
   reported_at: Time
-  "Time the reported was generated, in feed local time"
+  "Time the report was generated, in the feed's local time"
   reported_at_local: Time
-  "Time the report was generated, local timezone"
+  "IANA timezone name corresponding to ` + "`" + `reported_at_local` + "`" + `"
   reported_at_local_timezone: String
-  "Validation completed successfully"
+  "True if validation completed successfully"
   success: Boolean!
-  "Exception log if feed failed to validate"
+  "Error message if the feed failed to validate"
   failure_reason: String
-  "The report includes GTFS static data"
+  "True if the report includes GTFS static validation results"
   includes_static: Boolean
-  "The report includes GTFS-RT data"
+  "True if the report includes GTFS-RT validation results"
   includes_rt: Boolean
-  "Name of validator used"
+  "Validator name"
   validator: String
-  "Version of validator used"
+  "Validator version"
   validator_version: String
   "Validation errors, grouped by filename, if present"
   errors(limit: Int): [ValidationReportErrorGroup!]! @goField(forceResolver: true)
@@ -10254,21 +12045,21 @@ type ValidationReport {
 type ValidationReportDetails {
   "SHA1 hash of the validated feed"
   sha1: String!
-  "Calculated earliest calendar date in service schedule"
+  "Earliest calendar date with scheduled service"
   earliest_calendar_date: Date
-  "Calculated latest calendar date in service schedule"
+  "Latest calendar date with scheduled service"
   latest_calendar_date: Date
   "Details for each file contained in the feed"
   files: [FeedVersionFileInfo!]!
-  "Calculated service levels for feed"
+  "Calculated weekly service levels"
   service_levels(limit: Int, route_id: String): [FeedVersionServiceLevel!]!
-  "Selected agencies contained in feed"
+  "Sample of agencies in the feed (truncated; not a complete list)"
   agencies(limit: Int): [Agency!]!
-  "Selected routes contained in feed"
+  "Sample of routes in the feed (truncated; not a complete list)"
   routes(limit: Int): [Route!]!
-  "Selected stops contained in feed"
+  "Sample of stops in the feed (truncated; not a complete list)"
   stops(limit: Int): [Stop!]!
-  "Feed info data contained in feed"
+  "Records from ` + "`" + `feed_info.txt` + "`" + `"
   feed_infos(limit: Int): [FeedInfo!]!
   "Detailed information about GTFS-RT sources used in validation"
   realtime: [ValidationRealtimeResult!]
@@ -10276,53 +12067,53 @@ type ValidationReportDetails {
 
 """Source URL and JSON representation of GTFS-RT data used for validation"""
 type ValidationRealtimeResult {
-  "Source URL"
+  "URL the GTFS-RT message was fetched from"
   url: String!
-  "JSON representation of GTFS-RT data"
+  "JSON-decoded representation of the GTFS-RT message"
   json: Map!
 }
 
-"""Validation errors and warnings for a particular file or RT source"""
+"""Group of validation errors or warnings sharing the same file, type, and grouping key; useful for summarizing repeated issues"""
 type ValidationReportErrorGroup {
-  "Filename for error group"
+  "Source filename for this group (e.g. ` + "`" + `stops.txt` + "`" + `, or the GTFS-RT URL for realtime issues)"
   filename: String!
-  "Error type"
+  "Validation rule or error class identifier (e.g. ` + "`" + `MissingRequiredFieldError` + "`" + `)"
   error_type: String!
-  "Error code (for GTFS-RT)"
+  "GTFS-RT error code (set only for realtime validation errors)"
   error_code: String!
-  "Key for this error group"
+  "Stable grouping key used to aggregate equivalent errors"
   group_key: String!
-  "Affected entity field for this error group"
+  "Field name on which the error was raised"
   field: String!
-  "Number of affected entities for this error group"
+  "Total number of errors in this group"
   count: Int!
-  "Examples of this error"
+  "Sample of individual errors from this group"
   errors(limit: Int): [ValidationReportError!]! @goField(forceResolver: true)
 }
 
 """An individual validation error or warning."""
 type ValidationReportError {
-  "Source filename"
+  "Source filename (e.g. ` + "`" + `stops.txt` + "`" + `, or the GTFS-RT URL for realtime issues)"
   filename: String!
-  "Error type"
+  "Validation rule or error class identifier (e.g. ` + "`" + `MissingRequiredFieldError` + "`" + `)"
   error_type: String!
-  "Error code (for GTFS-RT)"
+  "GTFS-RT error code (set only for realtime validation errors)"
   error_code: String!
-  "Key for this error group"
+  "Stable grouping key shared with the parent ` + "`" + `ValidationReportErrorGroup` + "`" + `"
   group_key: String!
-  "Affected entity ID"
+  "Identifier of the affected entity (e.g. the ` + "`" + `stop_id` + "`" + ` or ` + "`" + `trip_id` + "`" + `)"
   entity_id: String!
-  "Affected entity field"
+  "Field name on which the error was raised"
   field: String!
-  "Affected entity line number (for static)"
+  "Line number in the source CSV file where the error occurred (static validation only; 0 for realtime)"
   line: Int!
-  "Value of affected field"
+  "Value of the affected field"
   value: String!
-  "Error message describing problem"
+  "Human-readable message describing the problem"
   message: String!
-  "Entity geometry, if available"
+  "Geometry of the affected entity, if available"
   geometry: Geometry
-  "JSON representation of entity, if available"
+  "JSON representation of the affected entity (empty map if not available)"
   entity_json: Map!
 }
 
@@ -10330,17 +12121,17 @@ type ValidationReportError {
 
 """Search options for operators"""
 input OperatorFilter {
-  "Merge multiple agency-operator associations into single operator results"
+  "If true, collapse multiple agency-operator associations into a single result per operator"
   merged: Boolean
-  "Search for operators with this OnestopID"
+  "Search for operators with this Onestop ID"
   onestop_id: String
-  "Search for operators with this feed OnestopID"
+  "Search for operators with this feed Onestop ID"
   feed_onestop_id: String
   "Search for operators with agencies having this GTFS agency_id"
   agency_id: String
   "Full-text search string"
   search: String
-  "Search for operators with this set of tag key/values"
+  "Search for operators matching these tags"
   tags: Tags
   "Search for operators by city name (provided by Natural Earth)"
   city_name: String
@@ -10364,17 +12155,17 @@ input OperatorFilter {
 
 """Search options for validation reports"""
 input ValidationReportFilter {
-  "Search for validation reports with the following integer IDs"
+  "Restrict to validation reports with these integer IDs"
   report_ids: [Int!]
-  "Search for successful validation reports"
+  "Filter by success: true for successful reports, false for failed"
   success: Boolean
-  "Search for validation reports generated by the specified validator"
+  "Filter by validator name"
   validator: String
-  "Search for validation reports generated using the specified validator version"
+  "Filter by validator version"
   validator_version: String
-  "Search for validation reports that include/exclude GTFS-RT data"
+  "Filter by ` + "`" + `includes_rt` + "`" + `: true for reports that include GTFS-RT validation, false for those that don't"
   includes_rt: Boolean
-  "Search for validation reports that include/exclude GTFS static data"
+  "Filter by ` + "`" + `includes_static` + "`" + `: true for reports that include GTFS static validation, false for those that don't"
   includes_static: Boolean
 }
 
@@ -10385,7 +12176,7 @@ input FeedVersionFilter {
   ids: [Int!]
   "Search for feed versions with the specified import status"
   import_status: ImportStatus
-  "Search for feed versions with this feed OnestopID"
+  "Search for feed versions with this feed Onestop ID"
   feed_onestop_id: String
   "Search for feed versions with this SHA1 hash"
   sha1: String
@@ -10401,7 +12192,7 @@ input FeedVersionFilter {
   within: Polygon
   "Search for feed versions within specified radius of a point"
   near: PointRadius
-  "Search for stops with these license details"
+  "Search for feed versions with these license details"
   license: LicenseFilter
 }
 
@@ -10413,6 +12204,7 @@ input LocationFilter {
   location_id: String
 }
 
+"""Search options for GTFS Flex booking rules"""
 input BookingRuleFilter {
   "Restrict to specific ids"
   ids: [Int!]
@@ -10438,13 +12230,13 @@ enum ImportStatus {
   IN_PROGRESS
 }
 
-"""Permissable and impermissable actions for a given license use"""
+"""Permissible and impermissible actions for a given license use"""
 enum LicenseValue {
   "Use is allowed"
   YES
   "Use is not allowed"
   NO
-  "Use is YES or UNKNOWN"
+  "Match any value that is not ` + "`" + `NO` + "`" + ` (i.e. ` + "`" + `YES` + "`" + ` or ` + "`" + `UNKNOWN` + "`" + `); used in license filters"
   EXCLUDE_NO
   "Use is not known"
   UNKNOWN
@@ -10452,13 +12244,13 @@ enum LicenseValue {
 
 """Search options for feeds"""
 input FeedFilter {
-  "Search for feed with a specific OnestopID"
+  "Search for a feed with this specific Onestop ID"
   onestop_id: String
-  "Search for feeds of certain data types"
+  "Restrict to feeds matching any of the given data types"
   spec: [FeedSpecTypes!]
-  "Search for feeds with or without a fetch error"
+  "Filter by latest-fetch outcome: true for feeds whose most recent fetch failed, false for those whose succeeded"
   fetch_error: Boolean
-  "Search for feeds by their import status"
+  "Filter by the import status of the feed's active feed version"
   import_status: ImportStatus
   "Full text search"
   search: String
@@ -10478,17 +12270,17 @@ input FeedFilter {
 
 """Search options for feed fetches"""
 input FeedFetchFilter {
-  "Search for feed fetches with success (true) or failure (false) or unspecified (null)"
+  "Filter by fetch outcome: true for successful, false for failed"
   success: Boolean
 }
 
 """Search options for searching by source URL"""
 input FeedSourceUrl {
-  "URL"
+  "URL to match against feed source URLs"
   url: String
-  "URL type"
+  "Restrict the URL match to a specific URL type (e.g. ` + "`" + `static_current` + "`" + `)"
   type: FeedSourceUrlTypes
-  "Case sensitive search (true) or case insensitive search (false or null)"
+  "If true, match the URL case-sensitively; default is case-insensitive"
   case_sensitive: Boolean
 }
 
@@ -10516,27 +12308,27 @@ enum FeedSourceUrlTypes {
 
 """Type of data contained in a source feed"""
 enum FeedSpecTypes {
-  "Static data"
+  "GTFS Schedule (static)"
   GTFS
-  "GTFS-RT data"
+  "GTFS Realtime"
   GTFS_RT
-  "GBFS data"
+  "General Bikeshare Feed Specification"
   GBFS
-  "MDS data"
+  "Mobility Data Specification"
   MDS
 }
 
 """Search options for agencies"""
 input AgencyFilter {
-  "Search for agencies with this operator OnestopID"
+  "Search by resolved Onestop ID (operator's when associated, else agency's)"
   onestop_id: String
   "Search for agencies with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for agencies with this feed OnestopID"
+  "Search for agencies with this feed Onestop ID"
   feed_onestop_id: String
   "Search for agencies with this GTFS agency_id"
   agency_id: String
-  "Search for records with this GTFS agency_name"
+  "Search for agencies with this GTFS agency_name"
   agency_name: String
   "Full text search"
   search: String
@@ -10552,16 +12344,17 @@ input AgencyFilter {
   adm1_iso: String
   "Search for agencies with these license details"
   license: LicenseFilter
-  "Location"
+  "Geographic search options"
   location: AgencyLocationFilter
-  "Backwards compat: Search for agencies within this bounding box"
-  bbox: BoundingBox
-  "Backwards compat: Search for agencies within this geographic polygon"
-  within: Polygon
-  "Backwards compat: Search for agencies within specified radius of a point"
-  near: PointRadius
+  "Search for agencies within this bounding box"
+  bbox: BoundingBox @deprecated(reason: "Use ` + "`" + `location.bbox` + "`" + ` instead")
+  "Search for agencies within this geographic polygon"
+  within: Polygon @deprecated(reason: "Use ` + "`" + `location.polygon` + "`" + ` instead")
+  "Search for agencies within specified radius of a point"
+  near: PointRadius @deprecated(reason: "Use ` + "`" + `location.near` + "`" + ` instead")
 }
 
+"""Geographic search options for agencies"""
 input AgencyLocationFilter {
   "Search for agencies within this bounding box"
   bbox: BoundingBox
@@ -10575,15 +12368,15 @@ input AgencyLocationFilter {
 
 """Search options for routes"""
 input RouteFilter {
-  "Search for routes with this OnestopID"
+  "Search for routes with this Onestop ID"
   onestop_id: String
-  "Search for routes with these OnestopIDs"
+  "Search for routes with these Onestop IDs"
   onestop_ids: [String!]
-  "Include previously used OnestopIDs that match the same (feed,route_id)"
+  "Include previously used Onestop IDs that match the same (feed,route_id)"
   allow_previous_onestop_ids: Boolean
   "Search for routes with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for routes with this feed OnestopID"
+  "Search for routes with this feed Onestop ID"
   feed_onestop_id: String
   "Search for routes with this GTFS route_id"
   route_id: String
@@ -10591,27 +12384,30 @@ input RouteFilter {
   route_type: Int
   "Search for routes with any of these GTFS route_types"
   route_types: [Int!]
-  "Search for routes with 1 or more trips (true) or 0 or more trips (false or null)"
+  "If true, restrict to routes with at least one trip; false or null returns all routes"
   serviced: Boolean
   "Full text search"
   search: String
-  "Search for routes operated by operators with this OnestopID"
+  "Search for routes operated by operators with this Onestop ID"
   operator_onestop_id: String
+  "Search for routes that serve a stop with this Onestop ID"
+  serves_stop_onestop_id: String
   "Search for routes with these license details"
   license: LicenseFilter
-  "Search for routes with these agency integer IDs. Deprecated."
-  agency_ids: [Int!]
-  "Location"
+  "Search for routes operated by these agencies (database integer IDs)"
+  agency_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer querying via ` + "`" + `Agency.routes` + "`" + ` or ` + "`" + `operator_onestop_id` + "`" + `")
+  "Geographic search options"
   location: RouteLocationFilter
-  "Backwards compat:Search for routes within this bounding box"
-  bbox: BoundingBox
-  "Backwards compat: Search for routes within this geographic polygon"
-  within: Polygon
-  "Backwards compat: Search for routes within specified radius of a point"
-  near: PointRadius
+  "Search for routes within this bounding box"
+  bbox: BoundingBox @deprecated(reason: "Use ` + "`" + `location.bbox` + "`" + ` instead")
+  "Search for routes within this geographic polygon"
+  within: Polygon @deprecated(reason: "Use ` + "`" + `location.polygon` + "`" + ` instead")
+  "Search for routes within specified radius of a point"
+  near: PointRadius @deprecated(reason: "Use ` + "`" + `location.near` + "`" + ` instead")
 
 }
 
+"""Geographic search options for routes"""
 input RouteLocationFilter {
   "Search for routes within this bounding box"
   bbox: BoundingBox
@@ -10623,39 +12419,45 @@ input RouteLocationFilter {
   focus: FocusPoint
 }
 
+"""A GeoJSON-style feature used as a search-area input. Stops contained in the feature are returned with the feature's ` + "`" + `id` + "`" + ` echoed back via ` + "`" + `Stop.within_features` + "`" + `"""
 input Feature {
+  "Caller-supplied identifier echoed back on matched stops"
   id: String
+  "Boundary geometry for the feature (GeoJSON)"
   geometry: Geometry
+  "Arbitrary key/value metadata associated with the feature"
   properties: Map
+  "GeoJSON type, typically ` + "`" + `Feature` + "`" + `"
   type: String
 }
 
+"""Geographic search options for stops"""
 input StopLocationFilter {
   "Search for stops within this bounding box"
   bbox: BoundingBox
   "Search for stops within this geographic polygon"
   polygon: Polygon
-  "Search within these enclosing features, and return the matching feature ids"
+  "Search for stops contained in any of the given features; matching feature ` + "`" + `id` + "`" + `s are echoed back via ` + "`" + `Stop.within_features` + "`" + `"
   features: [Feature]
   "Search for stops within specified radius of a point"
   near: PointRadius
-  "Search within these geography ids"
+  "Search for stops within any of the given ` + "`" + `CensusGeography` + "`" + ` integer IDs"
   geography_ids: [Int]
   "Focus search on this point; results will be sorted by distance"
-  focus: FocusPoint  
+  focus: FocusPoint
 }
 
 """Search options for stops"""
 input StopFilter {
-  "Search for stops with this OnestopID"
+  "Search for stops with this Onestop ID"
   onestop_id: String
-  "Search for stops with these OnestopIDs"
+  "Search for stops with these Onestop IDs"
   onestop_ids: [String!]
-  "Include previous used OnestopIDs that match the same (feed,stop_id)"
+  "Include previously used Onestop IDs that match the same (feed, stop_id)"
   allow_previous_onestop_ids: Boolean
   "Search for stops with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for stops with this feed OnestopID"
+  "Search for stops with this feed Onestop ID"
   feed_onestop_id: String
   "Search for stops with this GTFS stop_id"
   stop_id: String
@@ -10663,75 +12465,75 @@ input StopFilter {
   stop_code: String
   "Search for stops with this GTFS location_type"
   location_type: Int
-  "Search for stops with 1 or more trips (true) or 0 or more trips (false or null)"
+  "If true, restrict to stops served by at least one trip; false or null returns all stops"
   serviced: Boolean
   "Full text search"
   search: String
   "Search for stops with these license details"
   license: LicenseFilter
-  "Search for stops with service by routes or operators with these OnestopIDs"
+  "Search for stops served by routes or operators with any of these Onestop IDs"
   served_by_onestop_ids: [String!]
-  "Search for stopswith service by routes with the specified GTFS route_type"
+  "Search for stops served by routes with the specified GTFS route_type"
   served_by_route_type: Int
-  "Search for stopswith service by routes with any of the specified GTFS route_types"
+  "Search for stops served by routes with any of the specified GTFS route_types"
   served_by_route_types: [Int!]
-  "Search for stops with these agency integer IDs. Deprecated."
-  agency_ids: [Int!]
-  "Search geographically"
+  "Search for stops served by these agencies (database integer IDs)"
+  agency_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer querying via ` + "`" + `Agency.routes` + "`" + ` chained to stops")
+  "Geographic search options"
   location: StopLocationFilter
-  "Backwards compat: Search for stops within this bounding box"
-  bbox: BoundingBox
-  "Backwards compat: Search for stops within this geographic polygon"
-  within: Polygon
-  "Backwards compat: Search for stops within specified radius of a point"
-  near: PointRadius
+  "Search for stops within this bounding box"
+  bbox: BoundingBox @deprecated(reason: "Use ` + "`" + `location.bbox` + "`" + ` instead")
+  "Search for stops within this geographic polygon"
+  within: Polygon @deprecated(reason: "Use ` + "`" + `location.polygon` + "`" + ` instead")
+  "Search for stops within specified radius of a point"
+  near: PointRadius @deprecated(reason: "Use ` + "`" + `location.near` + "`" + ` instead")
 }
 
 """Search options for stop times, optionally on a given date"""
 input StopTimeFilter {
-  "Search for trips scheduled on the specified calendar date"
+  "Calendar date for which to return stop times"
   date: Date
-  "Search for trips scheduled on the specified relative date"
+  "Calendar date relative to today (e.g. ` + "`" + `MONDAY` + "`" + `, ` + "`" + `NEXT_FRIDAY` + "`" + `); see ` + "`" + `RelativeDate` + "`" + ` for semantics"
   relative_date: RelativeDate
-  "Search for trips scheduled on the specified GTFS calendar service date"
+  "GTFS service date (which may differ from the calendar date for trips that cross midnight)"
   service_date: Date
-  "Use the feed version fallback week for dates outside the normal service window for that feed version"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
   use_service_window: Boolean
-  "Search for stop times with departure times later than the specified time, in seconds since midnight"
+  "Lower bound for departure time, in seconds since midnight"
   start_time: Int
-  "Search for stop times with arrival times before the specified time, in seconds since midnight"
+  "Upper bound for arrival time, in seconds since midnight"
   end_time: Int
-  "Search for stop times with departure times later than the specified time, in local time HH:MM:SS"
+  "Lower bound for departure time, in local ` + "`" + `HH:MM:SS` + "`" + `"
   start: Seconds
-  "Search for stop times with arrival times before the specified time, in local time HH:MM:SS"
+  "Upper bound for arrival time, in local ` + "`" + `HH:MM:SS` + "`" + `"
   end: Seconds
-  "Search for stop times with departures within the specified number of seconds (in local time)"
+  "Return stop times with departures within the next N seconds from now (local time)"
   next: Int
-  "Search for stop times with service by routes with the specified route OnestopIDs"
-  route_onestop_ids: [String!] # keep?
-  "Include previously used route OnestopIDs that match the same (feed,route_id)"
+  "Restrict to stop times on routes matching any of these Onestop IDs"
+  route_onestop_ids: [String!]
+  "Include previously used route Onestop IDs that map to the same (feed, route_id)"
   allow_previous_route_onestop_ids: Boolean
-  "Exclude the first stop_time in a trip"
+  "Exclude the first stop_time of each trip"
   exclude_first: Boolean
-  "Exclude the last stop_time in a trip"
+  "Exclude the last stop_time of each trip"
   exclude_last: Boolean
 }
 
-"""Search options for stop times for a trip with no date specified"""
+"""Search options for stop times within a single trip (no date filter applies, since the parent trip determines the schedule)"""
 input TripStopTimeFilter {
-  "Search for stop times with departure times later than the specified time, in local time HH:MM:SS"
+  "Lower bound for departure time, in local ` + "`" + `HH:MM:SS` + "`" + `"
   start: Seconds
-  "Search for stop times with arrival times before the specified time, in local time HH:MM:SS"
+  "Upper bound for arrival time, in local ` + "`" + `HH:MM:SS` + "`" + `"
   end: Seconds
 }
 
-"""Search options for stop observations"""
+"""Filters for querying archived stop observations. All three fields are required."""
 input StopObservationFilter {
-  "Search for stop observations derived from the specified source"
+  "Data source to filter by; typically ` + "`" + `TripUpdate` + "`" + ` or ` + "`" + `VehiclePosition` + "`" + `"
   source: String!
-  "Search for stop observations associated with this feed version integer ID"
+  "Feed version integer ID to filter by"
   feed_version_id: Int!
-  "Search for stop observations made on this trip start date"
+  "Trip start date to filter by"
   trip_start_date: Date!
 }
 
@@ -10743,33 +12545,33 @@ input PathwayFilter {
 
 """Search options for trips"""
 input TripFilter {
-  "Search for trips scheduled on the specified GTFS calendar service date"
+  "GTFS service date on which trips run"
   service_date: Date
-  "Search for trips scheduled on the specified relative date"
+  "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `"
   relative_date: RelativeDate
-  "Use the feed version fallback week for dates outside the normal service window for that feed version"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
   use_service_window: Boolean
   "Search for trips with this GTFS trip_id"
   trip_id: String
-  "Search for trips with this stop pattern ID"
+  "Search for trips with this stop pattern ID (scoped to feed version)"
   stop_pattern_id: Int
   "Search for trips with these license details"
   license: LicenseFilter
-  "Search for trips associated with these route integer IDs. Deprecated."
-  route_ids: [Int!]
-  "Search for trips associated with these route OnestopIDs"
-  route_onestop_ids: [String!] # keep?
+  "Search for trips on these routes (database integer IDs)"
+  route_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer ` + "`" + `route_onestop_ids` + "`" + ` or query via ` + "`" + `Route.trips` + "`" + `")
+  "Search for trips on routes matching any of these Onestop IDs"
+  route_onestop_ids: [String!]
   "Search for trips with this feed version SHA1 hash"
   feed_version_sha1: String
-  "Search for trips with this feed OnestopID"
+  "Search for trips with this feed Onestop ID"
   feed_onestop_id: String
 }
 
 """Search options for census datasets"""
 input CensusDatasetFilter {
-  "Search for datasets with this name"
+  "Search for the dataset with this exact name (e.g. ` + "`" + `acsdt5y2022` + "`" + `)"
   name: String
-  "Search for datasets matching this string"
+  "Full-text search across dataset name and description"
   search: String
 }
 
@@ -10778,9 +12580,13 @@ input CensusDatasetFilter {
 Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 """
 input CensusGeographyFilter {
+  "Search within this dataset"
   dataset: String
+  "Search within this layer"
   layer: String
+  "Buffer radius in meters around the parent entity's geometry (e.g. stop or route stops)"
   radius: Float
+  "Search for geographies matching this string"
   search: String
 }
 
@@ -10789,15 +12595,15 @@ input CensusGeographyFilter {
 Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 """
 input CensusDatasetGeographyFilter {
-  "Geographies with these integer IDs"
+  "Restrict to geographies with these integer IDs"
   ids: [Int!]
-  "Search within this dataset"
+  "Search within this dataset (e.g. ` + "`" + `tiger2021` + "`" + `)"
   dataset: String
-  "Search within this layer"
+  "Search within this layer (e.g. ` + "`" + `tract` + "`" + `, ` + "`" + `state` + "`" + `)"
   layer: String
-  "Search for geographies matching this string"
+  "Search for geographies matching this string (matches on name)"
   search: String
-  "Location search"
+  "Geographic search options"
   location: CensusDatasetGeographyLocationFilter
 }
 
@@ -10806,11 +12612,11 @@ input CensusDatasetGeographyFilter {
 Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
 """
 input CensusSourceGeographyFilter {
-  "Geographies with these integer IDs"
+  "Restrict to geographies with these integer IDs"
   ids: [Int!]
-  "Search for geographies matching this string"
+  "Search for geographies matching this string (matches on name)"
   search: String
-  "Location search"
+  "Geographic search options"
   location: CensusDatasetGeographyLocationFilter
 }
 
@@ -10832,25 +12638,40 @@ input CensusDatasetGeographyLocationFilter {
   "Search within specified radius of a point"
   near: PointRadius
   "Focus search on this point; results will be sorted by distance"
-  focus: FocusPoint  
-  "Search based on a buffer around these stop ids"
+  focus: FocusPoint
+  "Search based on a buffer around these stop IDs"
   stop_buffer: StopBuffer
 }
 
-"""Search options for census geographies based on stop IDs"""
+"""A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer"""
 input StopBuffer {
-  "Search for geographies with these stop IDs"
+  "Stop integer IDs to buffer around"
   stop_ids: [Int!]
-  "Stop ID search radius, in meters"
+  "Buffer radius in meters around each stop"
   radius: Float
 }
 
+"""Search options for census tables"""
 input CensusTableFilter {
+  "Search for tables matching this string (matches on table name and title)"
   search: String
 }
 
+"""Search options for census values within a dataset"""
+input CensusDatasetValueFilter {
+  "Filter by table name"
+  table: String
+  "Filter by exact geoid"
+  geoid: String
+  "Filter by geoid prefix (e.g. 'ntd:00001' to find all values for NTD agency 00001)"
+  geoid_prefix: String
+}
+
+"""Search options for census source files"""
 input CensusSourceFilter {
+  "Search for sources with this exact name"
   name: String
+  "Search for sources matching this string"
   search: String
 }
 
@@ -10862,7 +12683,7 @@ input SegmentFilter {
 
 """Search options for route segment patterns"""
 input SegmentPatternFilter {
-  "Search for segments patterns associated with this layer name"
+  "Search for segment patterns associated with this layer name"
   layer: String
 }
 
@@ -10895,17 +12716,17 @@ input ServiceCoversFilter {
   fetched_after: Time
   "Search for feed versions fetched before this time"
   fetched_before: Time
-  "Search using only feed_info.txt values"
+  "Lower bound on the feed's ` + "`" + `feed_info.feed_start_date` + "`" + `"
   feed_start_date: Date
-  "Search using only feed_info.txt values"
+  "Upper bound on the feed's ` + "`" + `feed_info.feed_end_date` + "`" + `"
   feed_end_date: Date
-  "Search using feed_info.txt values or calendar maximum service extent"
+  "Lower bound, evaluated against ` + "`" + `feed_info.feed_start_date` + "`" + ` or calculated earliest calendar date"
   start_date: Date
-  "Search using feed_info.txt values or calendar maximum service extent"
+  "Upper bound, evaluated against ` + "`" + `feed_info.feed_end_date` + "`" + ` or calculated latest calendar date"
   end_date: Date
-  "Search using calendar maximum service extent"
+  "Lower bound on the calculated earliest calendar service date"
   earliest_calendar_date: Date
-  "Search using calendar maximum service extent"
+  "Upper bound on the calculated latest calendar service date"
   latest_calendar_date: Date
 }
 
@@ -10931,7 +12752,7 @@ input PlaceFilter {
 input CalendarDateFilter {
   "Search for calendar date exceptions on this date"
   date: Date
-  "Search for calendar date exceptions with this GTFS exception_type"
+  "Search for calendar date exceptions with this GTFS exception_type [1=service added, 2=service removed]"
   exception_type: Int
 }
 
@@ -10941,10 +12762,11 @@ input PointRadius {
   lat: Float!
   "Longitude"
   lon: Float!
-  "Radius around specified point"
+  "Search radius in meters"
   radius: Float!
 }
 
+"""A point used to bias result ordering by distance, without otherwise filtering results"""
 input FocusPoint {
   "Latitude"
   lat: Float!
@@ -10968,141 +12790,144 @@ input BoundingBox {
 
 """Result of a feed fetch operation"""
 type FeedVersionFetchResult {
-  "Details of fetched feed version, if successful"
+  "Details of the fetched feed version, if the fetch succeeded"
   feed_version: FeedVersion
-  "Exception log if fetch failed"
+  "Error message if the fetch failed"
   fetch_error: String
-  "Set if the fetched feed version is already present in the database with the same directory contents"
+  "True if the same zip file is already in the database (matched by SHA1)"
   found_sha1: Boolean!
-  "Set if the fetched feed version is already present in the database with the same SHA1 hash"
+  "True if a zip with identical unpacked contents is already in the database (matched by directory SHA1)"
   found_dir_sha1: Boolean!
 }
 
 """Result of feed version import operation"""
 type FeedVersionImportResult {
-  "Did the import succeed"
+  "True if the import succeeded"
   success: Boolean!
 }
 
 """Result of feed version unimport operation"""
 type FeedVersionUnimportResult {
-  "Did the unimport succeed"
+  "True if the unimport succeeded"
   success: Boolean!
 }
 
 """Result of feed version delete operation"""
 type FeedVersionDeleteResult {
-  "Did the delete succeed"
+  "True if the delete succeeded"
   success: Boolean!
 }
 
 
 """Update a feed version entity"""
 input FeedVersionSetInput {
-  "Entity ID to update"
+  "Integer ID of the feed version to update; required"
   id: Int
-  "Set entity name to this value"
+  "New name for the feed version"
   name: String
-  "Set entity description to this value"
+  "New description for the feed version"
   description: String
 }
 
-"""Specify a feed version"""
+"""Reference to an existing feed version"""
 input FeedVersionInput {
-  "Feed version integer ID"
+  "Integer ID of the feed version"
   id: Int
 }
 
-"""Update a stop entity"""
+"""Create or update a stop entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
 input StopSetInput {
-  "Entity ID to update"
+  "Integer ID of the stop to update; omit when creating a new stop"
   id: Int
-  "Feed version of entity to update"
+  "Feed version this stop belongs to (required when creating a new stop)"
   feed_version: FeedVersionInput
-  "Set GTFS location_type to this value"
+  "Set GTFS location_type"
   location_type: Int
-  "Set GTFS stop_code to this value"
+  "Set GTFS stop_code"
   stop_code: String
-  "Set GTFS stop_desc to this value"
+  "Set GTFS stop_desc"
   stop_desc: String
-  "Set GTFS stop_id to this value"
+  "Set GTFS stop_id"
   stop_id: String
-  "Set GTFS stop_name to this value"
+  "Set GTFS stop_name"
   stop_name: String
-  "Set GTFS stop_timezone to this value"
+  "Set GTFS stop_timezone"
   stop_timezone: String
-  "Set GTFS stop_url to this value"
+  "Set GTFS stop_url"
   stop_url: String
-  "Set GTFS wheelchair_boarding to this value"
+  "Set GTFS wheelchair_boarding"
   wheelchair_boarding: Int
-  "Set GTFS zone_id to this value"
+  "Set GTFS zone_id"
   zone_id: String
-  "Set GTFS platform_code to this value"
+  "Set GTFS platform_code"
   platform_code: String
-  "Set GTFS tts_stop_name to this value"
+  "Set GTFS tts_stop_name"
   tts_stop_name: String
-  "Set stop geometry to this value"
+  "Set stop geometry"
   geometry: Point
-  "Set stop parent station to this stop"
+  "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
   parent: StopSetInput
-  "Set stop level to this level"
+  "Reference to an existing level; only the ` + "`" + `id` + "`" + ` is used (the level must already exist)"
   level: LevelSetInput
-  "Set or update external reference for this stop"
+  "Set or update the cross-feed external reference for this stop"
   external_reference: StopExternalReferenceSetInput
 }
 
+"""Set or update a cross-feed stop reference linking this stop to a stop in another feed"""
 input StopExternalReferenceSetInput {
+  "Onestop ID of the target stop's feed"
   target_feed_onestop_id: String
+  "GTFS ` + "`" + `stop_id` + "`" + ` of the target stop within that feed"
   target_stop_id: String
 }
 
-"""Update a level entity"""
+"""Create or update a level entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
 input LevelSetInput {
-  "Entity ID to update"
+  "Integer ID of the level to update; omit when creating a new level"
   id: Int
-  "Feed version of entity to update"
+  "Feed version this level belongs to (required when creating a new level)"
   feed_version: FeedVersionInput
-  "Set GTFS level_id to this value"
+  "Set GTFS level_id"
   level_id: String
-  "Set GTFS level_name to this value"
+  "Set GTFS level_name"
   level_name: String
-  "Set GTFS level_index to this value"
+  "Set GTFS level_index"
   level_index: Float
-  "Set level geometry to this value"
+  "Set level geometry"
   geometry: MultiPolygon
-  "Set level parent station to this stop"
+  "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
   parent: StopSetInput
 }
 
-"""Update a pathway entity"""
+"""Create or update a pathway entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
 input PathwaySetInput {
-  "Entity ID to update"
+  "Integer ID of the pathway to update; omit when creating a new pathway"
   id: Int
-  "Feed version of entity to update"
+  "Feed version this pathway belongs to (required when creating a new pathway)"
   feed_version: FeedVersionInput
-  "Set GTFS pathway_id to this value"
+  "Set GTFS pathway_id"
   pathway_id: String
-  "Set GTFS pathway_mode to this value"
+  "Set GTFS pathway_mode"
   pathway_mode: Int
-  "Set GTFS is_bidirectional to this value"
+  "Set GTFS is_bidirectional"
   is_bidirectional: Int
-  "Set GTFS length to this value"
+  "Set GTFS length"
   length: Float
-  "Set GTFS traversal_time to this value"
+  "Set GTFS traversal_time"
   traversal_time: Int
-  "Set GTFS stair_count to this value"
+  "Set GTFS stair_count"
   stair_count: Int
-  "Set GTFS max_slope to this value"
+  "Set GTFS max_slope"
   max_slope: Float
-  "Set GTFS min_width to this value"
+  "Set GTFS min_width"
   min_width: Float
-  "Set GTFS signposted_as to this value"
+  "Set GTFS signposted_as"
   signposted_as: String
-  "Set GTFS reverse_signposted_as to this value"
+  "Set GTFS reverse_signposted_as"
   reverse_signposted_as: String
-  "Set pathway origin to this stop"
+  "Reference to an existing origin stop; only the ` + "`" + `id` + "`" + ` is used (the stop must already exist)"
   from_stop: StopSetInput
-  "Set pathway destination to this stop"
+  "Reference to an existing destination stop; only the ` + "`" + `id` + "`" + ` is used (the stop must already exist)"
   to_stop: StopSetInput
 }`, BuiltIn: false},
 }
@@ -11243,6 +13068,27 @@ func (ec *executionContext) field_CensusDataset_tables_args(ctx context.Context,
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_CensusDataset_values_relay_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOCensusDatasetValueFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusDatasetValueFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg2
 	return args, nil
 }
 
@@ -11519,6 +13365,17 @@ func (ec *executionContext) field_Feed_feed_versions_args(ctx context.Context, r
 	return args, nil
 }
 
+func (ec *executionContext) field_Group_feeds_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_LocationGroup_stop_times_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11627,6 +13484,22 @@ func (ec *executionContext) field_Mutation_feed_version_update_args(ctx context.
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_group_save_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNGroupInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_level_create_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11693,6 +13566,69 @@ func (ec *executionContext) field_Mutation_pathway_update_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_permission_add_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNPermissionInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_permission_remove_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNPermissionInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_permission_set_parent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNSetParentInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSetParentInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg2
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_stop_create_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11723,6 +13659,38 @@ func (ec *executionContext) field_Mutation_stop_update_args(ctx context.Context,
 		return nil, err
 	}
 	args["set"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_tenant_create_group_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNGroupInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_tenant_save_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNInt2int)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNTenantInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -11921,6 +13889,22 @@ func (ec *executionContext) field_Query_feeds_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "ids", ec.unmarshalOInt2ᚕintᚄ)
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_operators_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -12025,6 +14009,22 @@ func (ec *executionContext) field_Query_stops_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_tenants_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "ids", ec.unmarshalOInt2ᚕintᚄ)
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_trips_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -12048,6 +14048,22 @@ func (ec *executionContext) field_Query_trips_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["where"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOUserFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUserFilter)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -12403,6 +14419,17 @@ func (ec *executionContext) field_Stop_stop_times_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Tenant_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -13213,6 +15240,8 @@ func (ec *executionContext) fieldContext_Agency_feed_version(_ context.Context, 
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -15247,6 +17276,8 @@ func (ec *executionContext) fieldContext_BookingRule_feed_version(_ context.Cont
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -16375,6 +18406,64 @@ func (ec *executionContext) fieldContext_CensusDataset_layers(_ context.Context,
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CensusLayer", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CensusDataset_values_relay(ctx context.Context, field graphql.CollectedField, obj *model.CensusDataset) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CensusDataset_values_relay(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.CensusDataset().ValuesRelay(rctx, obj, fc.Args["first"].(*int), fc.Args["after"].(*string), fc.Args["where"].(*model.CensusDatasetValueFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.CensusValueConnection)
+	fc.Result = res
+	return ec.marshalOCensusValueConnection2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueConnection(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CensusDataset_values_relay(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CensusDataset",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "edges":
+				return ec.fieldContext_CensusValueConnection_edges(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_CensusValueConnection_pageInfo(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CensusValueConnection", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_CensusDataset_values_relay_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -18546,6 +20635,210 @@ func (ec *executionContext) fieldContext_CensusValue_geoid(_ context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _CensusValueConnection_edges(ctx context.Context, field graphql.CollectedField, obj *model.CensusValueConnection) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CensusValueConnection_edges(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Edges, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.CensusValueEdge)
+	fc.Result = res
+	return ec.marshalNCensusValueEdge2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueEdgeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CensusValueConnection_edges(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CensusValueConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "node":
+				return ec.fieldContext_CensusValueEdge_node(ctx, field)
+			case "cursor":
+				return ec.fieldContext_CensusValueEdge_cursor(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CensusValueEdge", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CensusValueConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.CensusValueConnection) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CensusValueConnection_pageInfo(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PageInfo)
+	fc.Result = res
+	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CensusValueConnection_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CensusValueConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			case "startCursor":
+				return ec.fieldContext_PageInfo_startCursor(ctx, field)
+			case "endCursor":
+				return ec.fieldContext_PageInfo_endCursor(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CensusValueEdge_node(ctx context.Context, field graphql.CollectedField, obj *model.CensusValueEdge) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CensusValueEdge_node(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Node, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.CensusValue)
+	fc.Result = res
+	return ec.marshalNCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CensusValueEdge_node(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CensusValueEdge",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "dataset_name":
+				return ec.fieldContext_CensusValue_dataset_name(ctx, field)
+			case "source_name":
+				return ec.fieldContext_CensusValue_source_name(ctx, field)
+			case "table":
+				return ec.fieldContext_CensusValue_table(ctx, field)
+			case "values":
+				return ec.fieldContext_CensusValue_values(ctx, field)
+			case "geoid":
+				return ec.fieldContext_CensusValue_geoid(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CensusValue", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CensusValueEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.CensusValueEdge) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CensusValueEdge_cursor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Cursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CensusValueEdge_cursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CensusValueEdge",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Directions_success(ctx context.Context, field graphql.CollectedField, obj *model.Directions) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Directions_success(ctx, field)
 	if err != nil {
@@ -20010,6 +22303,8 @@ func (ec *executionContext) fieldContext_Feed_feed_versions(ctx context.Context,
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -20024,6 +22319,57 @@ func (ec *executionContext) fieldContext_Feed_feed_versions(ctx context.Context,
 	if fc.Args, err = ec.field_Feed_feed_versions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Feed_permissions(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Feed_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Feed().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Feed_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Feed",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -21484,6 +23830,8 @@ func (ec *executionContext) fieldContext_FeedState_feed_version(_ context.Contex
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -22422,6 +24770,8 @@ func (ec *executionContext) fieldContext_FeedVersion_feed(_ context.Context, fie
 				return ec.fieldContext_Feed_feed_fetches(ctx, field)
 			case "feed_versions":
 				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
 		},
@@ -23038,6 +25388,10 @@ func (ec *executionContext) fieldContext_FeedVersion_stops(ctx context.Context, 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -23617,6 +25971,57 @@ func (ec *executionContext) fieldContext_FeedVersion_segments(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _FeedVersion_permissions(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_FeedVersion_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.FeedVersion().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_FeedVersion_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FeedVersionDeleteResult_success(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionDeleteResult) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_FeedVersionDeleteResult_success(ctx, field)
 	if err != nil {
@@ -23751,6 +26156,8 @@ func (ec *executionContext) fieldContext_FeedVersionFetchResult_feed_version(_ c
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -34628,6 +37035,285 @@ func (ec *executionContext) fieldContext_GbfsVehicleTypeAvailable_vehicle_type(_
 	return fc, nil
 }
 
+func (ec *executionContext) _Group_id(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_name(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_tenant(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_tenant(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Group().Tenant(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Tenant)
+	fc.Result = res
+	return ec.marshalOTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_tenant(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Tenant_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Tenant_name(ctx, field)
+			case "groups":
+				return ec.fieldContext_Tenant_groups(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Tenant_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_feeds(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_feeds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Group().Feeds(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Feed)
+	fc.Result = res
+	return ec.marshalNFeed2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_feeds(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Feed_id(ctx, field)
+			case "onestop_id":
+				return ec.fieldContext_Feed_onestop_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Feed_name(ctx, field)
+			case "file":
+				return ec.fieldContext_Feed_file(ctx, field)
+			case "spec":
+				return ec.fieldContext_Feed_spec(ctx, field)
+			case "languages":
+				return ec.fieldContext_Feed_languages(ctx, field)
+			case "tags":
+				return ec.fieldContext_Feed_tags(ctx, field)
+			case "authorization":
+				return ec.fieldContext_Feed_authorization(ctx, field)
+			case "urls":
+				return ec.fieldContext_Feed_urls(ctx, field)
+			case "license":
+				return ec.fieldContext_Feed_license(ctx, field)
+			case "search_rank":
+				return ec.fieldContext_Feed_search_rank(ctx, field)
+			case "associated_operators":
+				return ec.fieldContext_Feed_associated_operators(ctx, field)
+			case "feed_state":
+				return ec.fieldContext_Feed_feed_state(ctx, field)
+			case "feed_fetches":
+				return ec.fieldContext_Feed_feed_fetches(ctx, field)
+			case "feed_versions":
+				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Group_feeds_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_permissions(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Group().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Itinerary_duration(ctx context.Context, field graphql.CollectedField, obj *model.Itinerary) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Itinerary_duration(ctx, field)
 	if err != nil {
@@ -36634,8 +39320,94 @@ func (ec *executionContext) fieldContext_Level_stops(_ context.Context, field gr
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Level_created_at(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Level_created_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Level_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Level",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Level_updated_at(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Level_updated_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Level_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Level",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -37118,6 +39890,8 @@ func (ec *executionContext) fieldContext_Location_feed_version(_ context.Context
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -37538,6 +40312,8 @@ func (ec *executionContext) fieldContext_LocationGroup_feed_version(_ context.Co
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -37658,6 +40434,10 @@ func (ec *executionContext) fieldContext_LocationGroup_stops(ctx context.Context
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -37998,6 +40778,10 @@ func (ec *executionContext) fieldContext_LocationGroupStop_stop(_ context.Contex
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -38386,6 +41170,8 @@ func (ec *executionContext) fieldContext_Mutation_feed_version_update(ctx contex
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -38756,6 +41542,10 @@ func (ec *executionContext) fieldContext_Mutation_stop_create(ctx context.Contex
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -38887,6 +41677,10 @@ func (ec *executionContext) fieldContext_Mutation_stop_update(ctx context.Contex
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -39015,6 +41809,10 @@ func (ec *executionContext) fieldContext_Mutation_level_create(ctx context.Conte
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -39084,6 +41882,10 @@ func (ec *executionContext) fieldContext_Mutation_level_update(ctx context.Conte
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -39226,6 +42028,10 @@ func (ec *executionContext) fieldContext_Mutation_pathway_create(ctx context.Con
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -39309,6 +42115,10 @@ func (ec *executionContext) fieldContext_Mutation_pathway_update(ctx context.Con
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -39380,6 +42190,370 @@ func (ec *executionContext) fieldContext_Mutation_pathway_delete(ctx context.Con
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_pathway_delete_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_permission_add(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_permission_add(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PermissionAdd(rctx, fc.Args["type"].(string), fc.Args["id"].(int), fc.Args["input"].(model.PermissionInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_permission_add(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_permission_add_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_permission_remove(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_permission_remove(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PermissionRemove(rctx, fc.Args["type"].(string), fc.Args["id"].(int), fc.Args["input"].(model.PermissionInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_permission_remove(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_permission_remove_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_permission_set_parent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_permission_set_parent(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PermissionSetParent(rctx, fc.Args["type"].(string), fc.Args["id"].(int), fc.Args["input"].(model.SetParentInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_permission_set_parent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_permission_set_parent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_tenant_save(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_tenant_save(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().TenantSave(rctx, fc.Args["id"].(int), fc.Args["input"].(model.TenantInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Tenant)
+	fc.Result = res
+	return ec.marshalNTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_tenant_save(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Tenant_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Tenant_name(ctx, field)
+			case "groups":
+				return ec.fieldContext_Tenant_groups(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Tenant_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_tenant_save_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_tenant_create_group(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_tenant_create_group(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().TenantCreateGroup(rctx, fc.Args["id"].(int), fc.Args["input"].(model.GroupInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_tenant_create_group(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_tenant_create_group_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_group_save(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_group_save(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().GroupSave(rctx, fc.Args["id"].(int), fc.Args["input"].(model.GroupInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_group_save(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_group_save_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -39910,6 +43084,8 @@ func (ec *executionContext) fieldContext_Operator_feeds(ctx context.Context, fie
 				return ec.fieldContext_Feed_feed_fetches(ctx, field)
 			case "feed_versions":
 				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
 		},
@@ -39924,6 +43100,176 @@ func (ec *executionContext) fieldContext_Operator_feeds(ctx context.Context, fie
 	if fc.Args, err = ec.field_Operator_feeds_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PageInfo_hasNextPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasNextPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PageInfo_hasNextPage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PageInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PageInfo_hasPreviousPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasPreviousPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PageInfo_hasPreviousPage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PageInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PageInfo_startCursor(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PageInfo_startCursor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PageInfo_startCursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PageInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PageInfo_endCursor(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PageInfo_endCursor(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PageInfo_endCursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PageInfo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -40504,6 +43850,10 @@ func (ec *executionContext) fieldContext_Pathway_from_stop(_ context.Context, fi
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -40624,8 +43974,601 @@ func (ec *executionContext) fieldContext_Pathway_to_stop(_ context.Context, fiel
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Pathway_created_at(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Pathway_created_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Pathway_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pathway",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Pathway_updated_at(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Pathway_updated_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Pathway_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pathway",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionRef_type(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionRef_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionRef_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionRef",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionRef_id(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionRef_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionRef_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionRef",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionRef_name(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionRef_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionRef_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionRef",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_type(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_id(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_name(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PermissionSubject_relation(ctx context.Context, field graphql.CollectedField, obj *model.PermissionSubject) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PermissionSubject_relation(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Relation, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PermissionSubject_relation(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PermissionSubject",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_actions(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_actions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Actions, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_actions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_subjects(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_subjects(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Subjects, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PermissionSubject)
+	fc.Result = res
+	return ec.marshalNPermissionSubject2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubjectᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_subjects(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_PermissionSubject_type(ctx, field)
+			case "id":
+				return ec.fieldContext_PermissionSubject_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PermissionSubject_name(ctx, field)
+			case "relation":
+				return ec.fieldContext_PermissionSubject_relation(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PermissionSubject", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_parent(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_parent(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Parent, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.PermissionRef)
+	fc.Result = res
+	return ec.marshalOPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_parent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_PermissionRef_type(ctx, field)
+			case "id":
+				return ec.fieldContext_PermissionRef_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PermissionRef_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PermissionRef", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Permissions_children(ctx context.Context, field graphql.CollectedField, obj *model.Permissions) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Permissions_children(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Children, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PermissionRef)
+	fc.Result = res
+	return ec.marshalNPermissionRef2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRefᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Permissions_children(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Permissions",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_PermissionRef_type(ctx, field)
+			case "id":
+				return ec.fieldContext_PermissionRef_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PermissionRef_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PermissionRef", field.Name)
 		},
 	}
 	return fc, nil
@@ -40932,6 +44875,8 @@ func (ec *executionContext) fieldContext_Query_feeds(ctx context.Context, field 
 				return ec.fieldContext_Feed_feed_fetches(ctx, field)
 			case "feed_versions":
 				return ec.fieldContext_Feed_feed_versions(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Feed_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Feed", field.Name)
 		},
@@ -41122,6 +45067,8 @@ func (ec *executionContext) fieldContext_Query_feed_versions(ctx context.Context
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -41469,6 +45416,10 @@ func (ec *executionContext) fieldContext_Query_stops(ctx context.Context, field 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -42015,6 +45966,8 @@ func (ec *executionContext) fieldContext_Query_census_datasets(ctx context.Conte
 				return ec.fieldContext_CensusDataset_tables(ctx, field)
 			case "layers":
 				return ec.fieldContext_CensusDataset_layers(ctx, field)
+			case "values_relay":
+				return ec.fieldContext_CensusDataset_values_relay(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CensusDataset", field.Name)
 		},
@@ -42027,6 +45980,201 @@ func (ec *executionContext) fieldContext_Query_census_datasets(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_census_datasets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_tenants(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_tenants(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Tenants(rctx, fc.Args["limit"].(*int), fc.Args["ids"].([]int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Tenant)
+	fc.Result = res
+	return ec.marshalNTenant2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_tenants(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Tenant_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Tenant_name(ctx, field)
+			case "groups":
+				return ec.fieldContext_Tenant_groups(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Tenant_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_tenants_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_groups(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_groups(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Groups(rctx, fc.Args["limit"].(*int), fc.Args["ids"].([]int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_users(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_users(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Users(rctx, fc.Args["limit"].(*int), fc.Args["where"].(*model.UserFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUserᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_users_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -43544,6 +47692,8 @@ func (ec *executionContext) fieldContext_Route_feed_version(_ context.Context, f
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -43849,6 +47999,10 @@ func (ec *executionContext) fieldContext_Route_stops(ctx context.Context, field 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -44460,6 +48614,16 @@ func (ec *executionContext) fieldContext_Route_segment_patterns(ctx context.Cont
 				return ec.fieldContext_SegmentPattern_route(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_SegmentPattern_stop_pattern_id(ctx, field)
+			case "direction_id":
+				return ec.fieldContext_SegmentPattern_direction_id(ctx, field)
+			case "sequence_idx":
+				return ec.fieldContext_SegmentPattern_sequence_idx(ctx, field)
+			case "shape_id":
+				return ec.fieldContext_SegmentPattern_shape_id(ctx, field)
+			case "way_id":
+				return ec.fieldContext_SegmentPattern_way_id(ctx, field)
+			case "shape":
+				return ec.fieldContext_SegmentPattern_shape(ctx, field)
 			case "segment":
 				return ec.fieldContext_SegmentPattern_segment(ctx, field)
 			}
@@ -44965,6 +49129,10 @@ func (ec *executionContext) fieldContext_RouteHeadway_stop(_ context.Context, fi
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -45615,6 +49783,10 @@ func (ec *executionContext) fieldContext_RouteStop_stop(_ context.Context, field
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -46229,6 +50401,16 @@ func (ec *executionContext) fieldContext_Segment_segment_patterns(_ context.Cont
 				return ec.fieldContext_SegmentPattern_route(ctx, field)
 			case "stop_pattern_id":
 				return ec.fieldContext_SegmentPattern_stop_pattern_id(ctx, field)
+			case "direction_id":
+				return ec.fieldContext_SegmentPattern_direction_id(ctx, field)
+			case "sequence_idx":
+				return ec.fieldContext_SegmentPattern_sequence_idx(ctx, field)
+			case "shape_id":
+				return ec.fieldContext_SegmentPattern_shape_id(ctx, field)
+			case "way_id":
+				return ec.fieldContext_SegmentPattern_way_id(ctx, field)
+			case "shape":
+				return ec.fieldContext_SegmentPattern_shape(ctx, field)
 			case "segment":
 				return ec.fieldContext_SegmentPattern_segment(ctx, field)
 			}
@@ -46429,6 +50611,233 @@ func (ec *executionContext) fieldContext_SegmentPattern_stop_pattern_id(_ contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_direction_id(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_direction_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DirectionID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_direction_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_sequence_idx(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_sequence_idx(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SequenceIdx, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_sequence_idx(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_shape_id(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_shape_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ShapeID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_shape_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_way_id(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_way_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.WayID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_way_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SegmentPattern_shape(ctx context.Context, field graphql.CollectedField, obj *model.SegmentPattern) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SegmentPattern_shape(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.SegmentPattern().Shape(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Shape)
+	fc.Result = res
+	return ec.marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SegmentPattern_shape(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SegmentPattern",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Shape_id(ctx, field)
+			case "shape_id":
+				return ec.fieldContext_Shape_shape_id(ctx, field)
+			case "geometry":
+				return ec.fieldContext_Shape_geometry(ctx, field)
+			case "generated":
+				return ec.fieldContext_Shape_generated(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Shape", field.Name)
 		},
 	}
 	return fc, nil
@@ -47805,6 +52214,8 @@ func (ec *executionContext) fieldContext_Stop_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -47933,6 +52344,10 @@ func (ec *executionContext) fieldContext_Stop_level(_ context.Context, field gra
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -48050,6 +52465,10 @@ func (ec *executionContext) fieldContext_Stop_parent(_ context.Context, field gr
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -48302,6 +52721,10 @@ func (ec *executionContext) fieldContext_Stop_children(ctx context.Context, fiel
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -48442,6 +52865,10 @@ func (ec *executionContext) fieldContext_Stop_child_levels(ctx context.Context, 
 				return ec.fieldContext_Level_geometry(ctx, field)
 			case "stops":
 				return ec.fieldContext_Level_stops(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Level_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Level_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 		},
@@ -48525,6 +52952,10 @@ func (ec *executionContext) fieldContext_Stop_pathways_from_stop(ctx context.Con
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -48608,6 +53039,10 @@ func (ec *executionContext) fieldContext_Stop_pathways_to_stop(ctx context.Conte
 				return ec.fieldContext_Pathway_from_stop(ctx, field)
 			case "to_stop":
 				return ec.fieldContext_Pathway_to_stop(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Pathway_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Pathway_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 		},
@@ -49300,6 +53735,10 @@ func (ec *executionContext) fieldContext_Stop_nearby_stops(ctx context.Context, 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -49426,6 +53865,88 @@ func (ec *executionContext) fieldContext_Stop_within_features(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Strings does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Stop_created_at(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Stop_created_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Stop_created_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Stop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Stop_updated_at(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Stop_updated_at(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Stop_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Stop",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -49708,6 +54229,10 @@ func (ec *executionContext) fieldContext_StopExternalReference_target_active_sto
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -51264,6 +55789,10 @@ func (ec *executionContext) fieldContext_StopTime_stop(_ context.Context, field 
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -52203,6 +56732,212 @@ func (ec *executionContext) fieldContext_StopTimeEvent_uncertainty(_ context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Tenant_id(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Tenant_name(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Tenant_groups(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_groups(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Tenant().Groups(rctx, obj, fc.Args["limit"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Group)
+	fc.Result = res
+	return ec.marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_groups(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "tenant":
+				return ec.fieldContext_Group_tenant(ctx, field)
+			case "feeds":
+				return ec.fieldContext_Group_feeds(ctx, field)
+			case "permissions":
+				return ec.fieldContext_Group_permissions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Tenant_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Tenant_permissions(ctx context.Context, field graphql.CollectedField, obj *model.Tenant) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tenant_permissions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Tenant().Permissions(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Permissions)
+	fc.Result = res
+	return ec.marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tenant_permissions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tenant",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "actions":
+				return ec.fieldContext_Permissions_actions(ctx, field)
+			case "subjects":
+				return ec.fieldContext_Permissions_subjects(ctx, field)
+			case "parent":
+				return ec.fieldContext_Permissions_parent(ctx, field)
+			case "children":
+				return ec.fieldContext_Permissions_children(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Permissions", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Trip_id(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Trip_id(ctx, field)
 	if err != nil {
@@ -52905,6 +57640,8 @@ func (ec *executionContext) fieldContext_Trip_feed_version(_ context.Context, fi
 				return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 			case "segments":
 				return ec.fieldContext_FeedVersion_segments(ctx, field)
+			case "permissions":
+				return ec.fieldContext_FeedVersion_permissions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type FeedVersion", field.Name)
 		},
@@ -53332,6 +58069,138 @@ func (ec *executionContext) fieldContext_Trip_timestamp(_ context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_email(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Email, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_email(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -54642,6 +59511,10 @@ func (ec *executionContext) fieldContext_ValidationReportDetails_stops(ctx conte
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -55849,6 +60722,10 @@ func (ec *executionContext) fieldContext_VehiclePosition_stop_id(_ context.Conte
 				return ec.fieldContext_Stop_alerts(ctx, field)
 			case "within_features":
 				return ec.fieldContext_Stop_within_features(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Stop_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Stop_updated_at(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
 		},
@@ -59281,6 +64158,47 @@ func (ec *executionContext) unmarshalInputCensusDatasetGeographyLocationFilter(c
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCensusDatasetValueFilter(ctx context.Context, obj any) (model.CensusDatasetValueFilter, error) {
+	var it model.CensusDatasetValueFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"table", "geoid", "geoid_prefix"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "table":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("table"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Table = data
+		case "geoid":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geoid"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Geoid = data
+		case "geoid_prefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geoid_prefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GeoidPrefix = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCensusGeographyFilter(ctx context.Context, obj any) (model.CensusGeographyFilter, error) {
 	var it model.CensusGeographyFilter
 	asMap := map[string]any{}
@@ -59438,7 +64356,7 @@ func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"to", "from", "mode", "depart_at"}
+	fieldsInOrder := [...]string{"to", "from", "mode", "depart_at", "arrive_by"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -59473,6 +64391,13 @@ func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, 
 				return it, err
 			}
 			it.DepartAt = data
+		case "arrive_by":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("arrive_by"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ArriveBy = data
 		}
 	}
 
@@ -59979,6 +64904,33 @@ func (ec *executionContext) unmarshalInputGbfsDockRequest(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputGroupInput(ctx context.Context, obj any) (model.GroupInput, error) {
+	var it model.GroupInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputLevelSetInput(ctx context.Context, obj any) (model.LevelSetInput, error) {
 	var it model.LevelSetInput
 	asMap := map[string]any{}
@@ -60441,6 +65393,47 @@ func (ec *executionContext) unmarshalInputPathwaySetInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPermissionInput(ctx context.Context, obj any) (model.PermissionInput, error) {
+	var it model.PermissionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"subject_type", "subject_id", "relation"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "subject_type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subject_type"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SubjectType = data
+		case "subject_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subject_id"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SubjectID = data
+		case "relation":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relation"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Relation = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPlaceFilter(ctx context.Context, obj any) (model.PlaceFilter, error) {
 	var it model.PlaceFilter
 	asMap := map[string]any{}
@@ -60537,7 +65530,7 @@ func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"onestop_id", "onestop_ids", "allow_previous_onestop_ids", "feed_version_sha1", "feed_onestop_id", "route_id", "route_type", "route_types", "serviced", "search", "operator_onestop_id", "license", "agency_ids", "location", "bbox", "within", "near"}
+	fieldsInOrder := [...]string{"onestop_id", "onestop_ids", "allow_previous_onestop_ids", "feed_version_sha1", "feed_onestop_id", "route_id", "route_type", "route_types", "serviced", "search", "operator_onestop_id", "serves_stop_onestop_id", "license", "agency_ids", "location", "bbox", "within", "near"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -60621,6 +65614,13 @@ func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj a
 				return it, err
 			}
 			it.OperatorOnestopID = data
+		case "serves_stop_onestop_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serves_stop_onestop_id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServesStopOnestopID = data
 		case "license":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license"))
 			data, err := ec.unmarshalOLicenseFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLicenseFilter(ctx, v)
@@ -60841,6 +65841,40 @@ func (ec *executionContext) unmarshalInputServiceCoversFilter(ctx context.Contex
 				return it, err
 			}
 			it.LatestCalendarDate = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSetParentInput(ctx context.Context, obj any) (model.SetParentInput, error) {
+	var it model.SetParentInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"parent_type", "parent_id"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "parent_type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent_type"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ParentType = data
+		case "parent_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent_id"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ParentID = data
 		}
 	}
 
@@ -61421,6 +66455,33 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputTenantInput(ctx context.Context, obj any) (model.TenantInput, error) {
+	var it model.TenantInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj any) (model.TripFilter, error) {
 	var it model.TripFilter
 	asMap := map[string]any{}
@@ -61539,6 +66600,40 @@ func (ec *executionContext) unmarshalInputTripStopTimeFilter(ctx context.Context
 				return it, err
 			}
 			it.End = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUserFilter(ctx context.Context, obj any) (model.UserFilter, error) {
+	var it model.UserFilter
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "q"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "q":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("q"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Q = data
 		}
 	}
 
@@ -62518,6 +67613,39 @@ func (ec *executionContext) _CensusDataset(ctx context.Context, sel ast.Selectio
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "values_relay":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CensusDataset_values_relay(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -63154,6 +68282,94 @@ func (ec *executionContext) _CensusValue(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var censusValueConnectionImplementors = []string{"CensusValueConnection"}
+
+func (ec *executionContext) _CensusValueConnection(ctx context.Context, sel ast.SelectionSet, obj *model.CensusValueConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, censusValueConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CensusValueConnection")
+		case "edges":
+			out.Values[i] = ec._CensusValueConnection_edges(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._CensusValueConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var censusValueEdgeImplementors = []string{"CensusValueEdge"}
+
+func (ec *executionContext) _CensusValueEdge(ctx context.Context, sel ast.SelectionSet, obj *model.CensusValueEdge) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, censusValueEdgeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CensusValueEdge")
+		case "node":
+			out.Values[i] = ec._CensusValueEdge_node(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cursor":
+			out.Values[i] = ec._CensusValueEdge_cursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var directionsImplementors = []string{"Directions"}
 
 func (ec *executionContext) _Directions(ctx context.Context, sel ast.SelectionSet, obj *model.Directions) graphql.Marshaler {
@@ -63647,6 +68863,39 @@ func (ec *executionContext) _Feed(ctx context.Context, sel ast.SelectionSet, obj
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Feed_permissions(ctx, field, obj)
 				return res
 			}
 
@@ -64677,6 +69926,39 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._FeedVersion_segments(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_permissions(ctx, field, obj)
 				return res
 			}
 
@@ -66947,6 +72229,152 @@ func (ec *executionContext) _GbfsVehicleTypeAvailable(ctx context.Context, sel a
 	return out
 }
 
+var groupImplementors = []string{"Group"}
+
+func (ec *executionContext) _Group(ctx context.Context, sel ast.SelectionSet, obj *model.Group) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, groupImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Group")
+		case "id":
+			out.Values[i] = ec._Group_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "name":
+			out.Values[i] = ec._Group_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "tenant":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_tenant(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feeds":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_feeds(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_permissions(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var itineraryImplementors = []string{"Itinerary"}
 
 func (ec *executionContext) _Itinerary(ctx context.Context, sel ast.SelectionSet, obj *model.Itinerary) graphql.Marshaler {
@@ -67331,6 +72759,10 @@ func (ec *executionContext) _Level(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "created_at":
+			out.Values[i] = ec._Level_created_at(ctx, field, obj)
+		case "updated_at":
+			out.Values[i] = ec._Level_updated_at(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -67933,6 +73365,48 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "permission_add":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_permission_add(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "permission_remove":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_permission_remove(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "permission_set_parent":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_permission_set_parent(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "tenant_save":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_tenant_save(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "tenant_create_group":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_tenant_create_group(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "group_save":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_group_save(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -68080,6 +73554,54 @@ func (ec *executionContext) _Operator(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var pageInfoImplementors = []string{"PageInfo"}
+
+func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, pageInfoImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PageInfo")
+		case "hasNextPage":
+			out.Values[i] = ec._PageInfo_hasNextPage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hasPreviousPage":
+			out.Values[i] = ec._PageInfo_hasPreviousPage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "startCursor":
+			out.Values[i] = ec._PageInfo_startCursor(ctx, field, obj)
+		case "endCursor":
+			out.Values[i] = ec._PageInfo_endCursor(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var pathwayImplementors = []string{"Pathway"}
 
 func (ec *executionContext) _Pathway(ctx context.Context, sel ast.SelectionSet, obj *model.Pathway) graphql.Marshaler {
@@ -68197,6 +73719,164 @@ func (ec *executionContext) _Pathway(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "created_at":
+			out.Values[i] = ec._Pathway_created_at(ctx, field, obj)
+		case "updated_at":
+			out.Values[i] = ec._Pathway_updated_at(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var permissionRefImplementors = []string{"PermissionRef"}
+
+func (ec *executionContext) _PermissionRef(ctx context.Context, sel ast.SelectionSet, obj *model.PermissionRef) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, permissionRefImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PermissionRef")
+		case "type":
+			out.Values[i] = ec._PermissionRef_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "id":
+			out.Values[i] = ec._PermissionRef_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._PermissionRef_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var permissionSubjectImplementors = []string{"PermissionSubject"}
+
+func (ec *executionContext) _PermissionSubject(ctx context.Context, sel ast.SelectionSet, obj *model.PermissionSubject) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, permissionSubjectImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PermissionSubject")
+		case "type":
+			out.Values[i] = ec._PermissionSubject_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "id":
+			out.Values[i] = ec._PermissionSubject_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._PermissionSubject_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "relation":
+			out.Values[i] = ec._PermissionSubject_relation(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var permissionsImplementors = []string{"Permissions"}
+
+func (ec *executionContext) _Permissions(ctx context.Context, sel ast.SelectionSet, obj *model.Permissions) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, permissionsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Permissions")
+		case "actions":
+			out.Values[i] = ec._Permissions_actions(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "subjects":
+			out.Values[i] = ec._Permissions_subjects(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "parent":
+			out.Values[i] = ec._Permissions_parent(ctx, field, obj)
+		case "children":
+			out.Values[i] = ec._Permissions_children(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -68613,6 +74293,72 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_census_datasets(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "tenants":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_tenants(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "groups":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_groups(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "users":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_users(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -70037,6 +75783,59 @@ func (ec *executionContext) _SegmentPattern(ctx context.Context, sel ast.Selecti
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "direction_id":
+			out.Values[i] = ec._SegmentPattern_direction_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "sequence_idx":
+			out.Values[i] = ec._SegmentPattern_sequence_idx(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "shape_id":
+			out.Values[i] = ec._SegmentPattern_shape_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "way_id":
+			out.Values[i] = ec._SegmentPattern_way_id(ctx, field, obj)
+		case "shape":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SegmentPattern_shape(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "segment":
 			field := field
 
@@ -70946,6 +76745,10 @@ func (ec *executionContext) _Stop(ctx context.Context, sel ast.SelectionSet, obj
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "within_features":
 			out.Values[i] = ec._Stop_within_features(ctx, field, obj)
+		case "created_at":
+			out.Values[i] = ec._Stop_created_at(ctx, field, obj)
+		case "updated_at":
+			out.Values[i] = ec._Stop_updated_at(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -71526,6 +77329,119 @@ func (ec *executionContext) _StopTimeEvent(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var tenantImplementors = []string{"Tenant"}
+
+func (ec *executionContext) _Tenant(ctx context.Context, sel ast.SelectionSet, obj *model.Tenant) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tenantImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Tenant")
+		case "id":
+			out.Values[i] = ec._Tenant_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "name":
+			out.Values[i] = ec._Tenant_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "groups":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Tenant_groups(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "permissions":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Tenant_permissions(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var tripImplementors = []string{"Trip"}
 
 func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj *model.Trip) graphql.Marshaler {
@@ -71912,6 +77828,55 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var userImplementors = []string{"User"}
+
+func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("User")
+		case "id":
+			out.Values[i] = ec._User_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._User_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "email":
+			out.Values[i] = ec._User_email(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -73286,6 +79251,70 @@ func (ec *executionContext) marshalNCensusValue2ᚕᚖgithubᚗcomᚋinterline�
 	return ret
 }
 
+func (ec *executionContext) marshalNCensusValue2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValue(ctx context.Context, sel ast.SelectionSet, v *model.CensusValue) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CensusValue(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCensusValueEdge2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CensusValueEdge) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCensusValueEdge2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueEdge(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNCensusValueEdge2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueEdge(ctx context.Context, sel ast.SelectionSet, v *model.CensusValueEdge) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CensusValueEdge(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNCounts2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCounts(ctx context.Context, v any) (tt.Counts, error) {
 	var res tt.Counts
 	err := res.UnmarshalGQL(v)
@@ -74040,6 +80069,69 @@ func (ec *executionContext) marshalNGeometry2githubᚗcomᚋinterlineᚑioᚋtra
 	return v
 }
 
+func (ec *executionContext) marshalNGroup2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx context.Context, sel ast.SelectionSet, v model.Group) graphql.Marshaler {
+	return ec._Group(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGroup2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Group) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGroup2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroup(ctx context.Context, sel ast.SelectionSet, v *model.Group) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Group(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNGroupInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐGroupInput(ctx context.Context, v any) (model.GroupInput, error) {
+	res, err := ec.unmarshalInputGroupInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx context.Context, v any) (tt.Int, error) {
 	var res tt.Int
 	err := res.UnmarshalGQL(v)
@@ -74405,6 +80497,16 @@ func (ec *executionContext) marshalNOperator2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 	return ec._Operator(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PageInfo(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNPathway2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathway(ctx context.Context, sel ast.SelectionSet, v model.Pathway) graphql.Marshaler {
 	return ec._Pathway(ctx, sel, &v)
 }
@@ -74466,6 +80568,119 @@ func (ec *executionContext) marshalNPathway2ᚖgithubᚗcomᚋinterlineᚑioᚋt
 func (ec *executionContext) unmarshalNPathwaySetInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathwaySetInput(ctx context.Context, v any) (model.PathwaySetInput, error) {
 	res, err := ec.unmarshalInputPathwaySetInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNPermissionInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionInput(ctx context.Context, v any) (model.PermissionInput, error) {
+	res, err := ec.unmarshalInputPermissionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPermissionRef2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRefᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PermissionRef) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx context.Context, sel ast.SelectionSet, v *model.PermissionRef) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PermissionRef(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPermissionSubject2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubjectᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PermissionSubject) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPermissionSubject2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubject(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPermissionSubject2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionSubject(ctx context.Context, sel ast.SelectionSet, v *model.PermissionSubject) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PermissionSubject(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlace(ctx context.Context, sel ast.SelectionSet, v *model.Place) graphql.Marshaler {
@@ -74846,6 +81061,25 @@ func (ec *executionContext) marshalNSegmentPattern2ᚖgithubᚗcomᚋinterline�
 	return ec._SegmentPattern(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNSetParentInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSetParentInput(ctx context.Context, v any) (model.SetParentInput, error) {
+	res, err := ec.unmarshalInputSetParentInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNShape2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v model.Shape) graphql.Marshaler {
+	return ec._Shape(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v *model.Shape) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Shape(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNStep2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStep(ctx context.Context, sel ast.SelectionSet, v *model.Step) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -75123,6 +81357,69 @@ func (ec *executionContext) marshalNString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) marshalNTenant2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx context.Context, sel ast.SelectionSet, v model.Tenant) graphql.Marshaler {
+	return ec._Tenant(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTenant2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Tenant) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx context.Context, sel ast.SelectionSet, v *model.Tenant) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Tenant(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNTenantInput2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenantInput(ctx context.Context, v any) (model.TenantInput, error) {
+	res, err := ec.unmarshalInputTenantInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v any) (time.Time, error) {
 	res, err := graphql.UnmarshalTime(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -75215,6 +81512,60 @@ func (ec *executionContext) unmarshalNUrl2githubᚗcomᚋinterlineᚑioᚋtransi
 
 func (ec *executionContext) marshalNUrl2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐUrl(ctx context.Context, sel ast.SelectionSet, v tt.Url) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.User) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUser2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUser(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._User(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNValidationRealtimeResult2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationRealtimeResult(ctx context.Context, sel ast.SelectionSet, v *model.ValidationRealtimeResult) graphql.Marshaler {
@@ -75957,6 +82308,14 @@ func (ec *executionContext) unmarshalOCensusDatasetGeographyLocationFilter2ᚖgi
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOCensusDatasetValueFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusDatasetValueFilter(ctx context.Context, v any) (*model.CensusDatasetValueFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCensusDatasetValueFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalOCensusGeography2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusGeographyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CensusGeography) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -76196,6 +82555,13 @@ func (ec *executionContext) marshalOCensusValue2ᚖgithubᚗcomᚋinterlineᚑio
 		return graphql.Null
 	}
 	return ec._CensusValue(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOCensusValueConnection2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusValueConnection(ctx context.Context, sel ast.SelectionSet, v *model.CensusValueConnection) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._CensusValueConnection(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOColor2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐColor(ctx context.Context, v any) (tt.Color, error) {
@@ -77765,6 +84131,20 @@ func (ec *executionContext) unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterline
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalOPermissionRef2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissionRef(ctx context.Context, sel ast.SelectionSet, v *model.PermissionRef) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._PermissionRef(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPermissions(ctx context.Context, sel ast.SelectionSet, v *model.Permissions) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Permissions(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlaceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Place) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -78619,6 +84999,13 @@ func (ec *executionContext) marshalOTags2ᚖgithubᚗcomᚋinterlineᚑioᚋtran
 	return v
 }
 
+func (ec *executionContext) marshalOTenant2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTenant(ctx context.Context, sel ast.SelectionSet, v *model.Tenant) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Tenant(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOTime2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐTime(ctx context.Context, v any) (tt.Time, error) {
 	var res tt.Time
 	err := res.UnmarshalGQL(v)
@@ -78774,6 +85161,14 @@ func (ec *executionContext) marshalOUrl2ᚖgithubᚗcomᚋinterlineᚑioᚋtrans
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOUserFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐUserFilter(ctx context.Context, v any) (*model.UserFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUserFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOValidationRealtimeResult2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐValidationRealtimeResultᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ValidationRealtimeResult) graphql.Marshaler {

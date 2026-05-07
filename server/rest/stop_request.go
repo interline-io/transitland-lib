@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	oa "github.com/getkin/kin-openapi/openapi3"
-	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/server/auth/authn"
 )
 
 //go:embed stop_request.gql
@@ -31,6 +29,7 @@ type StopRequest struct {
 	ServedByOnestopIds string    `json:"served_by_onestop_ids"`
 	ServedByRouteType  *int      `json:"served_by_route_type,string"`
 	ServedByRouteTypes string    `json:"served_by_route_types"`
+	LocationType       *int      `json:"location_type,string"`
 	IncludeAlerts      bool      `json:"include_alerts,string"`
 	IncludeRoutes      bool      `json:"include_routes,string"`
 	LicenseFilter
@@ -86,6 +85,13 @@ func (r StopRequest) RequestInfo() RequestInfo {
 						Schema:      newSRVal("string", "", nil),
 						Extensions:  newExt("", "served_by_route_types=1,2", "served_by_route_types=1,2"),
 					}},
+					&pref{Value: &param{
+						Name:        "location_type",
+						In:          "query",
+						Description: `Filter by location_type: 0=stop/platform, 1=station, 2=entrance/exit, 3=generic node, 4=boarding area`,
+						Schema:      newSRVal("integer", "", nil),
+						Extensions:  newExt("", "location_type=1", "location_type=1"),
+					}},
 					newPRef("includeAlertsParam"),
 					newPRef("includeRoutesParam"),
 					newPRef("idParam"),
@@ -130,12 +136,6 @@ func (r StopRequest) Query(ctx context.Context) (string, map[string]any) {
 		r.IncludeRoutes = true
 	}
 
-	user := authn.ForContext(ctx)
-	if user == nil || (!user.HasRole("tl_user_pro") && r.IncludeRoutes) {
-		log.For(ctx).Trace().Msg("setting include_routes = false")
-		r.IncludeRoutes = false
-	}
-
 	where := hw{}
 	if r.FeedVersionSHA1 != "" {
 		where["feed_version_sha1"] = r.FeedVersionSHA1
@@ -166,6 +166,9 @@ func (r StopRequest) Query(ctx context.Context) (string, map[string]any) {
 	}
 	if r.ServedByRouteTypes != "" {
 		where["served_by_route_types"] = commaSplit(r.ServedByRouteTypes)
+	}
+	if r.LocationType != nil {
+		where["location_type"] = *r.LocationType
 	}
 	where["license"] = checkLicenseFilter(r.LicenseFilter)
 	return stopQuery, hw{

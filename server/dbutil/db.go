@@ -3,27 +3,19 @@ package dbutil
 import (
 	"context"
 	"database/sql"
-	"regexp"
 	"strings"
 	"time"
 
 	sq "github.com/irees/squirrel"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/internal/tags"
+	"github.com/interline-io/transitland-lib/tldb/querylogger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/reflectx"
 )
-
-var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-
-func toSnakeCase(str string) string {
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
-}
 
 // ConfigureDB sets up common database configuration
 func ConfigureDB(sqlDb *sql.DB) (*sqlx.DB, error) {
@@ -35,7 +27,7 @@ func ConfigureDB(sqlDb *sql.DB) (*sqlx.DB, error) {
 		log.Error().Err(err).Msgf("could not connect to database")
 		return nil, err
 	}
-	db.Mapper = reflectx.NewMapperFunc("db", toSnakeCase)
+	db.Mapper = reflectx.NewMapperFunc("db", tags.ToSnakeCase)
 	return db.Unsafe(), nil
 }
 
@@ -70,6 +62,18 @@ func OpenDB(url string) (*sqlx.DB, error) {
 		return nil, err
 	}
 	return ConfigureDB(db.DB)
+}
+
+// WithQueryLogger wraps a database connection with a QueryLogger.
+// If the connection is already a QueryLogger, its settings are updated in place
+// and it is returned as-is (no additional wrapping layer).
+func WithQueryLogger(db querylogger.Ext, trace bool, longQueryDuration time.Duration) *querylogger.QueryLogger {
+	if ql, ok := db.(*querylogger.QueryLogger); ok {
+		ql.Trace = trace
+		ql.LongQueryDuration = longQueryDuration
+		return ql
+	}
+	return &querylogger.QueryLogger{Ext: db, Trace: trace, LongQueryDuration: longQueryDuration}
 }
 
 // Select runs a query and reads results into dest.
@@ -108,4 +112,20 @@ func Get(ctx context.Context, db sqlx.Ext, q sq.SelectBuilder, dest interface{})
 		log.Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query failed")
 	}
 	return err
+}
+
+// EscapeLike escapes SQL LIKE/ILIKE wildcard characters (%, _, and \) in a string
+// and optionally adds prefix/suffix wildcards for pattern matching.
+func EscapeLike(s string, prefix bool, suffix bool) string {
+	// Escape backslash first, then the wildcards
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	if prefix {
+		s = "%" + s
+	}
+	if suffix {
+		s = s + "%"
+	}
+	return s
 }
