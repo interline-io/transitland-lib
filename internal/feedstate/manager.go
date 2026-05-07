@@ -241,6 +241,8 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		"feed_id":             "feed_versions.feed_id",
 		"onestop_id":          "osid.onestop_id",
 		"textsearch":          "gtfs_routes.textsearch",
+		"created_at":          "gtfs_routes.created_at",
+		"updated_at":          "gtfs_routes.updated_at",
 	}
 
 	// Add geometry column - full geometry for SQLite, simplified for PostGIS
@@ -292,6 +294,8 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		"onestop_id":          "osid.onestop_id",
 		"geometry":            "gtfs_stops.geometry",
 		"textsearch":          "gtfs_stops.textsearch",
+		"created_at":          "gtfs_stops.created_at",
+		"updated_at":          "gtfs_stops.updated_at",
 	}
 
 	// Extract columns and selects from the map, sorted for consistency
@@ -328,6 +332,8 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		"feed_id":         "feed_versions.feed_id",
 		"onestop_id":      "osid.onestop_id",
 		"textsearch":      "gtfs_agencies.textsearch",
+		"created_at":      "gtfs_agencies.created_at",
+		"updated_at":      "gtfs_agencies.updated_at",
 	}
 
 	// Extract columns and selects from the map, sorted for consistency
