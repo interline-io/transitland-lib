@@ -12390,7 +12390,7 @@ input RouteFilter {
   search: String
   "Search for routes operated by operators with this Onestop ID"
   operator_onestop_id: String
-  "Search for routes that serve a stop with this OnestopID"
+  "Search for routes that serve a stop with this Onestop ID"
   serves_stop_onestop_id: String
   "Search for routes with these license details"
   license: LicenseFilter

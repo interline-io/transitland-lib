@@ -1064,7 +1064,7 @@ type RouteFilter struct {
 	Search *string `json:"search,omitempty"`
 	// Search for routes operated by operators with this Onestop ID
 	OperatorOnestopID *string `json:"operator_onestop_id,omitempty"`
-	// Search for routes that serve a stop with this OnestopID
+	// Search for routes that serve a stop with this Onestop ID
 	ServesStopOnestopID *string `json:"serves_stop_onestop_id,omitempty"`
 	// Search for routes with these license details
 	License *LicenseFilter `json:"license,omitempty"`
