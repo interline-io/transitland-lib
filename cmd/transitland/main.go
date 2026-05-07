@@ -9,6 +9,7 @@ import (
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/cmds"
 	"github.com/interline-io/transitland-lib/diff"
+	"github.com/interline-io/transitland-lib/stopcompare"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlxy"
 
@@ -55,6 +56,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
 		tlcli.CobraHelper(&cmds.RTConvertCommand{}, pc, "rt-convert"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
+		tlcli.CobraHelper(&stopcompare.Command{}, pc, "stop-compare"),
 		tlcli.CobraHelper(&tlxy.PolylinesCommand{}, pc, "polylines-create"),
 		tlcli.CobraHelper(&cmds.ServerCommand{}, pc, "server"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),

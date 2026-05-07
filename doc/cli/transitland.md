@@ -26,6 +26,7 @@ transitland-lib utilities
 * [transitland rebuild-stats](transitland_rebuild-stats.md)	 - Rebuild statistics for feeds or specific feed versions
 * [transitland rt-convert](transitland_rt-convert.md)	 - Convert GTFS Realtime to JSON.
 * [transitland server](transitland_server.md)	 - Run transitland server
+* [transitland stop-compare](transitland_stop-compare.md)	 - Geometrically compare two GTFS feeds using stop point clouds
 * [transitland sync](transitland_sync.md)	 - Sync DMFR files to database
 * [transitland unimport](transitland_unimport.md)	 - Unimport feed versions
 * [transitland validate](transitland_validate.md)	 - Validate a GTFS feed
