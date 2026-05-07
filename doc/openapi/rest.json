@@ -114,7 +114,7 @@
         }
       },
       "includeRoutesParam": {
-        "description": "Include routes that serve this stop (requires tl_user_pro role)",
+        "description": "Include routes that serve this stop",
         "in": "query",
         "name": "include_routes",
         "schema": {
@@ -129,8 +129,7 @@
             "description": "include_routes=true",
             "url": "include_routes=true"
           }
-        ],
-        "x-required-role": "tl_user_pro"
+        ]
       },
       "includeStopsParam": {
         "description": "Include stops in response",
@@ -5673,6 +5672,20 @@
               {
                 "description": "operator_onestop_id=...",
                 "url": "operator_onestop_id=o-9q9-caltrain"
+              }
+            ]
+          },
+          {
+            "description": "Search for routes serving a stop with this OnestopID",
+            "in": "query",
+            "name": "serves_stop_onestop_id",
+            "schema": {
+              "type": "string"
+            },
+            "x-example-requests": [
+              {
+                "description": "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero",
+                "url": "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero"
               }
             ]
           },

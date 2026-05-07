@@ -287,9 +287,9 @@ var ParameterComponents = oa.ParametersMap{
 		Value: &param{
 			Name:        "include_routes",
 			In:          "query",
-			Description: `Include routes that serve this stop (requires tl_user_pro role)`,
+			Description: `Include routes that serve this stop`,
 			Schema:      newSRVal("string", "", []any{"true", "false"}),
-			Extensions:  newExtWithRole("", "include_routes=true", "include_routes=true", "tl_user_pro"),
+			Extensions:  newExt("", "include_routes=true", "include_routes=true"),
 		},
 	},
 }

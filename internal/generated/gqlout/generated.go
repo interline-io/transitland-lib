@@ -12390,6 +12390,8 @@ input RouteFilter {
   search: String
   "Search for routes operated by operators with this Onestop ID"
   operator_onestop_id: String
+  "Search for routes that serve a stop with this Onestop ID"
+  serves_stop_onestop_id: String
   "Search for routes with these license details"
   license: LicenseFilter
   "Search for routes operated by these agencies (database integer IDs)"
@@ -65528,7 +65530,7 @@ func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"onestop_id", "onestop_ids", "allow_previous_onestop_ids", "feed_version_sha1", "feed_onestop_id", "route_id", "route_type", "route_types", "serviced", "search", "operator_onestop_id", "license", "agency_ids", "location", "bbox", "within", "near"}
+	fieldsInOrder := [...]string{"onestop_id", "onestop_ids", "allow_previous_onestop_ids", "feed_version_sha1", "feed_onestop_id", "route_id", "route_type", "route_types", "serviced", "search", "operator_onestop_id", "serves_stop_onestop_id", "license", "agency_ids", "location", "bbox", "within", "near"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -65612,6 +65614,13 @@ func (ec *executionContext) unmarshalInputRouteFilter(ctx context.Context, obj a
 				return it, err
 			}
 			it.OperatorOnestopID = data
+		case "serves_stop_onestop_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serves_stop_onestop_id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServesStopOnestopID = data
 		case "license":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license"))
 			data, err := ec.unmarshalOLicenseFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLicenseFilter(ctx, v)
