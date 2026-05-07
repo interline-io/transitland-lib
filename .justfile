@@ -70,9 +70,11 @@ sed_inplace := "sed -i.bak"
 
 # Update local copy of GTFS specification
 spec-update-gtfs:
-    @HASH=$(git ls-remote https://github.com/google/transit.git master | awk '{print $1}'); \
-    wget "https://raw.githubusercontent.com/google/transit/$HASH/gtfs/spec/en/reference.md" -O gtfs/reference.md; \
-    {{sed_inplace}} "s/var GTFSVERSION = \".*\"/var GTFSVERSION = \"$HASH\"/" version.go && rm version.go.bak
+    @HASH=$(git ls-remote https://github.com/google/transit.git master | awk '{print $1}') && \
+    [ -n "$HASH" ] && \
+    wget "https://raw.githubusercontent.com/google/transit/$HASH/gtfs/spec/en/reference.md" -O gtfs/reference.md && \
+    {{sed_inplace}} "s/var GTFSVERSION = \".*\"/var GTFSVERSION = \"$HASH\"/" version.go && \
+    rm version.go.bak
 
 # Update local copy of GBFS human-readable spec
 spec-update-gbfs:
@@ -86,7 +88,9 @@ spec-update-gbfs-schema version=TL_GBFS_VERSION:
 
 # Update GTFS-Realtime protobuf definition and recompile
 spec-update-gtfs-rt:
-    @HASH=$(git ls-remote https://github.com/google/transit.git master | awk '{print $1}'); \
-    wget "https://raw.githubusercontent.com/google/transit/$HASH/gtfs-realtime/proto/gtfs-realtime.proto" -O rt/pb/gtfs-realtime.proto; \
-    (cd rt/pb && protoc --plugin=protoc-gen-go=../../protoc-gen-go-wrapper.sh --go_out=. --go_opt=paths=source_relative --go_opt=Mgtfs-realtime.proto=rt/pb gtfs-realtime.proto); \
-    {{sed_inplace}} "s/var GTFSRTVERSION = \".*\"/var GTFSRTVERSION = \"$HASH\"/" version.go && rm version.go.bak
+    @HASH=$(git ls-remote https://github.com/google/transit.git master | awk '{print $1}') && \
+    [ -n "$HASH" ] && \
+    wget "https://raw.githubusercontent.com/google/transit/$HASH/gtfs-realtime/proto/gtfs-realtime.proto" -O rt/pb/gtfs-realtime.proto && \
+    (cd rt/pb && protoc --plugin=protoc-gen-go=../../protoc-gen-go-wrapper.sh --go_out=. --go_opt=paths=source_relative --go_opt=Mgtfs-realtime.proto=rt/pb gtfs-realtime.proto) && \
+    {{sed_inplace}} "s/var GTFSRTVERSION = \".*\"/var GTFSRTVERSION = \"$HASH\"/" version.go && \
+    rm version.go.bak
