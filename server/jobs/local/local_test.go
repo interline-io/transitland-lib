@@ -7,11 +7,13 @@ import (
 	"github.com/interline-io/transitland-lib/server/jobs/jobtest"
 )
 
-func TestLocalJobs(t *testing.T) {
-	newQueue := func(queueName string) jobs.JobQueue {
-		q := jobs.NewJobLogger(NewLocalJobs())
-		q.AddQueue("default", 4)
-		return q
+func TestLocalBackend(t *testing.T) {
+	newSetup := func(queueName string) jobtest.TestSetup {
+		runner := jobs.NewRunner()
+		backend := NewLocalBackend(runner, map[string]QueueOpts{
+			queueName: {Workers: 4},
+		})
+		return jobtest.TestSetup{Runner: runner, Backend: backend, QueueName: queueName}
 	}
-	jobtest.TestJobQueue(t, newQueue)
+	jobtest.TestBackend(t, newSetup)
 }

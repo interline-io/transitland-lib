@@ -8,97 +8,30 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func init() {
-	var _ JobQueue = &JobLogger{}
-}
-
-type JobLogger struct {
-	log zerolog.Logger
-	JobQueue
-}
-
-func NewJobLogger(jq JobQueue) *JobLogger {
-	logger := log.With().Logger()
-	jq.Use(NewJobRunLogger(logger))
-	return &JobLogger{
-		log:      logger,
-		JobQueue: jq,
+// NewRunLogger returns a Middleware that logs each job's start, error, and
+// completion (with elapsed time) under a per-job logger keyed by Kind/Args.
+// Register on a Runner via Use.
+func NewRunLogger(logger zerolog.Logger) Middleware {
+	return func(w Worker, j Job) Worker {
+		return &runLogger{log: logger, job: j, Worker: w}
 	}
 }
 
-func (w *JobLogger) Use(jmw JobMiddleware) {
-	w.log.Trace().Msg("jobs: using middleware")
-	w.JobQueue.Use(jmw)
-}
-
-func (w *JobLogger) AddQueue(queue string, workers int) error {
-	w.log.Trace().Str("queue", queue).Int("workers", workers).Msg("jobs: adding queue")
-	return w.JobQueue.AddQueue(queue, workers)
-}
-
-func (w *JobLogger) AddJobType(jobFn JobFn) error {
-	w.log.Trace().Str("job_type", jobFn().Kind()).Msg("jobs: adding job type")
-	return w.JobQueue.AddJobType(jobFn)
-}
-
-func (w *JobLogger) AddJob(ctx context.Context, job Job) error {
-	w.log.Trace().Str("job_type", job.JobType).Any("job_args", job.JobArgs).Msg("jobs: adding job")
-	return w.JobQueue.AddJob(ctx, job)
-}
-
-func (w *JobLogger) AddJobs(ctx context.Context, jobs []Job) error {
-	w.log.Trace().Msg("jobs: adding jobs")
-	return w.JobQueue.AddJobs(ctx, jobs)
-}
-
-func (w *JobLogger) RunJob(ctx context.Context, job Job) error {
-	w.log.Trace().Str("job_type", job.JobType).Any("job_args", job.JobArgs).Msg("jobs: run job")
-	return w.JobQueue.RunJob(ctx, job)
-}
-
-func (w *JobLogger) Run(ctx context.Context) error {
-	w.log.Trace().Msg("jobs: run")
-	return w.JobQueue.Run(ctx)
-}
-
-func (w *JobLogger) Stop(ctx context.Context) error {
-	w.log.Trace().Msg("jobs: stop")
-	return w.JobQueue.Stop(ctx)
-}
-
-//
-
-type JobRunLogger struct {
+type runLogger struct {
 	log zerolog.Logger
 	job Job
-	JobWorker
+	Worker
 }
 
-func (w *JobRunLogger) Run(ctx context.Context) error {
-	// Create logger for this job
-	ctxLogger := log.For(ctx).With().Str("job_type", w.job.JobType).Any("job_args", w.job.JobArgs).Logger()
-
-	// Attach to the context
-	ctx = ctxLogger.WithContext(ctx)
-
-	// Run next job
+func (w *runLogger) Run(ctx context.Context) error {
+	ctxLog := log.For(ctx).With().Str("kind", w.job.Kind).Any("args", w.job.Args).Logger()
+	ctx = ctxLog.WithContext(ctx)
 	t1 := time.Now()
-	ctxLogger.Info().Msg("job: started")
-	if err := w.JobWorker.Run(ctx); err != nil {
-		ctxLogger.Error().Err(err).Msg("job: error")
+	ctxLog.Info().Msg("job: started")
+	if err := w.Worker.Run(ctx); err != nil {
+		ctxLog.Error().Err(err).Msg("job: error")
 		return err
 	}
-	ctxLogger.Info().Int64("job_time_ms", (time.Now().UnixNano()-t1.UnixNano())/1e6).Msg("job: completed")
+	ctxLog.Info().Int64("job_time_ms", (time.Now().UnixNano()-t1.UnixNano())/1e6).Msg("job: completed")
 	return nil
-
-}
-
-func NewJobRunLogger(logger zerolog.Logger) JobMiddleware {
-	return func(jw JobWorker, j Job) JobWorker {
-		return &JobRunLogger{
-			log:       logger,
-			job:       j,
-			JobWorker: jw,
-		}
-	}
 }

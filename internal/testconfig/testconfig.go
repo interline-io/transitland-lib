@@ -164,8 +164,9 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		opts.RTStorage = t.TempDir()
 	}
 
-	// Initialize job queue - do not start
-	jobQueue := jobs.NewJobLogger(localjobs.NewLocalJobs())
+	// Initialize job runner + backend - do not start
+	jobRunner := jobs.NewRunner()
+	jobBackend := localjobs.NewLocalBackend(jobRunner, nil)
 
 	// Action finder
 	actionFinder := &actions.Actions{}
@@ -175,7 +176,8 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		RTFinder:                 rtf,
 		GbfsFinder:               gbf,
 		Checker:                  checker,
-		JobQueue:                 jobQueue,
+		Jobs:                     jobBackend,
+		JobRunner:                jobRunner,
 		Actions:                  actionFinder,
 		Clock:                    cl,
 		Storage:                  opts.Storage,
