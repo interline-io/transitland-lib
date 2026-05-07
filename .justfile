@@ -65,11 +65,14 @@ db-create-migration name:
 
 # --- Specification ---
 
+# Portable in-place sed (works on both BSD/macOS and GNU sed)
+sed_inplace := "sed -i.bak"
+
 # Update local copy of GTFS specification
 spec-update-gtfs:
-    wget https://github.com/google/transit/raw/refs/heads/master/gtfs/spec/en/reference.md -O gtfs/reference.md
     @HASH=$(git ls-remote https://github.com/google/transit.git master | awk '{print $1}'); \
-    sed -i '' "s/var GTFSVERSION = \".*\"/var GTFSVERSION = \"$HASH\"/" version.go
+    wget "https://raw.githubusercontent.com/google/transit/$HASH/gtfs/spec/en/reference.md" -O gtfs/reference.md; \
+    {{sed_inplace}} "s/var GTFSVERSION = \".*\"/var GTFSVERSION = \"$HASH\"/" version.go && rm version.go.bak
 
 # Update local copy of GBFS human-readable spec
 spec-update-gbfs:
@@ -79,11 +82,11 @@ spec-update-gbfs:
 spec-update-gbfs-schema version=TL_GBFS_VERSION:
     @mkdir -p internal/gbfs/schema/v{{version}}
     wget https://raw.githubusercontent.com/MobilityData/gbfs-json-schema/master/v{{version}}/gbfs.json -O internal/gbfs/schema/v{{version}}/gbfs.json
-    @sed -i '' "s/var GBFS_SCHEMA_VERSION = \".*\"/var GBFS_SCHEMA_VERSION = \"v{{version}}\"/" version.go
+    @{{sed_inplace}} "s/var GBFS_SCHEMA_VERSION = \".*\"/var GBFS_SCHEMA_VERSION = \"v{{version}}\"/" version.go && rm version.go.bak
 
 # Update GTFS-Realtime protobuf definition and recompile
 spec-update-gtfs-rt:
-    wget https://github.com/google/transit/raw/refs/heads/master/gtfs-realtime/proto/gtfs-realtime.proto -O rt/pb/gtfs-realtime.proto
-    cd rt/pb && protoc --plugin=protoc-gen-go=../../protoc-gen-go-wrapper.sh --go_out=. --go_opt=paths=source_relative --go_opt=Mgtfs-realtime.proto=rt/pb gtfs-realtime.proto
     @HASH=$(git ls-remote https://github.com/google/transit.git master | awk '{print $1}'); \
-    sed -i '' "s/var GTFSRTVERSION = \".*\"/var GTFSRTVERSION = \"$HASH\"/" version.go
+    wget "https://raw.githubusercontent.com/google/transit/$HASH/gtfs-realtime/proto/gtfs-realtime.proto" -O rt/pb/gtfs-realtime.proto; \
+    (cd rt/pb && protoc --plugin=protoc-gen-go=../../protoc-gen-go-wrapper.sh --go_out=. --go_opt=paths=source_relative --go_opt=Mgtfs-realtime.proto=rt/pb gtfs-realtime.proto); \
+    {{sed_inplace}} "s/var GTFSRTVERSION = \".*\"/var GTFSRTVERSION = \"$HASH\"/" version.go && rm version.go.bak
