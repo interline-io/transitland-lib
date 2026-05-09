@@ -102,10 +102,10 @@ func StressBackend(t *testing.T, newSetup func(string) TestSetup, opts StressOpt
 type counterWorker struct {
 	N int64 `json:"n"`
 
-	kind    string
-	count   *int64
-	durMin  time.Duration
-	durMax  time.Duration
+	kind   string
+	count  *int64
+	durMin time.Duration
+	durMax time.Duration
 }
 
 func (w *counterWorker) Kind() string { return w.kind }
