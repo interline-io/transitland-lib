@@ -558,18 +558,21 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 		log.Trace().Int64("job_deadline", job.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
 		return q.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
-	// Window=0 deduplicates only while a matching job is queued/running, so
-	// release the lock when execution starts. Window>0 entries are time-based
-	// and expire on their own.
+	// Window=0 deduplicates while a matching job is queued OR running (per
+	// the UniqueWindow contract: no concurrent runs). Release the lock when
+	// execution finishes. Window>0 entries are time-based and expire on
+	// their own.
 	if job.Unique && job.UniqueWindow == 0 {
 		key, err := job.HexKey()
 		if err != nil {
 			return q.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
 		}
-		q.uniqueMu.Lock()
-		delete(q.uniqueJobs, key)
-		q.uniqueMu.Unlock()
-		log.Trace().Interface("job", job).Msgf("unlocked: %s", key)
+		defer func() {
+			q.uniqueMu.Lock()
+			delete(q.uniqueJobs, key)
+			q.uniqueMu.Unlock()
+			log.Trace().Interface("job", job).Msgf("unlocked: %s", key)
+		}()
 	}
 	// Derive a per-run ctx that Cancel can interrupt independently of Run/Stop.
 	runCtx, runCancel := context.WithCancel(ctx)

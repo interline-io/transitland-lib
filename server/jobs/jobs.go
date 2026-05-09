@@ -103,8 +103,8 @@ type ListOptions struct {
 
 // ListResult is a page of JobStatus rows plus an opaque cursor for the next page.
 type ListResult struct {
-	Jobs       []JobStatus
-	NextCursor string
+	Jobs       []JobStatus `json:"jobs"`
+	NextCursor string      `json:"next_cursor,omitempty"`
 }
 
 // CheckAccess returns nil if the context user is admin or matches the job's

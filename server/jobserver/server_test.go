@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/auth/authn"
+	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/jobs"
 	localjobs "github.com/interline-io/transitland-lib/server/jobs/local"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -56,7 +57,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *localjobs.LocalBackend, *jo
 	if err := runner.Register(func() jobs.Worker { return &echoWorker{kind: "test"} }); err != nil {
 		t.Fatal(err)
 	}
-	cfg := model.Config{Jobs: backend, JobRunner: runner}
+	cfg := model.Config{Jobs: backend, JobRunner: runner, Checker: &authz.AllowAllChecker{}}
 	h, err := NewServer()
 	if err != nil {
 		t.Fatal(err)

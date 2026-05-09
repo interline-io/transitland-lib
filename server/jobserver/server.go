@@ -164,11 +164,10 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	if !ok {
 		return
 	}
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
+	// http.ResponseController unwraps middleware-wrapped writers (compression,
+	// logging, otel) to find the underlying Flusher. Direct w.(http.Flusher)
+	// fails as soon as anything in the chain wraps the writer.
+	rc := http.NewResponseController(w)
 	ctx := req.Context()
 	ch, err := sq.Watch(ctx, chi.URLParam(req, "jobId"))
 	if err != nil {
@@ -181,7 +180,11 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	h.Set("Connection", "keep-alive")
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
+	// rc.Flush may fail if a middleware in the chain wraps the writer without
+	// implementing Unwrap. We still emit the body — the client gets the
+	// terminal event when the connection closes; only mid-stream keepalives
+	// and partial-progress events are degraded.
+	_ = rc.Flush()
 	// Heartbeat keeps intermediate proxies (nginx, ELBs) from closing an idle
 	// stream when the job sits in queued/running for a while.
 	heartbeat := time.NewTicker(sseHeartbeatInterval)
@@ -192,11 +195,11 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 			return
 		case <-heartbeat.C:
 			fmt.Fprint(w, ": keepalive\n\n")
-			flusher.Flush()
+			_ = rc.Flush()
 		case ev, open := <-ch:
 			if !open {
 				fmt.Fprint(w, "event: end\ndata: {}\n\n")
-				flusher.Flush()
+				_ = rc.Flush()
 				return
 			}
 			b, err := json.Marshal(ev)
@@ -204,7 +207,7 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 			fmt.Fprintf(w, "data: %s\n\n", b)
-			flusher.Flush()
+			_ = rc.Flush()
 		}
 	}
 }

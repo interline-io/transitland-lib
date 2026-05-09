@@ -61,6 +61,11 @@ func userCtx(id string) context.Context {
 
 func uniqueQueueName(t testing.TB) string {
 	tName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-"))
+	// River caps queue names at 64 chars, and adapters often prefix theirs
+	// (e.g. "test-"). Cap the test-name portion so the suffix and prefix fit.
+	if len(tName) > 28 {
+		tName = tName[:28]
+	}
 	return fmt.Sprintf("%s-%d-%d", tName, os.Getpid(), time.Now().UnixNano())
 }
 
