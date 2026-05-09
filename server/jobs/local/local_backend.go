@@ -45,6 +45,7 @@ const (
 type LocalBackend struct {
 	runner  *jobs.Runner
 	queues  map[string]*localQueue
+	startMu sync.Mutex
 	started bool
 	cancel  context.CancelFunc
 }
@@ -81,11 +82,15 @@ func (b *LocalBackend) Queue(name string) jobs.Queue {
 // Run starts every queue's worker pool and eviction loop, then blocks until
 // Stop is called (or the parent ctx is cancelled).
 func (b *LocalBackend) Run(ctx context.Context) error {
+	b.startMu.Lock()
 	if b.started {
+		b.startMu.Unlock()
 		return errors.New("already running")
 	}
 	b.started = true
 	ctx, b.cancel = context.WithCancel(ctx)
+	b.startMu.Unlock()
+
 	var wg sync.WaitGroup
 	for _, q := range b.queues {
 		q := q
@@ -104,11 +109,15 @@ func (b *LocalBackend) Run(ctx context.Context) error {
 }
 
 func (b *LocalBackend) Stop(ctx context.Context) error {
+	b.startMu.Lock()
 	if !b.started {
+		b.startMu.Unlock()
 		return errors.New("not running")
 	}
-	b.cancel()
+	cancel := b.cancel
 	b.started = false
+	b.startMu.Unlock()
+	cancel()
 	return nil
 }
 
@@ -120,7 +129,11 @@ type localQueue struct {
 	terminalTTL time.Duration
 	runner      *jobs.Runner
 
-	jobs    chan jobs.Job
+	jobs chan jobs.Job
+	// done is closed by shutdown to signal Submit/workers/periodics. The
+	// channel q.jobs is left open intentionally — closing it would race with
+	// in-flight Submit sends. Workers exit by selecting on q.done instead.
+	done    chan struct{}
 	closeMu sync.Mutex
 	closed  bool
 
@@ -160,6 +173,7 @@ func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner) *localQueue
 		terminalTTL: ttl,
 		runner:      runner,
 		jobs:        make(chan jobs.Job, 1000),
+		done:        make(chan struct{}),
 		uniqueJobs:  map[string]time.Time{},
 		registry:    map[string]*jobEntry{},
 		periodics:   map[string]context.CancelFunc{},
@@ -174,8 +188,15 @@ func (q *localQueue) run(ctx context.Context) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for job := range q.jobs {
-				_, _ = q.execute(ctx, job)
+			for {
+				select {
+				case <-q.done:
+					return
+				case <-ctx.Done():
+					return
+				case job := <-q.jobs:
+					_, _ = q.execute(ctx, job)
+				}
 			}
 		}()
 	}
@@ -196,16 +217,16 @@ func (q *localQueue) shutdown() {
 		return
 	}
 	q.closed = true
-	close(q.jobs)
+	close(q.done)
 }
 
 func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
-	q.closeMu.Lock()
-	if q.closed {
-		q.closeMu.Unlock()
+	// Best-effort early-out; the real shutdown guard is the select below.
+	select {
+	case <-q.done:
 		return jobs.JobStatus{}, errors.New("closed")
+	default:
 	}
-	q.closeMu.Unlock()
 	job.ID = uuid.NewString()
 	if job.Unique {
 		key, err := job.HexKey()
@@ -229,8 +250,34 @@ func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 		log.Trace().Interface("job", job).Msgf("locked: %s", key)
 	}
 	status := q.registerJob(job)
-	q.jobs <- job
-	return status, nil
+	select {
+	case q.jobs <- job:
+		return status, nil
+	case <-q.done:
+		q.cleanupFailedSubmit(job)
+		return jobs.JobStatus{}, errors.New("closed")
+	case <-ctx.Done():
+		q.cleanupFailedSubmit(job)
+		return jobs.JobStatus{}, ctx.Err()
+	}
+}
+
+// cleanupFailedSubmit reverses the registry + unique-lock state set up by a
+// Submit that failed to enqueue (shutdown or caller cancellation). Window>0
+// unique entries are left to expire naturally; window=0 entries are released
+// since no execute will run to release them.
+func (q *localQueue) cleanupFailedSubmit(job jobs.Job) {
+	q.registryMu.Lock()
+	delete(q.registry, job.ID)
+	q.registryMu.Unlock()
+	if job.Unique && job.UniqueWindow == 0 {
+		key, err := job.HexKey()
+		if err == nil {
+			q.uniqueMu.Lock()
+			delete(q.uniqueJobs, key)
+			q.uniqueMu.Unlock()
+		}
+	}
 }
 
 func (q *localQueue) SubmitMany(ctx context.Context, in []jobs.Job) ([]jobs.JobStatus, error) {
@@ -552,6 +599,16 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 func (q *localQueue) AddPeriodic(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
 	id := uuid.NewString()
 	pctx, cancel := context.WithCancel(ctx)
+	// Tie the periodic to backend shutdown as well as the caller's ctx.
+	// Without this, a periodic outlives Backend.Stop and keeps trying to
+	// Submit (which would now return errors, but the wakeups are still waste).
+	go func() {
+		select {
+		case <-q.done:
+			cancel()
+		case <-pctx.Done():
+		}
+	}()
 	if cronTab != "" {
 		schedule, err := cron.ParseStandard(cronTab)
 		if err != nil {
