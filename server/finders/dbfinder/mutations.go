@@ -358,11 +358,10 @@ func checkFeedEdit(ctx context.Context, fvid int) error {
 		return errors.New("invalid feed version id")
 	}
 	cfg := model.ForContext(ctx)
-	checker := cfg.Checker
-	if checker == nil {
-		return nil
+	if cfg.Checker == nil {
+		return authz.ErrUnauthorized
 	}
-	ok, err := checker.Check(ctx, authz.ObjectRef{Type: authz.FeedVersionType, ID: int64(fvid)}, authz.CanEdit)
+	ok, err := cfg.Checker.Check(ctx, authz.ObjectRef{Type: authz.FeedVersionType, ID: int64(fvid)}, authz.CanEdit)
 	if err != nil {
 		return err
 	}

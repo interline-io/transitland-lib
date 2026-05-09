@@ -127,10 +127,10 @@ func refsToInts(refs []authz.ObjectRef) []int {
 }
 
 func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
-	active := &PermFilter{}
 	if checker == nil {
-		return active, nil
+		panic("model.checkActive: Checker must be non-nil; install authz.DenyAllChecker for the deny-all default")
 	}
+	active := &PermFilter{}
 
 	if ok, err := checker.IsGlobalAdmin(ctx); err != nil {
 		return nil, err

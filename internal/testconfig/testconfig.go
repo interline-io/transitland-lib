@@ -36,6 +36,9 @@ type Options struct {
 	FGAEndpoint    string
 	FGAModelFile   string
 	FGAModelTuples []authz.TupleKey
+	// AllowAll installs an AllowAllChecker. Required for tests that exercise
+	// mutations. Ignored when FGAEndpoint is set.
+	AllowAll bool
 }
 
 func Config(t testing.TB, opts Options) model.Config {
@@ -97,8 +100,12 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	}
 	cl := &clock.Mock{T: when}
 
-	// Setup Checker
-	var checker model.Checker
+	// model.Config requires a non-nil Checker. Default to deny-all; tests that
+	// exercise mutations must opt in via Options.AllowAll.
+	var checker model.Checker = &authz.DenyAllChecker{}
+	if opts.AllowAll {
+		checker = &authz.AllowAllChecker{}
+	}
 	if opts.FGAEndpoint != "" {
 		fgaClient, fgaErr := fga.NewFGAClient(opts.FGAEndpoint, "", "")
 		if fgaErr != nil {

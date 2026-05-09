@@ -36,6 +36,7 @@ func TestWriterExtraColumn(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	defer os.RemoveAll(tmpdir)
 	writer, err := NewWriter(tmpdir)
 	writer.WriteExtraColumns(true)
 	if err != nil {

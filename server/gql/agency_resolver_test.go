@@ -21,7 +21,7 @@ func TestAgencyResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { agencies {agency_id}}`,
 			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", ""},
+			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", "", "1"},
 		},
 		{
 			name:   "basic fields",
@@ -93,7 +93,7 @@ func TestAgencyResolver(t *testing.T) {
 			query:        `query { agencies(where:{adm0_iso: "US"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
 			vars:         vars,
 			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit"},
+			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"},
 		},
 		{
 			name:         "places iso3166 state",
@@ -363,7 +363,7 @@ func TestAgencyResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
 			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"CT", "BA", "HA", "ctran-flex"},
+			selectExpect: []string{"CT", "BA", "HA", "WMATA", "ctran-flex"},
 		},
 		{
 			name: "focus basic: East coast focus returns FL agency before CA agencies",
@@ -375,7 +375,7 @@ func TestAgencyResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
 			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"HA", "BA", "CT", "ctran-flex"},
+			selectExpect: []string{"HA", "WMATA", "BA", "CT", "ctran-flex"},
 		},
 		{
 			name: "focus with pagination: maintains ordering",
@@ -388,7 +388,7 @@ func TestAgencyResolver_Location(t *testing.T) {
 			}`,
 			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testAgencyID},
 			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"HA"},
+			selectExpect: []string{"HA", "WMATA"},
 		},
 	}
 	queryTestcases(t, c, testcases)
@@ -420,8 +420,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: share_alike_optional = no",
@@ -436,8 +436,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  3,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: create_derived_product
 		{
@@ -445,8 +445,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: create_derived_product = no",
@@ -461,8 +461,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  3,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: commercial_use_allowed
 		{
@@ -470,8 +470,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = no",
@@ -486,8 +486,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  3,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: redistribution_allowed
 		{
@@ -495,8 +495,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: redistribution_allowed = no",
@@ -511,8 +511,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  3,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: use_without_attribution
 		{
@@ -520,8 +520,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: use_without_attribution = no",
@@ -536,8 +536,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "ctran-flex"},
-			selectExpectCount:  3,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 	}
 	c, _ := newTestClient(t)

@@ -61,11 +61,8 @@ models:
     model: 
       - "github.com/interline-io/transitland-lib/tt.Float"
   Bool:
-    model: 
+    model:
       - "github.com/interline-io/transitland-lib/tt.Bool"
-  Key:
-    model: 
-      - "github.com/interline-io/transitland-lib/tt.Key"
   Strings:
     model: 
       - "github.com/interline-io/transitland-lib/tt.Strings"

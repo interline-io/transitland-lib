@@ -10,7 +10,7 @@ import (
 
 // Stop stops.txt
 type Stop struct {
-	StopID             tt.String `csv:",required" required:"true"`
+	StopID             tt.String `csv:",required" required:"true" standardized_sort:"1"`
 	StopName           tt.String
 	StopCode           tt.String
 	StopDesc           tt.String

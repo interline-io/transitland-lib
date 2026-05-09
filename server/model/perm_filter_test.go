@@ -332,31 +332,13 @@ func TestWithPerms(t *testing.T) {
 		}
 	})
 
-	t.Run("nil checker - returns empty filter", func(t *testing.T) {
-		ctx := context.Background()
-		ctx = WithPerms(ctx, nil)
-
-		pf := PermsForContext(ctx)
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 || len(pf.AllowedFeedVersions) != 0 {
-			t.Error("expected empty PermFilter")
-		}
-	})
-
-	t.Run("nil checker with existing filter - merges empty", func(t *testing.T) {
-		ctx := context.Background()
-		existing := &PermFilter{AllowedFeeds: []int{1, 2}, AllowedFeedVersions: []int{10}}
-		ctx = WithPermFilter(ctx, existing)
-
-		ctx = WithPerms(ctx, nil)
-
-		pf := PermsForContext(ctx)
-		// Should merge existing with empty checker result
-		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
-			t.Errorf("expected feeds [1, 2], got %v", pf.AllowedFeeds)
-		}
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
+		WithPerms(context.Background(), nil)
 	})
 
 	t.Run("existing admin + non-admin checker preserves admin", func(t *testing.T) {
@@ -403,18 +385,13 @@ func TestWithPerms_ThreadSafety(t *testing.T) {
 }
 
 func TestCheckActive(t *testing.T) {
-	t.Run("nil checker returns empty filter", func(t *testing.T) {
-		ctx := context.Background()
-		pf, err := checkActive(ctx, nil)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 {
-			t.Error("expected empty AllowedFeeds")
-		}
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
+		_, _ = checkActive(context.Background(), nil)
 	})
 
 	t.Run("checker returns feeds and versions", func(t *testing.T) {
