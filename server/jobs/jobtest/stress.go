@@ -40,6 +40,10 @@ type StressOpts struct {
 	Timeout time.Duration
 }
 
+// Defaults are conservative — sized so any backend (including slow
+// remote-dispatch ones like Argo) can run the suite in reasonable time.
+// In-memory backends should override upward in their test wiring; durable
+// backends with low pickup throughput may need to override downward.
 func (o *StressOpts) defaults() {
 	if o.SubmitN == 0 {
 		o.SubmitN = 1000

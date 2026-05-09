@@ -172,7 +172,11 @@ func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner) *localQueue
 		workers:     workers,
 		terminalTTL: ttl,
 		runner:      runner,
-		jobs:        make(chan jobs.Job, 1000),
+		// 100k slots is a pragmatic dev-backend buffer: large enough that
+		// worker-spawns-children patterns don't deadlock with the worker pool
+		// blocked on a full channel. A truly correct solution would be an
+		// unbounded slice+cond queue; this is good enough for development.
+		jobs: make(chan jobs.Job, 100_000),
 		done:        make(chan struct{}),
 		uniqueJobs:  map[string]time.Time{},
 		registry:    map[string]*jobEntry{},
