@@ -6,13 +6,10 @@ import (
 	"errors"
 )
 
-// Runner is the process-local execution engine: a registry of Worker
-// constructors plus a stack of Middleware that wraps each run. Backends own
-// the queue/wire protocol; they delegate the actual job execution to a
-// Runner. One Runner per process is typical — shared by every Backend that
-// runs jobs in-process and by the synchronous /run endpoint. Submit-only
-// backends (e.g. an Argo adapter that ships work to pods) don't need a
-// Runner; the pods that execute the work import the same Runner code.
+// Runner is the process-local execution engine: Worker registry + Middleware
+// stack. Backends own the wire protocol and delegate execution here. The same
+// Runner code is reused by remote-dispatch backends (e.g. Argo) whose pods
+// import this package and call Run.
 type Runner struct {
 	fns         map[string]WorkerFn
 	middlewares []Middleware
@@ -35,15 +32,18 @@ func (r *Runner) Use(mw Middleware) {
 	r.middlewares = append(r.middlewares, mw)
 }
 
-// Worker constructs a Worker for the given Kind+Args. Backends that need to
-// apply additional per-execution wrapping (e.g. wire-format-specific
-// instrumentation) can call this directly; most callers should use Run.
+// Worker constructs a fresh Worker for the given Kind+Args. Most callers
+// want Run; this is exposed for backends that need to apply per-execution
+// wrapping before invoking Run.
 func (r *Runner) Worker(kind string, args Args) (Worker, error) {
 	fn, ok := r.fns[kind]
 	if !ok {
 		return nil, errors.New("unknown job kind: " + kind)
 	}
 	w := fn()
+	if len(args) == 0 {
+		return w, nil
+	}
 	blob, err := json.Marshal(args)
 	if err != nil {
 		return nil, err
@@ -54,9 +54,6 @@ func (r *Runner) Worker(kind string, args Args) (Worker, error) {
 	return w, nil
 }
 
-// Run resolves the job's Worker, applies registered middlewares in order,
-// and invokes Run. Backends call this from their worker pool; the /run
-// endpoint calls it directly for synchronous execution.
 func (r *Runner) Run(ctx context.Context, job Job) error {
 	w, err := r.Worker(job.Kind, job.Args)
 	if err != nil {

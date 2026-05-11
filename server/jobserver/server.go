@@ -38,8 +38,8 @@ func NewServer() (http.Handler, error) {
 	return r, nil
 }
 
-// runJobRequest runs the posted job synchronously via Runner. No queue, no
-// tracking; the response is a synthesized terminal JobStatus.
+// runJobRequest runs the posted job synchronously via Runner — no queue, no
+// tracking. The response is a synthesized terminal JobStatus.
 func runJobRequest(w http.ResponseWriter, req *http.Request) {
 	cfg := model.ForContext(req.Context())
 	if cfg.JobRunner == nil {
@@ -95,6 +95,15 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, status)
 }
 
+// Query parameter names accepted by listJobsRequest.
+const (
+	queryUserID = "user_id"
+	queryKind   = "kind"
+	queryAfter  = "after"
+	queryStates = "states"
+	queryLimit  = "limit"
+)
+
 func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	sq, ok := requireStatusQueue(w, req)
 	if !ok {
@@ -102,18 +111,18 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	}
 	q := req.URL.Query()
 	opts := jobs.ListOptions{
-		UserID: q.Get("user_id"),
-		Kind:   q.Get("kind"),
-		After:  q.Get("after"),
+		UserID: q.Get(queryUserID),
+		Kind:   q.Get(queryKind),
+		After:  q.Get(queryAfter),
 	}
-	if v := q.Get("states"); v != "" {
+	if v := q.Get(queryStates); v != "" {
 		for _, s := range strings.Split(v, ",") {
 			if s = strings.TrimSpace(s); s != "" {
 				opts.States = append(opts.States, jobs.JobState(s))
 			}
 		}
 	}
-	if v := q.Get("limit"); v != "" {
+	if v := q.Get(queryLimit); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
 			http.Error(w, "invalid limit", http.StatusBadRequest)
@@ -129,8 +138,8 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, result)
 }
 
-// statusJobRequest returns the JobStatus for a single job.
-// Returns 404 if the job is not visible to the caller (whether absent or not theirs).
+// statusJobRequest returns 404 when the job is not visible to the caller,
+// regardless of whether it's absent or just not theirs.
 func statusJobRequest(w http.ResponseWriter, req *http.Request) {
 	sq, ok := requireStatusQueue(w, req)
 	if !ok {
@@ -156,17 +165,15 @@ func cancelJobRequest(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// watchJobRequest streams JobEvents over Server-Sent Events. The stream
-// closes after a terminal event (with a final "event: end" sentinel) or
-// when the client disconnects.
+// watchJobRequest streams JobEvents as SSE. Closes on terminal (with an
+// "event: end" sentinel) or client disconnect.
 func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	sq, ok := requireStatusQueue(w, req)
 	if !ok {
 		return
 	}
-	// http.ResponseController unwraps middleware-wrapped writers (compression,
-	// logging, otel) to find the underlying Flusher. Direct w.(http.Flusher)
-	// fails as soon as anything in the chain wraps the writer.
+	// http.ResponseController navigates middleware-wrapped writers to find
+	// Flusher; bare w.(http.Flusher) breaks the moment anything wraps w.
 	rc := http.NewResponseController(w)
 	ctx := req.Context()
 	ch, err := sq.Watch(ctx, chi.URLParam(req, "jobId"))
@@ -180,13 +187,10 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	h.Set("Connection", "keep-alive")
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
-	// rc.Flush may fail if a middleware in the chain wraps the writer without
-	// implementing Unwrap. We still emit the body — the client gets the
-	// terminal event when the connection closes; only mid-stream keepalives
-	// and partial-progress events are degraded.
+	// Flush fails when a middleware wraps without Unwrap; emit anyway so the
+	// client at least sees the terminal event when the connection closes.
 	_ = rc.Flush()
-	// Heartbeat keeps intermediate proxies (nginx, ELBs) from closing an idle
-	// stream when the job sits in queued/running for a while.
+	// Heartbeat keeps proxies (nginx, ELBs) from closing the idle stream.
 	heartbeat := time.NewTicker(sseHeartbeatInterval)
 	defer heartbeat.Stop()
 	for {
@@ -194,11 +198,13 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			fmt.Fprint(w, ": keepalive\n\n")
+			if _, err := fmt.Fprint(w, ": keepalive\n\n"); err != nil {
+				return
+			}
 			_ = rc.Flush()
 		case ev, open := <-ch:
 			if !open {
-				fmt.Fprint(w, "event: end\ndata: {}\n\n")
+				_, _ = fmt.Fprint(w, "event: end\ndata: {}\n\n")
 				_ = rc.Flush()
 				return
 			}
@@ -206,7 +212,9 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				return
 			}
-			fmt.Fprintf(w, "data: %s\n\n", b)
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", b); err != nil {
+				return
+			}
 			_ = rc.Flush()
 		}
 	}
@@ -214,8 +222,6 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 
 const sseHeartbeatInterval = 30 * time.Second
 
-// requireQueue resolves the named queue and confirms auth. On failure it
-// writes the response and returns ok=false.
 func requireQueue(w http.ResponseWriter, req *http.Request) (jobs.Queue, bool) {
 	cfg := model.ForContext(req.Context())
 	if cfg.Jobs == nil {
@@ -234,8 +240,6 @@ func requireQueue(w http.ResponseWriter, req *http.Request) (jobs.Queue, bool) {
 	return q, true
 }
 
-// requireStatusQueue additionally type-asserts StatusQueue; the lifecycle
-// endpoints can't run on queues that don't track jobs.
 func requireStatusQueue(w http.ResponseWriter, req *http.Request) (jobs.StatusQueue, bool) {
 	q, ok := requireQueue(w, req)
 	if !ok {
@@ -263,9 +267,8 @@ func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 	job.UserID = user.ID()
 }
 
-// mapJobLookupError translates queue lookup errors to HTTP. ErrJobAccessDenied
-// from the queue means the caller is authenticated but not the owner; we
-// return 404 to avoid leaking that the job ID exists.
+// mapJobLookupError returns 404 for both ErrJobNotFound and ErrJobAccessDenied
+// so an authenticated-but-not-owner caller can't probe ID existence.
 func mapJobLookupError(w http.ResponseWriter, err error) {
 	if errors.Is(err, jobs.ErrJobNotFound) || errors.Is(err, jobs.ErrJobAccessDenied) {
 		http.Error(w, "not found", http.StatusNotFound)

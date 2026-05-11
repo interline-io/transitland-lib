@@ -40,10 +40,9 @@ type StressOpts struct {
 	Timeout time.Duration
 }
 
-// Defaults are conservative — sized so any backend (including slow
-// remote-dispatch ones like Argo) can run the suite in reasonable time.
-// In-memory backends should override upward in their test wiring; durable
-// backends with low pickup throughput may need to override downward.
+// Defaults are conservative so any backend can run the suite. In-memory
+// backends should override upward; slow remote-dispatch ones may need to
+// override downward.
 func (o *StressOpts) defaults() {
 	if o.SubmitN == 0 {
 		o.SubmitN = 1000
@@ -80,14 +79,10 @@ func (o *StressOpts) defaults() {
 	}
 }
 
-// StressBackend is an opt-in heavy-load conformance suite. Set JOBSTRESS=1 to
-// run; otherwise skips. Tunable via StressOpts (zero = defaults). Skips
-// scenarios that depend on capabilities the queue doesn't implement
-// (StatusQueue for cancel/watch, etc.).
-//
-// Backends that aren't durable (LocalBackend) sweep terminal entries on a
-// background timer; pass TerminalTTL: -1 in queue opts so the harness can
-// poll Status across a long run without seeing entries evicted.
+// StressBackend is an opt-in heavy-load conformance suite. Skipped unless
+// JOBSTRESS=1. Sub-tests that need StatusQueue self-skip on backends without
+// it (e.g. Redis). LocalBackend callers should set TerminalTTL: -1 so the
+// per-job poll loop doesn't race the sweeper.
 func StressBackend(t *testing.T, newSetup func(string) TestSetup, opts StressOpts) {
 	if os.Getenv("JOBSTRESS") == "" {
 		t.Skip("set JOBSTRESS=1 to run")
@@ -101,8 +96,7 @@ func StressBackend(t *testing.T, newSetup func(string) TestSetup, opts StressOpt
 	t.Run("unique-contention", func(t *testing.T) { stressUnique(t, newSetup, opts) })
 }
 
-// counterWorker increments a shared atomic when it runs. Used by throughput
-// and unique-contention scenarios.
+// counterWorker increments a shared atomic when it runs.
 type counterWorker struct {
 	N int64 `json:"n"`
 
@@ -129,8 +123,8 @@ func (w *counterWorker) Run(ctx context.Context) error {
 	return nil
 }
 
-// spawnerWorker enqueues Children copies of itself with Depth-1, until
-// Depth reaches 0. Used to exercise jobs-spawning-jobs.
+// spawnerWorker recursively submits Children copies of itself with Depth-1,
+// stopping at 0. Exercises jobs-spawning-jobs.
 type spawnerWorker struct {
 	Depth    int    `json:"depth"`
 	Children int    `json:"children"`
@@ -176,9 +170,8 @@ func stressThroughput(t *testing.T, newSetup func(string) TestSetup, opts Stress
 	q := setup.Queue()
 	ctx := adminCtx()
 
-	runCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = setup.Backend.Run(runCtx) }()
+	stop := startBackend(setup)
+	defer stop()
 
 	start := time.Now()
 	var wg sync.WaitGroup
@@ -204,7 +197,6 @@ func stressThroughput(t *testing.T, newSetup func(string) TestSetup, opts Stress
 		t.Fatalf("throughput: only %d/%d ran after %s", atomic.LoadInt64(&count), expected, opts.Timeout)
 	}
 	totalDur := time.Since(start)
-	_ = setup.Backend.Stop(runCtx)
 
 	t.Logf("throughput: %d submits in %s (%.0f/s); %d completions in %s (%.0f/s)",
 		expected, submitDur, float64(expected)/submitDur.Seconds(),
@@ -222,9 +214,8 @@ func stressFanout(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 		return &spawnerWorker{kind: kind, queue: q, ran: &ran, failed: &failed}
 	}))
 
-	runCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = setup.Backend.Run(runCtx) }()
+	stop := startBackend(setup)
+	defer stop()
 
 	start := time.Now()
 	for i := 0; i < opts.FanoutSeeds; i++ {
@@ -248,7 +239,6 @@ func stressFanout(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 			atomic.LoadInt64(&ran), expected, opts.Timeout, atomic.LoadInt64(&failed))
 	}
 	dur := time.Since(start)
-	_ = setup.Backend.Stop(runCtx)
 
 	t.Logf("fanout: %d seeds × tree(c=%d,d=%d)=%d → %d ran in %s (%.0f/s); %d submit-failures",
 		opts.FanoutSeeds, opts.FanoutChildren, opts.FanoutDepth, expectedPerSeed,
@@ -271,9 +261,8 @@ func stressCancel(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 		return &counterWorker{kind: kind, count: &ran, durMin: opts.CancelSleep, durMax: opts.CancelSleep}
 	}))
 
-	runCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = setup.Backend.Run(runCtx) }()
+	stop := startBackend(setup)
+	defer stop()
 
 	ids := make([]string, 0, opts.CancelN)
 	for i := 0; i < opts.CancelN; i++ {
@@ -326,7 +315,6 @@ func stressCancel(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 			other++
 		}
 	}
-	_ = setup.Backend.Stop(runCtx)
 
 	t.Logf("cancel: %d submitted, %d cancel calls; cancelled=%d succeeded=%d failed=%d other=%d ran-counter=%d",
 		opts.CancelN, cancelTarget, cancelled, succeeded, failed, other, atomic.LoadInt64(&ran))
@@ -350,9 +338,8 @@ func stressWatchers(t *testing.T, newSetup func(string) TestSetup, opts StressOp
 		return &counterWorker{kind: kind, count: &ran, durMin: 50 * time.Millisecond, durMax: 50 * time.Millisecond}
 	}))
 
-	runCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = setup.Backend.Run(runCtx) }()
+	stop := startBackend(setup)
+	defer stop()
 
 	ids := make([]string, 0, opts.WatchJobs)
 	for i := 0; i < opts.WatchJobs; i++ {
@@ -388,7 +375,6 @@ func stressWatchers(t *testing.T, newSetup func(string) TestSetup, opts StressOp
 		t.Fatalf("watch: only %d/%d watchers closed after %s",
 			atomic.LoadInt64(&closed), opts.WatchJobs*opts.WatchersPerJob, opts.Timeout)
 	}
-	_ = setup.Backend.Stop(runCtx)
 
 	t.Logf("watch: %d jobs × %d watchers = %d closed cleanly",
 		opts.WatchJobs, opts.WatchersPerJob, atomic.LoadInt64(&closed))
@@ -405,9 +391,8 @@ func stressUnique(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 		return &counterWorker{kind: kind, count: &ran, durMin: 100 * time.Millisecond, durMax: 100 * time.Millisecond}
 	}))
 
-	runCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = setup.Backend.Run(runCtx) }()
+	stop := startBackend(setup)
+	defer stop()
 
 	// Race many goroutines submitting the same Unique job.
 	mark := strconv.FormatInt(time.Now().UnixNano(), 36)
@@ -435,7 +420,6 @@ func stressUnique(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 	}
 	// Give a small grace window for any duplicate to slip through.
 	time.Sleep(200 * time.Millisecond)
-	_ = setup.Backend.Stop(runCtx)
 
 	got := atomic.LoadInt64(&ran)
 	t.Logf("unique: %d submit attempts (%d returned ok), %d actually ran",

@@ -8,9 +8,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// NewRunLogger returns a Middleware that logs each job's start, error, and
-// completion (with elapsed time) under a per-job logger keyed by Kind/Args.
-// Register on a Runner via Use.
+// NewRunLogger logs job start/error/completion under a per-job logger keyed
+// by Kind/Args. Register on a Runner via Use.
 func NewRunLogger(logger zerolog.Logger) Middleware {
 	return func(w Worker, j Job) Worker {
 		return &runLogger{log: logger, job: j, Worker: w}
@@ -32,6 +31,6 @@ func (w *runLogger) Run(ctx context.Context) error {
 		ctxLog.Error().Err(err).Msg("job: error")
 		return err
 	}
-	ctxLog.Info().Int64("job_time_ms", (time.Now().UnixNano()-t1.UnixNano())/1e6).Msg("job: completed")
+	ctxLog.Info().Int64("job_time_ms", time.Since(t1).Milliseconds()).Msg("job: completed")
 	return nil
 }

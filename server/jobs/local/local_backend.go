@@ -16,14 +16,11 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// QueueOpts is per-queue configuration handed to NewLocalBackend.
 type QueueOpts struct {
-	// Workers is the number of goroutines draining the queue. Defaults to 1
-	// if zero or negative.
+	// Workers is the number of goroutines draining the queue. Defaults to 1.
 	Workers int
-	// TerminalTTL controls how long terminal-state job entries are retained
-	// before being evicted from the in-memory registry. Zero = default (1h).
-	// Negative = eviction disabled (useful for tests).
+	// TerminalTTL retains terminal-state entries this long before eviction.
+	// Zero = default (1h). Negative = eviction disabled (for tests).
 	TerminalTTL time.Duration
 }
 
@@ -31,17 +28,13 @@ const (
 	defaultListLimit   = 100
 	defaultTerminalTTL = 1 * time.Hour
 	sweepInterval      = 1 * time.Minute
-	// watchBufferSize is overprovisioned so the small number of events a
-	// single job emits (queued -> running -> terminal) never fills the
-	// channel and forces a non-blocking drop. LocalBackend is a development
-	// adapter; corner cases where this overflows are documented on Watch's
-	// contract — only Status is authoritative.
+	// Overprovisioned so the few events a job emits never fill the channel and
+	// force a non-blocking drop. Watch's contract documents the overflow case.
 	watchBufferSize = 256
 )
 
 // LocalBackend is a development backend that runs jobs in-process via
-// goroutine pools. Each declared queue gets its own pool, registry, and
-// dedup map. All queues share the supplied Runner.
+// per-queue goroutine pools sharing one Runner.
 type LocalBackend struct {
 	runner  *jobs.Runner
 	queues  map[string]*localQueue
@@ -57,8 +50,6 @@ func init() {
 	var _ jobs.PeriodicQueue = &localQueue{}
 }
 
-// NewLocalBackend constructs a LocalBackend hosting the named queues. Each
-// queue's worker pool is sized by QueueOpts.Workers.
 func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts) *LocalBackend {
 	b := &LocalBackend{
 		runner: runner,
@@ -70,7 +61,6 @@ func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts) *LocalBac
 	return b
 }
 
-// Queue returns the per-queue handle for name, or nil if not declared.
 func (b *LocalBackend) Queue(name string) jobs.Queue {
 	q, ok := b.queues[name]
 	if !ok {
@@ -79,8 +69,6 @@ func (b *LocalBackend) Queue(name string) jobs.Queue {
 	return q
 }
 
-// Run starts every queue's worker pool and eviction loop, then blocks until
-// Stop is called (or the parent ctx is cancelled).
 func (b *LocalBackend) Run(ctx context.Context) error {
 	b.startMu.Lock()
 	if b.started {
@@ -130,12 +118,10 @@ type localQueue struct {
 	runner      *jobs.Runner
 
 	jobs chan jobs.Job
-	// done is closed by shutdown to signal Submit/workers/periodics. The
-	// channel q.jobs is left open intentionally — closing it would race with
-	// in-flight Submit sends. Workers exit by selecting on q.done instead.
-	done    chan struct{}
-	closeMu sync.Mutex
-	closed  bool
+	// done signals shutdown to Submit/workers/periodics. q.jobs is left open —
+	// closing it would race with in-flight Submit sends.
+	done     chan struct{}
+	doneOnce sync.Once
 
 	uniqueMu   sync.Mutex
 	uniqueJobs map[string]time.Time
@@ -172,10 +158,8 @@ func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner) *localQueue
 		workers:     workers,
 		terminalTTL: ttl,
 		runner:      runner,
-		// 100k slots is a pragmatic dev-backend buffer: large enough that
-		// worker-spawns-children patterns don't deadlock with the worker pool
-		// blocked on a full channel. A truly correct solution would be an
-		// unbounded slice+cond queue; this is good enough for development.
+		// Large buffer so worker-spawns-children patterns don't deadlock with
+		// the pool blocked on a full channel. Proper fix is an unbounded queue.
 		jobs: make(chan jobs.Job, 100_000),
 		done:        make(chan struct{}),
 		uniqueJobs:  map[string]time.Time{},
@@ -184,8 +168,6 @@ func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner) *localQueue
 	}
 }
 
-// run drains the queue with `workers` goroutines and sweeps terminal entries
-// + expired unique locks until ctx is cancelled.
 func (q *localQueue) run(ctx context.Context) {
 	var wg sync.WaitGroup
 	for i := 0; i < q.workers; i++ {
@@ -215,13 +197,7 @@ func (q *localQueue) run(ctx context.Context) {
 }
 
 func (q *localQueue) shutdown() {
-	q.closeMu.Lock()
-	defer q.closeMu.Unlock()
-	if q.closed {
-		return
-	}
-	q.closed = true
-	close(q.done)
+	q.doneOnce.Do(func() { close(q.done) })
 }
 
 func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
@@ -240,18 +216,15 @@ func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 		q.uniqueMu.Lock()
 		if expiresAt, ok := q.uniqueJobs[key]; ok && (expiresAt.IsZero() || time.Now().Before(expiresAt)) {
 			q.uniqueMu.Unlock()
-			log.Trace().Interface("job", job).Msgf("already locked: %s", key)
 			q.registerJob(job)
 			return q.updateStatus(job.ID, jobs.JobStateCancelled, "duplicate"), nil
 		}
-		// Either no entry, or the entry's window expired — claim the slot.
 		var expiresAt time.Time
 		if job.UniqueWindow > 0 {
 			expiresAt = time.Now().Add(job.UniqueWindow)
 		}
 		q.uniqueJobs[key] = expiresAt
 		q.uniqueMu.Unlock()
-		log.Trace().Interface("job", job).Msgf("locked: %s", key)
 	}
 	status := q.registerJob(job)
 	select {
@@ -266,10 +239,8 @@ func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 	}
 }
 
-// cleanupFailedSubmit reverses the registry + unique-lock state set up by a
-// Submit that failed to enqueue (shutdown or caller cancellation). Window>0
-// unique entries are left to expire naturally; window=0 entries are released
-// since no execute will run to release them.
+// cleanupFailedSubmit reverses registry + unique-lock state when Submit
+// fails to enqueue. Window>0 entries are left to expire naturally.
 func (q *localQueue) cleanupFailedSubmit(job jobs.Job) {
 	q.registryMu.Lock()
 	delete(q.registry, job.ID)
@@ -356,8 +327,8 @@ func (q *localQueue) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEv
 	}
 	entry.watchers = append(entry.watchers, ch)
 	entry.mu.Unlock()
-	// Drop the registration if the caller's context cancels before terminal.
-	// Both this goroutine and updateStatus take entry.mu, so we won't double-close.
+	// Both this goroutine and updateStatus serialize on entry.mu, so neither
+	// can double-close ch.
 	go q.cleanupWatcherOnCancel(ctx, entry, ch)
 	return ch, nil
 }
@@ -373,7 +344,7 @@ func (q *localQueue) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry
 			return
 		}
 	}
-	// Not found: updateStatus already broadcast and closed it on terminal.
+	// updateStatus already removed and closed it on terminal.
 }
 
 func (q *localQueue) List(ctx context.Context, opts jobs.ListOptions) (jobs.ListResult, error) {
@@ -426,8 +397,7 @@ func (q *localQueue) List(ctx context.Context, opts jobs.ListOptions) (jobs.List
 			return jobs.ListResult{}, err
 		}
 		// Keyset advance: find the first row strictly after the cursor under
-		// (SubmittedAt desc, ID asc). Robust against eviction — even if the
-		// cursor's row is gone, we still know where to resume.
+		// (SubmittedAt desc, ID asc). Robust against eviction of the cursor row.
 		cutoff := -1
 		for i, st := range snapshot {
 			ts := st.SubmittedAt.UnixNano()
@@ -456,9 +426,8 @@ func (q *localQueue) List(ctx context.Context, opts jobs.ListOptions) (jobs.List
 	return jobs.ListResult{Jobs: snapshot, NextCursor: next}, nil
 }
 
-// listCursor is the keyset payload — both fields of the sort key, so paging
-// can resume even if the cursor's underlying row was evicted. SubmittedAtNano
-// stays compact and time.Time-format-independent.
+// listCursor encodes both sort-key fields so paging resumes correctly even
+// if the cursor's underlying row was evicted.
 type listCursor struct {
 	SubmittedAtNano int64  `json:"t"`
 	ID              string `json:"i"`
@@ -466,11 +435,11 @@ type listCursor struct {
 
 func encodeCursor(st jobs.JobStatus) string {
 	b, _ := json.Marshal(listCursor{SubmittedAtNano: st.SubmittedAt.UnixNano(), ID: st.Job.ID})
-	return base64.URLEncoding.EncodeToString(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 func decodeCursor(cursor string) (listCursor, error) {
-	raw, err := base64.URLEncoding.DecodeString(cursor)
+	raw, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
 		return listCursor{}, errors.New("invalid cursor")
 	}
@@ -530,16 +499,17 @@ func (q *localQueue) updateStatus(jobId string, state jobs.JobState, errMsg stri
 		entry.status.Error = errMsg
 	}
 	evt := jobs.JobEvent{JobID: jobId, State: state, Attempt: entry.status.Attempt, Message: errMsg, Time: now}
+	terminal := state.Terminal()
 	for _, ch := range entry.watchers {
 		select {
 		case ch <- evt:
 		default:
 		}
-	}
-	if state.Terminal() {
-		for _, ch := range entry.watchers {
+		if terminal {
 			close(ch)
 		}
+	}
+	if terminal {
 		entry.watchers = nil
 	}
 	return entry.status
@@ -562,10 +532,8 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 		log.Trace().Int64("job_deadline", job.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
 		return q.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
-	// Window=0 deduplicates while a matching job is queued OR running (per
-	// the UniqueWindow contract: no concurrent runs). Release the lock when
-	// execution finishes. Window>0 entries are time-based and expire on
-	// their own.
+	// UniqueWindow=0 holds the lock through running so concurrent runs are
+	// blocked; Window>0 entries expire on their own (cron semantics).
 	if job.Unique && job.UniqueWindow == 0 {
 		key, err := job.HexKey()
 		if err != nil {
@@ -575,10 +543,9 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 			q.uniqueMu.Lock()
 			delete(q.uniqueJobs, key)
 			q.uniqueMu.Unlock()
-			log.Trace().Interface("job", job).Msgf("unlocked: %s", key)
 		}()
 	}
-	// Derive a per-run ctx that Cancel can interrupt independently of Run/Stop.
+	// Per-run ctx so Cancel can interrupt the worker independently of Stop.
 	runCtx, runCancel := context.WithCancel(ctx)
 	defer runCancel()
 	if entry != nil {
@@ -604,35 +571,37 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 }
 
 func (q *localQueue) AddPeriodic(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
+	var schedule cron.Schedule
+	if cronTab != "" {
+		s, err := cron.ParseStandard(cronTab)
+		if err != nil {
+			return "", err
+		}
+		schedule = s
+	}
 	id := uuid.NewString()
 	pctx, cancel := context.WithCancel(ctx)
-	// Tie the periodic to backend shutdown as well as the caller's ctx.
-	// Without this, a periodic outlives Backend.Stop and keeps trying to
-	// Submit (which would now return errors, but the wakeups are still waste).
+	// Cancel on backend shutdown or caller ctx, and drop the map entry on exit
+	// (otherwise caller-ctx-cancelled periodics would leak the entry).
 	go func() {
 		select {
 		case <-q.done:
 			cancel()
 		case <-pctx.Done():
 		}
+		q.periodicMu.Lock()
+		delete(q.periodics, id)
+		q.periodicMu.Unlock()
 	}()
-	if cronTab != "" {
-		schedule, err := cron.ParseStandard(cronTab)
-		if err != nil {
-			cancel()
-			return "", err
-		}
-		q.registerPeriodic(id, cancel)
-		go q.runCron(pctx, schedule, jobFunc)
-		return id, nil
-	}
 	q.registerPeriodic(id, cancel)
-	go q.runInterval(pctx, period, jobFunc)
+	if schedule != nil {
+		go q.runCron(pctx, schedule, jobFunc)
+	} else {
+		go q.runInterval(pctx, period, jobFunc)
+	}
 	return id, nil
 }
 
-// RemovePeriodic stops a previously-added schedule. Returns ErrJobNotFound
-// if the id is unknown (or already removed).
 func (q *localQueue) RemovePeriodic(ctx context.Context, id string) error {
 	q.periodicMu.Lock()
 	defer q.periodicMu.Unlock()
@@ -691,7 +660,7 @@ func (q *localQueue) sweepLoop(ctx context.Context) {
 }
 
 // sweepUniqueExpired drops UniqueWindow entries whose window has elapsed.
-// Window-zero entries (cleared by execute) are left alone.
+// Window-zero entries are released by execute itself.
 func (q *localQueue) sweepUniqueExpired(now time.Time) {
 	q.uniqueMu.Lock()
 	defer q.uniqueMu.Unlock()

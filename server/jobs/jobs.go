@@ -45,7 +45,6 @@ func (job *Job) HexKey() (string, error) {
 	return job.Kind + ":" + hex.EncodeToString(sum[:]), nil
 }
 
-// JobState describes a job's lifecycle state.
 type JobState string
 
 const (
@@ -57,7 +56,6 @@ const (
 	JobStateUnknown   JobState = "unknown"
 )
 
-// Terminal reports whether the state is final and will not transition again.
 func (s JobState) Terminal() bool {
 	return s == JobStateSucceeded || s == JobStateFailed || s == JobStateCancelled
 }
@@ -70,7 +68,6 @@ var (
 	ErrUnknownQueue       = errors.New("unknown queue")
 )
 
-// JobStatus is the lifecycle state of a submitted job.
 type JobStatus struct {
 	State       JobState   `json:"state"`
 	Job         Job        `json:"job"`
@@ -81,7 +78,6 @@ type JobStatus struct {
 	Attempt     int        `json:"attempt,omitempty"`
 }
 
-// JobEvent is emitted on a state transition or status update.
 type JobEvent struct {
 	JobID   string    `json:"job_id"`
 	State   JobState  `json:"state"`
@@ -101,7 +97,6 @@ type ListOptions struct {
 	After  string
 }
 
-// ListResult is a page of JobStatus rows plus an opaque cursor for the next page.
 type ListResult struct {
 	Jobs       []JobStatus `json:"jobs"`
 	NextCursor string      `json:"next_cursor,omitempty"`
@@ -131,7 +126,6 @@ type Worker interface {
 	Run(context.Context) error
 }
 
-// WorkerFn constructs a fresh Worker. Used by Runner.Register.
 type WorkerFn func() Worker
 
 // Middleware wraps a Worker for one execution. Registered on Runner via Use.

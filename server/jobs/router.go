@@ -2,27 +2,18 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"sync"
 )
 
-// Router is a Backend that aggregates other Backends. Queue(name) routes to
-// whichever Backend hosts the named queue; Run/Stop fan out across the
-// unique underlying Backends.
-//
-// The whole River-vs-Argo-vs-Local split is one declaration in one place:
-//
-//	router := jobs.NewRouter(map[string]jobs.Backend{
-//	    "rt-fetch":            riverBackend,
-//	    "static-fetch":        riverBackend,
-//	    "feed-version-import": argoBackend,
-//	})
+// Router is a Backend that dispatches per-queue traffic to one of several
+// underlying Backends — e.g. River for fetch queues and Argo for imports —
+// declared in a single map[queueName]Backend.
 type Router struct {
 	routes map[string]Backend // queue name → owning backend
 	unique []Backend          // dedup'd lifecycle list
 }
 
-// NewRouter constructs a Router from a queue→Backend map. Backends that
-// appear under multiple queue names are deduped for lifecycle calls.
 func NewRouter(routes map[string]Backend) *Router {
 	r := &Router{
 		routes: make(map[string]Backend, len(routes)),
@@ -41,8 +32,6 @@ func NewRouter(routes map[string]Backend) *Router {
 	return r
 }
 
-// Queue forwards to the Backend registered for the named queue, or returns
-// nil if no Backend hosts it.
 func (r *Router) Queue(name string) Queue {
 	b, ok := r.routes[name]
 	if !ok {
@@ -51,43 +40,29 @@ func (r *Router) Queue(name string) Queue {
 	return b.Queue(name)
 }
 
-// Run starts every unique underlying Backend and blocks until all return.
-// Each Backend's Run typically blocks until its Stop is called.
 func (r *Router) Run(ctx context.Context) error {
 	if len(r.unique) == 0 {
 		<-ctx.Done()
 		return nil
 	}
+	errs := make([]error, len(r.unique))
 	var wg sync.WaitGroup
-	errs := make(chan error, len(r.unique))
-	for _, b := range r.unique {
-		b := b
+	for i, b := range r.unique {
+		i, b := i, b
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := b.Run(ctx); err != nil {
-				errs <- err
-			}
+			errs[i] = b.Run(ctx)
 		}()
 	}
 	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return errors.Join(errs...)
 }
 
-// Stop signals every underlying Backend to shut down. Returns the first
-// error encountered (subsequent errors are dropped).
 func (r *Router) Stop(ctx context.Context) error {
-	var firstErr error
-	for _, b := range r.unique {
-		if err := b.Stop(ctx); err != nil && firstErr == nil {
-			firstErr = err
-		}
+	errs := make([]error, len(r.unique))
+	for i, b := range r.unique {
+		errs[i] = b.Stop(ctx)
 	}
-	return firstErr
+	return errors.Join(errs...)
 }

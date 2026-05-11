@@ -14,14 +14,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestSetup is the per-test triple returned by the factory. Tests register
-// workers/middleware on Runner, get a Queue handle from Backend, and submit
-// through it. The factory wires Backend's queue lifecycle internally — name
-// is a hint for namespacing in persistent backends (e.g. River).
+// TestSetup is the per-test triple returned by the factory. QueueName is the
+// name to pass to Backend.Queue (persistent backends namespace by it).
 type TestSetup struct {
 	Runner    *jobs.Runner
 	Backend   jobs.Backend
-	QueueName string // name to call Backend.Queue with
+	QueueName string
 }
 
 func (s TestSetup) Queue() jobs.Queue {
@@ -48,8 +46,7 @@ func checkErr(t testing.TB, err error) {
 	}
 }
 
-// adminCtx is the standard context used by tests to call status/watch/list APIs.
-// Backends require an authenticated user for those methods.
+// adminCtx provides an authenticated admin user; required by Status/Watch/List.
 func adminCtx() context.Context {
 	user := authn.NewCtxUser("test-admin", "", "").WithRoles("admin")
 	return authn.WithUser(context.Background(), user)
@@ -59,26 +56,45 @@ func userCtx(id string) context.Context {
 	return authn.WithUser(context.Background(), authn.NewCtxUser(id, "", ""))
 }
 
+// runUntil schedules Stop after d, then runs Backend.Run synchronously.
+func runUntil(t testing.TB, setup TestSetup, ctx context.Context, d time.Duration) {
+	t.Helper()
+	go func() {
+		time.Sleep(d)
+		setup.Backend.Stop(ctx)
+	}()
+	if err := setup.Backend.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// startBackend runs Backend.Run in a goroutine; defer the returned stop().
+func startBackend(setup TestSetup) (stop func()) {
+	runCtx, cancel := context.WithCancel(context.Background())
+	go func() { _ = setup.Backend.Run(runCtx) }()
+	return func() {
+		_ = setup.Backend.Stop(runCtx)
+		cancel()
+	}
+}
+
 func uniqueQueueName(t testing.TB) string {
 	tName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-"))
-	// River caps queue names at 64 chars, and adapters often prefix theirs
-	// (e.g. "test-"). Cap the test-name portion so the suffix and prefix fit.
+	// River caps queue names at 64 chars; cap the test-name portion so an
+	// adapter prefix + pid + nanos suffix still fits.
 	if len(tName) > 28 {
 		tName = tName[:28]
 	}
 	return fmt.Sprintf("%s-%d-%d", tName, os.Getpid(), time.Now().UnixNano())
 }
 
-// TestBackend runs the full conformance suite — submit/run/middleware plus
-// the lifecycle methods (Status, Watch, List, Cancel) and access control.
-// Backends that don't yet support StatusQueue can call TestBackendCore.
+// TestBackend runs the full conformance suite (Core + Lifecycle).
+// Backends without StatusQueue support should call TestBackendCore instead.
 func TestBackend(t *testing.T, newSetup func(string) TestSetup) {
 	TestBackendCore(t, newSetup)
 	TestBackendLifecycle(t, newSetup)
 }
 
-// TestBackendCore exercises the submit/run/middleware behavior any backend
-// should support.
 func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 	ctx := adminCtx()
 	sleepyTime := 3 * time.Second
@@ -103,13 +119,7 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 				t.Fatal(err)
 			}
 		}
-		go func() {
-			time.Sleep(sleepyTime)
-			setup.Backend.Stop(ctx)
-		}()
-		if err := setup.Backend.Run(ctx); err != nil {
-			t.Fatal(err)
-		}
+		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, len(feeds), int(count))
 	})
 	t.Run("SubmitMany", func(t *testing.T) {
@@ -122,13 +132,7 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		}
 		_, err := setup.Queue().SubmitMany(ctx, jj)
 		checkErr(t, err)
-		go func() {
-			time.Sleep(sleepyTime)
-			setup.Backend.Stop(ctx)
-		}()
-		if err := setup.Backend.Run(ctx); err != nil {
-			t.Fatal(err)
-		}
+		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, int64(10), count)
 	})
 	t.Run("unique", func(t *testing.T) {
@@ -157,13 +161,7 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 				checkErr(t, err)
 			}
 		}
-		go func() {
-			time.Sleep(sleepyTime)
-			setup.Backend.Stop(ctx)
-		}()
-		if err := setup.Backend.Run(ctx); err != nil {
-			t.Fatal(err)
-		}
+		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, int64(104), count)
 	})
 	t.Run("deadline", func(t *testing.T) {
@@ -174,13 +172,7 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Deadline: 0})
 		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Deadline: time.Now().Add(1 * time.Hour).Unix()})
 		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Deadline: time.Now().Add(-1 * time.Hour).Unix()})
-		go func() {
-			time.Sleep(sleepyTime)
-			setup.Backend.Stop(ctx)
-		}()
-		if err := setup.Backend.Run(ctx); err != nil {
-			t.Fatal(err)
-		}
+		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, int64(2), count)
 	})
 	t.Run("middleware", func(t *testing.T) {
@@ -194,20 +186,14 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		q := setup.Queue()
 		q.Submit(ctx, jobs.Job{Kind: "testMiddleware", Args: jobs.Args{"mw": "ok1"}})
 		q.Submit(ctx, jobs.Job{Kind: "testMiddleware", Args: jobs.Args{"mw": "ok2"}})
-		go func() {
-			time.Sleep(sleepyTime)
-			setup.Backend.Stop(ctx)
-		}()
-		if err := setup.Backend.Run(ctx); err != nil {
-			t.Fatal(err)
-		}
+		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, int64(2), count)
 		assert.Equal(t, int64(2*10), jwCount)
 	})
 }
 
-// requireStatusQueue asserts the queue implements StatusQueue and skips the
-// sub-test if it doesn't (e.g. fire-and-forget Redis).
+// requireStatusQueue skips the sub-test if the queue isn't a StatusQueue
+// (e.g. fire-and-forget Redis).
 func requireStatusQueue(t *testing.T, q jobs.Queue) jobs.StatusQueue {
 	t.Helper()
 	sq, ok := q.(jobs.StatusQueue)
@@ -217,9 +203,8 @@ func requireStatusQueue(t *testing.T, q jobs.Queue) jobs.StatusQueue {
 	return sq
 }
 
-// TestBackendLifecycle exercises Status, Watch, List, Cancel and the
-// admin-or-creator access rules. Sub-tests skip when the queue isn't a
-// StatusQueue.
+// TestBackendLifecycle exercises StatusQueue methods and access rules.
+// Sub-tests skip when the queue isn't a StatusQueue.
 func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 	ctx := adminCtx()
 	sleepyTime := 3 * time.Second
@@ -235,13 +220,7 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		queuedSt, err := sq.Status(ctx, st.Job.ID)
 		checkErr(t, err)
 		assert.Equal(t, st.Job.ID, queuedSt.Job.ID)
-		go func() {
-			time.Sleep(sleepyTime)
-			setup.Backend.Stop(ctx)
-		}()
-		if err := setup.Backend.Run(ctx); err != nil {
-			t.Fatal(err)
-		}
+		runUntil(t, setup, ctx, sleepyTime)
 		got, err := sq.Status(ctx, st.Job.ID)
 		checkErr(t, err)
 		assert.True(t, got.State.Terminal(), "expected terminal state, got %s", got.State)
@@ -356,13 +335,7 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		assert.ErrorIs(t, err, jobs.ErrJobAccessDenied)
 		err = sq.Cancel(ctx, "does-not-exist")
 		assert.Error(t, err)
-		go func() {
-			time.Sleep(sleepyTime)
-			setup.Backend.Stop(ctx)
-		}()
-		if err := setup.Backend.Run(ctx); err != nil {
-			t.Fatal(err)
-		}
+		runUntil(t, setup, ctx, sleepyTime)
 		final, err := sq.Status(ctx, st.Job.ID)
 		checkErr(t, err)
 		assert.Equal(t, jobs.JobStateCancelled, final.State)
