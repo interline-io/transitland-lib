@@ -166,7 +166,7 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 
 	// Initialize job runner + backend - do not start
 	jobRunner := jobs.NewRunner()
-	jobBackend := localjobs.NewLocalBackend(jobRunner, nil)
+	jobBackend := localjobs.NewLocalBackend(jobRunner, nil, nil)
 
 	// Action finder
 	actionFinder := &actions.Actions{}

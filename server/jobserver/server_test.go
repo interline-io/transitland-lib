@@ -53,7 +53,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *localjobs.LocalBackend, *jo
 	runner := jobs.NewRunner()
 	backend := localjobs.NewLocalBackend(runner, map[string]localjobs.QueueOpts{
 		testQueue: {Workers: 1},
-	})
+	}, nil)
 	if err := runner.Register(func() jobs.Worker { return &echoWorker{kind: "test"} }); err != nil {
 		t.Fatal(err)
 	}

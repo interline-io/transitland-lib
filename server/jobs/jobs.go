@@ -99,13 +99,26 @@ type ListResult struct {
 // behavior; consumers can install their own (e.g. RBAC per Kind) by passing
 // it to the backend constructor.
 type AccessPolicy interface {
+	// CanSubmit decides whether the context's user may submit the given job.
+	// Called at the top of Queue.Submit before any registry/dedup work.
+	CanSubmit(ctx context.Context, job Job) error
 	CanRead(ctx context.Context, status JobStatus) error
 	ScopeList(ctx context.Context, opts ListOptions) (ListOptions, error)
 }
 
 // CreatorOrAdmin is the default AccessPolicy: admins see everything; everyone
-// else sees only jobs they created (matched by Opts.UserID).
+// else sees only jobs they created (matched by Opts.UserID). Any authenticated
+// caller may submit a job of any Kind.
 type CreatorOrAdmin struct{}
+
+// CanSubmit allows any authenticated caller. Override on a custom policy for
+// per-Kind RBAC.
+func (CreatorOrAdmin) CanSubmit(ctx context.Context, _ Job) error {
+	if authn.ForContext(ctx) == nil {
+		return ErrJobAccessDenied
+	}
+	return nil
+}
 
 func (CreatorOrAdmin) CanRead(ctx context.Context, status JobStatus) error {
 	user := authn.ForContext(ctx)

@@ -13,7 +13,7 @@ func TestLocalBackend(t *testing.T) {
 		runner := jobs.NewRunner()
 		backend := NewLocalBackend(runner, map[string]QueueOpts{
 			queueName: {Workers: 4},
-		})
+		}, nil)
 		return jobtest.TestSetup{Runner: runner, Backend: backend, QueueName: queueName}
 	}
 	jobtest.TestBackend(t, newSetup)
@@ -27,7 +27,7 @@ func TestLocalBackendStress(t *testing.T) {
 		runner := jobs.NewRunner()
 		backend := NewLocalBackend(runner, map[string]QueueOpts{
 			queueName: {Workers: 16},
-		})
+		}, nil)
 		return jobtest.TestSetup{Runner: runner, Backend: backend, QueueName: queueName}
 	}
 	jobtest.StressBackend(t, newSetup, jobtest.StressOpts{

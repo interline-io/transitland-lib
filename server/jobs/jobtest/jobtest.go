@@ -348,6 +348,8 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		assert.ErrorIs(t, err, jobs.ErrJobAccessDenied)
 		_, err = sq.List(context.Background(), jobs.ListOptions{})
 		assert.ErrorIs(t, err, jobs.ErrJobAccessDenied)
+		_, err = setup.Queue().Submit(context.Background(), jobs.Job{Kind: "testAuth"})
+		assert.ErrorIs(t, err, jobs.ErrJobAccessDenied)
 	})
 	t.Run("cancel", func(t *testing.T) {
 		setup := newSetup(uniqueQueueName(t))

@@ -89,6 +89,10 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request) {
 	scopeJobUserID(req.Context(), &job)
 	status, err := q.Submit(req.Context(), job)
 	if err != nil {
+		if errors.Is(err, jobs.ErrJobAccessDenied) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

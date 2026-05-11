@@ -48,8 +48,12 @@ type LocalBackend struct {
 	runDone chan struct{}
 }
 
-func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts) *LocalBackend {
-	policy := jobs.AccessPolicy(jobs.CreatorOrAdmin{})
+// NewLocalBackend constructs an in-process backend. Pass nil for policy to
+// use the default CreatorOrAdmin rule.
+func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts, policy jobs.AccessPolicy) *LocalBackend {
+	if policy == nil {
+		policy = jobs.CreatorOrAdmin{}
+	}
 	b := &LocalBackend{
 		runner: runner,
 		queues: map[string]*localQueue{},
@@ -59,14 +63,6 @@ func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts) *LocalBac
 		b.queues[name] = newLocalQueue(name, opts, runner, policy)
 	}
 	return b
-}
-
-// SetAccessPolicy replaces the default CreatorOrAdmin policy. Call before Run.
-func (b *LocalBackend) SetAccessPolicy(p jobs.AccessPolicy) {
-	b.policy = p
-	for _, q := range b.queues {
-		q.policy = p
-	}
 }
 
 func (b *LocalBackend) Queue(name string) (jobs.Queue, error) {
@@ -215,6 +211,9 @@ func (q *localQueue) shutdown() {
 }
 
 func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
+	if err := q.policy.CanSubmit(ctx, job); err != nil {
+		return jobs.JobStatus{}, err
+	}
 	// Best-effort early-out; the real shutdown guard is the select below.
 	select {
 	case <-q.done:
