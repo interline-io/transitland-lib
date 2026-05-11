@@ -2,9 +2,6 @@ package jobs
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -14,35 +11,34 @@ import (
 // Args is the JSON-marshalable payload a Worker is constructed from.
 type Args map[string]any
 
-// Job is a single unit of work. The owning queue is implicit — you got here
-// by calling Backend.Queue(name).Submit(...). ID is always assigned by the
-// queue; any caller-set value is overwritten. Kind matches Worker.Kind() —
-// that's how Runner routes a job to its worker.
+// UniqueWhileRunning is the UniqueWindow sentinel for "dedupe while a matching
+// job is queued or running" (no concurrent runs). Pair with Job.UniqueWindow.
+const UniqueWhileRunning time.Duration = -1
+
+// Job is a single unit of work. Kind matches Worker.Kind() — that's how Runner
+// routes the job to its worker. Args is the JSON payload deserialized into the
+// worker. Opts holds infrastructure fields (auth, scheduling, dedup); separated
+// from Args so future opts (Priority, Tags, etc.) can land without growing
+// every caller's literal.
 //
-// Unique deduplicates submissions with the same Kind+Args within the queue.
-// UniqueWindow controls the dedup span: zero means "while a matching job is
-// still queued or running" (no concurrent runs); a positive duration means
-// "at most one matching job submitted in the trailing window" (cron-style).
+// ID is queue-assigned on Submit; any caller-set value is overwritten.
 type Job struct {
-	ID           string        `json:"id"`
-	UserID       string        `json:"user_id"`
-	Kind         string        `json:"kind" river:"unique"`
-	Args         Args          `json:"args" river:"unique"`
-	Deadline     int64         `json:"deadline"`
-	Unique       bool          `json:"unique"`
-	UniqueWindow time.Duration `json:"unique_window,omitempty"`
+	ID   string  `json:"id"`
+	Kind string  `json:"kind" river:"unique"`
+	Args Args    `json:"args" river:"unique"`
+	Opts JobOpts `json:"opts,omitempty"`
 }
 
-// HexKey is a stable hash of (Kind, Args) used by backends to dedup unique
-// jobs within a queue. Queue is not part of the key — uniqueness is scoped
-// per-queue by the backend's storage.
-func (job *Job) HexKey() (string, error) {
-	bytes, err := json.Marshal(job.Args)
-	if err != nil {
-		return "", err
-	}
-	sum := sha1.Sum(bytes)
-	return job.Kind + ":" + hex.EncodeToString(sum[:]), nil
+// JobOpts carries infrastructure-level submit options.
+//
+// UniqueWindow controls per-(Kind+Args) dedup within the queue:
+//   - 0  → no dedup
+//   - <0 → dedupe while a matching job is queued or running (use UniqueWhileRunning)
+//   - >0 → dedupe within the trailing window (cron-style)
+type JobOpts struct {
+	UserID       string        `json:"user_id,omitempty"`
+	Deadline     int64         `json:"deadline,omitempty"`
+	UniqueWindow time.Duration `json:"unique_window,omitempty"`
 }
 
 type JobState string
@@ -53,7 +49,6 @@ const (
 	JobStateSucceeded JobState = "succeeded"
 	JobStateFailed    JobState = "failed"
 	JobStateCancelled JobState = "cancelled"
-	JobStateUnknown   JobState = "unknown"
 )
 
 func (s JobState) Terminal() bool {
@@ -62,10 +57,12 @@ func (s JobState) Terminal() bool {
 
 // Sentinel errors returned by Backend / Queue methods.
 var (
-	ErrJobAccessDenied    = errors.New("job access denied")
-	ErrJobNotFound        = errors.New("job not found")
-	ErrCancelNotSupported = errors.New("job cancel not supported")
-	ErrUnknownQueue       = errors.New("unknown queue")
+	ErrJobAccessDenied = errors.New("job access denied")
+	ErrJobNotFound     = errors.New("job not found")
+	ErrUnknownQueue    = errors.New("unknown queue")
+	// ErrInvalidCursor signals a client-provided cursor failed to decode.
+	// HTTP layer should map this to 400 Bad Request.
+	ErrInvalidCursor = errors.New("invalid cursor")
 )
 
 type JobStatus struct {
@@ -102,9 +99,22 @@ type ListResult struct {
 	NextCursor string      `json:"next_cursor,omitempty"`
 }
 
-// CheckAccess returns nil if the context user is admin or matches the job's
-// creator (status.Job.UserID). Otherwise it returns ErrJobAccessDenied.
-func CheckAccess(ctx context.Context, status JobStatus) error {
+// AccessPolicy decides whether the context's user can see a particular job
+// and what filters apply to a List call. Backends call CanRead before
+// returning per-job status (Status/Watch/Cancel) and ScopeList before
+// executing a List. The default CreatorOrAdmin matches the historical
+// behavior; consumers can install their own (e.g. RBAC per Kind) by passing
+// it to the backend constructor.
+type AccessPolicy interface {
+	CanRead(ctx context.Context, status JobStatus) error
+	ScopeList(ctx context.Context, opts ListOptions) (ListOptions, error)
+}
+
+// CreatorOrAdmin is the default AccessPolicy: admins see everything; everyone
+// else sees only jobs they created (matched by Opts.UserID).
+type CreatorOrAdmin struct{}
+
+func (CreatorOrAdmin) CanRead(ctx context.Context, status JobStatus) error {
 	user := authn.ForContext(ctx)
 	if user == nil {
 		return ErrJobAccessDenied
@@ -112,10 +122,33 @@ func CheckAccess(ctx context.Context, status JobStatus) error {
 	if user.HasRole("admin") {
 		return nil
 	}
-	if user.ID() != "" && user.ID() == status.Job.UserID {
+	if user.ID() != "" && user.ID() == status.Job.Opts.UserID {
 		return nil
 	}
 	return ErrJobAccessDenied
+}
+
+// ScopeList force-overrides opts.UserID for non-admin callers so they cannot
+// query other users' jobs. Admins pass through.
+func (CreatorOrAdmin) ScopeList(ctx context.Context, opts ListOptions) (ListOptions, error) {
+	user := authn.ForContext(ctx)
+	if user == nil {
+		return opts, ErrJobAccessDenied
+	}
+	if user.HasRole("admin") {
+		return opts, nil
+	}
+	if user.ID() == "" {
+		return opts, ErrJobAccessDenied
+	}
+	opts.UserID = user.ID()
+	return opts, nil
+}
+
+// CheckAccess is a back-compat shim for adapter code that hasn't migrated to
+// per-backend AccessPolicy. New code should call backend.policy.CanRead.
+func CheckAccess(ctx context.Context, status JobStatus) error {
+	return CreatorOrAdmin{}.CanRead(ctx, status)
 }
 
 // Worker defines a job worker. The same Worker code runs whether the work
@@ -129,7 +162,8 @@ type Worker interface {
 type WorkerFn func() Worker
 
 // Middleware wraps a Worker for one execution. Registered on Runner via Use.
-// Runs in the order they were registered (outermost first on the way in).
+// Executes in registration order: the first Use() runs first on entry,
+// matching the chi/net-http middleware convention.
 type Middleware func(Worker, Job) Worker
 
 // Queue is the per-queue handle returned by Backend.Queue(name). Submit
@@ -145,16 +179,17 @@ type Queue interface {
 // and creator-only auth. Fire-and-forget queues simply return a Queue that
 // doesn't implement StatusQueue; callers should type-assert before use.
 //
-// Watch is best-effort and intended for UI feedback. Adapters may skip
-// intermediate transitions and the terminal event payload may be dropped
-// under load; the channel is still guaranteed to close when the job reaches
-// a terminal state. Only Status returns authoritative data — callers should
-// call it after the channel closes to learn the outcome.
+// Watch returns a channel that emits at least one terminal JobEvent before
+// closing. Adapters MAY emit intermediate transitions (queued→running→...)
+// but are not required to — River, for example, only emits the terminal
+// event because that's all its underlying Subscribe API exposes. Clients
+// can drain until close and rely on the last received event for the final
+// state and error message; calling Status after close is unnecessary.
 //
 // Cancel requests cancellation of a queued or running job. Idempotent on
-// terminal jobs. Backends that can't cancel running work should return
-// ErrCancelNotSupported for the running case; queued cancellation must
-// always succeed.
+// terminal jobs. Backends that can't cancel running work return the cancel
+// without affecting the in-progress run; queued cancellation must always
+// succeed.
 type StatusQueue interface {
 	Queue
 	Status(context.Context, string) (JobStatus, error)
@@ -175,7 +210,11 @@ type PeriodicQueue interface {
 
 // Backend hosts one or more named queues. Get a per-queue handle via
 // Queue(name) — returns nil if the backend doesn't host that queue.
-// Backends own runtime lifecycle (Run blocks until Stop).
+//
+// Lifecycle is split-phase: Run blocks the calling goroutine until shutdown
+// completes; Stop is a non-blocking signal that triggers shutdown and returns
+// immediately. To wait for in-flight work to drain, callers must observe Run
+// returning. A Backend is single-shot — once Stopped, do not call Run again.
 //
 // Implementations: LocalBackend (in-process), RiverBackend (Postgres),
 // ArgoBackend (k8s workflows), RedisBackend (fire-and-forget). A Router is
@@ -183,6 +222,10 @@ type PeriodicQueue interface {
 // to whichever Backend hosts the named queue.
 type Backend interface {
 	Queue(name string) Queue
+	// Run starts the backend and blocks until shutdown completes (Stop
+	// signalled, or the context cancelled). Returns the first shutdown error.
 	Run(context.Context) error
+	// Stop signals shutdown and returns immediately. It does not wait for
+	// in-flight jobs; observe Run returning for that.
 	Stop(context.Context) error
 }

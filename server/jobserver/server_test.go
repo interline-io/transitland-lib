@@ -114,7 +114,7 @@ func TestStatusEndpoint(t *testing.T) {
 	owner := authn.NewCtxUser("alice", "", "")
 	stranger := authn.NewCtxUser("bob", "", "")
 
-	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
 
 	url := srv.URL + "/queues/" + testQueue + "/jobs/" + st.Job.ID
 
@@ -172,13 +172,13 @@ func TestListEndpoint(t *testing.T) {
 
 	q := backend.Queue(testQueue)
 	for i := 0; i < 3; i++ {
-		_, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+		_, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	for i := 0; i < 2; i++ {
-		_, err := q.Submit(authn.WithUser(context.Background(), admin), jobs.Job{Kind: "test", UserID: "carol"})
+		_, err := q.Submit(authn.WithUser(context.Background(), admin), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "carol"}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -230,7 +230,7 @@ func TestListEndpoint(t *testing.T) {
 	resp.Body.Close()
 	assert.Equal(t, 3, len(mine.Jobs))
 	for _, st := range mine.Jobs {
-		assert.Equal(t, "alice", st.Job.UserID)
+		assert.Equal(t, "alice", st.Job.Opts.UserID)
 	}
 
 	// Comma-separated states filter.
@@ -258,7 +258,7 @@ func TestWatchEndpointTerminalReplay(t *testing.T) {
 	srv, backend, _ := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
 
-	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
 
 	url := srv.URL + "/queues/" + testQueue + "/jobs/" + st.Job.ID + "/watch"
 	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, owner))
@@ -281,7 +281,7 @@ func TestWatchEndpointStreaming(t *testing.T) {
 	owner := authn.NewCtxUser("alice", "", "")
 
 	q := backend.Queue(testQueue)
-	st, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", UserID: "alice"})
+	st, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,7 +2,9 @@ package jobs
 
 import (
 	"context"
+	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"sort"
@@ -11,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/jobs"
 	"github.com/robfig/cron/v3"
 )
@@ -38,6 +39,7 @@ const (
 type LocalBackend struct {
 	runner  *jobs.Runner
 	queues  map[string]*localQueue
+	policy  jobs.AccessPolicy
 	startMu sync.Mutex
 	started bool
 	cancel  context.CancelFunc
@@ -51,14 +53,24 @@ func init() {
 }
 
 func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts) *LocalBackend {
+	policy := jobs.AccessPolicy(jobs.CreatorOrAdmin{})
 	b := &LocalBackend{
 		runner: runner,
 		queues: map[string]*localQueue{},
+		policy: policy,
 	}
 	for name, opts := range queues {
-		b.queues[name] = newLocalQueue(name, opts, runner)
+		b.queues[name] = newLocalQueue(name, opts, runner, policy)
 	}
 	return b
+}
+
+// SetAccessPolicy replaces the default CreatorOrAdmin policy. Call before Run.
+func (b *LocalBackend) SetAccessPolicy(p jobs.AccessPolicy) {
+	b.policy = p
+	for _, q := range b.queues {
+		q.policy = p
+	}
 }
 
 func (b *LocalBackend) Queue(name string) jobs.Queue {
@@ -116,6 +128,7 @@ type localQueue struct {
 	workers     int
 	terminalTTL time.Duration
 	runner      *jobs.Runner
+	policy      jobs.AccessPolicy
 
 	jobs chan jobs.Job
 	// done signals shutdown to Submit/workers/periodics. q.jobs is left open —
@@ -141,7 +154,7 @@ type jobEntry struct {
 	cancelRequested bool               // set by Cancel; queued jobs check this before running
 }
 
-func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner) *localQueue {
+func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner, policy jobs.AccessPolicy) *localQueue {
 	workers := opts.Workers
 	if workers <= 0 {
 		workers = 1
@@ -158,6 +171,7 @@ func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner) *localQueue
 		workers:     workers,
 		terminalTTL: ttl,
 		runner:      runner,
+		policy:      policy,
 		// Large buffer so worker-spawns-children patterns don't deadlock with
 		// the pool blocked on a full channel. Proper fix is an unbounded queue.
 		jobs: make(chan jobs.Job, 100_000),
@@ -208,8 +222,8 @@ func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 	default:
 	}
 	job.ID = uuid.NewString()
-	if job.Unique {
-		key, err := job.HexKey()
+	if job.Opts.UniqueWindow != 0 {
+		key, err := dedupKey(job.Kind, job.Args)
 		if err != nil {
 			return jobs.JobStatus{}, err
 		}
@@ -220,8 +234,8 @@ func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 			return q.updateStatus(job.ID, jobs.JobStateCancelled, "duplicate"), nil
 		}
 		var expiresAt time.Time
-		if job.UniqueWindow > 0 {
-			expiresAt = time.Now().Add(job.UniqueWindow)
+		if job.Opts.UniqueWindow > 0 {
+			expiresAt = time.Now().Add(job.Opts.UniqueWindow)
 		}
 		q.uniqueJobs[key] = expiresAt
 		q.uniqueMu.Unlock()
@@ -245,14 +259,24 @@ func (q *localQueue) cleanupFailedSubmit(job jobs.Job) {
 	q.registryMu.Lock()
 	delete(q.registry, job.ID)
 	q.registryMu.Unlock()
-	if job.Unique && job.UniqueWindow == 0 {
-		key, err := job.HexKey()
+	if job.Opts.UniqueWindow < 0 {
+		key, err := dedupKey(job.Kind, job.Args)
 		if err == nil {
 			q.uniqueMu.Lock()
 			delete(q.uniqueJobs, key)
 			q.uniqueMu.Unlock()
 		}
 	}
+}
+
+// dedupKey is the per-(Kind,Args) hash used for unique-job dedup.
+func dedupKey(kind string, args jobs.Args) (string, error) {
+	bytes, err := json.Marshal(args)
+	if err != nil {
+		return "", err
+	}
+	sum := sha1.Sum(bytes)
+	return kind + ":" + hex.EncodeToString(sum[:]), nil
 }
 
 func (q *localQueue) SubmitMany(ctx context.Context, in []jobs.Job) ([]jobs.JobStatus, error) {
@@ -296,7 +320,7 @@ func (q *localQueue) Status(ctx context.Context, jobId string) (jobs.JobStatus, 
 	entry.mu.Lock()
 	st := entry.status
 	entry.mu.Unlock()
-	if err := jobs.CheckAccess(ctx, st); err != nil {
+	if err := q.policy.CanRead(ctx, st); err != nil {
 		return jobs.JobStatus{}, err
 	}
 	return st, nil
@@ -308,7 +332,7 @@ func (q *localQueue) Watch(ctx context.Context, jobId string) (<-chan jobs.JobEv
 		return nil, jobs.ErrJobNotFound
 	}
 	entry.mu.Lock()
-	if err := jobs.CheckAccess(ctx, entry.status); err != nil {
+	if err := q.policy.CanRead(ctx, entry.status); err != nil {
 		entry.mu.Unlock()
 		return nil, err
 	}
@@ -348,18 +372,12 @@ func (q *localQueue) cleanupWatcherOnCancel(ctx context.Context, entry *jobEntry
 }
 
 func (q *localQueue) List(ctx context.Context, opts jobs.ListOptions) (jobs.ListResult, error) {
-	user := authn.ForContext(ctx)
-	if user == nil {
-		return jobs.ListResult{}, jobs.ErrJobAccessDenied
+	scoped, err := q.policy.ScopeList(ctx, opts)
+	if err != nil {
+		return jobs.ListResult{}, err
 	}
-	isAdmin := user.HasRole("admin")
+	opts = scoped
 	filterUserId := opts.UserID
-	if !isAdmin {
-		filterUserId = user.ID()
-		if filterUserId == "" {
-			return jobs.ListResult{}, jobs.ErrJobAccessDenied
-		}
-	}
 	stateSet := map[jobs.JobState]bool{}
 	for _, s := range opts.States {
 		stateSet[s] = true
@@ -371,7 +389,7 @@ func (q *localQueue) List(ctx context.Context, opts jobs.ListOptions) (jobs.List
 		entry.mu.Lock()
 		st := entry.status
 		entry.mu.Unlock()
-		if filterUserId != "" && st.Job.UserID != filterUserId {
+		if filterUserId != "" && st.Job.Opts.UserID != filterUserId {
 			continue
 		}
 		if opts.Kind != "" && st.Job.Kind != opts.Kind {
@@ -441,11 +459,11 @@ func encodeCursor(st jobs.JobStatus) string {
 func decodeCursor(cursor string) (listCursor, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return listCursor{}, errors.New("invalid cursor")
+		return listCursor{}, jobs.ErrInvalidCursor
 	}
 	var c listCursor
 	if err := json.Unmarshal(raw, &c); err != nil {
-		return listCursor{}, errors.New("invalid cursor")
+		return listCursor{}, jobs.ErrInvalidCursor
 	}
 	return c, nil
 }
@@ -456,7 +474,7 @@ func (q *localQueue) Cancel(ctx context.Context, jobId string) error {
 		return jobs.ErrJobNotFound
 	}
 	entry.mu.Lock()
-	if err := jobs.CheckAccess(ctx, entry.status); err != nil {
+	if err := q.policy.CanRead(ctx, entry.status); err != nil {
 		entry.mu.Unlock()
 		return err
 	}
@@ -528,14 +546,14 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 	}
 
 	now := time.Now().In(time.UTC).Unix()
-	if job.Deadline > 0 && job.Deadline < now {
-		log.Trace().Int64("job_deadline", job.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
+	if job.Opts.Deadline > 0 && job.Opts.Deadline < now {
+		log.Trace().Int64("job_deadline", job.Opts.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
 		return q.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
-	// UniqueWindow=0 holds the lock through running so concurrent runs are
-	// blocked; Window>0 entries expire on their own (cron semantics).
-	if job.Unique && job.UniqueWindow == 0 {
-		key, err := job.HexKey()
+	// UniqueWhileRunning holds the lock through running to block concurrent
+	// runs; Window>0 entries expire on their own (cron semantics).
+	if job.Opts.UniqueWindow < 0 {
+		key, err := dedupKey(job.Kind, job.Args)
 		if err != nil {
 			return q.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
 		}

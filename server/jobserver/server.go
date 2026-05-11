@@ -132,6 +132,10 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	}
 	result, err := sq.List(req.Context(), opts)
 	if err != nil {
+		if errors.Is(err, jobs.ErrInvalidCursor) {
+			http.Error(w, "invalid cursor", http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -264,7 +268,7 @@ func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 	if user.HasRole("admin") {
 		return
 	}
-	job.UserID = user.ID()
+	job.Opts.UserID = user.ID()
 }
 
 // mapJobLookupError returns 404 for both ErrJobNotFound and ErrJobAccessDenied

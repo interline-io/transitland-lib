@@ -62,8 +62,11 @@ func (r *Runner) Run(ctx context.Context, job Job) error {
 	if w == nil {
 		return errors.New("no worker")
 	}
-	for _, mw := range r.middlewares {
-		w = mw(w, job)
+	// Wrap in reverse so registration order matches execution order:
+	// Use(A); Use(B); Use(C) → A wraps B wraps C wraps worker → on entry
+	// A.Run runs first, matching the chi/net-http convention.
+	for i := len(r.middlewares) - 1; i >= 0; i-- {
+		w = r.middlewares[i](w, job)
 		if w == nil {
 			return errors.New("middleware dropped worker")
 		}

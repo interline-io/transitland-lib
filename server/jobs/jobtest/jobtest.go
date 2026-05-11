@@ -144,13 +144,13 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		for i := 0; i < 10; i++ {
 			// 1 job: j=0
 			for j := 0; j < 10; j++ {
-				job := jobs.Job{Kind: "testUnique", Unique: true, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/10)}}
+				job := jobs.Job{Kind: "testUnique", Opts: jobs.JobOpts{UniqueWindow: jobs.UniqueWhileRunning}, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/10)}}
 				_, err := q.Submit(ctx, job)
 				checkErr(t, err)
 			}
 			// 3 jobs; j=3, j=6, j=9
 			for j := 0; j < 10; j++ {
-				job := jobs.Job{Kind: "testUnique", Unique: true, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/3)}}
+				job := jobs.Job{Kind: "testUnique", Opts: jobs.JobOpts{UniqueWindow: jobs.UniqueWhileRunning}, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/3)}}
 				_, err := q.Submit(ctx, job)
 				checkErr(t, err)
 			}
@@ -169,9 +169,9 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		count := int64(0)
 		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: "testDeadline"} }))
 		q := setup.Queue()
-		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Deadline: 0})
-		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Deadline: time.Now().Add(1 * time.Hour).Unix()})
-		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Deadline: time.Now().Add(-1 * time.Hour).Unix()})
+		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}})
+		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Opts: jobs.JobOpts{Deadline: time.Now().Add(1 * time.Hour).Unix()}})
+		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Opts: jobs.JobOpts{Deadline: time.Now().Add(-1 * time.Hour).Unix()}})
 		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, int64(2), count)
 	})
@@ -189,6 +189,26 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, int64(2), count)
 		assert.Equal(t, int64(2*10), jwCount)
+	})
+	t.Run("middlewareOrder", func(t *testing.T) {
+		// Use(A); Use(B); Use(C) → A enters first, exits last.
+		setup := newSetup(uniqueQueueName(t))
+		var entry, exit []string
+		mk := func(label string) jobs.Middleware {
+			return func(w jobs.Worker, j jobs.Job) jobs.Worker {
+				return &recordingMiddleware{Worker: w, label: label, entry: &entry, exit: &exit}
+			}
+		}
+		setup.Runner.Use(mk("A"))
+		setup.Runner.Use(mk("B"))
+		setup.Runner.Use(mk("C"))
+		count := int64(0)
+		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: "testMwOrder"} }))
+		q := setup.Queue()
+		q.Submit(ctx, jobs.Job{Kind: "testMwOrder"})
+		runUntil(t, setup, ctx, sleepyTime)
+		assert.Equal(t, []string{"A", "B", "C"}, entry, "entry order should match registration order")
+		assert.Equal(t, []string{"C", "B", "A"}, exit, "exit order should be reverse of entry")
 	})
 }
 
@@ -213,10 +233,10 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		sq := requireStatusQueue(t, setup.Queue())
 		count := int64(0)
 		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: "testStatus"} }))
-		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testStatus", UserID: "alice", Args: jobs.Args{"x": "1"}})
+		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testStatus", Args: jobs.Args{"x": "1"}, Opts: jobs.JobOpts{UserID: "alice"}})
 		checkErr(t, err)
 		assert.NotEmpty(t, st.Job.ID, "Submit should assign a Job ID")
-		assert.Equal(t, "alice", st.Job.UserID)
+		assert.Equal(t, "alice", st.Job.Opts.UserID)
 		queuedSt, err := sq.Status(ctx, st.Job.ID)
 		checkErr(t, err)
 		assert.Equal(t, st.Job.ID, queuedSt.Job.ID)
@@ -233,7 +253,7 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		sq := requireStatusQueue(t, setup.Queue())
 		count := int64(0)
 		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: "testWatch"} }))
-		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testWatch", UserID: "alice", Args: jobs.Args{"x": "live"}})
+		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testWatch", Args: jobs.Args{"x": "live"}, Opts: jobs.JobOpts{UserID: "alice"}})
 		checkErr(t, err)
 		ch, err := sq.Watch(ctx, st.Job.ID)
 		checkErr(t, err)
@@ -268,12 +288,12 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: listKind} }))
 		q := setup.Queue()
 		for i := 0; i < 5; i++ {
-			_, err := q.Submit(ctx, jobs.Job{Kind: listKind, UserID: "alice", Args: jobs.Args{"i": i}})
+			_, err := q.Submit(ctx, jobs.Job{Kind: listKind, Args: jobs.Args{"i": i}, Opts: jobs.JobOpts{UserID: "alice"}})
 			checkErr(t, err)
 			time.Sleep(1 * time.Millisecond)
 		}
 		for i := 0; i < 3; i++ {
-			_, err := q.Submit(ctx, jobs.Job{Kind: listKind, UserID: "bob", Args: jobs.Args{"i": i}})
+			_, err := q.Submit(ctx, jobs.Job{Kind: listKind, Args: jobs.Args{"i": i}, Opts: jobs.JobOpts{UserID: "bob"}})
 			checkErr(t, err)
 			time.Sleep(1 * time.Millisecond)
 		}
@@ -285,7 +305,7 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		checkErr(t, err)
 		assert.Equal(t, 5, len(mine.Jobs))
 		for _, st := range mine.Jobs {
-			assert.Equal(t, "alice", st.Job.UserID)
+			assert.Equal(t, "alice", st.Job.Opts.UserID)
 		}
 		seen := map[string]bool{}
 		var cursor string
@@ -308,7 +328,7 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		sq := requireStatusQueue(t, setup.Queue())
 		count := int64(0)
 		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: "testAuth"} }))
-		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testAuth", UserID: "alice", Args: jobs.Args{"x": "1"}})
+		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testAuth", Args: jobs.Args{"x": "1"}, Opts: jobs.JobOpts{UserID: "alice"}})
 		checkErr(t, err)
 		if _, err := sq.Status(userCtx("alice"), st.Job.ID); err != nil {
 			t.Errorf("owner Status: %v", err)
@@ -328,7 +348,7 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		sq := requireStatusQueue(t, setup.Queue())
 		count := int64(0)
 		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: "testCancel"} }))
-		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testCancel", UserID: "alice", Args: jobs.Args{"x": "1"}})
+		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testCancel", Args: jobs.Args{"x": "1"}, Opts: jobs.JobOpts{UserID: "alice"}})
 		checkErr(t, err)
 		checkErr(t, sq.Cancel(ctx, st.Job.ID))
 		err = sq.Cancel(userCtx("bob"), st.Job.ID)
@@ -351,4 +371,21 @@ type testMiddleware struct {
 func (w *testMiddleware) Run(ctx context.Context) error {
 	atomic.AddInt64(w.count, 10)
 	return w.Worker.Run(ctx)
+}
+
+// recordingMiddleware appends label to entry on the way in and exit on the
+// way out. Used to assert middleware execution order. Single-job tests only;
+// no synchronization.
+type recordingMiddleware struct {
+	jobs.Worker
+	label string
+	entry *[]string
+	exit  *[]string
+}
+
+func (w *recordingMiddleware) Run(ctx context.Context) error {
+	*w.entry = append(*w.entry, w.label)
+	err := w.Worker.Run(ctx)
+	*w.exit = append(*w.exit, w.label)
+	return err
 }

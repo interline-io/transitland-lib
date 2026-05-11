@@ -403,9 +403,9 @@ func stressUnique(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 		go func() {
 			defer wg.Done()
 			_, err := q.Submit(ctx, jobs.Job{
-				Kind:   kind,
-				Unique: true,
-				Args:   jobs.Args{"mark": mark},
+				Kind: kind,
+				Args: jobs.Args{"mark": mark},
+				Opts: jobs.JobOpts{UniqueWindow: jobs.UniqueWhileRunning},
 			})
 			if err == nil {
 				atomic.AddInt64(&submitted, 1)
