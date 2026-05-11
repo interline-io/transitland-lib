@@ -43,6 +43,8 @@ type LocalBackend struct {
 	startMu sync.Mutex
 	started bool
 	cancel  context.CancelFunc
+	// runDone closes when Run returns (drain complete). Wait selects on it.
+	runDone chan struct{}
 }
 
 func init() {
@@ -73,12 +75,12 @@ func (b *LocalBackend) SetAccessPolicy(p jobs.AccessPolicy) {
 	}
 }
 
-func (b *LocalBackend) Queue(name string) jobs.Queue {
+func (b *LocalBackend) Queue(name string) (jobs.Queue, error) {
 	q, ok := b.queues[name]
 	if !ok {
-		return nil
+		return nil, jobs.ErrUnknownQueue
 	}
-	return q
+	return q, nil
 }
 
 func (b *LocalBackend) Run(ctx context.Context) error {
@@ -89,8 +91,10 @@ func (b *LocalBackend) Run(ctx context.Context) error {
 	}
 	b.started = true
 	ctx, b.cancel = context.WithCancel(ctx)
+	b.runDone = make(chan struct{})
 	b.startMu.Unlock()
 
+	defer close(b.runDone)
 	var wg sync.WaitGroup
 	for _, q := range b.queues {
 		q := q
@@ -119,6 +123,24 @@ func (b *LocalBackend) Stop(ctx context.Context) error {
 	b.startMu.Unlock()
 	cancel()
 	return nil
+}
+
+// Wait blocks until Run returns (in-flight jobs have drained) or ctx fires.
+// Safe to call before Run; in that case it just waits for ctx.
+func (b *LocalBackend) Wait(ctx context.Context) error {
+	b.startMu.Lock()
+	done := b.runDone
+	b.startMu.Unlock()
+	if done == nil {
+		// Run never started — nothing to drain.
+		return nil
+	}
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // localQueue is the per-queue handle returned by LocalBackend.Queue.
@@ -545,9 +567,8 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 		}
 	}
 
-	now := time.Now().In(time.UTC).Unix()
-	if job.Opts.Deadline > 0 && job.Opts.Deadline < now {
-		log.Trace().Int64("job_deadline", job.Opts.Deadline).Int64("now", now).Msg("job skipped - deadline in past")
+	if !job.Opts.Deadline.IsZero() && time.Now().UTC().After(job.Opts.Deadline) {
+		log.Trace().Time("job_deadline", job.Opts.Deadline).Msg("job skipped - deadline in past")
 		return q.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
 	// UniqueWhileRunning holds the lock through running to block concurrent

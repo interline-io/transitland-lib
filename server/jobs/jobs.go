@@ -26,19 +26,23 @@ type Job struct {
 	ID   string  `json:"id"`
 	Kind string  `json:"kind" river:"unique"`
 	Args Args    `json:"args" river:"unique"`
-	Opts JobOpts `json:"opts,omitempty"`
+	Opts JobOpts `json:"opts"`
 }
 
 // JobOpts carries infrastructure-level submit options.
+//
+// Deadline is the wall-clock cutoff for execution: when set (non-zero), a job
+// picked up after the deadline is cancelled with "deadline in past" instead of
+// running. Zero means no deadline.
 //
 // UniqueWindow controls per-(Kind+Args) dedup within the queue:
 //   - 0  → no dedup
 //   - <0 → dedupe while a matching job is queued or running (use UniqueWhileRunning)
 //   - >0 → dedupe within the trailing window (cron-style)
 type JobOpts struct {
-	UserID       string        `json:"user_id,omitempty"`
-	Deadline     int64         `json:"deadline,omitempty"`
-	UniqueWindow time.Duration `json:"unique_window,omitempty"`
+	UserID       string        `json:"user_id"`
+	Deadline     time.Time     `json:"deadline"`
+	UniqueWindow time.Duration `json:"unique_window"`
 }
 
 type JobState string
@@ -209,23 +213,32 @@ type PeriodicQueue interface {
 }
 
 // Backend hosts one or more named queues. Get a per-queue handle via
-// Queue(name) — returns nil if the backend doesn't host that queue.
+// Queue(name) — returns ErrUnknownQueue if the backend doesn't host that
+// queue.
 //
-// Lifecycle is split-phase: Run blocks the calling goroutine until shutdown
-// completes; Stop is a non-blocking signal that triggers shutdown and returns
-// immediately. To wait for in-flight work to drain, callers must observe Run
-// returning. A Backend is single-shot — once Stopped, do not call Run again.
+// Lifecycle is split-phase:
+//   - Run blocks the calling goroutine until shutdown completes.
+//   - Stop is a non-blocking signal that triggers shutdown and returns
+//     immediately; it does not wait for in-flight jobs.
+//   - Wait blocks until in-flight work has drained or ctx fires, whichever
+//     comes first. Use after Stop for graceful shutdown with a deadline.
+//
+// A Backend is single-shot — once Stopped, do not call Run again.
 //
 // Implementations: LocalBackend (in-process), RiverBackend (Postgres),
 // ArgoBackend (k8s workflows), RedisBackend (fire-and-forget). A Router is
 // itself a Backend that aggregates other Backends and dispatches Queue(name)
 // to whichever Backend hosts the named queue.
 type Backend interface {
-	Queue(name string) Queue
+	Queue(name string) (Queue, error)
 	// Run starts the backend and blocks until shutdown completes (Stop
 	// signalled, or the context cancelled). Returns the first shutdown error.
 	Run(context.Context) error
 	// Stop signals shutdown and returns immediately. It does not wait for
-	// in-flight jobs; observe Run returning for that.
+	// in-flight jobs; pair with Wait for graceful drain.
 	Stop(context.Context) error
+	// Wait blocks until all in-flight jobs have completed and Run has
+	// returned, or until ctx is cancelled (use a deadline for bounded drain).
+	// Returns ctx.Err() on timeout, or nil when drain completes cleanly.
+	Wait(ctx context.Context) error
 }

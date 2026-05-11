@@ -236,8 +236,8 @@ func requireQueue(w http.ResponseWriter, req *http.Request) (jobs.Queue, bool) {
 		http.Error(w, "unauthenticated", http.StatusForbidden)
 		return nil, false
 	}
-	q := cfg.Jobs.Queue(chi.URLParam(req, "queue"))
-	if q == nil {
+	q, err := cfg.Jobs.Queue(chi.URLParam(req, "queue"))
+	if err != nil {
 		http.Error(w, "unknown queue", http.StatusNotFound)
 		return nil, false
 	}

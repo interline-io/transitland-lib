@@ -86,7 +86,7 @@ func authedRequest(t *testing.T, method, url string, user authn.User) *http.Requ
 // reaches a terminal state, and stops it. Returns the terminal status.
 func runOneAndStop(t *testing.T, backend *localjobs.LocalBackend, ctx context.Context, job jobs.Job) jobs.JobStatus {
 	t.Helper()
-	q := backend.Queue(testQueue)
+	q, _ := backend.Queue(testQueue)
 	st, err := q.Submit(ctx, job)
 	if err != nil {
 		t.Fatal(err)
@@ -170,7 +170,7 @@ func TestListEndpoint(t *testing.T) {
 	owner := authn.NewCtxUser("alice", "", "")
 	admin := authn.NewCtxUser("admin", "", "").WithRoles("admin")
 
-	q := backend.Queue(testQueue)
+	q, _ := backend.Queue(testQueue)
 	for i := 0; i < 3; i++ {
 		_, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
 		if err != nil {
@@ -280,7 +280,7 @@ func TestWatchEndpointStreaming(t *testing.T) {
 	srv, backend, _ := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")
 
-	q := backend.Queue(testQueue)
+	q, _ := backend.Queue(testQueue)
 	st, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
 	if err != nil {
 		t.Fatal(err)

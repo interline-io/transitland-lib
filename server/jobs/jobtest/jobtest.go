@@ -22,8 +22,14 @@ type TestSetup struct {
 	QueueName string
 }
 
+// Queue is a test convenience that panics on error; the test factory must
+// have registered QueueName with the backend.
 func (s TestSetup) Queue() jobs.Queue {
-	return s.Backend.Queue(s.QueueName)
+	q, err := s.Backend.Queue(s.QueueName)
+	if err != nil {
+		panic(err)
+	}
+	return q
 }
 
 var feeds = []string{"BA", "SF", "AC", "CT"}
@@ -170,8 +176,8 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		checkErr(t, setup.Runner.Register(func() jobs.Worker { return &testWorker{count: &count, kind: "testDeadline"} }))
 		q := setup.Queue()
 		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}})
-		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Opts: jobs.JobOpts{Deadline: time.Now().Add(1 * time.Hour).Unix()}})
-		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Opts: jobs.JobOpts{Deadline: time.Now().Add(-1 * time.Hour).Unix()}})
+		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Opts: jobs.JobOpts{Deadline: time.Now().Add(1 * time.Hour)}})
+		q.Submit(ctx, jobs.Job{Kind: "testDeadline", Args: jobs.Args{"test": "test"}, Opts: jobs.JobOpts{Deadline: time.Now().Add(-1 * time.Hour)}})
 		runUntil(t, setup, ctx, sleepyTime)
 		assert.Equal(t, int64(2), count)
 	})

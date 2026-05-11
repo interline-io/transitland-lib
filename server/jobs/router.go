@@ -32,10 +32,10 @@ func NewRouter(routes map[string]Backend) *Router {
 	return r
 }
 
-func (r *Router) Queue(name string) Queue {
+func (r *Router) Queue(name string) (Queue, error) {
 	b, ok := r.routes[name]
 	if !ok {
-		return nil
+		return nil, ErrUnknownQueue
 	}
 	return b.Queue(name)
 }
@@ -64,5 +64,23 @@ func (r *Router) Stop(ctx context.Context) error {
 	for i, b := range r.unique {
 		errs[i] = b.Stop(ctx)
 	}
+	return errors.Join(errs...)
+}
+
+// Wait fans out to every underlying Backend's Wait. Returns the joined errors;
+// individual backends that exceed ctx return ctx.Err() but the others may still
+// drain cleanly.
+func (r *Router) Wait(ctx context.Context) error {
+	errs := make([]error, len(r.unique))
+	var wg sync.WaitGroup
+	for i, b := range r.unique {
+		i, b := i, b
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[i] = b.Wait(ctx)
+		}()
+	}
+	wg.Wait()
 	return errors.Join(errs...)
 }
