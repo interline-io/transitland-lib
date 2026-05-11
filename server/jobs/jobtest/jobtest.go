@@ -150,13 +150,13 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 		for i := 0; i < 10; i++ {
 			// 1 job: j=0
 			for j := 0; j < 10; j++ {
-				job := jobs.Job{Kind: "testUnique", Opts: jobs.JobOpts{UniqueWindow: jobs.UniqueWhileRunning}, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/10)}}
+				job := jobs.Job{Kind: "testUnique", Opts: jobs.JobOpts{Unique: true}, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/10)}}
 				_, err := q.Submit(ctx, job)
 				checkErr(t, err)
 			}
 			// 3 jobs; j=3, j=6, j=9
 			for j := 0; j < 10; j++ {
-				job := jobs.Job{Kind: "testUnique", Opts: jobs.JobOpts{UniqueWindow: jobs.UniqueWhileRunning}, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/3)}}
+				job := jobs.Job{Kind: "testUnique", Opts: jobs.JobOpts{Unique: true}, Args: jobs.Args{"test": fmt.Sprintf("n:%d", j/3)}}
 				_, err := q.Submit(ctx, job)
 				checkErr(t, err)
 			}
@@ -314,18 +314,18 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 			assert.Equal(t, "alice", st.Job.Opts.UserID)
 		}
 		seen := map[string]bool{}
-		var cursor string
+		offset := 0
 		for pages := 0; pages < 10; pages++ {
-			page, err := sq.List(ctx, jobs.ListOptions{Kind: listKind, UserID: "alice", Limit: 2, After: cursor})
+			page, err := sq.List(ctx, jobs.ListOptions{Kind: listKind, UserID: "alice", Limit: 2, Offset: offset})
 			checkErr(t, err)
+			if len(page.Jobs) == 0 {
+				break
+			}
 			for _, st := range page.Jobs {
 				assert.False(t, seen[st.Job.ID], "duplicate Job ID across pages")
 				seen[st.Job.ID] = true
 			}
-			if page.NextCursor == "" {
-				break
-			}
-			cursor = page.NextCursor
+			offset += len(page.Jobs)
 		}
 		assert.Equal(t, 5, len(seen))
 	})

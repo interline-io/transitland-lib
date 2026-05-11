@@ -11,10 +11,6 @@ import (
 // Args is the JSON-marshalable payload a Worker is constructed from.
 type Args map[string]any
 
-// UniqueWhileRunning is the UniqueWindow sentinel for "dedupe while a matching
-// job is queued or running" (no concurrent runs). Pair with Job.UniqueWindow.
-const UniqueWhileRunning time.Duration = -1
-
 // Job is a single unit of work. Kind matches Worker.Kind() — that's how Runner
 // routes the job to its worker. Args is the JSON payload deserialized into the
 // worker. Opts holds infrastructure fields (auth, scheduling, dedup); separated
@@ -35,14 +31,12 @@ type Job struct {
 // picked up after the deadline is cancelled with "deadline in past" instead of
 // running. Zero means no deadline.
 //
-// UniqueWindow controls per-(Kind+Args) dedup within the queue:
-//   - 0  → no dedup
-//   - <0 → dedupe while a matching job is queued or running (use UniqueWhileRunning)
-//   - >0 → dedupe within the trailing window (cron-style)
+// Unique deduplicates by (Kind, Args) while a matching job is queued or
+// running — no concurrent runs.
 type JobOpts struct {
-	UserID       string        `json:"user_id"`
-	Deadline     time.Time     `json:"deadline"`
-	UniqueWindow time.Duration `json:"unique_window"`
+	UserID   string    `json:"user_id"`
+	Deadline time.Time `json:"deadline"`
+	Unique   bool      `json:"unique"`
 }
 
 type JobState string
@@ -64,9 +58,6 @@ var (
 	ErrJobAccessDenied = errors.New("job access denied")
 	ErrJobNotFound     = errors.New("job not found")
 	ErrUnknownQueue    = errors.New("unknown queue")
-	// ErrInvalidCursor signals a client-provided cursor failed to decode.
-	// HTTP layer should map this to 400 Bad Request.
-	ErrInvalidCursor = errors.New("invalid cursor")
 )
 
 type JobStatus struct {
@@ -87,20 +78,18 @@ type JobEvent struct {
 	Time    time.Time `json:"time"`
 }
 
-// ListOptions controls List filtering and paging. After is an opaque cursor
-// returned in ListResult.NextCursor; pass it back verbatim for the next page.
-// The encoding is backend-specific.
+// ListOptions controls List filtering and paging. Offset is a zero-based
+// row offset into the sorted result; pair with Limit for paging.
 type ListOptions struct {
 	States []JobState
 	UserID string
 	Kind   string
 	Limit  int
-	After  string
+	Offset int
 }
 
 type ListResult struct {
-	Jobs       []JobStatus `json:"jobs"`
-	NextCursor string      `json:"next_cursor,omitempty"`
+	Jobs []JobStatus `json:"jobs"`
 }
 
 // AccessPolicy decides whether the context's user can see a particular job

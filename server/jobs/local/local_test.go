@@ -25,10 +25,8 @@ func TestLocalBackend(t *testing.T) {
 func TestLocalBackendStress(t *testing.T) {
 	newSetup := func(queueName string) jobtest.TestSetup {
 		runner := jobs.NewRunner()
-		// Disable terminal eviction so Status polling across the run still
-		// finds the entries.
 		backend := NewLocalBackend(runner, map[string]QueueOpts{
-			queueName: {Workers: 16, TerminalTTL: -1},
+			queueName: {Workers: 16},
 		})
 		return jobtest.TestSetup{Runner: runner, Backend: backend, QueueName: queueName}
 	}

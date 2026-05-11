@@ -81,8 +81,7 @@ func (o *StressOpts) defaults() {
 
 // StressBackend is an opt-in heavy-load conformance suite. Skipped unless
 // JOBSTRESS=1. Sub-tests that need StatusQueue self-skip on backends without
-// it (e.g. Redis). LocalBackend callers should set TerminalTTL: -1 so the
-// per-job poll loop doesn't race the sweeper.
+// it (e.g. Redis).
 func StressBackend(t *testing.T, newSetup func(string) TestSetup, opts StressOpts) {
 	if os.Getenv("JOBSTRESS") == "" {
 		t.Skip("set JOBSTRESS=1 to run")
@@ -405,7 +404,7 @@ func stressUnique(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 			_, err := q.Submit(ctx, jobs.Job{
 				Kind: kind,
 				Args: jobs.Args{"mark": mark},
-				Opts: jobs.JobOpts{UniqueWindow: jobs.UniqueWhileRunning},
+				Opts: jobs.JobOpts{Unique: true},
 			})
 			if err == nil {
 				atomic.AddInt64(&submitted, 1)

@@ -99,7 +99,7 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request) {
 const (
 	queryUserID = "user_id"
 	queryKind   = "kind"
-	queryAfter  = "after"
+	queryOffset = "offset"
 	queryStates = "states"
 	queryLimit  = "limit"
 )
@@ -113,7 +113,6 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	opts := jobs.ListOptions{
 		UserID: q.Get(queryUserID),
 		Kind:   q.Get(queryKind),
-		After:  q.Get(queryAfter),
 	}
 	if v := q.Get(queryStates); v != "" {
 		for _, s := range strings.Split(v, ",") {
@@ -130,12 +129,16 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 		}
 		opts.Limit = n
 	}
-	result, err := sq.List(req.Context(), opts)
-	if err != nil {
-		if errors.Is(err, jobs.ErrInvalidCursor) {
-			http.Error(w, "invalid cursor", http.StatusBadRequest)
+	if v := q.Get(queryOffset); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			http.Error(w, "invalid offset", http.StatusBadRequest)
 			return
 		}
+		opts.Offset = n
+	}
+	result, err := sq.List(req.Context(), opts)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
