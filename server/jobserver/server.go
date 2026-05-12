@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/jobs"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -93,7 +94,7 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		internalError(w, req, "submit failed", err)
 		return
 	}
 	writeJSON(w, status)
@@ -107,6 +108,10 @@ const (
 	queryStates = "states"
 	queryLimit  = "limit"
 )
+
+// maxListLimit caps client-supplied ?limit= to bound list response size.
+// Defense-in-depth alongside the backend's default.
+const maxListLimit = 1000
 
 func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	sq, ok := requireStatusQueue(w, req)
@@ -131,6 +136,9 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, "invalid limit", http.StatusBadRequest)
 			return
 		}
+		if n > maxListLimit {
+			n = maxListLimit
+		}
 		opts.Limit = n
 	}
 	if v := q.Get(queryOffset); v != "" {
@@ -143,7 +151,11 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	}
 	result, err := sq.List(req.Context(), opts)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, jobs.ErrJobAccessDenied) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		internalError(w, req, "list failed", err)
 		return
 	}
 	writeJSON(w, result)
@@ -158,7 +170,7 @@ func statusJobRequest(w http.ResponseWriter, req *http.Request) {
 	}
 	st, err := sq.Status(req.Context(), chi.URLParam(req, "jobId"))
 	if err != nil {
-		mapJobLookupError(w, err)
+		mapJobLookupError(w, req, err)
 		return
 	}
 	writeJSON(w, st)
@@ -170,7 +182,7 @@ func cancelJobRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if err := sq.Cancel(req.Context(), chi.URLParam(req, "jobId")); err != nil {
-		mapJobLookupError(w, err)
+		mapJobLookupError(w, req, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -189,7 +201,7 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	ch, err := sq.Watch(ctx, chi.URLParam(req, "jobId"))
 	if err != nil {
-		mapJobLookupError(w, err)
+		mapJobLookupError(w, req, err)
 		return
 	}
 	h := w.Header()
@@ -280,12 +292,19 @@ func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 
 // mapJobLookupError returns 404 for both ErrJobNotFound and ErrJobAccessDenied
 // so an authenticated-but-not-owner caller can't probe ID existence.
-func mapJobLookupError(w http.ResponseWriter, err error) {
+func mapJobLookupError(w http.ResponseWriter, req *http.Request, err error) {
 	if errors.Is(err, jobs.ErrJobNotFound) || errors.Is(err, jobs.ErrJobAccessDenied) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	http.Error(w, err.Error(), http.StatusInternalServerError)
+	internalError(w, req, "job lookup failed", err)
+}
+
+// internalError logs err with request context and returns a generic 500 so
+// underlying details (DB messages, internal paths, etc.) don't leak to clients.
+func internalError(w http.ResponseWriter, req *http.Request, msg string, err error) {
+	log.For(req.Context()).Error().Err(err).Msg(msg)
+	http.Error(w, "internal error", http.StatusInternalServerError)
 }
 
 func decodeJob(req *http.Request) (jobs.Job, error) {
