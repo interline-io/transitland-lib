@@ -15,7 +15,11 @@ type Config struct {
 	GbfsFinder               GbfsFinder
 	Checker                  Checker
 	Actions                  Actions
-	JobQueue                 jobs.JobQueue
+	Jobs                     jobs.Backend
+	JobRunner                *jobs.Runner
+	// JobPolicy gates the synchronous /run endpoint (which doesn't go
+	// through a Queue). Nil means no kind-level RBAC on /run.
+	JobPolicy                jobs.AccessPolicy
 	Clock                    clock.Clock
 	Secrets                  []dmfr.Secret
 	ValidateLargeFiles       bool
