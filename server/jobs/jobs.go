@@ -92,12 +92,13 @@ type ListResult struct {
 	Jobs []JobStatus `json:"jobs"`
 }
 
-// AccessPolicy decides whether the context's user can see a particular job
-// and what filters apply to a List call. Backends call CanRead before
-// returning per-job status (Status/Watch/Cancel) and ScopeList before
-// executing a List. The default CreatorOrAdmin matches the historical
-// behavior; consumers can install their own (e.g. RBAC per Kind) by passing
-// it to the backend constructor.
+// AccessPolicy decides whether the context's user can submit a job, see a
+// particular job, and what filters apply to a List call. Backends call
+// CanSubmit at the top of Queue.Submit, CanRead before returning per-job
+// status (Status/Watch/Cancel), and ScopeList before executing a List. The
+// default CreatorOrAdmin matches the historical behavior; consumers can
+// install their own (e.g. RBAC per Kind) by passing it to the backend
+// constructor.
 type AccessPolicy interface {
 	// CanSubmit decides whether the context's user may submit the given job.
 	// Called at the top of Queue.Submit before any registry/dedup work.
@@ -149,12 +150,6 @@ func (CreatorOrAdmin) ScopeList(ctx context.Context, opts ListOptions) (ListOpti
 	}
 	opts.UserID = user.ID()
 	return opts, nil
-}
-
-// CheckAccess is a back-compat shim for adapter code that hasn't migrated to
-// per-backend AccessPolicy. New code should call backend.policy.CanRead.
-func CheckAccess(ctx context.Context, status JobStatus) error {
-	return CreatorOrAdmin{}.CanRead(ctx, status)
 }
 
 // Worker defines a job worker. The same Worker code runs whether the work
@@ -236,8 +231,6 @@ type PeriodicQueue interface {
 //	if err := backend.Shutdown(shutdownCtx); err != nil {
 //	    backend.Stop(context.Background()) // hard fallback on timeout
 //	}
-//
-// A Backend is single-shot — once Stopped, do not call Run again.
 //
 // Implementations: LocalBackend (in-process), RiverBackend (Postgres),
 // ArgoBackend (k8s workflows), RedisBackend (fire-and-forget — Shutdown is

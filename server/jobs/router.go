@@ -79,9 +79,16 @@ func (r *Router) Shutdown(ctx context.Context) error {
 
 func (r *Router) Stop(ctx context.Context) error {
 	errs := make([]error, len(r.unique))
+	var wg sync.WaitGroup
 	for i, b := range r.unique {
-		errs[i] = b.Stop(ctx)
+		i, b := i, b
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[i] = b.Stop(ctx)
+		}()
 	}
+	wg.Wait()
 	return errors.Join(errs...)
 }
 

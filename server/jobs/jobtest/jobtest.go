@@ -46,6 +46,27 @@ func (t *testWorker) Run(ctx context.Context) error {
 	return nil
 }
 
+// slowWorker sleeps for a fixed duration before incrementing count. Respects
+// ctx so the test can distinguish graceful (Shutdown) from hard (Stop)
+// shutdown: a graceful drain should let Run complete the full duration, a
+// hard cancel should return ctx.Err() before count is incremented.
+type slowWorker struct {
+	kind     string
+	duration time.Duration
+	count    *int64
+}
+
+func (s *slowWorker) Kind() string { return s.kind }
+func (s *slowWorker) Run(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(s.duration):
+	}
+	atomic.AddInt64(s.count, 1)
+	return nil
+}
+
 func checkErr(t testing.TB, err error) {
 	if err != nil {
 		t.Fatal(err)
@@ -368,6 +389,47 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		checkErr(t, err)
 		assert.Equal(t, jobs.JobStateCancelled, final.State)
 		assert.Equal(t, int64(0), atomic.LoadInt64(&count), "cancelled job should not have run")
+	})
+	t.Run("shutdown-graceful", func(t *testing.T) {
+		// Shutdown should let an in-flight job finish naturally (not cancel
+		// its ctx). Submit a job that sleeps 300ms; once it's running, call
+		// Shutdown with a generous deadline and assert the job reached
+		// Succeeded — which only happens if Shutdown left the worker ctx alive.
+		setup := newSetup(uniqueQueueName(t))
+		sq := requireStatusQueue(t, setup.Queue())
+		var count int64
+		checkErr(t, setup.Runner.Register(func() jobs.Worker {
+			return &slowWorker{kind: "testShutdown", duration: 300 * time.Millisecond, count: &count}
+		}))
+		st, err := setup.Queue().Submit(ctx, jobs.Job{Kind: "testShutdown", Opts: jobs.JobOpts{UserID: "alice"}})
+		checkErr(t, err)
+
+		runCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		runDone := make(chan struct{})
+		go func() { _ = setup.Backend.Run(runCtx); close(runDone) }()
+
+		// Wait until the worker has actually picked the job up.
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			s, _ := sq.Status(ctx, st.Job.ID)
+			if s.State == jobs.JobStateRunning {
+				break
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+
+		shutdownCtx, sCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer sCancel()
+		if err := setup.Backend.Shutdown(shutdownCtx); err != nil {
+			t.Fatalf("Shutdown returned error: %v", err)
+		}
+		<-runDone
+
+		final, err := sq.Status(ctx, st.Job.ID)
+		checkErr(t, err)
+		assert.Equal(t, jobs.JobStateSucceeded, final.State, "graceful Shutdown should let in-flight job complete")
+		assert.Equal(t, int64(1), atomic.LoadInt64(&count), "worker should have run to completion")
 	})
 }
 

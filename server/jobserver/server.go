@@ -57,6 +57,16 @@ func runJobRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	scopeJobUserID(req.Context(), &job)
+	if cfg.JobPolicy != nil {
+		if err := cfg.JobPolicy.CanSubmit(req.Context(), job); err != nil {
+			if errors.Is(err, jobs.ErrJobAccessDenied) {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+			internalError(w, req, "policy check failed", err)
+			return
+		}
+	}
 	job.ID = uuid.NewString()
 	startedAt := time.Now().UTC()
 	runErr := cfg.JobRunner.Run(req.Context(), job)
@@ -257,7 +267,11 @@ func requireQueue(w http.ResponseWriter, req *http.Request) (jobs.Queue, bool) {
 	}
 	q, err := cfg.Jobs.Queue(chi.URLParam(req, "queue"))
 	if err != nil {
-		http.Error(w, "unknown queue", http.StatusNotFound)
+		if errors.Is(err, jobs.ErrUnknownQueue) {
+			http.Error(w, "unknown queue", http.StatusNotFound)
+			return nil, false
+		}
+		internalError(w, req, "queue lookup failed", err)
 		return nil, false
 	}
 	return q, true
