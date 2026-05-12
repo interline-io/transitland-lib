@@ -44,8 +44,13 @@ type LocalBackend struct {
 	startMu sync.Mutex
 	started bool
 	cancel  context.CancelFunc
-	// runDone closes when Run returns (drain complete). Wait selects on it.
+	// runDone closes when Run returns (workers have exited). Wait selects on it.
 	runDone chan struct{}
+	// drain is closed by Shutdown to trigger graceful drain. Run selects on
+	// it alongside ctx.Done(). drained gates close(drain) under startMu so
+	// Shutdown is idempotent.
+	drain   chan struct{}
+	drained bool
 }
 
 // NewLocalBackend constructs an in-process backend. Pass nil for policy to
@@ -82,6 +87,9 @@ func (b *LocalBackend) Run(ctx context.Context) error {
 	b.started = true
 	ctx, b.cancel = context.WithCancel(ctx)
 	b.runDone = make(chan struct{})
+	b.drain = make(chan struct{})
+	b.drained = false
+	drain := b.drain
 	b.startMu.Unlock()
 
 	defer close(b.runDone)
@@ -94,12 +102,42 @@ func (b *LocalBackend) Run(ctx context.Context) error {
 			q.run(ctx)
 		}()
 	}
-	<-ctx.Done()
+	// Either hard stop (ctx cancelled) or graceful drain (Shutdown closed
+	// drain). Both paths close q.done in each queue; for graceful, ctx stays
+	// alive so in-flight worker.Run finishes naturally.
+	select {
+	case <-ctx.Done():
+	case <-drain:
+	}
 	for _, q := range b.queues {
 		q.shutdown()
 	}
 	wg.Wait()
 	return nil
+}
+
+// Shutdown triggers graceful drain and blocks until it finishes or ctx fires.
+// Queues stop accepting new jobs, in-flight workers run to completion (their
+// runCtx is NOT cancelled). Idempotent. Returns nil immediately if Run has
+// never been called.
+func (b *LocalBackend) Shutdown(ctx context.Context) error {
+	b.startMu.Lock()
+	done := b.runDone
+	if done == nil {
+		b.startMu.Unlock()
+		return nil
+	}
+	if !b.drained && b.drain != nil {
+		close(b.drain)
+		b.drained = true
+	}
+	b.startMu.Unlock()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (b *LocalBackend) Stop(ctx context.Context) error {
@@ -115,14 +153,14 @@ func (b *LocalBackend) Stop(ctx context.Context) error {
 	return nil
 }
 
-// Wait blocks until Run returns (in-flight jobs have drained) or ctx fires.
-// Safe to call before Run; in that case it just waits for ctx.
+// Wait blocks until Run has returned (workers exited and shutdown finished),
+// or until ctx fires. Returns nil immediately if Run has never been called.
+// Wait does NOT trigger shutdown — pair with Shutdown or Stop to initiate it.
 func (b *LocalBackend) Wait(ctx context.Context) error {
 	b.startMu.Lock()
 	done := b.runDone
 	b.startMu.Unlock()
 	if done == nil {
-		// Run never started — nothing to drain.
 		return nil
 	}
 	select {
@@ -470,6 +508,22 @@ func (q *localQueue) updateStatus(jobId string, state jobs.JobState, errMsg stri
 }
 
 func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
+	// Release the dedup key on every terminal path. Registered before the
+	// cancellation/deadline early-returns so those paths don't leak the key
+	// that Submit acquired.
+	if job.Opts.Unique {
+		key, err := dedupKey(job.Kind, job.Args)
+		if err != nil {
+			// Same Args succeeded in Submit; defensive only.
+			return q.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
+		}
+		defer func() {
+			q.uniqueMu.Lock()
+			delete(q.uniqueJobs, key)
+			q.uniqueMu.Unlock()
+		}()
+	}
+
 	// If Cancel was called while queued, skip the run.
 	entry := q.getEntry(job.ID)
 	if entry != nil {
@@ -484,18 +538,6 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 	if !job.Opts.Deadline.IsZero() && time.Now().UTC().After(job.Opts.Deadline) {
 		log.Trace().Time("job_deadline", job.Opts.Deadline).Msg("job skipped - deadline in past")
 		return q.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
-	}
-	// Hold the unique-lock through the run to block concurrent matching jobs.
-	if job.Opts.Unique {
-		key, err := dedupKey(job.Kind, job.Args)
-		if err != nil {
-			return q.updateStatus(job.ID, jobs.JobStateFailed, err.Error()), err
-		}
-		defer func() {
-			q.uniqueMu.Lock()
-			delete(q.uniqueJobs, key)
-			q.uniqueMu.Unlock()
-		}()
 	}
 	// Per-run ctx so Cancel can interrupt the worker independently of Stop.
 	runCtx, runCancel := context.WithCancel(ctx)
@@ -523,6 +565,9 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 }
 
 func (q *localQueue) AddPeriodic(ctx context.Context, jobFunc func() jobs.Job, period time.Duration, cronTab string) (string, error) {
+	if cronTab == "" && period <= 0 {
+		return "", errors.New("AddPeriodic: either cronTab or positive period required")
+	}
 	var schedule cron.Schedule
 	if cronTab != "" {
 		s, err := cron.ParseStandard(cronTab)

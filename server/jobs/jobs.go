@@ -218,29 +218,45 @@ type PeriodicQueue interface {
 // Queue(name) — returns ErrUnknownQueue if the backend doesn't host that
 // queue.
 //
-// Lifecycle is split-phase:
+// Lifecycle:
 //   - Run blocks the calling goroutine until shutdown completes.
-//   - Stop is a non-blocking signal that triggers shutdown and returns
-//     immediately; it does not wait for in-flight jobs.
-//   - Wait blocks until in-flight work has drained or ctx fires, whichever
-//     comes first. Use after Stop for graceful shutdown with a deadline.
+//   - Shutdown is the graceful primitive: triggers drain (stop accepting new
+//     jobs, let in-flight run to natural completion) and blocks until the
+//     drain finishes or ctx fires. Mirrors net/http.Server.Shutdown.
+//   - Stop is the hard cancel: signals shutdown by cancelling the backend
+//     context, which propagates to in-flight worker contexts. Returns
+//     immediately; pair with Wait if you need to observe completion.
+//   - Wait blocks until Run has returned (workers exited and shutdown
+//     finished), or until ctx fires. Wait does NOT trigger shutdown.
+//
+// Typical pattern (mirrors net/http):
+//
+//	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+//	defer cancel()
+//	if err := backend.Shutdown(shutdownCtx); err != nil {
+//	    backend.Stop(context.Background()) // hard fallback on timeout
+//	}
 //
 // A Backend is single-shot — once Stopped, do not call Run again.
 //
 // Implementations: LocalBackend (in-process), RiverBackend (Postgres),
-// ArgoBackend (k8s workflows), RedisBackend (fire-and-forget). A Router is
+// ArgoBackend (k8s workflows), RedisBackend (fire-and-forget — Shutdown is
+// a no-op since there's nothing to drain on the producer side). A Router is
 // itself a Backend that aggregates other Backends and dispatches Queue(name)
 // to whichever Backend hosts the named queue.
 type Backend interface {
 	Queue(name string) (Queue, error)
-	// Run starts the backend and blocks until shutdown completes (Stop
-	// signalled, or the context cancelled). Returns the first shutdown error.
+	// Run starts the backend and blocks until shutdown completes (Stop or
+	// Shutdown called, or the context cancelled). Returns the first
+	// shutdown error.
 	Run(context.Context) error
-	// Stop signals shutdown and returns immediately. It does not wait for
-	// in-flight jobs; pair with Wait for graceful drain.
+	// Shutdown triggers graceful drain and blocks until it finishes or ctx
+	// fires. In-flight worker contexts are NOT cancelled.
+	Shutdown(ctx context.Context) error
+	// Stop signals hard shutdown by cancelling the backend ctx (which
+	// propagates to in-flight worker ctxs). Returns immediately.
 	Stop(context.Context) error
-	// Wait blocks until all in-flight jobs have completed and Run has
-	// returned, or until ctx is cancelled (use a deadline for bounded drain).
-	// Returns ctx.Err() on timeout, or nil when drain completes cleanly.
+	// Wait blocks until Run has returned, or until ctx fires. Does not
+	// trigger shutdown.
 	Wait(ctx context.Context) error
 }

@@ -5,19 +5,18 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
-	"github.com/rs/zerolog"
 )
 
 // NewRunLogger logs job start/error/completion under a per-job logger keyed
-// by Kind/Args. Register on a Runner via Use.
-func NewRunLogger(logger zerolog.Logger) Middleware {
+// by Kind/Args. Register on a Runner via Use. The per-job logger is derived
+// from log.For(ctx) so it inherits request-scoped fields.
+func NewRunLogger() Middleware {
 	return func(w Worker, j Job) Worker {
-		return &runLogger{log: logger, job: j, Worker: w}
+		return &runLogger{job: j, Worker: w}
 	}
 }
 
 type runLogger struct {
-	log zerolog.Logger
 	job Job
 	Worker
 }

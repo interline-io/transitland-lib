@@ -59,6 +59,24 @@ func (r *Router) Run(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
+// Shutdown fans out graceful shutdown to every underlying Backend in parallel.
+// Returns the joined errors; backends that exceed ctx return ctx.Err() but
+// others may still drain cleanly.
+func (r *Router) Shutdown(ctx context.Context) error {
+	errs := make([]error, len(r.unique))
+	var wg sync.WaitGroup
+	for i, b := range r.unique {
+		i, b := i, b
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[i] = b.Shutdown(ctx)
+		}()
+	}
+	wg.Wait()
+	return errors.Join(errs...)
+}
+
 func (r *Router) Stop(ctx context.Context) error {
 	errs := make([]error, len(r.unique))
 	for i, b := range r.unique {

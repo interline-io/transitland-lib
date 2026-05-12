@@ -124,15 +124,22 @@ func (w *counterWorker) Run(ctx context.Context) error {
 
 // spawnerWorker recursively submits Children copies of itself with Depth-1,
 // stopping at 0. Exercises jobs-spawning-jobs.
+//
+// submitCtx is the ctx used for child submissions; the worker's own Run ctx
+// (runCtx, derived from backend ctx) has no user attached and would be
+// rejected by CanSubmit. Real deployments solve this via a Runner middleware
+// that reconstitutes the submitter's user onto runCtx — see
+// project_jobs_auth_middleware_plan in memory.
 type spawnerWorker struct {
 	Depth    int    `json:"depth"`
 	Children int    `json:"children"`
 	Mark     string `json:"mark"`
 
-	kind   string
-	queue  jobs.Queue
-	ran    *int64
-	failed *int64
+	kind      string
+	queue     jobs.Queue
+	submitCtx context.Context
+	ran       *int64
+	failed    *int64
 }
 
 func (w *spawnerWorker) Kind() string { return w.kind }
@@ -150,7 +157,7 @@ func (w *spawnerWorker) Run(ctx context.Context) error {
 				"mark":     w.Mark,
 			},
 		}
-		if _, err := w.queue.Submit(ctx, child); err != nil {
+		if _, err := w.queue.Submit(w.submitCtx, child); err != nil {
 			atomic.AddInt64(w.failed, 1)
 			return err
 		}
@@ -210,7 +217,7 @@ func stressFanout(t *testing.T, newSetup func(string) TestSetup, opts StressOpts
 	var ran, failed int64
 	const kind = "stress-spawner"
 	checkErr(t, setup.Runner.Register(func() jobs.Worker {
-		return &spawnerWorker{kind: kind, queue: q, ran: &ran, failed: &failed}
+		return &spawnerWorker{kind: kind, queue: q, submitCtx: ctx, ran: &ran, failed: &failed}
 	}))
 
 	stop := startBackend(setup)
