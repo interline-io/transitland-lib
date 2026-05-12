@@ -23,8 +23,8 @@ type QueueOpts struct {
 
 const (
 	defaultListLimit = 100
-	// Overprovisioned so the few events a job emits never fill the channel and
-	// force a non-blocking drop. Watch's contract documents the overflow case.
+	// Overprovisioned so a job's few events never overflow; StatusQueue.Watch
+	// documents the non-blocking-drop contract.
 	watchBufferSize = 256
 )
 
@@ -44,17 +44,14 @@ type LocalBackend struct {
 	startMu sync.Mutex
 	started bool
 	cancel  context.CancelFunc
-	// runDone closes when Run returns (workers have exited). Wait selects on it.
 	runDone chan struct{}
-	// drain is closed by Shutdown to trigger graceful drain. Run selects on
-	// it alongside ctx.Done(). drained gates close(drain) under startMu so
-	// Shutdown is idempotent.
+	// drain + drained: Shutdown closes drain; drained gates the close under
+	// startMu so Shutdown is idempotent. Run selects on drain or ctx.Done.
 	drain   chan struct{}
 	drained bool
 }
 
-// NewLocalBackend constructs an in-process backend. Pass nil for policy to
-// use the default CreatorOrAdmin rule.
+// NewLocalBackend constructs an in-process backend. nil policy → CreatorOrAdmin.
 func NewLocalBackend(runner *jobs.Runner, queues map[string]QueueOpts, policy jobs.AccessPolicy) *LocalBackend {
 	if policy == nil {
 		policy = jobs.CreatorOrAdmin{}
@@ -102,9 +99,8 @@ func (b *LocalBackend) Run(ctx context.Context) error {
 			q.run(ctx)
 		}()
 	}
-	// Either hard stop (ctx cancelled) or graceful drain (Shutdown closed
-	// drain). Both paths close q.done in each queue; for graceful, ctx stays
-	// alive so in-flight worker.Run finishes naturally.
+	// Either branch closes q.done below. For graceful drain, ctx stays alive
+	// so in-flight worker.Run finishes naturally; hard stop cancels everything.
 	select {
 	case <-ctx.Done():
 	case <-drain:
@@ -116,10 +112,9 @@ func (b *LocalBackend) Run(ctx context.Context) error {
 	return nil
 }
 
-// Shutdown triggers graceful drain and blocks until it finishes or ctx fires.
-// Queues stop accepting new jobs, in-flight workers run to completion (their
-// runCtx is NOT cancelled). Idempotent. Returns nil immediately if Run has
-// never been called.
+// Shutdown triggers graceful drain (queues stop accepting; in-flight workers
+// run to completion with ctx alive) and blocks until done or ctx fires.
+// Idempotent. Returns nil if Run was never called.
 func (b *LocalBackend) Shutdown(ctx context.Context) error {
 	b.startMu.Lock()
 	done := b.runDone
@@ -153,9 +148,8 @@ func (b *LocalBackend) Stop(ctx context.Context) error {
 	return nil
 }
 
-// Wait blocks until Run has returned (workers exited and shutdown finished),
-// or until ctx fires. Returns nil immediately if Run has never been called.
-// Wait does NOT trigger shutdown — pair with Shutdown or Stop to initiate it.
+// Wait blocks until Run returns or ctx fires. Does not trigger shutdown.
+// Returns nil if Run was never called.
 func (b *LocalBackend) Wait(ctx context.Context) error {
 	b.startMu.Lock()
 	done := b.runDone
@@ -171,8 +165,6 @@ func (b *LocalBackend) Wait(ctx context.Context) error {
 	}
 }
 
-// localQueue is the per-queue handle returned by LocalBackend.Queue.
-// Implements jobs.Queue, jobs.StatusQueue, jobs.PeriodicQueue.
 type localQueue struct {
 	name    string
 	workers int
@@ -180,7 +172,7 @@ type localQueue struct {
 	policy  jobs.AccessPolicy
 
 	jobs chan jobs.Job
-	// done signals shutdown to Submit/workers/periodics. q.jobs is left open —
+	// done is closed on shutdown. q.jobs is intentionally not closed —
 	// closing it would race with in-flight Submit sends.
 	done     chan struct{}
 	doneOnce sync.Once
@@ -199,8 +191,8 @@ type jobEntry struct {
 	mu              sync.Mutex
 	status          jobs.JobStatus
 	watchers        []chan jobs.JobEvent
-	cancelRun       context.CancelFunc // nil until execute starts; cancels the worker's ctx
-	cancelRequested bool               // set by Cancel; queued jobs check this before running
+	cancelRun       context.CancelFunc // set by execute; cancels just this worker's ctx
+	cancelRequested bool               // queued jobs check this before running
 }
 
 func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner, policy jobs.AccessPolicy) *localQueue {
@@ -213,8 +205,8 @@ func newLocalQueue(name string, opts QueueOpts, runner *jobs.Runner, policy jobs
 		workers: workers,
 		runner:  runner,
 		policy:  policy,
-		// Large buffer so worker-spawns-children patterns don't deadlock with
-		// the pool blocked on a full channel. Proper fix is an unbounded queue.
+		// Large buffer so worker-spawns-children doesn't deadlock on a full
+		// channel. Proper fix is an unbounded queue.
 		jobs:       make(chan jobs.Job, 100_000),
 		done:       make(chan struct{}),
 		uniqueJobs: map[string]struct{}{},
@@ -252,7 +244,7 @@ func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 	if err := q.policy.CanSubmit(ctx, job); err != nil {
 		return jobs.JobStatus{}, err
 	}
-	// Best-effort early-out; the real shutdown guard is the select below.
+	// Best-effort fast path; the authoritative shutdown guard is the select below.
 	select {
 	case <-q.done:
 		return jobs.JobStatus{}, errors.New("closed")
@@ -286,8 +278,7 @@ func (q *localQueue) Submit(ctx context.Context, job jobs.Job) (jobs.JobStatus, 
 	}
 }
 
-// cleanupFailedSubmit reverses registry + unique-lock state when Submit
-// fails to enqueue.
+// cleanupFailedSubmit reverses registry + dedup-key state when enqueue fails.
 func (q *localQueue) cleanupFailedSubmit(job jobs.Job) {
 	q.registryMu.Lock()
 	delete(q.registry, job.ID)
@@ -302,7 +293,6 @@ func (q *localQueue) cleanupFailedSubmit(job jobs.Job) {
 	}
 }
 
-// dedupKey is the per-(Kind,Args) hash used for unique-job dedup.
 func dedupKey(kind string, args jobs.Args) (string, error) {
 	bytes, err := json.Marshal(args)
 	if err != nil {
@@ -508,9 +498,8 @@ func (q *localQueue) updateStatus(jobId string, state jobs.JobState, errMsg stri
 }
 
 func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus, error) {
-	// Release the dedup key on every terminal path. Registered before the
-	// cancellation/deadline early-returns so those paths don't leak the key
-	// that Submit acquired.
+	// Defer registered before any early-return so cancelled/deadline-past
+	// paths still release the key that Submit acquired.
 	if job.Opts.Unique {
 		key, err := dedupKey(job.Kind, job.Args)
 		if err != nil {
@@ -524,7 +513,6 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 		}()
 	}
 
-	// If Cancel was called while queued, skip the run.
 	entry := q.getEntry(job.ID)
 	if entry != nil {
 		entry.mu.Lock()
@@ -539,7 +527,7 @@ func (q *localQueue) execute(ctx context.Context, job jobs.Job) (jobs.JobStatus,
 		log.Trace().Time("job_deadline", job.Opts.Deadline).Msg("job skipped - deadline in past")
 		return q.updateStatus(job.ID, jobs.JobStateCancelled, "deadline in past"), nil
 	}
-	// Per-run ctx so Cancel can interrupt the worker independently of Stop.
+	// Per-run ctx so Cancel can interrupt this worker without Stopping the backend.
 	runCtx, runCancel := context.WithCancel(ctx)
 	defer runCancel()
 	if entry != nil {
@@ -578,8 +566,8 @@ func (q *localQueue) AddPeriodic(ctx context.Context, jobFunc func() jobs.Job, p
 	}
 	id := uuid.NewString()
 	pctx, cancel := context.WithCancel(ctx)
-	// Cancel on backend shutdown or caller ctx, and drop the map entry on exit
-	// (otherwise caller-ctx-cancelled periodics would leak the entry).
+	// Cancel on backend shutdown OR caller ctx; drop the map entry on exit
+	// so caller-cancelled periodics don't leak.
 	go func() {
 		select {
 		case <-q.done:

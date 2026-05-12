@@ -46,10 +46,9 @@ func (t *testWorker) Run(ctx context.Context) error {
 	return nil
 }
 
-// slowWorker sleeps for a fixed duration before incrementing count. Respects
-// ctx so the test can distinguish graceful (Shutdown) from hard (Stop)
-// shutdown: a graceful drain should let Run complete the full duration, a
-// hard cancel should return ctx.Err() before count is incremented.
+// slowWorker sleeps for duration before incrementing count. Respects ctx so
+// a hard cancel returns ctx.Err() before count is touched; a graceful drain
+// lets the full duration elapse.
 type slowWorker struct {
 	kind     string
 	duration time.Duration
@@ -73,7 +72,7 @@ func checkErr(t testing.TB, err error) {
 	}
 }
 
-// adminCtx provides an authenticated admin user; required by Status/Watch/List.
+// adminCtx is an authenticated admin user.
 func adminCtx() context.Context {
 	user := authn.NewCtxUser("test-admin", "", "").WithRoles("admin")
 	return authn.WithUser(context.Background(), user)
@@ -107,8 +106,7 @@ func startBackend(setup TestSetup) (stop func()) {
 
 func uniqueQueueName(t testing.TB) string {
 	tName := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-"))
-	// River caps queue names at 64 chars; cap the test-name portion so an
-	// adapter prefix + pid + nanos suffix still fits.
+	// River caps queue names at 64 chars; leave room for pid + nanos suffix.
 	if len(tName) > 28 {
 		tName = tName[:28]
 	}
@@ -239,8 +237,7 @@ func TestBackendCore(t *testing.T, newSetup func(string) TestSetup) {
 	})
 }
 
-// requireStatusQueue skips the sub-test if the queue isn't a StatusQueue
-// (e.g. fire-and-forget Redis).
+// requireStatusQueue skips the sub-test for fire-and-forget queues (Redis).
 func requireStatusQueue(t *testing.T, q jobs.Queue) jobs.StatusQueue {
 	t.Helper()
 	sq, ok := q.(jobs.StatusQueue)
@@ -391,10 +388,8 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		assert.Equal(t, int64(0), atomic.LoadInt64(&count), "cancelled job should not have run")
 	})
 	t.Run("shutdown-graceful", func(t *testing.T) {
-		// Shutdown should let an in-flight job finish naturally (not cancel
-		// its ctx). Submit a job that sleeps 300ms; once it's running, call
-		// Shutdown with a generous deadline and assert the job reached
-		// Succeeded — which only happens if Shutdown left the worker ctx alive.
+		// Shutdown should let an in-flight job reach Succeeded (only possible
+		// if the worker's ctx wasn't cancelled).
 		setup := newSetup(uniqueQueueName(t))
 		sq := requireStatusQueue(t, setup.Queue())
 		var count int64
@@ -409,7 +404,7 @@ func TestBackendLifecycle(t *testing.T, newSetup func(string) TestSetup) {
 		runDone := make(chan struct{})
 		go func() { _ = setup.Backend.Run(runCtx); close(runDone) }()
 
-		// Wait until the worker has actually picked the job up.
+		// Wait for the worker to pick up the job.
 		deadline := time.Now().Add(2 * time.Second)
 		for time.Now().Before(deadline) {
 			s, _ := sq.Status(ctx, st.Job.ID)
@@ -443,9 +438,8 @@ func (w *testMiddleware) Run(ctx context.Context) error {
 	return w.Worker.Run(ctx)
 }
 
-// recordingMiddleware appends label to entry on the way in and exit on the
-// way out. Used to assert middleware execution order. Single-job tests only;
-// no synchronization.
+// recordingMiddleware appends label to entry/exit slices to assert execution
+// order. Single-job tests only; no synchronization.
 type recordingMiddleware struct {
 	jobs.Worker
 	label string

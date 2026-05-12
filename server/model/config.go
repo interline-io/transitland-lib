@@ -17,9 +17,8 @@ type Config struct {
 	Actions                  Actions
 	Jobs                     jobs.Backend
 	JobRunner                *jobs.Runner
-	// JobPolicy gates the synchronous /run endpoint, which doesn't go
-	// through a Queue and therefore can't consult the backend's policy.
-	// Nil means no kind-level RBAC on /run (authentication still required).
+	// JobPolicy gates the synchronous /run endpoint (which doesn't go
+	// through a Queue). Nil means no kind-level RBAC on /run.
 	JobPolicy                jobs.AccessPolicy
 	Clock                    clock.Clock
 	Secrets                  []dmfr.Secret

@@ -11,13 +11,10 @@ import (
 // Args is the JSON-marshalable payload a Worker is constructed from.
 type Args map[string]any
 
-// Job is a single unit of work. Kind matches Worker.Kind() — that's how Runner
-// routes the job to its worker. Args is the JSON payload deserialized into the
-// worker. Opts holds infrastructure fields (auth, scheduling, dedup); separated
-// from Args so future opts (Priority, Tags, etc.) can land without growing
-// every caller's literal.
-//
-// ID is queue-assigned on Submit; any caller-set value is overwritten.
+// Job is a single unit of work. Kind matches Worker.Kind() for routing; Args
+// is the JSON payload deserialized into the worker; Opts holds infrastructure
+// fields (auth, scheduling, dedup). ID is queue-assigned on Submit; any
+// caller-set value is overwritten.
 type Job struct {
 	ID   string  `json:"id"`
 	Kind string  `json:"kind" river:"unique"`
@@ -27,11 +24,9 @@ type Job struct {
 
 // JobOpts carries infrastructure-level submit options.
 //
-// Deadline is the wall-clock cutoff for execution: when set (non-zero), a job
-// picked up after the deadline is cancelled with "deadline in past" instead of
-// running. Zero means no deadline.
-//
-// Unique deduplicates by (Kind, Args) while a matching job is queued or
+// Deadline: jobs picked up after the deadline are cancelled instead of run;
+// zero means no deadline.
+// Unique: deduplicates by (Kind, Args) while a matching job is queued or
 // running — no concurrent runs.
 type JobOpts struct {
 	UserID   string    `json:"user_id"`
@@ -92,16 +87,12 @@ type ListResult struct {
 	Jobs []JobStatus `json:"jobs"`
 }
 
-// AccessPolicy decides whether the context's user can submit a job, see a
-// particular job, and what filters apply to a List call. Backends call
-// CanSubmit at the top of Queue.Submit, CanRead before returning per-job
-// status (Status/Watch/Cancel), and ScopeList before executing a List. The
-// default CreatorOrAdmin matches the historical behavior; consumers can
-// install their own (e.g. RBAC per Kind) by passing it to the backend
-// constructor.
+// AccessPolicy gates Submit, per-job reads (Status/Watch/Cancel), and List
+// scoping. Backends call CanSubmit at the top of Submit, CanRead before
+// returning per-job state, and ScopeList before executing a List. Pass a
+// custom implementation to the backend constructor for per-Kind RBAC or
+// stricter rules.
 type AccessPolicy interface {
-	// CanSubmit decides whether the context's user may submit the given job.
-	// Called at the top of Queue.Submit before any registry/dedup work.
 	CanSubmit(ctx context.Context, job Job) error
 	CanRead(ctx context.Context, status JobStatus) error
 	ScopeList(ctx context.Context, opts ListOptions) (ListOptions, error)
@@ -112,8 +103,6 @@ type AccessPolicy interface {
 // caller may submit a job of any Kind.
 type CreatorOrAdmin struct{}
 
-// CanSubmit allows any authenticated caller. Override on a custom policy for
-// per-Kind RBAC.
 func (CreatorOrAdmin) CanSubmit(ctx context.Context, _ Job) error {
 	if authn.ForContext(ctx) == nil {
 		return ErrJobAccessDenied
@@ -135,8 +124,8 @@ func (CreatorOrAdmin) CanRead(ctx context.Context, status JobStatus) error {
 	return ErrJobAccessDenied
 }
 
-// ScopeList force-overrides opts.UserID for non-admin callers so they cannot
-// query other users' jobs. Admins pass through.
+// ScopeList force-overrides opts.UserID to the caller's ID for non-admins,
+// so they cannot query other users' jobs.
 func (CreatorOrAdmin) ScopeList(ctx context.Context, opts ListOptions) (ListOptions, error) {
 	user := authn.ForContext(ctx)
 	if user == nil {
@@ -176,21 +165,16 @@ type Queue interface {
 }
 
 // StatusQueue is the optional capability for queues that track individual
-// jobs after submission — the basis of UI status displays, ops dashboards,
-// and creator-only auth. Fire-and-forget queues simply return a Queue that
-// doesn't implement StatusQueue; callers should type-assert before use.
+// jobs after submission. Fire-and-forget queues (e.g. Redis) return a Queue
+// that doesn't implement it; callers type-assert before use.
 //
-// Watch returns a channel that emits at least one terminal JobEvent before
-// closing. Adapters MAY emit intermediate transitions (queued→running→...)
-// but are not required to — River, for example, only emits the terminal
-// event because that's all its underlying Subscribe API exposes. Clients
-// can drain until close and rely on the last received event for the final
-// state and error message; calling Status after close is unnecessary.
+// Watch emits at least one terminal JobEvent before closing. Adapters MAY
+// emit intermediate transitions but aren't required to (River only emits
+// terminal). Drain until close and trust the last event for final state.
 //
-// Cancel requests cancellation of a queued or running job. Idempotent on
-// terminal jobs. Backends that can't cancel running work return the cancel
-// without affecting the in-progress run; queued cancellation must always
-// succeed.
+// Cancel is idempotent on terminal jobs. Backends that can't interrupt
+// running work return without affecting the in-progress run; queued
+// cancellation must always succeed.
 type StatusQueue interface {
 	Queue
 	Status(context.Context, string) (JobStatus, error)
@@ -199,10 +183,9 @@ type StatusQueue interface {
 	Cancel(context.Context, string) error
 }
 
-// PeriodicQueue is the optional capability for queues that support recurring
-// jobs. AddPeriodic returns an opaque ID that RemovePeriodic accepts. When
-// cronTab is non-empty it takes precedence over period; otherwise period is
-// used as a fixed interval.
+// PeriodicQueue is the optional capability for recurring jobs. cronTab
+// (non-empty) takes precedence over period; otherwise period is a fixed
+// interval. AddPeriodic returns an opaque ID for RemovePeriodic.
 type PeriodicQueue interface {
 	Queue
 	AddPeriodic(ctx context.Context, jobFunc func() Job, period time.Duration, cronTab string) (string, error)
@@ -239,17 +222,8 @@ type PeriodicQueue interface {
 // to whichever Backend hosts the named queue.
 type Backend interface {
 	Queue(name string) (Queue, error)
-	// Run starts the backend and blocks until shutdown completes (Stop or
-	// Shutdown called, or the context cancelled). Returns the first
-	// shutdown error.
 	Run(context.Context) error
-	// Shutdown triggers graceful drain and blocks until it finishes or ctx
-	// fires. In-flight worker contexts are NOT cancelled.
 	Shutdown(ctx context.Context) error
-	// Stop signals hard shutdown by cancelling the backend ctx (which
-	// propagates to in-flight worker ctxs). Returns immediately.
 	Stop(context.Context) error
-	// Wait blocks until Run has returned, or until ctx fires. Does not
-	// trigger shutdown.
 	Wait(ctx context.Context) error
 }

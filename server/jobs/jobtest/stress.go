@@ -122,14 +122,11 @@ func (w *counterWorker) Run(ctx context.Context) error {
 	return nil
 }
 
-// spawnerWorker recursively submits Children copies of itself with Depth-1,
-// stopping at 0. Exercises jobs-spawning-jobs.
-//
-// submitCtx is the ctx used for child submissions; the worker's own Run ctx
-// (runCtx, derived from backend ctx) has no user attached and would be
-// rejected by CanSubmit. Real deployments solve this via a Runner middleware
-// that reconstitutes the submitter's user onto runCtx — see
-// project_jobs_auth_middleware_plan in memory.
+// spawnerWorker recursively submits Children copies of itself, exercising
+// jobs-spawning-jobs. submitCtx carries an authenticated user (the worker's
+// own Run ctx descends from the backend ctx and would be denied by
+// CanSubmit). Production solves this with a Runner middleware that
+// reconstitutes the submitter's user onto runCtx.
 type spawnerWorker struct {
 	Depth    int    `json:"depth"`
 	Children int    `json:"children"`

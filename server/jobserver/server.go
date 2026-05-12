@@ -39,8 +39,7 @@ func NewServer() (http.Handler, error) {
 	return r, nil
 }
 
-// runJobRequest runs the posted job synchronously via Runner — no queue, no
-// tracking. The response is a synthesized terminal JobStatus.
+// runJobRequest runs synchronously via Runner — no queue, no tracking.
 func runJobRequest(w http.ResponseWriter, req *http.Request) {
 	cfg := model.ForContext(req.Context())
 	if cfg.JobRunner == nil {
@@ -110,7 +109,6 @@ func submitJobRequest(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, status)
 }
 
-// Query parameter names accepted by listJobsRequest.
 const (
 	queryUserID = "user_id"
 	queryKind   = "kind"
@@ -119,8 +117,7 @@ const (
 	queryLimit  = "limit"
 )
 
-// maxListLimit caps client-supplied ?limit= to bound list response size.
-// Defense-in-depth alongside the backend's default.
+// maxListLimit caps client-supplied ?limit= as defense-in-depth.
 const maxListLimit = 1000
 
 func listJobsRequest(w http.ResponseWriter, req *http.Request) {
@@ -171,8 +168,6 @@ func listJobsRequest(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, result)
 }
 
-// statusJobRequest returns 404 when the job is not visible to the caller,
-// regardless of whether it's absent or just not theirs.
 func statusJobRequest(w http.ResponseWriter, req *http.Request) {
 	sq, ok := requireStatusQueue(w, req)
 	if !ok {
@@ -198,15 +193,15 @@ func cancelJobRequest(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// watchJobRequest streams JobEvents as SSE. Closes on terminal (with an
-// "event: end" sentinel) or client disconnect.
+// watchJobRequest streams JobEvents as SSE until terminal (with "event: end")
+// or client disconnect.
 func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	sq, ok := requireStatusQueue(w, req)
 	if !ok {
 		return
 	}
-	// http.ResponseController navigates middleware-wrapped writers to find
-	// Flusher; bare w.(http.Flusher) breaks the moment anything wraps w.
+	// ResponseController unwraps middleware-wrapped writers; bare type-assert
+	// to http.Flusher breaks the moment anything wraps w.
 	rc := http.NewResponseController(w)
 	ctx := req.Context()
 	ch, err := sq.Watch(ctx, chi.URLParam(req, "jobId"))
@@ -220,8 +215,6 @@ func watchJobRequest(w http.ResponseWriter, req *http.Request) {
 	h.Set("Connection", "keep-alive")
 	h.Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
-	// Flush fails when a middleware wraps without Unwrap; emit anyway so the
-	// client at least sees the terminal event when the connection closes.
 	_ = rc.Flush()
 	// Heartbeat keeps proxies (nginx, ELBs) from closing the idle stream.
 	heartbeat := time.NewTicker(sseHeartbeatInterval)
@@ -290,9 +283,9 @@ func requireStatusQueue(w http.ResponseWriter, req *http.Request) (jobs.StatusQu
 	return sq, true
 }
 
-// scopeJobUserID binds the job's UserID to the authenticated user. Admins
-// may submit on behalf of any user (e.g. system jobs); non-admins always
-// have their own ID stamped, regardless of what the request body specified.
+// scopeJobUserID stamps the authenticated user's ID onto the job. Admins
+// may submit on behalf of any user; non-admins always get their own ID
+// regardless of what the request body specified.
 func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 	user := authn.ForContext(ctx)
 	if user == nil {
@@ -304,8 +297,8 @@ func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 	job.Opts.UserID = user.ID()
 }
 
-// mapJobLookupError returns 404 for both ErrJobNotFound and ErrJobAccessDenied
-// so an authenticated-but-not-owner caller can't probe ID existence.
+// mapJobLookupError collapses ErrJobNotFound and ErrJobAccessDenied to 404
+// so authenticated-but-not-owner callers can't probe ID existence.
 func mapJobLookupError(w http.ResponseWriter, req *http.Request, err error) {
 	if errors.Is(err, jobs.ErrJobNotFound) || errors.Is(err, jobs.ErrJobAccessDenied) {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -314,8 +307,8 @@ func mapJobLookupError(w http.ResponseWriter, req *http.Request, err error) {
 	internalError(w, req, "job lookup failed", err)
 }
 
-// internalError logs err with request context and returns a generic 500 so
-// underlying details (DB messages, internal paths, etc.) don't leak to clients.
+// internalError logs err and returns a generic 500 so underlying details
+// (DB messages, paths, etc.) don't leak to clients.
 func internalError(w http.ResponseWriter, req *http.Request, msg string, err error) {
 	log.For(req.Context()).Error().Err(err).Msg(msg)
 	http.Error(w, "internal error", http.StatusInternalServerError)
