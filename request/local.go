@@ -11,9 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
-func init() {
-	var _ Store = &Local{}
-}
+var _ Store = (*Local)(nil)
 
 type Local struct {
 	Directory string

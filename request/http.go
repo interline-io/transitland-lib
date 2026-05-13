@@ -50,9 +50,7 @@ var safeTransport = func() *http.Transport {
 	return t
 }()
 
-func init() {
-	var _ Downloader = &Http{}
-}
+var _ Downloader = (*Http)(nil)
 
 const (
 	// Default retry configuration for transient HTTP errors (429, 502, 503, 504).
