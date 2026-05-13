@@ -7,9 +7,7 @@ import (
 
 var bufferSize = 1000
 
-func init() {
-	var _ adapters.Reader = &Reader{}
-}
+var _ adapters.Reader = (*Reader)(nil)
 
 // Reader is a mocked up Reader used for testing.
 type Reader struct {

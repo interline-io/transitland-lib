@@ -7,9 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
-func init() {
-	var _ model.Actions = &Actions{}
-}
+var _ model.Actions = (*Actions)(nil)
 
 type Actions struct{}
 
