@@ -34,12 +34,24 @@ func TestSystemFileUnmarshalJSON(t *testing.T) {
 			assert.Equal(t, "system_information", sf.Data[""].Feeds[0].Name.Val)
 		}
 	})
-	t.Run("empty data", func(t *testing.T) {
+	t.Run("empty data object", func(t *testing.T) {
+		var sf SystemFile
+		if err := json.Unmarshal([]byte(`{"data":{}}`), &sf); err != nil {
+			t.Fatal(err)
+		}
+		assert.Empty(t, sf.Data)
+	})
+	t.Run("missing data key", func(t *testing.T) {
 		var sf SystemFile
 		if err := json.Unmarshal([]byte(`{}`), &sf); err != nil {
 			t.Fatal(err)
 		}
 		assert.Empty(t, sf.Data)
+	})
+	t.Run("malformed 2.x language value is not silently treated as 3.x", func(t *testing.T) {
+		var sf SystemFile
+		err := json.Unmarshal([]byte(`{"data":{"en":"bad"}}`), &sf)
+		assert.Error(t, err)
 	})
 }
 

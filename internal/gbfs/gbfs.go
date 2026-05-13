@@ -43,7 +43,10 @@ type SystemFile struct {
 // UnmarshalJSON accepts both the GBFS 1.x/2.x shape, where `data` is a map
 // keyed by language code, and the GBFS 3.x shape, where `data` is the
 // SystemFeeds object directly. The 3.x payload is stored under an empty
-// language key so downstream consumers can iterate uniformly.
+// language key so downstream consumers can iterate uniformly. The version
+// is disambiguated by the presence of a top-level `feeds` key in `data`,
+// rather than by trial-decoding — `SystemFeeds` ignores unknown fields, so
+// a fallback strategy would silently accept malformed 2.x payloads.
 func (s *SystemFile) UnmarshalJSON(b []byte) error {
 	var raw struct {
 		Data json.RawMessage `json:"data"`
@@ -54,16 +57,23 @@ func (s *SystemFile) UnmarshalJSON(b []byte) error {
 	if len(raw.Data) == 0 {
 		return nil
 	}
-	var langMap map[string]*SystemFeeds
-	if err := json.Unmarshal(raw.Data, &langMap); err == nil {
-		s.Data = langMap
-		return nil
-	}
-	var sf SystemFeeds
-	if err := json.Unmarshal(raw.Data, &sf); err != nil {
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(raw.Data, &keys); err != nil {
 		return err
 	}
-	s.Data = map[string]*SystemFeeds{"": &sf}
+	if _, ok := keys["feeds"]; ok {
+		var sf SystemFeeds
+		if err := json.Unmarshal(raw.Data, &sf); err != nil {
+			return err
+		}
+		s.Data = map[string]*SystemFeeds{"": &sf}
+		return nil
+	}
+	var langMap map[string]*SystemFeeds
+	if err := json.Unmarshal(raw.Data, &langMap); err != nil {
+		return err
+	}
+	s.Data = langMap
 	return nil
 }
 
