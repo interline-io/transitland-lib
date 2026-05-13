@@ -1,4 +1,4 @@
-package cmds
+package postgres
 
 import (
 	"context"
@@ -8,41 +8,41 @@ import (
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	migratepg "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	_ "github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/rs/zerolog"
 
 	"github.com/interline-io/log"
-	postgressMigrations "github.com/interline-io/transitland-lib/schema/postgres"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
-	postgressAdapter "github.com/interline-io/transitland-lib/tldb/postgres"
+	postgresAdapter "github.com/interline-io/transitland-lib/tldb/postgres"
 
 	"github.com/spf13/pflag"
 )
 
-type DBMigrateCommand struct {
+// Command runs schema migrations against a Postgres database using the
+// migrations embedded in this package. Lives next to the embedded migrations
+// so consumers that don't need to run dbmigrate don't transitively pull them
+// in by importing transitland-lib/cmds.
+type Command struct {
 	DBURL      string
 	Subcommand string
 	Adapter    tldb.Adapter
 }
 
-func (cmd *DBMigrateCommand) HelpDesc() (string, string) {
+func (cmd *Command) HelpDesc() (string, string) {
 	return "Perform database migrations", ""
 }
 
-func (cmd *DBMigrateCommand) HelpArgs() string {
+func (cmd *Command) HelpArgs() string {
 	return "[flags] <subcommand>"
 }
 
-func (cmd *DBMigrateCommand) AddFlags(fl *pflag.FlagSet) {
+func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 }
 
-// Parse command line options.
-func (cmd *DBMigrateCommand) Parse(args []string) error {
+func (cmd *Command) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	if fl.NArg() == 0 {
 		return errors.New("subcommand required")
@@ -54,31 +54,29 @@ func (cmd *DBMigrateCommand) Parse(args []string) error {
 	return nil
 }
 
-// Run this command.
-func (cmd *DBMigrateCommand) Run(ctx context.Context) error {
-	atx := postgressAdapter.PostgresAdapter{DBURL: cmd.DBURL}
+func (cmd *Command) Run(ctx context.Context) error {
+	atx := postgresAdapter.PostgresAdapter{DBURL: cmd.DBURL}
 	db, err := atx.OpenDB()
 	if err != nil {
 		return err
 	}
 	defer atx.Close()
-	cmd.Adapter = postgressAdapter.NewPostgresAdapterFromDBX(db)
+	cmd.Adapter = postgresAdapter.NewPostgresAdapterFromDBX(db)
 
-	_ = postgressMigrations.EmbeddedMigrations
-	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	driver, err := migratepg.WithInstance(db.DB, &migratepg.Config{})
 	if err != nil {
 		return err
 	}
-	_ = driver
-	source, err := iofs.New(postgressMigrations.EmbeddedMigrations, "migrations")
+	source, err := iofs.New(EmbeddedMigrations, "migrations")
 	if err != nil {
 		return err
 	}
 	m, err := migrate.NewWithInstance("iofs", source, "postgres", driver)
-	m.Log = &migrationLogger{log: log.Logger.With().Logger()}
 	if err != nil {
 		return err
 	}
+	m.Log = &migrationLogger{log: log.Logger.With().Logger()}
+
 	switch cmd.Subcommand {
 	case "up":
 		log.Info().Msg("Running migrations...")
