@@ -63,7 +63,7 @@ createdb "$PGDATABASE"
 
 # Run migrations
 transitland dbmigrate --dburl="$TL_TEST_DATABASE_URL" up
-transitland dbmigrate --dburl="$TL_TEST_DATABASE_URL" natural-earth
+transitland dbmigrate-natural-earth --dburl="$TL_TEST_DATABASE_URL"
 
 #########################
 # Migrate and init server database
@@ -79,7 +79,7 @@ createdb "$PGDATABASE"
 
 # Run migrations
 transitland dbmigrate --dburl="$TL_TEST_SERVER_DATABASE_URL" up
-transitland dbmigrate --dburl="$TL_TEST_SERVER_DATABASE_URL" natural-earth
+transitland dbmigrate-natural-earth --dburl="$TL_TEST_SERVER_DATABASE_URL"
 
 # Remove import files
 transitland sync --dburl="$TL_TEST_SERVER_DATABASE_URL" "$SCRIPTDIR/server/server-test.dmfr.json"

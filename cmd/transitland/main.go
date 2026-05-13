@@ -9,6 +9,8 @@ import (
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/cmds"
 	"github.com/interline-io/transitland-lib/diff"
+	neSchema "github.com/interline-io/transitland-lib/schema/ne"
+	postgresSchema "github.com/interline-io/transitland-lib/schema/postgres"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlxy"
 
@@ -58,7 +60,8 @@ func init() {
 		tlcli.CobraHelper(&tlxy.PolylinesCommand{}, pc, "polylines-create"),
 		tlcli.CobraHelper(&cmds.ServerCommand{}, pc, "server"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
-		tlcli.CobraHelper(&cmds.DBMigrateCommand{}, pc, "dbmigrate"),
+		tlcli.CobraHelper(&postgresSchema.Command{}, pc, "dbmigrate"),
+		tlcli.CobraHelper(&neSchema.Command{}, pc, "dbmigrate-natural-earth"),
 		tlcli.CobraHelper(&cmds.FeedStateManagerCommand{}, pc, "feed-state"),
 		cmds.NewDmfrCommand(pc),
 		dmfrFormatCommand,

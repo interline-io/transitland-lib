@@ -20,7 +20,7 @@ createdb "${PGDATABASE}"
 transitland dbmigrate up
 
 # Load Natural Earth - ogr2ogr is required for this.
-transitland dbmigrate natural-earth
+transitland dbmigrate-natural-earth
 
 # Import GTFS feeds from directories or DMFR files
 for arg in "$@"; do
