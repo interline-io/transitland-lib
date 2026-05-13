@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/server/caches/httpcache"
@@ -59,7 +58,7 @@ func NewRouter(client *http.Client, endpoint string, apikey string) *Router {
 
 func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*model.Directions, error) {
 	if err := directions.ValidateDirectionRequest(req); err != nil {
-		return &model.Directions{Success: false, Exception: aws.String("invalid input")}, nil
+		return &model.Directions{Success: false, Exception: strPtr("invalid input")}, nil
 	}
 
 	// Prepare request
@@ -74,7 +73,7 @@ func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*mode
 	case model.StepModeWalk, model.StepModeTransit:
 		input.Costing = "pedestrian"
 	default:
-		return &model.Directions{Success: false, Exception: aws.String("unsupported travel mode")}, nil
+		return &model.Directions{Success: false, Exception: strPtr("unsupported travel mode")}, nil
 	}
 
 	// Prepare time
@@ -94,7 +93,7 @@ func (h *Router) Request(ctx context.Context, req model.DirectionRequest) (*mode
 	res, err := makeRequest(ctx, input, h.client, h.endpoint, h.apikey)
 	if err != nil || len(res.Trip.Legs) == 0 {
 		log.For(ctx).Error().Err(err).Msg("valhalla router failed to calculate route")
-		return &model.Directions{Success: false, Exception: aws.String("could not calculate route")}, nil
+		return &model.Directions{Success: false, Exception: strPtr("could not calculate route")}, nil
 	}
 	// Prepare response
 	ret := makeDirections(res, departAt)
@@ -144,7 +143,7 @@ func makeDirections(res *Response, departAt time.Time) *model.Directions {
 	ret.Distance = itin.Distance
 	ret.StartTime = &itin.StartTime
 	ret.EndTime = &itin.EndTime
-	ret.DataSource = aws.String("OSM")
+	ret.DataSource = strPtr("OSM")
 
 	// Create legs for itinerary
 	prevLegDepartAt := departAt
@@ -222,7 +221,7 @@ func makeDirections(res *Response, departAt time.Time) *model.Directions {
 		itin.Legs = append(itin.Legs, &leg)
 	}
 	if len(itin.Legs) == 0 {
-		return &model.Directions{Success: false, Exception: aws.String("no legs in response")}
+		return &model.Directions{Success: false, Exception: strPtr("no legs in response")}
 	}
 
 	// Add summary
@@ -297,4 +296,8 @@ func wpiWaypoint(w *model.WaypointInput) *model.Waypoint {
 		Lat:  w.Lat,
 		Name: w.Name,
 	}
+}
+
+func strPtr(s string) *string {
+	return &s
 }
