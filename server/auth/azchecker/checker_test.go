@@ -17,11 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func init() {
-	// Ensure Checker implements authz.PermissionManager
-	var _ authz.PermissionManager = &Checker{}
-}
-
 type testCase struct {
 	Subject            authz.EntityKey
 	Object             authz.EntityKey

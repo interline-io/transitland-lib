@@ -79,8 +79,11 @@ type Checker struct {
 	globalAdmins []string
 }
 
-// Compile-time check that Checker implements authz.AdminManager
-var _ authz.AdminManager = (*Checker)(nil)
+// Compile-time check that Checker implements authz.AdminManager and authz.PermissionManager
+var (
+	_ authz.AdminManager      = (*Checker)(nil)
+	_ authz.PermissionManager = (*Checker)(nil)
+)
 
 func NewCheckerFromConfig(cfg CheckerConfig, userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) *Checker {
 	if userClient == nil {
