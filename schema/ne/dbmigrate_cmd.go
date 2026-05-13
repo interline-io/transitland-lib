@@ -1,9 +1,4 @@
-// Package dbmigratene loads Natural Earth admin boundary and populated place
-// data into the transitland database. The Natural Earth shapefile data is
-// embedded via transitland-lib/schema/ne (~15MB), so this package is kept
-// separate from transitland-lib/cmds to keep that data out of consumer
-// binaries that only need the rest of cmds.
-package dbmigratene
+package ne
 
 import (
 	"archive/zip"
@@ -15,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/schema/ne"
 	"github.com/interline-io/transitland-lib/tldb"
 	postgresAdapter "github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tt"
@@ -23,6 +17,11 @@ import (
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-shapefile"
 )
+
+// Command loads Natural Earth admin boundaries and populated places into a
+// Postgres database. Lives next to the embedded shapefile data so consumers
+// that don't need to run this loader don't transitively pull the ~15MB of
+// zip files in by importing transitland-lib/cmds.
 
 type Command struct {
 	DBURL   string
@@ -53,14 +52,14 @@ func (cmd *Command) Run(ctx context.Context) error {
 	defer atx.Close()
 	cmd.Adapter = postgresAdapter.NewPostgresAdapterFromDBX(db)
 
-	return fs.WalkDir(ne.EmbeddedNaturalEarthData, ".", func(path string, info fs.DirEntry, err error) error {
+	return fs.WalkDir(EmbeddedNaturalEarthData, ".", func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if !strings.HasSuffix(path, ".zip") {
 			return nil
 		}
-		neZipData, err := ne.EmbeddedNaturalEarthData.ReadFile(path)
+		neZipData, err := EmbeddedNaturalEarthData.ReadFile(path)
 		if err != nil {
 			return err
 		}
