@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/cmds"
+	"github.com/interline-io/transitland-lib/cmds/dbmigratene"
 	"github.com/interline-io/transitland-lib/diff"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -59,6 +60,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.ServerCommand{}, pc, "server"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		tlcli.CobraHelper(&cmds.DBMigrateCommand{}, pc, "dbmigrate"),
+		tlcli.CobraHelper(&dbmigratene.Command{}, pc, "dbmigrate-natural-earth"),
 		tlcli.CobraHelper(&cmds.FeedStateManagerCommand{}, pc, "feed-state"),
 		cmds.NewDmfrCommand(pc),
 		dmfrFormatCommand,
