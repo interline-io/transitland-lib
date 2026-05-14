@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Compile-time check — AdminRoleChecker satisfies the basic Checker contract.
-var _ Checker = (*AdminRoleChecker)(nil)
-
 func ctxWithUser(id string, roles ...string) context.Context {
 	u := authn.NewCtxUser(id, "", "").WithRoles(roles...)
 	return authn.WithUser(context.Background(), u)

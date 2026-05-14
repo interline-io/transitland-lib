@@ -174,6 +174,12 @@ type AdminRoleChecker struct {
 	GlobalAdminUserIDs []string
 }
 
+var (
+	_ Checker = (*AllowAllChecker)(nil)
+	_ Checker = (*DenyAllChecker)(nil)
+	_ Checker = (*AdminRoleChecker)(nil)
+)
+
 func (c *AdminRoleChecker) Me(ctx context.Context) (*UserInfo, error) {
 	user := authn.ForContext(ctx)
 	if user == nil {
