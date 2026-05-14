@@ -93,6 +93,9 @@ func NewChecker(userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) (*C
 	if fgaClient == nil {
 		return nil, errors.New("azchecker.NewChecker: FGAProvider must be non-nil")
 	}
+	if db == nil {
+		return nil, errors.New("azchecker.NewChecker: db must be non-nil")
+	}
 	return &Checker{
 		userClient: userClient,
 		fgaClient:  fgaClient,

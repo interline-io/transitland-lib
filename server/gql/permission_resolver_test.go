@@ -436,11 +436,11 @@ func TestPermissionResolver_Users(t *testing.T) {
 	mockUsers.AddUser("alice", authn.NewCtxUser("alice", "Alice Smith", "alice@example.com"))
 	mockUsers.AddUser("bob", authn.NewCtxUser("bob", "Bob Jones", "bob@example.com"))
 	mockUsers.AddUser("charlie", authn.NewCtxUser("charlie", "Charlie Brown", "charlie@example.com"))
-	checker, err := azchecker.NewChecker(mockUsers, azchecker.NewMockFGAClient(), nil)
+	cfg := testconfig.Config(t, testconfig.Options{})
+	checker, err := azchecker.NewChecker(mockUsers, azchecker.NewMockFGAClient(), testutil.MustOpenTestDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := testconfig.Config(t, testconfig.Options{})
 	cfg.Checker = checker
 	c := newPermTestClientFromConfig(cfg, "tl-tenant-admin", "admin")
 
