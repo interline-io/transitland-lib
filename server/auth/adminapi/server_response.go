@@ -1,4 +1,4 @@
-package azchecker
+package adminapi
 
 import (
 	"context"

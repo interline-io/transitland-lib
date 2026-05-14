@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/auth/adminapi"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/testutil"
@@ -409,7 +410,7 @@ func TestServer(t *testing.T) {
 }
 
 func testServerWithUser(c *Checker, tk testCase) http.Handler {
-	srv, _ := NewServer(c)
+	srv, _ := adminapi.NewServer(c)
 	srv = usercheck.UserDefaultMiddleware(stringOr(tk.CheckAsUser, tk.Subject.Name))(srv)
 	return srv
 }
