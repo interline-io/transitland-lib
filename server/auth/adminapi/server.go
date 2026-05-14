@@ -1,7 +1,5 @@
-// Package adminapi exposes the authz admin HTTP API. It depends on the
-// generic Server interface (authz.AdminManager + authz.EntityProvider),
-// not on any specific Checker implementation; today *azchecker.Checker
-// satisfies it but other backends could too.
+// Package adminapi exposes the authz admin HTTP API behind a generic
+// Server interface so any AdminManager+EntityProvider can back it.
 package adminapi
 
 import (
@@ -16,8 +14,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
-// Server is the dependency surface required by NewServer: authz read/write
-// operations plus entity hydration for response payloads.
 type Server interface {
 	authz.AdminManager
 	authz.EntityProvider

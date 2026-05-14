@@ -20,11 +20,11 @@ func TestAdminRoleChecker_AdminRoleAllows(t *testing.T) {
 
 	ok, err := c.Check(ctx, ObjectRef{Type: FeedType, ID: 1}, CanEdit)
 	require.NoError(t, err)
-	assert.True(t, ok, "user with admin role should pass Check")
+	assert.True(t, ok)
 
 	isGA, err := c.IsGlobalAdmin(ctx)
 	require.NoError(t, err)
-	assert.True(t, isGA, "user with admin role should be global admin")
+	assert.True(t, isGA)
 }
 
 func TestAdminRoleChecker_NonAdminDenied(t *testing.T) {
@@ -33,7 +33,7 @@ func TestAdminRoleChecker_NonAdminDenied(t *testing.T) {
 
 	ok, err := c.Check(ctx, ObjectRef{Type: FeedType, ID: 1}, CanEdit)
 	require.NoError(t, err)
-	assert.False(t, ok, "user without admin role should be denied")
+	assert.False(t, ok)
 
 	isGA, err := c.IsGlobalAdmin(ctx)
 	require.NoError(t, err)
@@ -42,11 +42,11 @@ func TestAdminRoleChecker_NonAdminDenied(t *testing.T) {
 
 func TestAdminRoleChecker_AllowlistedUserIDAllows(t *testing.T) {
 	c := &AdminRoleChecker{GlobalAdminUserIDs: []string{"service-account-1", "service-account-2"}}
-	ctx := ctxWithUser("service-account-1") // no role, ID matches allowlist
+	ctx := ctxWithUser("service-account-1")
 
 	ok, err := c.Check(ctx, ObjectRef{Type: FeedType, ID: 1}, CanEdit)
 	require.NoError(t, err)
-	assert.True(t, ok, "allowlisted user ID should pass Check")
+	assert.True(t, ok)
 
 	isGA, err := c.IsGlobalAdmin(ctx)
 	require.NoError(t, err)
@@ -59,16 +59,16 @@ func TestAdminRoleChecker_AllowlistDoesNotMatchOtherUser(t *testing.T) {
 
 	ok, err := c.Check(ctx, ObjectRef{Type: FeedType, ID: 1}, CanEdit)
 	require.NoError(t, err)
-	assert.False(t, ok, "user not in allowlist and without admin role should be denied")
+	assert.False(t, ok)
 }
 
 func TestAdminRoleChecker_NilUserDenied(t *testing.T) {
 	c := &AdminRoleChecker{GlobalAdminUserIDs: []string{"someone"}}
-	ctx := context.Background() // no authn user
+	ctx := context.Background()
 
 	ok, err := c.Check(ctx, ObjectRef{Type: FeedType, ID: 1}, CanEdit)
 	require.NoError(t, err)
-	assert.False(t, ok, "missing authn user should deny without panic")
+	assert.False(t, ok)
 
 	isGA, err := c.IsGlobalAdmin(ctx)
 	require.NoError(t, err)
@@ -93,9 +93,8 @@ func TestAdminRoleChecker_Me(t *testing.T) {
 }
 
 func TestAdminRoleChecker_ListObjectsAlwaysEmpty(t *testing.T) {
-	// PermFilter populated from this Checker should have empty AllowedFeeds
-	// — admins get the IsGlobalAdmin shortcut, non-admins get no per-object
-	// allowlist. Returning nil keeps the existing model.WithPerms logic happy.
+	// Admins take the IsGlobalAdmin shortcut; non-admins get no per-object
+	// allowlist. Nil keeps model.WithPerms happy.
 	c := &AdminRoleChecker{}
 	for _, ctx := range []context.Context{
 		context.Background(),

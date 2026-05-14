@@ -75,17 +75,14 @@ type Checker struct {
 	globalAdmins []string
 }
 
-// Compile-time check that Checker implements authz.AdminManager,
-// authz.PermissionManager, and authz.EntityProvider.
 var (
 	_ authz.AdminManager      = (*Checker)(nil)
 	_ authz.PermissionManager = (*Checker)(nil)
 	_ authz.EntityProvider    = (*Checker)(nil)
 )
 
-// NewChecker constructs an FGA-backed Checker from explicit providers.
-// userClient, fgaClient, and db are required (non-nil). Use AddGlobalAdmin
-// to grant unconditional admin status to specific authn user IDs.
+// NewChecker constructs an FGA-backed Checker. All arguments are required;
+// nil returns an error.
 func NewChecker(userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) (*Checker, error) {
 	if userClient == nil {
 		return nil, errors.New("azchecker.NewChecker: UserProvider must be non-nil")
@@ -103,9 +100,8 @@ func NewChecker(userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) (*C
 	}, nil
 }
 
-// AddGlobalAdmin grants the given authn user ID unconditional admin
-// status (in addition to anyone carrying the "admin" role). Safe to call
-// multiple times; empty userID is a no-op.
+// AddGlobalAdmin grants an authn user ID unconditional admin status, in
+// addition to anyone carrying the "admin" role. Empty userID is a no-op.
 func (c *Checker) AddGlobalAdmin(userID string) {
 	if userID == "" {
 		return

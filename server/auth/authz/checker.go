@@ -84,12 +84,9 @@ type AdminManager interface {
 	GroupSave(ctx context.Context, req *GroupSaveRequest) (*GroupSaveResponse, error)
 }
 
-// EntityProvider hydrates ObjectRef IDs into typed entity records. The
-// admin API HTTP server uses it to enrich response payloads with names
-// and other metadata for tenants, groups, feeds, and feed versions —
-// data that the authz layer otherwise only knows as opaque IDs. Kept
-// separate from AdminManager because the lookups are DB-backed metadata
-// fetches, not authz decisions.
+// EntityProvider hydrates ObjectRef IDs into typed entity records for
+// HTTP response payloads. Separate from AdminManager — these are plain
+// DB metadata lookups, not authz decisions.
 type EntityProvider interface {
 	GetTenants(ctx context.Context, ids []int64) ([]*Tenant, error)
 	GetGroups(ctx context.Context, ids []int64) ([]*Group, error)
@@ -160,17 +157,13 @@ func (c *DenyAllChecker) Check(ctx context.Context, obj ObjectRef, action Action
 	return false, nil
 }
 
-// AdminRoleChecker is a DenyAllChecker variant that permits all operations
-// when the request's authn user has the "admin" role, or carries an ID
-// listed in GlobalAdminUserIDs, and denies them otherwise. Install it in
-// deployments that don't run a full authorization backend (no FGA, no
-// admin API) but still need to gate mutating actions on admin presence.
-// Callers must guarantee the admin role / allowlisted IDs are only granted
-// to trusted principals.
+// AdminRoleChecker allows all operations when the authn user has the
+// "admin" role or an ID in GlobalAdminUserIDs, and denies them otherwise.
+// For deployments without an FGA backend that still need to gate
+// mutations; callers must ensure the role and listed IDs go only to
+// trusted principals.
 type AdminRoleChecker struct {
-	// GlobalAdminUserIDs is an optional allowlist of authn user IDs that
-	// are treated as global admin in addition to any user carrying the
-	// "admin" role. Mirrors azchecker.Checker.globalAdmins.
+	// Authn user IDs treated as admin in addition to the "admin" role.
 	GlobalAdminUserIDs []string
 }
 
