@@ -128,7 +128,11 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 				t.Fatal(fgaErr)
 			}
 		}
-		checker = azchecker.NewCheckerFromConfig(azchecker.CheckerConfig{}, nil, fgaClient, db)
+		c, cErr := azchecker.NewChecker(azchecker.NewMockUserProvider(), fgaClient, db)
+		if cErr != nil {
+			t.Fatal(cErr)
+		}
+		checker = c
 	}
 
 	// Setup DB

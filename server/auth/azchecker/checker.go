@@ -68,10 +68,6 @@ type FGAProvider interface {
 	DeleteTuple(context.Context, TupleKey) error
 }
 
-type CheckerConfig struct {
-	GlobalAdmin string
-}
-
 type Checker struct {
 	userClient   UserProvider
 	fgaClient    FGAProvider
@@ -79,32 +75,38 @@ type Checker struct {
 	globalAdmins []string
 }
 
-// Compile-time check that Checker implements authz.AdminManager and authz.PermissionManager
 var (
 	_ authz.AdminManager      = (*Checker)(nil)
 	_ authz.PermissionManager = (*Checker)(nil)
+	_ authz.EntityProvider    = (*Checker)(nil)
 )
 
-func NewCheckerFromConfig(cfg CheckerConfig, userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) *Checker {
+// NewChecker constructs an FGA-backed Checker. All arguments are required;
+// nil returns an error.
+func NewChecker(userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) (*Checker, error) {
 	if userClient == nil {
-		userClient = NewMockUserProvider()
+		return nil, errors.New("azchecker.NewChecker: UserProvider must be non-nil")
 	}
 	if fgaClient == nil {
-		fgaClient = NewMockFGAClient()
+		return nil, errors.New("azchecker.NewChecker: FGAProvider must be non-nil")
 	}
-	checker := NewChecker(userClient, fgaClient, db)
-	if cfg.GlobalAdmin != "" {
-		checker.globalAdmins = append(checker.globalAdmins, cfg.GlobalAdmin)
+	if db == nil {
+		return nil, errors.New("azchecker.NewChecker: db must be non-nil")
 	}
-	return checker
+	return &Checker{
+		userClient: userClient,
+		fgaClient:  fgaClient,
+		db:         db,
+	}, nil
 }
 
-func NewChecker(n UserProvider, p FGAProvider, db sqlx.Ext) *Checker {
-	return &Checker{
-		userClient: n,
-		fgaClient:  p,
-		db:         db,
+// AddGlobalAdmin grants an authn user ID unconditional admin status, in
+// addition to anyone carrying the "admin" role. Empty userID is a no-op.
+func (c *Checker) AddGlobalAdmin(userID string) {
+	if userID == "" {
+		return
 	}
+	c.globalAdmins = append(c.globalAdmins, userID)
 }
 
 // ///////////////////
@@ -142,19 +144,19 @@ func (c *Checker) User(ctx context.Context, req *authz.UserRequest) (*authz.User
 // DB helpers
 // ///////////////////
 
-func (c *Checker) getTenants(ctx context.Context, ids []int64) ([]*authz.Tenant, error) {
+func (c *Checker) GetTenants(ctx context.Context, ids []int64) ([]*authz.Tenant, error) {
 	return getEntities[*authz.Tenant](ctx, c.db, ids, "tl_tenants", "id", "coalesce(tenant_name,'') as name")
 }
 
-func (c *Checker) getGroups(ctx context.Context, ids []int64) ([]*authz.Group, error) {
+func (c *Checker) GetGroups(ctx context.Context, ids []int64) ([]*authz.Group, error) {
 	return getEntities[*authz.Group](ctx, c.db, ids, "tl_groups", "id", "coalesce(group_name,'') as name")
 }
 
-func (c *Checker) getFeeds(ctx context.Context, ids []int64) ([]*authz.Feed, error) {
+func (c *Checker) GetFeeds(ctx context.Context, ids []int64) ([]*authz.Feed, error) {
 	return getEntities[*authz.Feed](ctx, c.db, ids, "current_feeds", "id", "onestop_id", "coalesce(name,'') as name")
 }
 
-func (c *Checker) getFeedVersions(ctx context.Context, ids []int64) ([]*authz.FeedVersion, error) {
+func (c *Checker) GetFeedVersions(ctx context.Context, ids []int64) ([]*authz.FeedVersion, error) {
 	return getEntities[*authz.FeedVersion](ctx, c.db, ids, "feed_versions", "id", "feed_id", "sha1", "coalesce(name,'') as name")
 }
 
@@ -304,7 +306,7 @@ func (c *Checker) Me(ctx context.Context) (*authz.UserInfo, error) {
 	for _, groupTuple := range groupTuples {
 		directGroupIds = append(directGroupIds, groupTuple.Object.ID())
 	}
-	directGroups, err := c.getGroups(ctx, directGroupIds)
+	directGroups, err := c.GetGroups(ctx, directGroupIds)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +316,7 @@ func (c *Checker) Me(ctx context.Context) (*authz.UserInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	expandedGroups, err := c.getGroups(ctx, expandedGroupIds)
+	expandedGroups, err := c.GetGroups(ctx, expandedGroupIds)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +669,7 @@ func (c *Checker) hydrateSubjectRefs(ctx context.Context, refs []authz.SubjectRe
 		for id := range tenantIDs {
 			ids = append(ids, id)
 		}
-		if tenants, _ := c.getTenants(ctx, ids); tenants != nil {
+		if tenants, _ := c.GetTenants(ctx, ids); tenants != nil {
 			for _, t := range tenants {
 				if t != nil {
 					tenantNames[t.Id] = t.Name
@@ -683,7 +685,7 @@ func (c *Checker) hydrateSubjectRefs(ctx context.Context, refs []authz.SubjectRe
 		for id := range groupIDs {
 			ids = append(ids, id)
 		}
-		if groups, _ := c.getGroups(ctx, ids); groups != nil {
+		if groups, _ := c.GetGroups(ctx, ids); groups != nil {
 			for _, g := range groups {
 				if g != nil {
 					groupNames[g.Id] = g.Name
