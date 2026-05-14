@@ -12,7 +12,17 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
-func NewServer(checker *Checker) (http.Handler, error) {
+// AdminAPI is the dependency surface required by the admin API HTTP
+// server: authz read/write operations plus entity hydration for response
+// payloads. *Checker satisfies it today; the interface lets a future
+// non-FGA backend back the same admin API and lets this server move out
+// of the azchecker package later.
+type AdminAPI interface {
+	authz.AdminManager
+	authz.EntityProvider
+}
+
+func NewServer(checker AdminAPI) (http.Handler, error) {
 	router := chi.NewRouter()
 
 	/////////////////

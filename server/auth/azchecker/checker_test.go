@@ -1919,7 +1919,11 @@ func newTestChecker(t testing.TB, url string, testData []testCase) *Checker {
 		t.Fatal(err)
 	}
 
-	checker := NewCheckerFromConfig(CheckerConfig{GlobalAdmin: "global_admin"}, nil, fgaClient, dbx)
+	checker, err := NewChecker(NewMockUserProvider(), fgaClient, dbx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checker.AddGlobalAdmin("global_admin")
 
 	// Add test data
 	for _, tc := range testData {

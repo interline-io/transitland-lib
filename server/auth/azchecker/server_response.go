@@ -99,27 +99,27 @@ func refsToIDs(refs []authz.ObjectRef) []int64 {
 	return ids
 }
 
-func wrapTenantList(ctx context.Context, c *Checker, refs []authz.ObjectRef) *tenantListResponse {
+func wrapTenantList(ctx context.Context, c authz.EntityProvider, refs []authz.ObjectRef) *tenantListResponse {
 	ids := refsToIDs(refs)
-	tenants, _ := c.getTenants(ctx, ids)
+	tenants, _ := c.GetTenants(ctx, ids)
 	return &tenantListResponse{Tenants: tenants}
 }
 
-func wrapGroupList(ctx context.Context, c *Checker, refs []authz.ObjectRef) *groupListResponse {
+func wrapGroupList(ctx context.Context, c authz.EntityProvider, refs []authz.ObjectRef) *groupListResponse {
 	ids := refsToIDs(refs)
-	groups, _ := c.getGroups(ctx, ids)
+	groups, _ := c.GetGroups(ctx, ids)
 	return &groupListResponse{Groups: groups}
 }
 
-func wrapFeedList(ctx context.Context, c *Checker, refs []authz.ObjectRef) *feedListResponse {
+func wrapFeedList(ctx context.Context, c authz.EntityProvider, refs []authz.ObjectRef) *feedListResponse {
 	ids := refsToIDs(refs)
-	feeds, _ := c.getFeeds(ctx, ids)
+	feeds, _ := c.GetFeeds(ctx, ids)
 	return &feedListResponse{Feeds: feeds}
 }
 
-func wrapFeedVersionList(ctx context.Context, c *Checker, refs []authz.ObjectRef) *feedVersionListResponse {
+func wrapFeedVersionList(ctx context.Context, c authz.EntityProvider, refs []authz.ObjectRef) *feedVersionListResponse {
 	ids := refsToIDs(refs)
-	fvs, _ := c.getFeedVersions(ctx, ids)
+	fvs, _ := c.GetFeedVersions(ctx, ids)
 	return &feedVersionListResponse{FeedVersions: fvs}
 }
 
@@ -138,7 +138,7 @@ type tenantPermUsers struct {
 	Members []entityRelation `json:"members,omitempty"`
 }
 
-func wrapTenantPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermissions) *tenantPermissionsResponse {
+func wrapTenantPermissions(ctx context.Context, c authz.EntityProvider, p *authz.ObjectPermissions) *tenantPermissionsResponse {
 	if p == nil {
 		return nil
 	}
@@ -150,7 +150,7 @@ func wrapTenantPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermi
 	// Children (groups)
 	if len(p.Children) > 0 {
 		ids := refsToIDs(p.Children)
-		resp.Groups, _ = c.getGroups(ctx, ids)
+		resp.Groups, _ = c.GetGroups(ctx, ids)
 	}
 	// Subjects grouped by role
 	for _, s := range p.Subjects {
@@ -180,7 +180,7 @@ type groupPermUsers struct {
 	Viewers  []entityRelation `json:"viewers,omitempty"`
 }
 
-func wrapGroupPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermissions) *groupPermissionsResponse {
+func wrapGroupPermissions(ctx context.Context, c authz.EntityProvider, p *authz.ObjectPermissions) *groupPermissionsResponse {
 	if p == nil {
 		return nil
 	}
@@ -196,7 +196,7 @@ func wrapGroupPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermis
 	// Children (feeds)
 	if len(p.Children) > 0 {
 		ids := refsToIDs(p.Children)
-		resp.Feeds, _ = c.getFeeds(ctx, ids)
+		resp.Feeds, _ = c.GetFeeds(ctx, ids)
 	}
 	// Subjects grouped by role
 	for _, s := range p.Subjects {
@@ -220,7 +220,7 @@ type feedPermissionsResponse struct {
 	Actions map[string]bool `json:"actions,omitempty"`
 }
 
-func wrapFeedPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermissions) *feedPermissionsResponse {
+func wrapFeedPermissions(ctx context.Context, c authz.EntityProvider, p *authz.ObjectPermissions) *feedPermissionsResponse {
 	if p == nil {
 		return nil
 	}
@@ -229,7 +229,7 @@ func wrapFeedPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermiss
 		Actions: actionsMap(p.Actions),
 	}
 	// The old response populated feed.onestop_id — fetch full feed entity.
-	if feeds, _ := c.getFeeds(ctx, []int64{p.Ref.ID}); len(feeds) > 0 && feeds[0] != nil {
+	if feeds, _ := c.GetFeeds(ctx, []int64{p.Ref.ID}); len(feeds) > 0 && feeds[0] != nil {
 		resp.Feed = feeds[0]
 	}
 	// Parent (group)
@@ -252,7 +252,7 @@ type fvPermUsers struct {
 	Viewers []entityRelation `json:"viewers,omitempty"`
 }
 
-func wrapFeedVersionPermissions(ctx context.Context, c *Checker, p *authz.ObjectPermissions) *feedVersionPermissionsResponse {
+func wrapFeedVersionPermissions(ctx context.Context, c authz.EntityProvider, p *authz.ObjectPermissions) *feedVersionPermissionsResponse {
 	if p == nil {
 		return nil
 	}
@@ -263,11 +263,11 @@ func wrapFeedVersionPermissions(ctx context.Context, c *Checker, p *authz.Object
 	}
 	// The old response included the parent feed (with full entity) and
 	// the feed version's feed_id + sha1.
-	if fvs, _ := c.getFeedVersions(ctx, []int64{p.Ref.ID}); len(fvs) > 0 && fvs[0] != nil {
+	if fvs, _ := c.GetFeedVersions(ctx, []int64{p.Ref.ID}); len(fvs) > 0 && fvs[0] != nil {
 		resp.FeedVersion = fvs[0]
 	}
 	if p.Parent != nil {
-		if feeds, _ := c.getFeeds(ctx, []int64{p.Parent.ID}); len(feeds) > 0 && feeds[0] != nil {
+		if feeds, _ := c.GetFeeds(ctx, []int64{p.Parent.ID}); len(feeds) > 0 && feeds[0] != nil {
 			resp.Feed = feeds[0]
 		}
 	}

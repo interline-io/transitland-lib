@@ -84,6 +84,19 @@ type AdminManager interface {
 	GroupSave(ctx context.Context, req *GroupSaveRequest) (*GroupSaveResponse, error)
 }
 
+// EntityProvider hydrates ObjectRef IDs into typed entity records. The
+// admin API HTTP server uses it to enrich response payloads with names
+// and other metadata for tenants, groups, feeds, and feed versions —
+// data that the authz layer otherwise only knows as opaque IDs. Kept
+// separate from AdminManager because the lookups are DB-backed metadata
+// fetches, not authz decisions.
+type EntityProvider interface {
+	GetTenants(ctx context.Context, ids []int64) ([]*Tenant, error)
+	GetGroups(ctx context.Context, ids []int64) ([]*Group, error)
+	GetFeeds(ctx context.Context, ids []int64) ([]*Feed, error)
+	GetFeedVersions(ctx context.Context, ids []int64) ([]*FeedVersion, error)
+}
+
 // userInfoFromAuthn projects the authn identity into UserInfo for convenience
 // checkers. Caller must ensure user is non-nil.
 func userInfoFromAuthn(user authn.User) *UserInfo {
@@ -145,4 +158,55 @@ func (c *DenyAllChecker) ListObjects(ctx context.Context, objType ObjectType) ([
 
 func (c *DenyAllChecker) Check(ctx context.Context, obj ObjectRef, action Action) (bool, error) {
 	return false, nil
+}
+
+// AdminRoleChecker is a DenyAllChecker variant that permits all operations
+// when the request's authn user has the "admin" role, or carries an ID
+// listed in GlobalAdminUserIDs, and denies them otherwise. Install it in
+// deployments that don't run a full authorization backend (no FGA, no
+// admin API) but still need to gate mutating actions on admin presence.
+// Callers must guarantee the admin role / allowlisted IDs are only granted
+// to trusted principals.
+type AdminRoleChecker struct {
+	// GlobalAdminUserIDs is an optional allowlist of authn user IDs that
+	// are treated as global admin in addition to any user carrying the
+	// "admin" role. Mirrors azchecker.Checker.globalAdmins.
+	GlobalAdminUserIDs []string
+}
+
+func (c *AdminRoleChecker) Me(ctx context.Context) (*UserInfo, error) {
+	user := authn.ForContext(ctx)
+	if user == nil {
+		return nil, ErrUnauthorized
+	}
+	return userInfoFromAuthn(user), nil
+}
+
+func (c *AdminRoleChecker) IsGlobalAdmin(ctx context.Context) (bool, error) {
+	return c.isAdmin(ctx), nil
+}
+
+func (c *AdminRoleChecker) ListObjects(ctx context.Context, objType ObjectType) ([]ObjectRef, error) {
+	return nil, nil
+}
+
+func (c *AdminRoleChecker) Check(ctx context.Context, obj ObjectRef, action Action) (bool, error) {
+	return c.isAdmin(ctx), nil
+}
+
+func (c *AdminRoleChecker) isAdmin(ctx context.Context) bool {
+	user := authn.ForContext(ctx)
+	if user == nil {
+		return false
+	}
+	if user.HasRole("admin") {
+		return true
+	}
+	uid := user.ID()
+	for _, allow := range c.GlobalAdminUserIDs {
+		if allow == uid {
+			return true
+		}
+	}
+	return false
 }
