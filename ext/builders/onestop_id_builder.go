@@ -71,7 +71,7 @@ func NewOnestopIDBuilder() *OnestopIDBuilder {
 	}
 }
 
-func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (pp *OnestopIDBuilder) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		pp.agencyNames[eid] = v.AgencyName.Val

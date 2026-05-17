@@ -38,7 +38,7 @@ func NewRouteStopBuilder() *RouteStopBuilder {
 	}
 }
 
-func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Route:
 		pp.routeAgencies[eid] = v.AgencyID.Val
