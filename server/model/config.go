@@ -10,13 +10,13 @@ import (
 )
 
 type Config struct {
-	Finder                   Finder
-	RTFinder                 RTFinder
-	GbfsFinder               GbfsFinder
-	Checker                  Checker
-	Actions                  Actions
-	Jobs                     jobs.Backend
-	JobRunner                *jobs.Runner
+	Finder     Finder
+	RTFinder   RTFinder
+	GbfsFinder GbfsFinder
+	Checker    Checker
+	Actions    Actions
+	Jobs       jobs.Backend
+	JobRunner  *jobs.Runner
 	// JobPolicy gates the synchronous /run endpoint (which doesn't go
 	// through a Queue). Nil means no kind-level RBAC on /run.
 	JobPolicy                jobs.AccessPolicy
