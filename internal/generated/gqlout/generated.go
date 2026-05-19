@@ -12053,8 +12053,10 @@ input FeedVersionFilter {
   feed_ids: [Int!]
   "Search for feed versions that cover the specified date range"
   covers: ServiceCoversFilter
-  "Search for feed versions within this bounding box"
+  "Search for feed versions within this bounding box (matches feed version convex hull; may return false positives for feeds with bad-coordinate stops)"
   bbox: BoundingBox
+  "Search for feed versions with at least one stop inside this bounding box (uses precomputed geohash cells; preferred for discovery)"
+  bbox_stops: BoundingBox
   "Search for feed versions within this geographic polygon"
   within: Polygon
   "Search for feed versions within specified radius of a point"
@@ -12127,8 +12129,10 @@ input FeedFilter {
   source_url: FeedSourceUrl
   "Search for feeds with these license details"
   license: LicenseFilter
-  "Search for feeds within this bounding box"
+  "Search for feeds within this bounding box (matches feed version convex hull; may return false positives for feeds with bad-coordinate stops)"
   bbox: BoundingBox
+  "Search for feeds with at least one stop inside this bounding box (uses precomputed geohash cells; preferred for discovery)"
+  bbox_stops: BoundingBox
   "Search for feeds within this geographic polygon"
   within: Polygon
   "Search for feeds within specified radius of a point"
@@ -63878,7 +63882,7 @@ func (ec *executionContext) unmarshalInputFeedFilter(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"onestop_id", "spec", "fetch_error", "import_status", "search", "tags", "source_url", "license", "bbox", "within", "near"}
+	fieldsInOrder := [...]string{"onestop_id", "spec", "fetch_error", "import_status", "search", "tags", "source_url", "license", "bbox", "bbox_stops", "within", "near"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -63948,6 +63952,13 @@ func (ec *executionContext) unmarshalInputFeedFilter(ctx context.Context, obj an
 				return it, err
 			}
 			it.Bbox = data
+		case "bbox_stops":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bbox_stops"))
+			data, err := ec.unmarshalOBoundingBox2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBoundingBox(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BboxStops = data
 		case "within":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("within"))
 			data, err := ec.unmarshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPolygon(ctx, v)
@@ -64016,7 +64027,7 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "file", "feed_ids", "covers", "bbox", "within", "near", "license"}
+	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "file", "feed_ids", "covers", "bbox", "bbox_stops", "within", "near", "license"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -64079,6 +64090,13 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 				return it, err
 			}
 			it.Bbox = data
+		case "bbox_stops":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bbox_stops"))
+			data, err := ec.unmarshalOBoundingBox2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBoundingBox(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BboxStops = data
 		case "within":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("within"))
 			data, err := ec.unmarshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPolygon(ctx, v)

@@ -551,6 +551,17 @@ CREATE TABLE IF NOT EXISTS "tl_route_geometries" (
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(route_id) references gtfs_routes(id)
 );
+CREATE TABLE IF NOT EXISTS "tl_feed_version_geohashes" (
+  "id" integer primary key autoincrement,
+  "feed_version_id" integer not null,
+  "geohash" text not null,
+  "stop_count" integer not null,
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "tl_feed_version_geohashes_feed_version_id_geohash_idx"
+  ON "tl_feed_version_geohashes" ("feed_version_id", "geohash");
+CREATE INDEX IF NOT EXISTS "tl_feed_version_geohashes_geohash_idx"
+  ON "tl_feed_version_geohashes" ("geohash");
 ---------------
 CREATE TABLE IF NOT EXISTS "gtfs_translations" (
   "id" integer primary key autoincrement,

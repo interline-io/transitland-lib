@@ -189,7 +189,7 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		return fetchValidationResult, err
 	}
 
-	// Save stats records
+	// Save stats records (includes stop geohash cells for bbox_stops queries)
 	if err := stats.WriteFeedVersionStats(ctx, atx, feedVersionStats, fv.ID); err != nil {
 		// Fatal err
 		return fetchValidationResult, err

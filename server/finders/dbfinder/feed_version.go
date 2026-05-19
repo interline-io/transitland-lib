@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
@@ -200,10 +201,20 @@ func feedVersionSelect(limit *int, after *model.Cursor, ids []int, permFilter *m
 		}
 
 		// Spatial
-		if where.Bbox != nil || where.Within != nil || where.Near != nil {
+		if where.Bbox != nil || where.BboxStops != nil || where.Within != nil || where.Near != nil {
 			q = q.Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = feed_versions.id")
 			if where.Bbox != nil {
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
+			}
+			if where.BboxStops != nil {
+				b := where.BboxStops
+				cells := tlxy.CellsCoveringBbox(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, 3)
+				q = q.
+					Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat).
+					Where(`(NOT EXISTS (SELECT 1 FROM tl_feed_version_geohashes WHERE feed_version_id = feed_versions.id)
+                        OR EXISTS (SELECT 1 FROM tl_feed_version_geohashes
+                                   WHERE feed_version_id = feed_versions.id
+                                     AND geohash = ANY(?)))`, cells)
 			}
 			if where.Within != nil && where.Within.Valid {
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ?)", where.Within)
