@@ -51,7 +51,6 @@ func init() {
 		tlcli.CobraHelper(&cmds.ChecksumCommand{}, pc, "checksum"),
 		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
 		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
-		tlcli.CobraHelper(&cmds.GeohashBackfillCommand{}, pc, "geohash-backfill"),
 		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
 		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
 		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),

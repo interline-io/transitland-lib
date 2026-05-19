@@ -242,22 +242,6 @@ func TestFeedResolver(t *testing.T) {
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
 			expectError: true,
 		},
-		// bbox_stops: geohash-cell-based filter, AND'd with polygon. Falls back to
-		// polygon-only when an FV has no cells yet (cutover safety).
-		{
-			name:         "bbox_stops 1",
-			query:        `query($bbox:BoundingBox) {feeds(where: {bbox_stops:$bbox}) {onestop_id}}`,
-			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
-			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA"},
-		},
-		{
-			name:         "bbox_stops 2 empty area",
-			query:        `query($bbox:BoundingBox) {feeds(where: {bbox_stops:$bbox}) {onestop_id}}`,
-			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
-			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{},
-		},
 		// TODO: authorization,
 		// TODO: associated_operators
 	}

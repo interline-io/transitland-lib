@@ -509,10 +509,8 @@ type FeedFilter struct {
 	SourceURL *FeedSourceURL `json:"source_url,omitempty"`
 	// Search for feeds with these license details
 	License *LicenseFilter `json:"license,omitempty"`
-	// Search for feeds within this bounding box (matches feed version convex hull; may return false positives for feeds with bad-coordinate stops)
+	// Search for feeds within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Search for feeds with at least one stop inside this bounding box (uses precomputed geohash cells; preferred for discovery)
-	BboxStops *BoundingBox `json:"bbox_stops,omitempty"`
 	// Search for feeds within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
 	// Search for feeds within specified radius of a point
@@ -563,10 +561,8 @@ type FeedVersionFilter struct {
 	FeedIds []int `json:"feed_ids,omitempty"`
 	// Search for feed versions that cover the specified date range
 	Covers *ServiceCoversFilter `json:"covers,omitempty"`
-	// Search for feed versions within this bounding box (matches feed version convex hull; may return false positives for feeds with bad-coordinate stops)
+	// Search for feed versions within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Search for feed versions with at least one stop inside this bounding box (uses precomputed geohash cells; preferred for discovery)
-	BboxStops *BoundingBox `json:"bbox_stops,omitempty"`
 	// Search for feed versions within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
 	// Search for feed versions within specified radius of a point

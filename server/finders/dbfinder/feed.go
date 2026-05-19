@@ -108,15 +108,16 @@ func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.Pe
 		}
 
 		// Spatial
-		if where.Bbox != nil || where.BboxStops != nil || where.Within != nil || where.Near != nil {
+		if where.Bbox != nil || where.Within != nil || where.Near != nil {
 			q = q.
 				Join("feed_states fs_geom on fs_geom.feed_id = current_feeds.id").
 				Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = fs_geom.feed_version_id")
 			if where.Bbox != nil {
-				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
-			}
-			if where.BboxStops != nil {
-				b := where.BboxStops
+				b := where.Bbox
+				// Convex hull intersect (existing behavior) AND'd with a geohash
+				// cell membership check that rejects bad-coord-inflated polygons.
+				// NOT EXISTS … OR EXISTS … falls back to polygon-only when an FV
+				// has no cells yet, preserving cutover safety.
 				cells := tlxy.CellsCoveringBbox(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, 3)
 				q = q.
 					Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat).
