@@ -58,36 +58,6 @@ type Group {
   permissions: Permissions
 }
 
-"""Input for adding or removing a permission"""
-input PermissionInput {
-  "Subject type (e.g. user, tenant, group)"
-  subject_type: String!
-  "Subject identifier"
-  subject_id: String!
-  "Relationship to grant (e.g. viewer, editor, manager, admin, member)"
-  relation: String!
-}
-
-"""Input for setting an entity's parent"""
-input SetParentInput {
-  "Parent entity type"
-  parent_type: String!
-  "Parent entity ID"
-  parent_id: Int!
-}
-
-"""Input for saving a tenant"""
-input TenantInput {
-  "Tenant name"
-  name: String!
-}
-
-"""Input for saving a group"""
-input GroupInput {
-  "Group name"
-  name: String!
-}
-
 """A user in the authorization system"""
 type User {
   "User identifier"
@@ -113,21 +83,6 @@ extend type Query {
   groups(limit: Int, ids: [Int!]): [Group!]!
   "Search for users"
   users(limit: Int, where: UserFilter): [User!]!
-}
-
-extend type Mutation {
-  "Add a permission to an entity"
-  permission_add(type: String!, id: Int!, input: PermissionInput!): Boolean!
-  "Remove a permission from an entity"
-  permission_remove(type: String!, id: Int!, input: PermissionInput!): Boolean!
-  "Set an entity's parent in the authorization hierarchy"
-  permission_set_parent(type: String!, id: Int!, input: SetParentInput!): Boolean!
-  "Update a tenant's name"
-  tenant_save(id: Int!, input: TenantInput!): Tenant!
-  "Create a group within a tenant"
-  tenant_create_group(id: Int!, input: GroupInput!): Group!
-  "Update a group's name"
-  group_save(id: Int!, input: GroupInput!): Group!
 }
 
 extend type Feed {

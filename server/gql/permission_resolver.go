@@ -234,94 +234,6 @@ func (r *queryResolver) Users(ctx context.Context, limit *int, where *model.User
 	return users, nil
 }
 
-// Mutation resolvers
-
-func (r *mutationResolver) PermissionAdd(ctx context.Context, typeArg string, id int, input model.PermissionInput) (bool, error) {
-	pm, ref, subject, rel, err := parsePermissionArgs(ctx, typeArg, id, input)
-	if err != nil {
-		return false, err
-	}
-	if err := pm.AddPermission(ctx, ref, subject, rel); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func (r *mutationResolver) PermissionRemove(ctx context.Context, typeArg string, id int, input model.PermissionInput) (bool, error) {
-	pm, ref, subject, rel, err := parsePermissionArgs(ctx, typeArg, id, input)
-	if err != nil {
-		return false, err
-	}
-	if err := pm.RemovePermission(ctx, ref, subject, rel); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func (r *mutationResolver) PermissionSetParent(ctx context.Context, typeArg string, id int, input model.SetParentInput) (bool, error) {
-	pm, err := getPermissionManager(ctx)
-	if pm == nil || err != nil {
-		return false, errors.New("permission management not configured")
-	}
-	childType, err := authz.ObjectTypeString(typeArg)
-	if err != nil {
-		return false, err
-	}
-	parentType, err := authz.ObjectTypeString(input.ParentType)
-	if err != nil {
-		return false, err
-	}
-	child := authz.ObjectRef{Type: childType, ID: int64(id)}
-	parent := authz.ObjectRef{Type: parentType, ID: int64(input.ParentID)}
-	if err := pm.SetParent(ctx, child, parent); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func (r *mutationResolver) TenantSave(ctx context.Context, id int, input model.TenantInput) (*model.Tenant, error) {
-	am, err := getAdminManager(ctx)
-	if err != nil {
-		return nil, err
-	}
-	_, err = am.TenantSave(ctx, &authz.TenantSaveRequest{
-		Tenant: &authz.Tenant{Id: int64(id), Name: input.Name},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &model.Tenant{ID: id, Name: input.Name}, nil
-}
-
-func (r *mutationResolver) TenantCreateGroup(ctx context.Context, id int, input model.GroupInput) (*model.Group, error) {
-	am, err := getAdminManager(ctx)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := am.TenantCreateGroup(ctx, &authz.TenantCreateGroupRequest{
-		Id:    int64(id),
-		Group: &authz.Group{Name: input.Name},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &model.Group{ID: int(resp.Group.Id), Name: input.Name}, nil
-}
-
-func (r *mutationResolver) GroupSave(ctx context.Context, id int, input model.GroupInput) (*model.Group, error) {
-	am, err := getAdminManager(ctx)
-	if err != nil {
-		return nil, err
-	}
-	_, err = am.GroupSave(ctx, &authz.GroupSaveRequest{
-		Group: &authz.Group{Id: int64(id), Name: input.Name},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &model.Group{ID: id, Name: input.Name}, nil
-}
-
 // Helpers
 
 func getPermissionManager(ctx context.Context) (authz.PermissionManager, error) {
@@ -338,30 +250,6 @@ func getAdminManager(ctx context.Context) (authz.AdminManager, error) {
 		return am, nil
 	}
 	return nil, errors.New("admin operations not configured")
-}
-
-// parsePermissionArgs validates and converts the string arguments for
-// permission add/remove mutations into typed authz values.
-func parsePermissionArgs(ctx context.Context, typeArg string, id int, input model.PermissionInput) (authz.PermissionManager, authz.ObjectRef, authz.EntityKey, authz.Relation, error) {
-	pm, err := getPermissionManager(ctx)
-	if pm == nil || err != nil {
-		return nil, authz.ObjectRef{}, authz.EntityKey{}, 0, errors.New("permission management not configured")
-	}
-	objType, err := authz.ObjectTypeString(typeArg)
-	if err != nil {
-		return nil, authz.ObjectRef{}, authz.EntityKey{}, 0, err
-	}
-	subjectType, err := authz.ObjectTypeString(input.SubjectType)
-	if err != nil {
-		return nil, authz.ObjectRef{}, authz.EntityKey{}, 0, err
-	}
-	rel, err := authz.RelationString(input.Relation)
-	if err != nil {
-		return nil, authz.ObjectRef{}, authz.EntityKey{}, 0, err
-	}
-	ref := authz.ObjectRef{Type: objType, ID: int64(id)}
-	subject := authz.NewEntityKey(subjectType, input.SubjectID)
-	return pm, ref, subject, rel, nil
 }
 
 func resolvePermissions(ctx context.Context, objType authz.ObjectType, id int64) (*model.Permissions, error) {

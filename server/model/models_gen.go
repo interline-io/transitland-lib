@@ -660,12 +660,6 @@ type Group struct {
 	Permissions *Permissions `json:"permissions,omitempty"`
 }
 
-// Input for saving a group
-type GroupInput struct {
-	// Group name
-	Name string `json:"name"`
-}
-
 // A single trip option from origin to destination, composed of one or more `Leg`s.
 type Itinerary struct {
 	// Total duration of this itinerary
@@ -896,16 +890,6 @@ type PathwaySetInput struct {
 	FromStop *StopSetInput `json:"from_stop,omitempty"`
 	// Reference to an existing destination stop; only the `id` is used (the stop must already exist)
 	ToStop *StopSetInput `json:"to_stop,omitempty"`
-}
-
-// Input for adding or removing a permission
-type PermissionInput struct {
-	// Subject type (e.g. user, tenant, group)
-	SubjectType string `json:"subject_type"`
-	// Subject identifier
-	SubjectID string `json:"subject_id"`
-	// Relationship to grant (e.g. viewer, editor, manager, admin, member)
-	Relation string `json:"relation"`
 }
 
 // Reference to a related entity in the authorization hierarchy
@@ -1241,14 +1225,6 @@ type ServiceCoversFilter struct {
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 }
 
-// Input for setting an entity's parent
-type SetParentInput struct {
-	// Parent entity type
-	ParentType string `json:"parent_type"`
-	// Parent entity ID
-	ParentID int `json:"parent_id"`
-}
-
 // A single turn-by-turn navigation instruction within a walking or cycling leg.
 type Step struct {
 	// Duration of this step
@@ -1518,12 +1494,6 @@ type Tenant struct {
 	Groups []*Group `json:"groups"`
 	// Authorization permissions for this tenant
 	Permissions *Permissions `json:"permissions,omitempty"`
-}
-
-// Input for saving a tenant
-type TenantInput struct {
-	// Tenant name
-	Name string `json:"name"`
 }
 
 // Search options for trips
