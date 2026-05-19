@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TRIP
@@ -90,32 +89,9 @@ func (r *tripResolver) Alerts(ctx context.Context, obj *model.Trip, active *bool
 	return rtAlerts, nil
 }
 
-func (r *tripResolver) ModifiedTrip(ctx context.Context, obj *model.Trip) (*model.RTModifiedTripSelector, error) {
-	rtt := model.ForContext(ctx).RTFinder.FindTrip(ctx, obj)
-	if rtt == nil {
-		return nil, nil
-	}
-	mt := rtt.GetTrip().GetModifiedTrip()
-	if mt == nil {
-		return nil, nil
-	}
-	sel := &model.RTModifiedTripSelector{}
-	if id := mt.GetModificationsId(); id != "" {
-		sel.ModificationsID = &id
-	}
-	if id := mt.GetAffectedTripId(); id != "" {
-		sel.AffectedTripID = &id
-	}
-	if s := mt.GetStartTime(); s != "" {
-		if v, err := tt.NewSecondsFromString(s); err == nil {
-			sel.StartTime = &v
-		}
-	}
-	if s := mt.GetStartDate(); s != "" {
-		if v, err := time.Parse("20060102", s); err == nil {
-			d := tt.NewDate(v)
-			sel.StartDate = &d
-		}
-	}
-	return sel, nil
-}
+// TODO: GTFS-RT TripModifications — expose a Trip.modified_trip resolver that
+// returns the matching TripUpdate's modified_trip selector
+// (modifications_id, affected_trip_id, start_time, start_date). Requires adding
+// an RTModifiedTripSelector type and Trip.modified_trip field to the GraphQL
+// schema, and (together with the rtfinder TODOs) indexing TripUpdates by
+// affected_trip_id so modified trips are findable.

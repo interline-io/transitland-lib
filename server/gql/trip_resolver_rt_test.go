@@ -75,30 +75,6 @@ func TestTripRT_Alerts(t *testing.T) {
 	}
 }
 
-func TestTripRT_ModifiedTrip(t *testing.T) {
-	const q = `query($trip_id:String!) {
-		trips(where: { trip_id: $trip_id }) {
-			trip_id
-			modified_trip { modifications_id affected_trip_id }
-		}
-	}`
-	tc := rtTestCase{
-		name:  "trip with modified_trip selector",
-		query: q,
-		vars:  hw{"trip_id": "1031527WKDY"},
-		rtfiles: []testconfig.RTJsonFile{
-			{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-modified-trip.json"},
-		},
-		cb: func(t *testing.T, jj string) {
-			trip := gjson.Get(jj, "trips.0")
-			assert.Equal(t, "1031527WKDY", trip.Get("trip_id").String())
-			assert.Equal(t, "test_modifications_1", trip.Get("modified_trip.modifications_id").String())
-			assert.Equal(t, "1031527WKDY", trip.Get("modified_trip.affected_trip_id").String())
-		},
-	}
-	testRt(t, tc)
-}
-
 func TestTripRT_StopTimes(t *testing.T) {
 	const tripRtQuery = `query($trip_id:String!) {
 	trips(where: { trip_id: $trip_id }) {
