@@ -74,7 +74,6 @@ var (
 	// E052 = nec("vehicle.id is not unique", "E052")
 )
 
-// Errors added by transitland-lib (see header comment for the namespacing rationale).
 var (
 	E100 = nec("modified_trip is missing required affected_trip_id", "E100")
 )
@@ -92,7 +91,6 @@ var (
 // W009 = RealtimeWarning{msg: "schedule_relationship not populated", code: 9}
 )
 
-// Warnings added by transitland-lib (see header comment for the namespacing rationale).
 var (
 	W100 = nec("modified_trip is set alongside legacy TripDescriptor identifier fields", "W100")
 )
