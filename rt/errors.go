@@ -12,8 +12,17 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// Errors
-// https://github.com/CUTR-at-USF/gtfs-realtime-validator/blob/master/RULES.md
+// Errors and warnings below cross-reference an external rule list published by
+// MobilityData/gtfs-realtime-validator (originally developed as academic work
+// by the University of South Florida's Center for Urban Transportation Research):
+//   https://github.com/MobilityData/gtfs-realtime-validator/blob/master/RULES.md
+//
+// transitland-lib's RT validator is an independent implementation, not a fork
+// of that project. The external list has been stable at E001-E052 / W001-W009
+// for several years; transitland-lib currently implements 27 of the 52 errors
+// and 0 of the 9 warnings (the rest appear as commented placeholders for
+// traceability). Rules added by transitland-lib are namespaced starting at
+// E100 / W100; see the second `var (...)` block for each series below.
 var (
 	E001 = nec("Not in POSIX time", "E001")
 	E002 = nec("stop_time_updates not strictly sorted", "E002")
@@ -65,6 +74,11 @@ var (
 	// E052 = nec("vehicle.id is not unique", "E052")
 )
 
+// Errors added by transitland-lib (see header comment for the namespacing rationale).
+var (
+	E100 = nec("modified_trip is missing required affected_trip_id", "E100")
+)
+
 // Warnings
 var (
 // W001 = RealtimeWarning{msg: "timestamps not populated", code: 1}
@@ -76,6 +90,11 @@ var (
 // W007 = RealtimeWarning{msg: "Refresh interval is more than 35 seconds", code: 7}
 // W008 = RealtimeWarning{msg: "Header timestamp is older than 65 seconds", code: 8}
 // W009 = RealtimeWarning{msg: "schedule_relationship not populated", code: 9}
+)
+
+// Warnings added by transitland-lib (see header comment for the namespacing rationale).
+var (
+	W100 = nec("modified_trip is set alongside legacy TripDescriptor identifier fields", "W100")
 )
 
 type bc = causes.Context
@@ -114,6 +133,11 @@ func withFieldAndJson(e RealtimeError, field string, groupKey string, value any,
 	}
 	e2.entityJson = pbEntityToMap(ent)
 	return &e2
+}
+
+func withFieldAndJsonWarning(e RealtimeError, field string, groupKey string, value any, ent protoreflect.ProtoMessage, msg string, msgArgs ...any) *RealtimeWarning {
+	re := withFieldAndJson(e, field, groupKey, value, ent, msg, msgArgs...)
+	return &RealtimeWarning{RealtimeError: *re}
 }
 
 func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {

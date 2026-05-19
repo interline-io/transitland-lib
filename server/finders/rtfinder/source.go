@@ -47,6 +47,11 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 				v.Timestamp = &defaultTimestamp
 			}
 			tid := v.GetTrip().GetTripId()
+			// GTFS-RT TripModifications: the TripDescriptor may identify the trip
+			// via modified_trip.affected_trip_id instead of trip_id.
+			if tid == "" {
+				tid = v.GetTrip().GetModifiedTrip().GetAffectedTripId()
+			}
 			a[tid] = v
 		}
 		if v := ent.Alert; v != nil {

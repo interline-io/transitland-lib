@@ -517,6 +517,45 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 	rtKey := fi.getRtTripKey(td)
 	agencyId := rtKey.AgencyID
 
+	// GTFS-RT TripModifications: when modified_trip is present, validate its selector
+	// and warn on legacy-field co-occurrence regardless of which identifier branch
+	// below runs. Per spec the legacy fields (trip_id, route_id, direction_id,
+	// start_time, start_date) MUST be empty when modified_trip is set; W100 is a
+	// warning rather than an error to remain lenient with producers in the wild.
+	if mt := td.GetModifiedTrip(); mt != nil {
+		affectedTripId := mt.GetAffectedTripId()
+		if affectedTripId == "" {
+			errs = append(errs, withFieldAndJson(
+				E100,
+				"trip_update.trip.modified_trip.affected_trip_id",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
+		} else if _, ok := fi.tripInfo[affectedTripId]; !ok {
+			errs = append(errs, withFieldAndJson(
+				E003,
+				"trip_update.trip.modified_trip.affected_trip_id",
+				agencyId,
+				affectedTripId,
+				tripUpdate,
+				"TripUpdate modified_trip references affected_trip_id '%s' that does not exist in static GTFS data",
+				affectedTripId,
+			))
+		}
+		if td.GetTripId() != "" || td.RouteId != nil || td.DirectionId != nil || td.StartDate != nil || td.StartTime != nil {
+			errs = append(errs, withFieldAndJsonWarning(
+				W100,
+				"trip_update.trip.modified_trip",
+				agencyId,
+				"",
+				tripUpdate,
+				"TripDescriptor sets modified_trip alongside legacy identifier fields; per spec these MUST be empty when modified_trip is set",
+			))
+		}
+	}
+
 	if tripId := td.GetTripId(); tripId != "" {
 		tripInfo, ok := fi.tripInfo[tripId]
 		// Check trip exists
@@ -550,7 +589,8 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 			}
 			// TODO: Additional frequency based trip checks
 		}
-	} else {
+	} else if td.GetModifiedTrip() == nil {
+		// Neither trip_id nor modified_trip is set; require the legacy tuple.
 		if td.RouteId == nil || td.DirectionId == nil || td.StartDate == nil || td.StartTime == nil {
 			errs = append(errs, newError("TripDescriptor must provided a trip_id or all of route_id, direction_id, start_date, and start_time", "trip_update.trip.trip_id"))
 		}
@@ -765,6 +805,11 @@ func (fi *Validator) validatePosition(pos *pb.Position, vehiclePosition *pb.Vehi
 
 func (fi *Validator) getRtTripKey(trip *pb.TripDescriptor) rtTripKey {
 	tripId := trip.GetTripId()
+	// GTFS-RT TripModifications: when the TripDescriptor uses modified_trip
+	// (with no trip_id), the affected_trip_id identifies the underlying static trip.
+	if tripId == "" {
+		tripId = trip.GetModifiedTrip().GetAffectedTripId()
+	}
 	ret := rtTripKey{
 		TripID: tripId,
 	}

@@ -129,7 +129,7 @@ This library tracks specific commits of the upstream GTFS specs, defined in `ver
 - **GTFS Realtime**: `GTFSRTVERSION` → commit hash pointing to `https://github.com/google/transit/blob/{hash}/gtfs-realtime/proto/gtfs-realtime.proto`
 - **GTFS Realtime proto**: bundled at `rt/pb/gtfs-realtime.proto` with generated Go code in `rt/pb/gtfs-realtime.pb.go`
 - **Extended route types**: defined in `tt/routetypes.go`, based on https://developers.google.com/transit/gtfs/reference/extended-route-types
-- **GTFS-RT validation rules**: `rt/errors.go` maps 40+ error codes from https://github.com/CUTR-at-USF/gtfs-realtime-validator/blob/master/RULES.md
+- **GTFS-RT validation rules**: `rt/errors.go` cross-references codes E001-E052 / W001-W009 from the external MobilityData/gtfs-realtime-validator rule list at https://github.com/MobilityData/gtfs-realtime-validator/blob/master/RULES.md (transitland-lib's validator is an independent implementation, not a fork; currently implementing 27 of 52 errors and 0 of 9 warnings); transitland-lib additions are namespaced starting at E100 / W100
 - **Spec-based validation**: `rules/` contains validation rules referencing specific GTFS spec requirements (e.g., stop location_type constraints for transfers, stop_time sequence rules)
 
 Entity structs in `gtfs/` have filenames matching their GTFS source files (e.g., `agency.go` for `agency.txt`). GraphQL type descriptions link to the relevant spec section (e.g., `https://gtfs.org/reference/static/#agencytxt`).

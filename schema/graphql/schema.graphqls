@@ -1065,6 +1065,13 @@ type Trip {
 
   "Timestamp from the matching GTFS-RT TripUpdate, if any"
   timestamp: Time
+
+  """
+  GTFS-RT TripModifications selector identifying the modification entity affecting this trip, if any.
+  Populated when the matching TripUpdate's TripDescriptor uses `modified_trip` rather than `trip_id`.
+  See https://gtfs.org/documentation/realtime/feed-entities/trip-modifications/.
+  """
+  modified_trip: RTModifiedTripSelector
 }
 
 """
@@ -2238,6 +2245,21 @@ type RTTripDescriptor {
   start_date: Date
   "GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
   schedule_relationship: String
+}
+
+"""
+Selector for a trip whose schedule has been modified by a GTFS-RT
+TripModifications entity. See https://gtfs.org/documentation/realtime/feed-entities/trip-modifications/.
+"""
+type RTModifiedTripSelector {
+  "`id` of the FeedEntity carrying the TripModifications that affects this trip"
+  modifications_id: String
+  "GTFS `trip_id` of the static trip that is modified by the referenced TripModifications"
+  affected_trip_id: String
+  "Initially scheduled start time of the trip instance (used for frequency-based modified trips), local time `HH:MM:SS`"
+  start_time: Seconds
+  "Service date of the trip instance, local time"
+  start_date: Date
 }
 
 """A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""

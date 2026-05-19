@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TRIP
@@ -87,4 +88,34 @@ func (r *tripResolver) Timestamp(ctx context.Context, obj *model.Trip) (*time.Ti
 func (r *tripResolver) Alerts(ctx context.Context, obj *model.Trip, active *bool, limit *int) ([]*model.Alert, error) {
 	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForTrip(ctx, obj, resolverCheckLimit(limit), active)
 	return rtAlerts, nil
+}
+
+func (r *tripResolver) ModifiedTrip(ctx context.Context, obj *model.Trip) (*model.RTModifiedTripSelector, error) {
+	rtt := model.ForContext(ctx).RTFinder.FindTrip(ctx, obj)
+	if rtt == nil {
+		return nil, nil
+	}
+	mt := rtt.GetTrip().GetModifiedTrip()
+	if mt == nil {
+		return nil, nil
+	}
+	sel := &model.RTModifiedTripSelector{}
+	if id := mt.GetModificationsId(); id != "" {
+		sel.ModificationsID = &id
+	}
+	if id := mt.GetAffectedTripId(); id != "" {
+		sel.AffectedTripID = &id
+	}
+	if s := mt.GetStartTime(); s != "" {
+		if v, err := tt.NewSecondsFromString(s); err == nil {
+			sel.StartTime = &v
+		}
+	}
+	if s := mt.GetStartDate(); s != "" {
+		if v, err := time.Parse("20060102", s); err == nil {
+			d := tt.NewDate(v)
+			sel.StartDate = &d
+		}
+	}
+	return sel, nil
 }

@@ -955,6 +955,13 @@ type ComplexityRoot struct {
 		Users          func(childComplexity int, limit *int, where *model.UserFilter) int
 	}
 
+	RTModifiedTripSelector struct {
+		AffectedTripID  func(childComplexity int) int
+		ModificationsID func(childComplexity int) int
+		StartDate       func(childComplexity int) int
+		StartTime       func(childComplexity int) int
+	}
+
 	RTTimeRange struct {
 		End   func(childComplexity int) int
 		Start func(childComplexity int) int
@@ -1232,6 +1239,7 @@ type ComplexityRoot struct {
 		FlexStopTimes        func(childComplexity int, limit *int, where *model.TripStopTimeFilter) int
 		Frequencies          func(childComplexity int, limit *int) int
 		ID                   func(childComplexity int) int
+		ModifiedTrip         func(childComplexity int) int
 		Route                func(childComplexity int) int
 		ScheduleRelationship func(childComplexity int) int
 		Shape                func(childComplexity int) int
@@ -1612,6 +1620,7 @@ type TripResolver interface {
 	Alerts(ctx context.Context, obj *model.Trip, active *bool, limit *int) ([]*model.Alert, error)
 	ScheduleRelationship(ctx context.Context, obj *model.Trip) (*model.ScheduleRelationship, error)
 	Timestamp(ctx context.Context, obj *model.Trip) (*time.Time, error)
+	ModifiedTrip(ctx context.Context, obj *model.Trip) (*model.RTModifiedTripSelector, error)
 }
 type ValidationReportResolver interface {
 	Errors(ctx context.Context, obj *model.ValidationReport, limit *int) ([]*model.ValidationReportErrorGroup, error)
@@ -6389,6 +6398,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Users(childComplexity, args["limit"].(*int), args["where"].(*model.UserFilter)), true
 
+	case "RTModifiedTripSelector.affected_trip_id":
+		if e.complexity.RTModifiedTripSelector.AffectedTripID == nil {
+			break
+		}
+
+		return e.complexity.RTModifiedTripSelector.AffectedTripID(childComplexity), true
+
+	case "RTModifiedTripSelector.modifications_id":
+		if e.complexity.RTModifiedTripSelector.ModificationsID == nil {
+			break
+		}
+
+		return e.complexity.RTModifiedTripSelector.ModificationsID(childComplexity), true
+
+	case "RTModifiedTripSelector.start_date":
+		if e.complexity.RTModifiedTripSelector.StartDate == nil {
+			break
+		}
+
+		return e.complexity.RTModifiedTripSelector.StartDate(childComplexity), true
+
+	case "RTModifiedTripSelector.start_time":
+		if e.complexity.RTModifiedTripSelector.StartTime == nil {
+			break
+		}
+
+		return e.complexity.RTModifiedTripSelector.StartTime(childComplexity), true
+
 	case "RTTimeRange.end":
 		if e.complexity.RTTimeRange.End == nil {
 			break
@@ -8003,6 +8040,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Trip.ID(childComplexity), true
+
+	case "Trip.modified_trip":
+		if e.complexity.Trip.ModifiedTrip == nil {
+			break
+		}
+
+		return e.complexity.Trip.ModifiedTrip(childComplexity), true
 
 	case "Trip.route":
 		if e.complexity.Trip.Route == nil {
@@ -10813,6 +10857,13 @@ type Trip {
 
   "Timestamp from the matching GTFS-RT TripUpdate, if any"
   timestamp: Time
+
+  """
+  GTFS-RT TripModifications selector identifying the modification entity affecting this trip, if any.
+  Populated when the matching TripUpdate's TripDescriptor uses ` + "`" + `modified_trip` + "`" + ` rather than ` + "`" + `trip_id` + "`" + `.
+  See https://gtfs.org/documentation/realtime/feed-entities/trip-modifications/.
+  """
+  modified_trip: RTModifiedTripSelector
 }
 
 """
@@ -11986,6 +12037,21 @@ type RTTripDescriptor {
   start_date: Date
   "GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
   schedule_relationship: String
+}
+
+"""
+Selector for a trip whose schedule has been modified by a GTFS-RT
+TripModifications entity. See https://gtfs.org/documentation/realtime/feed-entities/trip-modifications/.
+"""
+type RTModifiedTripSelector {
+  "` + "`" + `id` + "`" + ` of the FeedEntity carrying the TripModifications that affects this trip"
+  modifications_id: String
+  "GTFS ` + "`" + `trip_id` + "`" + ` of the static trip that is modified by the referenced TripModifications"
+  affected_trip_id: String
+  "Initially scheduled start time of the trip instance (used for frequency-based modified trips), local time ` + "`" + `HH:MM:SS` + "`" + `"
+  start_time: Seconds
+  "Service date of the trip instance, local time"
+  start_date: Date
 }
 
 """A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""
@@ -25487,6 +25553,8 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 				return ec.fieldContext_Trip_schedule_relationship(ctx, field)
 			case "timestamp":
 				return ec.fieldContext_Trip_timestamp(ctx, field)
+			case "modified_trip":
+				return ec.fieldContext_Trip_modified_trip(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Trip", field.Name)
 		},
@@ -28996,6 +29064,8 @@ func (ec *executionContext) fieldContext_FlexStopTime_trip(_ context.Context, fi
 				return ec.fieldContext_Trip_schedule_relationship(ctx, field)
 			case "timestamp":
 				return ec.fieldContext_Trip_timestamp(ctx, field)
+			case "modified_trip":
+				return ec.fieldContext_Trip_modified_trip(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Trip", field.Name)
 		},
@@ -45515,6 +45585,8 @@ func (ec *executionContext) fieldContext_Query_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_schedule_relationship(ctx, field)
 			case "timestamp":
 				return ec.fieldContext_Trip_timestamp(ctx, field)
+			case "modified_trip":
+				return ec.fieldContext_Trip_modified_trip(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Trip", field.Name)
 		},
@@ -46307,6 +46379,170 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RTModifiedTripSelector_modifications_id(ctx context.Context, field graphql.CollectedField, obj *model.RTModifiedTripSelector) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RTModifiedTripSelector_modifications_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ModificationsID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RTModifiedTripSelector_modifications_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RTModifiedTripSelector",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RTModifiedTripSelector_affected_trip_id(ctx context.Context, field graphql.CollectedField, obj *model.RTModifiedTripSelector) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RTModifiedTripSelector_affected_trip_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AffectedTripID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RTModifiedTripSelector_affected_trip_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RTModifiedTripSelector",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RTModifiedTripSelector_start_time(ctx context.Context, field graphql.CollectedField, obj *model.RTModifiedTripSelector) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RTModifiedTripSelector_start_time(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartTime, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*tt.Seconds)
+	fc.Result = res
+	return ec.marshalOSeconds2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RTModifiedTripSelector_start_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RTModifiedTripSelector",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Seconds does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RTModifiedTripSelector_start_date(ctx context.Context, field graphql.CollectedField, obj *model.RTModifiedTripSelector) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RTModifiedTripSelector_start_date(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*tt.Date)
+	fc.Result = res
+	return ec.marshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RTModifiedTripSelector_start_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RTModifiedTripSelector",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Date does not have child fields")
 		},
 	}
 	return fc, nil
@@ -47868,6 +48104,8 @@ func (ec *executionContext) fieldContext_Route_trips(ctx context.Context, field 
 				return ec.fieldContext_Trip_schedule_relationship(ctx, field)
 			case "timestamp":
 				return ec.fieldContext_Trip_timestamp(ctx, field)
+			case "modified_trip":
+				return ec.fieldContext_Trip_modified_trip(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Trip", field.Name)
 		},
@@ -50209,6 +50447,8 @@ func (ec *executionContext) fieldContext_RouteStopPattern_trips(ctx context.Cont
 				return ec.fieldContext_Trip_schedule_relationship(ctx, field)
 			case "timestamp":
 				return ec.fieldContext_Trip_timestamp(ctx, field)
+			case "modified_trip":
+				return ec.fieldContext_Trip_modified_trip(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Trip", field.Name)
 		},
@@ -55877,6 +56117,8 @@ func (ec *executionContext) fieldContext_StopTime_trip(_ context.Context, field 
 				return ec.fieldContext_Trip_schedule_relationship(ctx, field)
 			case "timestamp":
 				return ec.fieldContext_Trip_timestamp(ctx, field)
+			case "modified_trip":
+				return ec.fieldContext_Trip_modified_trip(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Trip", field.Name)
 		},
@@ -58069,6 +58311,57 @@ func (ec *executionContext) fieldContext_Trip_timestamp(_ context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Trip_modified_trip(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Trip_modified_trip(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Trip().ModifiedTrip(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.RTModifiedTripSelector)
+	fc.Result = res
+	return ec.marshalORTModifiedTripSelector2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTModifiedTripSelector(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Trip_modified_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Trip",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "modifications_id":
+				return ec.fieldContext_RTModifiedTripSelector_modifications_id(ctx, field)
+			case "affected_trip_id":
+				return ec.fieldContext_RTModifiedTripSelector_affected_trip_id(ctx, field)
+			case "start_time":
+				return ec.fieldContext_RTModifiedTripSelector_start_time(ctx, field)
+			case "start_date":
+				return ec.fieldContext_RTModifiedTripSelector_start_date(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RTModifiedTripSelector", field.Name)
 		},
 	}
 	return fc, nil
@@ -74399,6 +74692,48 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
+var rTModifiedTripSelectorImplementors = []string{"RTModifiedTripSelector"}
+
+func (ec *executionContext) _RTModifiedTripSelector(ctx context.Context, sel ast.SelectionSet, obj *model.RTModifiedTripSelector) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, rTModifiedTripSelectorImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RTModifiedTripSelector")
+		case "modifications_id":
+			out.Values[i] = ec._RTModifiedTripSelector_modifications_id(ctx, field, obj)
+		case "affected_trip_id":
+			out.Values[i] = ec._RTModifiedTripSelector_affected_trip_id(ctx, field, obj)
+		case "start_time":
+			out.Values[i] = ec._RTModifiedTripSelector_start_time(ctx, field, obj)
+		case "start_date":
+			out.Values[i] = ec._RTModifiedTripSelector_start_date(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var rTTimeRangeImplementors = []string{"RTTimeRange"}
 
 func (ec *executionContext) _RTTimeRange(ctx context.Context, sel ast.SelectionSet, obj *model.RTTimeRange) graphql.Marshaler {
@@ -77805,6 +78140,39 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Trip_timestamp(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "modified_trip":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Trip_modified_trip(ctx, field, obj)
 				return res
 			}
 
@@ -84254,6 +84622,13 @@ func (ec *executionContext) marshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋt
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) marshalORTModifiedTripSelector2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTModifiedTripSelector(ctx context.Context, sel ast.SelectionSet, v *model.RTModifiedTripSelector) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._RTModifiedTripSelector(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalORTTimeRange2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTTimeRangeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RTTimeRange) graphql.Marshaler {

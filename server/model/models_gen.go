@@ -987,6 +987,19 @@ type PointRadius struct {
 type Query struct {
 }
 
+// Selector for a trip whose schedule has been modified by a GTFS-RT
+// TripModifications entity. See https://gtfs.org/documentation/realtime/feed-entities/trip-modifications/.
+type RTModifiedTripSelector struct {
+	// `id` of the FeedEntity carrying the TripModifications that affects this trip
+	ModificationsID *string `json:"modifications_id,omitempty"`
+	// GTFS `trip_id` of the static trip that is modified by the referenced TripModifications
+	AffectedTripID *string `json:"affected_trip_id,omitempty"`
+	// Initially scheduled start time of the trip instance (used for frequency-based modified trips), local time `HH:MM:SS`
+	StartTime *tt.Seconds `json:"start_time,omitempty"`
+	// Service date of the trip instance, local time
+	StartDate *tt.Date `json:"start_date,omitempty"`
+}
+
 // A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange
 type RTTimeRange struct {
 	// Start of the range, in Unix epoch seconds
