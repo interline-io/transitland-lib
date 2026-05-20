@@ -25,6 +25,7 @@ type Config struct {
 	ValidateLargeFiles       bool
 	DisableImage             bool
 	UseMaterialized          bool
+	UseGeohashFilter         bool
 	AllowHTTPFetchUnfiltered bool
 	RestPrefix               string
 	Storage                  string

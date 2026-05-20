@@ -52,6 +52,7 @@ type ServerCommand struct {
 	LoadAdmins              bool
 	ValidateLargeFiles      bool
 	UseMaterialized         bool
+	UseGeohashFilter        bool
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	SecretsFile             string
@@ -87,6 +88,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
 	fl.BoolVar(&cmd.UseMaterialized, "use-materialized", false, "Use materialized views for active entities")
+	fl.BoolVar(&cmd.UseGeohashFilter, "use-geohash-filter", false, "Filter feed/feed_version bbox queries by precomputed stop geohash cells (requires populated tl_feed_version_geohashes)")
 }
 
 func (cmd *ServerCommand) Parse(args []string) error {
@@ -168,6 +170,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		RTStorage:               cmd.RTStorage,
 		ValidateLargeFiles:      cmd.ValidateLargeFiles,
 		UseMaterialized:         cmd.UseMaterialized,
+		UseGeohashFilter:        cmd.UseGeohashFilter,
 		RestPrefix:              cmd.RestPrefix,
 		LoaderBatchSize:         cmd.LoaderBatchSize,
 		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,

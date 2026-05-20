@@ -13,7 +13,7 @@ import (
 
 func (f *Finder) FindFeeds(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.FeedFilter) ([]*model.Feed, error) {
 	var ents []*model.Feed
-	if err := dbutil.Select(ctx, f.db, feedSelect(limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
+	if err := dbutil.Select(ctx, f.db, feedSelect(limit, after, ids, f.PermFilter(ctx), where, model.ForContext(ctx).UseGeohashFilter), &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
 	return ents, nil
@@ -61,7 +61,7 @@ func (f *Finder) FeedFetchesByFeedIDs(ctx context.Context, limit *int, where *mo
 }
 
 func (f *Finder) FeedsByOperatorOnestopIDs(ctx context.Context, limit *int, where *model.FeedFilter, keys []string) ([][]*model.Feed, error) {
-	q := feedSelect(nil, nil, nil, f.PermFilter(ctx), where).
+	q := feedSelect(nil, nil, nil, f.PermFilter(ctx), where, model.ForContext(ctx).UseGeohashFilter).
 		Distinct().Options("on (coif.resolved_onestop_id, current_feeds.id)").
 		Column("coif.resolved_onestop_id as with_operator_onestop_id").
 		Join("current_operators_in_feed coif on coif.feed_id = current_feeds.id").
@@ -75,7 +75,7 @@ func (f *Finder) FeedsByOperatorOnestopIDs(ctx context.Context, limit *int, wher
 	return arrangeGroup(keys, ents, func(ent *model.Feed) string { return ent.WithOperatorOnestopID.Val }), err
 }
 
-func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedFilter) sq.SelectBuilder {
+func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedFilter, useGeohashFilter bool) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select(
 			"current_feeds.id",
@@ -114,17 +114,19 @@ func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.Pe
 				Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = fs_geom.feed_version_id")
 			if where.Bbox != nil {
 				b := where.Bbox
-				// Convex hull intersect (existing behavior) AND'd with a geohash
-				// cell membership check that rejects bad-coord-inflated polygons.
-				// NOT EXISTS … OR EXISTS … falls back to polygon-only when an FV
-				// has no cells yet, preserving cutover safety.
-				cells := tlxy.CellsCoveringBbox(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, 3)
-				q = q.
-					Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat).
-					Where(`(NOT EXISTS (SELECT 1 FROM tl_feed_version_geohashes WHERE feed_version_id = fs_geom.feed_version_id)
-                        OR EXISTS (SELECT 1 FROM tl_feed_version_geohashes
-                                   WHERE feed_version_id = fs_geom.feed_version_id
-                                     AND geohash = ANY(?)))`, cells)
+				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat)
+				// Optional secondary filter on precomputed stop geohash cells.
+				// Gated on UseGeohashFilter so the SQL doesn't reference
+				// tl_feed_version_geohashes before the migration runs / backfill
+				// completes. The NOT EXISTS … OR EXISTS … shape additionally
+				// falls back to polygon-only for FVs that haven't been backfilled.
+				if useGeohashFilter {
+					cells := tlxy.CellsCoveringBbox(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, 3)
+					q = q.Where(`(NOT EXISTS (SELECT 1 FROM tl_feed_version_geohashes WHERE feed_version_id = fs_geom.feed_version_id)
+                            OR EXISTS (SELECT 1 FROM tl_feed_version_geohashes
+                                       WHERE feed_version_id = fs_geom.feed_version_id
+                                         AND geohash = ANY(?)))`, cells)
+				}
 			}
 			if where.Within != nil && where.Within.Valid {
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ?)", where.Within)
