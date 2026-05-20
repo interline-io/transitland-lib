@@ -1,0 +1,16 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "2.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405801"
+    },
+    "entity": [
+      {
+        "id": "shape-only",
+        "shape": {
+          "shapeId": "rt_shape_500286",
+          "encodedPolyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+        }
+      }
+    ]
+  }
