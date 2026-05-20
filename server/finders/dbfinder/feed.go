@@ -122,14 +122,18 @@ func feedSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int,
 				b := where.Bbox
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat)
 				if useGeohashFilter {
-					q = q.Where(geohashCellsExists(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, fvCorrelation))
+					if expr, ok := geohashCellsExists(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, fvCorrelation); ok {
+						q = q.Where(expr)
+					}
 				}
 			}
 			if where.Within != nil && where.Within.Valid {
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ?)", where.Within)
 				if useGeohashFilter {
 					if bbox, ok := tlxy.BboxFromFlatCoords(where.Within.FlatCoords()); ok {
-						q = q.Where(geohashCellsExists(bbox, fvCorrelation))
+						if expr, ok := geohashCellsExists(bbox, fvCorrelation); ok {
+							q = q.Where(expr)
+						}
 					}
 				}
 			}
@@ -138,7 +142,9 @@ func feedSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int,
 				q = q.Where("ST_DWithin(fv_geoms.geometry, ST_MakePoint(?,?), ?)", where.Near.Lon, where.Near.Lat, radius)
 				if useGeohashFilter {
 					bbox := tlxy.BboxFromPointRadius(where.Near.Lon, where.Near.Lat, radius)
-					q = q.Where(geohashCellsExists(bbox, fvCorrelation))
+					if expr, ok := geohashCellsExists(bbox, fvCorrelation); ok {
+						q = q.Where(expr)
+					}
 				}
 			}
 		}

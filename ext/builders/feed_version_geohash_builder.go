@@ -9,9 +9,11 @@ import (
 )
 
 // DefaultGeohashPrecisions are the geohash precisions computed for each feed
-// version: p3 (~156×156 km, square — used for bbox discovery filtering) and
-// p5 (~4.9×4.9 km, square — reserved for future fingerprint/comparison use).
-var DefaultGeohashPrecisions = []uint{3, 5}
+// version. Currently only p3 (~156×156 km, square) is computed; it is used for
+// the bbox discovery filter. p5 (~4.9×4.9 km, square) is left out for now to
+// avoid storing cells nothing reads yet — add 5 back here to re-enable it for
+// future fingerprint/comparison use.
+var DefaultGeohashPrecisions = []uint{3} // {3, 5}
 
 type FeedVersionGeohash struct {
 	Geohash   tt.String
