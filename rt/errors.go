@@ -93,6 +93,18 @@ var (
 
 var (
 	W100 = nec("modified_trip is set alongside legacy TripDescriptor identifier fields", "W100")
+	W101 = nec("trip_modifications replacement_stops references a stop_id not defined in static or inline RT stops", "W101")
+	W102 = nec("trip_modifications selected_trips references a trip_id not defined in static GTFS", "W102")
+	W103 = nec("modified-trip TripUpdate has no parallel plain TripUpdate for legacy consumers", "W103")
+	W104 = nec("trip_modifications replacement_stops references a stop with location_type != 0", "W104")
+	W105 = nec("inline Stop.stop_id collides with a stop_id defined in static GTFS", "W105")
+	W106 = nec("inline Shape.shape_id collides with a shape_id defined in static GTFS", "W106")
+)
+
+var (
+	E101 = nec("modified_trip is missing required modifications_id", "E101")
+	E102 = nec("inline Stop entity is missing a required field", "E102")
+	E103 = nec("inline Shape entity is missing a required field", "E103")
 )
 
 type bc = causes.Context

@@ -27,6 +27,26 @@
           ],
           "timestamp": "1699405801"
         }
+      },
+      {
+        "id": "22-fallback",
+        "tripUpdate": {
+          "trip": {
+            "tripId": "124",
+            "scheduleRelationship": "SCHEDULED"
+          },
+          "stopTimeUpdate": [
+            {
+              "stopSequence": 1,
+              "stopId": "70012",
+              "arrival": {
+                "time": "1699405801"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            }
+          ],
+          "timestamp": "1699405801"
+        }
       }
     ]
   }
