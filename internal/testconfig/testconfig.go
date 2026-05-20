@@ -39,6 +39,9 @@ type Options struct {
 	// AllowAll installs an AllowAllChecker. Required for tests that exercise
 	// mutations. Ignored when FGAEndpoint is set.
 	AllowAll bool
+	// UseGeohashFilter enables the secondary stop-geohash filter on bbox/within/near
+	// queries. Requires the test database to have tl_feed_version_geohashes populated.
+	UseGeohashFilter bool
 }
 
 func Config(t testing.TB, opts Options) model.Config {
@@ -188,5 +191,6 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		RTStorage:                opts.RTStorage,
 		MaxRadius:                100_000,
 		AllowHTTPFetchUnfiltered: true,
+		UseGeohashFilter:         opts.UseGeohashFilter,
 	}
 }

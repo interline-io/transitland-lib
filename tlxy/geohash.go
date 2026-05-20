@@ -1,6 +1,7 @@
 package tlxy
 
 import (
+	"math"
 	"sort"
 
 	"github.com/mmcloughlin/geohash"
@@ -50,6 +51,59 @@ func CellsCoveringBbox(bbox BoundingBox, precision uint) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// BboxFromFlatCoords computes a bounding box from a flat (lon, lat) coordinate
+// slice. Returns ok=false if the slice contains no coordinate pairs.
+func BboxFromFlatCoords(coords []float64) (BoundingBox, bool) {
+	var bbox BoundingBox
+	initialized := false
+	for i := 0; i+1 < len(coords); i += 2 {
+		lon, lat := coords[i], coords[i+1]
+		if !initialized {
+			bbox = BoundingBox{MinLon: lon, MaxLon: lon, MinLat: lat, MaxLat: lat}
+			initialized = true
+			continue
+		}
+		if lon < bbox.MinLon {
+			bbox.MinLon = lon
+		}
+		if lon > bbox.MaxLon {
+			bbox.MaxLon = lon
+		}
+		if lat < bbox.MinLat {
+			bbox.MinLat = lat
+		}
+		if lat > bbox.MaxLat {
+			bbox.MaxLat = lat
+		}
+	}
+	return bbox, initialized
+}
+
+// BboxFromPointRadius returns the smallest axis-aligned bounding box that
+// encloses a circle of radius meters around (lon, lat). The longitude delta
+// uses cos(lat) so the box widens at the equator and narrows near the poles.
+// Capped at full longitude coverage at very high latitudes.
+func BboxFromPointRadius(lon, lat, radiusMeters float64) BoundingBox {
+	const metersPerDegLat = 111320.0
+	latDelta := radiusMeters / metersPerDegLat
+	cosLat := math.Cos(lat * math.Pi / 180.0)
+	var lonDelta float64
+	if cosLat < 1e-4 {
+		lonDelta = 180.0
+	} else {
+		lonDelta = radiusMeters / (metersPerDegLat * cosLat)
+		if lonDelta > 180.0 {
+			lonDelta = 180.0
+		}
+	}
+	return BoundingBox{
+		MinLon: lon - lonDelta,
+		MinLat: lat - latDelta,
+		MaxLon: lon + lonDelta,
+		MaxLat: lat + latDelta,
+	}
 }
 
 // geohashCellSize returns the (lon, lat) cell dimensions in degrees at the

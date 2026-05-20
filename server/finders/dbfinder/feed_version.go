@@ -203,28 +203,32 @@ func feedVersionSelect(limit *int, after *model.Cursor, ids []int, permFilter *m
 		// Spatial
 		if where.Bbox != nil || where.Within != nil || where.Near != nil {
 			q = q.Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = feed_versions.id")
+			// Optional secondary filter on precomputed stop geohash cells.
+			// Gated on UseGeohashFilter; operators are expected to run the
+			// migration and backfill before flipping the flag on, so FVs
+			// without cells are treated as not matching.
 			if where.Bbox != nil {
 				b := where.Bbox
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat)
-				// Optional secondary filter on precomputed stop geohash cells.
-				// Gated on UseGeohashFilter so the SQL doesn't reference
-				// tl_feed_version_geohashes before the migration runs / backfill
-				// completes. The NOT EXISTS … OR EXISTS … shape additionally
-				// falls back to polygon-only for FVs that haven't been backfilled.
 				if useGeohashFilter {
-					cells := tlxy.CellsCoveringBbox(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, 3)
-					q = q.Where(`(NOT EXISTS (SELECT 1 FROM tl_feed_version_geohashes WHERE feed_version_id = feed_versions.id)
-                            OR EXISTS (SELECT 1 FROM tl_feed_version_geohashes
-                                       WHERE feed_version_id = feed_versions.id
-                                         AND geohash = ANY(?)))`, cells)
+					q = q.Where(geohashCellsExists(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, "feed_versions.id"))
 				}
 			}
 			if where.Within != nil && where.Within.Valid {
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ?)", where.Within)
+				if useGeohashFilter {
+					if bbox, ok := tlxy.BboxFromFlatCoords(where.Within.FlatCoords()); ok {
+						q = q.Where(geohashCellsExists(bbox, "feed_versions.id"))
+					}
+				}
 			}
 			if where.Near != nil {
 				radius := checkFloat(&where.Near.Radius, 0, 1_000_000)
 				q = q.Where("ST_DWithin(fv_geoms.geometry, ST_MakePoint(?,?), ?)", where.Near.Lon, where.Near.Lat, radius)
+				if useGeohashFilter {
+					bbox := tlxy.BboxFromPointRadius(where.Near.Lon, where.Near.Lat, radius)
+					q = q.Where(geohashCellsExists(bbox, "feed_versions.id"))
+				}
 			}
 		}
 

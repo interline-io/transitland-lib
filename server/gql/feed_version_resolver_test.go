@@ -329,6 +329,62 @@ func TestFeedVersionResolver(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 
+// TestFeedVersionResolver_GeohashFilter runs the spatial filter cases with
+// the geohash secondary filter enabled. Same expected results as the
+// polygon-only path for these clean fixtures — proves the cells SQL is
+// correct and doesn't drop legitimate matches.
+func TestFeedVersionResolver_GeohashFilter(t *testing.T) {
+	within := hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{
+		{-122.39803791046143, 37.794626736533836},
+		{-122.40106344223022, 37.792303711508595},
+		{-122.3965573310852, 37.789641468930114},
+		{-122.3938751220703, 37.792354581451946},
+		{-122.39803791046143, 37.794626736533836},
+	}}}}
+	testcases := []testcase{
+		{
+			name:         "bbox SF",
+			query:        `query($bbox:BoundingBox) {feed_versions(where: {bbox:$bbox}) {sha1}}`,
+			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"},
+		},
+		{
+			name:         "bbox empty area",
+			query:        `query($bbox:BoundingBox) {feed_versions(where: {bbox:$bbox}) {sha1}}`,
+			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{},
+		},
+		{
+			name:         "within SF polygon",
+			query:        `query($within:Polygon) {feed_versions(where: {within:$within}) {sha1}}`,
+			vars:         within,
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"},
+		},
+		{
+			name:         "near SF point",
+			query:        `query($near:PointRadius) {feed_versions(where: {near:$near}) {sha1}}`,
+			vars:         hw{"near": hw{"lon": -122.2698781543005, "lat": 37.80700393130445, "radius": 1000}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"},
+		},
+		{
+			name:         "near Tampa point",
+			query:        `query($near:PointRadius) {feed_versions(where: {near:$near}) {sha1}}`,
+			vars:         hw{"near": hw{"lon": -82.45717479225324, "lat": 27.95070842389974, "radius": 1000}},
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{"c969427f56d3a645195dd8365cde6d7feae7e99b"},
+		},
+	}
+	c, _ := newTestClientWithOpts(t, testconfig.Options{
+		RTJsons:          testconfig.DefaultRTJson(),
+		UseGeohashFilter: true,
+	})
+	queryTestcases(t, c, testcases)
+}
+
 func TestFeedVersionResolver_Trips_Date(t *testing.T) {
 	weekdayTrips := []string{"STBA", "CITY1", "CITY2", "AB1", "AB2", "BFC1", "BFC2"}
 	weekendTrips := []string{"STBA", "CITY1", "CITY2", "AB1", "AB2", "BFC1", "BFC2", "AAMV1", "AAMV2", "AAMV3", "AAMV4"} // all trips

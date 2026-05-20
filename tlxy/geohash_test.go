@@ -39,7 +39,7 @@ func TestGeohashCellSize(t *testing.T) {
 	// (lat/lon bits split evenly), 2:1 wide-rectangle at even precisions
 	// (extra bit goes to lon).
 	cases := []struct {
-		precision        uint
+		precision            uint
 		expectLon, expectLat float64
 	}{
 		{1, 45.0, 45.0},            // 360/8, 180/4
@@ -104,6 +104,42 @@ func TestCellsCoveringBbox(t *testing.T) {
 	t.Run("precision 0 returns nil", func(t *testing.T) {
 		bbox := BoundingBox{MinLon: -122, MinLat: 37, MaxLon: -121, MaxLat: 38}
 		assert.Nil(t, CellsCoveringBbox(bbox, 0))
+	})
+
+	t.Run("BboxFromFlatCoords returns min/max across pairs", func(t *testing.T) {
+		coords := []float64{-122.4, 37.8, -122.5, 37.9, -122.3, 37.7}
+		bbox, ok := BboxFromFlatCoords(coords)
+		assert.True(t, ok)
+		assert.Equal(t, -122.5, bbox.MinLon)
+		assert.Equal(t, 37.7, bbox.MinLat)
+		assert.Equal(t, -122.3, bbox.MaxLon)
+		assert.Equal(t, 37.9, bbox.MaxLat)
+	})
+
+	t.Run("BboxFromFlatCoords empty input returns false", func(t *testing.T) {
+		_, ok := BboxFromFlatCoords(nil)
+		assert.False(t, ok)
+	})
+
+	t.Run("BboxFromPointRadius widens at equator, narrows at poles", func(t *testing.T) {
+		// 10 km at (0, 0): latDelta ~ 10000/111320 ~ 0.0898 deg in each dimension
+		eq := BboxFromPointRadius(0, 0, 10_000)
+		assert.InDelta(t, -0.0898, eq.MinLon, 0.001)
+		assert.InDelta(t, 0.0898, eq.MaxLon, 0.001)
+		assert.InDelta(t, -0.0898, eq.MinLat, 0.001)
+		assert.InDelta(t, 0.0898, eq.MaxLat, 0.001)
+
+		// Same radius at 60°N: lon span doubles (cos 60° = 0.5), lat unchanged
+		mid := BboxFromPointRadius(0, 60, 10_000)
+		assert.InDelta(t, 0.1797, mid.MaxLon, 0.001)
+		assert.InDelta(t, 0.0898, mid.MaxLat-60, 0.001)
+	})
+
+	t.Run("BboxFromPointRadius caps lon at poles", func(t *testing.T) {
+		// At lat=89.99, cos is ~tiny; lon delta would explode without the cap
+		polar := BboxFromPointRadius(0, 89.99, 10_000)
+		assert.Equal(t, -180.0, polar.MinLon)
+		assert.Equal(t, 180.0, polar.MaxLon)
 	})
 
 	t.Run("Brownsville bbox excludes Seattle p3 cell", func(t *testing.T) {

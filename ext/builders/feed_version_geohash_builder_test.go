@@ -80,11 +80,11 @@ func TestFeedVersionGeohashBuilder(t *testing.T) {
 			id       string
 			lon, lat float64
 		}{
-			{"good_sf", -122.4, 37.8},       // valid, San Francisco
-			{"good_tx", -97.49, 25.93},      // valid, Brownsville
-			{"null_island", 0, 0},           // bad
-			{"lon_out_of_range", 200, 37},   // bad
-			{"lat_out_of_range", -122, 95},  // bad
+			{"good_sf", -122.4, 37.8},      // valid, San Francisco
+			{"good_tx", -97.49, 25.93},     // valid, Brownsville
+			{"null_island", 0, 0},          // bad
+			{"lon_out_of_range", 200, 37},  // bad
+			{"lat_out_of_range", -122, 95}, // bad
 		}
 		for _, s := range stops {
 			st := &gtfs.Stop{StopID: tt.NewString(s.id)}
