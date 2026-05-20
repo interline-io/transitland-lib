@@ -93,6 +93,16 @@ All GTFS entities (in `gtfs/`) implement `tt.Entity` with `EntityID()` and `File
 - PostgreSQL migrations: `schema/postgres/migrations/*.up.pgsql` (applied via `transitland dbmigrate up`)
 - SQLite schema: `schema/sqlite/sqlite.sql` (single-file, created on demand with `-create` flag)
 
+### Building SQL
+
+NEVER use string manipulation (`fmt.Sprintf`, concatenation, etc.) to build SQL.
+Always build queries with the squirrel library (`sq`). This is non-negotiable —
+hand-built SQL strings are only acceptable in code the maintainer writes under
+direct supervision. If a query genuinely cannot be expressed in squirrel, stop
+and ask rather than reaching for string formatting. Note that constant SQL
+fragments passed to `sq.Expr(...)` (with `?` placeholders) are fine; the rule is
+about *dynamically assembling* SQL text from variables.
+
 ### GraphQL API
 
 - Schema files: `schema/graphql/*.graphqls`

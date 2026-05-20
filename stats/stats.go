@@ -168,17 +168,6 @@ func WriteFeedVersionStats(ctx context.Context, atx tldb.Adapter, stats FeedVers
 	return nil
 }
 
-// WriteFeedVersionGeohashes replaces the geohash rows for the given feed
-// version with the supplied cells. Standalone entry point for the backfill
-// CLI; WriteFeedVersionStats handles the same writes via its bucket-cleanup
-// + insert flow.
-func WriteFeedVersionGeohashes(ctx context.Context, atx tldb.Adapter, fvid int, cells map[string]int) error {
-	if err := FeedVersionTableDelete(ctx, atx, "tl_feed_version_geohashes", fvid, false); err != nil {
-		return err
-	}
-	return writeFeedVersionGeohashInserts(ctx, atx, fvid, cells)
-}
-
 func writeFeedVersionGeohashInserts(ctx context.Context, atx tldb.Adapter, fvid int, cells map[string]int) error {
 	if len(cells) == 0 {
 		return nil
@@ -187,7 +176,7 @@ func writeFeedVersionGeohashInserts(ctx context.Context, atx tldb.Adapter, fvid 
 	for cell, count := range cells {
 		ents = append(ents, builders.FeedVersionGeohash{
 			Geohash:   tt.NewString(cell),
-			StopCount: tt.NewInt(count),
+			StopCount: count,
 		})
 	}
 	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(ents), fvid)); err != nil {

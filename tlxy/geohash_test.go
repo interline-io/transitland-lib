@@ -8,32 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsValidStopCoord(t *testing.T) {
-	cases := []struct {
-		name     string
-		lon, lat float64
-		valid    bool
-	}{
-		{"san francisco", -122.4, 37.8, true},
-		{"null island", 0, 0, false},
-		{"longitude only zero", 0, 37.8, true},
-		{"latitude only zero", -122.4, 0, true},
-		{"north pole", 0, 90, true},
-		{"south pole", 0, -90, true},
-		{"antimeridian east", 180, 0, true},
-		{"antimeridian west", -180, 0, true},
-		{"lon out of range positive", 181, 0, false},
-		{"lon out of range negative", -181, 0, false},
-		{"lat out of range positive", 0, 91, false},
-		{"lat out of range negative", 0, -91, false},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			assert.Equal(t, c.valid, IsValidStopCoord(c.lon, c.lat))
-		})
-	}
-}
-
 func TestGeohashCellSize(t *testing.T) {
 	// Expected sizes from the geohash reference table: square at odd precisions
 	// (lat/lon bits split evenly), 2:1 wide-rectangle at even precisions

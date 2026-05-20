@@ -15,7 +15,7 @@ var DefaultGeohashPrecisions = []uint{3, 5}
 
 type FeedVersionGeohash struct {
 	Geohash   tt.String
-	StopCount tt.Int
+	StopCount int
 	tt.MinEntity
 	tt.FeedVersionEntity
 }
@@ -29,16 +29,16 @@ func (ent *FeedVersionGeohash) TableName() string {
 }
 
 // FeedVersionGeohashBuilder accumulates stop locations and GTFS-Flex location
-// polygons during the copier pass and emits per-(precision, geohash)
-// FeedVersionGeohash entities in Copy(). Designed to be registered with the
-// stats copier (fetch / rebuild-stats path); at fetch time the copier's writer
-// discards entities, so callers should read computed cells via Cells() and
-// persist them directly.
+// polygons during the copier pass and computes a per-(precision, geohash)
+// stop-count map in Copy(). Designed to be registered with the stats copier
+// (fetch / rebuild-stats path); callers read the result via Cells().
 //
-// Each emitted FeedVersionGeohash row carries a stop_count: positive when the
-// cell contains one or more fixed stops, zero when the cell is reached only
-// via a flex location polygon's bounding box. Zero-count cells preserve flex
-// feed visibility in bbox_stops queries without inflating density metrics.
+// Each cell carries a stop_count: positive when the cell contains one or more
+// stops, zero when the cell is reached only via a flex location polygon's
+// bounding box. Zero-count cells preserve flex feed visibility in bbox_stops
+// queries without inflating density metrics. All stop coordinates are kept,
+// including out-of-range and (0,0) values, so the cells can also surface
+// bad-coordinate stops.
 type FeedVersionGeohashBuilder struct {
 	precisions []uint
 	stops      map[string]*stopGeom
@@ -67,12 +67,9 @@ func (pp *FeedVersionGeohashBuilder) AfterWrite(eid string, ent tt.Entity, emap 
 	return nil
 }
 
-func (pp *FeedVersionGeohashBuilder) Copy(copier adapters.EntityCopier) error {
+func (pp *FeedVersionGeohashBuilder) Copy(_ adapters.EntityCopier) error {
 	// Stops contribute cells with stop_count >= 1.
 	for _, s := range pp.stops {
-		if !tlxy.IsValidStopCoord(s.lon, s.lat) {
-			continue
-		}
 		for _, p := range pp.precisions {
 			pp.cells[geohash.EncodeWithPrecision(s.lat, s.lon, p)]++
 		}
@@ -81,7 +78,7 @@ func (pp *FeedVersionGeohashBuilder) Copy(copier adapters.EntityCopier) error {
 	// cells not already populated by a stop. Conservative bbox-cover; finer
 	// polygon-cell intersection is a possible future refinement.
 	for _, loc := range pp.locations {
-		bbox, ok := flatCoordsBbox(loc.FlatCoords())
+		bbox, ok := tlxy.BboxFromFlatCoords(loc.FlatCoords())
 		if !ok {
 			continue
 		}
@@ -93,52 +90,10 @@ func (pp *FeedVersionGeohashBuilder) Copy(copier adapters.EntityCopier) error {
 			}
 		}
 	}
-	for cell, count := range pp.cells {
-		ent := FeedVersionGeohash{
-			Geohash:   tt.NewString(cell),
-			StopCount: tt.NewInt(count),
-		}
-		if err := copier.CopyEntity(&ent); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-// flatCoordsBbox computes a bounding box from a flat (lon,lat) coordinate
-// slice, ignoring vertices that fail IsValidStopCoord. Returns ok=false if
-// no valid coordinates remain.
-func flatCoordsBbox(coords []float64) (tlxy.BoundingBox, bool) {
-	var bbox tlxy.BoundingBox
-	initialized := false
-	for i := 0; i+1 < len(coords); i += 2 {
-		lon, lat := coords[i], coords[i+1]
-		if !tlxy.IsValidStopCoord(lon, lat) {
-			continue
-		}
-		if !initialized {
-			bbox = tlxy.BoundingBox{MinLon: lon, MaxLon: lon, MinLat: lat, MaxLat: lat}
-			initialized = true
-			continue
-		}
-		if lon < bbox.MinLon {
-			bbox.MinLon = lon
-		}
-		if lon > bbox.MaxLon {
-			bbox.MaxLon = lon
-		}
-		if lat < bbox.MinLat {
-			bbox.MinLat = lat
-		}
-		if lat > bbox.MaxLat {
-			bbox.MaxLat = lat
-		}
-	}
-	return bbox, initialized
-}
-
 // Cells returns the accumulated geohash→stop_count map after Copy() has run.
-// Used by callers (e.g. static_fetch) where the copier's writer is empty.
 func (pp *FeedVersionGeohashBuilder) Cells() map[string]int {
 	return pp.cells
 }

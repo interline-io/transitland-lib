@@ -7,21 +7,6 @@ import (
 	"github.com/mmcloughlin/geohash"
 )
 
-// IsValidStopCoord returns true if (lon, lat) is a usable stop location.
-// Drops (0,0) (null island, a common bad-data marker) and out-of-range coordinates.
-func IsValidStopCoord(lon, lat float64) bool {
-	if lon == 0 && lat == 0 {
-		return false
-	}
-	if lon < -180 || lon > 180 {
-		return false
-	}
-	if lat < -90 || lat > 90 {
-		return false
-	}
-	return true
-}
-
 // CellsCoveringBbox returns the sorted, deduplicated set of geohash cells at
 // the given precision whose tiles intersect bbox.
 //

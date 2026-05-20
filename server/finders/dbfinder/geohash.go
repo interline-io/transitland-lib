@@ -1,8 +1,6 @@
 package dbfinder
 
 import (
-	"fmt"
-
 	sq "github.com/irees/squirrel"
 
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -15,12 +13,14 @@ import (
 const geohashBboxFilterPrecision uint = 3
 
 // geohashCellsExists returns an EXISTS clause matching feed_versions that have
-// at least one stop geohash cell overlapping bbox. fvIDColumn is the SQL
-// expression identifying the feed_version_id in the outer query (e.g.
-// "feed_versions.id" or "fs_geom.feed_version_id").
-func geohashCellsExists(bbox tlxy.BoundingBox, fvIDColumn string) sq.Sqlizer {
+// at least one stop geohash cell overlapping bbox. fvCorrelation is the
+// constant join predicate linking the subquery's feed_version_id to the outer
+// query (e.g. sq.Expr("tl_feed_version_geohashes.feed_version_id = feed_versions.id")).
+func geohashCellsExists(bbox tlxy.BoundingBox, fvCorrelation sq.Sqlizer) sq.Sqlizer {
 	cells := tlxy.CellsCoveringBbox(bbox, geohashBboxFilterPrecision)
-	return sq.Expr(fmt.Sprintf(`EXISTS (SELECT 1 FROM tl_feed_version_geohashes
-                                    WHERE feed_version_id = %s
-                                      AND geohash = ANY(?))`, fvIDColumn), cells)
+	sub := sq.Select("1").
+		From("tl_feed_version_geohashes").
+		Where(fvCorrelation).
+		Where(sq.Eq{"tl_feed_version_geohashes.geohash": cells})
+	return sq.Expr("EXISTS (?)", sub)
 }
