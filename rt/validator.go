@@ -324,7 +324,7 @@ func (fi *Validator) ValidateShape(s *pb.Shape, ent *pb.FeedEntity) (errs []erro
 			s.GetShapeId(),
 		))
 	}
-	if s.EncodedPolyline == nil {
+	if s.GetEncodedPolyline() == "" {
 		errs = append(errs, withFieldAndJson(E103, "shape.encoded_polyline", "", "", ent, "inline Shape entity is missing required field encoded_polyline"))
 	}
 	return errs
@@ -790,7 +790,7 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 	} else if td.GetModifiedTrip() == nil {
 		// Neither trip_id nor modified_trip is set; require the legacy tuple.
 		if td.RouteId == nil || td.DirectionId == nil || td.StartDate == nil || td.StartTime == nil {
-			errs = append(errs, newError("TripDescriptor must provided a trip_id or all of route_id, direction_id, start_date, and start_time", "trip_update.trip.trip_id"))
+			errs = append(errs, newError("TripDescriptor must provide a trip_id or all of route_id, direction_id, start_date, and start_time", "trip_update.trip.trip_id"))
 		}
 		if td.GetScheduleRelationship() != pb.TripDescriptor_SCHEDULED {
 			errs = append(errs, newError("TripDescriptor must be SCHEDULED if no trip_id is provided", "trip_update.trip.trip_id"))
