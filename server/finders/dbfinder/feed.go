@@ -7,12 +7,13 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	sq "github.com/irees/squirrel"
 )
 
 func (f *Finder) FindFeeds(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.FeedFilter) ([]*model.Feed, error) {
 	var ents []*model.Feed
-	if err := dbutil.Select(ctx, f.db, feedSelect(limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
+	if err := dbutil.Select(ctx, f.db, feedSelect(ctx, limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
 	return ents, nil
@@ -60,7 +61,7 @@ func (f *Finder) FeedFetchesByFeedIDs(ctx context.Context, limit *int, where *mo
 }
 
 func (f *Finder) FeedsByOperatorOnestopIDs(ctx context.Context, limit *int, where *model.FeedFilter, keys []string) ([][]*model.Feed, error) {
-	q := feedSelect(nil, nil, nil, f.PermFilter(ctx), where).
+	q := feedSelect(ctx, nil, nil, nil, f.PermFilter(ctx), where).
 		Distinct().Options("on (coif.resolved_onestop_id, current_feeds.id)").
 		Column("coif.resolved_onestop_id as with_operator_onestop_id").
 		Join("current_operators_in_feed coif on coif.feed_id = current_feeds.id").
@@ -74,7 +75,7 @@ func (f *Finder) FeedsByOperatorOnestopIDs(ctx context.Context, limit *int, wher
 	return arrangeGroup(keys, ents, func(ent *model.Feed) string { return ent.WithOperatorOnestopID.Val }), err
 }
 
-func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedFilter) sq.SelectBuilder {
+func feedSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select(
 			"current_feeds.id",
@@ -111,15 +112,40 @@ func feedSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.Pe
 			q = q.
 				Join("feed_states fs_geom on fs_geom.feed_id = current_feeds.id").
 				Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = fs_geom.feed_version_id")
+			// Optional secondary filter on precomputed stop geohash cells.
+			// Gated on UseGeohashFilter; operators are expected to run the
+			// migration and backfill before flipping the flag on, so FVs
+			// without cells are treated as not matching.
+			useGeohashFilter := model.ForContext(ctx).UseGeohashFilter
+			fvCorrelation := sq.Expr("tl_feed_version_geohashes.feed_version_id = fs_geom.feed_version_id")
 			if where.Bbox != nil {
-				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
+				b := where.Bbox
+				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat)
+				if useGeohashFilter {
+					if expr, ok := geohashCellsExists(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, fvCorrelation); ok {
+						q = q.Where(expr)
+					}
+				}
 			}
 			if where.Within != nil && where.Within.Valid {
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ?)", where.Within)
+				if useGeohashFilter {
+					if bbox, ok := tlxy.BboxFromFlatCoords(where.Within.FlatCoords()); ok {
+						if expr, ok := geohashCellsExists(bbox, fvCorrelation); ok {
+							q = q.Where(expr)
+						}
+					}
+				}
 			}
 			if where.Near != nil {
 				radius := checkFloat(&where.Near.Radius, 0, 1_000_000)
 				q = q.Where("ST_DWithin(fv_geoms.geometry, ST_MakePoint(?,?), ?)", where.Near.Lon, where.Near.Lat, radius)
+				if useGeohashFilter {
+					bbox := tlxy.BboxFromPointRadius(where.Near.Lon, where.Near.Lat, radius)
+					if expr, ok := geohashCellsExists(bbox, fvCorrelation); ok {
+						q = q.Where(expr)
+					}
+				}
 			}
 		}
 

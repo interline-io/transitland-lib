@@ -11,6 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type FeedVersionStats struct {
@@ -20,6 +21,7 @@ type FeedVersionStats struct {
 	RouteOnestopIDs  []dmfr.FeedVersionRouteOnestopID
 	StopOnestopIDs   []dmfr.FeedVersionStopOnestopID
 	FileInfos        []dmfr.FeedVersionFileInfo
+	GeohashCells     map[string]int
 }
 
 func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
@@ -38,6 +40,7 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 	fvslBuilder := NewFeedVersionServiceLevelBuilder()
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
 	osidBuilder := NewFeedVersionOnestopIDBuilder()
+	geohashBuilder := builders.NewFeedVersionGeohashBuilder()
 	if _, err := copier.QuietCopy(
 		context.TODO(),
 		reader, &empty.Writer{},
@@ -47,10 +50,12 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 			o.AddExtension(fvslBuilder)
 			o.AddExtension(fvswBuilder)
 			o.AddExtension(osidBuilder)
+			o.AddExtension(geohashBuilder)
 		},
 	); err != nil {
 		return ret, err
 	}
+	ret.GeohashCells = geohashBuilder.Cells()
 
 	// Service levels
 	ret.ServiceLevels, err = fvslBuilder.ServiceLevels()
@@ -153,6 +158,28 @@ func WriteFeedVersionStats(ctx context.Context, atx tldb.Adapter, stats FeedVers
 
 	// Batch insert FVSLs
 	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(stats.ServiceLevels), fvid)); err != nil {
+		return err
+	}
+
+	// Batch insert geohashes
+	if err := writeFeedVersionGeohashInserts(ctx, atx, fvid, stats.GeohashCells); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeFeedVersionGeohashInserts(ctx context.Context, atx tldb.Adapter, fvid int, cells map[string]int) error {
+	if len(cells) == 0 {
+		return nil
+	}
+	var ents []builders.FeedVersionGeohash
+	for cell, count := range cells {
+		ents = append(ents, builders.FeedVersionGeohash{
+			Geohash:   tt.NewString(cell),
+			StopCount: count,
+		})
+	}
+	if _, err := atx.MultiInsert(ctx, setFvid(convertToAny(ents), fvid)); err != nil {
 		return err
 	}
 	return nil

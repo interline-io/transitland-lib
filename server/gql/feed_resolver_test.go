@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
@@ -246,6 +247,61 @@ func TestFeedResolver(t *testing.T) {
 		// TODO: associated_operators
 	}
 	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+// TestFeedResolver_GeohashFilter runs the spatial filter cases with the
+// geohash secondary filter enabled. Same expected results as the polygon-only
+// path for these clean fixtures — proves the cells SQL is correct and
+// doesn't drop legitimate matches.
+func TestFeedResolver_GeohashFilter(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:         "bbox SF",
+			query:        `query($bbox:BoundingBox) {feeds(where: {bbox:$bbox}) {onestop_id}}`,
+			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"BA"},
+		},
+		{
+			name:         "bbox empty area",
+			query:        `query($bbox:BoundingBox) {feeds(where: {bbox:$bbox}) {onestop_id}}`,
+			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
+			name:  "within SF polygon",
+			query: `query($within:Polygon) {feeds(where: {within:$within}) {onestop_id}}`,
+			vars: hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{
+				{-122.39803791046143, 37.794626736533836},
+				{-122.40106344223022, 37.792303711508595},
+				{-122.3965573310852, 37.789641468930114},
+				{-122.3938751220703, 37.792354581451946},
+				{-122.39803791046143, 37.794626736533836},
+			}}}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"BA"},
+		},
+		{
+			name:         "near SF point",
+			query:        `query($near:PointRadius) {feeds(where: {near:$near}) {onestop_id}}`,
+			vars:         hw{"near": hw{"lon": -122.2698781543005, "lat": 37.80700393130445, "radius": 1000}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"BA"},
+		},
+		{
+			name:         "near Tampa point",
+			query:        `query($near:PointRadius) {feeds(where: {near:$near}) {onestop_id}}`,
+			vars:         hw{"near": hw{"lon": -82.45717479225324, "lat": 27.95070842389974, "radius": 1000}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"HA"},
+		},
+	}
+	c, _ := newTestClientWithOpts(t, testconfig.Options{
+		RTJsons:          testconfig.DefaultRTJson(),
+		UseGeohashFilter: true,
+	})
 	queryTestcases(t, c, testcases)
 }
 

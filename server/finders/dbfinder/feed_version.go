@@ -8,13 +8,14 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
 
 func (f *Finder) FindFeedVersions(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error) {
 	var ents []*model.FeedVersion
-	if err := dbutil.Select(ctx, f.db, feedVersionSelect(limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
+	if err := dbutil.Select(ctx, f.db, feedVersionSelect(ctx, limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
 	return ents, nil
@@ -95,7 +96,7 @@ func (f *Finder) FeedVersionsByFeedIDs(ctx context.Context, limit *int, where *m
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			feedVersionSelect(limit, nil, nil, f.PermFilter(ctx), where),
+			feedVersionSelect(ctx, limit, nil, nil, f.PermFilter(ctx), where),
 			"current_feeds",
 			"id",
 			"feed_versions",
@@ -161,7 +162,7 @@ func (f *Finder) FeedInfosByFeedVersionIDs(ctx context.Context, limit *int, keys
 	return arrangeGroup(keys, ents, func(ent *model.FeedInfo) int { return ent.FeedVersionID }), err
 }
 
-func feedVersionSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedVersionFilter) sq.SelectBuilder {
+func feedVersionSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedVersionFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select(
 			"feed_versions.id",
@@ -202,15 +203,40 @@ func feedVersionSelect(limit *int, after *model.Cursor, ids []int, permFilter *m
 		// Spatial
 		if where.Bbox != nil || where.Within != nil || where.Near != nil {
 			q = q.Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = feed_versions.id")
+			// Optional secondary filter on precomputed stop geohash cells.
+			// Gated on UseGeohashFilter; operators are expected to run the
+			// migration and backfill before flipping the flag on, so FVs
+			// without cells are treated as not matching.
+			useGeohashFilter := model.ForContext(ctx).UseGeohashFilter
+			fvCorrelation := sq.Expr("tl_feed_version_geohashes.feed_version_id = feed_versions.id")
 			if where.Bbox != nil {
-				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
+				b := where.Bbox
+				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat)
+				if useGeohashFilter {
+					if expr, ok := geohashCellsExists(tlxy.BoundingBox{MinLon: b.MinLon, MinLat: b.MinLat, MaxLon: b.MaxLon, MaxLat: b.MaxLat}, fvCorrelation); ok {
+						q = q.Where(expr)
+					}
+				}
 			}
 			if where.Within != nil && where.Within.Valid {
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ?)", where.Within)
+				if useGeohashFilter {
+					if bbox, ok := tlxy.BboxFromFlatCoords(where.Within.FlatCoords()); ok {
+						if expr, ok := geohashCellsExists(bbox, fvCorrelation); ok {
+							q = q.Where(expr)
+						}
+					}
+				}
 			}
 			if where.Near != nil {
 				radius := checkFloat(&where.Near.Radius, 0, 1_000_000)
 				q = q.Where("ST_DWithin(fv_geoms.geometry, ST_MakePoint(?,?), ?)", where.Near.Lon, where.Near.Lat, radius)
+				if useGeohashFilter {
+					bbox := tlxy.BboxFromPointRadius(where.Near.Lon, where.Near.Lat, radius)
+					if expr, ok := geohashCellsExists(bbox, fvCorrelation); ok {
+						q = q.Where(expr)
+					}
+				}
 			}
 		}
 
