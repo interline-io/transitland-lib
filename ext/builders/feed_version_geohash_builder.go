@@ -37,10 +37,11 @@ func (ent *FeedVersionGeohash) TableName() string {
 //
 // Each cell carries a stop_count: positive when the cell contains one or more
 // stops, zero when the cell is reached only via a flex location polygon's
-// bounding box. Zero-count cells preserve flex feed visibility in bbox_stops
-// queries without inflating density metrics. All stop coordinates are kept,
-// including out-of-range and (0,0) values, so the cells can also surface
-// bad-coordinate stops.
+// bounding box. Zero-count cells preserve flex feed visibility in
+// feed/feed_version spatial queries without inflating density metrics. Stops
+// with no coordinate at all are skipped, but explicit out-of-range and (0,0)
+// coordinate values are kept, so the cells can also surface bad-coordinate
+// stops.
 type FeedVersionGeohashBuilder struct {
 	precisions []uint
 	stops      map[string]*stopGeom
@@ -59,6 +60,12 @@ func NewFeedVersionGeohashBuilder() *FeedVersionGeohashBuilder {
 func (pp *FeedVersionGeohashBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
+		// Skip stops with no coordinate at all (Geometry.Valid is false); an
+		// explicit (0,0) or out-of-range value is Valid and still recorded, so
+		// genuinely bad coordinates remain discoverable.
+		if !v.Geometry.Valid {
+			return nil
+		}
 		pp.stops[eid] = &stopGeom{
 			lon: v.Geometry.X(),
 			lat: v.Geometry.Y(),
@@ -89,7 +96,7 @@ func (pp *FeedVersionGeohashBuilder) Copy(_ adapters.EntityCopier) error {
 			continue
 		}
 		for _, p := range pp.precisions {
-			for _, cell := range tlxy.CellsCoveringBbox(bbox, p) {
+			for _, cell := range tlxy.CellsCoveringBbox(bbox, p, 0) {
 				if _, exists := pp.cells[cell]; !exists {
 					pp.cells[cell] = 0
 				}

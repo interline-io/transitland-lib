@@ -19,17 +19,36 @@ import (
 // by bad-coordinate stops without dropping legitimate city-scale matches.
 const GeohashBboxFilterPrecision uint = 3
 
-// CellsCoveringBbox returns the sorted, deduplicated set of geohash cells at
-// the given precision whose tiles intersect bbox.
-//
-// Bboxes crossing the antimeridian (MinLon > MaxLon) are not supported: the
-// longitude loop never executes, so the whole bbox returns an empty result
-// (not just the wrapped portion).
-func CellsCoveringBbox(bbox BoundingBox, precision uint) []string {
+// CellsCoveringBbox returns the sorted, deduplicated set of geohash cells at the
+// given precision whose tiles intersect bbox. It returns nil for a bbox it
+// cannot represent — precision 0, coordinates outside [-180,180]×[-90,90], or an
+// antimeridian-crossing bbox (MinLon > MaxLon) — and, when maxCells > 0, for a
+// bbox that would decompose into more than maxCells cells. A non-positive
+// maxCells means no limit. Callers treat nil/empty as "skip the cell filter" and
+// fall back to their primary spatial predicate.
+func CellsCoveringBbox(bbox BoundingBox, precision uint, maxCells int) []string {
 	if precision == 0 {
 		return nil
 	}
+	// Reject degenerate or out-of-range bboxes (e.g. a near-radius that crosses
+	// the antimeridian, leaving MaxLon > 180) rather than encoding bogus
+	// longitudes; the caller falls back to its primary spatial predicate.
+	if bbox.MinLon > bbox.MaxLon || bbox.MinLat > bbox.MaxLat ||
+		bbox.MinLon < -180 || bbox.MaxLon > 180 ||
+		bbox.MinLat < -90 || bbox.MaxLat > 90 {
+		return nil
+	}
 	lonStep, latStep := geohashCellSize(precision)
+	// Cheap upper-bound on the cell count; bail before generating when it would
+	// blow past the cap (continent/world-scale bboxes), where the filter adds no
+	// selectivity anyway.
+	if maxCells > 0 {
+		lonCells := int(math.Ceil((bbox.MaxLon-bbox.MinLon)/lonStep)) + 2
+		latCells := int(math.Ceil((bbox.MaxLat-bbox.MinLat)/latStep)) + 2
+		if lonCells*latCells > maxCells {
+			return nil
+		}
+	}
 	// Anchor iteration at the SW corner of the cell containing the bbox's SW corner,
 	// then walk cell-by-cell sampling each cell's center.
 	swCell := geohash.EncodeWithPrecision(bbox.MinLat, bbox.MinLon, precision)

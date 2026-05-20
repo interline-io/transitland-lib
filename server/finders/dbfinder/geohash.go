@@ -21,8 +21,8 @@ const geohashBboxFilterMaxCells = 1000
 // linking the subquery's feed_version_id to the outer query (e.g.
 // sq.Expr("tl_feed_version_geohashes.feed_version_id = feed_versions.id")).
 func geohashCellsExists(bbox tlxy.BoundingBox, fvCorrelation sq.Sqlizer) (sq.Sqlizer, bool) {
-	cells := tlxy.CellsCoveringBbox(bbox, tlxy.GeohashBboxFilterPrecision)
-	if len(cells) == 0 || len(cells) > geohashBboxFilterMaxCells {
+	cells := tlxy.CellsCoveringBbox(bbox, tlxy.GeohashBboxFilterPrecision, geohashBboxFilterMaxCells)
+	if len(cells) == 0 {
 		return nil, false
 	}
 	sub := sq.Select("1").

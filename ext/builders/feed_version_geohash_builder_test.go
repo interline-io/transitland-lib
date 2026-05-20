@@ -104,4 +104,29 @@ func TestFeedVersionGeohashBuilder(t *testing.T) {
 		assert.Contains(t, cells, geohash.EncodeWithPrecision(0, 0, 3))
 		assert.Contains(t, cells, geohash.EncodeWithPrecision(0, 0, 5))
 	})
+
+	t.Run("skips stops with no coordinate", func(t *testing.T) {
+		b := NewFeedVersionGeohashBuilder()
+		// A stop with a real coordinate.
+		good := &gtfs.Stop{StopID: tt.NewString("good")}
+		good.SetCoordinates([2]float64{-122.4, 37.8})
+		if err := b.AfterWrite("good", good, nil); err != nil {
+			t.Fatal(err)
+		}
+		// A stop with no coordinate at all (Geometry.Valid == false) must not add
+		// a (0,0) Null Island cell.
+		noCoord := &gtfs.Stop{StopID: tt.NewString("nocoord")}
+		if err := b.AfterWrite("nocoord", noCoord, nil); err != nil {
+			t.Fatal(err)
+		}
+		if err := b.Copy(nil); err != nil {
+			t.Fatal(err)
+		}
+		cells := b.Cells()
+		assert.NotContains(t, cells, geohash.EncodeWithPrecision(0, 0, 3),
+			"missing-coordinate stop must not add a null-island cell")
+		assert.NotContains(t, cells, geohash.EncodeWithPrecision(0, 0, 5))
+		// Only the good stop's p3 + p5 cells remain.
+		assert.Len(t, cells, 2, "got cells %v", cells)
+	})
 }

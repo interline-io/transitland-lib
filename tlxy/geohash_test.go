@@ -36,7 +36,7 @@ func TestCellsCoveringBbox(t *testing.T) {
 	t.Run("tiny bbox inside one p3 cell", func(t *testing.T) {
 		// ~100m square in San Francisco; sits inside a single p3 cell.
 		bbox := BoundingBox{MinLon: -122.42, MinLat: 37.77, MaxLon: -122.419, MaxLat: 37.771}
-		cells := CellsCoveringBbox(bbox, 3)
+		cells := CellsCoveringBbox(bbox, 3, 0)
 		assert.Len(t, cells, 1)
 		// The single cell must contain the bbox corners
 		expected := geohash.EncodeWithPrecision(37.77, -122.42, 3)
@@ -46,7 +46,7 @@ func TestCellsCoveringBbox(t *testing.T) {
 	t.Run("bbox spanning multiple p3 cells", func(t *testing.T) {
 		// ~3° × 3° bbox covers 2-3 cells per axis at p3 (1.4° cells).
 		bbox := BoundingBox{MinLon: -123, MinLat: 36, MaxLon: -120, MaxLat: 39}
-		cells := CellsCoveringBbox(bbox, 3)
+		cells := CellsCoveringBbox(bbox, 3, 0)
 		assert.GreaterOrEqual(t, len(cells), 4)
 		assert.LessOrEqual(t, len(cells), 16)
 		// Every cell in the result must actually intersect the bbox
@@ -61,15 +61,15 @@ func TestCellsCoveringBbox(t *testing.T) {
 
 	t.Run("p5 covers many more cells than p3 for same bbox", func(t *testing.T) {
 		bbox := BoundingBox{MinLon: -122.5, MinLat: 37.5, MaxLon: -122.0, MaxLat: 38.0}
-		p3Cells := CellsCoveringBbox(bbox, 3)
-		p5Cells := CellsCoveringBbox(bbox, 5)
+		p3Cells := CellsCoveringBbox(bbox, 3, 0)
+		p5Cells := CellsCoveringBbox(bbox, 5, 0)
 		assert.Greater(t, len(p5Cells), len(p3Cells)*10,
 			"p5 should yield many more cells than p3 for the same bbox")
 	})
 
 	t.Run("returns sorted output", func(t *testing.T) {
 		bbox := BoundingBox{MinLon: -123, MinLat: 36, MaxLon: -120, MaxLat: 39}
-		cells := CellsCoveringBbox(bbox, 3)
+		cells := CellsCoveringBbox(bbox, 3, 0)
 		for i := 1; i < len(cells); i++ {
 			assert.Less(t, cells[i-1], cells[i], "cells must be sorted")
 		}
@@ -77,7 +77,24 @@ func TestCellsCoveringBbox(t *testing.T) {
 
 	t.Run("precision 0 returns nil", func(t *testing.T) {
 		bbox := BoundingBox{MinLon: -122, MinLat: 37, MaxLon: -121, MaxLat: 38}
-		assert.Nil(t, CellsCoveringBbox(bbox, 0))
+		assert.Nil(t, CellsCoveringBbox(bbox, 0, 0))
+	})
+
+	t.Run("out-of-range or antimeridian-crossing bbox returns nil", func(t *testing.T) {
+		// Longitude past +180, e.g. a near-radius crossing the dateline.
+		assert.Nil(t, CellsCoveringBbox(BoundingBox{MinLon: 175, MinLat: 0, MaxLon: 185, MaxLat: 5}, 3, 0))
+		// Wrapped bbox (MinLon > MaxLon).
+		assert.Nil(t, CellsCoveringBbox(BoundingBox{MinLon: 170, MinLat: 0, MaxLon: -170, MaxLat: 5}, 3, 0))
+		// Latitude past the pole.
+		assert.Nil(t, CellsCoveringBbox(BoundingBox{MinLon: 0, MinLat: 80, MaxLon: 5, MaxLat: 95}, 3, 0))
+	})
+
+	t.Run("returns nil when cell count exceeds maxCells", func(t *testing.T) {
+		// Continent-scale bbox (~contiguous US) blows past a small cap, so the
+		// caller skips the filter; with no limit it still returns cells.
+		bbox := BoundingBox{MinLon: -125, MinLat: 25, MaxLon: -67, MaxLat: 49}
+		assert.NotEmpty(t, CellsCoveringBbox(bbox, 3, 0), "no limit returns cells")
+		assert.Nil(t, CellsCoveringBbox(bbox, 3, 10), "tiny cap skips")
 	})
 
 	t.Run("BboxFromFlatCoords returns min/max across pairs", func(t *testing.T) {
@@ -129,7 +146,7 @@ func TestCellsCoveringBbox(t *testing.T) {
 		// Verify the discrimination property: a feed with stops only around
 		// Brownsville TX must not produce p3 cells that overlap a Seattle bbox.
 		seattle := BoundingBox{MinLon: -122.45, MinLat: 47.5, MaxLon: -122.2, MaxLat: 47.7}
-		seattleCells := CellsCoveringBbox(seattle, 3)
+		seattleCells := CellsCoveringBbox(seattle, 3, 0)
 
 		brownsvilleHash := geohash.EncodeWithPrecision(25.93, -97.50, 3)
 		nullIslandHash := geohash.EncodeWithPrecision(0, 0, 3)
