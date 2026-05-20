@@ -9,12 +9,11 @@ import (
 )
 
 // DefaultGeohashPrecisions are the geohash precisions computed for each feed
-// version. The bbox discovery filter relies on tlxy.GeohashBboxFilterPrecision
-// (p3, ~156×156 km), so that precision must stay in this set — both sides
-// reference the shared constant. p5 (~4.9×4.9 km, square) is left out for now to
-// avoid storing cells nothing reads yet — add 5 back here to re-enable it for
-// future fingerprint/comparison use.
-var DefaultGeohashPrecisions = []uint{tlxy.GeohashBboxFilterPrecision} // {tlxy.GeohashBboxFilterPrecision, 5}
+// version. p3 (tlxy.GeohashBboxFilterPrecision, ~156×156 km) backs the bbox
+// discovery filter and must stay in this set — both sides reference the shared
+// constant. p5 (~4.9×4.9 km, square) is the finer per-FV fingerprint precision
+// for the FV-vs-FV comparison use case.
+var DefaultGeohashPrecisions = []uint{tlxy.GeohashBboxFilterPrecision, 5}
 
 type FeedVersionGeohash struct {
 	Geohash   tt.String
@@ -71,15 +70,19 @@ func (pp *FeedVersionGeohashBuilder) AfterWrite(eid string, ent tt.Entity, emap 
 }
 
 func (pp *FeedVersionGeohashBuilder) Copy(_ adapters.EntityCopier) error {
-	// Stops contribute cells with stop_count >= 1.
+	// Stops contribute cells at every precision with stop_count >= 1 (p3 backs
+	// discovery, p5 is the fingerprint).
 	for _, s := range pp.stops {
 		for _, p := range pp.precisions {
 			pp.cells[geohash.EncodeWithPrecision(s.lat, s.lon, p)]++
 		}
 	}
-	// Flex location polygons contribute cells with stop_count=0, only for
-	// cells not already populated by a stop. Conservative bbox-cover; finer
-	// polygon-cell intersection is a possible future refinement.
+	// Flex location polygons contribute stop_count=0 cells at every precision,
+	// only where no stop already populated the cell. Zero-count cells keep flex
+	// feeds visible in the bbox filter without inflating stop density; flex
+	// zones are small enough in practice that the finer precisions stay cheap.
+	// Conservative bbox-cover; finer polygon-cell intersection is a possible
+	// future refinement.
 	for _, loc := range pp.locations {
 		bbox, ok := tlxy.BboxFromFlatCoords(loc.FlatCoords())
 		if !ok {

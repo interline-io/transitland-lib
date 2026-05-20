@@ -13,21 +13,31 @@ import (
 )
 
 func TestFeedVersionGeohashBuilder(t *testing.T) {
-	t.Run("BART produces p3 cells with positive stop counts", func(t *testing.T) {
+	t.Run("BART produces p3 and p5 cells with positive stop counts", func(t *testing.T) {
 		b := NewFeedVersionGeohashBuilder()
 		if _, _, err := newMockCopier(testreader.ExampleFeedBART.URL, b); err != nil {
 			t.Fatal(err)
 		}
 		cells := b.Cells()
 		assert.NotEmpty(t, cells, "cells emitted")
+		var p3, p5 int
 		for c, n := range cells {
-			// Only p3 (length 3) cells are computed for now.
-			assert.Len(t, c, 3, "expected only p3 cells, got %q", c)
-			// BART is in the SF Bay area — geohash prefix "9q"
+			// Stops are encoded at p3 (discovery) and p5 (fingerprint).
+			assert.True(t, len(c) == 3 || len(c) == 5, "expected p3 or p5 cell, got %q", c)
+			switch len(c) {
+			case 3:
+				p3++
+			case 5:
+				p5++
+			}
+			// BART is in the SF Bay area — geohash prefix "9q" (p5 extends the p3 prefix).
 			assert.True(t, strings.HasPrefix(c, "9q"),
-				"BART p3 cell should be in 9q* range, got %q", c)
+				"BART cell should be in 9q* range, got %q", c)
 			assert.Positive(t, n)
 		}
+		assert.Positive(t, p3, "expected p3 cells")
+		assert.Positive(t, p5, "expected p5 cells")
+		assert.GreaterOrEqual(t, p5, p3, "p5 cells are at least as fine-grained as p3")
 	})
 
 	t.Run("flex location polygon emits a zero-count cell where no stops exist", func(t *testing.T) {
@@ -56,6 +66,11 @@ func TestFeedVersionGeohashBuilder(t *testing.T) {
 		assert.Equal(t, 1, cells[sfCell], "stop cell should have a positive count")
 		assert.Contains(t, cells, txCell, "flex polygon cell should be present")
 		assert.Equal(t, 0, cells[txCell], "flex-only cell should have stop_count 0")
+		// Flex cells are emitted at every precision, so the zone also surfaces a
+		// p5 cell with no stop.
+		txCellP5 := geohash.EncodeWithPrecision(25.9, -97.5, 5)
+		assert.Contains(t, cells, txCellP5, "flex polygon should also emit a p5 cell")
+		assert.Equal(t, 0, cells[txCellP5], "flex-only p5 cell should have stop_count 0")
 	})
 
 	t.Run("keeps all coordinates including bad ones", func(t *testing.T) {
@@ -79,13 +94,14 @@ func TestFeedVersionGeohashBuilder(t *testing.T) {
 			t.Fatal(err)
 		}
 		cells := b.Cells()
-		// 3 stops in different cells → 3 distinct p3 entries
-		assert.Len(t, cells, 3, "got cells %v", cells)
+		// 3 stops in distinct cells → 3 p3 + 3 p5 = 6 distinct entries
+		assert.Len(t, cells, 6, "got cells %v", cells)
 		for c, n := range cells {
 			assert.EqualValues(t, 1, n, "cell %s should have count 1", c)
 		}
-		// Null island is retained, so bad-coordinate stops remain discoverable
-		// via the cells.
+		// Null island is retained at both precisions, so bad-coordinate stops
+		// remain discoverable via the cells.
 		assert.Contains(t, cells, geohash.EncodeWithPrecision(0, 0, 3))
+		assert.Contains(t, cells, geohash.EncodeWithPrecision(0, 0, 5))
 	})
 }
