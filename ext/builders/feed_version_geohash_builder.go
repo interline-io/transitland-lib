@@ -9,11 +9,12 @@ import (
 )
 
 // DefaultGeohashPrecisions are the geohash precisions computed for each feed
-// version. Currently only p3 (~156×156 km, square) is computed; it is used for
-// the bbox discovery filter. p5 (~4.9×4.9 km, square) is left out for now to
+// version. The bbox discovery filter relies on tlxy.GeohashBboxFilterPrecision
+// (p3, ~156×156 km), so that precision must stay in this set — both sides
+// reference the shared constant. p5 (~4.9×4.9 km, square) is left out for now to
 // avoid storing cells nothing reads yet — add 5 back here to re-enable it for
 // future fingerprint/comparison use.
-var DefaultGeohashPrecisions = []uint{3} // {3, 5}
+var DefaultGeohashPrecisions = []uint{tlxy.GeohashBboxFilterPrecision} // {tlxy.GeohashBboxFilterPrecision, 5}
 
 type FeedVersionGeohash struct {
 	Geohash   tt.String

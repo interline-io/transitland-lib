@@ -116,6 +116,15 @@ func TestCellsCoveringBbox(t *testing.T) {
 		assert.Equal(t, 180.0, polar.MaxLon)
 	})
 
+	t.Run("BboxFromPointRadius clamps latitude to valid range", func(t *testing.T) {
+		// A large radius near a pole would push MaxLat past 90 without the clamp,
+		// feeding an out-of-range latitude to the geohash encoder.
+		polar := BboxFromPointRadius(0, 89, 1_000_000)
+		assert.Equal(t, 90.0, polar.MaxLat, "MaxLat should saturate at the pole")
+		assert.GreaterOrEqual(t, polar.MinLat, -90.0)
+		assert.LessOrEqual(t, polar.MaxLat, 90.0)
+	})
+
 	t.Run("Brownsville bbox excludes Seattle p3 cell", func(t *testing.T) {
 		// Verify the discrimination property: a feed with stops only around
 		// Brownsville TX must not produce p3 cells that overlap a Seattle bbox.

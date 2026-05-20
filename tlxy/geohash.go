@@ -7,11 +7,24 @@ import (
 	"github.com/mmcloughlin/geohash"
 )
 
+// GeohashBboxFilterPrecision is the geohash precision shared by both halves of
+// the feed-version bbox filter: the builder stores per-feed-version stop cells
+// at this precision, and queries expand a bbox into cells at the same precision
+// to match against them. The two MUST agree — a stored set that omits this
+// precision yields no matches — so both sides reference this constant instead
+// of independent literals.
+//
+// p3 cells are ~156×156 km (square) and decompose typical city bboxes into ~1–4
+// cells; coarse enough to reject the gross convex-hull false positives caused
+// by bad-coordinate stops without dropping legitimate city-scale matches.
+const GeohashBboxFilterPrecision uint = 3
+
 // CellsCoveringBbox returns the sorted, deduplicated set of geohash cells at
 // the given precision whose tiles intersect bbox.
 //
-// Bboxes crossing the antimeridian (MinLon > MaxLon) are not supported and
-// will return an empty result for the wrapped portion.
+// Bboxes crossing the antimeridian (MinLon > MaxLon) are not supported: the
+// longitude loop never executes, so the whole bbox returns an empty result
+// (not just the wrapped portion).
 func CellsCoveringBbox(bbox BoundingBox, precision uint) []string {
 	if precision == 0 {
 		return nil
@@ -68,8 +81,10 @@ func BboxFromFlatCoords(coords []float64) (BoundingBox, bool) {
 
 // BboxFromPointRadius returns the smallest axis-aligned bounding box that
 // encloses a circle of radius meters around (lon, lat). The longitude delta
-// uses cos(lat) so the box widens at the equator and narrows near the poles.
-// Capped at full longitude coverage at very high latitudes.
+// uses cos(lat) so the box widens at the equator and narrows near the poles,
+// capped at full longitude coverage at very high latitudes. Latitude is clamped
+// to [-90, 90] so a large radius near a pole cannot produce an out-of-range
+// coordinate.
 func BboxFromPointRadius(lon, lat, radiusMeters float64) BoundingBox {
 	const metersPerDegLat = 111320.0
 	latDelta := radiusMeters / metersPerDegLat
@@ -85,9 +100,9 @@ func BboxFromPointRadius(lon, lat, radiusMeters float64) BoundingBox {
 	}
 	return BoundingBox{
 		MinLon: lon - lonDelta,
-		MinLat: lat - latDelta,
+		MinLat: math.Max(lat-latDelta, -90.0),
 		MaxLon: lon + lonDelta,
-		MaxLat: lat + latDelta,
+		MaxLat: math.Min(lat+latDelta, 90.0),
 	}
 }
 

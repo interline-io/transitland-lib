@@ -6,12 +6,6 @@ import (
 	"github.com/interline-io/transitland-lib/tlxy"
 )
 
-// geohashBboxFilterPrecision is the geohash precision used for the bbox/within/near
-// secondary filter on tl_feed_version_geometries queries. p3 cells are ~156×156 km
-// (square) and decompose typical city bboxes to ~1–4 cells; sufficient to reject
-// the gross polygon false positives caused by bad-coordinate stops.
-const geohashBboxFilterPrecision uint = 3
-
 // geohashBboxFilterMaxCells caps the number of cells the secondary filter will
 // expand a bbox into. Country/continent-scale bboxes blow past this; at that
 // size the filter adds no selectivity (it matches nearly everything) and only
@@ -27,7 +21,7 @@ const geohashBboxFilterMaxCells = 1000
 // linking the subquery's feed_version_id to the outer query (e.g.
 // sq.Expr("tl_feed_version_geohashes.feed_version_id = feed_versions.id")).
 func geohashCellsExists(bbox tlxy.BoundingBox, fvCorrelation sq.Sqlizer) (sq.Sqlizer, bool) {
-	cells := tlxy.CellsCoveringBbox(bbox, geohashBboxFilterPrecision)
+	cells := tlxy.CellsCoveringBbox(bbox, tlxy.GeohashBboxFilterPrecision)
 	if len(cells) == 0 || len(cells) > geohashBboxFilterMaxCells {
 		return nil, false
 	}
