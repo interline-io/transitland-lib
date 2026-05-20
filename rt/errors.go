@@ -13,9 +13,9 @@ import (
 )
 
 // Errors and warnings below cross-reference an external rule list published by
-// MobilityData/gtfs-realtime-validator (originally developed as academic work
-// by the University of South Florida's Center for Urban Transportation Research):
-//   https://github.com/MobilityData/gtfs-realtime-validator/blob/master/RULES.md
+// MobilityData/gtfs-realtime-validator (originally developed by USF CUTR):
+//
+//	https://github.com/MobilityData/gtfs-realtime-validator/blob/master/RULES.md
 //
 // transitland-lib's RT validator is an independent implementation, not a fork
 // of that project. The external list has been stable at E001-E052 / W001-W009
