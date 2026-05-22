@@ -65,7 +65,7 @@ func (f *Finder) SegmentsByRouteIDs(ctx context.Context, limit *int, where *mode
 		Join("tl_segment_patterns on tl_segment_patterns.segment_id = tl_segments.id").
 		Join("feed_versions on feed_versions.id = tl_segments.feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
-		Where("tl_segment_patterns.route_id = gtfs_routes.id").
+		Where(sq.Expr("tl_segment_patterns.route_id = gtfs_routes.id")).
 		Limit(finderCheckLimit(limit))
 	inner = pfJoinCheckFv(inner, f.PermFilter(ctx))
 	q := sq.StatementBuilder.
@@ -140,7 +140,16 @@ func segmentSelect(limit *int, after *model.Cursor, ids []int, permFilter *model
 
 func segmentPatternSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
-		Select("tl_segment_patterns.*").
+		Select(
+			"tl_segment_patterns.id",
+			"tl_segment_patterns.route_id",
+			"tl_segment_patterns.segment_id",
+			"tl_segment_patterns.shape_id",
+			"tl_segment_patterns.stop_pattern_id",
+			"tl_segment_patterns.direction_id",
+			"tl_segment_patterns.sequence_idx",
+			"tl_segment_patterns.way_id",
+		).
 		From("tl_segment_patterns").
 		Join("feed_versions on feed_versions.id = tl_segment_patterns.feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
