@@ -10,16 +10,29 @@ import (
 
 func (f *Finder) SegmentsByFeedVersionIDs(ctx context.Context, limit *int, where *model.SegmentFilter, keys []int) ([][]*model.Segment, error) {
 	var ents []*model.Segment
+	// row_number/partition is intentional: lets the planner use the
+	// (feed_version_id, id) index. The PermFilter check is layered on
+	// outside the subquery so we don't disturb that index path.
+	subq := sq.StatementBuilder.
+		Select(
+			"tl_segments.id",
+			"tl_segments.feed_version_id",
+			"tl_segments.way_id",
+			"tl_segments.geometry",
+			"row_number() over (partition by tl_segments.feed_version_id order by tl_segments.id) as rn",
+		).
+		From("tl_segments").
+		Where(In("tl_segments.feed_version_id", keys))
+	q := sq.StatementBuilder.
+		Select("t.id", "t.feed_version_id", "t.way_id", "t.geometry").
+		FromSelect(subq, "t").
+		Join("feed_versions on feed_versions.id = t.feed_version_id").
+		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
+		Where(sq.LtOrEq{"t.rn": finderCheckLimit(limit)})
+	q = pfJoinCheckFv(q, f.PermFilter(ctx))
 	err := dbutil.Select(ctx,
 		f.db,
-		lateralWrap(
-			segmentSelect(limit, nil, nil, f.PermFilter(ctx)),
-			"feed_versions",
-			"id",
-			"tl_segments",
-			"feed_version_id",
-			keys,
-		),
+		q,
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Segment) int { return ent.FeedVersionID }), err
