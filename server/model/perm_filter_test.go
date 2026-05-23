@@ -216,7 +216,7 @@ func TestWithPermFilter(t *testing.T) {
 
 		// Simulate what WithPerms would do - it should create a new filter
 		checker := &mockChecker{feeds: []int{4, 5}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		// Original should be unchanged
 		if !reflect.DeepEqual(original.AllowedFeeds, []int{1, 2, 3}) {
@@ -240,7 +240,7 @@ func TestWithPerms(t *testing.T) {
 	t.Run("no existing filter - sets checker result", func(t *testing.T) {
 		ctx := context.Background()
 		checker := &mockChecker{feeds: []int{1, 2}, feedVersions: []int{10, 20}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
@@ -257,7 +257,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{3, 4}, feedVersions: []int{20, 30}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2, 3, 4}) {
@@ -275,7 +275,7 @@ func TestWithPerms(t *testing.T) {
 
 		// Checker returns overlapping IDs
 		checker := &mockChecker{feeds: []int{2, 3, 4}, feedVersions: []int{20, 30}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2, 3, 4}) {
@@ -292,7 +292,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{3}, feedVersions: []int{20}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if pf == existing {
@@ -306,7 +306,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{isAdmin: true}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		// For admin, the filter should have IsGlobalAdmin=true
 		pf := PermsForContext(ctx)
@@ -321,7 +321,7 @@ func TestWithPerms(t *testing.T) {
 	t.Run("global admin - no existing filter", func(t *testing.T) {
 		ctx := context.Background()
 		checker := &mockChecker{isAdmin: true}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if pf == nil {
@@ -347,7 +347,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{1, 2}} // non-admin checker
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !pf.IsGlobalAdmin {
@@ -375,7 +375,7 @@ func TestWithPerms_ThreadSafety(t *testing.T) {
 		ctx = WithPermFilter(ctx, original)
 
 		checker := &mockChecker{feeds: []int{4, 5}, feedVersions: []int{30}}
-		_ = WithPerms(ctx, checker)
+		_, _ = WithPerms(ctx, checker)
 
 		// Verify original was not mutated
 		if !reflect.DeepEqual(original.AllowedFeeds, originalFeedsCopy) {

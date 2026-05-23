@@ -627,7 +627,13 @@ func paramGroupQuery[
 			// Run query function
 			ents, err := queryFunc(ctx, pgroup.Limit, pgroup.Where, pgroup.Keys)
 			if err != nil {
-				panic(err)
+				// Surface the failure to every caller in this group via the
+				// per-index errs slice (the existing dataloader path consumes
+				// errs[idx]), and skip merging results for this group.
+				for _, idx := range pgroup.Index {
+					errs[idx] = err
+				}
+				continue
 			}
 
 			// Group using keyFunc and merge into output
