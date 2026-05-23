@@ -10,9 +10,8 @@ import (
 
 func (f *Finder) SegmentsByFeedVersionIDs(ctx context.Context, limit *int, where *model.SegmentFilter, keys []int) ([][]*model.Segment, error) {
 	var ents []*model.Segment
-	// row_number/partition is intentional: lets the planner use the
-	// (feed_version_id, id) index. The PermFilter check is layered on
-	// outside the subquery so we don't disturb that index path.
+	// row_number/partition preserves the (feed_version_id, id) index path;
+	// pfJoinCheckFv goes outside the subquery to keep it.
 	subq := sq.StatementBuilder.
 		Select(
 			"tl_segments.id",
