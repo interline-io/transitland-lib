@@ -335,7 +335,7 @@ func feedVersionSelect(ctx context.Context, limit *int, after *model.Cursor, ids
 	return q
 }
 
-func feedVersionServiceLevelSelect(limit *int, after *model.Cursor, ids []int, _ *model.PermFilter, where *model.FeedVersionServiceLevelFilter) sq.SelectBuilder {
+func feedVersionServiceLevelSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedVersionServiceLevelFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select(
 			"feed_version_service_levels.id",
@@ -352,16 +352,18 @@ func feedVersionServiceLevelSelect(limit *int, after *model.Cursor, ids []int, _
 			"feed_version_service_levels.sunday",
 		).
 		From("feed_version_service_levels").
+		Join("feed_versions on feed_versions.id = feed_version_service_levels.feed_version_id").
+		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
 		Limit(finderCheckLimit(limit)).
 		OrderBy("feed_version_service_levels.id")
 
-	q = q.Where(sq.Eq{"route_id": nil})
+	q = q.Where(sq.Eq{"feed_version_service_levels.route_id": nil})
 	if where != nil {
 		if where.StartDate != nil {
-			q = q.Where(sq.LtOrEq{"start_date": where.StartDate})
+			q = q.Where(sq.LtOrEq{"feed_version_service_levels.start_date": where.StartDate})
 		}
 		if where.EndDate != nil {
-			q = q.Where(sq.GtOrEq{"end_date": where.EndDate})
+			q = q.Where(sq.GtOrEq{"feed_version_service_levels.end_date": where.EndDate})
 		}
 	}
 	if len(ids) > 0 {
@@ -370,6 +372,7 @@ func feedVersionServiceLevelSelect(limit *int, after *model.Cursor, ids []int, _
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"feed_version_service_levels.id": after.ID})
 	}
+	q = pfJoinCheckFv(q, permFilter)
 	return q
 }
 
