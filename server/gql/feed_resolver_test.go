@@ -146,6 +146,13 @@ func TestFeedResolver(t *testing.T) {
 			selectExpect: []string{"CT~rt", "BA~rt"},
 		},
 		{
+			// `_` and `%` are ILIKE wildcards; unescaped they over-match every row.
+			name:         "where search escapes ilike wildcards",
+			query:        `query { feeds(where:{search:"__"}) {onestop_id}}`,
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
 			name:         "where tags test=ok",
 			query:        `query { feeds(where:{tags:{test:"ok"}}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
