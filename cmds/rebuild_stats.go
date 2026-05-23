@@ -111,11 +111,17 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
-	// Query to get FVs to import
+	// Query to get FVs to import. Match the import_cmd default-query filter:
+	// skip soft-deleted feeds, soft-deleted feed versions, and feed versions
+	// missing the sha1/file pointer needed to open the GTFS file from storage.
 	q := cmd.Adapter.Sqrl().
 		Select("feed_versions.id").
 		From("feed_versions").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		Where("current_feeds.deleted_at IS NULL").
+		Where("feed_versions.deleted_at IS NULL").
+		Where("feed_versions.sha1 <> ''").
+		Where("feed_versions.file <> ''").
 		OrderBy("feed_versions.id desc")
 	if len(cmd.FeedIDs) > 0 {
 		// Limit to specified feeds
