@@ -226,20 +226,17 @@ type canScan interface {
 	Scan(any) error
 }
 
-// scanCol assigns inval into val (via val.Scan) and records colname in the cols
-// list when inval is non-nil. Any Scan error is reported via the optional errp
-// accumulator (subsequent calls become no-ops once errp is set), so callers can
-// chain several scanCol calls and inspect a single error at the end. Pass a nil
-// errp at sites that intentionally ignore the result.
+// scanCol assigns inval into val (via val.Scan) and appends colname to cols
+// when inval is non-nil. Any Scan error is reported through errp, which must
+// be non-nil; once *errp is set, subsequent scanCol calls short-circuit so
+// callers can chain several and inspect a single error at the end.
 func scanCol[T any, PT *T](val canScan, inval PT, colname string, cols []string, errp *error) []string {
-	if errp != nil && *errp != nil {
+	if *errp != nil {
 		return cols
 	}
 	if inval != nil {
 		if err := val.Scan(*inval); err != nil {
-			if errp != nil {
-				*errp = fmt.Errorf("scan %s: %w", colname, err)
-			}
+			*errp = fmt.Errorf("scan %s: %w", colname, err)
 			return cols
 		}
 		cols = append(cols, colname)
