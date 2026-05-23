@@ -48,33 +48,34 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 		&gtfs.Stop{},
 		func(ent *gtfs.Stop) ([]string, error) {
 			var cols []string
-			cols = scanCol(&ent.StopID, input.StopID, "stop_id", cols)
-			cols = scanCol(&ent.StopCode, input.StopCode, "stop_code", cols)
-			cols = scanCol(&ent.StopDesc, input.StopDesc, "stop_desc", cols)
-			cols = scanCol(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols)
-			cols = scanCol(&ent.StopName, input.StopName, "stop_name", cols)
-			cols = scanCol(&ent.StopURL, input.StopURL, "stop_url", cols)
-			cols = scanCol(&ent.LocationType, input.LocationType, "location_type", cols)
-			cols = scanCol(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols)
-			cols = scanCol(&ent.ZoneID, input.ZoneID, "zone_id", cols)
-			cols = scanCol(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols)
-			cols = scanCol(&ent.PlatformCode, input.PlatformCode, "platform_code", cols)
+			var err error
+			cols = scanCol(&ent.StopID, input.StopID, "stop_id", cols, &err)
+			cols = scanCol(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
+			cols = scanCol(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
+			cols = scanCol(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
+			cols = scanCol(&ent.StopName, input.StopName, "stop_name", cols, &err)
+			cols = scanCol(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
+			cols = scanCol(&ent.LocationType, input.LocationType, "location_type", cols, &err)
+			cols = scanCol(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
+			cols = scanCol(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
+			cols = scanCol(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
+			cols = scanCol(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
 			if input.Geometry != nil && input.Geometry.Valid {
 				cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			}
 			if v := input.Parent; v != nil {
 				ent.ParentStation.Scan(nil)
 				cols = append(cols, "parent_station")
-				scanCol(&ent.ParentStation, v.ID, "parent_station", cols)
+				cols = scanCol(&ent.ParentStation, v.ID, "", cols, &err)
 			}
 			if v := input.Level; v != nil {
 				ent.LevelID.Scan(nil)
 				cols = append(cols, "level_id")
-				scanCol(&ent.LevelID, v.ID, "level_id", cols)
+				cols = scanCol(&ent.LevelID, v.ID, "", cols, &err)
 			}
 			// Set some defaults
 			ent.LocationType.OrSet(0)
-			return cols, nil
+			return cols, err
 		})
 	if err != nil {
 		return 0, err
@@ -94,12 +95,13 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 				&model.StopExternalReference{},
 				func(ent *model.StopExternalReference) ([]string, error) {
 					var cols []string
+					var err error
 					ent.StopID.SetInt(stopId)
-					cols = scanCol(&ent.StopID, &stopId, "stop_id", cols)
-					cols = scanCol(&ent.TargetFeedOnestopID, refInput.TargetFeedOnestopID, "target_feed_onestop_id", cols)
-					cols = scanCol(&ent.TargetStopID, refInput.TargetStopID, "target_stop_id", cols)
-					// cols = scanCol(&ent.Inactive, refInput.Inactive, "inactive", cols)
-					return cols, nil
+					cols = scanCol(&ent.StopID, &stopId, "stop_id", cols, &err)
+					cols = scanCol(&ent.TargetFeedOnestopID, refInput.TargetFeedOnestopID, "target_feed_onestop_id", cols, &err)
+					cols = scanCol(&ent.TargetStopID, refInput.TargetStopID, "target_stop_id", cols, &err)
+					// cols = scanCol(&ent.Inactive, refInput.Inactive, "inactive", cols, &err)
+					return cols, err
 				},
 			); err != nil {
 				return 0, fmt.Errorf("failed to create or update stop external reference for stop %d: %w", stopId, err)
@@ -144,25 +146,26 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 		&gtfs.Pathway{},
 		func(ent *gtfs.Pathway) ([]string, error) {
 			var cols []string
-			cols = scanCol(&ent.PathwayID, input.PathwayID, "pathway_id", cols)
-			cols = scanCol(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols)
-			cols = scanCol(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols)
-			cols = scanCol(&ent.Length, input.Length, "length", cols)
-			cols = scanCol(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols)
-			cols = scanCol(&ent.StairCount, input.StairCount, "stair_count", cols)
-			cols = scanCol(&ent.MaxSlope, input.MaxSlope, "max_slope", cols)
-			cols = scanCol(&ent.MinWidth, input.MinWidth, "min_width", cols)
-			cols = scanCol(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols)
-			cols = scanCol(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols)
+			var err error
+			cols = scanCol(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
+			cols = scanCol(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
+			cols = scanCol(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
+			cols = scanCol(&ent.Length, input.Length, "length", cols, &err)
+			cols = scanCol(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols, &err)
+			cols = scanCol(&ent.StairCount, input.StairCount, "stair_count", cols, &err)
+			cols = scanCol(&ent.MaxSlope, input.MaxSlope, "max_slope", cols, &err)
+			cols = scanCol(&ent.MinWidth, input.MinWidth, "min_width", cols, &err)
+			cols = scanCol(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols, &err)
+			cols = scanCol(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols, &err)
 			if v := input.FromStop; v != nil {
 				cols = append(cols, "from_stop_id")
-				scanCol(&ent.FromStopID, v.ID, "", nil)
+				cols = scanCol(&ent.FromStopID, v.ID, "", cols, &err)
 			}
 			if v := input.ToStop; v != nil {
 				cols = append(cols, "from_stop_id")
-				scanCol(&ent.ToStopID, v.ID, "", nil)
+				cols = scanCol(&ent.ToStopID, v.ID, "", cols, &err)
 			}
-			return cols, nil
+			return cols, err
 		})
 }
 
@@ -196,15 +199,16 @@ func createUpdateLevel(ctx context.Context, input model.LevelSetInput) (int, err
 		&model.Level{},
 		func(ent *model.Level) ([]string, error) {
 			var cols []string
-			cols = scanCol(&ent.LevelID, input.LevelID, "level_id", cols)
-			cols = scanCol(&ent.LevelName, input.LevelName, "level_name", cols)
-			cols = scanCol(&ent.LevelIndex, input.LevelIndex, "level_index", cols)
+			var err error
+			cols = scanCol(&ent.LevelID, input.LevelID, "level_id", cols, &err)
+			cols = scanCol(&ent.LevelName, input.LevelName, "level_name", cols, &err)
+			cols = scanCol(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
 			cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			if v := input.Parent; v != nil {
 				cols = append(cols, "parent_station")
-				scanCol(&ent.ParentStation, v.ID, "", nil)
+				cols = scanCol(&ent.ParentStation, v.ID, "", cols, &err)
 			}
-			return cols, nil
+			return cols, err
 		})
 }
 
@@ -222,12 +226,24 @@ type canScan interface {
 	Scan(any) error
 }
 
-func scanCol[T any, PT *T](val canScan, inval PT, colname string, cols []string) []string {
+// scanCol assigns inval into val (via val.Scan) and appends colname to cols
+// when inval is non-nil and colname is non-empty. (An empty colname is used at
+// sites that pre-append the column name explicitly and only want scanCol's
+// Scan side effect.) Any Scan error is reported through errp, which must be
+// non-nil; once *errp is set, subsequent scanCol calls short-circuit so
+// callers can chain several and inspect a single error at the end.
+func scanCol[T any, PT *T](val canScan, inval PT, colname string, cols []string, errp *error) []string {
+	if *errp != nil {
+		return cols
+	}
 	if inval != nil {
 		if err := val.Scan(*inval); err != nil {
-			panic(err)
+			*errp = fmt.Errorf("scan %s: %w", colname, err)
+			return cols
 		}
-		cols = append(cols, colname)
+		if colname != "" {
+			cols = append(cols, colname)
+		}
 	}
 	return cols
 }
