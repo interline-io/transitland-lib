@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ type RebuildStatsOptions struct {
 	Storage                 string
 	ValidationReportStorage string
 	SaveValidationReport    bool
+	Stats                   []string
 }
 
 type RebuildStatsResult struct {
@@ -61,6 +63,7 @@ func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
+	fl.StringSliceVar(&cmd.Options.Stats, "stats", nil, "Subset of stats to rebuild (default all); valid: "+strings.Join(stats.AllStats, ","))
 }
 
 // Parse command line flags
@@ -91,6 +94,9 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 				cmd.FVSHA1 = append(cmd.FVSHA1, line)
 			}
 		}
+	}
+	if err := (stats.WriteOptions{Stats: cmd.Options.Stats}).Validate(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -143,6 +149,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 			Storage:                 cmd.Options.Storage,
 			ValidationReportStorage: cmd.Options.ValidationReportStorage,
 			SaveValidationReport:    cmd.Options.SaveValidationReport,
+			Stats:                   cmd.Options.Stats,
 		}
 	}
 	close(jobs)
@@ -209,7 +216,7 @@ func rebuildStatsMain(ctx context.Context, adapter tldb.Adapter, opts RebuildSta
 	}
 	// Save
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
-		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID, stats.WriteOptions{Stats: opts.Stats}); err != nil {
 			return err
 		}
 		if opts.SaveValidationReport {
