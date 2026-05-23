@@ -2,10 +2,10 @@ package model
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/internal/util"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
@@ -119,20 +119,12 @@ func AddPerms(checker Checker) func(http.Handler) http.Handler {
 			ctx, err := WithPerms(r.Context(), checker)
 			if err != nil {
 				log.For(r.Context()).Error().Err(err).Msg("AddPerms: failed to resolve caller permissions")
-				writePermJsonError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				util.WriteJsonError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-}
-
-func writePermJsonError(w http.ResponseWriter, msg string, statusCode int) {
-	a := map[string]string{"error": msg}
-	jj, _ := json.Marshal(&a)
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	w.Write(jj)
 }
 
 func refsToInts(refs []authz.ObjectRef) []int {
