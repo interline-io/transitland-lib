@@ -152,6 +152,14 @@ func TestAgencyResolver(t *testing.T) {
 			selectExpect: []string{},
 		},
 		{
+			// `%` is an ILIKE wildcard; unescaped it would match every adm0_iso.
+			name:         "places adm0_iso escapes ilike wildcards",
+			query:        `query { agencies(where:{adm0_iso: "%"}) {onestop_id}}`,
+			vars:         vars,
+			selector:     "agencies.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
 			name:         "places city",
 			query:        `query { agencies(where:{city_name: "Berkeley"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
 			vars:         vars,

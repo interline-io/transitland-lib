@@ -2,7 +2,6 @@ package dbfinder
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -140,19 +139,19 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 				Join("tl_agency_places tlap ON tlap.agency_id = gtfs_agencies.id").
 				Join("ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = tlap.adm1name and ne_admin.admin = tlap.adm0name")
 			if where.Adm0Iso != nil {
-				q = q.Where(sq.ILike{"ne_admin.iso_a2": *where.Adm0Iso})
+				q = q.Where(sq.ILike{"ne_admin.iso_a2": dbutil.EscapeLike(*where.Adm0Iso, false, false)})
 			}
 			if where.Adm1Iso != nil {
-				q = q.Where(sq.ILike{"ne_admin.iso_3166_2": *where.Adm1Iso})
+				q = q.Where(sq.ILike{"ne_admin.iso_3166_2": dbutil.EscapeLike(*where.Adm1Iso, false, false)})
 			}
 			if where.Adm0Name != nil {
-				q = q.Where(sq.ILike{"tlap.adm0name": *where.Adm0Name})
+				q = q.Where(sq.ILike{"tlap.adm0name": dbutil.EscapeLike(*where.Adm0Name, false, false)})
 			}
 			if where.Adm1Name != nil {
-				q = q.Where(sq.ILike{"tlap.adm1name": *where.Adm1Name})
+				q = q.Where(sq.ILike{"tlap.adm1name": dbutil.EscapeLike(*where.Adm1Name, false, false)})
 			}
 			if where.CityName != nil {
-				q = q.Where(sq.ILike{"tlap.name": *where.CityName})
+				q = q.Where(sq.ILike{"tlap.name": dbutil.EscapeLike(*where.CityName, false, false)})
 			}
 		}
 
@@ -164,7 +163,7 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 			rank, wc := tsTableQuery("coif", *where.Search)
 			q = q.Column(rank).Where(sq.Or{
 				wc,
-				sq.ILike{"coif.resolved_onestop_id": fmt.Sprintf("%%%s%%", *where.Search)},
+				sq.ILike{"coif.resolved_onestop_id": dbutil.EscapeLike(*where.Search, true, true)},
 			})
 		}
 	}

@@ -2,7 +2,6 @@ package dbfinder
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -218,7 +217,7 @@ func feedSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int,
 			rank, wc := tsTableQuery("current_feeds", *where.Search)
 			q = q.Column(rank).Where(sq.Or{
 				wc,
-				sq.ILike{"onestop_id": fmt.Sprintf("%%%s%%", *where.Search)},
+				sq.ILike{"onestop_id": dbutil.EscapeLike(*where.Search, true, true)},
 			})
 		}
 

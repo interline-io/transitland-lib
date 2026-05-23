@@ -115,6 +115,13 @@ func TestOperatorResolver(t *testing.T) {
 			selector:     "operators.#.onestop_id",
 			selectExpect: []string{},
 		},
+		{
+			// `_` and `%` are ILIKE wildcards; unescaped they over-match every row.
+			name:         "search escapes ilike wildcards",
+			query:        `query { operators(where:{search: "__"}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{},
+		},
 		// spatial
 		{
 			name:         "near 100m",
