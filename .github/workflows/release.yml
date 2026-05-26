@@ -1,87 +1,76 @@
-name: "Release"
+name: Release
+
 on:
-  workflow_run:
-    workflows: ["Test Suite"]
-    types: [completed]
-    branches: [main] 
   release:
     types: [created]
-
-permissions:
-  contents: write
-  actions: write
-  pull-requests: write
 
 jobs:
   check-tests:
     runs-on: ubuntu-latest
-    # Only run check-tests for release events, since workflow_run already means tests passed
-    if: ${{ github.event_name == 'release' }}
+    permissions:
+      contents: read
+      actions: read
     steps:
-    - name: Check Test Suite Status
-      uses: actions/github-script@v7
-      with:
-        script: |
-          // Use the release commit SHA if available, otherwise fall back to context.sha
-          let commitSha = context.sha;
-          if (github.event && github.event.release && github.event.release.target_commitish) {
-            commitSha = github.event.release.target_commitish;
-          }
-          
-          const { data: workflows } = await github.rest.actions.listWorkflowRunsForRepo({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'test.yml',
-            head_sha: commitSha,
-            status: 'completed'
-          });
-          const testRun = workflows.workflow_runs.find(run => run.conclusion === 'success');
-          if (!testRun) {
-            core.setFailed('Test Suite workflow must pass before release can be built');
-          }
+      - name: Check Test Suite Status
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const { data: workflows } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'test.yml',
+              head_sha: context.sha,
+              status: 'completed'
+            });
+            const testRun = workflows.workflow_runs.find(run => run.conclusion === 'success');
+            if (!testRun) {
+              core.setFailed('Test Suite workflow must pass before release can be built');
+            }
 
   build-linux:
-    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         go-version: ['1.26.3']
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Build on Linux
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -buildvcs=true -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Store Linux binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: transitland-linux
           path: ${{ github.workspace }}/cmd/transitland/transitland
 
   build-macos-intel:
-    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: macos-15-large # macOS on Intel
+    permissions:
+      contents: read
     strategy:
       matrix:
         go-version: ['1.26.3']
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -buildvcs=true -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@11e1bb2d3771ad8ffa8459dfe527bc26b2dd4b62
+        uses: Apple-Actions/import-codesign-certs@95e84a1a18f2bdbc5c6ab9b7f4429372e4b13a8b # v5.0.3
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
@@ -98,30 +87,31 @@ jobs:
         run: |
           gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: transitland-macos-intel
           path: ${{ github.workspace }}/transitland.zip
 
   build-macos-apple:
-    if: ${{ github.event_name == 'release' }}
     needs: check-tests
     runs-on: macos-15 # macOS on Apple Silicon
+    permissions:
+      contents: read
     strategy:
       matrix:
         go-version: ['1.26.3']
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -buildvcs=true -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@11e1bb2d3771ad8ffa8459dfe527bc26b2dd4b62
+        uses: Apple-Actions/import-codesign-certs@95e84a1a18f2bdbc5c6ab9b7f4429372e4b13a8b # v5.0.3
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
@@ -138,28 +128,29 @@ jobs:
         run: |
           gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: transitland-macos-apple
           path: ${{ github.workspace }}/transitland.zip
 
   release:
-    if: ${{ github.event_name == 'release' }}
     needs: [build-linux, build-macos-intel, build-macos-apple]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download Linux binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: transitland-linux
           path: transitland-linux
       - name: Download macOS Intel binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: transitland-macos-intel
           path: transitland-macos-intel
       - name: Download macOS Apple Silicon binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: transitland-macos-apple
           path: transitland-macos-apple
@@ -174,7 +165,7 @@ jobs:
       - name: Copy and rename Linux binary
         run: cp transitland-linux/transitland transitland-linux/transitland-linux
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@fbadcc90e88ecface60a0a0d123795b784ceb239
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             transitland-linux/transitland-linux
@@ -182,24 +173,22 @@ jobs:
             transitland-macos-apple/transitland-macos-apple
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
   release-notes:
     needs: release
-    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-      - run: npm install github-release-notes -g
-      - run: gren release --override
+      - name: Generate release notes
         env:
-          GREN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release edit "$TAG" --generate-notes
+
   trigger-homebrew-update:
     needs: release
-    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -207,7 +196,7 @@ jobs:
     steps:
       - name: Create GitHub App Token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
@@ -216,7 +205,7 @@ jobs:
           permission-actions: write
 
       - name: Trigger Homebrew Update
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
