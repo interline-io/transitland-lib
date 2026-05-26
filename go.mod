@@ -54,7 +54,7 @@ require (
 	github.com/tidwall/tinylru v1.2.1
 	github.com/twpayne/go-geom v1.6.1
 	github.com/twpayne/go-polyline v1.1.1
-	github.com/twpayne/go-shapefile v0.0.6
+	github.com/twpayne/go-shapefile v0.0.7
 	github.com/vektah/gqlparser/v2 v2.5.30
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/dnaeon/go-vcr.v2 v2.3.0

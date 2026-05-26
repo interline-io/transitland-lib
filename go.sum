@@ -430,8 +430,8 @@ github.com/twpayne/go-geom v1.6.1 h1:iLE+Opv0Ihm/ABIcvQFGIiFBXd76oBIar9drAwHFhR4
 github.com/twpayne/go-geom v1.6.1/go.mod h1:Kr+Nly6BswFsKM5sd31YaoWS5PeDDH2NftJTK7Gd028=
 github.com/twpayne/go-polyline v1.1.1 h1:/tSF1BR7rN4HWj4XKqvRUNrCiYVMCvywxTFVofvDV0w=
 github.com/twpayne/go-polyline v1.1.1/go.mod h1:ybd9IWWivW/rlXPXuuckeKUyF3yrIim+iqA7kSl4NFY=
-github.com/twpayne/go-shapefile v0.0.6 h1:LxKnqpSPd8f7SNYiubmZt5BWMU4JwCUKMQtKEEGs0cI=
-github.com/twpayne/go-shapefile v0.0.6/go.mod h1:v9iix9am0RaezhdmeNh6SZ90bg6N/odtxttSJzWTcow=
+github.com/twpayne/go-shapefile v0.0.7 h1:1WKnm2xH+8tlnN2ougXREdMuCgBd/KMHL02Fc4HJJLo=
+github.com/twpayne/go-shapefile v0.0.7/go.mod h1:f/070EiniF/HKeqpe1vRgo8FRVuPMvKBFVc3k1BALew=
 github.com/ugorji/go/codec v1.2.7 h1:YPXUKf7fYbp/y8xloBqZOw2qaVggbfwMlI8WM3wZUJ0=
 github.com/ugorji/go/codec v1.2.7/go.mod h1:WGN1fab3R1fzQlVQTkfxVtIBhWDRqOviHU95kRgeqEY=
 github.com/urfave/cli/v2 v2.27.7 h1:bH59vdhbjLv3LAvIu6gd0usJHgoTTPhCFib8qqOwXYU=
