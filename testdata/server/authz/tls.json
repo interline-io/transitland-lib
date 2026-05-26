@@ -2,14 +2,38 @@
     "schema_version": "1.1",
     "type_definitions": [
         {
-            "type": "user",
-            "relations": {}
+            "type": "user"
         },
         {
             "type": "tenant",
             "relations": {
                 "admin": {
                     "this": {}
+                },
+                "can_create_org": {
+                    "computed_userset": {
+                        "relation": "admin"
+                    }
+                },
+                "can_delete_org": {
+                    "computed_userset": {
+                        "relation": "admin"
+                    }
+                },
+                "can_edit": {
+                    "computed_userset": {
+                        "relation": "admin"
+                    }
+                },
+                "can_edit_members": {
+                    "computed_userset": {
+                        "relation": "admin"
+                    }
+                },
+                "can_view": {
+                    "computed_userset": {
+                        "relation": "member"
+                    }
                 },
                 "member": {
                     "union": {
@@ -18,42 +42,11 @@
                                 "this": {}
                             },
                             {
-                                "computedUserset": {
-                                    "object": "",
+                                "computed_userset": {
                                     "relation": "admin"
                                 }
                             }
                         ]
-                    }
-                },
-                "can_create_org": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "admin"
-                    }
-                },
-                "can_delete_org": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "admin"
-                    }
-                },
-                "can_edit": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "admin"
-                    }
-                },
-                "can_edit_members": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "admin"
-                    }
-                },
-                "can_view": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "member"
                     }
                 }
             },
@@ -66,6 +59,11 @@
                             }
                         ]
                     },
+                    "can_create_org": {},
+                    "can_delete_org": {},
+                    "can_edit": {},
+                    "can_edit_members": {},
+                    "can_view": {},
                     "member": {
                         "directly_related_user_types": [
                             {
@@ -76,21 +74,6 @@
                                 "wildcard": {}
                             }
                         ]
-                    },
-                    "can_create_org": {
-                        "directly_related_user_types": []
-                    },
-                    "can_delete_org": {
-                        "directly_related_user_types": []
-                    },
-                    "can_edit": {
-                        "directly_related_user_types": []
-                    },
-                    "can_edit_members": {
-                        "directly_related_user_types": []
-                    },
-                    "can_view": {
-                        "directly_related_user_types": []
                     }
                 }
             }
@@ -98,8 +81,44 @@
         {
             "type": "org",
             "relations": {
-                "parent": {
-                    "this": {}
+                "can_create_feed": {
+                    "computed_userset": {
+                        "relation": "manager"
+                    }
+                },
+                "can_delete_feed": {
+                    "computed_userset": {
+                        "relation": "manager"
+                    }
+                },
+                "can_edit": {
+                    "computed_userset": {
+                        "relation": "editor"
+                    }
+                },
+                "can_edit_members": {
+                    "computed_userset": {
+                        "relation": "manager"
+                    }
+                },
+                "can_view": {
+                    "computed_userset": {
+                        "relation": "viewer"
+                    }
+                },
+                "editor": {
+                    "union": {
+                        "child": [
+                            {
+                                "this": {}
+                            },
+                            {
+                                "computed_userset": {
+                                    "relation": "manager"
+                                }
+                            }
+                        ]
+                    }
                 },
                 "manager": {
                     "union": {
@@ -108,13 +127,11 @@
                                 "this": {}
                             },
                             {
-                                "tupleToUserset": {
+                                "tuple_to_userset": {
                                     "tupleset": {
-                                        "object": "",
                                         "relation": "parent"
                                     },
-                                    "computedUserset": {
-                                        "object": "",
+                                    "computed_userset": {
                                         "relation": "admin"
                                     }
                                 }
@@ -122,20 +139,8 @@
                         ]
                     }
                 },
-                "editor": {
-                    "union": {
-                        "child": [
-                            {
-                                "this": {}
-                            },
-                            {
-                                "computedUserset": {
-                                    "object": "",
-                                    "relation": "manager"
-                                }
-                            }
-                        ]
-                    }
+                "parent": {
+                    "this": {}
                 },
                 "viewer": {
                     "union": {
@@ -144,47 +149,39 @@
                                 "this": {}
                             },
                             {
-                                "computedUserset": {
-                                    "object": "",
+                                "computed_userset": {
                                     "relation": "editor"
                                 }
                             }
                         ]
                     }
-                },
-                "can_edit_members": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "manager"
-                    }
-                },
-                "can_create_feed": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "manager"
-                    }
-                },
-                "can_delete_feed": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "manager"
-                    }
-                },
-                "can_edit": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "editor"
-                    }
-                },
-                "can_view": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "viewer"
-                    }
                 }
             },
             "metadata": {
                 "relations": {
+                    "can_create_feed": {},
+                    "can_delete_feed": {},
+                    "can_edit": {},
+                    "can_edit_members": {},
+                    "can_view": {},
+                    "editor": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            },
+                            {
+                                "type": "tenant",
+                                "relation": "member"
+                            }
+                        ]
+                    },
+                    "manager": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
                     "parent": {
                         "directly_related_user_types": [
                             {
@@ -192,24 +189,6 @@
                             }
                         ]
                     },
-                    "manager": {
-                        "directly_related_user_types": [
-                            {
-                                "type": "user"
-                            }
-                        ]
-                    },
-                    "editor": {
-                        "directly_related_user_types": [
-                            {
-                                "type": "user"
-                            },
-                            {
-                                "type": "tenant",
-                                "relation": "member"
-                            }
-                        ]
-                    },
                     "viewer": {
                         "directly_related_user_types": [
                             {
@@ -220,21 +199,6 @@
                                 "relation": "member"
                             }
                         ]
-                    },
-                    "can_edit_members": {
-                        "directly_related_user_types": []
-                    },
-                    "can_create_feed": {
-                        "directly_related_user_types": []
-                    },
-                    "can_delete_feed": {
-                        "directly_related_user_types": []
-                    },
-                    "can_edit": {
-                        "directly_related_user_types": []
-                    },
-                    "can_view": {
-                        "directly_related_user_types": []
                     }
                 }
             }
@@ -242,78 +206,74 @@
         {
             "type": "feed",
             "relations": {
-                "parent": {
-                    "this": {}
-                },
-                "manager": {
-                    "tupleToUserset": {
-                        "tupleset": {
-                            "object": "",
-                            "relation": "parent"
-                        },
-                        "computedUserset": {
-                            "object": "",
-                            "relation": "manager"
-                        }
-                    }
-                },
-                "editor": {
-                    "tupleToUserset": {
-                        "tupleset": {
-                            "object": "",
-                            "relation": "parent"
-                        },
-                        "computedUserset": {
-                            "object": "",
-                            "relation": "editor"
-                        }
-                    }
-                },
-                "viewer": {
-                    "tupleToUserset": {
-                        "tupleset": {
-                            "object": "",
-                            "relation": "parent"
-                        },
-                        "computedUserset": {
-                            "object": "",
-                            "relation": "viewer"
-                        }
-                    }
-                },
-                "can_set_group": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "manager"
-                    }
-                },
                 "can_create_feed_version": {
-                    "computedUserset": {
-                        "object": "",
+                    "computed_userset": {
                         "relation": "editor"
                     }
                 },
                 "can_delete_feed_version": {
-                    "computedUserset": {
-                        "object": "",
+                    "computed_userset": {
                         "relation": "editor"
                     }
                 },
                 "can_edit": {
-                    "computedUserset": {
-                        "object": "",
+                    "computed_userset": {
                         "relation": "editor"
                     }
                 },
+                "can_set_group": {
+                    "computed_userset": {
+                        "relation": "manager"
+                    }
+                },
                 "can_view": {
-                    "computedUserset": {
-                        "object": "",
+                    "computed_userset": {
                         "relation": "viewer"
+                    }
+                },
+                "editor": {
+                    "tuple_to_userset": {
+                        "tupleset": {
+                            "relation": "parent"
+                        },
+                        "computed_userset": {
+                            "relation": "editor"
+                        }
+                    }
+                },
+                "manager": {
+                    "tuple_to_userset": {
+                        "tupleset": {
+                            "relation": "parent"
+                        },
+                        "computed_userset": {
+                            "relation": "manager"
+                        }
+                    }
+                },
+                "parent": {
+                    "this": {}
+                },
+                "viewer": {
+                    "tuple_to_userset": {
+                        "tupleset": {
+                            "relation": "parent"
+                        },
+                        "computed_userset": {
+                            "relation": "viewer"
+                        }
                     }
                 }
             },
             "metadata": {
                 "relations": {
+                    "can_create_feed_version": {},
+                    "can_delete_feed_version": {},
+                    "can_edit": {},
+                    "can_set_group": {},
+                    "can_view": {},
+                    "editor": {},
+                    "manager": {},
                     "parent": {
                         "directly_related_user_types": [
                             {
@@ -321,49 +281,46 @@
                             }
                         ]
                     },
-                    "manager": {
-                        "directly_related_user_types": []
-                    },
-                    "editor": {
-                        "directly_related_user_types": []
-                    },
-                    "viewer": {
-                        "directly_related_user_types": []
-                    },
-                    "can_set_group": {
-                        "directly_related_user_types": []
-                    },
-                    "can_create_feed_version": {
-                        "directly_related_user_types": []
-                    },
-                    "can_delete_feed_version": {
-                        "directly_related_user_types": []
-                    },
-                    "can_edit": {
-                        "directly_related_user_types": []
-                    },
-                    "can_view": {
-                        "directly_related_user_types": []
-                    }
+                    "viewer": {}
                 }
             }
         },
         {
             "type": "feed_version",
             "relations": {
-                "parent": {
-                    "this": {}
+                "can_create_entity": {
+                    "computed_userset": {
+                        "relation": "editor"
+                    }
                 },
-                "manager": {
-                    "tupleToUserset": {
-                        "tupleset": {
-                            "object": "",
-                            "relation": "parent"
-                        },
-                        "computedUserset": {
-                            "object": "",
-                            "relation": "manager"
-                        }
+                "can_delete_entity": {
+                    "computed_userset": {
+                        "relation": "editor"
+                    }
+                },
+                "can_edit": {
+                    "computed_userset": {
+                        "relation": "editor"
+                    }
+                },
+                "can_edit_entity": {
+                    "computed_userset": {
+                        "relation": "editor"
+                    }
+                },
+                "can_edit_members": {
+                    "computed_userset": {
+                        "relation": "manager"
+                    }
+                },
+                "can_view": {
+                    "computed_userset": {
+                        "relation": "viewer"
+                    }
+                },
+                "can_view_entity": {
+                    "computed_userset": {
+                        "relation": "viewer"
                     }
                 },
                 "editor": {
@@ -373,25 +330,35 @@
                                 "this": {}
                             },
                             {
-                                "computedUserset": {
-                                    "object": "",
+                                "computed_userset": {
                                     "relation": "manager"
                                 }
                             },
                             {
-                                "tupleToUserset": {
+                                "tuple_to_userset": {
                                     "tupleset": {
-                                        "object": "",
                                         "relation": "parent"
                                     },
-                                    "computedUserset": {
-                                        "object": "",
+                                    "computed_userset": {
                                         "relation": "editor"
                                     }
                                 }
                             }
                         ]
                     }
+                },
+                "manager": {
+                    "tuple_to_userset": {
+                        "tupleset": {
+                            "relation": "parent"
+                        },
+                        "computed_userset": {
+                            "relation": "manager"
+                        }
+                    }
+                },
+                "parent": {
+                    "this": {}
                 },
                 "viewer": {
                     "union": {
@@ -400,81 +367,33 @@
                                 "this": {}
                             },
                             {
-                                "computedUserset": {
-                                    "object": "",
+                                "computed_userset": {
                                     "relation": "editor"
                                 }
                             },
                             {
-                                "tupleToUserset": {
+                                "tuple_to_userset": {
                                     "tupleset": {
-                                        "object": "",
                                         "relation": "parent"
                                     },
-                                    "computedUserset": {
-                                        "object": "",
+                                    "computed_userset": {
                                         "relation": "viewer"
                                     }
                                 }
                             }
                         ]
                     }
-                },
-                "can_edit_members": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "manager"
-                    }
-                },
-                "can_edit": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "editor"
-                    }
-                },
-                "can_view": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "viewer"
-                    }
-                },
-                "can_view_entity": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "viewer"
-                    }
-                },
-                "can_edit_entity": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "editor"
-                    }
-                },
-                "can_create_entity": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "editor"
-                    }
-                },
-                "can_delete_entity": {
-                    "computedUserset": {
-                        "object": "",
-                        "relation": "editor"
-                    }
                 }
             },
             "metadata": {
                 "relations": {
-                    "parent": {
-                        "directly_related_user_types": [
-                            {
-                                "type": "feed"
-                            }
-                        ]
-                    },
-                    "manager": {
-                        "directly_related_user_types": []
-                    },
+                    "can_create_entity": {},
+                    "can_delete_entity": {},
+                    "can_edit": {},
+                    "can_edit_entity": {},
+                    "can_edit_members": {},
+                    "can_view": {},
+                    "can_view_entity": {},
                     "editor": {
                         "directly_related_user_types": [
                             {
@@ -487,6 +406,14 @@
                             {
                                 "type": "tenant",
                                 "relation": "member"
+                            }
+                        ]
+                    },
+                    "manager": {},
+                    "parent": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "feed"
                             }
                         ]
                     },
@@ -504,27 +431,6 @@
                                 "relation": "member"
                             }
                         ]
-                    },
-                    "can_edit_members": {
-                        "directly_related_user_types": []
-                    },
-                    "can_edit": {
-                        "directly_related_user_types": []
-                    },
-                    "can_view": {
-                        "directly_related_user_types": []
-                    },
-                    "can_view_entity": {
-                        "directly_related_user_types": []
-                    },
-                    "can_edit_entity": {
-                        "directly_related_user_types": []
-                    },
-                    "can_create_entity": {
-                        "directly_related_user_types": []
-                    },
-                    "can_delete_entity": {
-                        "directly_related_user_types": []
                     }
                 }
             }
