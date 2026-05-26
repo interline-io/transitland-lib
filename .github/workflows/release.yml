@@ -79,30 +79,18 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
-      - name: Codesign binary
-        env:
-          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
+      - name: Install gon via HomeBrew for code signing and app notarization
         run: |
-          codesign --sign "$AC_APPLICATION_IDENTITY" --options runtime --timestamp --force ./cmd/transitland/transitland
-      - name: Zip binary for notarization
-        run: |
-          ditto -c -k --sequesterRsrc ./cmd/transitland/transitland ./transitland.zip
-      - name: Notarize binary
+          brew install Bearer/tap/gon
+      - name: Sign the mac binaries with Gon
         timeout-minutes: 20
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
         run: |
-          xcrun notarytool submit ./transitland.zip --apple-id "$AC_USERNAME" --password "$AC_PASSWORD" --team-id "$AC_PROVIDER" --wait
-      - name: Fetch notarytool log on failure
-        if: failure()
-        env:
-          AC_USERNAME: ${{ secrets.AC_USERNAME }}
-          AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-          AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
-        run: |
-          xcrun notarytool history --apple-id "$AC_USERNAME" --password "$AC_PASSWORD" --team-id "$AC_PROVIDER" || true
+          gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -132,30 +120,18 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
-      - name: Codesign binary
-        env:
-          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
+      - name: Install gon via HomeBrew for code signing and app notarization
         run: |
-          codesign --sign "$AC_APPLICATION_IDENTITY" --options runtime --timestamp --force ./cmd/transitland/transitland
-      - name: Zip binary for notarization
-        run: |
-          ditto -c -k --sequesterRsrc ./cmd/transitland/transitland ./transitland.zip
-      - name: Notarize binary
+          brew install Bearer/tap/gon
+      - name: Sign the mac binaries with Gon
         timeout-minutes: 20
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
+          AC_APPLICATION_IDENTITY: ${{ secrets.AC_APPLICATION_IDENTITY }}
         run: |
-          xcrun notarytool submit ./transitland.zip --apple-id "$AC_USERNAME" --password "$AC_PASSWORD" --team-id "$AC_PROVIDER" --wait
-      - name: Fetch notarytool log on failure
-        if: failure()
-        env:
-          AC_USERNAME: ${{ secrets.AC_USERNAME }}
-          AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-          AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
-        run: |
-          xcrun notarytool history --apple-id "$AC_USERNAME" --password "$AC_PASSWORD" --team-id "$AC_PROVIDER" || true
+          gon -log-level=debug -log-json ./.github/gonconfig.json
       - name: Store macOS binary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
