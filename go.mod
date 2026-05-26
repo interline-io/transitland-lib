@@ -55,7 +55,7 @@ require (
 	github.com/twpayne/go-geom v1.6.1
 	github.com/twpayne/go-polyline v1.1.1
 	github.com/twpayne/go-shapefile v0.0.6
-	github.com/vektah/gqlparser/v2 v2.5.30
+	github.com/vektah/gqlparser/v2 v2.5.33
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/dnaeon/go-vcr.v2 v2.3.0
 )
