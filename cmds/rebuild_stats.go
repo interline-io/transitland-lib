@@ -144,6 +144,24 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Warn if explicit --fvid / --fv-sha1 selectors were dropped by the
+	// default-query filter (e.g. caller asked for a soft-deleted feed version
+	// or one missing sha1/file). Only checked when a single selector is used;
+	// when both are set they are AND'd at the SQL level and a "requested
+	// count" isn't meaningful.
+	var expected int
+	switch {
+	case len(cmd.FVIDs) > 0 && len(cmd.FVSHA1) == 0:
+		expected = len(uniqueStrings(cmd.FVIDs))
+	case len(cmd.FVSHA1) > 0 && len(cmd.FVIDs) == 0:
+		expected = len(uniqueStrings(cmd.FVSHA1))
+	}
+	if expected > 0 && len(qrs) < expected {
+		log.For(ctx).Warn().Msgf(
+			"Requested %d feed versions but only %d will be processed; %d were skipped (soft-deleted feed/feed_version, missing sha1/file, or not found)",
+			expected, len(qrs), expected-len(qrs),
+		)
+	}
 	///////////////
 	// Here we go
 	log.For(ctx).Info().Msgf("Rebuilding stats for %d feed versions", len(qrs))
@@ -167,6 +185,19 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	}
 	wg.Wait()
 	return nil
+}
+
+func uniqueStrings(vals []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, v := range vals {
+		if seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	return out
 }
 
 func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryrun bool, jobs <-chan RebuildStatsOptions, results chan<- RebuildStatsResult, wg *sync.WaitGroup) {
