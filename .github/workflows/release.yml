@@ -70,7 +70,7 @@ jobs:
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -buildvcs=true -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@95e84a1a18f2bdbc5c6ab9b7f4429372e4b13a8b # v5.0.3
+        uses: Apple-Actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466 # v7.0.0
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
@@ -111,7 +111,7 @@ jobs:
         working-directory: ${{ github.workspace }}/cmd/transitland
         run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -buildvcs=true -ldflags "-X main.tag=$(git describe --tags --abbrev=0)"
       - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@95e84a1a18f2bdbc5c6ab9b7f4429372e4b13a8b # v5.0.3
+        uses: Apple-Actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466 # v7.0.0
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
