@@ -9,22 +9,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     steps:
       - name: Check Test Suite Status
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
-            // Use the release commit SHA if available, otherwise fall back to context.sha
-            let commitSha = context.sha;
-            if (github.event && github.event.release && github.event.release.target_commitish) {
-              commitSha = github.event.release.target_commitish;
-            }
-
             const { data: workflows } = await github.rest.actions.listWorkflowRunsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'test.yml',
-              head_sha: commitSha,
+              head_sha: context.sha,
               status: 'completed'
             });
             const testRun = workflows.workflow_runs.find(run => run.conclusion === 'success');
