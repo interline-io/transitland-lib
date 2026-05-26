@@ -1,9 +1,0 @@
-{
-  "source": ["./cmd/transitland/transitland"],
-  "bundle_id": "io.interline.transitland-lib",
-  "sign": {},
-  "zip": {
-    "output_path": "transitland.zip"
-  }
-}
-  
