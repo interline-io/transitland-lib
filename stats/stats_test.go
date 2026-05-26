@@ -31,7 +31,7 @@ func TestStatRegistrationConsistency(t *testing.T) {
 	assert.Equal(t, len(AllStats), len(statTables), "AllStats and statTables have different lengths")
 }
 
-func TestWriteOptions_Validate(t *testing.T) {
+func TestValidateStatNames(t *testing.T) {
 	cases := []struct {
 		name    string
 		stats   []string
@@ -46,7 +46,7 @@ func TestWriteOptions_Validate(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := WriteOptions{Stats: tc.stats}.Validate()
+			err := ValidateStatNames(tc.stats)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {

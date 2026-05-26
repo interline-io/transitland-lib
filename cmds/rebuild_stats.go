@@ -95,7 +95,7 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 			}
 		}
 	}
-	if err := (stats.WriteOptions{Stats: cmd.Options.Stats}).Validate(); err != nil {
+	if err := stats.ValidateStatNames(cmd.Options.Stats); err != nil {
 		return err
 	}
 	return nil
@@ -111,9 +111,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
-	// Query to get FVs to import. Match the import_cmd default-query filter:
-	// skip soft-deleted feeds, soft-deleted feed versions, and feed versions
-	// missing the sha1/file pointer needed to open the GTFS file from storage.
+	// Match import_cmd's default-query filter: skip soft-deleted and storage-less FVs.
 	q := cmd.Adapter.Sqrl().
 		Select("feed_versions.id").
 		From("feed_versions").
@@ -144,23 +142,12 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Warn if explicit --fvid / --fv-sha1 selectors were dropped by the
-	// default-query filter (e.g. caller asked for a soft-deleted feed version
-	// or one missing sha1/file). Only checked when a single selector is used;
-	// when both are set they are AND'd at the SQL level and a "requested
-	// count" isn't meaningful.
-	var expected int
-	switch {
-	case len(cmd.FVIDs) > 0 && len(cmd.FVSHA1) == 0:
-		expected = len(uniqueStrings(cmd.FVIDs))
-	case len(cmd.FVSHA1) > 0 && len(cmd.FVIDs) == 0:
-		expected = len(uniqueStrings(cmd.FVSHA1))
-	}
-	if expected > 0 && len(qrs) < expected {
-		log.For(ctx).Warn().Msgf(
-			"Requested %d feed versions but only %d will be processed; %d were skipped (soft-deleted feed/feed_version, missing sha1/file, or not found)",
-			expected, len(qrs), expected-len(qrs),
-		)
+	if expected := explicitSelectorCount(cmd.FVIDs, cmd.FVSHA1); expected > len(qrs) {
+		log.For(ctx).Warn().
+			Int("requested", expected).
+			Int("processed", len(qrs)).
+			Int("skipped", expected-len(qrs)).
+			Msg("some explicitly requested feed versions were skipped (soft-deleted, missing sha1/file, or not found)")
 	}
 	///////////////
 	// Here we go
@@ -187,17 +174,25 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	return nil
 }
 
-func uniqueStrings(vals []string) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, v := range vals {
-		if seen[v] {
-			continue
-		}
-		seen[v] = true
-		out = append(out, v)
+// explicitSelectorCount returns the number of distinct explicit FV selectors
+// when exactly one of fvids/sha1s is set. When both or neither are set,
+// returns 0: with both, they are AND'd at the SQL level and "requested count"
+// isn't meaningful; with neither, no explicit selection was made.
+func explicitSelectorCount(fvids, sha1s []string) int {
+	var sel []string
+	switch {
+	case len(fvids) > 0 && len(sha1s) == 0:
+		sel = fvids
+	case len(sha1s) > 0 && len(fvids) == 0:
+		sel = sha1s
+	default:
+		return 0
 	}
-	return out
+	seen := map[string]bool{}
+	for _, v := range sel {
+		seen[v] = true
+	}
+	return len(seen)
 }
 
 func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryrun bool, jobs <-chan RebuildStatsOptions, results chan<- RebuildStatsResult, wg *sync.WaitGroup) {

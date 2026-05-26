@@ -15,9 +15,8 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// Stat names accepted by WriteOptions.Stats. Each stat maps to one or more
-// derived-stat tables; the write path deletes and re-inserts only the tables
-// for the selected stats.
+// Stat names accepted by WriteOptions.Stats. Each maps to one or more
+// FetchStatDerivedTables; only the selected stats are deleted and re-inserted.
 const (
 	StatFileInfos      = "file_infos"
 	StatServiceLevels  = "service_levels"
@@ -36,7 +35,8 @@ var AllStats = []string{
 }
 
 // statTables maps a stat name to the FetchStatDerivedTables it writes. The
-// union across all entries must equal dmfr.GetFeedVersionTables().FetchStatDerivedTables.
+// union across all entries must equal dmfr.GetFeedVersionTables().FetchStatDerivedTables;
+// TestStatRegistrationConsistency enforces this.
 var statTables = map[string][]string{
 	StatFileInfos:      {"feed_version_file_infos"},
 	StatServiceLevels:  {"feed_version_service_levels"},
@@ -49,38 +49,35 @@ var statTables = map[string][]string{
 	StatGeohash: {"tl_feed_version_geohashes"},
 }
 
-// WriteOptions configures which stats WriteFeedVersionStats persists.
-// Builders always run regardless of selection; this only gates the database
-// delete/insert step so callers can target a single stat without churning
-// records for the others.
+// WriteOptions configures which stats WriteFeedVersionStats persists. Builders
+// always run regardless of selection; only the database delete/insert step is
+// gated, so callers can target a single stat without churning unrelated records.
 type WriteOptions struct {
-	// Stats is the subset of stat names to write; an empty slice means all.
+	// Subset of stat names to write; empty means all.
 	Stats []string
 }
 
-// Validate returns an error if any stat name in o.Stats is not recognized.
-// Callers can use this to fail fast before doing expensive work (reading the
-// GTFS feed, opening a transaction, etc.) that WriteFeedVersionStats would
-// otherwise discover late.
-func (o WriteOptions) Validate() error {
-	_, err := o.resolveStats()
-	return err
+// ValidateStatNames returns an error if any name in names is not a recognized
+// stat. Empty/nil is valid and means "all stats".
+func ValidateStatNames(names []string) error {
+	for _, s := range names {
+		if _, ok := statTables[s]; !ok {
+			return fmt.Errorf("unknown stat name %q (valid: %v)", s, AllStats)
+		}
+	}
+	return nil
 }
 
-// resolveStats validates the selection and returns the set of stat names to
-// write. An empty selection enables every stat in AllStats.
 func (o WriteOptions) resolveStats() (map[string]bool, error) {
-	enabled := map[string]bool{}
-	if len(o.Stats) == 0 {
-		for _, s := range AllStats {
-			enabled[s] = true
-		}
-		return enabled, nil
+	if err := ValidateStatNames(o.Stats); err != nil {
+		return nil, err
 	}
-	for _, s := range o.Stats {
-		if _, ok := statTables[s]; !ok {
-			return nil, fmt.Errorf("unknown stat name %q (valid: %v)", s, AllStats)
-		}
+	enabled := map[string]bool{}
+	src := o.Stats
+	if len(src) == 0 {
+		src = AllStats
+	}
+	for _, s := range src {
 		enabled[s] = true
 	}
 	return enabled, nil
@@ -201,7 +198,6 @@ func WriteFeedVersionStats(ctx context.Context, atx tldb.Adapter, stats FeedVers
 		return err
 	}
 
-	// Delete existing records for selected stats only.
 	for _, stat := range AllStats {
 		if !enabled[stat] {
 			continue
