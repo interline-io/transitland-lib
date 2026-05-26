@@ -5,8 +5,8 @@ go 1.26.3
 require (
 	code.dny.dev/ssrf v0.2.0
 	github.com/99designs/gqlgen v0.17.78
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.6.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0
 	github.com/MicahParks/keyfunc/v3 v3.8.0
 	github.com/auth0/go-auth0 v0.17.2
@@ -62,8 +62,8 @@ require (
 
 require (
 	cel.dev/expr v0.25.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v1.8.0 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
 	github.com/MicahParks/jwkset v0.11.0 // indirect
 	github.com/PuerkitoBio/rehttp v1.3.0 // indirect
 	github.com/Yiling-J/theine-go v0.6.2 // indirect
