@@ -16,7 +16,7 @@ type Auth0Client struct {
 func NewAuth0Client(domain string, clientId string, clientSecret string) (*Auth0Client, error) {
 	auth0API, err := management.New(
 		domain,
-		management.WithClientCredentials(clientId, clientSecret),
+		management.WithClientCredentials(context.Background(), clientId, clientSecret),
 	)
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func NewAuth0Client(domain string, clientId string, clientSecret string) (*Auth0
 }
 
 func (c *Auth0Client) UserByID(ctx context.Context, id string) (authn.User, error) {
-	user, err := c.client.User.Read(id)
+	user, err := c.client.User.Read(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (c *Auth0Client) Users(ctx context.Context, userQuery string) ([]authn.User
 			userQuery = fmt.Sprintf(`identities.connection:"%s"`, c.Connection)
 		}
 	}
-	ul, err := c.client.User.List(management.Query(userQuery))
+	ul, err := c.client.User.List(ctx, management.Query(userQuery))
 	if err != nil {
 		return nil, err
 	}

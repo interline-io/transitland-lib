@@ -12,7 +12,7 @@ jobs:
       actions: read
     steps:
       - name: Check Test Suite Status
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const { data: workflows } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -140,17 +140,17 @@ jobs:
       contents: write
     steps:
       - name: Download Linux binary
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: transitland-linux
           path: transitland-linux
       - name: Download macOS Intel binary
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: transitland-macos-intel
           path: transitland-macos-intel
       - name: Download macOS Apple Silicon binary
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: transitland-macos-apple
           path: transitland-macos-apple
@@ -165,7 +165,7 @@ jobs:
       - name: Copy and rename Linux binary
         run: cp transitland-linux/transitland transitland-linux/transitland-linux
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           files: |
             transitland-linux/transitland-linux
@@ -205,7 +205,7 @@ jobs:
           permission-actions: write
 
       - name: Trigger Homebrew Update
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
