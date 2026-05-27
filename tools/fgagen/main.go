@@ -32,8 +32,8 @@ func main() {
 	}
 
 	pretty, err := protojson.MarshalOptions{
-		UseProtoNames: true,
-		Indent:        "    ",
+		EmitUnpopulated: true,
+		Indent:          "    ",
 	}.Marshal(model)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "marshal: %v\n", err)
