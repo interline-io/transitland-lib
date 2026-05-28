@@ -1,6 +1,9 @@
 package authz
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Action represents a permission action that can be checked.
 type Action int32
@@ -123,6 +126,26 @@ func (o *ObjectType) UnmarshalText(text []byte) error {
 	return fmt.Errorf("unknown object type: %s", text)
 }
 
+// UnmarshalJSON accepts either a JSON number (proto3 enum int value) or a
+// JSON string (enum name). The admin REST API migration guide documents
+// that request bodies use integer enum values; this keeps that working
+// without giving up the string form used elsewhere.
+func (o *ObjectType) UnmarshalJSON(data []byte) error {
+	var n int32
+	if err := json.Unmarshal(data, &n); err == nil {
+		if _, ok := ObjectType_name[n]; !ok {
+			return fmt.Errorf("unknown object type: %d", n)
+		}
+		*o = ObjectType(n)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("invalid object type: %s", string(data))
+	}
+	return o.UnmarshalText([]byte(s))
+}
+
 // Relation represents a relationship between entities.
 type Relation int32
 
@@ -175,6 +198,24 @@ func (r *Relation) UnmarshalText(text []byte) error {
 		return nil
 	}
 	return fmt.Errorf("unknown relation: %s", text)
+}
+
+// UnmarshalJSON accepts either a JSON number (proto3 enum int value) or a
+// JSON string (enum name). See ObjectType.UnmarshalJSON for rationale.
+func (r *Relation) UnmarshalJSON(data []byte) error {
+	var n int32
+	if err := json.Unmarshal(data, &n); err == nil {
+		if _, ok := Relation_name[n]; !ok {
+			return fmt.Errorf("unknown relation: %d", n)
+		}
+		*r = Relation(n)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("invalid relation: %s", string(data))
+	}
+	return r.UnmarshalText([]byte(s))
 }
 
 //////
