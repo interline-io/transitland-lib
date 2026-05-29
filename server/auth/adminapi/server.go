@@ -77,7 +77,7 @@ func NewServer(srv Server) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: authz.TenantType, ID: checkId(r, "tenant_id")}
-		err := srv.AddPermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
+		err := srv.AddPermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id).WithRefRel(er.RefRelation), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 	router.Delete("/tenants/{tenant_id}/permissions", func(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +87,7 @@ func NewServer(srv Server) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: authz.TenantType, ID: checkId(r, "tenant_id")}
-		err := srv.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
+		err := srv.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id).WithRefRel(er.RefRelation), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 
@@ -120,7 +120,7 @@ func NewServer(srv Server) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: authz.GroupType, ID: checkId(r, "group_id")}
-		err := srv.AddPermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
+		err := srv.AddPermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id).WithRefRel(er.RefRelation), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 	router.Delete("/groups/{group_id}/permissions", func(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +130,7 @@ func NewServer(srv Server) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: authz.GroupType, ID: checkId(r, "group_id")}
-		err := srv.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
+		err := srv.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id).WithRefRel(er.RefRelation), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 	router.Post("/groups/{group_id}/tenant", func(w http.ResponseWriter, r *http.Request) {
@@ -192,7 +192,7 @@ func NewServer(srv Server) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: authz.FeedVersionType, ID: checkId(r, "feed_version_id")}
-		err := srv.AddPermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
+		err := srv.AddPermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id).WithRefRel(er.RefRelation), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 	router.Delete("/feed_versions/{feed_version_id}/permissions", func(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +202,7 @@ func NewServer(srv Server) (http.Handler, error) {
 			return
 		}
 		ref := authz.ObjectRef{Type: authz.FeedVersionType, ID: checkId(r, "feed_version_id")}
-		err := srv.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id), er.Relation)
+		err := srv.RemovePermission(r.Context(), ref, authz.NewEntityKey(er.Type, er.Id).WithRefRel(er.RefRelation), er.Relation)
 		handleJson(r.Context(), w, nil, err)
 	})
 

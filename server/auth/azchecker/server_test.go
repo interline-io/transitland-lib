@@ -1,6 +1,8 @@
 package azchecker
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -407,6 +409,112 @@ func TestServer(t *testing.T) {
 		}
 	})
 
+	// PERMISSIONS (add/remove). Regression guard: the handlers must carry
+	// ref_relation into the subject so userset members (tenant#member,
+	// org#viewer) are written. Dropping it produced a bare object subject
+	// (e.g. tenant:<id>) that the authorization model rejects, surfacing as 500.
+	t.Run("AddPermission", func(t *testing.T) {
+		checks := []testCase{
+			{
+				Notes:       "add tenant#member as group viewer",
+				Subject:     newEntityKey(TenantType, "tl-tenant").WithRefRel(MemberRelation),
+				Object:      newEntityKey(GroupType, "CT-group"),
+				Relation:    ViewerRelation,
+				CheckAsUser: "tl-tenant-admin",
+			},
+			{
+				Notes:       "add user as group viewer",
+				Subject:     newEntityKey(UserType, "new-user"),
+				Object:      newEntityKey(GroupType, "CT-group"),
+				Relation:    ViewerRelation,
+				CheckAsUser: "tl-tenant-admin",
+			},
+			{
+				Notes:       "add org#viewer as feed version editor",
+				Subject:     newEntityKey(GroupType, "CT-group").WithRefRel(ViewerRelation),
+				Object:      newEntityKey(FeedVersionType, "e535eb2b3b9ac3ef15d82c56575e914575e732e0"),
+				Relation:    EditorRelation,
+				CheckAsUser: "tl-tenant-admin",
+			},
+			{
+				Notes:       "cannot add org as group viewer: an org#... subject is not allowed for org relations",
+				Subject:     newEntityKey(GroupType, "BA-group").WithRefRel(ViewerRelation),
+				Object:      newEntityKey(GroupType, "CT-group"),
+				Relation:    ViewerRelation,
+				CheckAsUser: "tl-tenant-admin",
+				ExpectError: true,
+			},
+			{
+				Notes:              "group viewer is not authorized to add members",
+				Subject:            newEntityKey(UserType, "new-user"),
+				Object:             newEntityKey(GroupType, "BA-group"),
+				Relation:           ViewerRelation,
+				CheckAsUser:        "ian",
+				ExpectUnauthorized: true,
+			},
+		}
+		for _, tc := range checks {
+			t.Run(tc.String(), func(t *testing.T) {
+				// Mutating test - fresh checker (and FGA store) per case.
+				checker := newTestChecker(t, fgaUrl, serverTestData)
+				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
+				srv := testServerWithUser(checker, tc)
+				body, err := json.Marshal(authz.NewEntityRelation(ltk.Subject, ltk.Relation))
+				if err != nil {
+					t.Fatal(err)
+				}
+				req, _ := http.NewRequest("POST", permissionsPath(t, ltk.Object), bytes.NewReader(body))
+				rr := httptest.NewRecorder()
+				srv.ServeHTTP(rr, req)
+				checkHttpExpectError(t, tc, rr)
+			})
+		}
+	})
+
+	t.Run("RemovePermission", func(t *testing.T) {
+		checker := newTestChecker(t, fgaUrl, serverTestData)
+		tc := testCase{
+			Subject:     newEntityKey(TenantType, "tl-tenant").WithRefRel(MemberRelation),
+			Object:      newEntityKey(GroupType, "CT-group"),
+			Relation:    ViewerRelation,
+			CheckAsUser: "tl-tenant-admin",
+		}
+		ltk := dbTupleLookup(t, dbx, tc.TupleKey())
+		srv := testServerWithUser(checker, tc)
+		body, err := json.Marshal(authz.NewEntityRelation(ltk.Subject, ltk.Relation))
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := permissionsPath(t, ltk.Object)
+
+		// Add the userset member, then remove it; both round-trip the ref
+		// relation, so the tuple written and deleted is tenant:<id>#member.
+		add, _ := http.NewRequest("POST", path, bytes.NewReader(body))
+		rrAdd := httptest.NewRecorder()
+		srv.ServeHTTP(rrAdd, add)
+		assert.Equal(t, http.StatusOK, rrAdd.Code, "add body: %s", rrAdd.Body.String())
+
+		del, _ := http.NewRequest("DELETE", path, bytes.NewReader(body))
+		rrDel := httptest.NewRecorder()
+		srv.ServeHTTP(rrDel, del)
+		assert.Equal(t, http.StatusOK, rrDel.Code, "delete body: %s", rrDel.Body.String())
+	})
+
+}
+
+// permissionsPath returns the admin REST permissions route for an object.
+func permissionsPath(t testing.TB, ek EntityKey) string {
+	t.Helper()
+	switch ek.Type {
+	case TenantType:
+		return fmt.Sprintf("/tenants/%s/permissions", ek.Name)
+	case GroupType:
+		return fmt.Sprintf("/groups/%s/permissions", ek.Name)
+	case FeedVersionType:
+		return fmt.Sprintf("/feed_versions/%s/permissions", ek.Name)
+	}
+	t.Fatalf("no permissions path for object type %s", ek.Type)
+	return ""
 }
 
 func testServerWithUser(c *Checker, tk testCase) http.Handler {
