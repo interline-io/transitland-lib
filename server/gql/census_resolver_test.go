@@ -336,6 +336,23 @@ func TestCensusResolver(t *testing.T) {
 				)
 			},
 		},
+		{
+			// Same as above but with dataset pinned by name, which triggers the
+			// composite (layer_id, geometry) index pushdown in the builder.
+			// Results must be identical to the no-dataset case above.
+			name:  "agency intersection areas - tract, dataset pinned",
+			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{dataset:"tiger2024", layer:"tract", radius:100.0}) { name geoid geometry_area intersection_geometry intersection_area } } }`,
+			vars:  vars,
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "agencies.0.census_geographies").Array(),
+					39,
+					73325034.5592,
+					687170.8023156085,
+				)
+			},
+		},
 	}
 	queryTestcases(t, c, testcases)
 }
