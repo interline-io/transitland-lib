@@ -378,7 +378,7 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		// },
 		// TODO: parent, children; test data has no stations.
 		// TODO: level, pathways_from_stop, pathways_to_stop: test data has no pathways...
-		// TODO: census_geographies
+		// census_geographies: see per-stop buffer cases below
 		// stop_times
 		{
 			name:         "stop_times",
@@ -552,7 +552,41 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			selector:     "stops.#.stop_id",
 			selectExpect: []string{},
 		},
-		// TODO: census_geographies
+		// census_geographies (per-stop buffer attribution)
+		{
+			name:         "census_geographies tract by stop buffer",
+			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			selector:     "stops.0.census_geographies.#.geoid",
+			selectExpect: []string{"1400000US06001406100"},
+		},
+		{
+			name:         "census_geographies county by stop buffer",
+			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"MCAR"}) { stop_id census_geographies(where:{layer:"county", radius:1000.0}) { geoid } } }`,
+			selector:     "stops.0.census_geographies.#.geoid",
+			selectExpect: []string{"0500000US06001"},
+		},
+		{
+			// Two stops resolved in one request batch into a single
+			// CensusGeographiesByEntityIDs call; each must get its own
+			// geographies (including the tracts shared by both buffers).
+			// Before per-stop attribution every row carried match_entity_id=0
+			// and both stops resolved to empty lists.
+			name: "census_geographies per-stop attribution across batch",
+			query: `query{
+				s12: stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+				s19: stops(where:{feed_onestop_id:"BA", stop_id:"19TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+			}`,
+			sel: []testcaseSelector{
+				{
+					selector: "s12.0.census_geographies.#.geoid",
+					expect:   []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"},
+				},
+				{
+					selector: "s19.0.census_geographies.#.geoid",
+					expect:   []string{"1400000US06001402801", "1400000US06001402900"},
+				},
+			},
+		},
 		// TODO: route_stop_buffer
 	}
 	return testcases
