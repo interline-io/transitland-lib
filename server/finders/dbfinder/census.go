@@ -428,7 +428,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
-				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?) as buffer", loc.Near.Lon, loc.Near.Lat, radius).
+				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?)::geometry as buffer", loc.Near.Lon, loc.Near.Lat, radius).
 				Column("0 as match_entity_id")
 		} else if loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0 {
 			radius := checkFloat(loc.StopBuffer.Radius, 0, 1_000)
