@@ -477,7 +477,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Expression:   qBuffer,
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
-				Where(sq.Expr("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) > 0"))
+				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
 			if fields.intersectionArea {
 				q = q.Column("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) as intersection_area")
 			}
@@ -496,7 +496,18 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
 				Column("buffer.match_entity_id").
-				Where(sq.Expr("ST_Intersects(tlcg.geometry, buffer.buffer)"))
+				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
+		}
+		// Pin layer_id as a scalar so the composite (layer_id, geometry) GiST
+		// index can serve the spatial join. Only safe when both dataset and
+		// layer are set, since (dataset, layer) resolves to a single layer_id.
+		if (qBufferUse || qPointsUse) && where.Dataset != nil && where.Layer != nil {
+			layerID := sq.StatementBuilder.
+				Select("clsub.id").
+				From("tl_census_layers clsub").
+				Join("tl_census_datasets cdsub ON cdsub.id = clsub.dataset_id").
+				Where(sq.Eq{"clsub.name": *where.Layer, "cdsub.name": *where.Dataset})
+			q = q.Where(layerID.Prefix("tlcg.layer_id = (").Suffix(")"))
 		}
 		if loc.Focus != nil {
 			orderBy = sq.Expr("ST_Distance(tlcg.geometry, ST_MakePoint(?,?))", loc.Focus.Lon, loc.Focus.Lat)
