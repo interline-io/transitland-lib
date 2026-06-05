@@ -284,7 +284,9 @@ func requireStatusQueue(w http.ResponseWriter, req *http.Request) (jobs.StatusQu
 }
 
 // scopeJobUserID stamps the authenticated user's ID onto the job. Admins
-// may submit on behalf of any user; non-admins always get their own ID
+// may submit on behalf of any user, but default to themselves when the
+// request doesn't name one — otherwise the job runs unattributed and workers
+// fall back to the synthetic job user. Non-admins always get their own ID
 // regardless of what the request body specified.
 func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 	user := authn.ForContext(ctx)
@@ -292,6 +294,9 @@ func scopeJobUserID(ctx context.Context, job *jobs.Job) {
 		return
 	}
 	if user.HasRole("admin") {
+		if job.Opts.UserID == "" {
+			job.Opts.UserID = user.ID()
+		}
 		return
 	}
 	job.Opts.UserID = user.ID()
