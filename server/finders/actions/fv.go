@@ -30,6 +30,10 @@ func FeedVersionImport(ctx context.Context, fvid int) (*model.FeedVersionImportR
 	opts := importer.Options{
 		FeedVersionID: fvid,
 		Storage:       cfg.Storage,
+		// Imports initiated through this action (e.g. the GraphQL
+		// feed_version_import mutation) are user-initiated. Direct/maintenance
+		// imports go through importer.ImportFeedVersion and default to automatic.
+		ImportSource: dmfr.ImportSourceManual,
 		Options: copier.Options{
 			InterpolateStopTimes:       true,
 			CreateMissingShapes:        true,

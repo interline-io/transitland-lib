@@ -407,6 +407,7 @@ type ComplexityRoot struct {
 		EntityCount               func(childComplexity int) int
 		ExceptionLog              func(childComplexity int) int
 		ID                        func(childComplexity int) int
+		ImportSource              func(childComplexity int) int
 		InProgress                func(childComplexity int) int
 		InterpolatedStopTimeCount func(childComplexity int) int
 		ScheduleRemoved           func(childComplexity int) int
@@ -3259,6 +3260,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersionGtfsImport.ID(childComplexity), true
+	case "FeedVersionGtfsImport.import_source":
+		if e.ComplexityRoot.FeedVersionGtfsImport.ImportSource == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FeedVersionGtfsImport.ImportSource(childComplexity), true
 	case "FeedVersionGtfsImport.in_progress":
 		if e.ComplexityRoot.FeedVersionGtfsImport.InProgress == nil {
 			break
@@ -9317,6 +9324,8 @@ type FeedVersionGtfsImport {
   skip_entity_marked_count: Any
   "Number of stop_times whose arrival/departure times were filled in by interpolation during import"
   interpolated_stop_time_count: Int
+  "How the import was initiated: 'manual' (by a user) or 'automatic' (by a maintenance/queue process)"
+  import_source: String!
   "Time the import record was created"
   created_at: Time
   "Time the import record was last updated"
@@ -12650,6 +12659,8 @@ func (ec *executionContext) childFields_FeedVersionGtfsImport(ctx context.Contex
 		return ec.fieldContext_FeedVersionGtfsImport_skip_entity_marked_count(ctx, field)
 	case "interpolated_stop_time_count":
 		return ec.fieldContext_FeedVersionGtfsImport_interpolated_stop_time_count(ctx, field)
+	case "import_source":
+		return ec.fieldContext_FeedVersionGtfsImport_import_source(ctx, field)
 	case "created_at":
 		return ec.fieldContext_FeedVersionGtfsImport_created_at(ctx, field)
 	case "updated_at":
@@ -23347,6 +23358,29 @@ func (ec *executionContext) _FeedVersionGtfsImport_interpolated_stop_time_count(
 }
 func (ec *executionContext) fieldContext_FeedVersionGtfsImport_interpolated_stop_time_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FeedVersionGtfsImport", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FeedVersionGtfsImport_import_source(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionGtfsImport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersionGtfsImport_import_source(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ImportSource, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersionGtfsImport_import_source(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FeedVersionGtfsImport", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _FeedVersionGtfsImport_created_at(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionGtfsImport) (ret graphql.Marshaler) {
@@ -48935,6 +48969,11 @@ func (ec *executionContext) _FeedVersionGtfsImport(ctx context.Context, sel ast.
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "interpolated_stop_time_count":
 			out.Values[i] = ec._FeedVersionGtfsImport_interpolated_stop_time_count(ctx, field, obj)
+		case "import_source":
+			out.Values[i] = ec._FeedVersionGtfsImport_import_source(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "created_at":
 			out.Values[i] = ec._FeedVersionGtfsImport_created_at(ctx, field, obj)
 		case "updated_at":

@@ -21,6 +21,10 @@ type Options struct {
 	FeedVersionID int
 	Storage       string
 	Activate      bool
+	// ImportSource records whether the import was initiated automatically (by a
+	// maintenance/queue process) or manually (by a user). See the
+	// dmfr.ImportSource* constants. Defaults to "automatic" when empty.
+	ImportSource string
 	// ErrorThreshold sets the maximum error percentage (0-100) allowed per file.
 	// The key is the filename (e.g., "stops.txt") or "*" for the default threshold.
 	// If any file exceeds its threshold, the import is considered failed.
@@ -54,7 +58,11 @@ func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error 
 // ImportFeedVersion create FVI and run Copier inside a Tx.
 func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
 	// Get FV
-	fvi := dmfr.FeedVersionImport{InProgress: true}
+	importSource := opts.ImportSource
+	if importSource == "" {
+		importSource = dmfr.ImportSourceAutomatic
+	}
+	fvi := dmfr.FeedVersionImport{InProgress: true, ImportSource: importSource}
 	fvi.FeedVersionID = opts.FeedVersionID
 	fv := dmfr.FeedVersion{}
 	fv.ID = opts.FeedVersionID
@@ -101,6 +109,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fviresult.ID = fvi.ID
 		fviresult.CreatedAt = fvi.CreatedAt
 		fviresult.FeedVersionID = fv.ID
+		fviresult.ImportSource = fvi.ImportSource
 		fviresult.ImportLevel = 4
 		fviresult.Success = true
 		fviresult.InProgress = false

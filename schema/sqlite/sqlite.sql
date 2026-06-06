@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "in_progress" bool,
   "exception_log" blob,
   "import_level" integer not null,
+  "import_source" text not null default 'automatic',
   "interpolated_stop_time_count" integer not null,
   "skip_entity_error_count" blob,
   "skip_entity_reference_count" blob,
