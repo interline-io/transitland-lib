@@ -540,6 +540,8 @@ type FeedVersionGtfsImport {
   skip_entity_marked_count: Any
   "Number of stop_times whose arrival/departure times were filled in by interpolation during import"
   interpolated_stop_time_count: Int
+  "How the import was initiated: 'manual' (by a user) or 'automatic' (by a maintenance/queue process)"
+  import_source: String!
   "Time the import record was created"
   created_at: Time
   "Time the import record was last updated"
