@@ -356,3 +356,32 @@ func readSSE(t *testing.T, body interface {
 		return nil, false
 	}
 }
+
+func TestScopeJobUserID(t *testing.T) {
+	owner := authn.NewCtxUser("alice", "", "")
+	admin := authn.NewCtxUser("root", "", "").WithRoles("admin")
+
+	tcs := []struct {
+		name   string
+		user   authn.User
+		bodyID string
+		expect string
+	}{
+		{"non-admin gets own id", owner, "", "alice"},
+		{"non-admin cannot submit as someone else", owner, "carol", "alice"},
+		{"admin defaults to own id when unspecified", admin, "", "root"},
+		{"admin may submit on behalf of another user", admin, "carol", "carol"},
+		{"unauthenticated leaves body id unchanged", nil, "carol", "carol"},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			if tc.user != nil {
+				ctx = authn.WithUser(ctx, tc.user)
+			}
+			job := jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: tc.bodyID}}
+			scopeJobUserID(ctx, &job)
+			assert.Equal(t, tc.expect, job.Opts.UserID)
+		})
+	}
+}
