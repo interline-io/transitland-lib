@@ -86,8 +86,15 @@ func (reader *Reader) ValidateStructure() []error {
 				fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, readerr))
 				return
 			}
-			if rowcount == 0 && rowsRequired {
-				fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
+			// A file with only a header and no data rows is treated as empty.
+			// Required files report FileRequiredError; optional files (e.g.
+			// stops.txt in a flex feed) are skipped without error. We return
+			// here because the column check below cannot run on a file that has
+			// no rows: the CSV header is never surfaced to this callback.
+			if rowcount == 0 {
+				if rowsRequired {
+					fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
+				}
 				return
 			}
 			// Check columns
@@ -126,7 +133,15 @@ func (reader *Reader) ValidateStructure() []error {
 		}
 		return fileerrs
 	}
-	allerrs = append(allerrs, check(&gtfs.Stop{}, false)...)
+	// stops.txt is conditionally required. It may be omitted entirely when the
+	// feed provides location-based service via locations.geojson or
+	// location_groups.txt (GTFS-Flex). When the file is present it is always
+	// validated (an empty, header-only stops.txt is allowed).
+	stopsAlternativePresent := reader.ContainsFile((&gtfs.Location{}).Filename()) ||
+		reader.ContainsFile((&gtfs.LocationGroup{}).Filename())
+	if reader.ContainsFile((&gtfs.Stop{}).Filename()) || !stopsAlternativePresent {
+		allerrs = append(allerrs, check(&gtfs.Stop{}, false)...)
+	}
 	allerrs = append(allerrs, check(&gtfs.Route{}, true)...)
 	allerrs = append(allerrs, check(&gtfs.Agency{}, true)...)
 	allerrs = append(allerrs, check(&gtfs.Trip{}, true)...)
