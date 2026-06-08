@@ -37,6 +37,14 @@ func TestValidateStructure_Stops(t *testing.T) {
 			wantStopsRequired: false,
 		},
 		{
+			// stops.txt present with data rows but no recognized columns and no
+			// flex alternative: the column-presence check must still fire. Guards
+			// against the empty-file early return weakening column validation.
+			name:              "stops present with unrecognized columns",
+			dir:               "testdata/flex/stops-bad-columns",
+			wantStopsRequired: true,
+		},
+		{
 			// stops.txt omitted entirely, but location_groups.txt /
 			// locations.geojson cover service: allowed for flex feeds.
 			name:              "absent stops with flex alternative",
@@ -67,5 +75,26 @@ func TestValidateStructure_Stops(t *testing.T) {
 				t.Errorf("expected no stops.txt FileRequiredError, got %d (all errs: %v)", got, errs)
 			}
 		})
+	}
+}
+
+// TestValidateStructure_RequiredHeaderOnly ensures the empty-file handling does
+// not weaken required files: a required file with only a header (no data rows)
+// must still report a FileRequiredError.
+func TestValidateStructure_RequiredHeaderOnly(t *testing.T) {
+	reader := &Reader{Adapter: NewDirAdapter(testpath.RelPath("testdata/flex/required-header-only"))}
+	if err := reader.Open(); err != nil {
+		t.Fatalf("failed to open reader: %v", err)
+	}
+	defer reader.Close()
+	found := false
+	for _, err := range reader.ValidateStructure() {
+		var fre *causes.FileRequiredError
+		if errors.As(err, &fre) && fre.Filename == "routes.txt" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected a routes.txt FileRequiredError for a header-only required file, got none")
 	}
 }
