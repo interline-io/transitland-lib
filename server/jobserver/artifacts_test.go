@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/auth/authn"
@@ -57,6 +58,9 @@ func newArtifactTestServer(t *testing.T, factory model.ArtifactStoreFactory, sto
 		Checker:              &authz.AllowAllChecker{},
 		ArtifactStoreFactory: factory,
 		ArtifactStorage:      storage,
+		// Simulate a path-rewriting ingress: download_url must include this
+		// public prefix, not just the path this server sees.
+		RestPrefix: "https://example.test/api",
 	}
 	h, err := NewServer()
 	if err != nil {
@@ -113,9 +117,13 @@ func TestArtifactEndpoints(t *testing.T) {
 	require.Len(t, listResp.Artifacts, 1)
 	a0 := listResp.Artifacts[0]
 	assert.Equal(t, "out.txt", a0["filename"])
-	assert.Contains(t, a0, "download_url")
 	assert.NotContains(t, a0, "storage_key")
 	assert.NotContains(t, a0, "user_id")
+	// download_url must carry the RestPrefix (correct behind a path-rewriting
+	// ingress) and point at this artifact's download route.
+	dlURL, _ := a0["download_url"].(string)
+	assert.True(t, strings.HasPrefix(dlURL, "https://example.test/api/"), "download_url should include RestPrefix: %q", dlURL)
+	assert.True(t, strings.HasSuffix(dlURL, "/artifacts/1/download"), "download_url: %q", dlURL)
 
 	// List (stranger): 404 — does not own the job.
 	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, base, stranger))

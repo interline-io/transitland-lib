@@ -107,8 +107,13 @@ func listArtifactsRequest(w http.ResponseWriter, req *http.Request) {
 		internalError(w, req, "artifact list failed", err)
 		return
 	}
-	// download_url is the collection path (this request) + /{id}/download.
-	base := strings.TrimRight(req.URL.Path, "/")
+	// download_url is the public URL of the download route: RestPrefix (the
+	// prefix the ingress strips before forwarding) + the path this server sees +
+	// /{id}/download. Mirrors how the REST API builds pagination "next" links;
+	// using req.URL.Path alone would drop the stripped prefix under a
+	// path-rewriting ingress.
+	cfg := model.ForContext(req.Context())
+	base := cfg.RestPrefix + strings.TrimRight(req.URL.Path, "/")
 	out := make([]artifactResponse, 0, len(arts))
 	for _, a := range arts {
 		out = append(out, toArtifactResponse(a, base+"/"+strconv.Itoa(a.ID)+"/download"))
@@ -130,7 +135,9 @@ func artifactMetaRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// This request path is .../artifacts/{id}; download is one segment deeper.
-	writeJSON(w, toArtifactResponse(art, strings.TrimRight(req.URL.Path, "/")+"/download"))
+	// Prefix with RestPrefix so the link is correct behind a path-rewriting ingress.
+	cfg := model.ForContext(req.Context())
+	writeJSON(w, toArtifactResponse(art, cfg.RestPrefix+strings.TrimRight(req.URL.Path, "/")+"/download"))
 }
 
 func downloadArtifactRequest(w http.ResponseWriter, req *http.Request) {
