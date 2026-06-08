@@ -230,6 +230,31 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 	return out
 }
 
+// TripsByID yields trips whose trip_id is in ids; with no ids it yields all trips,
+// matching Trips(). It reloads a bounded batch of trips by re-scanning trips.txt,
+// so the caller need not cache every trip in memory.
+func (reader *Reader) TripsByID(ids ...string) chan gtfs.Trip {
+	if len(ids) == 0 {
+		return reader.Trips()
+	}
+	set := stringsToSet(ids)
+	out := make(chan gtfs.Trip, bufferSize)
+	go func() {
+		ent := gtfs.Trip{}
+		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
+			sid, _ := row.Get("trip_id")
+			if _, ok := set[sid]; !ok {
+				return
+			}
+			e := gtfs.Trip{}
+			loadRow(&e, row)
+			out <- e
+		})
+		close(out)
+	}()
+	return out
+}
+
 // Shapes sends single-geometry LineString Shapes
 func (reader *Reader) Shapes() chan gtfs.Shape {
 	return ReadEntities[gtfs.Shape](reader, getFilename(&gtfs.Shape{}))
