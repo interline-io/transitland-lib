@@ -2,7 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"runtime/pprof"
+	"syscall"
 	_ "time/tzdata"
 
 	"github.com/interline-io/log"
@@ -69,10 +75,106 @@ func init() {
 		genDocCommand,
 	)
 
+	// Persistent profiling flags, available on every subcommand. CPU profiling
+	// starts before the command runs; the heap profile is written at exit.
+	rootCmd.PersistentFlags().StringVar(&cpuProfilePath, "cpuprofile", "", "Write a CPU profile to `file`")
+	rootCmd.PersistentFlags().StringVar(&memProfilePath, "memprofile", "", "Write a heap profile to `file` at exit")
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// Open both profile files up front so a bad/missing path fails in the
+		// first second, instead of being discovered only at exit after a long
+		// run has already completed.
+		if memProfilePath != "" {
+			f, err := createProfileFile(memProfilePath)
+			if err != nil {
+				return fmt.Errorf("could not create memory profile %q: %w", memProfilePath, err)
+			}
+			memProfileFile = f
+			// SIGUSR1 dumps an on-demand heap profile to <memprofile>.sigN so the
+			// peak resident set can be captured mid-run; the at-exit profile only
+			// sees the post-free heap. Send with: kill -USR1 <pid>
+			installHeapSignalDump(memProfilePath)
+		}
+		if cpuProfilePath != "" {
+			f, err := createProfileFile(cpuProfilePath)
+			if err != nil {
+				return fmt.Errorf("could not create CPU profile %q: %w", cpuProfilePath, err)
+			}
+			if err := pprof.StartCPUProfile(f); err != nil {
+				f.Close()
+				return fmt.Errorf("could not start CPU profile: %w", err)
+			}
+			cpuProfileFile = f
+		}
+		return nil
+	}
+}
+
+var (
+	cpuProfilePath string
+	memProfilePath string
+	cpuProfileFile *os.File
+	memProfileFile *os.File
+)
+
+// installHeapSignalDump writes a heap profile to <base>.sigN each time the
+// process receives SIGUSR1, so the peak resident set can be captured mid-run
+// (the at-exit --memprofile only sees the post-free heap). Runs for the life of
+// the process.
+func installHeapSignalDump(base string) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGUSR1)
+	go func() {
+		n := 0
+		for range ch {
+			n++
+			path := fmt.Sprintf("%s.sig%d", base, n)
+			f, err := createProfileFile(path)
+			if err != nil {
+				log.Error().Err(err).Msgf("could not create heap profile %q", path)
+				continue
+			}
+			runtime.GC() // update in-use statistics before snapshotting the heap
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				log.Error().Err(err).Msg("could not write heap profile")
+			}
+			f.Close()
+			log.Info().Msgf("wrote heap profile to %s", path)
+		}
+	}()
+}
+
+// createProfileFile opens a profile output file, creating parent directories as
+// needed so a missing dir never silently costs a long profiling run.
+func createProfileFile(path string) (*os.File, error) {
+	if dir := filepath.Dir(path); dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, err
+		}
+	}
+	return os.Create(path)
+}
+
+// writeProfiles stops CPU profiling and snapshots the heap into the files opened
+// in PersistentPreRunE. Called on both the success and error paths since os.Exit
+// skips deferred funcs; a SIGKILL (OOM) still bypasses it, so pair --memprofile
+// with GODEBUG=gctrace=1 to catch peaks.
+func writeProfiles() {
+	if cpuProfileFile != nil {
+		pprof.StopCPUProfile()
+		cpuProfileFile.Close()
+	}
+	if memProfileFile != nil {
+		runtime.GC() // update in-use statistics before snapshotting the heap
+		if err := pprof.WriteHeapProfile(memProfileFile); err != nil {
+			log.Error().Err(err).Msg("could not write memory profile")
+		}
+		memProfileFile.Close()
+	}
 }
 
 func main() {
 	err := rootCmd.Execute()
+	writeProfiles()
 	if err != nil {
 		os.Exit(1)
 	}
