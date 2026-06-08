@@ -112,6 +112,12 @@ func (s *scoped) create(ctx context.Context, opts model.ArtifactOpts, r io.Reade
 	if filename == "" {
 		return nil, fmt.Errorf("artifactstore: invalid filename %q", opts.Filename)
 	}
+	// Artifact storage must be configured explicitly; there is no fallback to
+	// the feed-version storage. Fail the write loudly rather than silently
+	// writing artifacts somewhere unexpected.
+	if s.store.storageURL == "" {
+		return nil, errors.New("artifactstore: no artifact storage configured")
+	}
 	store, err := request.GetStore(s.store.storageURL)
 	if err != nil {
 		return nil, fmt.Errorf("artifactstore: get storage: %w", err)

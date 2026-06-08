@@ -40,6 +40,16 @@ func TestSanitizeFilename(t *testing.T) {
 	}
 }
 
+// TestCreateWithoutStorageErrors confirms a write fails when no artifact
+// storage is configured — there is no silent fallback to other storage. Needs
+// no DB: the guard returns before any database use.
+func TestCreateWithoutStorageErrors(t *testing.T) {
+	sc := NewStore(nil, "").For("job-1", "alice", "test")
+	_, err := sc.CreateReader(context.Background(), model.ArtifactOpts{Filename: "out.txt"}, strings.NewReader("x"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no artifact storage configured")
+}
+
 // TestStoreRoundTrip exercises the full create -> storage + row -> read path.
 // Requires a Postgres test DB (with the tl_job_artifacts migration applied);
 // skips otherwise.
