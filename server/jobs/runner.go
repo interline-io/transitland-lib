@@ -55,6 +55,11 @@ func (r *Runner) Worker(kind string, args Args) (Worker, error) {
 }
 
 func (r *Runner) Run(ctx context.Context, job Job) error {
+	// Make the job ID available to the worker (and per-job helpers like the
+	// artifact store) for the whole execution. Covers local, River, and the
+	// synchronous /run path; the Argo pod assigns job.ID from the workflow
+	// name before calling Run, so it is covered too.
+	ctx = WithJobID(ctx, job.ID)
 	w, err := r.Worker(job.Kind, job.Args)
 	if err != nil {
 		return err
