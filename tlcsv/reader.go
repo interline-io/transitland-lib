@@ -230,27 +230,96 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 	return out
 }
 
-// TripsByID yields trips whose trip_id is in ids; with no ids it yields all trips,
-// matching Trips(). It reloads a bounded batch of trips by re-scanning trips.txt,
-// so the caller need not cache every trip in memory.
-func (reader *Reader) TripsByID(ids ...string) chan gtfs.Trip {
-	if len(ids) == 0 {
-		return reader.Trips()
-	}
-	set := stringsToSet(ids)
-	out := make(chan gtfs.Trip, bufferSize)
+// TripsWithStopTimes yields every trip with its StopTimes attached, buffering at
+// most chunkSize stop_times at a time (configurable via TL_GTFS_CHUNKSIZE) so memory
+// stays bounded regardless of feed size. It satisfies the copier's trip+stop_time
+// streaming contract: trips are yielded in trips.txt order within each chunk; a trip
+// with no stop_times is yielded with an empty StopTimes; for a duplicate trip_id the
+// first occurrence carries the stop_times and later ones are empty; and stop_times
+// whose trip_id is absent from trips.txt are yielded as invalid entries (Valid =
+// false) so their reference can still be validated. With ids, only those trips and
+// their stop_times are yielded and the stop_time-less sweep is skipped.
+func (reader *Reader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes {
+	out := make(chan gtfs.TripStopTimes, bufferSize)
 	go func() {
-		ent := gtfs.Trip{}
-		reader.Adapter.ReadRows(ent.Filename(), func(row Row) {
-			sid, _ := row.Get("trip_id")
-			if _, ok := set[sid]; !ok {
+		defer close(out)
+
+		// Plan which trip_ids have stop_times, chunked so each chunk's stop_times
+		// stay under chunkSize.
+		var chunks s2D
+		stopTimeIDs := map[string]struct{}{}
+		if len(ids) == 0 {
+			counter := map[string]int{}
+			reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
+				sid, _ := row.Get("trip_id")
+				counter[sid]++
+			})
+			for k := range counter {
+				stopTimeIDs[k] = struct{}{}
+			}
+			chunks = chunkMSI(counter, chunkSize)
+		} else {
+			for _, id := range ids {
+				stopTimeIDs[id] = struct{}{}
+			}
+			chunks = s2D{ids}
+		}
+
+		// For each chunk: load its stop_times, then read trips.txt and yield each
+		// trip (in file order) with its stop_times attached.
+		for _, chunk := range chunks {
+			set := stringsToSet(chunk)
+			stm := map[string][]gtfs.StopTime{}
+			reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
+				sid, _ := row.Get("trip_id")
+				if _, ok := set[sid]; !ok {
+					return
+				}
+				st := gtfs.StopTime{}
+				loadRow(&st, row)
+				stm[sid] = append(stm[sid], st)
+			})
+			for _, v := range stm {
+				sort.Slice(v, func(i, j int) bool {
+					return v[i].StopSequence.Val < v[j].StopSequence.Val
+				})
+			}
+			emitted := map[string]bool{}
+			reader.Adapter.ReadRows("trips.txt", func(row Row) {
+				tid, _ := row.Get("trip_id")
+				if _, ok := set[tid]; !ok {
+					return
+				}
+				e := gtfs.Trip{}
+				loadRow(&e, row)
+				tst := gtfs.TripStopTimes{Valid: true, Trip: e}
+				if !emitted[tid] {
+					emitted[tid] = true
+					tst.StopTimes = stm[tid]
+				}
+				out <- tst
+			})
+			// Orphan stop_times: trip_ids present in stop_times but not trips.txt.
+			for tid := range set {
+				if !emitted[tid] && len(stm[tid]) > 0 {
+					out <- gtfs.TripStopTimes{StopTimes: stm[tid]}
+				}
+			}
+		}
+
+		if len(ids) > 0 {
+			return
+		}
+		// Sweep trips.txt for trips with no stop_times (never in a chunk).
+		reader.Adapter.ReadRows("trips.txt", func(row Row) {
+			tid, _ := row.Get("trip_id")
+			if _, ok := stopTimeIDs[tid]; ok {
 				return
 			}
 			e := gtfs.Trip{}
 			loadRow(&e, row)
-			out <- e
+			out <- gtfs.TripStopTimes{Valid: true, Trip: e}
 		})
-		close(out)
 	}()
 	return out
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -17,12 +18,13 @@ import (
 	"github.com/interline-io/transitland-lib/diff"
 	neSchema "github.com/interline-io/transitland-lib/schema/ne"
 	postgresSchema "github.com/interline-io/transitland-lib/schema/postgres"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcli"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tlxy"
 
 	_ "github.com/interline-io/transitland-lib/ext/filters"
 	_ "github.com/interline-io/transitland-lib/ext/plus"
-	_ "github.com/interline-io/transitland-lib/tlcsv"
 	_ "github.com/interline-io/transitland-lib/tldb"
 	_ "github.com/interline-io/transitland-lib/tldb/postgres"
 	_ "github.com/interline-io/transitland-lib/tldb/sqlite"
@@ -57,6 +59,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.ChecksumCommand{}, pc, "checksum"),
 		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
 		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
+		tlcli.CobraHelper(&statsTestCommand{}, pc, "stats-test"),
 		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
 		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
 		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
@@ -186,6 +189,59 @@ func init() {
 	if tag != "" {
 		tl.Version.Tag = tag
 	}
+}
+
+// statsTestCommand runs the rebuild-stats computation on a local feed file without
+// touching the database. Useful for profiling the stats pass (it runs the same
+// builders as rebuild-stats via stats.NewFeedStatsFromReader); pair it with
+// --memprofile and TL_GTFS_CHUNKSIZE.
+type statsTestCommand struct {
+	path string
+}
+
+func (cmd *statsTestCommand) HelpDesc() (string, string) {
+	return "Compute feed version stats from a file without writing to the database", ""
+}
+
+func (cmd *statsTestCommand) HelpArgs() string {
+	return "<feed.zip>"
+}
+
+func (cmd *statsTestCommand) AddFlags(fl *pflag.FlagSet) {}
+
+func (cmd *statsTestCommand) Parse(args []string) error {
+	if len(args) == 0 {
+		return errors.New("requires a feed file argument")
+	}
+	cmd.path = args[0]
+	return nil
+}
+
+func (cmd *statsTestCommand) Run(ctx context.Context) error {
+	reader, err := tlcsv.NewReader(cmd.path)
+	if err != nil {
+		return fmt.Errorf("could not create reader for %s: %w", cmd.path, err)
+	}
+	if err := reader.Open(); err != nil {
+		return fmt.Errorf("could not open feed at %s: %w", cmd.path, err)
+	}
+	defer reader.Close()
+
+	st, err := stats.NewFeedStatsFromReader(reader)
+	if err != nil {
+		return err
+	}
+	log.Print(
+		"stats for %s: %d service levels, %d agency osids, %d route osids, %d stop osids, %d geohash cells, %d file infos",
+		cmd.path,
+		len(st.ServiceLevels),
+		len(st.AgencyOnestopIDs),
+		len(st.RouteOnestopIDs),
+		len(st.StopOnestopIDs),
+		len(st.GeohashCells),
+		len(st.FileInfos),
+	)
+	return nil
 }
 
 type versionCommand struct{}

@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
-	"maps"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -852,228 +850,135 @@ func newTripStopTimeState() *tripStopTimeState {
 	}
 }
 
-// tripBatchReader is an optional Reader capability that lets copyTripsAndStopTimes
-// load trips in bounded batches instead of caching every trip in memory. Readers
-// that can cheaply re-scan trips by trip_id implement it; readers that don't fall
-// back to the all-trips-cached path.
-type tripBatchReader interface {
-	// TripsByID yields trips whose trip_id is in ids.
-	TripsByID(ids ...string) chan gtfs.Trip
+// tripStopTimeReader is an optional Reader capability: it yields each trip with its
+// StopTimes already attached, doing all batching/buffering internally so the copier
+// never holds the whole feed in memory and never has to know the reader's chunk size.
+// Readers that don't implement it fall back to a generic in-copier join that caches
+// trips (Copier.tripsWithStopTimes).
+//
+// Contract for the yielded channel:
+//   - Each trip is yielded once, with its stop_times sorted by stop_sequence.
+//   - A trip with no stop_times is yielded with an empty StopTimes.
+//   - For a duplicate trip_id the first occurrence carries the stop_times; later
+//     occurrences are yielded with an empty StopTimes.
+//   - stop_times whose trip_id is absent from trips.txt are yielded on a zero-value
+//     Trip (empty TripID) so the caller can still validate them.
+type tripStopTimeReader interface {
+	TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes
 }
 
-// tripBatchStopTimeLimit is the number of stop_times to buffer before reloading
-// the batch's trips and flushing. It bounds peak memory: only this many stop_times
-// and their trips are held at once. Larger values mean fewer re-scans of trips.txt.
-var tripBatchStopTimeLimit = 1_000_000
-
-// copyTripsAndStopTimes writes Trips and StopTimes, batching trip loading when the
-// reader supports it so memory stays flat regardless of feed size.
+// copyTripsAndStopTimes writes Trips and StopTimes. It consumes a stream of trips
+// that already carry their stop_times (from the reader when it supports it, or from
+// a generic caching join otherwise) and processes them a batch at a time, so memory
+// stays flat regardless of feed size.
 func (copier *Copier) copyTripsAndStopTimes() error {
-	if br, ok := copier.reader.(tripBatchReader); ok {
-		return copier.copyTripsAndStopTimesBatched(br)
+	var source chan gtfs.TripStopTimes
+	if r, ok := copier.reader.(tripStopTimeReader); ok {
+		source = r.TripsWithStopTimes()
+	} else {
+		source = copier.tripsWithStopTimes()
 	}
-	return copier.copyTripsAndStopTimesCached()
+
+	// Pattern dedup accounting persists across every batch; the trips and their
+	// stop_times are per-batch.
+	state := newTripStopTimeState()
+	var batch []gtfs.TripStopTimes
+	for tst := range source {
+		batch = append(batch, tst)
+		if len(batch) >= copier.options.BatchSize {
+			if err := copier.processTripBatch(batch, state); err != nil {
+				return err
+			}
+			batch = nil
+		}
+	}
+	if err := copier.processTripBatch(batch, state); err != nil {
+		return err
+	}
+
+	copier.logCount(&gtfs.Trip{})
+	copier.logCount(&gtfs.StopTime{})
+	return nil
 }
 
-// copyTripsAndStopTimesBatched streams stop_times in the reader's native order and
-// reloads trips one bounded batch at a time, so the full set of trips is never held
-// in memory. Driving off StopTimesByTripID preserves the reader's emit order (and
-// its single-pass fast path for stop_times already grouped by trip_id), which keeps
-// order-sensitive validators producing identical results to the cached path. Trips
-// with no stop_times never appear in a batch and are written by a final trips.txt
-// sweep. Pattern dedup accounting in state persists across all batches.
-func (copier *Copier) copyTripsAndStopTimesBatched(br tripBatchReader) error {
-	// trip_ids that had stop_times, so the final sweep writes only the stop_time-less
-	// trips. This is the one O(trips) structure kept for the whole pass, but it holds
-	// just ids, not full trip records.
-	stopTimeTripIDs := map[string]struct{}{}
-	state := newTripStopTimeState()
-
-	var pending [][]gtfs.StopTime
-	pendingCount := 0
-	flush := func() error {
-		if len(pending) == 0 {
-			return nil
-		}
-		// Collect this batch's trip_ids (in first-seen order) and reload only those
-		// trips. First occurrence wins; later duplicates are written after the
-		// batch's stop_times, matching the cached path.
-		var ids []string
-		idset := map[string]struct{}{}
-		for _, sts := range pending {
-			if len(sts) == 0 {
-				continue
-			}
-			tripid := sts[0].TripID.Val
-			if _, ok := idset[tripid]; !ok {
-				idset[tripid] = struct{}{}
-				ids = append(ids, tripid)
-			}
-		}
+// tripsWithStopTimes is the generic fallback for readers that don't implement
+// tripStopTimeReader: it caches all trips, then attaches stop_times streamed from
+// StopTimesByTripID and yields them following the tripStopTimeReader contract.
+// Caching trips (not stop_times) keeps peak memory at O(trips); readers that need
+// O(1) memory should implement TripsWithStopTimes themselves.
+func (copier *Copier) tripsWithStopTimes() chan gtfs.TripStopTimes {
+	out := make(chan gtfs.TripStopTimes, 1000)
+	go func() {
+		defer close(out)
+		// Cache all trips. First occurrence wins; later duplicates are yielded
+		// (empty) at the end.
 		trips := map[string]*gtfs.Trip{}
-		duplicateTrips := []*gtfs.Trip{}
-		batchTripIds := map[string]struct{}{}
-		for trip := range br.TripsByID(ids...) {
-			eid := trip.EntityID()
-			batchTripIds[eid] = struct{}{}
+		var duplicates []*gtfs.Trip
+		allIDs := map[string]struct{}{}
+		for trip := range copier.reader.Trips() {
 			tripCopy := trip
+			eid := tripCopy.EntityID()
+			allIDs[eid] = struct{}{}
 			if _, ok := trips[eid]; ok {
-				duplicateTrips = append(duplicateTrips, &tripCopy)
+				duplicates = append(duplicates, &tripCopy)
 				continue
 			}
 			trips[eid] = &tripCopy
 		}
-
-		// Process the buffered groups in arrival order, sub-batched for writing.
-		for i := 0; i < len(pending); i += copier.options.BatchSize {
-			end := i + copier.options.BatchSize
-			if end > len(pending) {
-				end = len(pending)
+		// Attach stop_times: yield each matched trip, or an invalid entry carrying
+		// stop_times whose trip_id is absent from trips.txt.
+		for grp := range copier.reader.StopTimesByTripID() {
+			if len(grp) == 0 {
+				continue
 			}
-			if err := copier.copyStopTimeBatch(trips, batchTripIds, state, pending[i:end]); err != nil {
-				return err
+			eid := grp[0].TripID.Val
+			if trip, ok := trips[eid]; ok {
+				out <- gtfs.TripStopTimes{Valid: true, Trip: *trip, StopTimes: grp}
+				delete(trips, eid)
+			} else if _, exists := allIDs[eid]; !exists {
+				out <- gtfs.TripStopTimes{StopTimes: grp}
 			}
 		}
+		// Trips with no stop_times (leftover), then duplicate trip rows.
+		for _, trip := range trips {
+			out <- gtfs.TripStopTimes{Valid: true, Trip: *trip}
+		}
+		for _, trip := range duplicates {
+			out <- gtfs.TripStopTimes{Valid: true, Trip: *trip}
+		}
+	}()
+	return out
+}
 
-		// Any batch trips not consumed by a stop_time group (defensive; ids come
-		// from stop_times so this is normally empty), then duplicates.
-		if _, err := copyEntities(copier, slices.Collect(maps.Values(trips))); err != nil {
-			return err
-		}
-		if _, err := copyEntities(copier, duplicateTrips); err != nil {
-			return err
-		}
-		for id := range idset {
-			stopTimeTripIDs[id] = struct{}{}
-		}
-		pending = nil
-		pendingCount = 0
+// processTripBatch processes one batch of trips that already carry their stop_times.
+// It assigns the stop/journey pattern (optionally generating a shape and
+// interpolating) to each trip that has stop_times, writes the trips, then writes the
+// stop_times of the trips that were accepted (skipping journey-pattern duplicates).
+// Trips with no stop_times are written as-is. Invalid entries carry only orphan
+// stop_times (no trips.txt row): those stop_times are written so reference errors
+// surface, but no trip is written. state carries cross-batch pattern accounting.
+func (copier *Copier) processTripBatch(batch []gtfs.TripStopTimes, state *tripStopTimeState) error {
+	if len(batch) == 0 {
 		return nil
 	}
-
-	for sts := range copier.reader.StopTimesByTripID() {
-		pending = append(pending, sts)
-		pendingCount += len(sts)
-		if pendingCount >= tripBatchStopTimeLimit {
-			if err := flush(); err != nil {
-				return err
-			}
-		}
-	}
-	if err := flush(); err != nil {
-		return err
-	}
-
-	// Sweep trips.txt for trips with no stop_times (never in a batch) and write them
-	// as-is, matching the cached path's leftover handling. Duplicates resolve
-	// first-wins by file order via the writer's existing duplicate handling.
-	for tripBatch := range batchChan(copier.reader.Trips(), copier.options.BatchSize, func(t gtfs.Trip) bool {
-		_, hasStopTimes := stopTimeTripIDs[t.EntityID()]
-		return !hasStopTimes
-	}) {
-		ents := make([]*gtfs.Trip, len(tripBatch))
-		for i := range tripBatch {
-			tripCopy := tripBatch[i]
-			ents[i] = &tripCopy
-		}
-		if _, err := copyEntities(copier, ents); err != nil {
-			return err
-		}
-	}
-
-	copier.logCount(&gtfs.Trip{})
-	copier.logCount(&gtfs.StopTime{})
-	return nil
-}
-
-// copyTripsAndStopTimesCached caches every trip in memory, then streams stop_times.
-// Used for readers that don't support batched trip loading.
-func (copier *Copier) copyTripsAndStopTimesCached() error {
-	// Cache all trips in memory
-	trips := map[string]*gtfs.Trip{}
-	duplicateTrips := []*gtfs.Trip{}
-	allTripIds := map[string]struct{}{}
-	for trip := range copier.reader.Trips() {
-		eid := trip.EntityID()
-		allTripIds[eid] = struct{}{}
-		// Handle duplicate trips later
-		tripCopy := trip
-		if _, ok := trips[eid]; ok {
-			duplicateTrips = append(duplicateTrips, &tripCopy)
-			continue
-		}
-		trips[eid] = &tripCopy
-	}
-	copier.log.Trace().Msgf("Loaded %d trips", len(allTripIds))
-
-	// Cross-batch accounting (pattern dedup tables) persists across every
-	// stop_time batch; the trip and stop_time records are per-batch.
-	state := newTripStopTimeState()
-
-	// Process trips and stop_times one batch at a time
-	for stsGroup := range batchChan(copier.reader.StopTimesByTripID(), copier.options.BatchSize, nil) {
-		if err := copier.copyStopTimeBatch(trips, allTripIds, state, stsGroup); err != nil {
-			return err
-		}
-	}
-
-	// Add any Trips that were not visited/did not have StopTimes
-	if _, err := copyEntities(copier, slices.Collect(maps.Values(trips))); err != nil {
-		return err
-	}
-
-	// Add any duplicate trips
-	if _, err := copyEntities(copier, duplicateTrips); err != nil {
-		return err
-	}
-
-	copier.logCount(&gtfs.Trip{})
-	copier.logCount(&gtfs.StopTime{})
-	return nil
-}
-
-// copyStopTimeBatch processes one batch of trip-grouped stop_times: it matches
-// each group to its (marked) trip, assigns the stop/journey pattern, optionally
-// generates a shape and interpolates, then writes the trips followed by their
-// stop_times. Matched trips are deleted from trips so the caller can write the
-// unvisited remainder afterwards. state carries the cross-batch pattern
-// accounting that must survive across batches.
-func (copier *Copier) copyStopTimeBatch(trips map[string]*gtfs.Trip, allTripIds map[string]struct{}, state *tripStopTimeState, stsGroup [][]gtfs.StopTime) error {
-	count := 0
-	for _, sts := range stsGroup {
-		count += len(sts)
-	}
-	batchTrips := make([]*gtfs.Trip, 0, len(stsGroup))
-	batchStopTimes := make([]*gtfs.StopTime, 0, count)
-	for _, sts := range stsGroup {
-		if len(sts) == 0 {
-			continue
-		}
-
-		// Does this trip exist?
-		tripid := sts[0].TripID.Val
-		if _, ok := allTripIds[tripid]; !ok {
-			// Trip doesn't exist, try to copy stop times anyway
-			for _, st := range sts {
-				batchStopTimes = append(batchStopTimes, &st)
+	batchStopTimes := []*gtfs.StopTime{}
+	batchTrips := make([]*gtfs.Trip, 0, len(batch))
+	for i := range batch {
+		item := &batch[i]
+		if !item.Valid {
+			// Orphan stop_times: no trip to write, but still validate them.
+			for j := range item.StopTimes {
+				batchStopTimes = append(batchStopTimes, &item.StopTimes[j])
 			}
 			continue
 		}
-
-		// Is this trip marked?
-		trip, ok := trips[tripid]
-		if !ok {
-			// Trip exists but is not marked
-			copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(sts)
+		trip := &item.Trip
+		trip.StopTimes = item.StopTimes
+		batchTrips = append(batchTrips, trip)
+		if len(trip.StopTimes) == 0 {
+			// Stop_time-less or duplicate trip: written as-is, no pattern assignment.
 			continue
 		}
-
-		// Mark trip as associated with at least 1 stop_time
-		// Remaining trips will be processed later
-		delete(trips, tripid)
-
-		// Set stop times
-		trip.StopTimes = sts
 
 		// Set StopPattern
 		// Empty key means flex trip - assign unique pattern ID without caching
@@ -1128,9 +1033,6 @@ func (copier *Copier) copyStopTimeBatch(trips map[string]*gtfs.Trip, allTripIds 
 			trip.JourneyPatternOffset.Set(0)
 			state.journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID.Val}
 		}
-
-		// Add to group
-		batchTrips = append(batchTrips, trip)
 	}
 
 	// Write trips
@@ -1139,15 +1041,15 @@ func (copier *Copier) copyStopTimeBatch(trips map[string]*gtfs.Trip, allTripIds 
 		return err
 	}
 
-	// Process regular stop times
+	// Write the stop_times of accepted trips, skipping journey-pattern duplicates
 	for _, ent := range okTrips {
 		if v, ok := ent.(*gtfs.Trip); ok {
 			if _, dedupOk := state.tripOffsets[v.TripID.Val]; dedupOk && copier.options.DeduplicateJourneyPatterns {
 				copier.log.Trace().Msgf("deduplicating: %s", v.TripID)
 				continue
 			}
-			for _, st := range v.StopTimes {
-				batchStopTimes = append(batchStopTimes, &st)
+			for j := range v.StopTimes {
+				batchStopTimes = append(batchStopTimes, &v.StopTimes[j])
 			}
 		}
 	}

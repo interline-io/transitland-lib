@@ -44,3 +44,13 @@ type Reader interface {
 	BookingRules() chan BookingRule
 	Locations() chan Location
 }
+
+// TripStopTimes is a Trip together with its StopTimes, as streamed by readers that
+// yield trips with their stop_times already joined. Valid is false when the
+// StopTimes have no matching trip in trips.txt — Trip is then the zero value and the
+// StopTimes are surfaced only so their trip_id reference can still be validated.
+type TripStopTimes struct {
+	Valid     bool
+	Trip      Trip
+	StopTimes []StopTime
+}

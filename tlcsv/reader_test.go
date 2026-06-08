@@ -11,7 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/request"
 )
 
-func TestReader_TripsByID(t *testing.T) {
+func TestReader_TripsWithStopTimes(t *testing.T) {
 	reader, err := NewReader(testreader.ExampleDir.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -21,31 +21,44 @@ func TestReader_TripsByID(t *testing.T) {
 	}
 	defer reader.Close()
 
-	// No filter yields all trips, matching Trips().
-	all := 0
-	for range reader.TripsByID() {
-		all++
-	}
-	if all != 11 {
-		t.Errorf("TripsByID() yielded %d trips, want 11", all)
+	// Force small chunks so the example feed's trips span several chunks.
+	old := chunkSize
+	chunkSize = 5
+	defer func() { chunkSize = old }()
+
+	trips := map[string]int{} // trip_id -> times yielded
+	stopTimeCount := 0
+	for tst := range reader.TripsWithStopTimes() {
+		if !tst.Valid {
+			t.Errorf("unexpected invalid entry with %d stop_times", len(tst.StopTimes))
+			continue
+		}
+		trips[tst.Trip.TripID.Val]++
+		stopTimeCount += len(tst.StopTimes)
+		// Stop_times belong to this trip and are sorted by stop_sequence.
+		var last int64 = -1
+		for _, st := range tst.StopTimes {
+			if st.TripID.Val != tst.Trip.TripID.Val {
+				t.Errorf("stop_time trip_id %q under trip %q", st.TripID.Val, tst.Trip.TripID.Val)
+			}
+			if st.StopSequence.Val < last {
+				t.Errorf("stop_times not sorted for trip %q", tst.Trip.TripID.Val)
+			}
+			last = st.StopSequence.Val
+		}
 	}
 
-	// Filtered yields only the requested trips.
-	got := map[string]bool{}
-	for trip := range reader.TripsByID("AB1", "STBA") {
-		got[trip.TripID.Val] = true
+	// All 11 example-feed trips have stop_times; each is yielded exactly once.
+	if len(trips) != 11 {
+		t.Errorf("yielded %d distinct trips, want 11", len(trips))
 	}
-	if len(got) != 2 || !got["AB1"] || !got["STBA"] {
-		t.Errorf("TripsByID(AB1,STBA) = %v, want {AB1, STBA}", got)
+	for id, n := range trips {
+		if n != 1 {
+			t.Errorf("trip %q yielded %d times, want 1", id, n)
+		}
 	}
-
-	// Unknown id yields nothing.
-	none := 0
-	for range reader.TripsByID("does-not-exist") {
-		none++
-	}
-	if none != 0 {
-		t.Errorf("TripsByID(unknown) yielded %d trips, want 0", none)
+	if stopTimeCount != 28 {
+		t.Errorf("yielded %d stop_times, want 28", stopTimeCount)
 	}
 }
 

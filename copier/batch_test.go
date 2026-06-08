@@ -14,27 +14,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// batchTripReader wraps a direct.Reader and adds TripsByID, so it satisfies the
-// copier's tripBatchReader capability and drives the batched trip-loading path the
-// same way a real tlcsv reader does. The embedded direct.Reader supplies the
-// streaming StopTimesByTripID() the batched path reads from.
+// batchTripReader wraps a direct.Reader and adds the tripStopTimeReader capability,
+// so it drives the copier's streaming path the same way a real tlcsv reader does. It
+// joins TripList and StopTimeList in memory following the TripsWithStopTimes
+// contract (first occurrence of a duplicate carries the stop_times; stop_time-less
+// trips are yielded empty; stop_times with no trip are yielded invalid).
 type batchTripReader struct {
 	*direct.Reader
 }
 
-func (r *batchTripReader) TripsByID(ids ...string) chan gtfs.Trip {
-	set := map[string]bool{}
-	for _, id := range ids {
-		set[id] = true
-	}
-	out := make(chan gtfs.Trip, 1000)
+func (r *batchTripReader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes {
+	out := make(chan gtfs.TripStopTimes, 1000)
 	go func() {
+		defer close(out)
+		stm := map[string][]gtfs.StopTime{}
+		var orphanOrder []string
+		tripIDs := map[string]bool{}
 		for _, tr := range r.TripList {
-			if len(set) == 0 || set[tr.TripID.Val] {
-				out <- tr
-			}
+			tripIDs[tr.TripID.Val] = true
 		}
-		close(out)
+		for _, st := range r.StopTimeList {
+			id := st.TripID.Val
+			if _, seen := stm[id]; !seen && !tripIDs[id] {
+				orphanOrder = append(orphanOrder, id)
+			}
+			stm[id] = append(stm[id], st)
+		}
+		emitted := map[string]bool{}
+		for _, tr := range r.TripList {
+			id := tr.TripID.Val
+			tst := gtfs.TripStopTimes{Valid: true, Trip: tr}
+			if !emitted[id] {
+				emitted[id] = true
+				tst.StopTimes = stm[id]
+			}
+			out <- tst
+		}
+		for _, id := range orphanOrder {
+			out <- gtfs.TripStopTimes{StopTimes: stm[id]}
+		}
 	}()
 	return out
 }
@@ -118,24 +136,18 @@ func batchCopyTrips(t *testing.T, reader adapters.Reader) ([]string, map[string]
 }
 
 func TestCopier_TripBatchingEquivalence(t *testing.T) {
-	// Cached path: a plain direct.Reader does not implement tripBatchReader.
+	// Fallback path: a plain direct.Reader does not implement tripStopTimeReader, so
+	// the copier uses its generic caching join.
 	wantTrips, wantStopTimes := batchCopyTrips(t, buildBatchTestReader())
 
 	// Sanity: the fixture writes the duplicate trip twice and the stop_time-less
 	// trip once, so the comparison below actually covers those cases.
 	assert.Equal(t, []string{"t1", "t2", "t3", "t4", "t5", "tdup", "tdup", "tnostops"}, wantTrips)
 
-	// Batched path: the stop_time flush limit controls how many batches the trips
-	// are reloaded in; any limit should produce identical output. A limit of 1
-	// flushes after every trip group, exercising the many-batch path.
-	defer func(old int) { tripBatchStopTimeLimit = old }(tripBatchStopTimeLimit)
-	for _, limit := range []int{1, 2, 5, 1_000_000} {
-		t.Run("limit="+strconv.Itoa(limit), func(t *testing.T) {
-			tripBatchStopTimeLimit = limit
-			reader := &batchTripReader{Reader: buildBatchTestReader()}
-			gotTrips, gotStopTimes := batchCopyTrips(t, reader)
-			assert.Equal(t, wantTrips, gotTrips, "trips written should match cached path")
-			assert.Equal(t, wantStopTimes, gotStopTimes, "stop_times written should match cached path")
-		})
-	}
+	// Streaming path: a reader implementing TripsWithStopTimes must produce identical
+	// output to the fallback.
+	reader := &batchTripReader{Reader: buildBatchTestReader()}
+	gotTrips, gotStopTimes := batchCopyTrips(t, reader)
+	assert.Equal(t, wantTrips, gotTrips, "trips written should match the fallback path")
+	assert.Equal(t, wantStopTimes, gotStopTimes, "stop_times written should match the fallback path")
 }
