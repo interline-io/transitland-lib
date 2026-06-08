@@ -11,18 +11,15 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
-// serveArtifact serves the artifact bytes, preferring a presigned redirect when
-// the store supports it (S3/Azure) and falling back to streaming (Local). It
-// takes art.StorageKey verbatim — unlike rest.serveFromStorage, which builds the
-// key itself — and always sets download headers on the streaming path. It writes
-// its own error responses and logs failures.
-func serveArtifact(w http.ResponseWriter, req *http.Request, storage string, art *model.JobArtifact) {
+// serveArtifact serves the artifact bytes from an already-resolved store,
+// preferring a presigned redirect when the store supports it (S3/Azure) and
+// falling back to streaming (Local). It takes art.StorageKey verbatim — unlike
+// rest.serveFromStorage, which builds the key itself — and always sets download
+// headers on the streaming path. It writes its own error responses and logs
+// failures. The caller resolves the store (request.GetStore) so this is
+// directly testable with a fake Presigner / byte store.
+func serveArtifact(w http.ResponseWriter, req *http.Request, store request.Store, art *model.JobArtifact) {
 	ctx := req.Context()
-	store, err := request.GetStore(storage)
-	if err != nil {
-		internalError(w, req, "artifact storage unavailable", err)
-		return
-	}
 	// art.Filename was sanitized at create time, so it is safe to use in a
 	// Content-Disposition header and as the presign content-disposition.
 	disposition := fmt.Sprintf("attachment; filename=%q", art.Filename)

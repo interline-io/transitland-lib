@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/stretchr/testify/assert"
@@ -28,6 +29,11 @@ func TestSanitizeFilename(t *testing.T) {
 		{"  spaced.txt  ", "spaced.txt"},
 		{"", ""},
 		{"weird\n\tname.json", "weird__name.json"},
+		// Header-injection chars (the reason this function exists): CR/LF, ';',
+		// '=' must never survive into a Content-Disposition value.
+		{"file\r\nSet-Cookie: x.zip", "file__Set-Cookie__x.zip"},
+		{"file;name.csv", "file_name.csv"},
+		{"file=value.txt", "file_value.txt"},
 	}
 	for _, tc := range cases {
 		assert.Equalf(t, tc.want, sanitizeFilename(tc.in), "sanitizeFilename(%q)", tc.in)
@@ -68,27 +74,58 @@ func TestStoreRoundTrip(t *testing.T) {
 	assert.Equal(t, "text/plain", art.ContentType)
 	assert.Equal(t, int64(len(content)), art.SizeBytes)
 	assert.Equal(t, wantSHA, art.SHA1)
-	assert.True(t, strings.HasPrefix(art.StorageKey, "job-artifacts/"+jobID+"/"), "key=%s", art.StorageKey)
+
+	// Full key structure: job-artifacts/<jobID>/<uuid>/<filename>. The uuid
+	// segment is what prevents same-filename collisions and unguessable keys, so
+	// assert it is present and valid (a prefix check would miss its removal).
+	keyParts := strings.Split(art.StorageKey, "/")
+	require.Len(t, keyParts, 4, "key=%s", art.StorageKey)
+	assert.Equal(t, "job-artifacts", keyParts[0])
+	assert.Equal(t, jobID, keyParts[1])
+	_, uerr := uuid.Parse(keyParts[2])
+	assert.NoError(t, uerr, "middle key segment should be a uuid: %q", keyParts[2])
+	assert.Equal(t, "out.txt", keyParts[3])
 
 	// Blob is on disk with the expected content.
 	blob, err := os.ReadFile(filepath.Join(dir, art.StorageKey))
 	require.NoError(t, err)
 	assert.Equal(t, content, string(blob))
 
-	// ListByJob + GetByID.
-	list, err := store.ListByJob(ctx, jobID)
-	require.NoError(t, err)
-	require.Len(t, list, 1)
-	assert.Equal(t, art.ID, list[0].ID)
-
+	// GetByID returns the row; unknown id -> ErrArtifactNotFound.
 	got, err := store.GetByID(ctx, art.ID)
 	require.NoError(t, err)
 	assert.Equal(t, art.StorageKey, got.StorageKey)
-
 	_, err = store.GetByID(ctx, 0x7fffffff)
 	assert.ErrorIs(t, err, model.ErrArtifactNotFound)
 
-	// Empty job id (e.g. fire-and-forget backend) is rejected.
+	// CreateFile mirrors CreateReader, sourcing bytes from a file on disk.
+	srcPath := filepath.Join(t.TempDir(), "src.txt")
+	require.NoError(t, os.WriteFile(srcPath, []byte(content), 0o600))
+	fileArt, err := sc.CreateFile(ctx, model.ArtifactOpts{Filename: "file.txt", ContentType: "text/plain"}, srcPath)
+	require.NoError(t, err)
+	assert.Equal(t, int64(len(content)), fileArt.SizeBytes)
+	assert.Equal(t, wantSHA, fileArt.SHA1)
+	fblob, err := os.ReadFile(filepath.Join(dir, fileArt.StorageKey))
+	require.NoError(t, err)
+	assert.Equal(t, content, string(fblob))
+	// A missing source path errors before any row is written.
+	_, err = sc.CreateFile(ctx, model.ArtifactOpts{Filename: "missing.txt"}, filepath.Join(dir, "does-not-exist"))
+	assert.Error(t, err)
+
+	// Empty/whitespace ContentType defaults to application/octet-stream.
+	defArt, err := sc.CreateReader(ctx, model.ArtifactOpts{Filename: "default.bin", ContentType: "  "}, strings.NewReader("z"))
+	require.NoError(t, err)
+	assert.Equal(t, "application/octet-stream", defArt.ContentType)
+
+	// ListByJob returns all three rows, newest (highest id) first.
+	list, err := store.ListByJob(ctx, jobID)
+	require.NoError(t, err)
+	require.Len(t, list, 3)
+	assert.Equal(t, defArt.ID, list[0].ID)
+	assert.Equal(t, fileArt.ID, list[1].ID)
+	assert.Equal(t, art.ID, list[2].ID)
+
+	// Empty job id (e.g. fire-and-forget backend) is rejected before any I/O.
 	_, err = store.For("", "", "").CreateReader(ctx, model.ArtifactOpts{Filename: "x"}, strings.NewReader("x"))
 	assert.Error(t, err)
 }

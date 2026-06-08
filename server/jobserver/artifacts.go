@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
@@ -146,6 +147,11 @@ func downloadArtifactRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	cfg := model.ForContext(req.Context())
+	store, err := request.GetStore(cfg.ArtifactStorage)
+	if err != nil {
+		internalError(w, req, "artifact storage unavailable", err)
+		return
+	}
 	// serveArtifact writes its own success/error response and logs failures.
-	serveArtifact(w, req, cfg.ArtifactStorage, art)
+	serveArtifact(w, req, store, art)
 }
