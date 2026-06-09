@@ -129,33 +129,43 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 	return nil
 }
 
-// RouteGeometries assembles the representative geometry for every route seen,
-// keyed by route_id. Routes whose geometry can't be built are skipped (and logged).
-// It reads from the accumulated counts and the shared geom cache without mutating
-// either, so it can be called independently of Copy — e.g. to surface route
-// geometries in a validation report without writing them.
-func (pp *RouteGeometryBuilder) RouteGeometries() map[string]*RouteGeometry {
+// eachRouteGeometry builds each route's representative geometry one at a time and
+// passes it to fn, reading from the accumulated counts and shared geom cache without
+// mutating either. Routes whose geometry can't be built are skipped (and logged).
+// Streaming one at a time keeps the whole set from being held in memory at once.
+func (pp *RouteGeometryBuilder) eachRouteGeometry(fn func(*RouteGeometry) error) error {
 	ctx := context.TODO()
-	out := make(map[string]*RouteGeometry, len(pp.shapeCounts))
 	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
 			log.For(ctx).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
-		out[rid] = ent
-	}
-	return out
-}
-
-// Collects and assembles the default shapes and writes to the database
-func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
-	for _, ent := range pp.RouteGeometries() {
-		if err := copier.CopyEntity(ent); err != nil {
+		if err := fn(ent); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// RouteGeometries assembles every route's geometry into a map keyed by route_id, for
+// callers that need random access (e.g. a validation report). Copy streams instead;
+// prefer that when you only need to write them, since this holds the whole set.
+func (pp *RouteGeometryBuilder) RouteGeometries() map[string]*RouteGeometry {
+	out := make(map[string]*RouteGeometry, len(pp.shapeCounts))
+	_ = pp.eachRouteGeometry(func(ent *RouteGeometry) error {
+		out[ent.RouteID] = ent
+		return nil
+	})
+	return out
+}
+
+// Collects and assembles the default shapes and writes them, streaming one route at a
+// time so the full set is never held in memory.
+func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
+	return pp.eachRouteGeometry(func(ent *RouteGeometry) error {
+		return copier.CopyEntity(ent)
+	})
 }
 
 func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, error) {
