@@ -67,12 +67,13 @@ func OpenDB(url string) (*sqlx.DB, error) {
 // WithQueryLogger wraps a database connection with a QueryLogger.
 // If the connection is already a QueryLogger, its settings are updated in place
 // and it is returned as-is (no additional wrapping layer).
-func WithQueryLogger(db querylogger.Ext, longQueryDuration time.Duration) *querylogger.QueryLogger {
+func WithQueryLogger(db querylogger.Ext, trace bool, longQueryDuration time.Duration) *querylogger.QueryLogger {
 	if ql, ok := db.(*querylogger.QueryLogger); ok {
+		ql.Trace = trace
 		ql.LongQueryDuration = longQueryDuration
 		return ql
 	}
-	return &querylogger.QueryLogger{Ext: db, LongQueryDuration: longQueryDuration}
+	return &querylogger.QueryLogger{Ext: db, Trace: trace, LongQueryDuration: longQueryDuration}
 }
 
 // Select runs a query and reads results into dest.

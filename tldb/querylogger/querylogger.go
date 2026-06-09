@@ -6,7 +6,6 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"sync/atomic"
@@ -18,10 +17,6 @@ import (
 
 var queryCounter = uint64(0)
 
-// logQueries gates per-query logging. It is off by default so enabling TRACE doesn't
-// flood with one line per query; set TL_LOG_QUERIES=true to turn it on.
-var logQueries = os.Getenv("TL_LOG_QUERIES") == "true"
-
 type Ext interface {
 	sqlx.Ext
 	sqlx.QueryerContext
@@ -32,12 +27,10 @@ type Ext interface {
 
 var _ Ext = (*QueryLogger)(nil)
 
-// QueryLogger wraps sql/sqlx methods with loggers. Per-query logging is gated by
-// logQueries (TL_LOG_QUERIES) so enabling TRACE doesn't flood with one line per query.
-// LongQueryDuration, when set, further restricts logged completions to queries over
-// the threshold.
+// QueryLogger wraps sql/sqlx methods with loggers.
 type QueryLogger struct {
 	LongQueryDuration time.Duration
+	Trace             bool
 	Ext
 }
 
@@ -48,7 +41,7 @@ func (p *QueryLogger) Exec(query string, args ...interface{}) (sql.Result, error
 
 func (p *QueryLogger) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	rid := p.queryId()
-	if logQueries {
+	if p.Trace {
 		queryStart(ctx, rid, query, args...)
 	}
 
@@ -66,7 +59,7 @@ func (p *QueryLogger) Query(query string, args ...interface{}) (*sql.Rows, error
 
 func (p *QueryLogger) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	rid := p.queryId()
-	if logQueries {
+	if p.Trace {
 		queryStart(ctx, rid, query, args...)
 	}
 
@@ -84,7 +77,7 @@ func (p *QueryLogger) Queryx(query string, args ...interface{}) (*sqlx.Rows, err
 
 func (p *QueryLogger) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
 	rid := p.queryId()
-	if logQueries {
+	if p.Trace {
 		queryStart(ctx, rid, query, args...)
 	}
 
@@ -102,7 +95,7 @@ func (p *QueryLogger) QueryRow(query string, args ...interface{}) *sql.Row {
 
 func (p *QueryLogger) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	rid := p.queryId()
-	if logQueries {
+	if p.Trace {
 		queryStart(ctx, rid, query, args...)
 	}
 
@@ -120,7 +113,7 @@ func (p *QueryLogger) QueryRowx(query string, args ...interface{}) *sqlx.Row {
 
 func (p *QueryLogger) QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row {
 	rid := p.queryId()
-	if logQueries {
+	if p.Trace {
 		queryStart(ctx, rid, query, args...)
 	}
 
@@ -152,24 +145,21 @@ func (p *QueryLogger) queryId() int {
 
 var qstrRex = regexp.MustCompile(`[\s]+`)
 
-// queryStart logs database query beginnings. Callers gate on logQueries.
+// QueryStart logs database query beginnings; requires TRACE.
 func queryStart(ctx context.Context, rid int, qstr string, a ...interface{}) {
-	sts := []string{}
-	for i, val := range a {
-		q := qval{strconv.Itoa(i + 1), val}
-		sts = append(sts, q.String())
-	}
-	qstr = qstrRex.ReplaceAllString(qstr, " ")
-	log.For(ctx).Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Msg("query: begin")
+	log.TraceCheck(func() {
+		sts := []string{}
+		for i, val := range a {
+			q := qval{strconv.Itoa(i + 1), val}
+			sts = append(sts, q.String())
+		}
+		qstr = qstrRex.ReplaceAllString(qstr, " ")
+		log.For(ctx).Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Msg("query: begin")
+	})
 }
 
-// queryTime logs database queries and time relative to start. Gated by
-// logQueries (TL_LOG_QUERIES); LongQueryDuration, if set, restricts logging to
-// queries over the threshold.
+// QueryTime logs database queries and time relative to start; requires LogQuery or TRACE.
 func (p *QueryLogger) queryTime(ctx context.Context, rid int, t time.Time, qstr string, a ...interface{}) {
-	if !logQueries {
-		return
-	}
 	duration := time.Since(t)
 
 	// Only log if duration exceeds threshold (or threshold is zero for all queries)
@@ -177,14 +167,16 @@ func (p *QueryLogger) queryTime(ctx context.Context, rid int, t time.Time, qstr 
 		return
 	}
 
-	t2 := float64(duration.Nanoseconds()) / 1e6
-	sts := []string{}
-	for i, val := range a {
-		q := qval{strconv.Itoa(i + 1), val}
-		sts = append(sts, q.String())
-	}
-	qstr = qstrRex.ReplaceAllString(qstr, " ")
-	log.For(ctx).Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Float64("queryTime", t2).Msg("query: complete")
+	log.TraceCheck(func() {
+		t2 := float64(duration.Nanoseconds()) / 1e6
+		sts := []string{}
+		for i, val := range a {
+			q := qval{strconv.Itoa(i + 1), val}
+			sts = append(sts, q.String())
+		}
+		qstr = qstrRex.ReplaceAllString(qstr, " ")
+		log.For(ctx).Trace().Int("query_id", rid).Str("query", qstr).Strs("query_args", sts).Float64("queryTime", t2).Msg("query: complete")
+	})
 }
 
 // Some helpers

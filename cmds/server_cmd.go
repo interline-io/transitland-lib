@@ -31,6 +31,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/playground"
 	"github.com/interline-io/transitland-lib/server/rest"
+	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
 
 	// Import drivers
@@ -118,8 +119,9 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	trace := log.Logger.GetLevel() == zerolog.TraceLevel
 	longQueryDuration := time.Duration(cmd.LongQueryDuration) * time.Millisecond
-	var db tldb.Ext = dbutil.WithQueryLogger(dbx, longQueryDuration)
+	var db tldb.Ext = dbutil.WithQueryLogger(dbx, trace, longQueryDuration)
 
 	// Open redis
 	var redisClient *redis.Client
