@@ -85,6 +85,91 @@ func TestReader_TripsWithStopTimes(t *testing.T) {
 	}
 }
 
+// TestReader_TripsWithStopTimes_Grouping checks that the grouped single-pass fast
+// path and the ungrouped chunked path produce identical output for the same logical
+// feed, both in stop_times first-appearance order.
+func TestReader_TripsWithStopTimes_Grouping(t *testing.T) {
+	old := chunkSize
+	chunkSize = 3 // force several chunks for 3 trips x 2 stop_times
+	defer func() { chunkSize = old }()
+
+	writeFeed := func(t *testing.T, stopTimes [][]string) string {
+		t.Helper()
+		dir := t.TempDir()
+		w := NewDirAdapter(dir)
+		if err := w.WriteRows("trips.txt", [][]string{
+			{"route_id", "service_id", "trip_id"},
+			{"r", "s", "t1"},
+			{"r", "s", "t2"},
+			{"r", "s", "t3"},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := w.WriteRows("stop_times.txt", append(
+			[][]string{{"trip_id", "stop_id", "stop_sequence", "arrival_time", "departure_time"}},
+			stopTimes...,
+		)); err != nil {
+			t.Fatal(err)
+		}
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+	st := func(trip, seq string) []string { return []string{trip, "a", seq, "08:00:00", "08:00:00"} }
+
+	read := func(t *testing.T, dir string) ([]string, map[string][]int64) {
+		t.Helper()
+		reader, err := NewReader(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := reader.Open(); err != nil {
+			t.Fatal(err)
+		}
+		defer reader.Close()
+		var order []string
+		byTrip := map[string][]int64{}
+		for tst := range reader.TripsWithStopTimes() {
+			if !tst.Valid {
+				t.Fatalf("unexpected invalid entry with %d stop_times", len(tst.StopTimes))
+			}
+			order = append(order, tst.Trip.TripID.Val)
+			for _, s := range tst.StopTimes {
+				byTrip[tst.Trip.TripID.Val] = append(byTrip[tst.Trip.TripID.Val], s.StopSequence.Val)
+			}
+		}
+		return order, byTrip
+	}
+
+	// Same logical feed, stop_times physically grouped vs interleaved by trip_id.
+	grouped := writeFeed(t, [][]string{st("t1", "1"), st("t1", "2"), st("t2", "1"), st("t2", "2"), st("t3", "1"), st("t3", "2")})
+	interleaved := writeFeed(t, [][]string{st("t1", "1"), st("t2", "1"), st("t3", "1"), st("t1", "2"), st("t2", "2"), st("t3", "2")})
+
+	gOrder, gByTrip := read(t, grouped)
+	iOrder, iByTrip := read(t, interleaved)
+
+	want := []string{"t1", "t2", "t3"}
+	if !slices.Equal(gOrder, want) {
+		t.Errorf("grouped order = %v, want %v", gOrder, want)
+	}
+	if !slices.Equal(iOrder, want) {
+		t.Errorf("interleaved order = %v, want %v", iOrder, want)
+	}
+	// The fast path and chunked path must agree on the joined data.
+	if len(gByTrip) != len(iByTrip) {
+		t.Fatalf("trip count differs: grouped %d, interleaved %d", len(gByTrip), len(iByTrip))
+	}
+	for trip, gSeqs := range gByTrip {
+		if !slices.Equal(gSeqs, iByTrip[trip]) {
+			t.Errorf("trip %s: grouped %v != interleaved %v", trip, gSeqs, iByTrip[trip])
+		}
+		if !slices.Equal(gSeqs, []int64{1, 2}) {
+			t.Errorf("trip %s seqs = %v, want [1 2]", trip, gSeqs)
+		}
+	}
+}
+
 func TestReader_ShapesByShapeID_Order(t *testing.T) {
 	// Grouped file (example feed): shapes emit in first-appearance order via the
 	// single-pass fast path.

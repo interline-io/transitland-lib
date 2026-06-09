@@ -850,27 +850,6 @@ func newTripStopTimeState() *tripStopTimeState {
 	}
 }
 
-// tripStopTimeReader is an optional Reader capability: it yields each trip with its
-// StopTimes already attached, doing all batching/buffering internally so the copier
-// never holds the whole feed in memory and never has to know the reader's chunk size.
-// Readers that don't implement it fall back to a generic in-copier join that caches
-// trips (Copier.tripsWithStopTimes).
-//
-// Contract for the yielded channel:
-//   - Each trip is yielded once, with its stop_times sorted by stop_sequence.
-//   - Trips are yielded in a deterministic order that order-sensitive validators
-//     (e.g. block-overlap) rely on for stable attribution. The tlcsv reader uses
-//     stop_times.txt first-appearance order; the generic fallback below emits trips
-//     as their stop_times stream in. Both are deterministic for a given feed.
-//   - A trip with no stop_times is yielded with an empty StopTimes.
-//   - For a duplicate trip_id the first occurrence carries the stop_times; later
-//     occurrences are yielded with an empty StopTimes.
-//   - stop_times whose trip_id is absent from trips.txt are yielded on a zero-value
-//     Trip (empty TripID) so the caller can still validate them.
-type tripStopTimeReader interface {
-	TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes
-}
-
 // copyTripsAndStopTimes writes Trips and StopTimes. It consumes a stream of trips
 // that already carry their stop_times (from the reader when it supports it, or from
 // a generic caching join otherwise) and processes them a batch at a time, so memory
@@ -880,7 +859,7 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	if r, ok := copier.reader.(tripStopTimeReader); ok {
 		source = r.TripsWithStopTimes()
 	} else {
-		source = copier.tripsWithStopTimes()
+		source = genericTripsWithStopTimes(copier.reader)
 	}
 
 	state := newTripStopTimeState()
@@ -903,12 +882,26 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 	return nil
 }
 
-// tripsWithStopTimes is the generic fallback for readers that don't implement
+// tripStopTimeReader is an optional Reader capability: it yields each trip with its
+// StopTimes attached, batching internally so the copier never holds the whole feed in
+// memory. Readers without it fall back to genericTripsWithStopTimes.
+//
+// Contract for the yielded channel:
+//   - Each trip is yielded once, stop_times sorted by stop_sequence.
+//   - In a deterministic order that order-sensitive validators (e.g. block-overlap)
+//     rely on; the tlcsv reader uses stop_times.txt first-appearance order.
+//   - A stop_time-less trip is yielded with empty StopTimes; for a duplicate trip_id
+//     the first occurrence carries the stop_times and later ones are empty.
+//   - stop_times whose trip_id is absent from trips.txt are yielded on a zero-value
+//     Trip so the caller can still validate them.
+type tripStopTimeReader interface {
+	TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes
+}
+
+// genericTripsWithStopTimes is the generic fallback for readers that don't implement
 // tripStopTimeReader: it caches all trips, then attaches stop_times streamed from
 // StopTimesByTripID and yields them following the tripStopTimeReader contract.
-// Caching trips (not stop_times) keeps peak memory at O(trips); readers that need
-// O(1) memory should implement TripsWithStopTimes themselves.
-func (copier *Copier) tripsWithStopTimes() chan gtfs.TripStopTimes {
+func genericTripsWithStopTimes(reader adapters.Reader) chan gtfs.TripStopTimes {
 	out := make(chan gtfs.TripStopTimes, 1000)
 	go func() {
 		defer close(out)
@@ -918,7 +911,7 @@ func (copier *Copier) tripsWithStopTimes() chan gtfs.TripStopTimes {
 		trips := map[string]*gtfs.Trip{}
 		var duplicates []*gtfs.Trip
 		allIDs := map[string]struct{}{}
-		for trip := range copier.reader.Trips() {
+		for trip := range reader.Trips() {
 			tripCopy := trip
 			eid := tripCopy.EntityID()
 			allIDs[eid] = struct{}{}
@@ -931,7 +924,7 @@ func (copier *Copier) tripsWithStopTimes() chan gtfs.TripStopTimes {
 		// Stream stop_times past the cached trips. A trip_id absent from trips was
 		// either already emitted (and deleted) or never a trip; allIDs tells them apart
 		// so only true orphans are surfaced for validation.
-		for grp := range copier.reader.StopTimesByTripID() {
+		for grp := range reader.StopTimesByTripID() {
 			if len(grp) == 0 {
 				continue
 			}
