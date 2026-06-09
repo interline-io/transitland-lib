@@ -196,7 +196,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 	}
 
 	//
-	out := make(chan []gtfs.StopTime, bufferSize)
+	out := make(chan []gtfs.StopTime, groupBufferSize)
 	go func(chunks s2D, grouped bool) {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
@@ -247,7 +247,7 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 // output identical to the chunked path. If ids are given, only those trip_ids are
 // yielded.
 func (reader *Reader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes {
-	out := make(chan gtfs.TripStopTimes, bufferSize)
+	out := make(chan gtfs.TripStopTimes, groupBufferSize)
 	go func() {
 		defer close(out)
 		filter := make(map[string]struct{}, len(ids))
@@ -488,7 +488,7 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 		chunks = s2D{shapeIDs}
 	}
 	//
-	out := make(chan []gtfs.Shape, bufferSize)
+	out := make(chan []gtfs.Shape, groupBufferSize)
 	go func(chunks s2D, grouped bool) {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
