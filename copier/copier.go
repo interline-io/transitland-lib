@@ -900,7 +900,11 @@ type tripStopTimeReader interface {
 
 // genericTripsWithStopTimes is the generic fallback for readers that don't implement
 // tripStopTimeReader: it caches all trips, then attaches stop_times streamed from
-// StopTimesByTripID and yields them following the tripStopTimeReader contract.
+// StopTimesByTripID. It honors the contract's join semantics (orphans, duplicates,
+// stop_times sorted by stop_sequence) but not its emission order: that follows the
+// reader's StopTimesByTripID, which is map-based for some readers and so not
+// deterministic. Deterministic order is only guaranteed by readers that implement
+// TripsWithStopTimes natively (tlcsv).
 func genericTripsWithStopTimes(reader adapters.Reader) chan gtfs.TripStopTimes {
 	out := make(chan gtfs.TripStopTimes, 1000)
 	go func() {

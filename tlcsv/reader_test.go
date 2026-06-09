@@ -72,7 +72,8 @@ func TestReader_TripsWithStopTimes(t *testing.T) {
 		t.Errorf("trip order = %v, want %v", order, want)
 	}
 
-	// With ids, only those trips are yielded, still in trips.txt file order.
+	// With ids, only those trips are yielded, still in stop_times.txt first-appearance
+	// order (here AB1 before BFC2, matching the unfiltered order above).
 	var filtered []string
 	for tst := range reader.TripsWithStopTimes("BFC2", "AB1") {
 		if !tst.Valid || len(tst.StopTimes) == 0 {

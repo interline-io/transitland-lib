@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
-	"syscall"
 	_ "time/tzdata"
 
 	"github.com/interline-io/log"
@@ -89,10 +87,6 @@ func init() {
 				return fmt.Errorf("could not create memory profile %q: %w", memProfilePath, err)
 			}
 			memProfileFile = f
-			// SIGUSR1 dumps an on-demand heap profile to <memprofile>.sigN so the
-			// peak resident set can be captured mid-run; the at-exit profile only
-			// sees the post-free heap. Send with: kill -USR1 <pid>
-			installHeapSignalDump(memProfilePath)
 		}
 		if cpuProfilePath != "" {
 			f, err := createProfileFile(cpuProfilePath)
@@ -115,33 +109,6 @@ var (
 	cpuProfileFile *os.File
 	memProfileFile *os.File
 )
-
-// installHeapSignalDump writes a heap profile to <base>.sigN each time the
-// process receives SIGUSR1, so the peak resident set can be captured mid-run
-// (the at-exit --memprofile only sees the post-free heap). Runs for the life of
-// the process.
-func installHeapSignalDump(base string) {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGUSR1)
-	go func() {
-		n := 0
-		for range ch {
-			n++
-			path := fmt.Sprintf("%s.sig%d", base, n)
-			f, err := createProfileFile(path)
-			if err != nil {
-				log.Error().Err(err).Msgf("could not create heap profile %q", path)
-				continue
-			}
-			runtime.GC() // update in-use statistics before snapshotting the heap
-			if err := pprof.WriteHeapProfile(f); err != nil {
-				log.Error().Err(err).Msg("could not write heap profile")
-			}
-			f.Close()
-			log.Info().Msgf("wrote heap profile to %s", path)
-		}
-	}()
-}
 
 // createProfileFile opens a profile output file, creating parent directories as
 // needed so a missing dir never silently costs a long profiling run.
