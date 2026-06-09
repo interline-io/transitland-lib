@@ -12,7 +12,7 @@ import (
 func TestFinder_FindFeedVersionServiceWindow(t *testing.T) {
 	ctx := context.Background()
 	db := testutil.MustOpenTestDB(t)
-	dbf := NewFinder(dbutil.WithQueryLogger(db, false, 0))
+	dbf := NewFinder(dbutil.WithQueryLogger(db, 0))
 	testFinder := dbf
 
 	fvm := map[string]int{}
