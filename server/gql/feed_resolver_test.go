@@ -325,13 +325,13 @@ func TestFeedResolver_Cursor(t *testing.T) {
 	testcases := []testcase{
 		{
 			name:         "no cursor",
-			query:        "query{feeds(limit:10){id onestop_id}}",
+			query:        "query{feeds(limit:100){id onestop_id}}",
 			selector:     "feeds.#.onestop_id",
 			selectExpect: allIds,
 		},
 		{
 			name:         "after 0",
-			query:        "query{feeds(after: 0, limit:10){id onestop_id}}",
+			query:        "query{feeds(after: 0, limit:100){id onestop_id}}",
 			selector:     "feeds.#.onestop_id",
 			selectExpect: allIds,
 		},

@@ -153,7 +153,7 @@ func TestOperatorRequest_Pagination(t *testing.T) {
 			name:         "limit:1000",
 			h:            OperatorRequest{WithCursor: WithCursor{Limit: 1000}},
 			selector:     "operators.#.onestop_id",
-			expectLength: 6,
+			expectLength: 7,
 		},
 	}
 	for _, tc := range testcases {
