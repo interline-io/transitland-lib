@@ -2,7 +2,7 @@
 
 `transitland-lib` is a library and command-line tool for reading, writing, and processing transit data in [GTFS](http://gtfs.org) and related formats. The library is structured as a set of data sources, filters, and transformations that can be mixed together in a variety of ways to create processing pipelines. The library supports the [DMFR](https://github.com/transitland/distributed-mobility-feed-registry) format to describe feed resources.
 
-![Test & Release](https://github.com/interline-io/transitland-lib/workflows/Test%20&%20Release/badge.svg) [![GoDoc](https://godoc.org/github.com/interline-io/transitland-lib/tl?status.svg)](https://godoc.org/github.com/interline-io/transitland-lib/tl) ![Go Report Card](https://goreportcard.com/badge/github.com/interline-io/transitland-lib)
+[![Test Suite](https://github.com/interline-io/transitland-lib/actions/workflows/test.yml/badge.svg)](https://github.com/interline-io/transitland-lib/actions/workflows/test.yml) [![GoDoc](https://godoc.org/github.com/interline-io/transitland-lib/tl?status.svg)](https://godoc.org/github.com/interline-io/transitland-lib/tl) ![Go Report Card](https://goreportcard.com/badge/github.com/interline-io/transitland-lib)
 
 ## Table of Contents <!-- omit in toc -->
 <!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
@@ -24,7 +24,12 @@
 
 ### Download prebuilt binary
 
-The `transitland` binaries for Linux and macOS are attached to each [release](https://github.com/interline-io/transitland-lib/releases).
+The `transitland` binaries for Linux and macOS are attached to each [release](https://github.com/interline-io/transitland-lib/releases), along with a `SHA256SUMS` file and [SLSA build provenance](https://docs.github.com/en/actions/concepts/security/artifact-attestations). To verify a download:
+
+```bash
+gh attestation verify ./transitland-linux --repo interline-io/transitland-lib
+sha256sum -c SHA256SUMS
+```
 
 ### Install using homebrew
 
@@ -139,13 +144,23 @@ Test cases generally run within transactions; you do not need to regenerate the 
 
 ### Releases
 
-Releases follow [Semantic Versioning](https://semver.org/) conventions.
+Releases follow [Semantic Versioning](https://semver.org/) and are driven by
+[changesets](https://github.com/changesets/changesets); version numbers continue
+the existing `vX.Y.Z` tag series.
 
-To cut a new release:
+In a PR that makes a user-visible change, record it with:
 
-1. Run `go generate ./...` to update auto-generated documentation.
-2. Create a GitHub release. This will create a tag and GitHub Actions will create &amp; attach code-signed binaries.
-3. Download the files from the release, and update the [homebrew formula](https://github.com/interline-io/homebrew-transitland-lib/blob/master/transitland-lib.rb) with the updated sha256 hashes and version tag.
+```bash
+pnpm changeset
+```
+
+Merging to `main` opens a "Version Packages" PR that bumps the version and
+updates `CHANGELOG.md`. Merging *that* PR automatically tags the release, builds,
+signs, and publishes the binaries, and updates the homebrew formula — no manual
+tagging or formula edits required.
+
+See [RELEASING.md](RELEASING.md) for the full flow, build-provenance/checksum
+verification, and major-version (`/vN` module path) guidance.
 
 ## Licenses
 
