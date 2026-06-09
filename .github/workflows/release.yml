@@ -94,7 +94,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Build on Linux
         working-directory: ${{ github.workspace }}/cmd/transitland
-        run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -buildvcs=true -ldflags "-X main.tag=v${{ needs.changesets.outputs.version }}"
+        run: CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=true -ldflags "-s -w -X main.tag=v${{ needs.changesets.outputs.version }}"
       - name: Store Linux binary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -121,7 +121,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/transitland
-        run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -buildvcs=true -ldflags "-X main.tag=v${{ needs.changesets.outputs.version }}"
+        run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -trimpath -buildvcs=true -ldflags "-s -w -X main.tag=v${{ needs.changesets.outputs.version }}"
       - name: Import Code-Signing Certificates
         uses: Apple-Actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466 # v7.0.0
         with:
@@ -165,7 +165,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Build on macOS
         working-directory: ${{ github.workspace }}/cmd/transitland
-        run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -buildvcs=true -ldflags "-X main.tag=v${{ needs.changesets.outputs.version }}"
+        run: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -trimpath -buildvcs=true -ldflags "-s -w -X main.tag=v${{ needs.changesets.outputs.version }}"
       - name: Import Code-Signing Certificates
         uses: Apple-Actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466 # v7.0.0
         with:
@@ -194,7 +194,9 @@ jobs:
     if: ${{ needs.changesets.outputs.release == 'true' }}
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write      # create the tag, release, and upload assets
+      id-token: write      # OIDC identity for keyless provenance signing
+      attestations: write  # record the build provenance attestation
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -215,16 +217,24 @@ jobs:
         with:
           name: transitland-macos-apple
           path: transitland-macos-apple
-      - name: Unzip and rename macOS Intel binary
+      - name: Assemble artifacts and checksums
+        # Flatten the three binaries into dist/ with their final asset names and
+        # produce SHA256SUMS (basenames only, so `sha256sum -c` works after download).
         run: |
+          mkdir -p dist
           unzip -j transitland-macos-intel/transitland.zip -d transitland-macos-intel/
-          mv transitland-macos-intel/transitland transitland-macos-intel/transitland-macos-intel
-      - name: Unzip and rename macOS Apple Silicon binary
-        run: |
           unzip -j transitland-macos-apple/transitland.zip -d transitland-macos-apple/
-          mv transitland-macos-apple/transitland transitland-macos-apple/transitland-macos-apple
-      - name: Copy and rename Linux binary
-        run: cp transitland-linux/transitland transitland-linux/transitland-linux
+          cp transitland-linux/transitland       dist/transitland-linux
+          cp transitland-macos-intel/transitland dist/transitland-macos-intel
+          cp transitland-macos-apple/transitland dist/transitland-macos-apple
+          ( cd dist && sha256sum transitland-linux transitland-macos-intel transitland-macos-apple > SHA256SUMS )
+          cat dist/SHA256SUMS
+      - name: Attest build provenance
+        # SLSA build provenance for every binary listed in SHA256SUMS. Verify with:
+        #   gh attestation verify <file> --repo interline-io/transitland-lib
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-checksums: dist/SHA256SUMS
       - name: Create tag and GitHub Release with assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -237,9 +247,10 @@ jobs:
           gh release create "$VERSION" --target "$TARGET" \
             --title "$VERSION" \
             --notes "${NOTES:-Release $VERSION}" \
-            transitland-linux/transitland-linux \
-            transitland-macos-intel/transitland-macos-intel \
-            transitland-macos-apple/transitland-macos-apple
+            dist/transitland-linux \
+            dist/transitland-macos-intel \
+            dist/transitland-macos-apple \
+            dist/SHA256SUMS
 
   trigger-homebrew-update:
     needs: [changesets, release]

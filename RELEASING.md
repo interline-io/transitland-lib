@@ -45,6 +45,38 @@ App token is used only for the cross-repo Homebrew dispatch.
 > `package.json`, `CHANGELOG.md`, and `.changeset/*`; the full suite still runs on
 > `main` before anything is built or released.
 
+## Major versions (v2+) — read before choosing a `major` bump
+
+`transitland-lib` is both a CLI and a **Go library** imported by other projects,
+so Go module rules apply. A `major` changeset will bump to `2.0.0` and tag
+`v2.0.0` — but for Go modules **a v2+ release also requires changing the module
+path**, which is not automatic:
+
+- Update `module github.com/interline-io/transitland-lib` →
+  `.../transitland-lib/v2` in `go.mod`.
+- Update internal imports of the module path accordingly.
+- Consumers must then `import ".../transitland-lib/v2"` and `go get .../v2`.
+
+Without the `/vN` suffix, `go get` cannot resolve `v2.0.0` and downstream builds
+break. Because changesets makes a major bump look as cheap as any other, treat
+`major` as a deliberate, separately-reviewed change that includes the module-path
+move (and ideally a migration note in the changelog). For `v0`/`v1` this does not
+apply.
+
+Never delete or re-point a published tag — consumers may depend on it.
+
+## Build provenance & verification
+
+Released binaries carry [SLSA build provenance](https://docs.github.com/en/actions/concepts/security/artifact-attestations)
+(keyless, via GitHub OIDC + Sigstore) and a `SHA256SUMS` asset. To verify a
+downloaded binary:
+
+```bash
+gh attestation verify ./transitland-linux --repo interline-io/transitland-lib
+# and/or
+sha256sum -c SHA256SUMS
+```
+
 ## Dependency / supply-chain policy
 
 The changesets tooling is third-party JavaScript and is treated as untrusted:
