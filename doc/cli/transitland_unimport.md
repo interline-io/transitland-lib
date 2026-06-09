@@ -26,13 +26,6 @@ transitland unimport [flags] <fvids...>
       --schedule-only         Unimport stop times, trips, transfers, shapes, and frequencies
 ```
 
-### Options inherited from parent commands
-
-```
-      --cpuprofile file   Write a CPU profile to file
-      --memprofile file   Write a heap profile to file at exit
-```
-
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities

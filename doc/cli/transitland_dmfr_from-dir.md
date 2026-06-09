@@ -20,13 +20,6 @@ transitland dmfr from-dir [flags] <directory>
       --recursive       Search subdirectories recursively
 ```
 
-### Options inherited from parent commands
-
-```
-      --cpuprofile file   Write a CPU profile to file
-      --memprofile file   Write a heap profile to file at exit
-```
-
 ### SEE ALSO
 
 * [transitland dmfr](transitland_dmfr.md)	 - DMFR commands

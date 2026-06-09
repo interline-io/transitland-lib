@@ -85,13 +85,6 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
       --write-extra-files                  Copy additional files found in source to destination
 ```
 
-### Options inherited from parent commands
-
-```
-      --cpuprofile file   Write a CPU profile to file
-      --memprofile file   Write a heap profile to file at exit
-```
-
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities

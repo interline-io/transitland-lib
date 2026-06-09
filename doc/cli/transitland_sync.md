@@ -35,13 +35,6 @@ transitland sync [flags] <filenames...>
       --set-public              Force all synced feeds to public
 ```
 
-### Options inherited from parent commands
-
-```
-      --cpuprofile file   Write a CPU profile to file
-      --memprofile file   Write a heap profile to file at exit
-```
-
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities

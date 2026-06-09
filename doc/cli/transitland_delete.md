@@ -21,13 +21,6 @@ transitland delete [flags] <fvid>
   -h, --help                  help for delete
 ```
 
-### Options inherited from parent commands
-
-```
-      --cpuprofile file   Write a CPU profile to file
-      --memprofile file   Write a heap profile to file at exit
-```
-
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities

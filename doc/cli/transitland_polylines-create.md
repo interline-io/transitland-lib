@@ -20,13 +20,6 @@ transitland polylines-create [flags] <type> <input> <output>
   -k, --key strings    Include these keys in output
 ```
 
-### Options inherited from parent commands
-
-```
-      --cpuprofile file   Write a CPU profile to file
-      --memprofile file   Write a heap profile to file at exit
-```
-
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities
