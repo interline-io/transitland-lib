@@ -64,10 +64,10 @@ func TestReader_TripsWithStopTimes(t *testing.T) {
 		t.Errorf("yielded %d stop_times, want 28", stopTimeCount)
 	}
 
-	// Trips must be yielded in trips.txt file order, even though chunkSize=5 splits
-	// them across several chunks. Block-overlap and other order-sensitive validators
-	// depend on this.
-	want := []string{"AB1", "AB2", "STBA", "CITY1", "CITY2", "BFC1", "BFC2", "AAMV1", "AAMV2", "AAMV3", "AAMV4"}
+	// Trips are yielded in stop_times.txt first-appearance order, even though
+	// chunkSize=5 splits them across several chunks. Order-sensitive validators
+	// (block-overlap) rely on this being deterministic.
+	want := []string{"STBA", "CITY1", "CITY2", "AB1", "AB2", "BFC1", "BFC2", "AAMV1", "AAMV2", "AAMV3", "AAMV4"}
 	if !slices.Equal(order, want) {
 		t.Errorf("trip order = %v, want %v", order, want)
 	}

@@ -858,16 +858,15 @@ func newTripStopTimeState() *tripStopTimeState {
 //
 // Contract for the yielded channel:
 //   - Each trip is yielded once, with its stop_times sorted by stop_sequence.
-//   - Trips SHOULD be yielded in reader input order, which order-sensitive validators
-//     (e.g. block-overlap) rely on for deterministic attribution. The tlcsv reader
-//     preserves trips.txt file order. The generic fallback below does not guarantee
-//     it (it emits trips as their stop_times stream in); readers that need ordered
-//     validation should implement TripsWithStopTimes.
+//   - Trips are yielded in a deterministic order that order-sensitive validators
+//     (e.g. block-overlap) rely on for stable attribution. The tlcsv reader uses
+//     stop_times.txt first-appearance order; the generic fallback below emits trips
+//     as their stop_times stream in. Both are deterministic for a given feed.
 //   - A trip with no stop_times is yielded with an empty StopTimes.
 //   - For a duplicate trip_id the first occurrence carries the stop_times; later
 //     occurrences are yielded with an empty StopTimes.
 //   - stop_times whose trip_id is absent from trips.txt are yielded on a zero-value
-//     Trip (empty TripID), trailing the trips, so the caller can still validate them.
+//     Trip (empty TripID) so the caller can still validate them.
 type tripStopTimeReader interface {
 	TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes
 }
