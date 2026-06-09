@@ -25,7 +25,7 @@ the generated `.changeset/<name>.md` file with your PR.
 2. Merging that PR creates the `vX.Y.Z` git tag and GitHub Release, which builds
    and ships the binaries.
 
-You do not run `changeset version` or `changeset tag` by hand — CI does.
+You do not run `changeset version` or `changeset tag` by hand; CI does.
 
 See [`RELEASING.md`](../RELEASING.md) for the full flow and the dependency
 hardening policy.

@@ -1,9 +1,9 @@
 # Releasing transitland-lib
 
 Releases are driven by [changesets](https://github.com/changesets/changesets).
-Versioning is continuous with the historical `vX.Y.Z` git tags — changesets uses
+Versioning is continuous with the historical `vX.Y.Z` git tags. Changesets uses
 the `v`-prefixed tag format for single-package repositories, so the series simply
-continues (`v1.3.3` → `v1.3.4` → ...).
+continues (`v1.3.3` to `v1.3.4` and so on).
 
 The Go module version is still embedded at build time from the git tag (via
 `-ldflags -X main.tag=...`, read in `version.go`); `package.json` is only the
@@ -37,7 +37,7 @@ Everything runs in `.github/workflows/release.yml`, which fires only after the
    update.
 
 You never run `changeset version`, `changeset tag`, or create the Release by
-hand — CI does. The built-in `GITHUB_TOKEN` covers all in-repo steps; the GitHub
+hand; CI does. The built-in `GITHUB_TOKEN` covers all in-repo steps; the GitHub
 App token is used only for the cross-repo Homebrew dispatch.
 
 > Note: the auto-generated "Version Packages" PR does not get its own Test Suite
@@ -45,14 +45,14 @@ App token is used only for the cross-repo Homebrew dispatch.
 > `package.json`, `CHANGELOG.md`, and `.changeset/*`; the full suite still runs on
 > `main` before anything is built or released.
 
-## Major versions (v2+) — read before choosing a `major` bump
+## Major versions (v2+): read before choosing a `major` bump
 
 `transitland-lib` is both a CLI and a **Go library** imported by other projects,
 so Go module rules apply. A `major` changeset will bump to `2.0.0` and tag
-`v2.0.0` — but for Go modules **a v2+ release also requires changing the module
+`v2.0.0`, but for Go modules **a v2+ release also requires changing the module
 path**, which is not automatic:
 
-- Update `module github.com/interline-io/transitland-lib` →
+- Update `module github.com/interline-io/transitland-lib` to
   `.../transitland-lib/v2` in `go.mod`.
 - Update internal imports of the module path accordingly.
 - Consumers must then `import ".../transitland-lib/v2"` and `go get .../v2`.
@@ -63,7 +63,7 @@ break. Because changesets makes a major bump look as cheap as any other, treat
 move (and ideally a migration note in the changelog). For `v0`/`v1` this does not
 apply.
 
-Never delete or re-point a published tag — consumers may depend on it.
+Never delete or re-point a published tag; consumers may depend on it.
 
 ## Build provenance & verification
 

@@ -33,7 +33,7 @@ sha256sum -c SHA256SUMS
 
 ### Install using homebrew
 
-The `transitland` binary can be installed using homebrew. The executable is code-signed and notarized.
+The `transitland` binary can be installed using homebrew from the [interline-io/homebrew-transitland-lib](https://github.com/interline-io/homebrew-transitland-lib) tap. The executable is code-signed and notarized.
 
 ```bash
 brew install interline-io/transitland-lib/transitland-lib
@@ -121,6 +121,8 @@ We welcome the addition of more readers and writers.
 
 GitHub Actions runs all tests, stores code coverage reports as artifacts, and prepares releases.
 
+When you change anything that feeds auto-generated code or docs (GraphQL schema, CLI commands), run `go generate ./...` and commit the result as part of your PR. This is a prerequisite: CI (`check-go-generate.yml`) fails if the generated output is out of date. If your PR makes a user-visible change, also add a changeset with `pnpm changeset` (see [Releases](#releases)).
+
 For running tests locally, the following instructions should help get started:
 
 1. Set `TL_TEST_SERVER_DATABASE_URL` to the connection string to a test database
@@ -156,8 +158,9 @@ pnpm changeset
 
 Merging to `main` opens a "Version Packages" PR that bumps the version and
 updates `CHANGELOG.md`. Merging *that* PR automatically tags the release, builds,
-signs, and publishes the binaries, and updates the homebrew formula — no manual
-tagging or formula edits required.
+signs, and publishes the binaries, and updates the
+[homebrew formula](https://github.com/interline-io/homebrew-transitland-lib).
+No manual tagging or formula edits are required.
 
 See [RELEASING.md](RELEASING.md) for the full flow, build-provenance/checksum
 verification, and major-version (`/vN` module path) guidance.
