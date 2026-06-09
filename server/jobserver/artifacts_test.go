@@ -183,6 +183,23 @@ func TestArtifactsNotConfigured(t *testing.T) {
 	assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
 }
 
+func TestArtifactsStorageNotConfigured(t *testing.T) {
+	// A factory is wired but ArtifactStorage is empty. The read side could list
+	// rows, but bytes can't be served, so the deployment is treated as
+	// not-configured: a consistent 501, not a 200 list followed by a 500 on the
+	// download path from request.GetStore("").
+	owner := authn.NewCtxUser("alice", "", "")
+	factory := &fakeArtifactFactory{byID: map[int]*model.JobArtifact{}}
+	srv, backend := newArtifactTestServer(t, factory, "")
+	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner),
+		jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
+	url := srv.URL + "/queues/" + testQueue + "/jobs/" + st.Job.ID + "/artifacts"
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, owner))
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
+}
+
 // artifactWriter is a worker that publishes one artifact through the per-job
 // cfg.Artifacts handle — the worker-facing half of the feature.
 type artifactWriter struct {

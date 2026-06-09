@@ -42,10 +42,14 @@ func toArtifactResponse(a *model.JobArtifact, downloadURL string) artifactRespon
 }
 
 // requireArtifactReader returns the configured read side, or writes 501 if the
-// active deployment has no artifact store wired.
+// active deployment has no artifact store wired. A factory with no storage URL
+// counts as not-wired: the read side could list rows, but the download path
+// can't fetch bytes (request.GetStore("") fails). Gating both halves here keeps
+// all three endpoints on one consistent 501 instead of leaking a 500 from the
+// empty GetStore deeper in downloadArtifactRequest.
 func requireArtifactReader(w http.ResponseWriter, req *http.Request) (model.ArtifactReader, bool) {
 	cfg := model.ForContext(req.Context())
-	if cfg.ArtifactStoreFactory == nil {
+	if cfg.ArtifactStoreFactory == nil || cfg.ArtifactStorage == "" {
 		http.Error(w, "artifacts not configured", http.StatusNotImplemented)
 		return nil, false
 	}
