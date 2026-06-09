@@ -161,11 +161,9 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	opts.Options.AllowEntityErrors = false
 	opts.Options.AllowReferenceErrors = false
 	opts.Options.NormalizeServiceIDs = true
-	opts.Options.AddExtension(builders.NewRouteGeometryBuilder())
-	opts.Options.AddExtension(builders.NewRouteStopBuilder())
-	opts.Options.AddExtension(builders.NewRouteHeadwayBuilder())
-	opts.Options.AddExtension(builders.NewConvexHullBuilder())
-	opts.Options.AddExtension(builders.NewAgencyPlaceBuilder())
+	for _, b := range builders.DefaultImportBuilders() {
+		opts.Options.AddExtension(b)
+	}
 	fvi.InProgress = false
 
 	// Go

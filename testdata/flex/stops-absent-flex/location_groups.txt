@@ -1,0 +1,2 @@
+location_group_id,location_group_name
+lg1,Downtown Zone

@@ -8,6 +8,21 @@ import (
 	"github.com/mmcloughlin/geohash"
 )
 
+// DefaultImportBuilders returns a fresh set of the derived-entity builders the
+// importer runs (route geometries, route stops, route headways, agency convex hulls,
+// agency places). Each call returns new instances since builders accumulate state.
+// The validator can run the same set against an empty writer to exercise them without
+// a database import.
+func DefaultImportBuilders() []any {
+	return []any{
+		NewRouteGeometryBuilder(),
+		NewRouteStopBuilder(),
+		NewRouteHeadwayBuilder(),
+		NewConvexHullBuilder(),
+		NewAgencyPlaceBuilder(),
+	}
+}
+
 // Support methods and types
 
 type point = tlxy.Point

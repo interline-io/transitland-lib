@@ -10,7 +10,14 @@ import (
 )
 
 var bufferSize = 1000
-var chunkSize = 1000000
+
+// groupBufferSize is the read-ahead for the grouped streams (ShapesByShapeID,
+// StopTimesByTripID, TripsWithStopTimes), where each buffered item is a whole shape's
+// points or a trip's stop_times. Kept small so the in-flight set isn't ~1000 full
+// geometries while the writer drains a batch.
+var groupBufferSize = 32
+
+var chunkSize = 250000
 
 func init() {
 	// Register readers/writers
