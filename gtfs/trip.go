@@ -16,14 +16,14 @@ type Trip struct {
 	TripShortName        tt.String
 	DirectionID          tt.Int `enum:"0,1"`
 	BlockID              tt.String
-	ShapeID              tt.Key     `target:"shapes.txt"`
-	WheelchairAccessible tt.Int     `enum:"0,1,2"`
-	BikesAllowed         tt.Int     `enum:"0,1,2"`
+	ShapeID              tt.Key `target:"shapes.txt"`
+	WheelchairAccessible tt.Int `enum:"0,1,2"`
+	BikesAllowed         tt.Int `enum:"0,1,2"`
 	// GTFS-Flex: safe duration fields (google/transit#598)
 	// See: https://github.com/google/transit/pull/598
-	SafeDurationFactor tt.Float
-	SafeDurationOffset tt.Float
-	JourneyPatternID   tt.String `csv:"-"`
+	SafeDurationFactor   tt.Float
+	SafeDurationOffset   tt.Float
+	JourneyPatternID     tt.String  `csv:"-"`
 	JourneyPatternOffset tt.Int     `csv:"-"`
 	StopPatternID        tt.Int     `csv:"-"`
 	StopTimes            []StopTime `csv:"-" db:"-"` // for validation
