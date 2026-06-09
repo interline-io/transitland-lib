@@ -90,7 +90,7 @@ func DefaultRTJson() []RTJsonFile {
 }
 
 func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options) model.Config {
-	db = dbutil.WithQueryLogger(db, false, 0)
+	db = dbutil.WithQueryLogger(db, 0)
 
 	// Default time
 	if opts.WhenUtc == "" {

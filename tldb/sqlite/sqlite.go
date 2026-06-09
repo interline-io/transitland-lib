@@ -126,7 +126,7 @@ func (adapter *SQLiteAdapter) Tx(cb func(Adapter) error) error {
 	// Re-wrap the transaction with QueryLogger only if the original connection was wrapped
 	var txdb Ext = tx
 	if ql, ok := adapter.db.(*QueryLogger); ok {
-		txdb = &QueryLogger{Ext: tx, Trace: ql.Trace, LongQueryDuration: ql.LongQueryDuration}
+		txdb = &QueryLogger{Ext: tx, LongQueryDuration: ql.LongQueryDuration}
 	}
 	if errTx := cb(&SQLiteAdapter{DBURL: adapter.DBURL, db: txdb}); errTx != nil {
 		if commit {

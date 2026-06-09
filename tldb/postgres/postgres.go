@@ -114,7 +114,7 @@ func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	// Re-wrap the transaction with QueryLogger only if the original connection was wrapped
 	var txdb Ext = tx
 	if ql, ok := adapter.db.(*QueryLogger); ok {
-		txdb = &QueryLogger{Ext: tx, Trace: ql.Trace, LongQueryDuration: ql.LongQueryDuration}
+		txdb = &QueryLogger{Ext: tx, LongQueryDuration: ql.LongQueryDuration}
 	}
 	if err := cb(&PostgresAdapter{DBURL: adapter.DBURL, db: txdb}); err != nil {
 		if commit {
