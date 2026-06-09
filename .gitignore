@@ -21,3 +21,6 @@ tldb/test.db
 tmp
 **/tmp
 transitland
+
+# Node / changesets release tooling
+node_modules/

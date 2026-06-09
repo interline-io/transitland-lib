@@ -1,0 +1,15 @@
+# Single-package repo: the root IS the package. This file mainly carries pnpm
+# hardening settings (cooldown, no install scripts).
+packages:
+  - "."
+
+# Supply-chain cooldown: a newly published version must be at least this many
+# minutes old before pnpm will resolve it into the lockfile. Guards against
+# installing a compromised release before it can be detected/yanked. Only
+# affects resolution (local `pnpm install`/`pnpm update`), not `--frozen-lockfile`.
+minimumReleaseAge: 4320 # 3 days
+minimumReleaseAgeStrict: true
+
+# Do not run dependency lifecycle scripts (preinstall/install/postinstall).
+# Empty allowlist => no package is permitted to run build scripts.
+onlyBuiltDependencies: []

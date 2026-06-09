@@ -1,0 +1,15 @@
+{
+  "name": "transitland-lib",
+  "version": "1.3.3",
+  "private": true,
+  "description": "Release tooling (changesets) for transitland-lib. The library itself is Go; this package only manages versioning and changelogs.",
+  "packageManager": "pnpm@11.5.1",
+  "scripts": {
+    "changeset": "changeset",
+    "changeset:version": "changeset version"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "0.7.0",
+    "@changesets/cli": "2.31.0"
+  }
+}
