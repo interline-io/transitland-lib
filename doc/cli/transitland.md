@@ -5,7 +5,9 @@ transitland-lib utilities
 ### Options
 
 ```
-  -h, --help   help for transitland
+      --cpuprofile file   Write a CPU profile to file
+  -h, --help              help for transitland
+      --memprofile file   Write a heap profile to file at exit
 ```
 
 ### SEE ALSO

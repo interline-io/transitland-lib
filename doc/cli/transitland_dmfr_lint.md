@@ -18,6 +18,13 @@ transitland dmfr lint [flags] <filenames...>
   -h, --help   help for lint
 ```
 
+### Options inherited from parent commands
+
+```
+      --cpuprofile file   Write a CPU profile to file
+      --memprofile file   Write a heap profile to file at exit
+```
+
 ### SEE ALSO
 
 * [transitland dmfr](transitland_dmfr.md)	 - DMFR commands

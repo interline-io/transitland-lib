@@ -39,6 +39,13 @@ transitland completion zsh [flags]
       --no-descriptions   disable completion descriptions
 ```
 
+### Options inherited from parent commands
+
+```
+      --cpuprofile file   Write a CPU profile to file
+      --memprofile file   Write a heap profile to file at exit
+```
+
 ### SEE ALSO
 
 * [transitland completion](transitland_completion.md)	 - Generate the autocompletion script for the specified shell

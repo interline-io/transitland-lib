@@ -42,6 +42,13 @@ BART,Bay Area Rapid Transit,https://www.bart.gov/,America/Los_Angeles,,510-464-6
       --write-extra-files                   Copy additional files found in source to destination
 ```
 
+### Options inherited from parent commands
+
+```
+      --cpuprofile file   Write a CPU profile to file
+      --memprofile file   Write a heap profile to file at exit
+```
+
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities

@@ -25,6 +25,13 @@ transitland diff [flags] <feed1> <feed2> <output>
       --same      Show entities present in both files and identical
 ```
 
+### Options inherited from parent commands
+
+```
+      --cpuprofile file   Write a CPU profile to file
+      --memprofile file   Write a heap profile to file at exit
+```
+
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities

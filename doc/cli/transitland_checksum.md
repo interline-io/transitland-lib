@@ -37,6 +37,13 @@ transitland checksum <feed-path> [flags]
       --raw-zip-sha1   Output only the zip SHA1 hash
 ```
 
+### Options inherited from parent commands
+
+```
+      --cpuprofile file   Write a CPU profile to file
+      --memprofile file   Write a heap profile to file at exit
+```
+
 ### SEE ALSO
 
 * [transitland](transitland.md)	 - transitland-lib utilities
