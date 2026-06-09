@@ -8,9 +8,11 @@ BEGIN;
 -- have no row here at all. job_id is the cross-backend correlation key only
 -- (river_job id as text / local uuid / argo workflow name).
 --
--- user_id is copied from Job.Opts.UserID at create time for display/audit ONLY;
--- it is never used as an authorization gate (downloads authorize via the job's
--- AccessPolicy, not this column).
+-- user_id is copied from Job.Opts.UserID at create time and IS the artifact
+-- read-authorization gate: the jobserver serves an artifact to its submitter (or
+-- an admin), evaluated against this column rather than live job status, so
+-- artifacts stay reachable after the job is pruned from its backend. It is never
+-- exposed to API clients (json:"-"). The index on it supports owner lookups.
 CREATE TABLE tl_job_artifacts (
     id bigserial primary key NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,

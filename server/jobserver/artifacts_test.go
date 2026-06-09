@@ -135,10 +135,18 @@ func TestArtifactEndpoints(t *testing.T) {
 		assert.True(t, strings.HasSuffix(dlURL, "/artifacts/1/download"), "download_url: %q", dlURL)
 	})
 
-	t.Run("list (stranger) is 404", func(t *testing.T) {
+	t.Run("list (stranger) sees no artifacts", func(t *testing.T) {
+		// Decoupled from job status: a non-owner gets an empty list (leaking
+		// nothing about the job), not a 404 from an AccessPolicy denial.
 		resp := get(t, base, stranger)
+		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		var listResp struct {
+			Artifacts []map[string]any `json:"artifacts"`
+		}
+		require.NoError(t, json.Unmarshal(body, &listResp))
+		assert.Empty(t, listResp.Artifacts)
 	})
 
 	t.Run("download (owner) streams bytes and headers", func(t *testing.T) {
@@ -168,6 +176,60 @@ func TestArtifactEndpoints(t *testing.T) {
 		resp.Body.Close()
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
+}
+
+// TestArtifactsOutliveJob proves artifact access is decoupled from live job
+// status: an artifact whose job the backend no longer knows (pruned/expired) is
+// still listable and readable by its owner, and hidden from everyone else. No
+// job is ever submitted, so there is no status for the jobserver to consult.
+func TestArtifactsOutliveJob(t *testing.T) {
+	owner := authn.NewCtxUser("alice", "", "")
+	stranger := authn.NewCtxUser("bob", "", "")
+	factory := &fakeArtifactFactory{byID: map[int]*model.JobArtifact{}}
+	srv, _ := newArtifactTestServer(t, factory, t.TempDir())
+
+	const ghostJob = "pruned-job-123" // never submitted; backend has no status for it
+	art := &model.JobArtifact{
+		JobID: ghostJob, JobKind: "export", UserID: "alice",
+		Filename: "out.txt", ContentType: "text/plain", SizeBytes: 3, StorageKey: "k",
+	}
+	art.ID = 7
+	factory.byID[7] = art
+
+	base := srv.URL + "/queues/" + testQueue + "/jobs/" + ghostJob + "/artifacts"
+	do := func(url string, u authn.User) *http.Response {
+		resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, u))
+		require.NoError(t, err)
+		return resp
+	}
+
+	// Owner lists and reads metadata even though the job is gone.
+	resp := do(base, owner)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	var listResp struct {
+		Artifacts []map[string]any `json:"artifacts"`
+	}
+	require.NoError(t, json.Unmarshal(body, &listResp))
+	require.Len(t, listResp.Artifacts, 1)
+
+	resp = do(base+"/7", owner)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Stranger: empty list, and 404 on the specific artifact.
+	resp = do(base, stranger)
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	listResp.Artifacts = nil
+	require.NoError(t, json.Unmarshal(body, &listResp))
+	assert.Empty(t, listResp.Artifacts)
+
+	resp = do(base+"/7", stranger)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestArtifactsNotConfigured(t *testing.T) {
