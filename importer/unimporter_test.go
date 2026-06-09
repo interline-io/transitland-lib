@@ -44,7 +44,7 @@ func setupImport(ctx context.Context, t *testing.T, atx tldb.Adapter) int {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := stats.CreateFeedStats(ctx, atx, tlreader, fvid); err != nil {
+	if err := stats.CreateFeedStats(ctx, atx, tlreader, fvid, stats.WriteOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	// Import

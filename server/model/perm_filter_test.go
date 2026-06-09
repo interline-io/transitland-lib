@@ -2,6 +2,9 @@ package model
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"sort"
 	"testing"
@@ -216,7 +219,7 @@ func TestWithPermFilter(t *testing.T) {
 
 		// Simulate what WithPerms would do - it should create a new filter
 		checker := &mockChecker{feeds: []int{4, 5}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		// Original should be unchanged
 		if !reflect.DeepEqual(original.AllowedFeeds, []int{1, 2, 3}) {
@@ -240,7 +243,7 @@ func TestWithPerms(t *testing.T) {
 	t.Run("no existing filter - sets checker result", func(t *testing.T) {
 		ctx := context.Background()
 		checker := &mockChecker{feeds: []int{1, 2}, feedVersions: []int{10, 20}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
@@ -257,7 +260,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{3, 4}, feedVersions: []int{20, 30}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2, 3, 4}) {
@@ -275,7 +278,7 @@ func TestWithPerms(t *testing.T) {
 
 		// Checker returns overlapping IDs
 		checker := &mockChecker{feeds: []int{2, 3, 4}, feedVersions: []int{20, 30}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2, 3, 4}) {
@@ -292,7 +295,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{3}, feedVersions: []int{20}}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if pf == existing {
@@ -306,7 +309,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{isAdmin: true}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		// For admin, the filter should have IsGlobalAdmin=true
 		pf := PermsForContext(ctx)
@@ -321,7 +324,7 @@ func TestWithPerms(t *testing.T) {
 	t.Run("global admin - no existing filter", func(t *testing.T) {
 		ctx := context.Background()
 		checker := &mockChecker{isAdmin: true}
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if pf == nil {
@@ -332,31 +335,13 @@ func TestWithPerms(t *testing.T) {
 		}
 	})
 
-	t.Run("nil checker - returns empty filter", func(t *testing.T) {
-		ctx := context.Background()
-		ctx = WithPerms(ctx, nil)
-
-		pf := PermsForContext(ctx)
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 || len(pf.AllowedFeedVersions) != 0 {
-			t.Error("expected empty PermFilter")
-		}
-	})
-
-	t.Run("nil checker with existing filter - merges empty", func(t *testing.T) {
-		ctx := context.Background()
-		existing := &PermFilter{AllowedFeeds: []int{1, 2}, AllowedFeedVersions: []int{10}}
-		ctx = WithPermFilter(ctx, existing)
-
-		ctx = WithPerms(ctx, nil)
-
-		pf := PermsForContext(ctx)
-		// Should merge existing with empty checker result
-		if !reflect.DeepEqual(sortedInts(pf.AllowedFeeds), []int{1, 2}) {
-			t.Errorf("expected feeds [1, 2], got %v", pf.AllowedFeeds)
-		}
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
+		WithPerms(context.Background(), nil)
 	})
 
 	t.Run("existing admin + non-admin checker preserves admin", func(t *testing.T) {
@@ -365,7 +350,7 @@ func TestWithPerms(t *testing.T) {
 		ctx = WithPermFilter(ctx, existing)
 
 		checker := &mockChecker{feeds: []int{1, 2}} // non-admin checker
-		ctx = WithPerms(ctx, checker)
+		ctx, _ = WithPerms(ctx, checker)
 
 		pf := PermsForContext(ctx)
 		if !pf.IsGlobalAdmin {
@@ -393,7 +378,7 @@ func TestWithPerms_ThreadSafety(t *testing.T) {
 		ctx = WithPermFilter(ctx, original)
 
 		checker := &mockChecker{feeds: []int{4, 5}, feedVersions: []int{30}}
-		_ = WithPerms(ctx, checker)
+		_, _ = WithPerms(ctx, checker)
 
 		// Verify original was not mutated
 		if !reflect.DeepEqual(original.AllowedFeeds, originalFeedsCopy) {
@@ -403,18 +388,13 @@ func TestWithPerms_ThreadSafety(t *testing.T) {
 }
 
 func TestCheckActive(t *testing.T) {
-	t.Run("nil checker returns empty filter", func(t *testing.T) {
-		ctx := context.Background()
-		pf, err := checkActive(ctx, nil)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if pf == nil {
-			t.Error("expected non-nil PermFilter")
-		}
-		if len(pf.AllowedFeeds) != 0 {
-			t.Error("expected empty AllowedFeeds")
-		}
+	t.Run("nil checker panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic on nil checker")
+			}
+		}()
+		_, _ = checkActive(context.Background(), nil)
 	})
 
 	t.Run("checker returns feeds and versions", func(t *testing.T) {
@@ -446,4 +426,63 @@ func TestCheckActive(t *testing.T) {
 			t.Error("expected IsGlobalAdmin to be true")
 		}
 	})
+}
+
+// AddPerms must fail closed when the Checker can't resolve perms: 500 to the
+// client, downstream handler never invoked. Previously this path panicked.
+func TestAddPerms_CheckerErrorReturns500(t *testing.T) {
+	downstreamCalled := false
+	downstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		downstreamCalled = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	handler := AddPerms(&mockChecker{shouldError: true})(downstream)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	handler.ServeHTTP(rec, req)
+
+	if downstreamCalled {
+		t.Error("downstream handler should not be invoked when checker fails")
+	}
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected status 500, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("expected Content-Type application/json, got %q", ct)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("response body is not JSON: %v (%s)", err, rec.Body.String())
+	}
+	if body["error"] == "" {
+		t.Errorf("expected error field in body, got %v", body)
+	}
+}
+
+func TestAddPerms_SuccessForwardsToDownstream(t *testing.T) {
+	downstreamCalled := false
+	var seenPf *PermFilter
+	downstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		downstreamCalled = true
+		seenPf = PermsForContext(r.Context())
+		w.WriteHeader(http.StatusOK)
+	})
+
+	handler := AddPerms(&mockChecker{feeds: []int{1, 2}})(downstream)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	handler.ServeHTTP(rec, req)
+
+	if !downstreamCalled {
+		t.Fatal("downstream handler should be invoked on checker success")
+	}
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+	if !reflect.DeepEqual(sortedInts(seenPf.AllowedFeeds), []int{1, 2}) {
+		t.Errorf("expected downstream ctx to carry checker's feeds [1, 2], got %v", seenPf.AllowedFeeds)
+	}
 }

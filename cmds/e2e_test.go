@@ -141,8 +141,9 @@ func TestE2E(t *testing.T) {
 				Adapter: atx,
 				Options: fetch.StaticFetchOptions{
 					Options: fetch.Options{
-						Storage:   tmpdir,
-						FetchedAt: time.Now(),
+						Storage:                  tmpdir,
+						FetchedAt:                time.Now(),
+						AllowHTTPFetchUnfiltered: true,
 					},
 				},
 			}

@@ -12,10 +12,8 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/server/auth/auth0"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
-	"github.com/interline-io/transitland-lib/server/auth/fga"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 )
 
@@ -70,19 +68,6 @@ type FGAProvider interface {
 	DeleteTuple(context.Context, TupleKey) error
 }
 
-type CheckerConfig struct {
-	Auth0Domain       string
-	Auth0ClientID     string
-	Auth0ClientSecret string
-	Auth0Connection   string
-	FGAStoreID        string
-	FGAModelID        string
-	FGAEndpoint       string
-	FGALoadModelFile  string
-	FGALoadTestData   []TupleKey
-	GlobalAdmin       string
-}
-
 type Checker struct {
 	userClient   UserProvider
 	fgaClient    FGAProvider
@@ -90,71 +75,38 @@ type Checker struct {
 	globalAdmins []string
 }
 
-// Compile-time check that Checker implements authz.PermissionManager
-var _ authz.PermissionManager = (*Checker)(nil)
+var (
+	_ authz.AdminManager      = (*Checker)(nil)
+	_ authz.PermissionManager = (*Checker)(nil)
+	_ authz.EntityProvider    = (*Checker)(nil)
+)
 
-func NewCheckerFromConfig(ctx context.Context, cfg CheckerConfig, db sqlx.Ext) (*Checker, error) {
-	var userClient UserProvider
-	userClient = NewMockUserProvider()
-	var fgaClient FGAProvider
-	fgaClient = NewMockFGAClient()
-
-	// Use Auth0 if configured
-	if cfg.Auth0Domain != "" {
-		auth0Client, err := auth0.NewAuth0Client(cfg.Auth0Domain, cfg.Auth0ClientID, cfg.Auth0ClientSecret)
-		auth0Client.Connection = cfg.Auth0Connection
-		if err != nil {
-			return nil, err
-		}
-		userClient = auth0Client
+// NewChecker constructs an FGA-backed Checker. All arguments are required;
+// nil returns an error.
+func NewChecker(userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) (*Checker, error) {
+	if userClient == nil {
+		return nil, errors.New("azchecker.NewChecker: UserProvider must be non-nil")
 	}
-
-	// Use FGA if configured
-	if cfg.FGAEndpoint != "" {
-		fgac, err := fga.NewFGAClient(cfg.FGAEndpoint, cfg.FGAStoreID, cfg.FGAModelID)
-		if err != nil {
-			return nil, err
-		}
-		fgaClient = fgac
-		// Create test FGA environment
-		if cfg.FGALoadModelFile != "" {
-			if cfg.FGAStoreID == "" {
-				if _, err := fgac.CreateStore(ctx, "test"); err != nil {
-					return nil, err
-				}
-			}
-			if _, err := fgac.CreateModel(ctx, cfg.FGALoadModelFile); err != nil {
-				return nil, err
-			}
-		}
-		// Add test data
-		for _, tk := range cfg.FGALoadTestData {
-			ltk, found, err := ekLookup(db, tk)
-			if !found {
-				log.For(ctx).Info().Msgf("warning, tuple entities not found in database: %s", tk.String())
-			}
-			if err != nil {
-				return nil, err
-			}
-			if err := fgaClient.WriteTuple(ctx, ltk); err != nil {
-				return nil, err
-			}
-		}
+	if fgaClient == nil {
+		return nil, errors.New("azchecker.NewChecker: FGAProvider must be non-nil")
 	}
-
-	checker := NewChecker(userClient, fgaClient, db)
-	if cfg.GlobalAdmin != "" {
-		checker.globalAdmins = append(checker.globalAdmins, cfg.GlobalAdmin)
+	if db == nil {
+		return nil, errors.New("azchecker.NewChecker: db must be non-nil")
 	}
-	return checker, nil
+	return &Checker{
+		userClient: userClient,
+		fgaClient:  fgaClient,
+		db:         db,
+	}, nil
 }
 
-func NewChecker(n UserProvider, p FGAProvider, db sqlx.Ext) *Checker {
-	return &Checker{
-		userClient: n,
-		fgaClient:  p,
-		db:         db,
+// AddGlobalAdmin grants an authn user ID unconditional admin status, in
+// addition to anyone carrying the "admin" role. Empty userID is a no-op.
+func (c *Checker) AddGlobalAdmin(userID string) {
+	if userID == "" {
+		return
 	}
+	c.globalAdmins = append(c.globalAdmins, userID)
 }
 
 // ///////////////////
@@ -192,19 +144,19 @@ func (c *Checker) User(ctx context.Context, req *authz.UserRequest) (*authz.User
 // DB helpers
 // ///////////////////
 
-func (c *Checker) getTenants(ctx context.Context, ids []int64) ([]*authz.Tenant, error) {
+func (c *Checker) GetTenants(ctx context.Context, ids []int64) ([]*authz.Tenant, error) {
 	return getEntities[*authz.Tenant](ctx, c.db, ids, "tl_tenants", "id", "coalesce(tenant_name,'') as name")
 }
 
-func (c *Checker) getGroups(ctx context.Context, ids []int64) ([]*authz.Group, error) {
+func (c *Checker) GetGroups(ctx context.Context, ids []int64) ([]*authz.Group, error) {
 	return getEntities[*authz.Group](ctx, c.db, ids, "tl_groups", "id", "coalesce(group_name,'') as name")
 }
 
-func (c *Checker) getFeeds(ctx context.Context, ids []int64) ([]*authz.Feed, error) {
+func (c *Checker) GetFeeds(ctx context.Context, ids []int64) ([]*authz.Feed, error) {
 	return getEntities[*authz.Feed](ctx, c.db, ids, "current_feeds", "id", "onestop_id", "coalesce(name,'') as name")
 }
 
-func (c *Checker) getFeedVersions(ctx context.Context, ids []int64) ([]*authz.FeedVersion, error) {
+func (c *Checker) GetFeedVersions(ctx context.Context, ids []int64) ([]*authz.FeedVersion, error) {
 	return getEntities[*authz.FeedVersion](ctx, c.db, ids, "feed_versions", "id", "feed_id", "sha1", "coalesce(name,'') as name")
 }
 
@@ -354,7 +306,7 @@ func (c *Checker) Me(ctx context.Context) (*authz.UserInfo, error) {
 	for _, groupTuple := range groupTuples {
 		directGroupIds = append(directGroupIds, groupTuple.Object.ID())
 	}
-	directGroups, err := c.getGroups(ctx, directGroupIds)
+	directGroups, err := c.GetGroups(ctx, directGroupIds)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +316,7 @@ func (c *Checker) Me(ctx context.Context) (*authz.UserInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	expandedGroups, err := c.getGroups(ctx, expandedGroupIds)
+	expandedGroups, err := c.GetGroups(ctx, expandedGroupIds)
 	if err != nil {
 		return nil, err
 	}
@@ -412,6 +364,7 @@ func (c *Checker) ListObjects(ctx context.Context, objType ObjectType) ([]authz.
 	for i, id := range ids {
 		refs[i] = authz.ObjectRef{Type: objType, ID: id}
 	}
+	c.hydrateObjectRefs(ctx, refs)
 	return refs, nil
 }
 
@@ -467,11 +420,16 @@ func (c *Checker) ObjectPermissions(ctx context.Context, obj authz.ObjectRef) (*
 	}
 	c.hydrateSubjectRefs(ctx, ret.Subjects)
 
-	// Children
+	// Children — only include children the current user can view
 	if childType, ok := childTypeForType(obj.Type); ok {
 		childIds, _ := c.listSubjectRelations(ctx, entKey, childType, ParentRelation)
 		for _, id := range childIds {
-			ret.Children = append(ret.Children, authz.ObjectRef{Type: childType, ID: id})
+			childRef := authz.ObjectRef{Type: childType, ID: id}
+			childCtxTuples := c.contextualTuples(ctx, childRef)
+			childKey := newEntityID(childType, id)
+			if ok, _ := c.checkAction(ctx, CanView, childKey, childCtxTuples...); ok {
+				ret.Children = append(ret.Children, childRef)
+			}
 		}
 	}
 
@@ -711,7 +669,7 @@ func (c *Checker) hydrateSubjectRefs(ctx context.Context, refs []authz.SubjectRe
 		for id := range tenantIDs {
 			ids = append(ids, id)
 		}
-		if tenants, _ := c.getTenants(ctx, ids); tenants != nil {
+		if tenants, _ := c.GetTenants(ctx, ids); tenants != nil {
 			for _, t := range tenants {
 				if t != nil {
 					tenantNames[t.Id] = t.Name
@@ -727,7 +685,7 @@ func (c *Checker) hydrateSubjectRefs(ctx context.Context, refs []authz.SubjectRe
 		for id := range groupIDs {
 			ids = append(ids, id)
 		}
-		if groups, _ := c.getGroups(ctx, ids); groups != nil {
+		if groups, _ := c.GetGroups(ctx, ids); groups != nil {
 			for _, g := range groups {
 				if g != nil {
 					groupNames[g.Id] = g.Name
@@ -903,28 +861,22 @@ func first[T any](v []T) T {
 	return xt
 }
 
-// todo: rename to dbTestTupleLookup and make arg TestTuple
 func dbTupleLookup(t testing.TB, dbx sqlx.Ext, tk TupleKey) TupleKey {
-	var err error
-	var found bool
-	tk.Subject, found, err = dbNameToEntityKey(dbx, tk.Subject)
-	if !found && t != nil {
-		t.Logf("lookup warning: %s not found", tk.Subject.String())
+	ltk, found, err := EKLookup(dbx, tk)
+	if !found {
+		t.Logf("lookup warning: tuple entities not found: %s", tk.String())
 	}
 	if err != nil {
 		t.Log(err)
 	}
-	tk.Object, found, err = dbNameToEntityKey(dbx, tk.Object)
-	if !found && t != nil {
-		t.Logf("lookup warning: %s not found", tk.Object.String())
-	}
-	if err != nil {
-		t.Log(err)
-	}
-	return tk
+	return ltk
 }
 
-func ekLookup(dbx sqlx.Ext, tk TupleKey) (TupleKey, bool, error) {
+// EKLookup resolves symbolic entity names in a TupleKey to database IDs.
+// For example, a FeedType entity with name "CT" is looked up in current_feeds
+// and replaced with its integer ID. Returns the resolved tuple, whether both
+// sides were found, and any error.
+func EKLookup(dbx sqlx.Ext, tk TupleKey) (TupleKey, bool, error) {
 	var err error
 	var found1 bool
 	var found2 bool

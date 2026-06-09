@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/internal/util"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 )
 
@@ -75,10 +77,13 @@ func PermsForContext(ctx context.Context) *PermFilter {
 //   - No existing filter: checker results are used directly
 //   - Existing filter + checker results: creates new filter with merged, deduplicated IDs
 //   - Either filter has IsGlobalAdmin=true: resulting filter has IsGlobalAdmin=true
-func WithPerms(ctx context.Context, checker Checker) context.Context {
+//
+// Returns an error if the Checker fails to resolve the caller's permissions.
+// The returned context still has the original PermFilter (if any) untouched.
+func WithPerms(ctx context.Context, checker Checker) (context.Context, error) {
 	checkerPf, err := checkActive(ctx, checker)
 	if err != nil {
-		panic(err)
+		return ctx, err
 	}
 
 	existing, hasExisting := ctx.Value(pfCtxKey).(*PermFilter)
@@ -101,19 +106,23 @@ func WithPerms(ctx context.Context, checker Checker) context.Context {
 			AllowedFeedVersions: dedupeInts(mergedFvs),
 			IsGlobalAdmin:       existing.IsGlobalAdmin || checkerPf.IsGlobalAdmin,
 		}
-		return context.WithValue(ctx, pfCtxKey, merged)
+		return context.WithValue(ctx, pfCtxKey, merged), nil
 	}
 
 	// No existing PermFilter, set the checker's result
-	return context.WithValue(ctx, pfCtxKey, checkerPf)
+	return context.WithValue(ctx, pfCtxKey, checkerPf), nil
 }
 
 func AddPerms(checker Checker) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			r = r.WithContext(WithPerms(ctx, checker))
-			next.ServeHTTP(w, r)
+			ctx, err := WithPerms(r.Context(), checker)
+			if err != nil {
+				log.For(r.Context()).Error().Err(err).Msg("AddPerms: failed to resolve caller permissions")
+				util.WriteJsonError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
@@ -127,10 +136,10 @@ func refsToInts(refs []authz.ObjectRef) []int {
 }
 
 func checkActive(ctx context.Context, checker Checker) (*PermFilter, error) {
-	active := &PermFilter{}
 	if checker == nil {
-		return active, nil
+		panic("model.checkActive: Checker must be non-nil; install authz.DenyAllChecker for the deny-all default")
 	}
+	active := &PermFilter{}
 
 	if ok, err := checker.IsGlobalAdmin(ctx); err != nil {
 		return nil, err

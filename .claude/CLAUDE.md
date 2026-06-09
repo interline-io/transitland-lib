@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `transitland-lib` is a Go library and CLI tool for reading, writing, and processing transit data in GTFS and related formats. It provides CSV/database readers and writers, a transformation pipeline (copier), GTFS validation, a GraphQL/REST web API, and DMFR (Distributed Mobility Feed Registry) support.
 
-**Go 1.24.2** | PostgreSQL/PostGIS | SQLite (requires CGO) | GraphQL (gqlgen) | Cobra CLI
+**Go 1.26** | PostgreSQL/PostGIS | SQLite (requires CGO) | GraphQL (gqlgen) | Cobra CLI
 
 ## Build & Test Commands
 
@@ -92,6 +92,16 @@ All GTFS entities (in `gtfs/`) implement `tt.Entity` with `EntityID()` and `File
 
 - PostgreSQL migrations: `schema/postgres/migrations/*.up.pgsql` (applied via `transitland dbmigrate up`)
 - SQLite schema: `schema/sqlite/sqlite.sql` (single-file, created on demand with `-create` flag)
+
+### Building SQL
+
+NEVER use string manipulation (`fmt.Sprintf`, concatenation, etc.) to build SQL.
+Always build queries with the squirrel library (`sq`). This is non-negotiable —
+hand-built SQL strings are only acceptable in code the maintainer writes under
+direct supervision. If a query genuinely cannot be expressed in squirrel, stop
+and ask rather than reaching for string formatting. Note that constant SQL
+fragments passed to `sq.Expr(...)` (with `?` placeholders) are fine; the rule is
+about *dynamically assembling* SQL text from variables.
 
 ### GraphQL API
 

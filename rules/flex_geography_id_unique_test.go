@@ -108,4 +108,3 @@ func TestFlexGeographyIDUniqueCheck(t *testing.T) {
 		})
 	}
 }
-

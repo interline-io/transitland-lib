@@ -2,9 +2,7 @@ package gql
 
 import (
 	"context"
-	"errors"
 
-	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -17,29 +15,16 @@ func (r *queryResolver) Me(ctx context.Context) (*model.Me, error) {
 	cfg := model.ForContext(ctx)
 	me := model.Me{}
 	me.ExternalData = tt.NewMap(map[string]any{})
-	if checker := cfg.Checker; checker != nil {
-		// Use checker if available
-		cm, err := checker.Me(ctx)
-		if err != nil {
-			return nil, err
-		}
-		me.ID = cm.ID
-		me.Email = &cm.Email
-		me.Name = &cm.Name
-		me.Roles = cm.Roles
-		for k, v := range cm.ExternalData {
-			me.ExternalData.Val[k] = v
-		}
-	} else if user := authn.ForContext(ctx); user != nil {
-		// Fallback to user context
-		um := user.Email()
-		un := user.Name()
-		me.ID = user.ID()
-		me.Name = &un
-		me.Email = &um
-		me.Roles = user.Roles()
-	} else {
-		return nil, errors.New("no user")
+	cm, err := cfg.Checker.Me(ctx)
+	if err != nil {
+		return nil, err
+	}
+	me.ID = cm.ID
+	me.Email = &cm.Email
+	me.Name = &cm.Name
+	me.Roles = cm.Roles
+	for k, v := range cm.ExternalData {
+		me.ExternalData.Val[k] = v
 	}
 	return &me, nil
 }

@@ -16,6 +16,7 @@ transitland fetch [flags] [feeds...]
 
 ```
       --allow-ftp-fetch                    Allow fetching from FTP urls
+      --allow-http-fetch-unfiltered        Disable SSRF protection for http(s) fetches; allow private/loopback/metadata IPs (use only for local CLI runs)
       --allow-local-fetch                  Allow fetching from filesystem directories/zip files
       --allow-s3-fetch                     Allow fetching from S3 urls
       --create-feed                        Create feed record if not found

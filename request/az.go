@@ -22,10 +22,10 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
-func init() {
-	var _ Store = &Az{}
-	var _ Presigner = &Az{}
-}
+var (
+	_ Store     = (*Az)(nil)
+	_ Presigner = (*Az)(nil)
+)
 
 type Az struct {
 	Account      string

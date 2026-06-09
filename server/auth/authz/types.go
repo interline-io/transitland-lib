@@ -1,6 +1,9 @@
 package authz
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Action represents a permission action that can be checked.
 type Action int32
@@ -75,12 +78,12 @@ func (a *Action) UnmarshalText(text []byte) error {
 type ObjectType int32
 
 const (
-	ObjectType_empty_object  ObjectType = 0
-	ObjectType_tenant        ObjectType = 1
-	ObjectType_org           ObjectType = 2
-	ObjectType_feed          ObjectType = 3
-	ObjectType_feed_version  ObjectType = 4
-	ObjectType_user          ObjectType = 5
+	ObjectType_empty_object ObjectType = 0
+	ObjectType_tenant       ObjectType = 1
+	ObjectType_org          ObjectType = 2
+	ObjectType_feed         ObjectType = 3
+	ObjectType_feed_version ObjectType = 4
+	ObjectType_user         ObjectType = 5
 )
 
 var ObjectType_name = map[int32]string{
@@ -96,6 +99,7 @@ var ObjectType_value = map[string]int32{
 	"empty_object": 0,
 	"tenant":       1,
 	"org":          2,
+	"group":        2, // alias for "org" — the GraphQL API exposes "group"
 	"feed":         3,
 	"feed_version": 4,
 	"user":         5,
@@ -120,6 +124,26 @@ func (o *ObjectType) UnmarshalText(text []byte) error {
 		return nil
 	}
 	return fmt.Errorf("unknown object type: %s", text)
+}
+
+// UnmarshalJSON accepts either a JSON number (proto3 enum int value) or a
+// JSON string (enum name). The admin REST API migration guide documents
+// that request bodies use integer enum values; this keeps that working
+// without giving up the string form used elsewhere.
+func (o *ObjectType) UnmarshalJSON(data []byte) error {
+	var n int32
+	if err := json.Unmarshal(data, &n); err == nil {
+		if _, ok := ObjectType_name[n]; !ok {
+			return fmt.Errorf("unknown object type: %d", n)
+		}
+		*o = ObjectType(n)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("invalid object type: %s", string(data))
+	}
+	return o.UnmarshalText([]byte(s))
 }
 
 // Relation represents a relationship between entities.
@@ -174,6 +198,24 @@ func (r *Relation) UnmarshalText(text []byte) error {
 		return nil
 	}
 	return fmt.Errorf("unknown relation: %s", text)
+}
+
+// UnmarshalJSON accepts either a JSON number (proto3 enum int value) or a
+// JSON string (enum name). See ObjectType.UnmarshalJSON for rationale.
+func (r *Relation) UnmarshalJSON(data []byte) error {
+	var n int32
+	if err := json.Unmarshal(data, &n); err == nil {
+		if _, ok := Relation_name[n]; !ok {
+			return fmt.Errorf("unknown relation: %d", n)
+		}
+		*r = Relation(n)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("invalid relation: %s", string(data))
+	}
+	return r.UnmarshalText([]byte(s))
 }
 
 //////
@@ -430,4 +472,3 @@ func (x *GroupSaveRequest) GetGroup() *Group {
 type GroupSaveResponse struct {
 	Group *Group `json:"group,omitempty"`
 }
-

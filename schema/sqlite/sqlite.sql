@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "in_progress" bool,
   "exception_log" blob,
   "import_level" integer not null,
+  "import_source" text not null default 'automatic',
   "interpolated_stop_time_count" integer not null,
   "skip_entity_error_count" blob,
   "skip_entity_reference_count" blob,
@@ -553,6 +554,13 @@ CREATE TABLE IF NOT EXISTS "tl_route_geometries" (
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(route_id) references gtfs_routes(id)
 );
+CREATE TABLE IF NOT EXISTS "tl_feed_version_geohashes" (
+  "feed_version_id" integer not null,
+  "geohash" text not null,
+  "stop_count" integer not null,
+  primary key("feed_version_id", "geohash"),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
 ---------------
 CREATE TABLE IF NOT EXISTS "gtfs_translations" (
   "id" integer primary key autoincrement,
@@ -880,10 +888,14 @@ CREATE TABLE tl_materialized_active_routes (
 
     -- Search optimization
     textsearch TEXT,
-    
+
     -- Spatial column (full geometry in SQLite, simplified in PostGIS)
     geometry_simplified BLOB,
-    
+
+    -- Source entity timestamps
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
     FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
     FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
 );
@@ -921,10 +933,14 @@ CREATE TABLE tl_materialized_active_stops (
     
     -- Materialization metadata
     materialized_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    
+
     -- Search optimization
     textsearch TEXT,
-    
+
+    -- Source entity timestamps
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
     FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
     FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
 );
@@ -958,7 +974,11 @@ CREATE TABLE tl_materialized_active_agencies (
     
     -- Search optimization
     textsearch TEXT,
-    
+
+    -- Source entity timestamps
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
     FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
     FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
 );

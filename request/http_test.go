@@ -196,8 +196,9 @@ func TestHttp_DownloadAuth_429Retry(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -229,8 +230,9 @@ func TestHttp_DownloadAuth_503Retry(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -257,8 +259,9 @@ func TestHttp_DownloadAuth_429MaxRetriesExceeded(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      2,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond},
+		MaxRetries:          2,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -288,8 +291,9 @@ func TestHttp_DownloadAuth_429WithRetryAfterHeader(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -318,8 +322,9 @@ func TestHttp_DownloadAuth_ContextCancellation(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{1 * time.Second, 2 * time.Second, 3 * time.Second},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{1 * time.Second, 2 * time.Second, 3 * time.Second},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -339,8 +344,9 @@ func TestHttp_DownloadAuth_NonRetryableError(t *testing.T) {
 	defer ts.Close()
 
 	h := &Http{
-		MaxRetries:      3,
-		BackoffSchedule: []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		MaxRetries:          3,
+		BackoffSchedule:     []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond},
+		AllowHTTPUnfiltered: true,
 	}
 
 	ctx := context.Background()
@@ -351,20 +357,79 @@ func TestHttp_DownloadAuth_NonRetryableError(t *testing.T) {
 	assert.Nil(t, body)
 }
 
+func TestHttp_DownloadAuth_SSRFRejectsLoopbackByDefault(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}))
+	defer ts.Close()
+
+	h := &Http{}
+	body, _, err := h.DownloadAuth(context.Background(), ts.URL, dmfr.FeedAuthorization{})
+	assert.Error(t, err, "default Http should reject loopback")
+	assert.Nil(t, body)
+}
+
+func TestHttp_DownloadAuth_AllowHTTPUnfilteredPermitsLoopback(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}))
+	defer ts.Close()
+
+	h := &Http{AllowHTTPUnfiltered: true}
+	body, statusCode, err := h.DownloadAuth(context.Background(), ts.URL, dmfr.FeedAuthorization{})
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.NotNil(t, body)
+	if body != nil {
+		body.Close()
+	}
+}
+
 func TestHttp_DefaultValues(t *testing.T) {
 	h := &Http{}
 
 	assert.Equal(t, defaultMaxRetries, h.getMaxRetries())
 	assert.Equal(t, defaultBackoffSchedule, h.getBackoffSchedule())
+	assert.Equal(t, defaultMaxRedirects, h.getMaxRedirects())
 }
 
 func TestHttp_CustomValues(t *testing.T) {
 	customSchedule := []time.Duration{5 * time.Second, 15 * time.Second, 45 * time.Second}
 	h := &Http{
 		MaxRetries:      10,
+		MaxRedirects:    5,
 		BackoffSchedule: customSchedule,
 	}
 
 	assert.Equal(t, 10, h.getMaxRetries())
+	assert.Equal(t, 5, h.getMaxRedirects())
 	assert.Equal(t, customSchedule, h.getBackoffSchedule())
+}
+
+func TestHttp_DownloadAuth_RedirectLoop(t *testing.T) {
+	var requestCount int32
+
+	// Server redirects to itself indefinitely (mimics an OIDC login loop
+	// that never completes without valid auth).
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&requestCount, 1)
+		// Rotate a query param so URL-equality cycle detection wouldn't trigger.
+		w.Header().Set("Location", r.URL.Path+"?n="+fmt.Sprint(atomic.LoadInt32(&requestCount)))
+		w.WriteHeader(http.StatusFound)
+	}))
+	defer ts.Close()
+
+	h := &Http{MaxRedirects: 3, AllowHTTPUnfiltered: true}
+
+	ctx := context.Background()
+	body, _, err := h.DownloadAuth(ctx, ts.URL, dmfr.FeedAuthorization{})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stopped after 3 redirects")
+	assert.Nil(t, body)
+	// CheckRedirect fires when len(via) >= MaxRedirects, so the initial request
+	// plus (MaxRedirects - 1) redirects are followed before the cap triggers.
+	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
 }

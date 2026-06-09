@@ -1,10 +1,10 @@
 ## transitland dbmigrate
 
-Perform database migrations and load Natural Earth geographies
+Perform database migrations
 
 ### Synopsis
 
-Perform database migrations and load Natural Earth geographies
+Perform database migrations
 
 
 

@@ -3,6 +3,7 @@ package tt
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"reflect"
 )
 
 type Option[T any] struct {
@@ -12,6 +13,13 @@ type Option[T any] struct {
 
 func NewOption[T any](v T) Option[T] {
 	return Option[T]{Val: v, Valid: true}
+}
+
+// OptionType returns the reflect.Type of the wrapped value (T), exposing
+// the inner type to reflection-based callers without leaking struct layout.
+func (Option[T]) OptionType() reflect.Type {
+	var zero T
+	return reflect.TypeOf(zero)
 }
 
 func (r Option[T]) IsValid() bool {

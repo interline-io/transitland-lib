@@ -16,7 +16,6 @@ transitland server [flags]
 
 ```
       --dburl string                      Database URL (default: $TL_DATABASE_URL)
-      --disable-auth                      Disable feed authorization checks (treat all feeds as public)
   -h, --help                              help for server
       --load-admins                       Load admin polygons from database into memory
       --loader-batch-size int             GraphQL Loader batch size (default 100)
@@ -30,6 +29,7 @@ transitland server [flags]
       --secrets string                    DMFR file containing secrets
       --storage string                    Static storage backend
       --timeout int                        (default 60)
+      --use-geohash-filter                Filter feed/feed_version bbox queries by precomputed stop geohash cells (requires populated tl_feed_version_geohashes)
       --use-materialized                  Use materialized views for active entities
       --validate-large-files              Allow validation of large files
 ```

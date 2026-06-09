@@ -38,6 +38,10 @@ func NewFinder(cache Cache, db tldb.Ext) *Finder {
 	}
 }
 
+func (f *Finder) Close() error {
+	return f.cache.Close()
+}
+
 func (f *Finder) AddData(ctx context.Context, topic string, data []byte) error {
 	return f.cache.AddData(ctx, topic, data)
 }

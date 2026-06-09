@@ -189,7 +189,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.DatasetID, p.Where, p.Limit
 			},
 		),
-		CensusTableByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.CensusTableByIDs),
+		CensusTableByIDs:   withWaitAndCapacity(waitTime, batchSize, dbf.CensusTableByIDs),
 		CensusLayersByIDs:  withWaitAndCapacity(waitTime, batchSize, dbf.CensusLayersByIDs),
 		CensusSourcesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.CensusSourcesByIDs),
 		CensusGeographiesBySourceIDs: withWaitAndCapacityGroup(waitTime, batchSize,
@@ -475,12 +475,13 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 func loaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This is per request scoped loaders/cache
-		// Is this OK to use as a long term cache?
 		ctx := r.Context()
 		cfg := model.ForContext(ctx)
-		loaders := NewLoaders(cfg.Finder, cfg.LoaderBatchSize, cfg.LoaderStopTimeBatchSize)
-		nextCtx := context.WithValue(ctx, loadersKey, loaders)
-		r = r.WithContext(nextCtx)
+		if cfg.Finder != nil {
+			loaders := NewLoaders(cfg.Finder, cfg.LoaderBatchSize, cfg.LoaderStopTimeBatchSize)
+			ctx = context.WithValue(ctx, loadersKey, loaders)
+		}
+		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -626,7 +627,13 @@ func paramGroupQuery[
 			// Run query function
 			ents, err := queryFunc(ctx, pgroup.Limit, pgroup.Where, pgroup.Keys)
 			if err != nil {
-				panic(err)
+				// Surface the failure to every caller in this group via the
+				// per-index errs slice (the existing dataloader path consumes
+				// errs[idx]), and skip merging results for this group.
+				for _, idx := range pgroup.Index {
+					errs[idx] = err
+				}
+				continue
 			}
 
 			// Group using keyFunc and merge into output

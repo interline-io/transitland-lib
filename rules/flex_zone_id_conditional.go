@@ -54,4 +54,3 @@ func (e *FlexZoneIDConditionalCheck) Validate(ent tt.Entity) []error {
 
 	return nil
 }
-

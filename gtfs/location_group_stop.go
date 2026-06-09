@@ -6,8 +6,8 @@ import (
 
 // LocationGroupStop location_group_stops.txt
 type LocationGroupStop struct {
-	LocationGroupID tt.Key `csv:",required" target:"location_groups.txt"`
-	StopID          tt.Key `csv:",required" target:"stops.txt"`
+	LocationGroupID tt.Key `csv:",required" target:"location_groups.txt" standardized_sort:"1"`
+	StopID          tt.Key `csv:",required" target:"stops.txt" standardized_sort:"2"`
 	tt.BaseEntity
 }
 

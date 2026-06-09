@@ -8,6 +8,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/request"
 )
 
 func TestReader(t *testing.T) {
@@ -22,7 +23,9 @@ func TestReader(t *testing.T) {
 	defer ts.Close()
 	//
 	tsa := getTestAdapters()
-	tsa["URL"] = func() Adapter { return &URLAdapter{url: ts.URL} }
+	tsa["URL"] = func() Adapter {
+		return &URLAdapter{url: ts.URL, reqOpts: []request.RequestOption{request.WithAllowHTTPUnfiltered}}
+	}
 	for k, v := range tsa {
 		t.Run(k, func(t *testing.T) {
 			testreader.TestReader(t, testreader.ExampleDir, func() adapters.Reader {

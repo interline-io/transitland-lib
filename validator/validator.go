@@ -49,6 +49,7 @@ type Options struct {
 	ValidateRealtimeMessages []string
 	IncludeRealtimeJson      bool
 	MaxRTMessageSize         uint64
+	AllowHTTPFetchUnfiltered bool
 	EvaluateAt               time.Time
 	EvaluateAtTimezone       string
 	// ErrorThreshold sets the maximum error percentage (0-100) allowed per file.
@@ -327,7 +328,11 @@ func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.T
 		Url: fn,
 	}
 	var rterrs []error
-	msg, err := rt.ReadURL(ctx, fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
+	rtOpts := []request.RequestOption{request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal}
+	if v.Options.AllowHTTPFetchUnfiltered {
+		rtOpts = append(rtOpts, request.WithAllowHTTPUnfiltered)
+	}
+	msg, err := rt.ReadURL(ctx, fn, rtOpts...)
 	if err != nil {
 		rterrs = append(rterrs, err)
 	} else {

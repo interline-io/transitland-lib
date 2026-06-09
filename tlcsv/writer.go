@@ -147,6 +147,11 @@ func (writer *Writer) addBatch(ents []tt.Entity) ([]string, error) {
 		h2 := append([]string{}, header...)
 		h2 = append(h2, extraHeader...)
 		writer.WriterAdapter.WriteRows(efn, [][]string{h2})
+		if reg, okSortReg := writer.WriterAdapter.(sortColumnRegistrar); okSortReg {
+			if cols := MapperCache.GetSortColumns(ent); len(cols) > 0 {
+				reg.registerSortColumns(efn, cols)
+			}
+		}
 	}
 	rows := [][]string{}
 	for _, ent := range ents {
@@ -216,6 +221,12 @@ func (writer *Writer) addBatchGeoJSON(ents []tt.Entity, filename string) ([]stri
 	}
 
 	return eids, nil
+}
+
+func (writer *Writer) SetStandardizedSortOptions(opts adapters.StandardizedSortOptions) {
+	if s, ok := writer.WriterAdapter.(adapters.SortableWriter); ok {
+		s.SetStandardizedSortOptions(opts)
+	}
 }
 
 type canFlatten interface {

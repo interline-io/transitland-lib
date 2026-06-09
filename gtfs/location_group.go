@@ -6,7 +6,7 @@ import (
 
 // LocationGroup location_groups.txt
 type LocationGroup struct {
-	LocationGroupID   tt.String `csv:",required"`
+	LocationGroupID   tt.String `csv:",required" standardized_sort:"1"`
 	LocationGroupName tt.String
 	tt.BaseEntity
 }
@@ -26,4 +26,3 @@ func (ent *LocationGroup) Filename() string {
 func (ent *LocationGroup) TableName() string {
 	return "gtfs_location_groups"
 }
-

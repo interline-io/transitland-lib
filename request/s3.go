@@ -18,10 +18,10 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
-func init() {
-	var _ Store = &S3{}
-	var _ Presigner = &S3{}
-}
+var (
+	_ Store     = (*S3)(nil)
+	_ Presigner = (*S3)(nil)
+)
 
 func trimSlash(v string) string {
 	return strings.TrimPrefix(strings.TrimSuffix(v, "/"), "/")

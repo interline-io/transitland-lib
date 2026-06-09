@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -78,6 +77,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
 	fl.BoolVar(&cmd.Options.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls")
+	fl.BoolVar(&cmd.Options.AllowHTTPFetchUnfiltered, "allow-http-fetch-unfiltered", false, "Disable SSRF protection for http(s) fetches; allow private/loopback/metadata IPs (use only for local CLI runs)")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
@@ -342,30 +342,4 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		}
 	}
 	wg.Done()
-}
-
-// parseSecretEnv parses a secret-env argument in the format "target:ENV_VAR"
-// where target is either a feed_id or a filename (detected by .json suffix).
-// The secret key value is read from the environment variable.
-func parseSecretEnv(arg string) (dmfr.Secret, error) {
-	parts := strings.SplitN(arg, ":", 2)
-	if len(parts) != 2 {
-		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: expected target:ENV_VAR", arg)
-	}
-	target := parts[0]
-	envVar := parts[1]
-	if target == "" || envVar == "" {
-		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: target and ENV_VAR must not be empty", arg)
-	}
-	key := os.Getenv(envVar)
-	if key == "" {
-		return dmfr.Secret{}, fmt.Errorf("environment variable %q is not set or empty", envVar)
-	}
-	secret := dmfr.Secret{Key: key}
-	if strings.HasSuffix(target, ".json") {
-		secret.Filename = target
-	} else {
-		secret.FeedID = target
-	}
-	return secret, nil
 }

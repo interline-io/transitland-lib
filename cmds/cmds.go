@@ -3,8 +3,11 @@ package cmds
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+
+	"github.com/interline-io/transitland-lib/dmfr"
 )
 
 // parseErrorThresholds parses a slice of "filename:percent" strings into a map.
@@ -39,4 +42,29 @@ func parseErrorThresholds(thresholds []string) (map[string]float64, error) {
 		result[filename] = percent
 	}
 	return result, nil
+}
+
+// parseSecretEnv parses "target:ENV_VAR"; target is a feed_id, or a filename
+// if it ends in .json. The key is read from the named env var.
+func parseSecretEnv(arg string) (dmfr.Secret, error) {
+	parts := strings.SplitN(arg, ":", 2)
+	if len(parts) != 2 {
+		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: expected target:ENV_VAR", arg)
+	}
+	target := parts[0]
+	envVar := parts[1]
+	if target == "" || envVar == "" {
+		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: target and ENV_VAR must not be empty", arg)
+	}
+	key := os.Getenv(envVar)
+	if key == "" {
+		return dmfr.Secret{}, fmt.Errorf("environment variable %q is not set or empty", envVar)
+	}
+	secret := dmfr.Secret{Key: key}
+	if strings.HasSuffix(target, ".json") {
+		secret.Filename = target
+	} else {
+		secret.FeedID = target
+	}
+	return secret, nil
 }

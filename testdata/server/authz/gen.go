@@ -1,2 +1,2 @@
-//go:generate /bin/sh -c "npx @openfga/syntax-transformer transform --from dsl --inputFile tls.model > tls.json"
+//go:generate go run ../../../tools/fgagen tls.model tls.json
 package authz

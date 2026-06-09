@@ -50,6 +50,7 @@ func GetFeedVersionTables() FeedVersionTables {
 			"feed_version_agency_onestop_ids",
 			"feed_version_route_onestop_ids",
 			"feed_version_stop_onestop_ids",
+			"tl_feed_version_geohashes",
 		},
 		ImportDerivedTables: []string{
 			"tl_feed_version_geometries",

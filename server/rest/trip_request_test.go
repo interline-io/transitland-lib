@@ -265,7 +265,7 @@ func TestTripRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional yes",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "yes"}}, selector: "trips.#.trip_id",
-			expectLength: 14718,
+			expectLength: 31232,
 		},
 		{
 			name: "license:share_alike_optional no",
@@ -275,12 +275,12 @@ func TestTripRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional exclude_no",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "trips.#.trip_id",
-			expectLength: 16292,
+			expectLength: 32806,
 		},
 		{
 			name: "license:commercial_use_allowed yes",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "yes"}}, selector: "trips.#.trip_id",
-			expectLength: 14718,
+			expectLength: 31232,
 		},
 		{
 			name: "license:commercial_use_allowed no",
@@ -290,12 +290,12 @@ func TestTripRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed exclude_no",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "trips.#.trip_id",
-			expectLength: 16292,
+			expectLength: 32806,
 		},
 		{
 			name: "license:create_derived_product yes",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "yes"}}, selector: "trips.#.trip_id",
-			expectLength: 14718,
+			expectLength: 31232,
 		},
 		{
 			name: "license:create_derived_product no",
@@ -305,7 +305,7 @@ func TestTripRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product exclude_no",
 			h:    TripRequest{WithCursor: WithCursor{Limit: 100_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "trips.#.trip_id",
-			expectLength: 16292,
+			expectLength: 32806,
 		},
 	}
 	for _, tc := range testcases {

@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ type RebuildStatsOptions struct {
 	Storage                 string
 	ValidationReportStorage string
 	SaveValidationReport    bool
+	Stats                   []string
 }
 
 type RebuildStatsResult struct {
@@ -61,6 +63,7 @@ func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
+	fl.StringSliceVar(&cmd.Options.Stats, "stats", nil, "Subset of stats to rebuild (default all); valid: "+strings.Join(stats.AllStats, ","))
 }
 
 // Parse command line flags
@@ -92,6 +95,9 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 			}
 		}
 	}
+	if err := stats.ValidateStatNames(cmd.Options.Stats); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -105,11 +111,15 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
-	// Query to get FVs to import
+	// Match import_cmd's default-query filter: skip soft-deleted and storage-less FVs.
 	q := cmd.Adapter.Sqrl().
 		Select("feed_versions.id").
 		From("feed_versions").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		Where("current_feeds.deleted_at IS NULL").
+		Where("feed_versions.deleted_at IS NULL").
+		Where("feed_versions.sha1 <> ''").
+		Where("feed_versions.file <> ''").
 		OrderBy("feed_versions.id desc")
 	if len(cmd.FeedIDs) > 0 {
 		// Limit to specified feeds
@@ -132,6 +142,13 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if expected := explicitSelectorCount(cmd.FVIDs, cmd.FVSHA1); expected > len(qrs) {
+		log.For(ctx).Warn().
+			Int("requested", expected).
+			Int("processed", len(qrs)).
+			Int("skipped", expected-len(qrs)).
+			Msg("some explicitly requested feed versions were skipped (soft-deleted, missing sha1/file, or not found)")
+	}
 	///////////////
 	// Here we go
 	log.For(ctx).Info().Msgf("Rebuilding stats for %d feed versions", len(qrs))
@@ -143,6 +160,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 			Storage:                 cmd.Options.Storage,
 			ValidationReportStorage: cmd.Options.ValidationReportStorage,
 			SaveValidationReport:    cmd.Options.SaveValidationReport,
+			Stats:                   cmd.Options.Stats,
 		}
 	}
 	close(jobs)
@@ -154,6 +172,27 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	}
 	wg.Wait()
 	return nil
+}
+
+// explicitSelectorCount returns the number of distinct explicit FV selectors
+// when exactly one of fvids/sha1s is set. When both or neither are set,
+// returns 0: with both, they are AND'd at the SQL level and "requested count"
+// isn't meaningful; with neither, no explicit selection was made.
+func explicitSelectorCount(fvids, sha1s []string) int {
+	var sel []string
+	switch {
+	case len(fvids) > 0 && len(sha1s) == 0:
+		sel = fvids
+	case len(sha1s) > 0 && len(fvids) == 0:
+		sel = sha1s
+	default:
+		return 0
+	}
+	seen := map[string]bool{}
+	for _, v := range sel {
+		seen[v] = true
+	}
+	return len(seen)
 }
 
 func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryrun bool, jobs <-chan RebuildStatsOptions, results chan<- RebuildStatsResult, wg *sync.WaitGroup) {
@@ -209,7 +248,7 @@ func rebuildStatsMain(ctx context.Context, adapter tldb.Adapter, opts RebuildSta
 	}
 	// Save
 	errImport := adapter.Tx(func(atx tldb.Adapter) error {
-		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID); err != nil {
+		if err := stats.CreateFeedStats(ctx, atx, reader, fv.ID, stats.WriteOptions{Stats: opts.Stats}); err != nil {
 			return err
 		}
 		if opts.SaveValidationReport {
