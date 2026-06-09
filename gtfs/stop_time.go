@@ -29,12 +29,17 @@ type StopTime struct {
 	EndPickupDropOffWindow   tt.Seconds
 	PickupBookingRuleID      tt.Key `target:"booking_rules.txt"`
 	DropOffBookingRuleID     tt.Key `target:"booking_rules.txt"`
-	// Deprecated: safe_duration fields moved to trips.txt per google/transit#598.
-	// Kept for backward compat with older feeds that still produce these on stop_times.
+	// Deprecated: safe_duration_factor / safe_duration_offset were adopted into GTFS
+	// on trips.txt (google/transit#598, merged 2026-04), not stop_times.txt. The
+	// GTFS-Flex proposal originally placed them on stop_times.txt, and some feeds
+	// still emit them there, so they are retained here for backward compat. See
+	// gtfs.Trip for the spec-conformant fields.
 	SafeDurationFactor tt.Float
 	SafeDurationOffset tt.Float
-	// Deprecated: mean_duration fields removed from spec per gtfs-flex#73.
-	// Kept for backward compat with older feeds.
+	// Deprecated: mean_duration_factor / mean_duration_offset remain only in the
+	// (unadopted) GTFS-Flex proposal on stop_times.txt; they were not part of the
+	// GTFS adoption (google/transit#598) and have no official home. Retained for
+	// backward compat with feeds that still emit them on stop_times.
 	MeanDurationFactor tt.Float
 	MeanDurationOffset tt.Float
 	tt.MinEntity
