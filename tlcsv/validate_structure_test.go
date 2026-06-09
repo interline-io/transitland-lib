@@ -52,6 +52,14 @@ func TestValidateStructure_Stops(t *testing.T) {
 			wantStopsRequired: false,
 		},
 		{
+			// stops.txt omitted with location_groups.txt as the ONLY flex
+			// alternative (no locations.geojson). Isolates the location_groups
+			// branch of the alternative-present check.
+			name:              "absent stops with location_groups only",
+			dir:               "testdata/flex/stops-absent-locationgroups-only",
+			wantStopsRequired: false,
+		},
+		{
 			// stops.txt omitted and no flex alternative present: still an error.
 			name:              "absent stops without flex alternative",
 			dir:               "testdata/flex/stops-absent-no-flex",
