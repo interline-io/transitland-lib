@@ -31,9 +31,10 @@ type Config struct {
 	Storage                  string
 	RTStorage                string
 	ArtifactStorage          string // job-artifact storage URL; no fallback to Storage
-	// Artifacts is the executing job's handle, installed by the job middleware;
-	// nil outside a job (e.g. HTTP requests).
-	Artifacts               ArtifactStore
+	// ArtifactStoreFactory is the unscoped read/serve side (jobserver) and the
+	// producer of per-job scoped handles (see JobArtifacts). The per-job handle
+	// is intentionally NOT a Config field: it is execution-scoped, resolved from
+	// the job's JobMeta rather than stored on this process-wide struct.
 	ArtifactStoreFactory    ArtifactStoreFactory
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
@@ -60,6 +61,24 @@ func ForContext(ctx context.Context) Config {
 func WithConfig(ctx context.Context, cfg Config) context.Context {
 	r := context.WithValue(ctx, finderCtxKey, cfg)
 	return r
+}
+
+// JobArtifacts returns an ArtifactStore scoped to the executing job, or nil when
+// there is no job on the context (e.g. an HTTP request) or no artifact storage
+// is configured for this deployment. Workers call this to publish files
+// attributed to the job they are running; the scope (id/user/kind) comes from
+// the runner-stamped JobMeta, so a worker cannot misattribute a file to another
+// job. A non-nil return means "in a job AND artifacts are available here."
+func JobArtifacts(ctx context.Context) ArtifactStore {
+	cfg := ForContext(ctx)
+	if cfg.ArtifactStoreFactory == nil {
+		return nil
+	}
+	m, ok := jobs.JobMetaFromContext(ctx)
+	if !ok {
+		return nil
+	}
+	return cfg.ArtifactStoreFactory.For(m.ID, m.UserID, m.Kind)
 }
 
 func AddConfig(cfg Config) func(http.Handler) http.Handler {

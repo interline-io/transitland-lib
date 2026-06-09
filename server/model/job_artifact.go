@@ -43,8 +43,8 @@ type ArtifactOpts struct {
 }
 
 // ArtifactStore is the per-job handle a worker uses to publish files. A scoped
-// instance (bound to the executing job's id/user/kind) is installed on
-// Config.Artifacts by the job middleware.
+// instance (bound to the executing job's id/user/kind) is resolved by
+// JobArtifacts(ctx) from the job's JobMeta and Config.ArtifactStoreFactory.
 type ArtifactStore interface {
 	CreateFile(ctx context.Context, opts ArtifactOpts, localPath string) (*JobArtifact, error)
 	CreateReader(ctx context.Context, opts ArtifactOpts, r io.Reader) (*JobArtifact, error)

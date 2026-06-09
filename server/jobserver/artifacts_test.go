@@ -200,15 +200,15 @@ func TestArtifactsStorageNotConfigured(t *testing.T) {
 	assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
 }
 
-// artifactWriter is a worker that publishes one artifact through the per-job
-// cfg.Artifacts handle — the worker-facing half of the feature.
+// artifactWriter is a worker that publishes one artifact through the resolver
+// model.JobArtifacts(ctx) — the worker-facing half of the feature.
 type artifactWriter struct {
 	filename, content string
 }
 
 func (w *artifactWriter) Kind() string { return "artifact-writer" }
 func (w *artifactWriter) Run(ctx context.Context) error {
-	store := model.ForContext(ctx).Artifacts
+	store := model.JobArtifacts(ctx)
 	if store == nil {
 		return errors.New("no artifact store in worker context")
 	}
@@ -216,26 +216,24 @@ func (w *artifactWriter) Run(ctx context.Context) error {
 	return err
 }
 
-// jobConfigMiddleware installs cfg plus the per-job artifact handle into the
-// worker context, standing in for the config + artifacts job middleware that
-// lives in the tlv2 deployment layer.
-func jobConfigMiddleware(cfg model.Config, factory model.ArtifactStoreFactory) jobs.Middleware {
-	return func(inner jobs.Worker, j jobs.Job) jobs.Worker {
-		return &configWorker{Worker: inner, cfg: cfg, factory: factory, job: j}
+// jobConfigMiddleware installs cfg into the worker context, standing in for the
+// config job middleware in the tlv2 deployment layer. The per-job artifact scope
+// comes from the JobMeta the runner stamps, so model.JobArtifacts(ctx) resolves
+// the scoped store from cfg.ArtifactStoreFactory — no artifact-specific
+// middleware needed.
+func jobConfigMiddleware(cfg model.Config) jobs.Middleware {
+	return func(inner jobs.Worker, _ jobs.Job) jobs.Worker {
+		return &configWorker{Worker: inner, cfg: cfg}
 	}
 }
 
 type configWorker struct {
 	jobs.Worker
-	cfg     model.Config
-	factory model.ArtifactStoreFactory
-	job     jobs.Job
+	cfg model.Config
 }
 
 func (w *configWorker) Run(ctx context.Context) error {
-	cfg := w.cfg
-	cfg.Artifacts = w.factory.For(w.job.ID, w.job.Opts.UserID, w.job.Kind)
-	return w.Worker.Run(model.WithConfig(ctx, cfg))
+	return w.Worker.Run(model.WithConfig(ctx, w.cfg))
 }
 
 // TestArtifactEndToEnd runs the whole vertical slice against a real store:
@@ -265,7 +263,7 @@ func TestArtifactEndToEnd(t *testing.T) {
 		ArtifactStoreFactory: factory,
 		ArtifactStorage:      dir,
 	}
-	runner.Use(jobConfigMiddleware(cfg, factory))
+	runner.Use(jobConfigMiddleware(cfg))
 
 	h, err := NewServer()
 	require.NoError(t, err)
