@@ -1,8 +1,7 @@
-// Package artifactstore implements model.ArtifactStoreFactory: it persists job
-// artifacts as files in the configured request.Store and as rows in the
-// tl_job_artifacts table. It mirrors validator.SaveValidationReport (upload the
-// blob, then insert the row) and the server/finders/actions layering (a thin
-// type over a tldb.Ext plus a storage URL).
+// Package artifactstore persists job artifacts (a blob in request.Store plus a
+// tl_job_artifacts row). It follows validator.SaveValidationReport: upload the
+// blob first and insert the row second, so a failure can't leave a row pointing
+// at nothing.
 package artifactstore
 
 import (
@@ -32,8 +31,7 @@ const artifactPrefix = "job-artifacts"
 
 const defaultContentType = "application/octet-stream"
 
-// Store is the unscoped factory + read side. It satisfies
-// model.ArtifactStoreFactory.
+// Store is the unscoped factory and read side.
 type Store struct {
 	dbx        tldb.Ext
 	storageURL string
@@ -44,14 +42,15 @@ var (
 	_ model.ArtifactStore        = (*scoped)(nil)
 )
 
-// NewStore returns a Store backed by the given database handle and storage URL.
-// storageURL is the resolved Config.ArtifactStorage (defaults to Config.Storage).
+// NewStore binds the store to a db handle and the resolved Config.ArtifactStorage
+// URL. An empty URL is allowed; writes then fail loudly (see create) rather than
+// falling back to feed-version storage.
 func NewStore(dbx tldb.Ext, storageURL string) *Store {
 	return &Store{dbx: dbx, storageURL: storageURL}
 }
 
-// For binds the store to a single job so a worker can publish files attributed
-// to it. jobID/userID/kind come from the executing Job.
+// For binds the store to one job's identity so a worker can publish files
+// attributed to it.
 func (s *Store) For(jobID, userID, kind string) model.ArtifactStore {
 	return &scoped{store: s, jobID: jobID, userID: userID, kind: kind}
 }
@@ -112,9 +111,7 @@ func (s *scoped) create(ctx context.Context, opts model.ArtifactOpts, r io.Reade
 	if filename == "" {
 		return nil, fmt.Errorf("artifactstore: invalid filename %q", opts.Filename)
 	}
-	// Artifact storage must be configured explicitly; there is no fallback to
-	// the feed-version storage. Fail the write loudly rather than silently
-	// writing artifacts somewhere unexpected.
+	// No fallback to feed-version storage: fail rather than write somewhere unexpected.
 	if s.store.storageURL == "" {
 		return nil, errors.New("artifactstore: no artifact storage configured")
 	}

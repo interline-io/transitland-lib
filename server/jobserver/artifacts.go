@@ -107,11 +107,8 @@ func listArtifactsRequest(w http.ResponseWriter, req *http.Request) {
 		internalError(w, req, "artifact list failed", err)
 		return
 	}
-	// download_url is the public URL of the download route: RestPrefix (the
-	// prefix the ingress strips before forwarding) + the path this server sees +
-	// /{id}/download. Mirrors how the REST API builds pagination "next" links;
-	// using req.URL.Path alone would drop the stripped prefix under a
-	// path-rewriting ingress.
+	// Prefix with RestPrefix (the ingress-stripped prefix) so download_url is
+	// correct behind a path-rewriting ingress, as the REST pagination links do.
 	cfg := model.ForContext(req.Context())
 	base := cfg.RestPrefix + strings.TrimRight(req.URL.Path, "/")
 	out := make([]artifactResponse, 0, len(arts))

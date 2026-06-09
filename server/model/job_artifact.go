@@ -11,14 +11,12 @@ import (
 // ErrArtifactNotFound is returned by ArtifactReader.GetByID when no row matches.
 var ErrArtifactNotFound = errors.New("artifact not found")
 
-// JobArtifact is a file produced by a background job and made available to the
-// submitting user for download. It is both the tl_job_artifacts row and the
-// value passed across the artifact APIs.
+// JobArtifact is a file produced by a background job, for the submitting user to
+// download. It is both the tl_job_artifacts row and the artifact-API DTO.
 //
-// JobID is opaque (see the tl_job_artifacts migration: it is a river_job id,
-// local uuid, or Argo workflow name, never a foreign key). UserID and
-// StorageKey are internal and must never be serialized to API clients — the
-// jobserver builds a dedicated response shape and computes a download URL.
+// JobID is opaque: a river_job id, local uuid, or Argo workflow name, never a
+// foreign key. UserID and StorageKey are internal (json:"-") and must not reach
+// API clients.
 type JobArtifact struct {
 	JobID       string `db:"job_id" json:"job_id"`
 	JobKind     string `db:"job_kind" json:"job_kind"`
@@ -48,18 +46,16 @@ type ArtifactOpts struct {
 // instance (bound to the executing job's id/user/kind) is installed on
 // Config.Artifacts by the job middleware.
 type ArtifactStore interface {
-	// CreateFile uploads localPath and records an artifact row for the current job.
 	CreateFile(ctx context.Context, opts ArtifactOpts, localPath string) (*JobArtifact, error)
-	// CreateReader uploads from r and records an artifact row for the current job.
 	CreateReader(ctx context.Context, opts ArtifactOpts, r io.Reader) (*JobArtifact, error)
 }
 
 // ArtifactReader is the read side used by the jobserver to list and look up
 // artifacts. It is not scoped to a single job; callers pass the job id / row id.
 type ArtifactReader interface {
-	// ListByJob returns the artifacts produced by jobID, newest first.
+	// ListByJob returns jobID's artifacts, newest first.
 	ListByJob(ctx context.Context, jobID string) ([]*JobArtifact, error)
-	// GetByID returns a single artifact by its row id.
+	// GetByID returns one row, or ErrArtifactNotFound.
 	GetByID(ctx context.Context, artifactID int) (*JobArtifact, error)
 }
 

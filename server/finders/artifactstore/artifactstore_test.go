@@ -74,68 +74,84 @@ func TestStoreRoundTrip(t *testing.T) {
 	wantSHA := hex.EncodeToString(sum[:])
 
 	sc := store.For(jobID, "alice", "test")
+
+	// The three persisted artifacts the subtests assert against. Created up front
+	// (not inside subtests) so a failure here stops the run before the dependent
+	// subtests, and so ListByJob below sees the full set.
 	art, err := sc.CreateReader(ctx, model.ArtifactOpts{Filename: "out.txt", ContentType: "text/plain"}, strings.NewReader(content))
 	require.NoError(t, err)
-	assert.Greater(t, art.ID, 0)
-	assert.Equal(t, jobID, art.JobID)
-	assert.Equal(t, "alice", art.UserID)
-	assert.Equal(t, "test", art.JobKind)
-	assert.Equal(t, "out.txt", art.Filename)
-	assert.Equal(t, "text/plain", art.ContentType)
-	assert.Equal(t, int64(len(content)), art.SizeBytes)
-	assert.Equal(t, wantSHA, art.SHA1)
-
-	// Full key structure: job-artifacts/<jobID>/<uuid>/<filename>. The uuid
-	// segment is what prevents same-filename collisions and unguessable keys, so
-	// assert it is present and valid (a prefix check would miss its removal).
-	keyParts := strings.Split(art.StorageKey, "/")
-	require.Len(t, keyParts, 4, "key=%s", art.StorageKey)
-	assert.Equal(t, "job-artifacts", keyParts[0])
-	assert.Equal(t, jobID, keyParts[1])
-	_, uerr := uuid.Parse(keyParts[2])
-	assert.NoError(t, uerr, "middle key segment should be a uuid: %q", keyParts[2])
-	assert.Equal(t, "out.txt", keyParts[3])
-
-	// Blob is on disk with the expected content.
-	blob, err := os.ReadFile(filepath.Join(dir, art.StorageKey))
-	require.NoError(t, err)
-	assert.Equal(t, content, string(blob))
-
-	// GetByID returns the row; unknown id -> ErrArtifactNotFound.
-	got, err := store.GetByID(ctx, art.ID)
-	require.NoError(t, err)
-	assert.Equal(t, art.StorageKey, got.StorageKey)
-	_, err = store.GetByID(ctx, 0x7fffffff)
-	assert.ErrorIs(t, err, model.ErrArtifactNotFound)
-
-	// CreateFile mirrors CreateReader, sourcing bytes from a file on disk.
 	srcPath := filepath.Join(t.TempDir(), "src.txt")
 	require.NoError(t, os.WriteFile(srcPath, []byte(content), 0o600))
 	fileArt, err := sc.CreateFile(ctx, model.ArtifactOpts{Filename: "file.txt", ContentType: "text/plain"}, srcPath)
 	require.NoError(t, err)
-	assert.Equal(t, int64(len(content)), fileArt.SizeBytes)
-	assert.Equal(t, wantSHA, fileArt.SHA1)
-	fblob, err := os.ReadFile(filepath.Join(dir, fileArt.StorageKey))
-	require.NoError(t, err)
-	assert.Equal(t, content, string(fblob))
-	// A missing source path errors before any row is written.
-	_, err = sc.CreateFile(ctx, model.ArtifactOpts{Filename: "missing.txt"}, filepath.Join(dir, "does-not-exist"))
-	assert.Error(t, err)
-
-	// Empty/whitespace ContentType defaults to application/octet-stream.
 	defArt, err := sc.CreateReader(ctx, model.ArtifactOpts{Filename: "default.bin", ContentType: "  "}, strings.NewReader("z"))
 	require.NoError(t, err)
-	assert.Equal(t, "application/octet-stream", defArt.ContentType)
 
-	// ListByJob returns all three rows, newest (highest id) first.
-	list, err := store.ListByJob(ctx, jobID)
-	require.NoError(t, err)
-	require.Len(t, list, 3)
-	assert.Equal(t, defArt.ID, list[0].ID)
-	assert.Equal(t, fileArt.ID, list[1].ID)
-	assert.Equal(t, art.ID, list[2].ID)
+	t.Run("CreateReader populates the row", func(t *testing.T) {
+		assert.Greater(t, art.ID, 0)
+		assert.Equal(t, jobID, art.JobID)
+		assert.Equal(t, "alice", art.UserID)
+		assert.Equal(t, "test", art.JobKind)
+		assert.Equal(t, "out.txt", art.Filename)
+		assert.Equal(t, "text/plain", art.ContentType)
+		assert.Equal(t, int64(len(content)), art.SizeBytes)
+		assert.Equal(t, wantSHA, art.SHA1)
+	})
 
-	// Empty job id (e.g. fire-and-forget backend) is rejected before any I/O.
-	_, err = store.For("", "", "").CreateReader(ctx, model.ArtifactOpts{Filename: "x"}, strings.NewReader("x"))
-	assert.Error(t, err)
+	t.Run("storage key is job-artifacts/<jobID>/<uuid>/<filename>", func(t *testing.T) {
+		// Parse the uuid segment rather than prefix-check: it's what makes keys
+		// collision-free and unguessable, and a prefix check would miss its loss.
+		keyParts := strings.Split(art.StorageKey, "/")
+		require.Len(t, keyParts, 4, "key=%s", art.StorageKey)
+		assert.Equal(t, "job-artifacts", keyParts[0])
+		assert.Equal(t, jobID, keyParts[1])
+		_, err := uuid.Parse(keyParts[2])
+		assert.NoError(t, err, "middle segment should be a uuid: %q", keyParts[2])
+		assert.Equal(t, "out.txt", keyParts[3])
+	})
+
+	t.Run("blob written to disk", func(t *testing.T) {
+		blob, err := os.ReadFile(filepath.Join(dir, art.StorageKey))
+		require.NoError(t, err)
+		assert.Equal(t, content, string(blob))
+	})
+
+	t.Run("GetByID", func(t *testing.T) {
+		got, err := store.GetByID(ctx, art.ID)
+		require.NoError(t, err)
+		assert.Equal(t, art.StorageKey, got.StorageKey)
+		_, err = store.GetByID(ctx, 0x7fffffff)
+		assert.ErrorIs(t, err, model.ErrArtifactNotFound)
+	})
+
+	t.Run("CreateFile streams from a file on disk", func(t *testing.T) {
+		assert.Equal(t, int64(len(content)), fileArt.SizeBytes)
+		assert.Equal(t, wantSHA, fileArt.SHA1)
+		blob, err := os.ReadFile(filepath.Join(dir, fileArt.StorageKey))
+		require.NoError(t, err)
+		assert.Equal(t, content, string(blob))
+	})
+
+	t.Run("CreateFile with a missing source errors before any row", func(t *testing.T) {
+		_, err := sc.CreateFile(ctx, model.ArtifactOpts{Filename: "missing.txt"}, filepath.Join(dir, "does-not-exist"))
+		assert.Error(t, err)
+	})
+
+	t.Run("blank ContentType defaults to octet-stream", func(t *testing.T) {
+		assert.Equal(t, "application/octet-stream", defArt.ContentType)
+	})
+
+	t.Run("ListByJob returns newest first", func(t *testing.T) {
+		list, err := store.ListByJob(ctx, jobID)
+		require.NoError(t, err)
+		require.Len(t, list, 3)
+		assert.Equal(t, defArt.ID, list[0].ID)
+		assert.Equal(t, fileArt.ID, list[1].ID)
+		assert.Equal(t, art.ID, list[2].ID)
+	})
+
+	t.Run("empty job id is rejected", func(t *testing.T) {
+		_, err := store.For("", "", "").CreateReader(ctx, model.ArtifactOpts{Filename: "x"}, strings.NewReader("x"))
+		assert.Error(t, err)
+	})
 }

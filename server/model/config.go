@@ -30,15 +30,10 @@ type Config struct {
 	RestPrefix               string
 	Storage                  string
 	RTStorage                string
-	// ArtifactStorage is the storage URL for job artifacts (the bytes behind
-	// tl_job_artifacts rows). Resolved from --artifact-storage, defaulting to
-	// Storage. Used by the artifact store (writes) and the jobserver (serves).
-	ArtifactStorage string
-	// Artifacts is the per-job artifact handle installed by the job middleware
-	// for the executing job; nil outside a job (e.g. HTTP requests).
-	Artifacts ArtifactStore
-	// ArtifactStoreFactory backs the jobserver artifact read/serve endpoints and
-	// produces the per-job handles assigned to Artifacts.
+	ArtifactStorage          string // job-artifact storage URL; no fallback to Storage
+	// Artifacts is the executing job's handle, installed by the job middleware;
+	// nil outside a job (e.g. HTTP requests).
+	Artifacts               ArtifactStore
 	ArtifactStoreFactory    ArtifactStoreFactory
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
