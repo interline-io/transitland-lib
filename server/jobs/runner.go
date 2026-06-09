@@ -71,5 +71,15 @@ func (r *Runner) Run(ctx context.Context, job Job) error {
 			return errors.New("middleware dropped worker")
 		}
 	}
+	// Stamp the job's identity onto ctx so the whole middleware chain and the
+	// worker can resolve job-scoped capabilities (e.g. model.JobArtifacts) from
+	// it. Sourced from the Job, never a worker parameter, so a worker cannot
+	// misattribute work to another job.
+	ctx = WithJobMeta(ctx, JobMeta{
+		ID:       job.ID,
+		Kind:     job.Kind,
+		UserID:   job.Opts.UserID,
+		Deadline: job.Opts.Deadline,
+	})
 	return w.Run(ctx)
 }
