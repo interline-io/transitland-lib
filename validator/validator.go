@@ -16,13 +16,13 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext/bestpractices"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
-	"github.com/twpayne/go-geom"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -62,10 +62,11 @@ type Options struct {
 
 // Validator checks a GTFS source for errors and warnings.
 type Validator struct {
-	Reader          adapters.Reader
-	Options         Options
-	rtValidator     *rt.Validator
-	defaultTimezone string
+	Reader           adapters.Reader
+	Options          Options
+	rtValidator      *rt.Validator
+	defaultTimezone  string
+	routeGeomBuilder *builders.RouteGeometryBuilder
 }
 
 // NewValidator returns a new Validator.
@@ -195,10 +196,13 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		}
 	}
 
-	routeShapes := map[string]*geom.MultiLineString{}
-	if v.Options.IncludeRouteGeometries {
-		// Build shapes...
-		routeShapes = buildRouteShapes(reader)
+	// Route geometries come from the import builder that ran during the copy above,
+	// so the report shows exactly what an import would produce.
+	routeGeoms := map[string]tt.Geometry{}
+	if v.routeGeomBuilder != nil {
+		for rid, rg := range v.routeGeomBuilder.RouteGeometries() {
+			routeGeoms[rid] = rg.CombinedGeometry
+		}
 	}
 
 	// Include some basic entities in the report
@@ -212,8 +216,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		}
 		for ent := range reader.Routes() {
 			ent := ent
-			if s, ok := routeShapes[ent.RouteID.Val]; ok {
-				g := tt.NewGeometry(s)
+			if g, ok := routeGeoms[ent.RouteID.Val]; ok {
 				ent.Geometry = g
 			}
 			details.Routes = append(details.Routes, ent)
@@ -408,6 +411,19 @@ func (v *Validator) copierOptions() copier.Options {
 	cpOpts.AllowEntityErrors = true
 	cpOpts.AllowReferenceErrors = true
 	cpOpts.AddExtensionWithLevel(v.rtValidator, 1)
+
+	// Run the importer's derived-entity builders (route geometries, route stops,
+	// etc.) against the empty writer, so route geometries are produced the same way
+	// import does, without a database import. Keep a handle to the route-geometry
+	// builder so the report can read its output (see RouteGeometries below).
+	if v.Options.IncludeRouteGeometries {
+		for _, b := range builders.DefaultImportBuilders() {
+			if rgb, ok := b.(*builders.RouteGeometryBuilder); ok {
+				v.routeGeomBuilder = rgb
+			}
+			cpOpts.AddExtension(b)
+		}
+	}
 
 	// Best practices extension
 	if v.Options.BestPractices {

@@ -587,11 +587,15 @@ func (copier *Copier) Copy(ctx context.Context) (*Result, error) {
 	copier.log.Trace().Msg("Begin processing feed")
 	r := copier.reader
 	bs := copier.options.BatchSize
+	// Shapes carry full-resolution geometry, so a 1000-row batch makes the writer
+	// build a single INSERT holding ~1000 geometries (and their encoded args) at once.
+	// Batch them much smaller so the writer's in-flight geometry stays bounded.
+	shapeBs := 32
 	fns := []func() error{
 		func() error { return batchCopy(copier, batchChan(r.Agencies(), 1, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Routes(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Levels(), bs, nil)) },
-		func() error { return batchCopy(copier, batchChan(shapeLines(r.ShapesByShapeID()), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(shapeLines(r.ShapesByShapeID()), shapeBs, nil)) },
 		func() error {
 			return batchCopy(copier,
 				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {

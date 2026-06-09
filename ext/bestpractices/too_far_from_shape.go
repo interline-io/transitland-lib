@@ -54,6 +54,9 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tt.Entity) []error {
 	if e.checked[shapeid] == nil {
 		e.checked[shapeid] = map[string]bool{}
 	}
+	// The shape is the same for every stop_time on this trip; fetch it once rather
+	// than once per stop.
+	sgeom := e.geomCache.GetShape(shapeid)
 	var errs []error
 	for _, st := range v.StopTimes {
 		if !st.StopID.Valid {
@@ -65,7 +68,6 @@ func (e *StopTooFarFromShapeCheck) Validate(ent tt.Entity) []error {
 		}
 		e.checked[shapeid][st.StopID.Val] = true
 		g := e.geomCache.GetStop(st.StopID.Val)
-		sgeom := e.geomCache.GetShape(shapeid)
 		nearest, _, _ := tlxy.LineClosestPoint(sgeom, g)
 		distance := tlxy.DistanceHaversine(g, nearest)
 		if distance > e.maxdist {
