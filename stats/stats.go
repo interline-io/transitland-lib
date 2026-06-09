@@ -110,7 +110,7 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
 	osidBuilder := NewFeedVersionOnestopIDBuilder()
 	geohashBuilder := builders.NewFeedVersionGeohashBuilder()
-	if _, err := copier.Copy(
+	if _, err := copier.QuietCopy(
 		context.TODO(),
 		reader, &empty.Writer{},
 		func(o *copier.Options) {
