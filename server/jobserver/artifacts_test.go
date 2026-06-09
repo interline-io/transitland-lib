@@ -62,9 +62,11 @@ func newArtifactTestServer(t *testing.T, factory model.ArtifactStoreFactory, sto
 		Checker:              &authz.AllowAllChecker{},
 		ArtifactStoreFactory: factory,
 		ArtifactStorage:      storage,
-		// Simulate a path-rewriting ingress: download_url must include this
-		// public prefix, not just the path this server sees.
-		RestPrefix: "https://example.test/api",
+		// Simulate a path-rewriting ingress: download_url must be built from the
+		// jobserver's public prefix (JobsPrefix), NOT RestPrefix (the REST mount).
+		// Distinct values catch a regression to RestPrefix.
+		RestPrefix: "https://example.test/api/rest",
+		JobsPrefix: "https://example.test/api/jobs",
 	}
 	h, err := NewServer()
 	if err != nil {
@@ -131,7 +133,7 @@ func TestArtifactEndpoints(t *testing.T) {
 		// download_url carries the RestPrefix (correct behind a path-rewriting
 		// ingress) and points at this artifact's download route.
 		dlURL, _ := a0["download_url"].(string)
-		assert.True(t, strings.HasPrefix(dlURL, "https://example.test/api/"), "download_url should include RestPrefix: %q", dlURL)
+		assert.True(t, strings.HasPrefix(dlURL, "https://example.test/api/jobs/"), "download_url should be rooted at JobsPrefix, not RestPrefix: %q", dlURL)
 		assert.True(t, strings.HasSuffix(dlURL, "/artifacts/1/download"), "download_url: %q", dlURL)
 	})
 

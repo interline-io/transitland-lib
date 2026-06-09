@@ -113,6 +113,22 @@ func loadArtifact(w http.ResponseWriter, req *http.Request, reader model.Artifac
 	return art, true
 }
 
+// artifactDownloadURL builds the absolute download URL for an artifact by
+// appending segs (the artifact id on the list endpoint, then "download") to the
+// calling endpoint's request path, rooted at the jobserver's public mount
+// (JobsPrefix). Using JobsPrefix — not RestPrefix — keeps the link on the /jobs
+// mount and correct behind a path-rewriting ingress; an empty JobsPrefix yields
+// a host-relative path the client resolves against the request origin. The
+// trailing slash on JobsPrefix is trimmed so it never doubles.
+func artifactDownloadURL(req *http.Request, segs ...string) string {
+	cfg := model.ForContext(req.Context())
+	u := strings.TrimRight(cfg.JobsPrefix, "/") + strings.TrimRight(req.URL.Path, "/")
+	for _, s := range segs {
+		u += "/" + s
+	}
+	return u
+}
+
 func listArtifactsRequest(w http.ResponseWriter, req *http.Request) {
 	jobID, ok := artifactPrecheck(w, req)
 	if !ok {
@@ -127,10 +143,6 @@ func listArtifactsRequest(w http.ResponseWriter, req *http.Request) {
 		internalError(w, req, "artifact list failed", err)
 		return
 	}
-	// Prefix with RestPrefix (the ingress-stripped prefix) so download_url is
-	// correct behind a path-rewriting ingress, as the REST pagination links do.
-	cfg := model.ForContext(req.Context())
-	base := cfg.RestPrefix + strings.TrimRight(req.URL.Path, "/")
 	out := make([]artifactResponse, 0, len(arts))
 	for _, a := range arts {
 		// A job's artifacts all share one submitter, so a non-owner sees an empty
@@ -138,7 +150,7 @@ func listArtifactsRequest(w http.ResponseWriter, req *http.Request) {
 		if !authorizeArtifactOwner(req, a.UserID) {
 			continue
 		}
-		out = append(out, toArtifactResponse(a, base+"/"+strconv.Itoa(a.ID)+"/download"))
+		out = append(out, toArtifactResponse(a, artifactDownloadURL(req, strconv.Itoa(a.ID), "download")))
 	}
 	writeJSON(w, map[string]any{"artifacts": out})
 }
@@ -157,9 +169,7 @@ func artifactMetaRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// This request path is .../artifacts/{id}; download is one segment deeper.
-	// Prefix with RestPrefix so the link is correct behind a path-rewriting ingress.
-	cfg := model.ForContext(req.Context())
-	writeJSON(w, toArtifactResponse(art, cfg.RestPrefix+strings.TrimRight(req.URL.Path, "/")+"/download"))
+	writeJSON(w, toArtifactResponse(art, artifactDownloadURL(req, "download")))
 }
 
 func downloadArtifactRequest(w http.ResponseWriter, req *http.Request) {

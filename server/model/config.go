@@ -28,9 +28,14 @@ type Config struct {
 	UseGeohashFilter         bool
 	AllowHTTPFetchUnfiltered bool
 	RestPrefix               string
-	Storage                  string
-	RTStorage                string
-	ArtifactStorage          string // job-artifact storage URL; no fallback to Storage
+	// JobsPrefix is the public prefix of the jobserver mount (analogue of
+	// RestPrefix for the REST mount), used to build absolute artifact download
+	// links that are correct behind a path-rewriting ingress. Empty yields
+	// host-relative links.
+	JobsPrefix      string
+	Storage         string
+	RTStorage       string
+	ArtifactStorage string // job-artifact storage URL; no fallback to Storage
 	// ArtifactStoreFactory is the unscoped read/serve side (jobserver) and the
 	// producer of per-job scoped handles (see JobArtifacts). The per-job handle
 	// is intentionally NOT a Config field: it is execution-scoped, resolved from
@@ -71,7 +76,11 @@ func WithConfig(ctx context.Context, cfg Config) context.Context {
 // job. A non-nil return means "in a job AND artifacts are available here."
 func JobArtifacts(ctx context.Context) ArtifactStore {
 	cfg := ForContext(ctx)
-	if cfg.ArtifactStoreFactory == nil {
+	// Treat an empty storage URL as "not configured", matching the jobserver's
+	// requireArtifactReader: NewStore returns a non-nil *Store even for an empty
+	// URL (writes then fail loudly), so guarding only the factory would hand a
+	// worker a handle that errors on every write.
+	if cfg.ArtifactStoreFactory == nil || cfg.ArtifactStorage == "" {
 		return nil
 	}
 	m, ok := jobs.JobMetaFromContext(ctx)
