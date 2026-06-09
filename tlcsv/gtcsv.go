@@ -10,7 +10,7 @@ import (
 )
 
 var bufferSize = 1000
-var chunkSize = 1000000
+var chunkSize = 250000
 
 func init() {
 	// Register readers/writers

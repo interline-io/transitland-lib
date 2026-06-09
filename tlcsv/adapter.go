@@ -277,6 +277,7 @@ func (adapter *ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 
 // ReadRows opens the specified file and runs the callback on each Row. An error is returned if the file cannot be read.
 func (adapter *ZipAdapter) ReadRows(filename string, cb func(Row)) error {
+	log.For(context.TODO()).Trace().Str("filename", filename).Msg("tlcsv: read pass")
 	return adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
@@ -647,6 +648,7 @@ func (adapter *DirAdapter) AddFile(filename string, reader io.Reader) error {
 
 // ReadRows opens the file and runs the callback for each row. An error is returned if the file cannot be read.
 func (adapter *DirAdapter) ReadRows(filename string, cb func(Row)) error {
+	log.For(context.TODO()).Trace().Str("filename", filename).Msg("tlcsv: read pass")
 	return adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
