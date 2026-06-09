@@ -24,6 +24,13 @@ on:
     types: [completed]
     branches: [main]
 
+# Serialize release runs so two Test Suite completions finishing close together
+# can't race on the Version Packages PR or on tag/release creation. Do not cancel
+# an in-flight run mid-release.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   changesets:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -66,7 +73,7 @@ jobs:
         run: |
           VERSION="$(git show HEAD:package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
             echo "release=false" >> "$GITHUB_OUTPUT"
             echo "v$VERSION already tagged; nothing to release."
           else
