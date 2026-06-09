@@ -67,10 +67,11 @@ func TestServeArtifactPresignRedirect(t *testing.T) {
 	assert.Equal(t, http.StatusFound, rec.Code)
 	assert.Equal(t, store.signedURL, rec.Header().Get("Location"))
 	assert.Empty(t, rec.Body.String(), "presign redirect must not stream the body")
-	// The verbatim storage key is presigned, and the sanitized filename rides
-	// along as the content-disposition (not the raw body).
+	// The verbatim storage key is presigned, and the BARE sanitized filename is
+	// handed to the presigner (which formats the disposition header itself) —
+	// not a pre-built "attachment; filename=..." string, which Az would double-wrap.
 	assert.Equal(t, art.StorageKey, store.gotKey)
-	assert.Contains(t, store.gotDisposition, "out.txt")
+	assert.Equal(t, "out.txt", store.gotDisposition)
 }
 
 func TestServeArtifactStream(t *testing.T) {

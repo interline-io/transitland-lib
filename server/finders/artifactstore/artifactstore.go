@@ -65,7 +65,7 @@ func (s *Store) ListByJob(ctx context.Context, jobID string) ([]*model.JobArtifa
 	return ret, nil
 }
 
-// GetByID returns a single artifact row, or ErrNotFound.
+// GetByID returns a single artifact row, or ErrArtifactNotFound.
 func (s *Store) GetByID(ctx context.Context, artifactID int) (*model.JobArtifact, error) {
 	q := sq.Select("*").From("tl_job_artifacts").Where(sq.Eq{"id": artifactID}).Limit(1)
 	var ret []*model.JobArtifact

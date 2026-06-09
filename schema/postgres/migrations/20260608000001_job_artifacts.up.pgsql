@@ -1,8 +1,7 @@
 BEGIN;
 
--- Files produced by background jobs (exports, reports, generated CSVs) and made
--- available to the submitting user for download. One row per artifact; the bytes
--- live in the configured storage backend (request.Store) under storage_key.
+-- Files produced by background jobs, downloadable by the submitting user; the
+-- bytes live in request.Store under storage_key.
 --
 -- job_id is OPAQUE and intentionally NOT a foreign key: there is no canonical
 -- jobs table in this schema. River owns river_job; the local and Argo backends

@@ -17,11 +17,12 @@ import (
 // itself. The caller resolves the store, so this is testable with fakes.
 func serveArtifact(w http.ResponseWriter, req *http.Request, store request.Store, art *model.JobArtifact) {
 	ctx := req.Context()
-	// art.Filename was sanitized at create time, so it is safe to use in a
-	// Content-Disposition header and as the presign content-disposition.
-	disposition := fmt.Sprintf("attachment; filename=%q", art.Filename)
+	// art.Filename was sanitized at create time, so it is safe in a
+	// Content-Disposition header / SAS disposition.
 	if p, ok := store.(request.Presigner); ok {
-		signedURL, err := p.CreateSignedUrl(ctx, art.StorageKey, disposition)
+		// Presigners build the disposition header themselves from a bare
+		// filename (see request.Az), so pass the name, not a full header.
+		signedURL, err := p.CreateSignedUrl(ctx, art.StorageKey, art.Filename)
 		if err != nil {
 			internalError(w, req, "artifact presign failed", err)
 			return
@@ -37,7 +38,7 @@ func serveArtifact(w http.ResponseWriter, req *http.Request, store request.Store
 	}
 	defer rdr.Close()
 	w.Header().Set("Content-Type", art.ContentType)
-	w.Header().Set("Content-Disposition", disposition)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", art.Filename))
 	if art.SizeBytes > 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(art.SizeBytes, 10))
 	}
