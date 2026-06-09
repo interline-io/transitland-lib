@@ -23,6 +23,8 @@ type batchTripReader struct {
 	*direct.Reader
 }
 
+// ids filtering is not exercised by the copier (it always requests all trips), so
+// the fake ignores ids; it exists only to satisfy the tripStopTimeReader interface.
 func (r *batchTripReader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes {
 	out := make(chan gtfs.TripStopTimes, 1000)
 	go func() {

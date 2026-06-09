@@ -858,11 +858,16 @@ func newTripStopTimeState() *tripStopTimeState {
 //
 // Contract for the yielded channel:
 //   - Each trip is yielded once, with its stop_times sorted by stop_sequence.
+//   - Trips SHOULD be yielded in reader input order, which order-sensitive validators
+//     (e.g. block-overlap) rely on for deterministic attribution. The tlcsv reader
+//     preserves trips.txt file order. The generic fallback below does not guarantee
+//     it (it emits trips as their stop_times stream in); readers that need ordered
+//     validation should implement TripsWithStopTimes.
 //   - A trip with no stop_times is yielded with an empty StopTimes.
 //   - For a duplicate trip_id the first occurrence carries the stop_times; later
 //     occurrences are yielded with an empty StopTimes.
 //   - stop_times whose trip_id is absent from trips.txt are yielded on a zero-value
-//     Trip (empty TripID) so the caller can still validate them.
+//     Trip (empty TripID), trailing the trips, so the caller can still validate them.
 type tripStopTimeReader interface {
 	TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes
 }
@@ -879,8 +884,6 @@ func (copier *Copier) copyTripsAndStopTimes() error {
 		source = copier.tripsWithStopTimes()
 	}
 
-	// Pattern dedup accounting persists across every batch; the trips and their
-	// stop_times are per-batch.
 	state := newTripStopTimeState()
 	var batch []gtfs.TripStopTimes
 	for tst := range source {
@@ -910,8 +913,9 @@ func (copier *Copier) tripsWithStopTimes() chan gtfs.TripStopTimes {
 	out := make(chan gtfs.TripStopTimes, 1000)
 	go func() {
 		defer close(out)
-		// Cache all trips. First occurrence wins; later duplicates are yielded
-		// (empty) at the end.
+		// Cache all trips up front (the O(trips) cost this fallback accepts) so
+		// stop_times can stream past without being held. First row of a trip_id wins;
+		// later duplicate rows trail at the end.
 		trips := map[string]*gtfs.Trip{}
 		var duplicates []*gtfs.Trip
 		allIDs := map[string]struct{}{}
@@ -925,8 +929,9 @@ func (copier *Copier) tripsWithStopTimes() chan gtfs.TripStopTimes {
 			}
 			trips[eid] = &tripCopy
 		}
-		// Attach stop_times: yield each matched trip, or an invalid entry carrying
-		// stop_times whose trip_id is absent from trips.txt.
+		// Stream stop_times past the cached trips. A trip_id absent from trips was
+		// either already emitted (and deleted) or never a trip; allIDs tells them apart
+		// so only true orphans are surfaced for validation.
 		for grp := range copier.reader.StopTimesByTripID() {
 			if len(grp) == 0 {
 				continue
@@ -939,7 +944,8 @@ func (copier *Copier) tripsWithStopTimes() chan gtfs.TripStopTimes {
 				out <- gtfs.TripStopTimes{StopTimes: grp}
 			}
 		}
-		// Trips with no stop_times (leftover), then duplicate trip rows.
+		// Whatever's left never matched a stop_time group: leftover trips, then
+		// duplicate rows, all with empty StopTimes.
 		for _, trip := range trips {
 			out <- gtfs.TripStopTimes{Valid: true, Trip: *trip}
 		}

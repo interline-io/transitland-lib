@@ -1,11 +1,13 @@
 package tlcsv
 
 import (
+	"context"
 	"io"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
@@ -233,41 +235,86 @@ func (reader *Reader) StopTimesByTripID(tripIDs ...string) chan []gtfs.StopTime 
 // TripsWithStopTimes yields every trip with its StopTimes attached, buffering at
 // most chunkSize stop_times at a time (configurable via TL_GTFS_CHUNKSIZE) so memory
 // stays bounded regardless of feed size. It satisfies the copier's trip+stop_time
-// streaming contract: trips are yielded in trips.txt order within each chunk; a trip
-// with no stop_times is yielded with an empty StopTimes; for a duplicate trip_id the
-// first occurrence carries the stop_times and later ones are empty; and stop_times
-// whose trip_id is absent from trips.txt are yielded as invalid entries (Valid =
-// false) so their reference can still be validated. With ids, only those trips and
-// their stop_times are yielded and the stop_time-less sweep is skipped.
+// streaming contract: trips are yielded in trips.txt file order; a trip with no
+// stop_times is yielded with an empty StopTimes; for a duplicate trip_id the first
+// occurrence carries the stop_times and later ones are empty; and stop_times whose
+// trip_id is absent from trips.txt are yielded as invalid entries (Valid = false),
+// trailing the trips, so their reference can still be validated.
+//
+// If ids are given, only those trip_ids (and their stop_times) are yielded; chunking
+// and ordering are otherwise unchanged.
 func (reader *Reader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes {
 	out := make(chan gtfs.TripStopTimes, bufferSize)
 	go func() {
 		defer close(out)
 
-		// Plan which trip_ids have stop_times, chunked so each chunk's stop_times
-		// stay under chunkSize.
-		var chunks s2D
-		stopTimeIDs := map[string]struct{}{}
-		if len(ids) == 0 {
-			counter := map[string]int{}
-			reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
-				sid, _ := row.Get("trip_id")
-				counter[sid]++
-			})
-			for k := range counter {
-				stopTimeIDs[k] = struct{}{}
-			}
-			chunks = chunkMSI(counter, chunkSize)
-		} else {
+		keep := func(string) bool { return true }
+		if len(ids) > 0 {
+			filter := make(map[string]struct{}, len(ids))
 			for _, id := range ids {
-				stopTimeIDs[id] = struct{}{}
+				filter[id] = struct{}{}
 			}
-			chunks = s2D{ids}
+			keep = func(id string) bool { _, ok := filter[id]; return ok }
 		}
 
-		// For each chunk: load its stop_times, then read trips.txt and yield each
-		// trip (in file order) with its stop_times attached.
-		for _, chunk := range chunks {
+		// Per-trip stop_time counts feed the chunk-size budget in the plan pass below.
+		counter := map[string]int{}
+		reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
+			sid, _ := row.Get("trip_id")
+			if keep(sid) {
+				counter[sid]++
+			}
+		})
+
+		// Plan chunks by walking trips.txt in file order rather than chunkMSI-ing the
+		// counts: file order is what makes output order match input order, which
+		// order-sensitive validators (block-overlap) depend on. Each chunk fills until
+		// its stop_times cross chunkSize; stop_time-less trips (count 0) ride along in
+		// place, so they need no separate sweep.
+		var chunks s2D
+		seen := map[string]struct{}{}
+		var cur []string
+		c := 0
+		reader.Adapter.ReadRows("trips.txt", func(row Row) {
+			tid, _ := row.Get("trip_id")
+			if !keep(tid) {
+				return
+			}
+			if _, dup := seen[tid]; dup {
+				return // plan each trip_id once; duplicate rows attach to the first's chunk
+			}
+			seen[tid] = struct{}{}
+			cur = append(cur, tid)
+			c += counter[tid]
+			if c >= chunkSize {
+				chunks = append(chunks, cur)
+				cur = nil
+				c = 0
+			}
+		})
+		if len(cur) > 0 {
+			chunks = append(chunks, cur)
+		}
+		// trip_ids with stop_times but no trips.txt row: the walk above never reached
+		// them, so collect and chunk them separately — still bounded, still validated.
+		orphans := map[string]int{}
+		for tid, n := range counter {
+			if _, ok := seen[tid]; !ok {
+				orphans[tid] = n
+			}
+		}
+		chunks = append(chunks, chunkMSI(orphans, chunkSize)...)
+		counter, seen, orphans = nil, nil, nil // free planning maps so they don't stack on the per-chunk peak
+
+		// Each chunk re-reads both files but keeps only its own stop_times resident —
+		// the repeated passes are the price of bounded memory. The plan is already
+		// complete, so len(chunks) is an exact total to report progress against.
+		for i, chunk := range chunks {
+			log.For(context.TODO()).Trace().
+				Int("chunk", i+1).
+				Int("chunks", len(chunks)).
+				Int("trips", len(chunk)).
+				Msg("tlcsv: processing trip chunk")
 			set := stringsToSet(chunk)
 			stm := map[string][]gtfs.StopTime{}
 			reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
@@ -299,27 +346,14 @@ func (reader *Reader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes 
 				}
 				out <- tst
 			})
-			// Orphan stop_times: trip_ids present in stop_times but not trips.txt.
+			// Chunk members not emitted from trips.txt are orphans (only the trailing
+			// orphan chunks reach this); stop_time-less trips already emitted above.
 			for tid := range set {
-				if !emitted[tid] && len(stm[tid]) > 0 {
+				if !emitted[tid] {
 					out <- gtfs.TripStopTimes{StopTimes: stm[tid]}
 				}
 			}
 		}
-
-		if len(ids) > 0 {
-			return
-		}
-		// Sweep trips.txt for trips with no stop_times (never in a chunk).
-		reader.Adapter.ReadRows("trips.txt", func(row Row) {
-			tid, _ := row.Get("trip_id")
-			if _, ok := stopTimeIDs[tid]; ok {
-				return
-			}
-			e := gtfs.Trip{}
-			loadRow(&e, row)
-			out <- gtfs.TripStopTimes{Valid: true, Trip: e}
-		})
 	}()
 	return out
 }
@@ -329,7 +363,11 @@ func (reader *Reader) Shapes() chan gtfs.Shape {
 	return ReadEntities[gtfs.Shape](reader, getFilename(&gtfs.Shape{}))
 }
 
-// shapesByShapeID returns a map with grouped Shapes.
+// ShapesByShapeID yields each shape's points grouped into one []gtfs.Shape, in
+// shapes.txt order. A grouped file (each shape_id's rows contiguous) streams in a
+// single pass; otherwise points are chunked under chunkSize by first-appearance
+// order — the same order-preserving scheme as TripsWithStopTimes. With shapeIDs,
+// only those shapes are yielded.
 func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 	var chunks s2D
 	grouped := false
@@ -337,27 +375,41 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 	if len(shapeIDs) == 0 {
 		grouped = true
 		counter := map[string]int{}
+		var order []string // shape_ids in first-appearance order
 		last := ""
 		reader.Adapter.ReadRows("shapes.txt", func(row Row) {
-			// Only check shape_id
 			sid, _ := row.Get("shape_id")
-			// If ID transition, have we seen this ID
-			if sid != last && grouped && last != "" {
-				if _, ok := counter[sid]; ok {
-					grouped = false
-				}
+			_, seen := counter[sid]
+			// A shape_id reappearing after a gap means the file isn't grouped by ID.
+			if grouped && sid != last && last != "" && seen {
+				grouped = false
+			}
+			if !seen {
+				order = append(order, sid)
 			}
 			counter[sid]++
 			last = sid
 		})
 		if grouped {
-			keys := []string{}
-			for k := range counter {
-				keys = append(keys, k)
-			}
-			chunks = s2D{keys}
+			// One streaming pass emits in file order (below); a single chunk suffices.
+			chunks = s2D{order}
 		} else {
-			chunks = chunkMSI(counter, chunkSize)
+			// Interleaved shape_ids: chunk in first-appearance order so shapes still
+			// emit in shapes.txt order, each chunk's points bounded by chunkSize.
+			var cur []string
+			c := 0
+			for _, sid := range order {
+				cur = append(cur, sid)
+				c += counter[sid]
+				if c >= chunkSize {
+					chunks = append(chunks, cur)
+					cur = nil
+					c = 0
+				}
+			}
+			if len(cur) > 0 {
+				chunks = append(chunks, cur)
+			}
 		}
 	} else {
 		chunks = s2D{shapeIDs}
@@ -387,7 +439,13 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 				}
 				last = sid
 			})
-			for _, v := range m {
+			// Emit remaining shapes in first-appearance (chunk) order: for a grouped
+			// file that's just the final shape; otherwise the whole chunk.
+			for _, sid := range chunk {
+				v, ok := m[sid]
+				if !ok {
+					continue
+				}
 				sort.Slice(v, func(i, j int) bool {
 					return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
 				})
