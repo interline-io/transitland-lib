@@ -243,6 +243,9 @@ func rebuildStatsMain(ctx context.Context, adapter tldb.Adapter, opts RebuildSta
 	if err != nil {
 		return RebuildStatsResult{}, err
 	}
+	// Close removes the temp file downloaded by NewStoreAdapter; without this,
+	// long-running batch rebuilds leak one zip per feed version and fill the disk
+	defer reader.Close()
 	if err := reader.Open(); err != nil {
 		return RebuildStatsResult{}, err
 	}
