@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"io"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/interline-io/log"
@@ -151,24 +151,20 @@ func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		acl = types.ObjectCannedACLPrivate
 	}
 
-	// Calculate MD5 for server-side verification if reader is seekable
-	var contentMD5 *string
-	if md5sum := md5FromReader(uploadFile); md5sum != nil {
-		encoded := base64.StdEncoding.EncodeToString(md5sum)
-		contentMD5 = &encoded
-		log.Trace().Str("key", key).Msg("s3 upload: calculated MD5 for integrity verification")
-	}
-
-	// Save object
+	// Use the S3 upload manager rather than a bare PutObject. The artifact store
+	// streams a non-seekable io.TeeReader of unknown length (to hash + size in one
+	// pass), which PutObject rejects with 411 MissingContentLength because it
+	// can't derive Content-Length. The manager reads the body in bounded parts and
+	// uses multipart for large objects, so memory stays ~part-sized (5MB default)
+	// regardless of object size.
 	log.Debug().Msgf("s3 store: uploading to key '%s', full key is '%s'", key, r.getFullKey(key))
-	result, err := client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:     aws.String(r.Bucket),
-		Key:        aws.String(r.getFullKey(key)),
-		Body:       uploadFile,
-		ACL:        acl,
-		ContentMD5: contentMD5,
+	uploader := manager.NewUploader(client)
+	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(r.Bucket),
+		Key:    aws.String(r.getFullKey(key)),
+		Body:   uploadFile,
+		ACL:    acl,
 	})
-	_ = result
 	return err
 }
 
