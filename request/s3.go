@@ -155,8 +155,8 @@ func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 	// streams a non-seekable io.TeeReader of unknown length (to hash + size in one
 	// pass), which PutObject rejects with 411 MissingContentLength because it
 	// can't derive Content-Length. The manager reads the body in bounded parts and
-	// uses multipart for large objects, so memory stays ~part-sized (5MB default)
-	// regardless of object size.
+	// uses multipart for large objects, so peak memory is bounded to about the
+	// part size times the upload concurrency (~25MB by default), not the object.
 	log.Debug().Msgf("s3 store: uploading to key '%s', full key is '%s'", key, r.getFullKey(key))
 	uploader := manager.NewUploader(client)
 	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
