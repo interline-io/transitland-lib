@@ -3,6 +3,16 @@ name: Check Generated Code
 on:
   pull_request:
     branches: [main]
+    # go generate ./... skips testdata/ directories and does not read test
+    # files, so changes limited to those paths cannot affect generated code.
+    paths-ignore:
+      - 'testdata/**'
+      - '**/*_test.go'
+      - 'README.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   pull-requests: write  # Needed for commenting on PRs

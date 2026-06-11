@@ -6,9 +6,17 @@ on:
       - opened
       - synchronize
       - reopened
+    paths-ignore:
+      - '**.md'
   push:
     branches:
-      - '*'
+      - main
+
+# Cancel superseded runs on PR branches; never cancel runs on main, since the
+# release workflow requires a completed Test Suite run for the tagged commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
