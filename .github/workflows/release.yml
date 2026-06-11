@@ -185,7 +185,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.event.release.tag_name }}
-        run: gh release edit "$TAG" --generate-notes
+        run: |
+          gh api "repos/${GH_REPO}/releases/generate-notes" -f tag_name="$TAG" --jq .body \
+            | gh release edit "$TAG" --notes-file -
 
   trigger-homebrew-update:
     needs: release
