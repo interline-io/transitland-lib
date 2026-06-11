@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/request"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func TestReader_TripsWithStopTimes(t *testing.T) {
@@ -265,4 +267,87 @@ func TestReader(t *testing.T) {
 			})
 		})
 	}
+}
+
+// TestReader_GroupCapsOversizedEntities verifies that a trip's stop_times and a
+// shape's points are capped at chunkSize and flagged, rather than buffered without
+// bound. The example feed's CITY1 has 5 stop_times and shape "ok" has 4 points, so
+// a chunkSize of 3 truncates both.
+func TestReader_GroupCapsOversizedEntities(t *testing.T) {
+	old := chunkSize
+	chunkSize = 3
+	defer func() { chunkSize = old }()
+
+	reader, err := NewReader(testreader.ExampleDir.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reader.Open(); err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+
+	t.Run("trip stop_times", func(t *testing.T) {
+		capped, uncapped := 0, 0
+		for tst := range reader.TripsWithStopTimes() {
+			if !tst.Valid {
+				continue
+			}
+			limited := hasEntityLimitError(tt.CheckErrors(&tst.Trip))
+			if tst.Trip.TripID.Val == "CITY1" {
+				if len(tst.StopTimes) != 3 {
+					t.Errorf("CITY1: got %d stop_times, want 3 (capped)", len(tst.StopTimes))
+				}
+				if !limited {
+					t.Errorf("CITY1: expected EntityLimitError")
+				}
+			}
+			if limited {
+				capped++
+				if len(tst.StopTimes) != 3 {
+					t.Errorf("trip %q flagged but holds %d stop_times, want 3", tst.Trip.TripID.Val, len(tst.StopTimes))
+				}
+			} else {
+				uncapped++
+				if len(tst.StopTimes) > 3 {
+					t.Errorf("trip %q not flagged but holds %d stop_times (over cap)", tst.Trip.TripID.Val, len(tst.StopTimes))
+				}
+			}
+		}
+		if capped == 0 {
+			t.Error("expected at least one capped trip")
+		}
+		if uncapped == 0 {
+			t.Error("expected at least one uncapped trip")
+		}
+	})
+
+	t.Run("shape points", func(t *testing.T) {
+		capped := 0
+		for grp := range reader.ShapesByShapeID() {
+			if len(grp) == 0 {
+				continue
+			}
+			if hasEntityLimitError(tt.CheckErrors(&grp[0])) {
+				capped++
+				if len(grp) != 3 {
+					t.Errorf("shape %q flagged but holds %d points, want 3", grp[0].ShapeID.Val, len(grp))
+				}
+			} else if len(grp) > 3 {
+				t.Errorf("shape %q not flagged but holds %d points (over cap)", grp[0].ShapeID.Val, len(grp))
+			}
+		}
+		if capped == 0 {
+			t.Error("expected at least one capped shape")
+		}
+	})
+}
+
+func hasEntityLimitError(errs []error) bool {
+	for _, err := range errs {
+		if _, ok := err.(*causes.EntityLimitError); ok {
+			return true
+		}
+	}
+	return false
 }

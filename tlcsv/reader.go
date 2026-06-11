@@ -368,54 +368,71 @@ func (reader *Reader) readTripsForIDs(ids []string) map[string][]gtfs.Trip {
 
 // emitJoinedTrip emits one trip joined with its stop_times (sorted by stop_sequence).
 // rows are the trips.txt rows for the id: none means an orphan (Valid = false); any
-// extras are duplicate trip rows, emitted after the first with empty StopTimes.
-func emitJoinedTrip(out chan<- gtfs.TripStopTimes, rows []gtfs.Trip, sts []gtfs.StopTime) {
+// extras are duplicate trip rows, emitted after the first with empty StopTimes. When
+// capped is set the stop_times were truncated at chunkSize, so the emitted entity
+// carries an EntityLimitError.
+func emitJoinedTrip(out chan<- gtfs.TripStopTimes, rows []gtfs.Trip, sts []gtfs.StopTime, capped bool) {
 	sort.Slice(sts, func(i, j int) bool { return sts[i].StopSequence.Val < sts[j].StopSequence.Val })
 	if len(rows) == 0 {
+		if capped && len(sts) > 0 {
+			sts[0].AddError(causes.NewEntityLimitError(sts[0].TripID.Val, "stop_times", chunkSize))
+		}
 		out <- gtfs.TripStopTimes{StopTimes: sts}
 		return
 	}
-	out <- gtfs.TripStopTimes{Valid: true, Trip: rows[0], StopTimes: sts}
+	trip := rows[0]
+	if capped {
+		trip.AddError(causes.NewEntityLimitError(trip.EntityID(), "stop_times", chunkSize))
+	}
+	out <- gtfs.TripStopTimes{Valid: true, Trip: trip, StopTimes: sts}
 	for _, dup := range rows[1:] {
 		out <- gtfs.TripStopTimes{Valid: true, Trip: dup}
 	}
 }
 
 // streamTripStopTimes handles a grouped stop_times.txt: one streaming pass completes
-// trips in order, holding only the current trip's stop_times. A chunk's trips are read
-// from trips.txt when its first trip is reached, so peak memory is one trip's
-// stop_times plus one chunk's trips.
+// trips in order, holding only the current trip's stop_times (capped at chunkSize). A
+// chunk's trips are read from trips.txt when its first trip is reached, so peak memory
+// is at most chunkSize stop_times plus one chunk's trips.
 func (reader *Reader) streamTripStopTimes(out chan<- gtfs.TripStopTimes, keep func(string) bool, chunks s2D) {
 	ci, pi := 0, 0 // current chunk index, position within it
 	var chunkTrips map[string][]gtfs.Trip
-	emit := func(tid string, sts []gtfs.StopTime) {
+	emit := func(tid string, sts []gtfs.StopTime, capped bool) {
 		if pi == 0 {
 			log.For(context.TODO()).Trace().Int("chunk", ci+1).Int("chunks", len(chunks)).Int("trips", len(chunks[ci])).Msg("tlcsv: processing trip chunk")
 			chunkTrips = reader.readTripsForIDs(chunks[ci])
 		}
-		emitJoinedTrip(out, chunkTrips[tid], sts)
+		emitJoinedTrip(out, chunkTrips[tid], sts, capped)
 		if pi++; pi == len(chunks[ci]) {
 			ci, pi, chunkTrips = ci+1, 0, nil
 		}
 	}
 	var sts []gtfs.StopTime
 	last := ""
+	capped := false
 	reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
 		sid, _ := row.Get("trip_id")
 		if !keep(sid) {
 			return
 		}
 		if last != "" && sid != last {
-			emit(last, sts)
+			emit(last, sts, capped)
 			sts = nil
+			capped = false
+		}
+		last = sid
+		// Cap one trip's stop_times at chunkSize so a degenerate trip can't grow this
+		// buffer without bound; the trip is still emitted, flagged via emitJoinedTrip.
+		if len(sts) >= chunkSize {
+			capped = true
+			return
 		}
 		st := gtfs.StopTime{}
 		loadRow(&st, row)
 		sts = append(sts, st)
-		last = sid
 	})
 	if last != "" {
-		emit(last, sts)
+		emit(last, sts, capped)
 	}
 }
 
@@ -430,9 +447,15 @@ func (reader *Reader) chunkTripStopTimes(out chan<- gtfs.TripStopTimes, chunks s
 			Msg("tlcsv: processing trip chunk")
 		set := stringsToSet(chunk)
 		stm := map[string][]gtfs.StopTime{}
+		capped := map[string]bool{}
 		reader.Adapter.ReadRows("stop_times.txt", func(row Row) {
 			sid, _ := row.Get("trip_id")
 			if _, ok := set[sid]; !ok {
+				return
+			}
+			// Cap each trip's stop_times at chunkSize (see streamTripStopTimes).
+			if len(stm[sid]) >= chunkSize {
+				capped[sid] = true
 				return
 			}
 			st := gtfs.StopTime{}
@@ -441,7 +464,7 @@ func (reader *Reader) chunkTripStopTimes(out chan<- gtfs.TripStopTimes, chunks s
 		})
 		tripRows := reader.readTripsForIDs(chunk)
 		for _, tid := range chunk {
-			emitJoinedTrip(out, tripRows[tid], stm[tid])
+			emitJoinedTrip(out, tripRows[tid], stm[tid], capped[tid])
 		}
 	}
 }
@@ -508,36 +531,47 @@ func (reader *Reader) ShapesByShapeID(shapeIDs ...string) chan []gtfs.Shape {
 		for _, chunk := range chunks {
 			set := stringsToSet(chunk)
 			m := map[string][]gtfs.Shape{}
+			capped := map[string]bool{}
+			// emitShape sorts a shape's points by sequence, flags it if its points were
+			// capped at chunkSize, sends it, and drops it from the buffer.
+			emitShape := func(sid string) {
+				v := m[sid]
+				sort.Slice(v, func(i, j int) bool {
+					return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
+				})
+				if capped[sid] && len(v) > 0 {
+					v[0].AddError(causes.NewEntityLimitError(sid, "shapes", chunkSize))
+				}
+				out <- v
+				delete(m, sid)
+			}
 			last := ""
 			reader.Adapter.ReadRows("shapes.txt", func(row Row) {
 				sid, _ := row.Get("shape_id")
 				if _, ok := set[sid]; ok {
-					ent := gtfs.Shape{}
-					loadRow(&ent, row)
-					m[sid] = append(m[sid], ent)
+					// Cap one shape's points at chunkSize so a degenerate shape can't grow
+					// this buffer without bound; it is still emitted, flagged.
+					if len(m[sid]) >= chunkSize {
+						capped[sid] = true
+					} else {
+						ent := gtfs.Shape{}
+						loadRow(&ent, row)
+						m[sid] = append(m[sid], ent)
+					}
 				}
 				// If we know the file is grouped, send the shape at transition
 				if grouped && sid != last && last != "" {
-					v := m[last]
-					sort.Slice(v, func(i, j int) bool {
-						return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
-					})
-					out <- v
-					delete(m, last)
+					emitShape(last)
 				}
 				last = sid
 			})
 			// Emit remaining shapes in first-appearance (chunk) order: for a grouped
 			// file that's just the final shape; otherwise the whole chunk.
 			for _, sid := range chunk {
-				v, ok := m[sid]
-				if !ok {
+				if _, ok := m[sid]; !ok {
 					continue
 				}
-				sort.Slice(v, func(i, j int) bool {
-					return v[i].ShapePtSequence.Val < v[j].ShapePtSequence.Val
-				})
-				out <- v
+				emitShape(sid)
 			}
 		}
 		close(out)
