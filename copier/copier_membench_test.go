@@ -8,12 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/rs/zerolog"
 )
 
 // runCopierBench drains a feed through a Copier with the given options, writing to a
@@ -28,7 +26,6 @@ func runCopierBench(t *testing.T, opts copier.Options) {
 	if path == "" {
 		t.Skip("set TL_BENCH_FEED to a feed (dir or .zip) to run the copier memory benchmark")
 	}
-	log.SetLevel(zerolog.TraceLevel) // emit the reader's "read pass" + "trip chunk" lines
 	ctx := context.Background()
 
 	reader, err := tlcsv.NewReader(path)
