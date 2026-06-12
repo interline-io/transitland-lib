@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
@@ -277,10 +278,13 @@ func (adapter *ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 
 // ReadRows opens the specified file and runs the callback on each Row. An error is returned if the file cannot be read.
 func (adapter *ZipAdapter) ReadRows(filename string, cb func(Row)) error {
+	t0 := time.Now()
 	log.For(context.TODO()).Trace().Str("filename", filename).Msg("tlcsv: read pass")
-	return adapter.OpenFile(filename, func(in io.Reader) {
+	err := adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
+	log.For(context.TODO()).Trace().Str("filename", filename).Int("elapsed_ms", int(time.Since(t0).Milliseconds())).Msg("tlcsv: read pass complete")
+	return err
 }
 
 // SHA1 returns the SHA1 checksum of the zip archive.
@@ -648,10 +652,13 @@ func (adapter *DirAdapter) AddFile(filename string, reader io.Reader) error {
 
 // ReadRows opens the file and runs the callback for each row. An error is returned if the file cannot be read.
 func (adapter *DirAdapter) ReadRows(filename string, cb func(Row)) error {
+	t0 := time.Now()
 	log.For(context.TODO()).Trace().Str("filename", filename).Msg("tlcsv: read pass")
-	return adapter.OpenFile(filename, func(in io.Reader) {
+	err := adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
+	log.For(context.TODO()).Trace().Str("filename", filename).Int("elapsed_ms", int(time.Since(t0).Milliseconds())).Msg("tlcsv: read pass complete")
+	return err
 }
 
 // Exists checks if the specified directory exists.
