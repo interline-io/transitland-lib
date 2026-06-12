@@ -243,6 +243,24 @@ func (e *DuplicateKeyError) Error() string {
 
 ////////////////////////////
 
+// EntityLimitError reports when an entity's grouped child rows — a trip's
+// stop_times or a shape's points — exceeded the per-group limit and were capped.
+type EntityLimitError struct {
+	bc
+}
+
+// NewEntityLimitError returns an EntityLimitError for entity eid whose `field`
+// rows were capped at `limit`.
+func NewEntityLimitError(eid string, field string, limit int) *EntityLimitError {
+	return &EntityLimitError{bc: bc{EntityID: eid, Field: field, Value: fmt.Sprintf("%d", limit)}}
+}
+
+func (e *EntityLimitError) Error() string {
+	return fmt.Sprintf("entity '%s' exceeded the limit of %s %s and was capped", e.EntityID, e.Value, e.Field)
+}
+
+////////////////////////////
+
 // DuplicateServiceExceptionError reports when a (service_id,date) value is present more than once.
 type DuplicateServiceExceptionError struct {
 	ServiceID string

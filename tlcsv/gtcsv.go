@@ -17,7 +17,12 @@ var bufferSize = 1000
 // geometries while the writer drains a batch.
 var groupBufferSize = 32
 
-var chunkSize = 250000
+// chunkSize is the single knob (TL_GTFS_CHUNKSIZE) for the join's group sizing: the
+// unsorted path's per-chunk stop_time buffer, the sorted path's per-chunk trip count,
+// and the per-group cap (max stop_times per trip, max points per shape). The sorted
+// path counts trips rather than stop_times, so at the same value it covers far more
+// trips per chunk than the stop_time-bounded unsorted path.
+var chunkSize = 100000
 
 func init() {
 	// Register readers/writers
