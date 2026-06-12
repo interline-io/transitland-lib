@@ -60,7 +60,12 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	return nil
 }
 
-// ValidateStructure returns if all required CSV files are present.
+// ValidateStructure checks the feed's structure: that the source opens and that each
+// expected file is present, has a header with its required columns (no duplicates),
+// and has at least one data row. It reads only the header and first data row of each
+// file, so it verifies file presence and shape, not full readability — a file that
+// opens cleanly but hits a read error partway through is caught during the actual data
+// pass, not here.
 func (reader *Reader) ValidateStructure() []error {
 	// Check if the archive can be opened
 	allerrs := []error{}
