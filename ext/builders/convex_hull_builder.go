@@ -45,7 +45,6 @@ func (ent *FeedVersionGeometry) TableName() string {
 
 type ConvexHullBuilder struct {
 	stops              map[string]*stopGeom
-	tripRoutes         map[string]string
 	routeStopGeoms     map[string]*routeStopGeoms
 	locationGeometries []tt.Geometry
 }
@@ -53,7 +52,6 @@ type ConvexHullBuilder struct {
 func NewConvexHullBuilder() *ConvexHullBuilder {
 	return &ConvexHullBuilder{
 		stops:          map[string]*stopGeom{},
-		tripRoutes:     map[string]string{},
 		routeStopGeoms: map[string]*routeStopGeoms{},
 	}
 }
@@ -75,22 +73,26 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 			stopGeoms: map[string]*stopGeom{},
 		}
 	case *gtfs.Trip:
-		pp.tripRoutes[eid] = v.RouteID.Val
-	case *gtfs.StopTime:
-		if !v.StopID.Valid {
-			return nil
-		}
-		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
+		// Record the route's visited stop geometries from the trip's own stop_times
+		// (see RouteStopBuilder); resolve stop ids through the EntityMap.
+		r, ok := pp.routeStopGeoms[v.RouteID.Val]
 		if !ok {
-			// log.For(ctx).Debug().Msgf("no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
-		s, ok := pp.stops[v.StopID.Val]
-		if !ok {
-			// log.For(ctx).Debug().Msgf("no stop:", v.StopID)
-			return nil
+		for _, st := range v.StopTimes {
+			if !st.StopID.Valid {
+				continue
+			}
+			stopId, ok := emap.Get("stops.txt", st.StopID.Val)
+			if !ok {
+				continue
+			}
+			s, ok := pp.stops[stopId]
+			if !ok {
+				continue
+			}
+			r.stopGeoms[stopId] = s
 		}
-		r.stopGeoms[v.StopID.Val] = s
 	}
 	return nil
 }
