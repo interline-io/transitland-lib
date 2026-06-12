@@ -390,16 +390,14 @@ func (reader *Reader) readTripsForIDs(ids []string) map[string][]gtfs.Trip {
 }
 
 // emitJoinedTrip emits one trip joined with its stop_times (sorted by stop_sequence).
-// rows are the trips.txt rows for the id: none means an orphan (Valid = false); any
-// extras are duplicate trip rows, emitted after the first with empty StopTimes. When
-// capped is set the stop_times were truncated at chunkSize, so the emitted entity
-// carries an EntityLimitError.
+// rows are the trips.txt rows for the id: none means an orphan (Valid = false), already
+// reported as an invalid reference, so a cap is not flagged on it; any extras are
+// duplicate trip rows, emitted after the first with empty StopTimes. When capped is set
+// the stop_times were truncated at chunkSize, so the emitted trip carries an
+// EntityLimitError.
 func emitJoinedTrip(out chan<- gtfs.TripStopTimes, rows []gtfs.Trip, sts []gtfs.StopTime, capped bool) {
 	sort.Slice(sts, func(i, j int) bool { return sts[i].StopSequence.Val < sts[j].StopSequence.Val })
 	if len(rows) == 0 {
-		if capped && len(sts) > 0 {
-			sts[0].AddError(causes.NewEntityLimitError(sts[0].TripID.Val, "stop_times", chunkSize))
-		}
 		out <- gtfs.TripStopTimes{StopTimes: sts}
 		return
 	}

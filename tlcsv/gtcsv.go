@@ -35,8 +35,9 @@ func init() {
 	ext.RegisterReader("ftp", r)
 	w := func(url string) (adapters.Writer, error) { return NewWriter(url) }
 	ext.RegisterWriter("csv", w)
-	// Set chunkSize from config.
-	if v, e := strconv.Atoi(os.Getenv("TL_GTFS_CHUNKSIZE")); e == nil {
+	// Set chunkSize from config. Ignore a non-positive value: it would make the
+	// per-group cap (len >= chunkSize) drop every row.
+	if v, e := strconv.Atoi(os.Getenv("TL_GTFS_CHUNKSIZE")); e == nil && v > 0 {
 		chunkSize = v
 	}
 }

@@ -344,6 +344,62 @@ func TestReader_GroupCapsOversizedEntities(t *testing.T) {
 	})
 }
 
+// TestReader_ChunkCapsUngrouped covers the per-trip cap on the ungrouped (chunked)
+// path: when stop_times.txt is not grouped by trip_id, a trip with more than chunkSize
+// stop_times must still be truncated and flagged, the same as the sorted fast path.
+func TestReader_ChunkCapsUngrouped(t *testing.T) {
+	old := chunkSize
+	chunkSize = 3
+	defer func() { chunkSize = old }()
+
+	dir := t.TempDir()
+	w := NewDirAdapter(dir)
+	if err := w.WriteRows("trips.txt", [][]string{
+		{"route_id", "service_id", "trip_id"},
+		{"r", "s", "big"},
+		{"r", "s", "small"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	st := func(trip, seq string) []string { return []string{trip, "a", seq, "08:00:00", "08:00:00"} }
+	// "big" reappears after "small", forcing the ungrouped/chunked path; it has 5
+	// stop_times (capped to 3 at chunkSize=3), "small" has 1 (uncapped).
+	if err := w.WriteRows("stop_times.txt", [][]string{
+		{"trip_id", "stop_id", "stop_sequence", "arrival_time", "departure_time"},
+		st("big", "1"), st("small", "1"), st("big", "2"), st("big", "3"), st("big", "4"), st("big", "5"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	reader, err := NewReader(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reader.Open(); err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+
+	counts := map[string]int{}
+	capped := map[string]bool{}
+	for tst := range reader.TripsWithStopTimes() {
+		if !tst.Valid {
+			continue
+		}
+		counts[tst.Trip.TripID.Val] = len(tst.StopTimes)
+		capped[tst.Trip.TripID.Val] = hasEntityLimitError(tt.CheckErrors(&tst.Trip))
+	}
+	if counts["big"] != 3 || !capped["big"] {
+		t.Errorf("big: got %d stop_times capped=%v, want 3 capped=true", counts["big"], capped["big"])
+	}
+	if counts["small"] != 1 || capped["small"] {
+		t.Errorf("small: got %d stop_times capped=%v, want 1 capped=false", counts["small"], capped["small"])
+	}
+}
+
 func hasEntityLimitError(errs []error) bool {
 	for _, err := range errs {
 		if _, ok := err.(*causes.EntityLimitError); ok {
