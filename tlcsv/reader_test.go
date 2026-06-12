@@ -24,7 +24,8 @@ func TestReader_TripsWithStopTimes(t *testing.T) {
 	}
 	defer reader.Close()
 
-	// Force small chunks so the example feed's trips span several chunks.
+	// chunkSize=5 splits the example feed's 11 trips into several sorted-path chunks while
+	// staying at the busiest trip's stop_time count, so nothing is capped.
 	old := chunkSize
 	chunkSize = 5
 	defer func() { chunkSize = old }()
@@ -93,7 +94,7 @@ func TestReader_TripsWithStopTimes(t *testing.T) {
 // feed, both in stop_times first-appearance order.
 func TestReader_TripsWithStopTimes_Grouping(t *testing.T) {
 	old := chunkSize
-	chunkSize = 3 // force several chunks for 3 trips x 2 stop_times
+	chunkSize = 2 // force several chunks for 3 trips x 2 stop_times (none capped at 2)
 	defer func() { chunkSize = old }()
 
 	writeFeed := func(t *testing.T, stopTimes [][]string) string {

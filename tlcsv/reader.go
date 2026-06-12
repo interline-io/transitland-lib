@@ -77,12 +77,19 @@ func (reader *Reader) ValidateStructure() []error {
 		err := reader.Adapter.OpenFile(efn, func(in io.Reader) {
 			rowcount := 0
 			rowheader := []string{}
-			readerr := ReadRows(in, func(row Row) {
-				if len(rowheader) == 0 {
+			var readerr error
+			// Structure validation only needs the header and whether any data row
+			// exists, so stop at the first row instead of scanning the whole file
+			// (stop_times.txt / shapes.txt can be tens of millions of rows).
+			for row, rerr := range ReadRowsIter(in) {
+				if rerr != nil {
+					readerr = rerr
+				} else {
 					rowheader = row.Header
+					rowcount++
 				}
-				rowcount++
-			})
+				break
+			}
 			// If the file is unreadable or has no rows then return
 			if readerr != nil {
 				fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, readerr))
@@ -277,15 +284,15 @@ func (reader *Reader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes 
 			return ok
 		}
 		counts, order, grouped := reader.scanTripStopTimes(keep)
-		chunks := chunkByCount(order, counts)
-		order = nil
 		if grouped {
-			// Grouped: one streaming pass, emitting each trip as it completes.
-			reader.streamTripStopTimes(out, keep, chunks)
+			// Sorted fast path: one streaming pass, chunked by trip count (only one
+			// trip's stop_times is held at a time, so trips.txt drives the chunk size).
+			reader.streamTripStopTimes(out, keep, order)
 		} else {
-			// Ungrouped: re-read stop_times.txt once per chunk to gather its records.
-			reader.chunkTripStopTimes(out, chunks)
+			// Unsorted fallback: re-read stop_times.txt once per stop_time-bounded chunk.
+			reader.chunkTripStopTimes(out, order, counts)
 		}
+		order = nil
 		// Trips with no stop_times never appeared above; emit them last, in trips.txt
 		// order (counts is now the set of trip_ids that had stop_times).
 		reader.Adapter.ReadRows("trips.txt", func(row Row) {
@@ -349,6 +356,26 @@ func chunkByCount(order []string, counts map[string]int) s2D {
 	return chunks
 }
 
+// chunkByTrips splits trip_ids (in order) into chunks of at most n trips. The sorted
+// path uses this because its live stop_time buffer is already one trip, so the chunk
+// size only governs how many trip records are held while reading trips.txt — far cheaper
+// than the stop_time budget chunkByCount enforces, so n can be large and the trips.txt
+// passes few.
+func chunkByTrips(order []string, n int) s2D {
+	if n < 1 {
+		n = 1
+	}
+	var chunks s2D
+	for i := 0; i < len(order); i += n {
+		end := i + n
+		if end > len(order) {
+			end = len(order)
+		}
+		chunks = append(chunks, order[i:end])
+	}
+	return chunks
+}
+
 // readTripsForIDs reads trips.txt and returns the rows for the given trip_ids, grouped
 // by id in file order so duplicate rows are preserved.
 func (reader *Reader) readTripsForIDs(ids []string) map[string][]gtfs.Trip {
@@ -393,8 +420,12 @@ func emitJoinedTrip(out chan<- gtfs.TripStopTimes, rows []gtfs.Trip, sts []gtfs.
 // streamTripStopTimes handles a grouped stop_times.txt: one streaming pass completes
 // trips in order, holding only the current trip's stop_times (capped at chunkSize). A
 // chunk's trips are read from trips.txt when its first trip is reached, so peak memory
-// is at most chunkSize stop_times plus one chunk's trips.
-func (reader *Reader) streamTripStopTimes(out chan<- gtfs.TripStopTimes, keep func(string) bool, chunks s2D) {
+// is at most chunkSize stop_times plus one chunk's trips. Because stop_time memory is
+// already bounded to one trip, chunks are sized by trip count (chunkSize, counted in
+// trips here), keeping trips.txt passes proportional to trips rather than the much
+// larger stop_time count.
+func (reader *Reader) streamTripStopTimes(out chan<- gtfs.TripStopTimes, keep func(string) bool, order []string) {
+	chunks := chunkByTrips(order, chunkSize)
 	ci, pi := 0, 0 // current chunk index, position within it
 	var chunkTrips map[string][]gtfs.Trip
 	emit := func(tid string, sts []gtfs.StopTime, capped bool) {
@@ -437,8 +468,10 @@ func (reader *Reader) streamTripStopTimes(out chan<- gtfs.TripStopTimes, keep fu
 }
 
 // chunkTripStopTimes handles an ungrouped stop_times.txt: each chunk re-reads
-// stop_times.txt to gather its scattered records, then emits.
-func (reader *Reader) chunkTripStopTimes(out chan<- gtfs.TripStopTimes, chunks s2D) {
+// stop_times.txt to gather its scattered records, then emits. Chunks are sized by
+// stop_time count (chunkByCount) because a chunk buffers all of its stop_times at once.
+func (reader *Reader) chunkTripStopTimes(out chan<- gtfs.TripStopTimes, order []string, counts map[string]int) {
+	chunks := chunkByCount(order, counts)
 	for i, chunk := range chunks {
 		log.For(context.TODO()).Trace().
 			Int("chunk", i+1).
