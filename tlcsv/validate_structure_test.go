@@ -86,6 +86,52 @@ func TestValidateStructure_Stops(t *testing.T) {
 	}
 }
 
+// TestValidateStructure_RequiresDataRow pins the header-vs-data-row distinction:
+// the early-out at the first row must still tell a header-only file (treated as
+// empty) apart from a file that has at least one data row. A required file errors
+// in the first case and validates in the second.
+func TestValidateStructure_RequiresDataRow(t *testing.T) {
+	header := []string{"route_id", "route_short_name", "route_long_name", "route_type"}
+	dataRow := []string{"r1", "R", "Route One", "3"}
+	routesRequired := func(errs []error) bool {
+		for _, err := range errs {
+			var fre *causes.FileRequiredError
+			if errors.As(err, &fre) && fre.Filename == "routes.txt" {
+				return true
+			}
+		}
+		return false
+	}
+	writeRoutes := func(t *testing.T, rows [][]string) *Reader {
+		t.Helper()
+		dir := t.TempDir()
+		w := NewDirAdapter(dir)
+		if err := w.WriteRows("routes.txt", rows); err != nil {
+			t.Fatal(err)
+		}
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+		reader := &Reader{Adapter: NewDirAdapter(dir)}
+		if err := reader.Open(); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { reader.Close() })
+		return reader
+	}
+
+	t.Run("header only is treated as empty", func(t *testing.T) {
+		if !routesRequired(writeRoutes(t, [][]string{header}).ValidateStructure()) {
+			t.Error("header-only routes.txt should report a FileRequiredError")
+		}
+	})
+	t.Run("header plus a data row is not empty", func(t *testing.T) {
+		if routesRequired(writeRoutes(t, [][]string{header, dataRow}).ValidateStructure()) {
+			t.Error("routes.txt with a data row should not be treated as empty")
+		}
+	})
+}
+
 // TestValidateStructure_RequiredHeaderOnly ensures the empty-file handling does
 // not weaken required files: a required file with only a header (no data rows)
 // must still report a FileRequiredError.

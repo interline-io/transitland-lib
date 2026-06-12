@@ -60,7 +60,12 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 	return nil
 }
 
-// ValidateStructure returns if all required CSV files are present.
+// ValidateStructure checks the feed's structure: that the source opens and that each
+// expected file is present, has a header with its required columns (no duplicates),
+// and has at least one data row. It reads only the header and first data row of each
+// file, so it verifies file presence and shape, not full readability — a file that
+// opens cleanly but hits a read error partway through is caught during the actual data
+// pass, not here.
 func (reader *Reader) ValidateStructure() []error {
 	// Check if the archive can be opened
 	allerrs := []error{}
@@ -77,12 +82,21 @@ func (reader *Reader) ValidateStructure() []error {
 		err := reader.Adapter.OpenFile(efn, func(in io.Reader) {
 			rowcount := 0
 			rowheader := []string{}
-			readerr := ReadRows(in, func(row Row) {
-				if len(rowheader) == 0 {
+			var readerr error
+			// Structure validation only needs the header and whether at least one data
+			// row exists. ReadRowsIter reads the header (first non-empty line) internally
+			// and yields data rows, so the first iteration confirms both — read it and
+			// stop, no scanning whole files (stop_times.txt / shapes.txt can be tens of
+			// millions of rows). Zero iterations means header-only, treated as empty below.
+			for row, rerr := range ReadRowsIter(in) {
+				if rerr != nil {
+					readerr = rerr
+				} else {
 					rowheader = row.Header
+					rowcount++
 				}
-				rowcount++
-			})
+				break
+			}
 			// If the file is unreadable or has no rows then return
 			if readerr != nil {
 				fileerrs = append(fileerrs, causes.NewFileUnreadableError(efn, readerr))
