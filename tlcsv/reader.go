@@ -78,9 +78,11 @@ func (reader *Reader) ValidateStructure() []error {
 			rowcount := 0
 			rowheader := []string{}
 			var readerr error
-			// Structure validation only needs the header and whether any data row
-			// exists, so stop at the first row instead of scanning the whole file
-			// (stop_times.txt / shapes.txt can be tens of millions of rows).
+			// Structure validation only needs the header and whether at least one data
+			// row exists. ReadRowsIter reads the header (first non-empty line) internally
+			// and yields data rows, so the first iteration confirms both — read it and
+			// stop, no scanning whole files (stop_times.txt / shapes.txt can be tens of
+			// millions of rows). Zero iterations means header-only, treated as empty below.
 			for row, rerr := range ReadRowsIter(in) {
 				if rerr != nil {
 					readerr = rerr
@@ -328,6 +330,9 @@ func (reader *Reader) scanTripStopTimes(keep func(string) bool) (counts map[stri
 			grouped = false
 		}
 		if !seen {
+			// Clone out of the csv reader's per-record string so this long-lived key
+			// retains only the trip_id, not the whole pinned stop_times row.
+			sid = strings.Clone(sid)
 			order = append(order, sid)
 		}
 		counts[sid]++
