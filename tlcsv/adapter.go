@@ -283,7 +283,7 @@ func (adapter *ZipAdapter) ReadRows(filename string, cb func(Row)) error {
 	err := adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
-	log.For(context.TODO()).Trace().Str("filename", filename).Str("elapsed", time.Since(t0).Round(time.Millisecond).String()).Msg("tlcsv: read pass complete")
+	log.For(context.TODO()).Trace().Str("filename", filename).Int("elapsed_ms", int(time.Since(t0).Milliseconds())).Msg("tlcsv: read pass complete")
 	return err
 }
 
@@ -657,7 +657,7 @@ func (adapter *DirAdapter) ReadRows(filename string, cb func(Row)) error {
 	err := adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
-	log.For(context.TODO()).Trace().Str("filename", filename).Str("elapsed", time.Since(t0).Round(time.Millisecond).String()).Msg("tlcsv: read pass complete")
+	log.For(context.TODO()).Trace().Str("filename", filename).Int("elapsed_ms", int(time.Since(t0).Milliseconds())).Msg("tlcsv: read pass complete")
 	return err
 }
 
