@@ -20,7 +20,7 @@ import (
 )
 
 const latestFeedVersionQuery = `
-query($feed_onestop_id: String!, $ids: [Int!]) {
+query($feed_onestop_id: String, $ids: [Int!]) {
 	feeds(ids: $ids, where: { onestop_id: $feed_onestop_id }) {
 	  onestop_id
 	  license {
@@ -189,7 +189,7 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 }
 
 const feedVersionFileQuery = `
-query($feed_version_sha1:String!, $ids: [Int!]) {
+query($feed_version_sha1: String, $ids: [Int!]) {
 	feed_versions(limit:1, ids: $ids, where:{sha1:$feed_version_sha1}) {
 	  sha1
 	  feed {
@@ -230,7 +230,7 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 	if v, ok := checkfv["feed_versions"].([]interface{}); len(v) > 0 && ok {
 		if v2, ok := v[0].(hw); ok {
 			fvsha1 = v2["sha1"].(string)
-			if fvsha1 == key {
+			if fvsha1 != "" {
 				found = true
 			}
 			if v3, ok := v2["feed"].(hw); ok {
