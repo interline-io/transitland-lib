@@ -45,6 +45,7 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 		// v.RouteID rather than keeping a trip->route map until each StopTime arrives.
 		// The attached stop_times are raw, so resolve stop ids through the EntityMap.
 		rid := v.RouteID.Val
+		var rs map[string]bool // bound on the first kept stop; nil until then avoids an empty route entry
 		for _, st := range v.StopTimes {
 			if !st.StopID.Valid {
 				continue
@@ -53,10 +54,11 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 			if !ok {
 				continue
 			}
-			rs, ok := pp.routeStops[rid]
-			if !ok {
-				rs = map[string]bool{}
-				pp.routeStops[rid] = rs
+			if rs == nil {
+				if rs = pp.routeStops[rid]; rs == nil {
+					rs = map[string]bool{}
+					pp.routeStops[rid] = rs
+				}
 			}
 			rs[stopId] = true
 		}
