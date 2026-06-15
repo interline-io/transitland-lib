@@ -27,6 +27,14 @@ func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor,
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
+	// Temporary instrumentation for tlv2#354: only for bare-osid AllowPrev
+	// requests (the durable-key case), not pinned-version browsing. stopSelect
+	// has already merged where.OnestopID into where.OnestopIds.
+	if allowPrevProbeEnabled && where != nil &&
+		where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds &&
+		where.FeedVersionSha1 == nil && len(ids) == 0 && len(where.OnestopIds) > 0 {
+		f.probeAllowPrev(ctx, where.OnestopIds)
+	}
 	return ents, nil
 }
 
