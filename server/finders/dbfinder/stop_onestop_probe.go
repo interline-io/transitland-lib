@@ -35,21 +35,13 @@ type allowPrevProbeRow struct {
 	SearchWouldMatch bool   `db:"search_would_match"`
 }
 
-// probeAllowPrev resolves the requested Onestop IDs via the same (feed, stop_id)
-// continuity the AllowPrev query uses, then classifies each resolved current
-// stop:
-//   - differs: the stop's current Onestop ID is not the requested one, i.e. an
-//     exact lookup would have missed it and AllowPrev did real work.
-//   - search_would_match: a geohash-point + name search would also have found
-//     this stop, so a search-key resolver would not lose it.
-//
-// "meaningful" work (logged per row) is differs AND NOT search_would_match: the
-// resolutions that only stored history can recover. It measures raw continuity
-// resolution (no permission/license filtering) against active feed versions.
 // allowPrevProbeQuery builds the diagnostic query. Args bind in order: the osid
-// VALUES rows (CTE), then the radius and similarity threshold in the
+// VALUES rows (req CTE), then the radius and similarity threshold in the
 // search_would_match expression. squirrel emits CTE args before column args, so
-// placeholder positions line up.
+// placeholder positions line up. The hist CTE collapses the per-feed-version
+// history to one row per (requested osid, entity_id, feed) before joining to
+// stops, mirroring the production CTE's DISTINCT ON and avoiding fan-out for
+// pairs present in many feed versions.
 func allowPrevProbeQuery(osids []string) sq.SelectBuilder {
 	ph := make([]string, len(osids))
 	args := make([]interface{}, len(osids))
@@ -63,16 +55,16 @@ func allowPrevProbeQuery(osids []string) sq.SelectBuilder {
 	}
 	return sq.StatementBuilder.
 		Select(
-			"req.requested_osid",
+			"hist.requested_osid",
 			"gs.id as stop_db_id",
 			"gs.stop_id as stop_gtfs_id",
 			"coalesce(cur.onestop_id,'') as current_osid",
-			"(cur.onestop_id IS DISTINCT FROM req.requested_osid) as differs",
+			"(cur.onestop_id IS DISTINCT FROM hist.requested_osid) as differs",
 		).
 		Column(sq.Expr(
-			"(ST_DWithin(gs.geometry, ST_PointFromGeoHash(split_part(req.requested_osid,'-',2))::geography, ?) "+
-				"and (split_part(coalesce(cur.onestop_id,''),'-',3) = split_part(req.requested_osid,'-',3) "+
-				"or word_similarity(split_part(req.requested_osid,'-',3), split_part(coalesce(cur.onestop_id,''),'-',3)) > ?)) as search_would_match",
+			"(ST_DWithin(gs.geometry, ST_PointFromGeoHash(split_part(hist.requested_osid,'-',2))::geography, ?) "+
+				"and (split_part(coalesce(cur.onestop_id,''),'-',3) = split_part(hist.requested_osid,'-',3) "+
+				"or word_similarity(split_part(hist.requested_osid,'-',3), split_part(coalesce(cur.onestop_id,''),'-',3)) > ?)) as search_would_match",
 			allowPrevProbeRadiusM, allowPrevProbeSimilarity,
 		)).
 		Distinct().
@@ -81,15 +73,34 @@ func allowPrevProbeQuery(osids []string) sq.SelectBuilder {
 			ColumnList: []string{"requested_osid"},
 			Expression: sq.Expr("VALUES "+strings.Join(ph, ", "), args...),
 		}).
-		From("req").
-		Join("feed_version_stop_onestop_ids hist on hist.onestop_id = req.requested_osid").
-		Join("feed_versions hist_fv on hist_fv.id = hist.feed_version_id").
+		WithCTE(sq.CTE{
+			Alias: "hist",
+			Expression: sq.Expr("SELECT DISTINCT req.requested_osid, fvs.entity_id, fv.feed_id " +
+				"FROM req " +
+				"JOIN feed_version_stop_onestop_ids fvs ON fvs.onestop_id = req.requested_osid " +
+				"JOIN feed_versions fv ON fv.id = fvs.feed_version_id"),
+		}).
+		From("hist").
 		Join("gtfs_stops gs on gs.stop_id = hist.entity_id").
-		Join("feed_versions cur_fv on cur_fv.id = gs.feed_version_id and cur_fv.feed_id = hist_fv.feed_id").
+		Join("feed_versions cur_fv on cur_fv.id = gs.feed_version_id and cur_fv.feed_id = hist.feed_id").
 		Join("feed_states fs on fs.feed_version_id = gs.feed_version_id").
 		JoinClause("left join feed_version_stop_onestop_ids cur on cur.entity_id = gs.stop_id and cur.feed_version_id = gs.feed_version_id")
 }
 
+// probeAllowPrev resolves the requested Onestop IDs via the same (feed, stop_id)
+// continuity the AllowPrev query uses, then classifies each resolved current
+// stop:
+//   - differs: the stop's current Onestop ID is not the requested one, i.e. an
+//     exact lookup would have missed it and AllowPrev did real work.
+//   - search_would_match: a geohash-point + name search would also have found
+//     this stop, so a search-key resolver would not lose it.
+//
+// "meaningful" work (logged per row) is differs AND NOT search_would_match: the
+// resolutions that only stored history can recover. Stops with no current
+// Onestop ID (a stats data gap, where differs is ill-defined) are counted
+// separately as n_no_current and excluded from both, so they do not inflate the
+// meaningful count. It measures raw continuity resolution (no permission/license
+// filtering) against active feed versions.
 func (f *Finder) probeAllowPrev(ctx context.Context, osids []string) {
 	if len(osids) == 0 {
 		return
@@ -102,8 +113,12 @@ func (f *Finder) probeAllowPrev(ctx context.Context, osids []string) {
 		return
 	}
 
-	differs, meaningful := 0, 0
+	differs, meaningful, noCurrent := 0, 0, 0
 	for _, r := range rows {
+		if r.CurrentOsid == "" {
+			noCurrent++
+			continue
+		}
 		if r.Differs {
 			differs++
 			if !r.SearchWouldMatch {
@@ -116,10 +131,11 @@ func (f *Finder) probeAllowPrev(ctx context.Context, osids []string) {
 		Int("n_resolved", len(rows)).
 		Int("n_differs", differs).
 		Int("n_meaningful", meaningful).
+		Int("n_no_current", noCurrent).
 		Strs("requested_osids", osids).
 		Msg("allowprev_probe")
 	for _, r := range rows {
-		if r.Differs && !r.SearchWouldMatch {
+		if r.CurrentOsid != "" && r.Differs && !r.SearchWouldMatch {
 			log.For(ctx).Info().
 				Str("requested_osid", r.RequestedOsid).
 				Str("current_osid", r.CurrentOsid).
