@@ -17,6 +17,7 @@ transitland dbmigrate-natural-earth [flags]
 ```
       --dburl string   Database URL (default: $TL_DATABASE_URL)
   -h, --help           help for dbmigrate-natural-earth
+      --overwrite      Reload even if data is already present (truncates first); default skips when present
 ```
 
 ### SEE ALSO
