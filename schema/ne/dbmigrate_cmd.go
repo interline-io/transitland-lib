@@ -24,8 +24,9 @@ import (
 // zip files in by importing transitland-lib/cmds.
 
 type Command struct {
-	DBURL   string
-	Adapter tldb.Adapter
+	DBURL     string
+	Overwrite bool
+	Adapter   tldb.Adapter
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
@@ -34,6 +35,7 @@ func (cmd *Command) HelpDesc() (string, string) {
 
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
+	fl.BoolVar(&cmd.Overwrite, "overwrite", false, "Reload even if data is already present (truncates first); default skips when present")
 }
 
 func (cmd *Command) Parse(args []string) error {
@@ -51,6 +53,23 @@ func (cmd *Command) Run(ctx context.Context) error {
 	}
 	defer atx.Close()
 	cmd.Adapter = postgresAdapter.NewPostgresAdapterFromDBX(db)
+
+	// The loader appends rows unconditionally (these tables have no natural unique key),
+	// so guard against duplicating an existing load: skip when data is already present
+	// unless --overwrite, which truncates both tables and reloads.
+	var count int
+	if err := cmd.Adapter.Get(ctx, &count, "SELECT count(*) FROM ne_10m_populated_places"); err != nil {
+		return err
+	}
+	if count > 0 && !cmd.Overwrite {
+		log.Info().Msgf("Natural Earth data already present (%d populated places); skipping (use --overwrite to reload)", count)
+		return nil
+	}
+	if cmd.Overwrite {
+		if _, err := cmd.Adapter.DBX().ExecContext(ctx, "TRUNCATE ne_10m_admin_1_states_provinces, ne_10m_populated_places"); err != nil {
+			return err
+		}
+	}
 
 	return fs.WalkDir(EmbeddedNaturalEarthData, ".", func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
