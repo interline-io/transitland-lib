@@ -31,7 +31,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	github.com/hypirion/go-filecache v0.0.0-20160810125507-e3e6ef6981f0
 	github.com/iancoleman/orderedmap v0.3.0
-	github.com/interline-io/log v0.0.0-20260509014723-c913c7aa21a8
+	github.com/interline-io/log v0.0.0-20260609094544-2ef9b819bc27
 	github.com/irees/squirrel v1.6.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jellydator/ttlcache/v2 v2.11.1
@@ -129,7 +129,7 @@ require (
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mazznoer/csscolorparser v0.1.8 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
@@ -183,8 +183,8 @@ require (
 	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
