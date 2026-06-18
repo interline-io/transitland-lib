@@ -294,6 +294,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 		"gtfs_stops.zone_id",
 		"gtfs_stops.platform_code",
 		"gtfs_stops.tts_stop_name",
+		"gtfs_stops.stop_access",
 		"gtfs_stops.geometry",
 		"gtfs_stops.level_id",
 		"gtfs_stops.parent_station",

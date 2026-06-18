@@ -25,11 +25,24 @@ func TestStopCreate(t *testing.T) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
+		// stop_access is only valid on a platform with a parent_station, so create a parent station first
+		parentID, err := finder.StopCreate(ctx, model.StopSetInput{
+			FeedVersion:  &fv,
+			StopID:       toPtr(fmt.Sprintf("station-%d", time.Now().UnixNano())),
+			StopName:     toPtr("station"),
+			LocationType: toPtr(1),
+			Geometry:     toPtr(tt.NewPoint(-122.271604, 37.803664)),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		stopInput := model.StopSetInput{
 			FeedVersion: &fv,
 			StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
 			StopName:    toPtr("hello"),
 			Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
+			Parent:      &model.StopSetInput{ID: toPtr(parentID)},
+			StopAccess:  toPtr(1),
 		}
 		eid, err := finder.StopCreate(ctx, stopInput)
 		if err != nil {
@@ -44,6 +57,8 @@ func TestStopCreate(t *testing.T) {
 		assert.Equal(t, stopInput.StopID, &checkEnt.StopID.Val)
 		assert.Equal(t, stopInput.StopName, &checkEnt.StopName.Val)
 		assert.Equal(t, stopInput.Geometry.FlatCoords(), checkEnt.Geometry.FlatCoords())
+		assert.EqualValues(t, 1, checkEnt.StopAccess.Val)
+		assert.True(t, checkEnt.StopAccess.Valid)
 	})
 }
 

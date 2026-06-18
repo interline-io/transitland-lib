@@ -850,7 +850,10 @@ type Stop {
   
   "GTFS `stops.tts_stop_name`; readable version of stop_name for use with text-to-speech systems"
   tts_stop_name: String
-  
+
+  "GTFS `stops.stop_access` [0=access only via station entrance/pathways, 1=route directly to the stop]; only valid for platforms (location_type 0) with a parent_station"
+  stop_access: Int
+
   "Geographic location of this stop as a GeoJSON Point"
   geometry: Point!
 
@@ -3123,6 +3126,8 @@ input StopSetInput {
   platform_code: String
   "Set GTFS tts_stop_name"
   tts_stop_name: String
+  "Set GTFS stop_access"
+  stop_access: Int
   "Set stop geometry"
   geometry: Point
   "Reference to an existing parent station; only the `id` is used (the parent must already exist)"

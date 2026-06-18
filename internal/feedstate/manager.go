@@ -289,6 +289,7 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		"area_id":             "gtfs_stops.area_id",
 		"tts_stop_name":       "gtfs_stops.tts_stop_name",
 		"platform_code":       "gtfs_stops.platform_code",
+		"stop_access":         "gtfs_stops.stop_access",
 		"feed_version_id":     "feed_versions.id",
 		"feed_id":             "feed_versions.feed_id",
 		"onestop_id":          "osid.onestop_id",
