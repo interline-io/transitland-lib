@@ -133,6 +133,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		"gtfs_trips.block_id",
 		"gtfs_trips.wheelchair_accessible",
 		"gtfs_trips.bikes_allowed",
+		"gtfs_trips.cars_allowed",
 		"gtfs_trips.stop_pattern_id",
 		"gtfs_trips.journey_pattern_id",
 		"gtfs_trips.journey_pattern_offset",

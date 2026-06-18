@@ -1213,6 +1213,7 @@ type ComplexityRoot struct {
 		BikesAllowed         func(childComplexity int) int
 		BlockID              func(childComplexity int) int
 		Calendar             func(childComplexity int) int
+		CarsAllowed          func(childComplexity int) int
 		DirectionID          func(childComplexity int) int
 		FeedVersion          func(childComplexity int) int
 		FlexStopTimes        func(childComplexity int, limit *int, where *model.TripStopTimeFilter) int
@@ -7152,6 +7153,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Trip.Calendar(childComplexity), true
+	case "Trip.cars_allowed":
+		if e.ComplexityRoot.Trip.CarsAllowed == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Trip.CarsAllowed(childComplexity), true
 	case "Trip.direction_id":
 		if e.ComplexityRoot.Trip.DirectionID == nil {
 			break
@@ -9842,6 +9849,9 @@ type Trip {
   
   "GTFS ` + "`" + `trips.bikes_allowed` + "`" + ` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]"
   bikes_allowed: Int
+
+  "GTFS ` + "`" + `trips.cars_allowed` + "`" + ` [0=no information, 1=vehicle can accommodate at least one car, 2=no cars allowed]"
+  cars_allowed: Int
 
   "GTFS ` + "`" + `trips.safe_duration_factor` + "`" + ` (GTFS-Flex, google/transit#598); multiplier applied to driving duration for a safe travel time estimate"
   safe_duration_factor: Float
@@ -14157,6 +14167,8 @@ func (ec *executionContext) childFields_Trip(ctx context.Context, field graphql.
 		return ec.fieldContext_Trip_wheelchair_accessible(ctx, field)
 	case "bikes_allowed":
 		return ec.fieldContext_Trip_bikes_allowed(ctx, field)
+	case "cars_allowed":
+		return ec.fieldContext_Trip_cars_allowed(ctx, field)
 	case "safe_duration_factor":
 		return ec.fieldContext_Trip_safe_duration_factor(ctx, field)
 	case "safe_duration_offset":
@@ -38959,6 +38971,29 @@ func (ec *executionContext) fieldContext_Trip_bikes_allowed(_ context.Context, f
 	return graphql.NewScalarFieldContext("Trip", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _Trip_cars_allowed(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Trip_cars_allowed(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CarsAllowed, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Trip_cars_allowed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Trip", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _Trip_safe_duration_factor(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -56116,6 +56151,8 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Trip_wheelchair_accessible(ctx, field, obj)
 		case "bikes_allowed":
 			out.Values[i] = ec._Trip_bikes_allowed(ctx, field, obj)
+		case "cars_allowed":
+			out.Values[i] = ec._Trip_cars_allowed(ctx, field, obj)
 		case "safe_duration_factor":
 			out.Values[i] = ec._Trip_safe_duration_factor(ctx, field, obj)
 		case "safe_duration_offset":

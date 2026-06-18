@@ -19,6 +19,7 @@ func TestTrip_Errors(t *testing.T) {
 			ShapeID:              tt.NewKey("ok"),
 			WheelchairAccessible: tt.NewInt(1),
 			BikesAllowed:         tt.NewInt(1),
+			CarsAllowed:          tt.NewInt(1),
 		}
 		if fn != nil {
 			fn(trip)
@@ -77,6 +78,13 @@ func TestTrip_Errors(t *testing.T) {
 				t.BikesAllowed = tt.NewInt(100)
 			}),
 			expectedErrors: PE("InvalidFieldError:bikes_allowed"),
+		},
+		{
+			name: "Invalid cars_allowed",
+			trip: newTrip(func(t *Trip) {
+				t.CarsAllowed = tt.NewInt(100)
+			}),
+			expectedErrors: PE("InvalidFieldError:cars_allowed"),
 		},
 		// GTFS-Flex safe duration fields (google/transit#598)
 		{
