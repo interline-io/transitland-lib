@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -52,6 +53,36 @@ func TestSchemaDrift_SQLite(t *testing.T) {
 			for _, col := range want {
 				assert.Containsf(t, got, col,
 					"%T: db column %q is missing from sqlite table %q (add it to schema/sqlite/sqlite.sql)", ent, col, table)
+			}
+		})
+	}
+}
+
+// TestSchemaDrift_MaterializedSQLite asserts that every destination column the
+// materialization projection writes exists in the corresponding materialized
+// active table in the embedded SQLite schema.
+//
+// The source of truth is feedstate.MaterializedTableFields — the same
+// destination-column set MaterializeFeedVersion inserts. If a projection gains a
+// column but the table doesn't (the cEMV / stop_access class of bug), the
+// materialization INSERT would fail; this catches it without a live DB. The
+// spatial flag does not change the destination column set, so false is used.
+func TestSchemaDrift_MaterializedSQLite(t *testing.T) {
+	ctx := context.Background()
+	adapter := &sqlite.SQLiteAdapter{DBURL: "sqlite3://:memory:"}
+	require.NoError(t, adapter.Open())
+	defer adapter.Close()
+	require.NoError(t, adapter.Create())
+	db := adapter.DBX()
+
+	for table, fields := range feedstate.MaterializedTableFields(false) {
+		t.Run(table, func(t *testing.T) {
+			got, err := sqliteColumns(ctx, db, table)
+			require.NoError(t, err)
+			require.NotEmptyf(t, got, "materialized table %q is missing from schema/sqlite/sqlite.sql", table)
+			for col := range fields {
+				assert.Containsf(t, got, col,
+					"materialization projects column %q but it is missing from %q (add it to schema/sqlite/sqlite.sql and the postgres migration)", col, table)
 			}
 		})
 	}

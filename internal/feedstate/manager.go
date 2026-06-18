@@ -211,15 +211,11 @@ func (m *Manager) DematerializeFeedVersion(ctx context.Context, feedVersionID in
 	return nil
 }
 
-// MaterializeFeedVersion inserts routes/stops/agencies for a feed version into materialized tables
-func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int) error {
-	// Clear any existing materialized data for this feed version first
-	if err := m.DematerializeFeedVersion(ctx, feedVersionID); err != nil {
-		return fmt.Errorf("failed to dematerialize feed version %d before materializing: %w", feedVersionID, err)
-	}
-
-	// Build route column mappings (destination column -> source expression)
-	routeFields := map[string]string{
+// routeMaterializeFields returns the destination-column -> source-expression
+// projection used to populate tl_materialized_active_routes. When spatial is
+// true the geometry is simplified (PostGIS); otherwise it is copied as-is (SQLite).
+func routeMaterializeFields(spatial bool) map[string]string {
+	fields := map[string]string{
 		"id":                  "gtfs_routes.id",
 		"route_id":            "gtfs_routes.route_id",
 		"route_short_name":    "gtfs_routes.route_short_name",
@@ -245,36 +241,18 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		"created_at":          "gtfs_routes.created_at",
 		"updated_at":          "gtfs_routes.updated_at",
 	}
-
-	// Add geometry column - full geometry for SQLite, simplified for PostGIS
-	routeFields["geometry_simplified"] = "tlrg.geometry"
-	if m.adapter.SupportsSpatialFunctions() {
-		routeFields["geometry_simplified"] = "ST_Simplify(tlrg.geometry::geometry, 0.01)"
+	// Geometry column - full geometry for SQLite, simplified for PostGIS
+	fields["geometry_simplified"] = "tlrg.geometry"
+	if spatial {
+		fields["geometry_simplified"] = "ST_Simplify(tlrg.geometry::geometry, 0.01)"
 	}
+	return fields
+}
 
-	// Extract columns and selects from the map, sorted for consistency
-	routeColumns, routeSelects := sortedColumnsAndSelects(routeFields)
-
-	// Insert routes with derived data using Squirrel
-	routeQuery := m.adapter.Sqrl().
-		Insert("tl_materialized_active_routes").
-		Columns(routeColumns...).
-		Select(m.adapter.Sqrl().
-			Select(routeSelects...).
-			From("gtfs_routes").
-			Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
-			Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
-			LeftJoin("feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id AND osid.feed_version_id = feed_versions.id").
-			LeftJoin("tl_route_geometries tlrg ON tlrg.route_id = gtfs_routes.id").
-			Where(sq.Eq{"gtfs_routes.feed_version_id": feedVersionID}))
-
-	_, err := routeQuery.ExecContext(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to insert routes for feed version %d: %w", feedVersionID, err)
-	}
-
-	// Build stop column mappings (destination column -> source expression)
-	stopFields := map[string]string{
+// stopMaterializeFields returns the destination-column -> source-expression
+// projection used to populate tl_materialized_active_stops.
+func stopMaterializeFields() map[string]string {
+	return map[string]string{
 		"id":                  "gtfs_stops.id",
 		"stop_id":             "gtfs_stops.stop_id",
 		"stop_code":           "gtfs_stops.stop_code",
@@ -299,6 +277,77 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 		"created_at":          "gtfs_stops.created_at",
 		"updated_at":          "gtfs_stops.updated_at",
 	}
+}
+
+// agencyMaterializeFields returns the destination-column -> source-expression
+// projection used to populate tl_materialized_active_agencies.
+func agencyMaterializeFields() map[string]string {
+	return map[string]string{
+		"id":              "gtfs_agencies.id",
+		"agency_id":       "gtfs_agencies.agency_id",
+		"agency_name":     "gtfs_agencies.agency_name",
+		"agency_url":      "gtfs_agencies.agency_url",
+		"agency_timezone": "gtfs_agencies.agency_timezone",
+		"agency_lang":     "gtfs_agencies.agency_lang",
+		"agency_phone":    "gtfs_agencies.agency_phone",
+		"agency_fare_url": "gtfs_agencies.agency_fare_url",
+		"agency_email":    "gtfs_agencies.agency_email",
+		"cemv_support":    "gtfs_agencies.cemv_support",
+		"feed_version_id": "feed_versions.id",
+		"feed_id":         "feed_versions.feed_id",
+		"onestop_id":      "osid.onestop_id",
+		"textsearch":      "gtfs_agencies.textsearch",
+		"created_at":      "gtfs_agencies.created_at",
+		"updated_at":      "gtfs_agencies.updated_at",
+	}
+}
+
+// MaterializedTableFields returns, for each materialized active table, the
+// destination-column -> source-expression projection used by
+// MaterializeFeedVersion. These maps are the single source of truth for what
+// those tables must contain; schema-drift checks assert that every destination
+// column exists in the corresponding table.
+func MaterializedTableFields(spatial bool) map[string]map[string]string {
+	return map[string]map[string]string{
+		"tl_materialized_active_routes":   routeMaterializeFields(spatial),
+		"tl_materialized_active_stops":    stopMaterializeFields(),
+		"tl_materialized_active_agencies": agencyMaterializeFields(),
+	}
+}
+
+// MaterializeFeedVersion inserts routes/stops/agencies for a feed version into materialized tables
+func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int) error {
+	// Clear any existing materialized data for this feed version first
+	if err := m.DematerializeFeedVersion(ctx, feedVersionID); err != nil {
+		return fmt.Errorf("failed to dematerialize feed version %d before materializing: %w", feedVersionID, err)
+	}
+
+	// Build route column mappings (destination column -> source expression)
+	routeFields := routeMaterializeFields(m.adapter.SupportsSpatialFunctions())
+
+	// Extract columns and selects from the map, sorted for consistency
+	routeColumns, routeSelects := sortedColumnsAndSelects(routeFields)
+
+	// Insert routes with derived data using Squirrel
+	routeQuery := m.adapter.Sqrl().
+		Insert("tl_materialized_active_routes").
+		Columns(routeColumns...).
+		Select(m.adapter.Sqrl().
+			Select(routeSelects...).
+			From("gtfs_routes").
+			Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
+			Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
+			LeftJoin("feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id AND osid.feed_version_id = feed_versions.id").
+			LeftJoin("tl_route_geometries tlrg ON tlrg.route_id = gtfs_routes.id").
+			Where(sq.Eq{"gtfs_routes.feed_version_id": feedVersionID}))
+
+	_, err := routeQuery.ExecContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to insert routes for feed version %d: %w", feedVersionID, err)
+	}
+
+	// Build stop column mappings (destination column -> source expression)
+	stopFields := stopMaterializeFields()
 
 	// Extract columns and selects from the map, sorted for consistency
 	stopColumns, stopSelects := sortedColumnsAndSelects(stopFields)
@@ -320,24 +369,7 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 	}
 
 	// Build agency column mappings (destination column -> source expression)
-	agencyFields := map[string]string{
-		"id":              "gtfs_agencies.id",
-		"agency_id":       "gtfs_agencies.agency_id",
-		"agency_name":     "gtfs_agencies.agency_name",
-		"agency_url":      "gtfs_agencies.agency_url",
-		"agency_timezone": "gtfs_agencies.agency_timezone",
-		"agency_lang":     "gtfs_agencies.agency_lang",
-		"agency_phone":    "gtfs_agencies.agency_phone",
-		"agency_fare_url": "gtfs_agencies.agency_fare_url",
-		"agency_email":    "gtfs_agencies.agency_email",
-		"cemv_support":    "gtfs_agencies.cemv_support",
-		"feed_version_id": "feed_versions.id",
-		"feed_id":         "feed_versions.feed_id",
-		"onestop_id":      "osid.onestop_id",
-		"textsearch":      "gtfs_agencies.textsearch",
-		"created_at":      "gtfs_agencies.created_at",
-		"updated_at":      "gtfs_agencies.updated_at",
-	}
+	agencyFields := agencyMaterializeFields()
 
 	// Extract columns and selects from the map, sorted for consistency
 	agencyColumns, agencySelects := sortedColumnsAndSelects(agencyFields)
