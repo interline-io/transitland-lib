@@ -123,6 +123,10 @@ func (mr *Reader) FareLegRules() chan gtfs.FareLegRule {
 	return readNullEntities[gtfs.FareLegRule](mr)
 }
 
+func (mr *Reader) FareLegJoinRules() chan gtfs.FareLegJoinRule {
+	return readNullEntities[gtfs.FareLegJoinRule](mr)
+}
+
 func (mr *Reader) FareTransferRules() chan gtfs.FareTransferRule {
 	return readNullEntities[gtfs.FareTransferRule](mr)
 }

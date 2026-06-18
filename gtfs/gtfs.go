@@ -32,6 +32,7 @@ type Reader interface {
 	Areas() chan Area
 	StopAreas() chan StopArea
 	FareLegRules() chan FareLegRule
+	FareLegJoinRules() chan FareLegJoinRule
 	FareTransferRules() chan FareTransferRule
 	FareProducts() chan FareProduct
 	RiderCategories() chan RiderCategory
