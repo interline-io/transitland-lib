@@ -982,11 +982,23 @@ func stopResolverPreviousOnestopIDTestcases(t testing.TB, cfg model.Config) []te
 			selectExpect: []string{"s-9q9nfswzpg-fruitvale"},
 		},
 		{
+			// A previous Onestop ID is resolved as a search key (geohash point +
+			// name) against current stops, so it returns the stop's *current*
+			// canonical Onestop ID, not the historical id that was queried.
 			name:         "use previous",
 			query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
 			vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": true},
 			selector:     "stops.#.onestop_id",
-			selectExpect: []string{"s-9q9nfswzpg-fruitvale"},
+			selectExpect: []string{"s-9q9nfsxn67-fruitvale"},
+		},
+		{
+			// A malformed/non-stop Onestop ID has no valid search key, so the
+			// request must return empty rather than an unconstrained result.
+			name:         "previous with malformed id returns empty",
+			query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
+			vars:         hw{"osid": "not-a-onestop-id", "previous": true},
+			selector:     "stops.#.onestop_id",
+			selectExpect: []string{},
 		},
 	}
 	return testcases

@@ -321,27 +321,34 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 		if where.OnestopID != nil {
 			where.OnestopIds = append(where.OnestopIds, *where.OnestopID)
 		}
-		if len(where.OnestopIds) > 0 && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
-			// Use CTE for stop lookup optimization
-			sub := sq.StatementBuilder.
-				Select(
-					"feed_version_stop_onestop_ids.onestop_id",
-					"feed_version_stop_onestop_ids.entity_id",
-					"feed_versions.feed_id",
-				).
-				Distinct().Options("on (feed_version_stop_onestop_ids.onestop_id, feed_version_stop_onestop_ids.entity_id, feed_versions.feed_id)").
-				From("feed_version_stop_onestop_ids").
-				Join("feed_versions on feed_versions.id = feed_version_stop_onestop_ids.feed_version_id").
-				Where(In("feed_version_stop_onestop_ids.onestop_id", where.OnestopIds)).
-				OrderBy("feed_version_stop_onestop_ids.onestop_id, feed_version_stop_onestop_ids.entity_id, feed_versions.feed_id, feed_versions.id DESC")
-			stopLookupCte := sq.CTE{
-				Materialized: true,
-				Alias:        "feed_version_stop_onestop_ids",
-				Expression:   sub,
+		searchCte, searchOk := stopOnestopSearchCTE(where.OnestopIds)
+		if searchOk && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
+			// Resolve (possibly historical) Onestop IDs as search keys: decode
+			// each to a point + name and match against current stops by location
+			// and name similarity, rather than a stored per-version association.
+			// See interline-io/tlv2#354. If no Onestop ID parses as a search key
+			// (searchOk is false), we fall through to the exact-match branch
+			// below, which returns empty for unknown ids.
+			//
+			// Source for the stop's current onestop_id, used to compare name
+			// components. On the materialized active path it is a column on the
+			// materialized table; otherwise it comes from a join to
+			// feed_version_stop_onestop_ids (matching the select expression).
+			curOsid := "feed_version_stop_onestop_ids.onestop_id"
+			if useActive.Active() && useActive.materialized {
+				curOsid = "gtfs_stops.onestop_id"
+			} else {
+				q = q.JoinClause(`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`)
 			}
 			q = q.
-				WithCTE(stopLookupCte).
-				Join("feed_version_stop_onestop_ids on feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_id = feed_versions.feed_id")
+				WithCTE(searchCte).
+				Join(
+					"stop_onestop_search on ST_DWithin(gtfs_stops.geometry, ST_MakePoint(stop_onestop_search.lng, stop_onestop_search.lat), ?) "+
+						"and (split_part("+curOsid+", '-', 3) = stop_onestop_search.name_component "+
+						"or word_similarity(stop_onestop_search.name_component, split_part("+curOsid+", '-', 3)) > ?)",
+					stopOnestopSearchRadius, stopOnestopSearchSimilarity,
+				)
+			distinct = true
 		} else {
 			q = q.JoinClause(`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`)
 			if len(where.OnestopIds) > 0 {
