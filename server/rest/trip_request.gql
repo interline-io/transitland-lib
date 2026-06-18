@@ -38,6 +38,7 @@ query ($limit: Int, $ids: [Int!], $after: Int, $include_route: Boolean!, $includ
     block_id
     wheelchair_accessible
     bikes_allowed
+    cars_allowed
     schedule_relationship
     stop_pattern_id
     feed_version {

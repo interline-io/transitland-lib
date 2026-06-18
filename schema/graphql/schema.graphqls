@@ -1038,6 +1038,9 @@ type Trip {
   "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]"
   bikes_allowed: Int
 
+  "GTFS `trips.cars_allowed` [0=no information, 1=vehicle can accommodate at least one car, 2=no cars allowed]"
+  cars_allowed: Int
+
   "GTFS `trips.safe_duration_factor` (GTFS-Flex, google/transit#598); multiplier applied to driving duration for a safe travel time estimate"
   safe_duration_factor: Float
 
