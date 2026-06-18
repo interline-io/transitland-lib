@@ -26,6 +26,9 @@ import (
 //	GET  /queues/{queue}/jobs/{jobId}            — status
 //	GET  /queues/{queue}/jobs/{jobId}/watch      — SSE stream
 //	POST /queues/{queue}/jobs/{jobId}/cancel     — cancel
+//	GET  /queues/{queue}/jobs/{jobId}/artifacts                      — list artifacts
+//	GET  /queues/{queue}/jobs/{jobId}/artifacts/{artifactId}         — artifact metadata
+//	GET  /queues/{queue}/jobs/{jobId}/artifacts/{artifactId}/download — download
 func NewServer() (http.Handler, error) {
 	r := chi.NewRouter()
 	r.Post("/run", runJobRequest)
@@ -35,6 +38,9 @@ func NewServer() (http.Handler, error) {
 		r.Get("/{jobId}", statusJobRequest)
 		r.Get("/{jobId}/watch", watchJobRequest)
 		r.Post("/{jobId}/cancel", cancelJobRequest)
+		r.Get("/{jobId}/artifacts", listArtifactsRequest)
+		r.Get("/{jobId}/artifacts/{artifactId}", artifactMetaRequest)
+		r.Get("/{jobId}/artifacts/{artifactId}/download", downloadArtifactRequest)
 	})
 	return r, nil
 }

@@ -28,11 +28,22 @@ type Config struct {
 	UseGeohashFilter         bool
 	AllowHTTPFetchUnfiltered bool
 	RestPrefix               string
-	Storage                  string
-	RTStorage                string
-	LoaderBatchSize          int
-	LoaderStopTimeBatchSize  int
-	MaxRadius                float64
+	// JobsPrefix is the public prefix of the jobserver mount (analogue of
+	// RestPrefix for the REST mount), used to build absolute artifact download
+	// links that are correct behind a path-rewriting ingress. Empty yields
+	// host-relative links.
+	JobsPrefix      string
+	Storage         string
+	RTStorage       string
+	ArtifactStorage string // job-artifact storage URL; no fallback to Storage
+	// ArtifactStoreFactory is the unscoped read/serve side (jobserver) and the
+	// producer of per-job scoped handles (see JobArtifacts). The per-job handle
+	// is intentionally NOT a Config field: it is execution-scoped, resolved from
+	// the job's JobMeta rather than stored on this process-wide struct.
+	ArtifactStoreFactory    ArtifactStoreFactory
+	LoaderBatchSize         int
+	LoaderStopTimeBatchSize int
+	MaxRadius               float64
 }
 
 var finderCtxKey = &contextKey{"finderConfig"}
@@ -55,6 +66,28 @@ func ForContext(ctx context.Context) Config {
 func WithConfig(ctx context.Context, cfg Config) context.Context {
 	r := context.WithValue(ctx, finderCtxKey, cfg)
 	return r
+}
+
+// JobArtifacts returns an ArtifactStore scoped to the executing job, or nil when
+// there is no job on the context (e.g. an HTTP request) or no artifact storage
+// is configured for this deployment. Workers call this to publish files
+// attributed to the job they are running; the scope (id/user/kind) comes from
+// the runner-stamped JobMeta, so a worker cannot misattribute a file to another
+// job. A non-nil return means "in a job AND artifacts are available here."
+func JobArtifacts(ctx context.Context) ArtifactStore {
+	cfg := ForContext(ctx)
+	// Treat an empty storage URL as "not configured", matching the jobserver's
+	// requireArtifactReader: NewStore returns a non-nil *Store even for an empty
+	// URL (writes then fail loudly), so guarding only the factory would hand a
+	// worker a handle that errors on every write.
+	if cfg.ArtifactStoreFactory == nil || cfg.ArtifactStorage == "" {
+		return nil
+	}
+	m, ok := jobs.JobMetaFromContext(ctx)
+	if !ok {
+		return nil
+	}
+	return cfg.ArtifactStoreFactory.For(m.ID, m.UserID, m.Kind)
 }
 
 func AddConfig(cfg Config) func(http.Handler) http.Handler {

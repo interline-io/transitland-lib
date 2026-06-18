@@ -1062,3 +1062,18 @@ CREATE TABLE IF NOT EXISTS "gtfs_locations" (
 );
 CREATE INDEX idx_gtfs_locations_feed_version_id ON "gtfs_locations"(feed_version_id);
 CREATE UNIQUE INDEX idx_gtfs_locations_fv_id ON "gtfs_locations"(feed_version_id, location_id);
+CREATE TABLE tl_job_artifacts (
+  "id" integer primary key autoincrement,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "job_id" text not null,
+  "job_kind" text not null default '',
+  "user_id" text not null default '',
+  "filename" text not null,
+  "content_type" text not null default 'application/octet-stream',
+  "size_bytes" integer not null default 0,
+  "sha1" text not null default '',
+  "storage_key" text not null
+);
+CREATE INDEX idx_tl_job_artifacts_job_id ON "tl_job_artifacts"(job_id);
+CREATE INDEX idx_tl_job_artifacts_user_id ON "tl_job_artifacts"(user_id);

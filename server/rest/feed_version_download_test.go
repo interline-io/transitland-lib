@@ -13,11 +13,27 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 	"google.golang.org/protobuf/proto"
 )
 
+// resolveID posts a GraphQL query to the handler as admin and returns the
+// integer id found at the given gjson path. Used to exercise the
+// download-by-integer-id paths, since fixture serial ids are not stable.
+func resolveID(t *testing.T, gqlSrv http.Handler, query string, path string) string {
+	req, _ := http.NewRequest("POST", "/", strings.NewReader(query))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	usercheck.AdminDefaultMiddleware("test")(gqlSrv).ServeHTTP(rr, req)
+	id := gjson.Get(rr.Body.String(), path).String()
+	if id == "" {
+		t.Fatalf("could not resolve id at %q from response: %s", path, rr.Body.String())
+	}
+	return id
+}
+
 func TestFeedVersionDownloadRequest(t *testing.T) {
-	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+	gqlSrv, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
 
@@ -32,6 +48,17 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 		if sc := len(rr.Body.Bytes()); sc != 59324 {
 			t.Errorf("got %d bytes, expected 59324", sc)
 		}
+	})
+	t.Run("ok by integer id", func(t *testing.T) {
+		fvID := resolveID(t, gqlSrv,
+			`{"query":"{feed_versions(where:{sha1:\"d2813c293bcfd7a97dde599527ae6c62c98e66c6\"}){id}}"}`,
+			"data.feed_versions.0.id")
+		req, _ := http.NewRequest("GET", "/feed_versions/"+fvID+"/download", nil)
+		rr := httptest.NewRecorder()
+		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin.ServeHTTP(rr, req)
+		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
+		assert.Equal(t, 59324, rr.Body.Len(), "body length")
 	})
 	t.Run("not authorized as anon", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
@@ -110,7 +137,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 }
 
 func TestFeedDownloadLatestRequest(t *testing.T) {
-	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+	gqlSrv, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
 
@@ -125,6 +152,17 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 		if sc := len(rr.Body.Bytes()); sc != 59324 {
 			t.Errorf("got %d bytes, expected 59324", sc)
 		}
+	})
+	t.Run("ok by integer id", func(t *testing.T) {
+		feedID := resolveID(t, gqlSrv,
+			`{"query":"{feeds(where:{onestop_id:\"CT\"}){id}}"}`,
+			"data.feeds.0.id")
+		req, _ := http.NewRequest("GET", "/feeds/"+feedID+"/download_latest_feed_version", nil)
+		rr := httptest.NewRecorder()
+		asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
+		asAdmin.ServeHTTP(rr, req)
+		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
+		assert.Equal(t, 59324, rr.Body.Len(), "body length")
 	})
 	t.Run("ok as user", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)

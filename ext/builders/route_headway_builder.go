@@ -33,12 +33,6 @@ func (ent *RouteHeadway) TableName() string {
 
 //////
 
-type riTrip struct {
-	RouteID   string
-	ServiceID string
-	Direction uint8
-}
-
 type riKey struct {
 	StopID    string
 	ServiceID string
@@ -46,18 +40,20 @@ type riKey struct {
 }
 
 type RouteHeadwayBuilder struct {
-	tripDetails     map[string]riTrip
-	routeDepartures map[string]map[riKey][]int
-	serviceDays     map[string][]string
-	tripService     map[string]string
+	// Departure seconds are accumulated for every stop_time in the feed, so they are
+	// stored as int32 (seconds-since-midnight fits easily) to halve this map's footprint
+	// on large feeds; widened back to int only for the selected stop's stats.
+	routeDepartures map[string]map[riKey][]int32
+	// services holds one Service per service_id. The active-days materialization is
+	// deferred to Copy and scoped to each route's own services there, instead of
+	// expanding every service into a feed-wide date->services map up front.
+	services map[string]*service.Service
 }
 
 func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	return &RouteHeadwayBuilder{
-		tripDetails:     map[string]riTrip{},
-		routeDepartures: map[string]map[riKey][]int{},
-		tripService:     map[string]string{},
-		serviceDays:     map[string][]string{},
+		routeDepartures: map[string]map[riKey][]int32{},
+		services:        map[string]*service.Service{},
 	}
 }
 
@@ -65,18 +61,10 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 	// Keep track of all services and departures
 	switch v := ent.(type) {
 	case *gtfs.Calendar:
-		// Use only the first 30 days of service
-		svc := service.NewService(*v, v.CalendarDates...)
-		startDate := v.StartDate.Val
-		for i := 0; i < 31; i++ {
-			if svc.IsActive(startDate) {
-				d := startDate.Format("2006-01-02")
-				pp.serviceDays[d] = append(pp.serviceDays[d], eid)
-			}
-			startDate = startDate.AddDate(0, 0, 1)
-		}
+		// Cache the service; its active days are materialized lazily in Copy.
+		pp.services[eid] = service.NewService(*v, v.CalendarDates...)
 	case *gtfs.Route:
-		pp.routeDepartures[eid] = map[riKey][]int{}
+		pp.routeDepartures[eid] = map[riKey][]int32{}
 	case *gtfs.Trip:
 		// Process StopTimes assuming they will all be written
 		// otherwise this breaks on journey pattern deduplication.
@@ -94,7 +82,7 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 				StopID:    stopId,
 			}
 			if rd, ok := pp.routeDepartures[v.RouteID.Val]; ok && st.DepartureTime.Valid {
-				rd[rkey] = append(rd[rkey], st.DepartureTime.Int())
+				rd[rkey] = append(rd[rkey], int32(st.DepartureTime.Int()))
 			}
 		}
 	}
@@ -108,17 +96,24 @@ func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 		for k, v := range routeDepartures {
 			departuresByService[k.ServiceID] += len(v)
 		}
+		// Materialize active days for only this route's services (deferred from
+		// accumulation), scoped to the route instead of scanning every feed service.
+		routeServiceDays := map[string]map[string]bool{}
+		for sid := range departuresByService {
+			if svc, ok := pp.services[sid]; ok {
+				routeServiceDays[sid] = serviceWindowDays(svc)
+			}
+		}
 		tripsByDay := map[string]int{}
-		for day, serviceids := range pp.serviceDays {
-			for _, sid := range serviceids {
-				tripsByDay[day] += departuresByService[sid]
+		for sid, n := range departuresByService {
+			for day := range routeServiceDays[sid] {
+				tripsByDay[day] += n
 			}
 		}
 		// Stable sort
 		tripsByDaySorted := sortMap(tripsByDay)
 		// Get the highest trip count for each dow category
 		dowCatDay := map[int]string{}
-		dowCatCounts := map[int]int{}
 		for _, day := range tripsByDaySorted {
 			// parse day again to get weekday
 			d, _ := time.Parse("2006-01-02", day)
@@ -132,21 +127,17 @@ func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 			}
 			if _, ok := dowCatDay[dowCat]; !ok {
 				dowCatDay[dowCat] = day
-				dowCatCounts[dowCat] = tripsByDay[day]
 			}
 		}
 		// For each direction...
 		for direction := uint8(0); direction < 2; direction++ {
 			// Find the stop with the most visits on the highest day in each dow category
-			for dowCat, dowCatDay := range dowCatDay {
-				d, _ := time.Parse("2006-01-02", dowCatDay)
-				stopDepartures := map[string][]int{}
-				serviceIds := pp.serviceDays[dowCatDay]
+			for dowCat, day := range dowCatDay {
+				d, _ := time.Parse("2006-01-02", day)
+				stopDepartures := map[string][]int32{}
 				for k, v := range routeDepartures {
-					for _, sid := range serviceIds {
-						if k.Direction == direction && k.ServiceID == sid {
-							stopDepartures[k.StopID] = append(stopDepartures[k.StopID], v...)
-						}
+					if k.Direction == direction && routeServiceDays[k.ServiceID][day] {
+						stopDepartures[k.StopID] = append(stopDepartures[k.StopID], v...)
 					}
 				}
 				stopsByVisits := sortMapSlice(stopDepartures)
@@ -154,7 +145,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 					continue
 				}
 				mostVisitedStop := stopsByVisits[0]
-				departures := stopDepartures[mostVisitedStop]
+				departures := intsFromInt32(stopDepartures[mostVisitedStop])
 				sort.Ints(departures)
 				rh := RouteHeadway{
 					RouteID:        rid,
@@ -218,7 +209,31 @@ func median(v []int) float64 {
 	return float64(v[m-1]+v[m]) / 2
 }
 
-func sortMapSlice(value map[string][]int) []string {
+// intsFromInt32 widens a departures slice (stored as int32 to bound memory across the
+// whole feed) back to []int for the stats helpers and tt.Ints output.
+func intsFromInt32(v []int32) []int {
+	out := make([]int, len(v))
+	for i, x := range v {
+		out[i] = int(x)
+	}
+	return out
+}
+
+// serviceWindowDays returns the YYYY-MM-DD dates a service is active on within the
+// first 31 days of its calendar — the window the headway day-selection uses.
+func serviceWindowDays(svc *service.Service) map[string]bool {
+	days := map[string]bool{}
+	d := svc.StartDate.Val
+	for i := 0; i < 31; i++ {
+		if svc.IsActive(d) {
+			days[d.Format("2006-01-02")] = true
+		}
+		d = d.AddDate(0, 0, 1)
+	}
+	return days
+}
+
+func sortMapSlice(value map[string][]int32) []string {
 	type kv struct {
 		Key   string
 		Value int

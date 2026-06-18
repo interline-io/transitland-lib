@@ -153,7 +153,7 @@ Entity structs in `gtfs/` have filenames matching their GTFS source files (e.g.,
 
 ## PR Summary
 
-When asked to "generate PR summary", run `git diff main...HEAD` and `git log main..HEAD --oneline` to analyze all changes on the current branch, then output a GitHub-flavored markdown PR description wrapped in a fenced code block so it can be copy-pasted. No emojis, no checklists. Use this structure:
+When asked to "generate PR summary", run `git diff main...HEAD` and `git log main..HEAD --oneline` to analyze all changes on the current branch, then output a GitHub-flavored markdown PR description wrapped in a fenced code block so it can be copy-pasted. No emojis, no checklists. Do not manually word-wrap the markdown — write each paragraph and bullet as a single line and let it soft-wrap. Describe only changes in this repository; do not reference other repositories (downstream consumers, deployment repos), their wiring, or dependency-pin bumps — the description must stand on its own. Use this structure:
 
 ```
 ## Summary

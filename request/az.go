@@ -174,6 +174,10 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 		return "", err
 	}
 
+	// Sign and address the fully-prefixed blob name. Upload/Download apply
+	// getFullKey, so the SAS must too — otherwise a store with a KeyPrefix signs
+	// (and points at) a blob that doesn't exist and the download 404s.
+	fullKey := r.getFullKey(key)
 	// Create Blob Signature Values with desired permissions and sign with user delegation credential
 	sasQueryParams, err := sas.BlobSignatureValues{
 		ContentDisposition: fmt.Sprintf(`attachment; filename="%s"`, url.PathEscape(contentDisposition)),
@@ -181,13 +185,13 @@ func (r Az) CreateSignedUrl(ctx context.Context, key string, contentDisposition 
 		StartTime:          now,
 		ExpiryTime:         expiry,
 		Permissions:        to.Ptr(sas.ContainerPermissions{Read: true}).String(),
-		BlobName:           key,
+		BlobName:           fullKey,
 		ContainerName:      r.Container,
 	}.SignWithUserDelegation(udc)
 	if err != nil {
 		return "", err
 	}
-	sasUrl := fmt.Sprintf("https://%s/%s/%s?%s", r.Account, r.Container, key, sasQueryParams.Encode())
+	sasUrl := fmt.Sprintf("https://%s/%s/%s?%s", r.Account, r.Container, fullKey, sasQueryParams.Encode())
 	return sasUrl, nil
 }
 
