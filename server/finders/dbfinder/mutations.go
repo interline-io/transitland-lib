@@ -60,6 +60,7 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 			cols = scanCol(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
 			cols = scanCol(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
 			cols = scanCol(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
+			cols = scanCol(&ent.StopAccess, input.StopAccess, "stop_access", cols, &err)
 			if input.Geometry != nil && input.Geometry.Valid {
 				cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			}

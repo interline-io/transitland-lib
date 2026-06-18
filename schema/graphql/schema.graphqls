@@ -3126,6 +3126,8 @@ input StopSetInput {
   platform_code: String
   "Set GTFS tts_stop_name"
   tts_stop_name: String
+  "Set GTFS stop_access"
+  stop_access: Int
   "Set stop geometry"
   geometry: Point
   "Reference to an existing parent station; only the `id` is used (the parent must already exist)"

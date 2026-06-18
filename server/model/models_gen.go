@@ -1403,6 +1403,8 @@ type StopSetInput struct {
 	PlatformCode *string `json:"platform_code,omitempty"`
 	// Set GTFS tts_stop_name
 	TtsStopName *string `json:"tts_stop_name,omitempty"`
+	// Set GTFS stop_access
+	StopAccess *int `json:"stop_access,omitempty"`
 	// Set stop geometry
 	Geometry *tt.Point `json:"geometry,omitempty"`
 	// Reference to an existing parent station; only the `id` is used (the parent must already exist)

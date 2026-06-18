@@ -11931,6 +11931,8 @@ input StopSetInput {
   platform_code: String
   "Set GTFS tts_stop_name"
   tts_stop_name: String
+  "Set GTFS stop_access"
+  stop_access: Int
   "Set stop geometry"
   geometry: Point
   "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
@@ -44889,7 +44891,7 @@ func (ec *executionContext) unmarshalInputStopSetInput(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "feed_version", "location_type", "stop_code", "stop_desc", "stop_id", "stop_name", "stop_timezone", "stop_url", "wheelchair_boarding", "zone_id", "platform_code", "tts_stop_name", "geometry", "parent", "level", "external_reference"}
+	fieldsInOrder := [...]string{"id", "feed_version", "location_type", "stop_code", "stop_desc", "stop_id", "stop_name", "stop_timezone", "stop_url", "wheelchair_boarding", "zone_id", "platform_code", "tts_stop_name", "stop_access", "geometry", "parent", "level", "external_reference"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -44987,6 +44989,13 @@ func (ec *executionContext) unmarshalInputStopSetInput(ctx context.Context, obj 
 				return it, err
 			}
 			it.TtsStopName = data
+		case "stop_access":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_access"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StopAccess = data
 		case "geometry":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geometry"))
 			data, err := ec.unmarshalOPoint2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPoint(ctx, v)

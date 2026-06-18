@@ -107,13 +107,11 @@ func (ent *Stop) ConditionalErrors() []error {
 		errs = append(errs, causes.NewConditionallyRequiredFieldError("parent_station"))
 	}
 
-	// Validate stop_access field
+	// stop_access is only valid for a platform (location_type 0) with a parent_station
 	if ent.StopAccess.Valid {
-		// Forbidden for stations, entrances, generic nodes, and boarding areas
-		if lt == 1 || lt == 2 || lt == 3 || lt == 4 {
+		if lt != 0 {
 			errs = append(errs, causes.NewInvalidFieldError("stop_access", fmt.Sprint(ent.StopAccess.Val), fmt.Errorf("stop_access is forbidden for location_type %d", lt)))
 		} else if ent.ParentStation.Val == "" {
-			// Forbidden when parent_station is empty
 			errs = append(errs, causes.NewInvalidFieldError("stop_access", fmt.Sprint(ent.StopAccess.Val), fmt.Errorf("stop_access is forbidden when parent_station is empty")))
 		}
 	}
