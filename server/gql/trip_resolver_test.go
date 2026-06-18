@@ -411,3 +411,38 @@ func TestTripResolver_FlexStopTimes(t *testing.T) {
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)
 }
+
+func TestTripResolver_SafeDuration(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	ctranFlexTripID := "trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>"
+	testcases := []testcase{
+		{
+			name: "trip safe duration fields",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						trip_id
+						safe_duration_factor
+						safe_duration_offset
+					}
+				}
+			}`,
+			vars:   hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			expect: `{"feed_versions":[{"trips":[{"trip_id":"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>","safe_duration_factor":1,"safe_duration_offset":0}]}]}`,
+		},
+		{
+			name: "safe duration fields null for non-flex trip",
+			query: `query($trip_id: String!) {
+				trips(where:{trip_id:$trip_id}) {
+					trip_id
+					safe_duration_factor
+					safe_duration_offset
+				}
+			}`,
+			vars:   hw{"trip_id": "3850526WKDY"},
+			expect: `{"trips":[{"trip_id":"3850526WKDY","safe_duration_factor":null,"safe_duration_offset":null}]}`,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}

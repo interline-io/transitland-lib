@@ -1034,7 +1034,13 @@ type Trip {
   
   "GTFS `trips.bikes_allowed` [0=no information, 1=vehicle can accommodate at least one bicycle, 2=no bicycles allowed]"
   bikes_allowed: Int
-  
+
+  "GTFS `trips.safe_duration_factor` (GTFS-Flex, google/transit#598); multiplier applied to driving duration for a safe travel time estimate"
+  safe_duration_factor: Float
+
+  "GTFS `trips.safe_duration_offset` (GTFS-Flex, google/transit#598); fixed offset in seconds added to driving duration for a safe travel time estimate"
+  safe_duration_offset: Float
+
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
   
