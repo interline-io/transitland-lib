@@ -16,7 +16,7 @@ type OnestopIdEntityRedirectRequest struct {
 func (handler OnestopIdEntityRedirectRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/onestop_id/{onestop_id}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Operation: &oa.Operation{
 				Summary: "Onestop ID Entity Redirect",
 

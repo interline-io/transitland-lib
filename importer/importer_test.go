@@ -8,7 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -25,7 +25,7 @@ func TestImportFeedVersion(t *testing.T) {
 	}
 	t.Run("Success", func(t *testing.T) {
 		testdb.TempSqlite(func(atx tldb.Adapter) error {
-			fvid := setup(atx, testutil.ExampleZip.URL)
+			fvid := setup(atx, testreader.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
 			_, err := ImportFeedVersion(ctx, &atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
 			if err != nil {
@@ -43,8 +43,12 @@ func TestImportFeedVersion(t *testing.T) {
 			if fvi.InProgress != false {
 				t.Errorf("expected in_progress = false")
 			}
+			// An import with no ImportSource set defaults to automatic.
+			if fvi.ImportSource != dmfr.ImportSourceAutomatic {
+				t.Errorf("expected import_source = %q, got %q", dmfr.ImportSourceAutomatic, fvi.ImportSource)
+			}
 			count := 0
-			expstops := testutil.ExampleZip.Counts["stops.txt"]
+			expstops := testreader.ExampleZip.Counts["stops.txt"]
 			testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 			if count != expstops {
 				t.Errorf("got %d stops, expect %d stops", count, expstops)
@@ -52,6 +56,22 @@ func TestImportFeedVersion(t *testing.T) {
 			expfvistops := fvi.EntityCount["stops.txt"]
 			if count != expfvistops {
 				t.Errorf("got %d stops, expect %d stops", count, expfvistops)
+			}
+			return nil
+		})
+	})
+	t.Run("ManualSource", func(t *testing.T) {
+		testdb.TempSqlite(func(atx tldb.Adapter) error {
+			fvid := setup(atx, testreader.ExampleZip.URL)
+			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
+			_, err := ImportFeedVersion(ctx, &atx2, Options{FeedVersionID: fvid, Storage: "/", ImportSource: dmfr.ImportSourceManual})
+			if err != nil {
+				t.Fatal(err)
+			}
+			fvi := dmfr.FeedVersionImport{}
+			testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fvid)
+			if fvi.ImportSource != dmfr.ImportSourceManual {
+				t.Errorf("expected import_source = %q, got %q", dmfr.ImportSourceManual, fvi.ImportSource)
 			}
 			return nil
 		})
@@ -88,7 +108,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
-		fv := dmfr.FeedVersion{File: testutil.ExampleZip.URL}
+		fv := dmfr.FeedVersion{File: testreader.ExampleZip.URL}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
 		fvid := testdb.ShouldInsert(t, atx, &fv)
@@ -100,7 +120,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		}
 		// Check
 		count := 0
-		expstops := testutil.ExampleZip.Counts["stops.txt"]
+		expstops := testreader.ExampleZip.Counts["stops.txt"]
 		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
 		if count != expstops {
 			t.Errorf("expect %d stops, got %d", count, expstops)

@@ -1,2 +1,0 @@
-area_id,area_name,expect_error
-,required area id,RequiredFieldError:area_id

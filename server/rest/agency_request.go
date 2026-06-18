@@ -40,15 +40,15 @@ type AgencyRequest struct {
 func (r AgencyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/agencies",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: agencyQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for agencies`,
 				Extensions: map[string]any{
 					"x-alternates": []RequestAltPath{
 						{"GET", "/agencies.{format}", "Request agencies in specified format"},
-						{"GET", "/agencies/{agency_key}", "Request an agency"},
-						{"GET", "/agencies/{agency_key}.format", "Request an agency in a specified format"},
+						{"GET", "/agencies/{agency_key}", "Request an agency by ID or Onestop ID"},
+						{"GET", "/agencies/{agency_key}.{format}", "Request an agency by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{
@@ -181,7 +181,7 @@ type AgencyKeyRequest struct {
 func (r AgencyKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/agencies/{agency_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: agencyQuery,
 			Operation: &oa.Operation{
 				Summary: "Agencies",

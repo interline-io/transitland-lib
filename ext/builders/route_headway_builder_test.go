@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,14 +26,14 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 	}
 	groups := map[string]testgroup{
 		"Caltrain": {
-			testutil.ExampleFeedCaltrain.URL,
+			testreader.ExampleFeedCaltrain.URL,
 			[]testcase{
 				{RouteID: "Bu-130", DowCat: 1, DirectionID: 0, StopID: "70011", ServiceDate: "2017-10-02"},
 				{RouteID: "Lo-130", DowCat: 1, DirectionID: 0, StopID: "70011", ServiceDate: "2017-10-02"},
 			},
 		},
 		"BART": {
-			testutil.ExampleFeedBART.URL,
+			testreader.ExampleFeedBART.URL,
 			[]testcase{
 				{RouteID: "07", DowCat: 1, DirectionID: 0, StopID: "12TH", ServiceDate: "2018-05-29", HeadwaySecs: 900},
 				{RouteID: "07", DowCat: 1, DirectionID: 1, StopID: "12TH", ServiceDate: "2018-05-29", HeadwaySecs: 900},

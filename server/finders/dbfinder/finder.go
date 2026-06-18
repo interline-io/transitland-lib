@@ -17,8 +17,33 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-// Maximum query result limit
-var MAXLIMIT = 100_000
+// These limits have high maximums just for query safety
+// Normal request handler limits are set in the GraphQL resolver layer
+
+// Maximum query result limitss
+
+// Other maximum query limits
+const (
+	FINDER_MAXLIMIT     = 100_000
+	FINDER_DEFAULTLIMIT = 100_000
+)
+
+func finderCheckLimit(limit *int) uint64 {
+	return finderCheckLimitMax(limit, FINDER_MAXLIMIT)
+}
+
+func finderCheckLimitMax(limit *int, maxLimit int) uint64 {
+	alim := FINDER_DEFAULTLIMIT
+	if limit != nil {
+		alim = *limit
+	}
+	if alim < 0 {
+		alim = 0
+	} else if alim >= maxLimit {
+		alim = maxLimit
+	}
+	return uint64(alim)
+}
 
 type Finder struct {
 	Clock      clock.Clock
@@ -137,21 +162,6 @@ func tzTruncate(s time.Time, loc *time.Location) *tt.Date {
 	return ptr(tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, loc)))
 }
 
-func checkLimit(limit *int) uint64 {
-	return checkRange(limit, 0, MAXLIMIT)
-}
-
-func checkRange(limit *int, min, max int) uint64 {
-	if limit == nil {
-		return uint64(max)
-	} else if *limit >= max {
-		return uint64(max)
-	} else if *limit < min {
-		return uint64(min)
-	}
-	return uint64(*limit)
-}
-
 func checkFloat(v *float64, min float64, max float64) float64 {
 	if v == nil || *v < min {
 		return min
@@ -199,6 +209,9 @@ func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuil
 	sqOr := sq.Or{}
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("fsp.feed_id", permFilter.GetAllowedFeeds()))
+	if permFilter.GetIsGlobalAdmin() {
+		sqOr = append(sqOr, sq.Expr("1=1")) // Global admin: allow all rows
+	}
 	return q.Where(sqOr)
 }
 
@@ -210,6 +223,9 @@ func pfJoinCheckFv(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBu
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("feed_versions.feed_id", permFilter.GetAllowedFeeds()))
 	sqOr = append(sqOr, In("feed_versions.id", permFilter.GetAllowedFeedVersions()))
+	if permFilter.GetIsGlobalAdmin() {
+		sqOr = append(sqOr, sq.Expr("1=1")) // Global admin: allow all rows
+	}
 	return q.Where(sqOr)
 }
 
@@ -263,7 +279,7 @@ func quickSelectOrder(table string, limit *int, after *model.Cursor, ids []int, 
 	q := sq.StatementBuilder.
 		Select("*").
 		From(table).
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 	if order != "" {
 		q = q.OrderBy(order)
 	}
@@ -274,4 +290,22 @@ func quickSelectOrder(table string, limit *int, after *model.Cursor, ids []int, 
 		q = q.Where(sq.Gt{"id": after.ID})
 	}
 	return q
+}
+
+type UseActive struct {
+	active       bool
+	materialized bool
+}
+
+// Active returns true if u is non-nil and active is true
+func (u *UseActive) Active() bool {
+	return u != nil && u.active
+}
+
+// UseTable returns the materialized table name if conditions are met, otherwise returns the base table name
+func (u *UseActive) UseTable(baseTable, materializedTable string) string {
+	if u != nil && u.active && u.materialized {
+		return materializedTable
+	}
+	return baseTable
 }

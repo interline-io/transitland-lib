@@ -9,14 +9,22 @@ import (
 )
 
 func stopPatternKey(stoptimes []gtfs.StopTime) string {
-	key := make([]string, len(stoptimes))
+	// Skip flex trips - return empty key which won't match other patterns
+	if !gtfs.CheckFlexStopTimes(stoptimes).AllStopsHaveStopID {
+		return ""
+	}
+	key := make([]string, 0, len(stoptimes))
 	for i := 0; i < len(stoptimes); i++ {
-		key[i] = stoptimes[i].StopID.Val
+		key = append(key, stoptimes[i].StopID.Val)
 	}
 	return strings.Join(key, string(byte(0)))
 }
 
 func journeyPatternKey(trip *gtfs.Trip) string {
+	// Skip flex trips - return empty key to prevent deduplication
+	if !gtfs.CheckFlexStopTimes(trip.StopTimes).AllStopsHaveStopID {
+		return ""
+	}
 	m := sha1.New()
 	a := trip.StopTimes[0].ArrivalTime
 	b := trip.StopTimes[0].DepartureTime
@@ -34,11 +42,15 @@ func journeyPatternKey(trip *gtfs.Trip) string {
 	)))
 	for i := 0; i < len(trip.StopTimes); i++ {
 		st := trip.StopTimes[i]
+		stopID := ""
+		if st.StopID.Valid {
+			stopID = st.StopID.Val
+		}
 		m.Write([]byte(fmt.Sprintf(
 			"%d-%d-%s-%s-%d-%d-%d",
 			st.ArrivalTime.Val-a.Val,
 			st.DepartureTime.Val-b.Val,
-			st.StopID.Val,
+			stopID,
 			st.StopHeadsign.Val,
 			st.PickupType.Val,
 			st.DropOffType.Val,

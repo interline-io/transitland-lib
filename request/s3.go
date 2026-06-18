@@ -11,16 +11,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
-func init() {
-	var _ Store = &S3{}
-	var _ Presigner = &S3{}
-}
+var (
+	_ Store     = (*S3)(nil)
+	_ Presigner = (*S3)(nil)
+)
 
 func trimSlash(v string) string {
 	return strings.TrimPrefix(strings.TrimSuffix(v, "/"), "/")
@@ -124,6 +125,9 @@ func (r S3) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 }
 
 func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
+	if key == "" {
+		return errors.New("key must not be empty")
+	}
 	// Create client
 	client, err := awsConfig(ctx, r.secret)
 	if err != nil {
@@ -147,15 +151,20 @@ func (r S3) Upload(ctx context.Context, key string, uploadFile io.Reader) error 
 		acl = types.ObjectCannedACLPrivate
 	}
 
-	// Save object
+	// Use the S3 upload manager rather than a bare PutObject. The artifact store
+	// streams a non-seekable io.TeeReader of unknown length (to hash + size in one
+	// pass), which PutObject rejects with 411 MissingContentLength because it
+	// can't derive Content-Length. The manager reads the body in bounded parts and
+	// uses multipart for large objects, so peak memory is bounded to about the
+	// part size times the upload concurrency (~25MB by default), not the object.
 	log.Debug().Msgf("s3 store: uploading to key '%s', full key is '%s'", key, r.getFullKey(key))
-	result, err := client.PutObject(ctx, &s3.PutObjectInput{
+	uploader := manager.NewUploader(client)
+	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(r.Bucket),
 		Key:    aws.String(r.getFullKey(key)),
 		Body:   uploadFile,
 		ACL:    acl,
 	})
-	_ = result
 	return err
 }
 

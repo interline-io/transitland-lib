@@ -40,6 +40,7 @@ type EntityFinder interface {
 	FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error)
 	FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter) ([]*Place, error)
 	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
+	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
 	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)
 	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
 	DBX() tldb.Ext // escape hatch, for now
@@ -50,6 +51,8 @@ type EntityLoader interface {
 	AgenciesByIDs(context.Context, []int) ([]*Agency, []error)
 	AgenciesByOnestopIDs(context.Context, *int, *AgencyFilter, []string) ([][]*Agency, error)
 	AgencyPlacesByAgencyIDs(context.Context, *int, *AgencyPlaceFilter, []int) ([][]*AgencyPlace, error)
+	BookingRulesByFeedVersionIDs(context.Context, *int, *BookingRuleFilter, []int) ([][]*BookingRule, error)
+	BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
 	CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error)
 	CalendarsByIDs(context.Context, []int) ([]*Calendar, []error)
 	CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error)
@@ -62,8 +65,9 @@ type EntityLoader interface {
 	CensusSourcesByIDs(context.Context, []int) ([]*CensusSource, []error)
 	CensusSourceLayersBySourceIDs(context.Context, []int) ([][]*CensusLayer, []error)
 	CensusSourcesByDatasetIDs(context.Context, *int, *CensusSourceFilter, []int) ([][]*CensusSource, error)
+	CensusTablesByDatasetIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error)
 	CensusTableByIDs(context.Context, []int) ([]*CensusTable, []error)
-	CensusValuesByGeographyIDs(context.Context, *int, []string, []string) ([][]*CensusValue, error)
+	CensusValuesByGeographyIDs(context.Context, *int, string, []string, []string) ([][]*CensusValue, error)
 	FeedFetchesByFeedIDs(context.Context, *int, *FeedFetchFilter, []int) ([][]*FeedFetch, error)
 	FeedInfosByFeedVersionIDs(context.Context, *int, []int) ([][]*FeedInfo, error)
 	FeedsByIDs(context.Context, []int) ([]*Feed, []error)
@@ -76,9 +80,18 @@ type EntityLoader interface {
 	FeedVersionsByIDs(context.Context, []int) ([]*FeedVersion, []error)
 	FeedVersionServiceLevelsByFeedVersionIDs(context.Context, *int, *FeedVersionServiceLevelFilter, []int) ([][]*FeedVersionServiceLevel, error)
 	FeedVersionServiceWindowByFeedVersionIDs(context.Context, []int) ([]*FeedVersionServiceWindow, []error)
+	FlexStopTimesByStopIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
+	FlexStopTimesByLocationIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
+	FlexStopTimesByLocationGroupIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
+	FlexStopTimesByTripIDs(context.Context, *int, *TripStopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
 	FrequenciesByTripIDs(context.Context, *int, []int) ([][]*Frequency, error)
 	LevelsByIDs(context.Context, []int) ([]*Level, []error)
 	LevelsByParentStationIDs(context.Context, *int, []int) ([][]*Level, error)
+	LocationGroupsByFeedVersionIDs(context.Context, *int, *LocationGroupFilter, []int) ([][]*LocationGroup, error)
+	LocationGroupsByIDs(context.Context, []int) ([]*LocationGroup, []error)
+	LocationGroupsByStopIDs(context.Context, *int, []int) ([][]*LocationGroup, error)
+	LocationsByFeedVersionIDs(context.Context, *int, *LocationFilter, []int) ([][]*Location, error)
+	LocationsByIDs(context.Context, []int) ([]*Location, []error)
 	OperatorsByAgencyIDs(context.Context, []int) ([]*Operator, []error)
 	OperatorsByCOIFs(context.Context, []int) ([]*Operator, []error)
 	OperatorsByFeedIDs(context.Context, *int, *OperatorFilter, []int) ([][]*Operator, error)
@@ -106,6 +119,7 @@ type EntityLoader interface {
 	StopsByFeedVersionIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error)
 	StopsByIDs(context.Context, []int) ([]*Stop, []error)
 	StopsByLevelIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error)
+	StopsByLocationGroupIDs(context.Context, *int, []int) ([][]*Stop, error)
 	StopsByParentStopIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error)
 	StopsByRouteIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error)
 	StopTimesByStopIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*StopTime, error)
@@ -144,6 +158,7 @@ type RTFinder interface {
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
 	// lookup cache methods
 	StopTimezone(context.Context, int, string) (*time.Location, bool)
+	FeedVersionTimezone(context.Context, int) (*time.Location, bool)
 	GetGtfsTripID(context.Context, int) (string, bool)
 	GetMessage(context.Context, string, string) (*pb.FeedMessage, bool)
 }
@@ -155,9 +170,7 @@ type GbfsFinder interface {
 	FindDocks(context.Context, *int, *GbfsDockRequest) ([]*GbfsStationInformation, error)
 }
 
-type Checker interface {
-	authz.CheckerServer
-}
+type Checker = authz.Checker
 
 type Actions interface {
 	StaticFetch(context.Context, string, io.Reader, string) (*FeedVersionFetchResult, error)

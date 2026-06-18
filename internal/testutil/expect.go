@@ -151,3 +151,11 @@ func ParseExpectError(value string) ExpectError {
 	}
 	return NewExpectError(v[2], v[3], v[1], v[0])
 }
+
+func ParseExpectErrors(values ...string) []ExpectError {
+	var expecterrs []ExpectError
+	for _, value := range values {
+		expecterrs = append(expecterrs, ParseExpectError(value))
+	}
+	return expecterrs
+}

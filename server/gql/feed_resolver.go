@@ -20,7 +20,7 @@ func (r *feedResolver) FeedState(ctx context.Context, obj *model.Feed) (*model.F
 }
 
 func (r *feedResolver) FeedVersions(ctx context.Context, obj *model.Feed, limit *int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error) {
-	return LoaderFor(ctx).FeedVersionsByFeedIDs.Load(ctx, feedVersionLoaderParam{FeedID: obj.ID, Limit: checkLimit(limit), Where: where})()
+	return LoaderFor(ctx).FeedVersionsByFeedIDs.Load(ctx, feedVersionLoaderParam{FeedID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *feedResolver) License(ctx context.Context, obj *model.Feed) (*model.FeedLicense, error) {
@@ -44,7 +44,7 @@ func (r *feedResolver) Authorization(ctx context.Context, obj *model.Feed) (*mod
 }
 
 func (r *feedResolver) FeedFetches(ctx context.Context, obj *model.Feed, limit *int, where *model.FeedFetchFilter) ([]*model.FeedFetch, error) {
-	return LoaderFor(ctx).FeedFetchesByFeedIDs.Load(ctx, feedFetchLoaderParam{FeedID: obj.ID, Limit: checkLimit(limit), Where: where})()
+	return LoaderFor(ctx).FeedFetchesByFeedIDs.Load(ctx, feedFetchLoaderParam{FeedID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *feedResolver) Spec(ctx context.Context, obj *model.Feed) (*model.FeedSpecTypes, error) {

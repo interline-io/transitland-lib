@@ -7,20 +7,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/ext/bestpractices"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
-	"github.com/interline-io/transitland-lib/rules"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
-	"github.com/twpayne/go-geom"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -47,17 +49,24 @@ type Options struct {
 	ValidateRealtimeMessages []string
 	IncludeRealtimeJson      bool
 	MaxRTMessageSize         uint64
+	AllowHTTPFetchUnfiltered bool
 	EvaluateAt               time.Time
 	EvaluateAtTimezone       string
+	// ErrorThreshold sets the maximum error percentage (0-100) allowed per file.
+	// The key is the filename (e.g., "stops.txt") or "*" for the default threshold.
+	// If any file exceeds its threshold, the validation is considered failed.
+	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
+	ErrorThreshold map[string]float64
 	copier.Options
 }
 
 // Validator checks a GTFS source for errors and warnings.
 type Validator struct {
-	Reader          adapters.Reader
-	Options         Options
-	rtValidator     *rt.Validator
-	defaultTimezone string
+	Reader           adapters.Reader
+	Options          Options
+	rtValidator      *rt.Validator
+	defaultTimezone  string
+	routeGeomBuilder *builders.RouteGeometryBuilder
 }
 
 // NewValidator returns a new Validator.
@@ -187,10 +196,13 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		}
 	}
 
-	routeShapes := map[string]*geom.MultiLineString{}
-	if v.Options.IncludeRouteGeometries {
-		// Build shapes...
-		routeShapes = buildRouteShapes(reader)
+	// Route geometries come from the import builder that ran during the copy above,
+	// so the report shows exactly what an import would produce.
+	routeGeoms := map[string]tt.Geometry{}
+	if v.routeGeomBuilder != nil {
+		for rid, rg := range v.routeGeomBuilder.RouteGeometries() {
+			routeGeoms[rid] = rg.CombinedGeometry
+		}
 	}
 
 	// Include some basic entities in the report
@@ -204,8 +216,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 		}
 		for ent := range reader.Routes() {
 			ent := ent
-			if s, ok := routeShapes[ent.RouteID.Val]; ok {
-				g := tt.NewGeometry(s)
+			if g, ok := routeGeoms[ent.RouteID.Val]; ok {
 				ent.Geometry = g
 			}
 			details.Routes = append(details.Routes, ent)
@@ -233,6 +244,49 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	}
 	for k, v := range cpResult.Warnings {
 		result.Warnings[k] = copierEgToValidationEg(v)
+	}
+
+	// Check error threshold
+	if len(v.Options.ErrorThreshold) > 0 {
+		thresholdResult := cpResult.CheckErrorThreshold(v.Options.ErrorThreshold)
+		if !thresholdResult.OK {
+			var exceededFiles []string
+			for fn, detail := range thresholdResult.Details {
+				if !detail.OK {
+					log.For(context.TODO()).Error().Str("filename", fn).Float64("error_percent", detail.ErrorPercent).Float64("threshold", detail.Threshold).Int("error_count", detail.ErrorCount).Int("total_count", detail.TotalCount).Msg("file exceeded error threshold")
+					exceededFiles = append(exceededFiles, fn)
+				}
+			}
+			sort.Strings(exceededFiles)
+			var errMsgs []string
+			for _, fn := range exceededFiles {
+				detail := thresholdResult.Details[fn]
+				errMsgs = append(errMsgs, fmt.Sprintf("%s: %.2f%% errors (threshold: %.2f%%)", fn, detail.ErrorPercent, detail.Threshold))
+			}
+			result.FailureReason.Set(fmt.Sprintf("error threshold exceeded: %s", strings.Join(errMsgs, "; ")))
+			return result, nil
+		}
+	}
+
+	// Check required files have at least minimum entities
+	requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
+	minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
+	if !minEntitiesResult.OK {
+		var failedFiles []string
+		for fn, detail := range minEntitiesResult.Details {
+			if !detail.OK {
+				log.For(context.TODO()).Error().Str("filename", fn).Int("total_count", detail.TotalCount).Int("required", detail.Required).Msg("file did not meet required minimum entities")
+				failedFiles = append(failedFiles, fn)
+			}
+		}
+		sort.Strings(failedFiles)
+		var errMsgs []string
+		for _, fn := range failedFiles {
+			detail := minEntitiesResult.Details[fn]
+			errMsgs = append(errMsgs, fmt.Sprintf("%s: %d entities (required: %d)", fn, detail.TotalCount, detail.Required))
+		}
+		result.FailureReason.Set(fmt.Sprintf("required minimum entities not met: %s", strings.Join(errMsgs, "; ")))
+		return result, nil
 	}
 
 	// Return
@@ -277,7 +331,11 @@ func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.T
 		Url: fn,
 	}
 	var rterrs []error
-	msg, err := rt.ReadURL(ctx, fn, request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal)
+	rtOpts := []request.RequestOption{request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal}
+	if v.Options.AllowHTTPFetchUnfiltered {
+		rtOpts = append(rtOpts, request.WithAllowHTTPUnfiltered)
+	}
+	msg, err := rt.ReadURL(ctx, fn, rtOpts...)
 	if err != nil {
 		rterrs = append(rterrs, err)
 	} else {
@@ -354,31 +412,46 @@ func (v *Validator) copierOptions() copier.Options {
 	cpOpts.AllowReferenceErrors = true
 	cpOpts.AddExtensionWithLevel(v.rtValidator, 1)
 
+	// Run the importer's derived-entity builders (route geometries, route stops,
+	// etc.) against the empty writer, so route geometries are produced the same way
+	// import does, without a database import. Keep a handle to the route-geometry
+	// builder so the report can read its output (see RouteGeometries below).
+	if v.Options.IncludeRouteGeometries {
+		for _, b := range builders.DefaultImportBuilders() {
+			if rgb, ok := b.(*builders.RouteGeometryBuilder); ok {
+				v.routeGeomBuilder = rgb
+			}
+			cpOpts.AddExtension(b)
+		}
+	}
+
 	// Best practices extension
 	if v.Options.BestPractices {
-		cpOpts.AddExtensionWithLevel(&rules.NoScheduledServiceCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTooCloseCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTooFarCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.DuplicateRouteNameCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.FrequencyOverlapCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTooFarFromShapeCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.StopTimeFastTravelCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.BlockOverlapCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.AgencyIDRecommendedCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.DescriptionEqualsName{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteExtendedTypesCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.InsufficientColorContrastCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteShortNameTooLongCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.ShortServiceCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.ServiceAllDaysEmptyCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.NullIslandCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.FrequencyDurationCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.MinTransferTimeCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteNamesPrefixCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.RouteNamesCharactersCheck{}, 1)
-		cpOpts.AddExtensionWithLevel(&rules.ShapeMaxSegmentLengthCheck{
+		cpOpts.AddExtensionWithLevel(&bestpractices.NoScheduledServiceCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTooCloseCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTooFarCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.DuplicateRouteNameCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.FrequencyOverlapCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTooFarFromShapeCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.StopTimeFastTravelCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.BlockOverlapCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.AgencyIDRecommendedCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.DescriptionEqualsName{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteExtendedTypesCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.InsufficientColorContrastCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteShortNameTooLongCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.ShortServiceCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.ServiceAllDaysEmptyCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.NullIslandCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.FrequencyDurationCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.MinTransferTimeCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteNamesPrefixCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.RouteNamesCharactersCheck{}, 1)
+		cpOpts.AddExtensionWithLevel(&bestpractices.ShapeMaxSegmentLengthCheck{
 			MaxAllowedDistance: 1_000_000, // 1000 km
 		}, 1)
+		// GTFS-Flex best practice: location groups should have stops
+		cpOpts.AddExtensionWithLevel(&bestpractices.FlexLocationGroupEmptyCheck{}, 1)
 	}
 	return cpOpts
 }

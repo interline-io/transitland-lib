@@ -38,6 +38,10 @@ func NewFinder(cache Cache, db tldb.Ext) *Finder {
 	}
 }
 
+func (f *Finder) Close() error {
+	return f.cache.Close()
+}
+
 func (f *Finder) AddData(ctx context.Context, topic string, data []byte) error {
 	return f.cache.AddData(ctx, topic, data)
 }
@@ -48,6 +52,10 @@ func (f *Finder) GetGtfsTripID(ctx context.Context, id int) (string, bool) {
 
 func (f *Finder) StopTimezone(ctx context.Context, id int, known string) (*time.Location, bool) {
 	return f.lc.StopTimezone(ctx, id, known)
+}
+
+func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Location, bool) {
+	return f.lc.FeedVersionTimezone(ctx, fvid)
 }
 
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {

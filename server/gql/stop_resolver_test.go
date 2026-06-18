@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -33,6 +34,105 @@ func TestStopResolver_PreviousOnestopID(t *testing.T) {
 func TestStopResolver_License(t *testing.T) {
 	c, cfg := newTestClient(t)
 	queryTestcases(t, c, stopResolverLicenseTestcases(t, cfg))
+}
+
+func TestStopResolver_LocationGroups(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	// These stops are part of the Fairgrounds location group
+	fairgroundsStop1 := "stop_id__756c0e65-32d2-4e32-a6b7-a15c3c22e6cf"
+	fairgroundsStop2 := "stop_id__2e44e463-310b-4069-a709-fa0eb8f73ba9"
+	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
+
+	testcases := []testcase{
+		{
+			name: "stop with location groups - returns location group id",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_id
+						}
+					}
+				}
+			}`,
+			vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			selector: "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			selectExpect: []string{
+				fairgroundsLocationGroupID,
+			},
+		},
+		{
+			name: "stop with location groups - returns location group name",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_name
+						}
+					}
+				}
+			}`,
+			vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop2},
+			selector: "feed_versions.0.stops.0.location_groups.0.location_group_name",
+			selectExpect: []string{
+				"Clark County Fairgroun...",
+			},
+		},
+		{
+			name: "stop location groups - navigate to feed metadata",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_id
+							feed_onestop_id
+							feed_version_sha1
+						}
+					}
+				}
+			}`,
+			vars:   hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			expect: `{"feed_versions":[{"stops":[{"location_groups":[{"feed_onestop_id":"ctran-flex","feed_version_sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c","location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}],"stop_id":"stop_id__756c0e65-32d2-4e32-a6b7-a15c3c22e6cf"}]}]}`,
+		},
+		{
+			name: "stop without location groups - returns empty",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_id
+						}
+					}
+				}
+			}`,
+			// BART stop - not part of any location group
+			vars:         hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "MCAR"},
+			selector:     "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			selectExpect: []string{},
+		},
+		{
+			name: "stop location groups with limit",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups(limit: 1) {
+							location_group_id
+						}
+					}
+				}
+			}`,
+			vars:              hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			selector:          "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			selectExpectCount: 1,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
 }
 
 func TestStopResolver_AdminCache(t *testing.T) {
@@ -143,6 +243,17 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			vars:         vars,
 			selector:     "stops.0.route_stops.#.route.route_id",
 			selectExpect: []string{"01", "03", "07"},
+		},
+		{
+			name:  "timestamps",
+			query: `query($stop_id: String!) { stops(where:{stop_id:$stop_id}) { created_at updated_at } }`,
+			vars:  vars,
+			f: func(t *testing.T, jj string) {
+				createdAt := gjson.Get(jj, "stops.0.created_at").String()
+				updatedAt := gjson.Get(jj, "stops.0.updated_at").String()
+				assert.NotEmpty(t, createdAt, "created_at should be exposed and non-empty")
+				assert.NotEmpty(t, updatedAt, "updated_at should be exposed and non-empty")
+			},
 		},
 
 		{
@@ -267,7 +378,7 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		// },
 		// TODO: parent, children; test data has no stations.
 		// TODO: level, pathways_from_stop, pathways_to_stop: test data has no pathways...
-		// TODO: census_geographies
+		// census_geographies: see per-stop buffer cases below
 		// stop_times
 		{
 			name:         "stop_times",
@@ -371,10 +482,9 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			  }`,
-			vars: hw{"fvid": stopObsFvid, "day": "2023-03-08"},
-			f: func(t *testing.T, jj string) {
-				assert.EqualValues(t, 0, len(gjson.Get(jj, "stops.0.observations").Array()))
-			},
+			vars:         hw{"fvid": stopObsFvid, "day": "2023-03-08"},
+			selector:     "stops.0.observations.#.trip_id",
+			selectExpect: []string{},
 		},
 		// serviced
 		{
@@ -442,7 +552,41 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			selector:     "stops.#.stop_id",
 			selectExpect: []string{},
 		},
-		// TODO: census_geographies
+		// census_geographies (per-stop buffer attribution)
+		{
+			name:         "census_geographies tract by stop buffer",
+			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			selector:     "stops.0.census_geographies.#.geoid",
+			selectExpect: []string{"1400000US06001406100"},
+		},
+		{
+			name:         "census_geographies county by stop buffer",
+			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"MCAR"}) { stop_id census_geographies(where:{layer:"county", radius:1000.0}) { geoid } } }`,
+			selector:     "stops.0.census_geographies.#.geoid",
+			selectExpect: []string{"0500000US06001"},
+		},
+		{
+			// Two stops resolved in one request batch into a single
+			// CensusGeographiesByEntityIDs call; each must get its own
+			// geographies (including the tracts shared by both buffers).
+			// Before per-stop attribution every row carried match_entity_id=0
+			// and both stops resolved to empty lists.
+			name: "census_geographies per-stop attribution across batch",
+			query: `query{
+				s12: stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+				s19: stops(where:{feed_onestop_id:"BA", stop_id:"19TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+			}`,
+			sel: []testcaseSelector{
+				{
+					selector: "s12.0.census_geographies.#.geoid",
+					expect:   []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"},
+				},
+				{
+					selector: "s19.0.census_geographies.#.geoid",
+					expect:   []string{"1400000US06001402801", "1400000US06001402900"},
+				},
+			},
+		},
 		// TODO: route_stop_buffer
 	}
 	return testcases
@@ -516,6 +660,15 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 	}`)
 
 	bartStops := []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "BAYF", "CAST", "CIVC", "COLS", "COLM", "CONC", "DALY", "DBRK", "DUBL", "DELN", "PLZA", "EMBR", "FRMT", "FTVL", "GLEN", "HAYW", "LAFY", "LAKE", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "OAKL", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SANL", "SHAY", "SSAN", "UCTY", "WCRK", "WARM", "WDUB", "WOAK"}
+
+	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
+	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
+	sanJoseRadiusMeters := 10_000.0 // 10km
+
+	var testStopID int
+	if err := cfg.Finder.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = $1`, "70252").Scan(&testStopID); err != nil {
+		t.Errorf("could not get stop ID for test: %s", err.Error())
+	}
 
 	testcases := []testcase{
 		{
@@ -627,11 +780,9 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 				}
 			  }			  `,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			selector:    "stops.#.stop_id",
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
+
 		// this test is just for debugging purposes
 		{
 			name: "nearby stops check n+1 query",
@@ -646,6 +797,108 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 			vars:         hw{"radius": 1000},
 			selector:     "stops.#.stop_id",
 			selectExpect: bartStops,
+		},
+		// Focus test cases
+		{
+			name: "focus basic: Florida focus point returns HA stops first",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "stops.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA"},
+		},
+		{
+			name: "focus basic: San Jose focus point returns CT stops first",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "stops.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT"},
+		},
+		{
+			name: "focus with feed filter: HA stops only, ordered by distance",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops(limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					stop_id
+					geometry
+				}
+			}`,
+			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			f: func(t *testing.T, jj string) {
+				// Verify the query returns stops
+				stopIds := gjson.Get(jj, "stops.#.stop_id").Array()
+				assert.Equal(t, 10, len(stopIds), "should return exactly 10 stops")
+
+				// Parse geometries and verify stops are sorted by increasing distance
+				var prevDistance float64
+				for i, stop := range gjson.Get(jj, "stops").Array() {
+					// Parse into tlxy.Point
+					coords := stop.Get("geometry.coordinates").Array()
+					stopPoint := tlxy.Point{
+						Lon: coords[0].Float(),
+						Lat: coords[1].Float(),
+					}
+
+					// Calculate distance from focus point
+					// Verify distance is increasing (or equal for stops at same location)
+					distance := tlxy.DistanceHaversine(floridaFocus, stopPoint)
+					if i > 0 {
+						assert.GreaterOrEqual(t, distance, prevDistance,
+							"stop index %d (stop_id=%s) at distance %.2f should be >= previous distance %.2f",
+							i, stop.Get("stop_id").String(), distance, prevDistance)
+					}
+					prevDistance = distance
+				}
+			},
+		},
+		{
+			name: "focus with pagination: first page",
+			query: `query($lat:Float!, $lon:Float!) {
+				stops: stops(limit: 10, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					stop_id
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242"},
+		},
+		{
+			name: "focus with pagination: second page maintains ordering",
+			query: `query($lat:Float!, $lon:Float!, $after:Int!) {
+				stops: stops(after: $after, limit: 10, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					stop_id
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testStopID},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"70272", "70271", "777403", "70241", "70242", "70282", "70281", "70232", "70231", "70291"},
+		},
+		{
+			name: "focus with near filter: combined spatial queries",
+			query: `query($lat:Float!, $lon:Float!, $radius:Float!) {
+				stops(limit: 100, where: {
+					feed_onestop_id: "CT",
+					location: {
+						focus: {lat: $lat, lon: $lon},
+						near: {lat: $lat, lon: $lon, radius: $radius}
+					}
+				}) {
+					stop_id
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "radius": sanJoseRadiusMeters},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242", "70282", "70281"},
 		},
 	}
 	return testcases
@@ -690,7 +943,6 @@ func stopResolverCursorTestcases(t *testing.T, cfg model.Config) []testcase {
 			selector:     "stops.#.stop_id",
 			selectExpect: []string{},
 		},
-
 		// TODO: uncomment after schema changes
 		// {
 		// 	"no cursor",
@@ -759,7 +1011,7 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			}
 		  }
 		}
-	  }	  
+	  }
 	`
 	testcases := []testcase{
 		// license: share_alike_optional
@@ -768,8 +1020,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: share_alike_optional = no",
@@ -784,8 +1036,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: create_derived_product
 		{
@@ -793,8 +1045,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: create_derived_product = no",
@@ -809,8 +1061,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: commercial_use_allowed
 		{
@@ -818,8 +1070,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = no",
@@ -834,8 +1086,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: redistribution_allowed
 		{
@@ -843,8 +1095,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: redistribution_allowed = no",
@@ -859,8 +1111,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: use_without_attribution
 		{
@@ -868,8 +1120,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: use_without_attribution = no",
@@ -884,8 +1136,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 	}
 	return testcases

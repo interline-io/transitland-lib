@@ -2,6 +2,7 @@ package dbfinder
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -15,7 +16,10 @@ func (f *Finder) FindTrips(ctx context.Context, limit *int, after *model.Cursor,
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) || (where != nil && len(where.RouteIds) > 0) {
 		active = false
 	}
-	q := tripSelect(limit, after, ids, active, f.PermFilter(ctx), where, nil)
+	q, err := tripSelect(limit, after, ids, active, f.PermFilter(ctx), where, nil)
+	if err != nil {
+		return nil, err
+	}
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
@@ -59,10 +63,14 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 		if err != nil {
 			return nil, err
 		}
+		inner, err := tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		if err != nil {
+			return nil, err
+		}
 		if err := dbutil.Select(ctx,
 			f.db,
 			lateralWrap(
-				tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw),
+				inner,
 				"gtfs_routes",
 				"id",
 				"gtfs_trips",
@@ -86,11 +94,15 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 		if err != nil {
 			return nil, err
 		}
+		inner, err := tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		if err != nil {
+			return nil, err
+		}
 		var q []*model.Trip
 		err = dbutil.Select(ctx,
 			f.db,
 			lateralWrap(
-				tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw),
+				inner,
 				"feed_versions",
 				"id",
 				"gtfs_trips",
@@ -99,12 +111,15 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 			),
 			&q,
 		)
+		if err != nil {
+			return nil, err
+		}
 		ents = append(ents, q...)
 	}
 	return arrangeGroup(keys, ents, func(ent *model.Trip) int { return ent.FeedVersionID }), nil
 }
 
-func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.TripFilter, fvsw *model.ServiceWindow) sq.SelectBuilder {
+func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.TripFilter, fvsw *model.ServiceWindow) (sq.SelectBuilder, error) {
 	q := sq.StatementBuilder.Select(
 		"gtfs_trips.id",
 		"gtfs_trips.feed_version_id",
@@ -121,6 +136,8 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		"gtfs_trips.stop_pattern_id",
 		"gtfs_trips.journey_pattern_id",
 		"gtfs_trips.journey_pattern_offset",
+		"gtfs_trips.safe_duration_factor",
+		"gtfs_trips.safe_duration_offset",
 		"current_feeds.id AS feed_id",
 		"current_feeds.onestop_id AS feed_onestop_id",
 		"feed_versions.sha1 AS feed_version_sha1",
@@ -129,15 +146,14 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		Join("feed_versions ON feed_versions.id = gtfs_trips.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		OrderBy("gtfs_trips.feed_version_id,gtfs_trips.id").
-		Limit(checkLimit(limit))
+		Limit(finderCheckLimit(limit))
 
 	// Process FVSW
 	if where != nil && fvsw != nil {
 		if where.RelativeDate != nil {
-			// This must be an enum; panic is OK
 			s, err := tt.RelativeDate(fvsw.NowLocal, kebabize(string(*where.RelativeDate)))
 			if err != nil {
-				panic(err)
+				return q, fmt.Errorf("invalid relative_date %q: %w", *where.RelativeDate, err)
 			}
 			where.ServiceDate = tzTruncate(s, fvsw.NowLocal.Location())
 		}
@@ -224,5 +240,5 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 
 	// Handle permissions
 	q = pfJoinCheckFv(q, permFilter)
-	return q
+	return q, nil
 }

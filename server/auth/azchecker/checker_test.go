@@ -2,24 +2,20 @@ package azchecker
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/interline-io/log"
+
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
+	"github.com/interline-io/transitland-lib/server/auth/fga"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
 )
-
-func init() {
-	// Ensure Checker implements CheckerServer
-	var _ authz.CheckerServer = &Checker{}
-}
 
 type testCase struct {
 	Subject            authz.EntityKey
@@ -87,11 +83,7 @@ var checkerGetTests = []testCase{
 }
 
 func TestChecker(t *testing.T) {
-	fgaUrl, a, ok := testutil.CheckEnv("TL_TEST_FGA_ENDPOINT")
-	if !ok {
-		t.Skip(a)
-		return
-	}
+	fgaUrl := testutil.FGAServer(t)
 	if a, ok := testutil.CheckTestDB(); !ok {
 		t.Skip(a)
 		return
@@ -340,14 +332,14 @@ func TestChecker(t *testing.T) {
 		}
 		for _, tc := range tcs {
 			t.Run(tc.Name, func(t *testing.T) {
-				ent, err := checker.Me(newUserCtx(tc.CheckAsUser), &authz.MeRequest{})
+				ent, err := checker.Me(newUserCtx(tc.CheckAsUser))
 				if !checkExpectError(t, err, tc.ExpectError) {
 					return
 				}
 				if ent == nil {
 					t.Fatal("got no result")
 				}
-				assert.Equal(t, tc.ExpectUserId, ent.User.Id)
+				assert.Equal(t, tc.ExpectUserId, ent.ID)
 				var directGroupNames []string
 				for _, g := range ent.Groups {
 					directGroupNames = append(directGroupNames, g.Name)
@@ -399,22 +391,23 @@ func TestChecker(t *testing.T) {
 
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
-				ret, err := checker.TenantList(
+				ret, err := checker.ListObjects(
 					newUserCtx(tc.CheckAsUser, tc.Subject.Name),
-					&authz.TenantListRequest{},
+					TenantType,
 				)
 				if err != nil {
 					t.Fatal(err)
 				}
-				var gotNames []string
-				for _, v := range ret.Tenants {
-					gotNames = append(gotNames, v.Name)
+				var gotIDs []int64
+				for _, v := range ret {
+					gotIDs = append(gotIDs, v.ID)
 				}
-				var expectNames []string
+				var expectIDs []int64
 				for _, v := range tc.ExpectKeys {
-					expectNames = append(expectNames, v.Name)
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
 				}
-				assert.ElementsMatch(t, expectNames, gotNames, "tenant names")
+				assert.ElementsMatch(t, expectIDs, gotIDs, "tenant IDs")
 			})
 		}
 	})
@@ -518,15 +511,133 @@ func TestChecker(t *testing.T) {
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				ret, err := checker.TenantPermissions(
+				ret, err := checker.ObjectPermissions(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.TenantRequest{Id: ltk.Object.ID()},
+					authz.ObjectRef{Type: TenantType, ID: ltk.Object.ID()},
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 				if err != nil {
 					return
 				}
 				checkActionSubset(t, ret.Actions, tc.ExpectActions)
+			})
+		}
+	})
+
+	t.Run("TenantPermissions children filtered", func(t *testing.T) {
+		checker := newTestChecker(t, fgaUrl, checkerTestData)
+		dbx := testutil.MustOpenTestDB(t)
+		type childrenTest struct {
+			Notes          string
+			CheckAsUser    string
+			Object         EntityKey
+			ExpectChildren []EntityKey
+		}
+		checks := []childrenTest{
+			{
+				Notes:          "admin sees all groups under tl-tenant",
+				CheckAsUser:    "tl-tenant-admin",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "CT-group", "BA-group", "HA-group", "EX-group"),
+			},
+			{
+				Notes:          "ian sees CT-group, BA-group, HA-group (viewer/editor + tenant member on HA)",
+				CheckAsUser:    "ian",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "CT-group", "BA-group", "HA-group"),
+			},
+			{
+				Notes:          "drew sees CT-group and HA-group (manager of CT + tenant member on HA)",
+				CheckAsUser:    "drew",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "CT-group", "HA-group"),
+			},
+			{
+				Notes:          "tl-tenant-member sees only HA-group (tenant member on HA)",
+				CheckAsUser:    "tl-tenant-member",
+				Object:         newEntityKey(TenantType, "tl-tenant"),
+				ExpectChildren: newEntityKeys(GroupType, "HA-group"),
+			},
+		}
+		for _, tc := range checks {
+			t.Run(tc.Notes, func(t *testing.T) {
+				ltk := dbTupleLookup(t, dbx, TupleKey{Object: tc.Object})
+				ret, err := checker.ObjectPermissions(
+					newUserCtx(tc.CheckAsUser),
+					authz.ObjectRef{Type: TenantType, ID: ltk.Object.ID()},
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var gotIDs []int64
+				for _, child := range ret.Children {
+					gotIDs = append(gotIDs, child.ID)
+				}
+				var expectIDs []int64
+				for _, v := range tc.ExpectChildren {
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
+				}
+				assert.ElementsMatch(t, expectIDs, gotIDs)
+			})
+		}
+	})
+
+	t.Run("GroupPermissions children filtered", func(t *testing.T) {
+		checker := newTestChecker(t, fgaUrl, checkerTestData)
+		dbx := testutil.MustOpenTestDB(t)
+		type childrenTest struct {
+			Notes          string
+			CheckAsUser    string
+			Object         EntityKey
+			ExpectChildren []EntityKey
+		}
+		checks := []childrenTest{
+			{
+				Notes:          "admin sees all feeds under CT-group",
+				CheckAsUser:    "tl-tenant-admin",
+				Object:         newEntityKey(GroupType, "CT-group"),
+				ExpectChildren: newEntityKeys(FeedType, "CT"),
+			},
+			{
+				Notes:          "admin sees all feeds under BA-group",
+				CheckAsUser:    "tl-tenant-admin",
+				Object:         newEntityKey(GroupType, "BA-group"),
+				ExpectChildren: newEntityKeys(FeedType, "BA"),
+			},
+			{
+				Notes:          "ian (viewer of CT-group) sees feed CT",
+				CheckAsUser:    "ian",
+				Object:         newEntityKey(GroupType, "CT-group"),
+				ExpectChildren: newEntityKeys(FeedType, "CT"),
+			},
+			{
+				Notes:          "ian (editor of BA-group) sees feed BA",
+				CheckAsUser:    "ian",
+				Object:         newEntityKey(GroupType, "BA-group"),
+				ExpectChildren: newEntityKeys(FeedType, "BA"),
+			},
+		}
+		for _, tc := range checks {
+			t.Run(tc.Notes, func(t *testing.T) {
+				ltk := dbTupleLookup(t, dbx, TupleKey{Object: tc.Object})
+				ret, err := checker.ObjectPermissions(
+					newUserCtx(tc.CheckAsUser),
+					authz.ObjectRef{Type: GroupType, ID: ltk.Object.ID()},
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var gotIDs []int64
+				for _, child := range ret.Children {
+					gotIDs = append(gotIDs, child.ID)
+				}
+				var expectIDs []int64
+				for _, v := range tc.ExpectChildren {
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
+				}
+				assert.ElementsMatch(t, expectIDs, gotIDs)
 			})
 		}
 	})
@@ -618,12 +729,11 @@ func TestChecker(t *testing.T) {
 				// Mutating test - initialize for each test
 				checker := newTestChecker(t, fgaUrl, checkerTestData)
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				_, err := checker.TenantAddPermission(
+				err := checker.AddPermission(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.TenantModifyPermissionRequest{
-						Id:             ltk.Object.ID(),
-						EntityRelation: authz.NewEntityRelation(ltk.Subject, ltk.Relation),
-					},
+					authz.ObjectRef{Type: TenantType, ID: ltk.Object.ID()},
+					ltk.Subject,
+					ltk.Relation,
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 			})
@@ -702,12 +812,11 @@ func TestChecker(t *testing.T) {
 				// Mutating test - initialize for each test
 				checker := newTestChecker(t, fgaUrl, checkerTestData)
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				_, err := checker.TenantRemovePermission(
+				err := checker.RemovePermission(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.TenantModifyPermissionRequest{
-						Id:             ltk.Object.ID(),
-						EntityRelation: authz.NewEntityRelation(ltk.Subject, ltk.Relation),
-					},
+					authz.ObjectRef{Type: TenantType, ID: ltk.Object.ID()},
+					ltk.Subject,
+					tc.Relation,
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 			})
@@ -877,22 +986,23 @@ func TestChecker(t *testing.T) {
 		}
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
-				ret, err := checker.GroupList(
+				ret, err := checker.ListObjects(
 					newUserCtx(tc.CheckAsUser, tc.Subject.Name),
-					&authz.GroupListRequest{},
+					GroupType,
 				)
 				if err != nil {
 					t.Fatal(err)
 				}
-				var gotNames []string
-				for _, v := range ret.Groups {
-					gotNames = append(gotNames, v.Name)
+				var gotIDs []int64
+				for _, v := range ret {
+					gotIDs = append(gotIDs, v.ID)
 				}
-				var expectNames []string
+				var expectIDs []int64
 				for _, v := range tc.ExpectKeys {
-					expectNames = append(expectNames, v.Name)
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
 				}
-				assert.ElementsMatch(t, expectNames, gotNames, "group names")
+				assert.ElementsMatch(t, expectIDs, gotIDs, "group IDs")
 			})
 		}
 	})
@@ -1020,9 +1130,9 @@ func TestChecker(t *testing.T) {
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				ret, err := checker.GroupPermissions(
+				ret, err := checker.ObjectPermissions(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.GroupRequest{Id: ltk.Object.ID()},
+					authz.ObjectRef{Type: GroupType, ID: ltk.Object.ID()},
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 				if err != nil {
@@ -1143,12 +1253,11 @@ func TestChecker(t *testing.T) {
 				// Mutating test - initialize for each test
 				checker := newTestChecker(t, fgaUrl, checkerTestData)
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				_, err := checker.GroupAddPermission(
+				err := checker.AddPermission(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.GroupModifyPermissionRequest{
-						Id:             ltk.Object.ID(),
-						EntityRelation: authz.NewEntityRelation(ltk.Subject, ltk.Relation),
-					},
+					authz.ObjectRef{Type: GroupType, ID: ltk.Object.ID()},
+					ltk.Subject,
+					ltk.Relation,
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 			})
@@ -1219,12 +1328,11 @@ func TestChecker(t *testing.T) {
 				// Mutating test - initialize for each test
 				checker := newTestChecker(t, fgaUrl, checkerTestData)
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				_, err := checker.GroupRemovePermission(
+				err := checker.RemovePermission(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.GroupModifyPermissionRequest{
-						Id:             ltk.Object.ID(),
-						EntityRelation: authz.NewEntityRelation(ltk.Subject, ltk.Relation),
-					},
+					authz.ObjectRef{Type: GroupType, ID: ltk.Object.ID()},
+					ltk.Subject,
+					tc.Relation,
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 			})
@@ -1323,22 +1431,23 @@ func TestChecker(t *testing.T) {
 		}
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
-				ret, err := checker.FeedList(
+				ret, err := checker.ListObjects(
 					newUserCtx(tc.CheckAsUser, tc.Subject.Name),
-					&authz.FeedListRequest{},
+					FeedType,
 				)
 				if err != nil {
 					t.Fatal(err)
 				}
-				var gotNames []string
-				for _, v := range ret.Feeds {
-					gotNames = append(gotNames, v.OnestopId)
+				var gotIDs []int64
+				for _, v := range ret {
+					gotIDs = append(gotIDs, v.ID)
 				}
-				var expectNames []string
+				var expectIDs []int64
 				for _, v := range tc.ExpectKeys {
-					expectNames = append(expectNames, v.Name)
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
 				}
-				assert.ElementsMatch(t, expectNames, gotNames, "feed names")
+				assert.ElementsMatch(t, expectIDs, gotIDs, "feed IDs")
 			})
 		}
 	})
@@ -1430,9 +1539,9 @@ func TestChecker(t *testing.T) {
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				ret, err := checker.FeedPermissions(
+				ret, err := checker.ObjectPermissions(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.FeedRequest{Id: ltk.Object.ID()},
+					authz.ObjectRef{Type: FeedType, ID: ltk.Object.ID()},
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 				if err != nil {
@@ -1480,22 +1589,26 @@ func TestChecker(t *testing.T) {
 				// Mutating test - initialize for each test
 				checker := newTestChecker(t, fgaUrl, checkerTestData)
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				_, err := checker.FeedSetGroup(
+				err := checker.SetParent(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.FeedSetGroupRequest{Id: ltk.Subject.ID(), GroupId: ltk.Object.ID()},
+					authz.ObjectRef{Type: FeedType, ID: ltk.Subject.ID()},
+					authz.ObjectRef{Type: GroupType, ID: ltk.Object.ID()},
 				)
 				if checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized) {
 					return
 				}
 				// Verify write
-				fr, err := checker.FeedPermissions(
+				fr, err := checker.ObjectPermissions(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.FeedRequest{Id: ltk.Subject.ID()},
+					authz.ObjectRef{Type: FeedType, ID: ltk.Subject.ID()},
 				)
 				if err != nil {
 					t.Fatal(err)
 				}
-				assert.Equal(t, tc.Object.Name, fr.Group.Name)
+				if fr.Parent == nil {
+					t.Fatal("expected parent to be set")
+				}
+				assert.Equal(t, ltk.Object.ID(), fr.Parent.ID)
 			})
 		}
 	})
@@ -1534,22 +1647,23 @@ func TestChecker(t *testing.T) {
 		}
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
-				ret, err := checker.FeedVersionList(
+				ret, err := checker.ListObjects(
 					newUserCtx(tc.CheckAsUser, tc.Subject.Name),
-					&authz.FeedVersionListRequest{},
+					FeedVersionType,
 				)
 				if err != nil {
 					t.Fatal(err)
 				}
-				var gotNames []string
-				for _, v := range ret.FeedVersions {
-					gotNames = append(gotNames, v.Sha1)
+				var gotIDs []int64
+				for _, v := range ret {
+					gotIDs = append(gotIDs, v.ID)
 				}
-				var expectNames []string
+				var expectIDs []int64
 				for _, v := range tc.ExpectKeys {
-					expectNames = append(expectNames, v.Name)
+					ek := dbTupleLookup(t, dbx, TupleKey{Object: v})
+					expectIDs = append(expectIDs, ek.Object.ID())
 				}
-				assert.ElementsMatch(t, expectNames, gotNames, "feed version names")
+				assert.ElementsMatch(t, expectIDs, gotIDs, "feed version IDs")
 			})
 		}
 	})
@@ -1606,9 +1720,9 @@ func TestChecker(t *testing.T) {
 		for _, tc := range checks {
 			t.Run(tc.String(), func(t *testing.T) {
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				ret, err := checker.FeedVersionPermissions(
+				ret, err := checker.ObjectPermissions(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.FeedVersionRequest{Id: ltk.Object.ID()},
+					authz.ObjectRef{Type: FeedVersionType, ID: ltk.Object.ID()},
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 				if err != nil {
@@ -1682,12 +1796,11 @@ func TestChecker(t *testing.T) {
 				// Mutating test - initialize for each test
 				checker := newTestChecker(t, fgaUrl, checkerTestData)
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				_, err := checker.FeedVersionAddPermission(
+				err := checker.AddPermission(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.FeedVersionModifyPermissionRequest{
-						Id:             ltk.Object.ID(),
-						EntityRelation: authz.NewEntityRelation(ltk.Subject, ltk.Relation),
-					},
+					authz.ObjectRef{Type: FeedVersionType, ID: ltk.Object.ID()},
+					ltk.Subject,
+					ltk.Relation,
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 			})
@@ -1734,12 +1847,11 @@ func TestChecker(t *testing.T) {
 				// Mutating test - initialize for each test
 				checker := newTestChecker(t, fgaUrl, checkerTestData)
 				ltk := dbTupleLookup(t, dbx, tc.TupleKey())
-				_, err := checker.FeedVersionRemovePermission(
+				err := checker.RemovePermission(
 					newUserCtx(tc.CheckAsUser, ltk.Subject.Name),
-					&authz.FeedVersionModifyPermissionRequest{
-						Id:             ltk.Object.ID(),
-						EntityRelation: authz.NewEntityRelation(ltk.Subject, ltk.Relation),
-					},
+					authz.ObjectRef{Type: FeedVersionType, ID: ltk.Object.ID()},
+					ltk.Subject,
+					tc.Relation,
 				)
 				checkErrUnauthorized(t, err, tc.ExpectError, tc.ExpectUnauthorized)
 			})
@@ -1755,13 +1867,13 @@ func stringOr(a, b string) string {
 	return b
 }
 
-func checkActionSubset(t testing.TB, actions any, checks []Action) {
-	checkA, err := actionsToMap(actions)
-	if err != nil {
-		t.Error(err)
+func checkActionSubset(t testing.TB, actions authz.ActionSet, checks []Action) {
+	got := make(map[string]bool)
+	for k, v := range actions {
+		got[k.String()] = v
 	}
-	checkActions := checkActionsToMap(checks)
-	checkMapSubset(t, checkA, checkActions)
+	expect := checkActionsToMap(checks)
+	checkMapSubset(t, got, expect)
 }
 
 func checkMapSubset(t testing.TB, got map[string]bool, expect map[string]bool) {
@@ -1777,18 +1889,6 @@ func checkMapSubset(t testing.TB, got map[string]bool, expect map[string]bool) {
 			t.Errorf("key %s mismatch, got %t expect %t", k, got[k], expect[k])
 		}
 	}
-}
-
-func actionsToMap(actions any) (map[string]bool, error) {
-	jj, err := json.Marshal(actions)
-	if err != nil {
-		return nil, err
-	}
-	ret := map[string]bool{}
-	if err := json.Unmarshal(jj, &ret); err != nil {
-		return nil, err
-	}
-	return ret, nil
 }
 
 func checkActionsToMap(v []Action) map[string]bool {
@@ -1807,16 +1907,23 @@ func checkActionsToMap(v []Action) map[string]bool {
 func newTestChecker(t testing.TB, url string, testData []testCase) *Checker {
 	ctx := context.Background()
 	dbx := testutil.MustOpenTestDB(t)
-	cfg := CheckerConfig{
-		FGAEndpoint:      url,
-		FGALoadModelFile: testdata.Path("server/authz/tls.json"),
-		GlobalAdmin:      "global_admin",
-	}
 
-	checker, err := NewCheckerFromConfig(ctx, cfg, dbx)
+	fgaClient, err := fga.NewFGAClient(url, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := fgaClient.CreateStore(ctx, "test"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fgaClient.CreateModel(ctx, testdata.Path("server/authz/tls.json")); err != nil {
+		t.Fatal(err)
+	}
+
+	checker, err := NewChecker(NewMockUserProvider(), fgaClient, dbx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checker.AddGlobalAdmin("global_admin")
 
 	// Add test data
 	for _, tc := range testData {

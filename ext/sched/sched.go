@@ -37,7 +37,9 @@ func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 		ti := tripInfo{
 			ServiceID: v.ServiceID.Val,
 		}
-		if len(v.StopTimes) > 0 {
+		// Only track fixed-route trips with arrival/departure times
+		// Flex trips use time windows instead of fixed times
+		if len(v.StopTimes) > 0 && !gtfs.CheckFlexStopTimes(v.StopTimes).IsFlexTrip() {
 			ti.StartTime = v.StopTimes[0].DepartureTime
 			ti.EndTime = v.StopTimes[len(v.StopTimes)-1].ArrivalTime
 		}

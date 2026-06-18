@@ -25,9 +25,7 @@ type Ext interface {
 	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
-func init() {
-	var _ Ext = &QueryLogger{}
-}
+var _ Ext = (*QueryLogger)(nil)
 
 // QueryLogger wraps sql/sqlx methods with loggers.
 type QueryLogger struct {

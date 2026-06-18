@@ -9,7 +9,7 @@ import (
 
 // FeedInfo feed_info.txt
 type FeedInfo struct {
-	FeedPublisherName tt.String   `csv:",required"`
+	FeedPublisherName tt.String   `csv:",required" standardized_sort:"1"`
 	FeedPublisherURL  tt.Url      `csv:",required"`
 	FeedLang          tt.Language `csv:",required"`
 	FeedVersion       tt.String   `db:"feed_version_name"`

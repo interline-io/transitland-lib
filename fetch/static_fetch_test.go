@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"archive/zip"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -11,12 +12,12 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/stretchr/testify/assert"
 )
 
-var ExampleZip = testutil.ExampleZip
+var ExampleZip = testreader.ExampleZip
 
 func TestStaticFetch(t *testing.T) {
 	basedir := ""
@@ -124,7 +125,7 @@ func TestStaticFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir}})
+				fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -177,11 +178,11 @@ func TestStaticFetch_Exists(t *testing.T) {
 		feed := testdb.CreateTestFeed(atx, url)
 		_ = feed
 		tmpdir := t.TempDir()
-		fr1, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir}})
+		fr1, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		fr2, err2 := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir}})
+		fr2, err2 := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 		if err2 != nil {
 			t.Error(err2)
 		}
@@ -226,7 +227,7 @@ func TestStaticFetch_AdditionalTests(t *testing.T) {
 		//
 		url := ts.URL
 		feed := testdb.CreateTestFeed(atx, ts.URL)
-		fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir}})
+		fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -312,7 +313,7 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 		for _, tc := range tcs {
 			_ = tc
 			feed := testdb.CreateTestFeed(atx, ts.URL+"/"+tc.url)
-			fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir}})
+			fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 			if err != nil {
 				t.Error(err)
 				return nil
@@ -370,6 +371,84 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 // 	})
 // }
 
+// zipDirToTemp writes every regular file in dir into a new temp .zip and
+// returns its path. The flex fixtures are stored as directories so they remain
+// the single source of truth; we zip them on the fly for fetch tests.
+func zipDirToTemp(t *testing.T, dir string) string {
+	t.Helper()
+	tmp, err := os.CreateTemp("", "flexfeed-*.zip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tmp.Close()
+	zw := zip.NewWriter(tmp)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		buf, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f, err := zw.Create(e.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.Write(buf); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return tmp.Name()
+}
+
+// TestStaticFetch_FlexNoStops is a regression test for GTFS-Flex feeds that
+// locate service via locations.geojson with an empty (header-only) stops.txt.
+// Before stops.txt was treated as conditionally required, ValidateStructure
+// returned a fatal FileRequiredError via stats.NewFeedVersionFromReader, so the
+// fetch failed with "required file 'stops.txt' not present or could not be read"
+// and no feed version was ever created. This asserts the fetch now succeeds.
+func TestStaticFetch_FlexNoStops(t *testing.T) {
+	zipPath := zipDirToTemp(t, testpath.RelPath("testdata/flex/stops-header-only"))
+	defer os.Remove(zipPath)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := os.ReadFile(zipPath)
+		if err != nil {
+			t.Error(err)
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+	ctx := context.TODO()
+	testdb.TempSqlite(func(atx tldb.Adapter) error {
+		tmpdir := t.TempDir()
+		feed := testdb.CreateTestFeed(atx, ts.URL)
+		fr, err := StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Fetch must succeed: no fatal stops.txt error, and a feed version created.
+		if fr.FetchError != nil {
+			t.Fatalf("expected no fetch error for flex feed, got: %s", fr.FetchError.Error())
+		}
+		if fr.FeedVersion == nil || fr.FeedVersion.ID == 0 {
+			t.Fatal("expected a feed version to be created for the flex feed")
+		}
+		// The feed_fetch row should record success.
+		tlff := dmfr.FeedFetch{}
+		testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
+		assert.Equal(t, 200, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
+		assert.Equal(t, true, tlff.Success, "did not get expected feed_fetch success")
+		return nil
+	})
+}
+
 func TestStaticStateFetch_FetchError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", 404)
@@ -385,7 +464,7 @@ func TestStaticStateFetch_FetchError(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, err = StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir}})
+		_, err = StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 		if err != nil {
 			t.Error(err)
 			return nil
@@ -418,7 +497,7 @@ func TestStaticStateFetch_HideURL(t *testing.T) {
 		defer os.RemoveAll(tmpdir) // clean up
 		feed := testdb.CreateTestFeed(atx, ts.URL)
 		// Fetch
-		_, err = StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, HideURL: true}})
+		_, err = StaticFetch(ctx, atx, StaticFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: tmpdir, HideURL: true, AllowHTTPFetchUnfiltered: true}})
 		if err != nil {
 			t.Error(err)
 			return nil

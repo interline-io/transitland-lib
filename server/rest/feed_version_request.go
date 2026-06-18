@@ -33,7 +33,7 @@ type FeedVersionRequest struct {
 func (r FeedVersionRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/feed_versions",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: feedVersionQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for feed versions`,
@@ -41,7 +41,7 @@ func (r FeedVersionRequest) RequestInfo() RequestInfo {
 					"x-alternates": []RequestAltPath{
 						{"GET", "/feed_versions.{format}", "Request feed versions in specified format"},
 						{"GET", "/feed_versions/{feed_version_key}", "Request a feed version by ID or SHA1"},
-						{"GET", "/feed_versions/{feed_version_key}.format", "Request a feed version by ID or SHA1 in specifed format"},
+						{"GET", "/feed_versions/{feed_version_key}.{format}", "Request a feed version by ID or SHA1 in specified format"},
 						{"GET", "/feeds/{feed_key}/feed_versions", "Request feed versions by feed ID or Onestop ID"},
 					},
 				},
@@ -171,7 +171,7 @@ type FeedVersionKeyRequest struct {
 func (r FeedVersionKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/feed_versions/{feed_version_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: feedVersionQuery,
 			Operation: &oa.Operation{
 				Summary: "Feed Versions",
@@ -196,7 +196,7 @@ func (r FeedVersionDownloadRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path:        "/feed_versions/{feed_version_key}/download",
 		Description: `Download this feed version GTFS zip for this feed, if redistribution is allowed by the source feed's license. Available only using Transitland professional or enterprise plan API keys.`,
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Operation: &oa.Operation{
 				Summary: "Download feed version",
 				Extensions: map[string]any{
@@ -211,6 +211,28 @@ func (r FeedVersionDownloadRequest) RequestInfo() RequestInfo {
 						Schema:      newSRVal("string", "", nil),
 					}},
 				},
+				Responses: oa.NewResponses(
+					oa.WithStatus(200, &oa.ResponseRef{
+						Value: &oa.Response{
+							Description: toPtr("Success"),
+							Content: oa.Content{
+								"application/octet-stream": &oa.MediaType{
+									Schema: newSRVal("string", "binary", nil),
+								},
+							},
+						},
+					}),
+					oa.WithStatus(401, &oa.ResponseRef{
+						Value: &oa.Response{
+							Description: toPtr("Not authorized - feed redistribution not allowed"),
+						},
+					}),
+					oa.WithStatus(404, &oa.ResponseRef{
+						Value: &oa.Response{
+							Description: toPtr("Not found - feed not found"),
+						},
+					}),
+				),
 			},
 		},
 	}

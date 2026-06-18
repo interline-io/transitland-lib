@@ -61,11 +61,8 @@ models:
     model: 
       - "github.com/interline-io/transitland-lib/tt.Float"
   Bool:
-    model: 
+    model:
       - "github.com/interline-io/transitland-lib/tt.Bool"
-  Key:
-    model: 
-      - "github.com/interline-io/transitland-lib/tt.Key"
   Strings:
     model: 
       - "github.com/interline-io/transitland-lib/tt.Strings"
@@ -120,10 +117,30 @@ models:
   Timezone:
     model:
       - "github.com/interline-io/transitland-lib/tt.Timezone"
-  Feed:       
+  Tenant:
+    fields:
+      groups:
+        resolver: true
+      permissions:
+        resolver: true
+  Group:
+    fields:
+      tenant:
+        resolver: true
+      feeds:
+        resolver: true
+      permissions:
+        resolver: true
+  Feed:
     fields:
       onestop_id:
         fieldName: FeedID
+      permissions:
+        resolver: true
+  FeedVersion:
+    fields:
+      permissions:
+        resolver: true
   # Force resolvers
   StopObservation:
     extraFields:
@@ -190,6 +207,8 @@ models:
         resolver: true
       route:
         resolver: true
+      shape:
+        resolver: true
     extraFields:
       RouteID:
         type: int
@@ -230,6 +249,8 @@ models:
       tables:
         resolver: true
       layers:
+        resolver: true
+      values_relay:
         resolver: true
   CensusLayer:
     fields:

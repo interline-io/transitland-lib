@@ -50,6 +50,7 @@ func GetFeedVersionTables() FeedVersionTables {
 			"feed_version_agency_onestop_ids",
 			"feed_version_route_onestop_ids",
 			"feed_version_stop_onestop_ids",
+			"tl_feed_version_geohashes",
 		},
 		ImportDerivedTables: []string{
 			"tl_feed_version_geometries",
@@ -87,6 +88,7 @@ func GetFeedVersionTables() FeedVersionTables {
 			"gtfs_fare_rules",
 			"gtfs_attributions",
 			"gtfs_translations",
+			"gtfs_location_group_stops",
 		},
 		GtfsEntityTables: []string{
 			"gtfs_fare_media",
@@ -102,6 +104,9 @@ func GetFeedVersionTables() FeedVersionTables {
 			"gtfs_fare_attributes",
 			"gtfs_trips",
 			"gtfs_shapes",
+			"gtfs_booking_rules",
+			"gtfs_location_groups",
+			"gtfs_locations",
 			"gtfs_calendars",
 			"gtfs_stops",
 			"gtfs_levels",

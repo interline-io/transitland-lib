@@ -7,17 +7,17 @@
 ## Table of Contents <!-- omit in toc -->
 <!-- to update use https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one -->
 - [Installation](#installation)
-	- [Download prebuilt binary](#download-prebuilt-binary)
-	- [Install using homebrew](#install-using-homebrew)
-	- [Install binary from source](#install-binary-from-source)
+  - [Download prebuilt binary](#download-prebuilt-binary)
+  - [Install using homebrew](#install-using-homebrew)
+  - [Install binary from source](#install-binary-from-source)
 - [Usage as a CLI tool](#usage-as-a-cli-tool)
-	- [Breaking changes](#breaking-changes)
+  - [Breaking changes](#breaking-changes)
 - [Usage as a library](#usage-as-a-library)
 - [Usage as a web service](#usage-as-a-web-service)
 - [Database migrations](#database-migrations)
 - [Included Readers and Writers](#included-readers-and-writers)
 - [Development](#development)
-	- [Releases](#releases)
+  - [Releases](#releases)
 - [Licenses](#licenses)
 
 ## Installation
@@ -121,7 +121,7 @@ For running tests locally, the following instructions should help get started:
 1. Set `TL_TEST_SERVER_DATABASE_URL` to the connection string to a test database
    - e.g. `postgresql://localhost:5432/tlv2_test_server?sslmode=disable`
    - You must also set `PGHOST=localhost`, `PGDATABASE=tlv2_test_server`, etc., to match this url
-2. Initialize test fixtures: `./testdata/server/test_setup.sh`
+2. Initialize test fixtures: `./testdata/test_setup.sh`
    - This will create the `tlv2_test_server` database in postgres
    - Will halt with an error (intentionally) if this database already exists
    - Runs migrations in `transitland-lib/schema/postgres/migrations`

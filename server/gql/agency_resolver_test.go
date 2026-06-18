@@ -11,6 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
+	"github.com/interline-io/transitland-lib/tlxy"
 )
 
 func TestAgencyResolver(t *testing.T) {
@@ -20,7 +21,7 @@ func TestAgencyResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { agencies {agency_id}}`,
 			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART", ""},
+			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", "", "1"},
 		},
 		{
 			name:   "basic fields",
@@ -35,52 +36,6 @@ func TestAgencyResolver(t *testing.T) {
 			vars:         vars,
 			selector:     "agencies.0.geometry.type",
 			selectExpect: []string{"Polygon"},
-		},
-		{
-			name:         "near 100m",
-			query:        `query {agencies(where:{near:{lon:-122.407974,lat:37.784471,radius:100.0}}) {agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"BART"},
-		},
-		{
-			name:         "near 10000m",
-			query:        `query {agencies(where:{near:{lon:-122.407974,lat:37.784471,radius:10000.0}}) {agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART"},
-		},
-		{
-			name:         "within polygon",
-			query:        `query{agencies(where:{within:{type:"Polygon",coordinates:[[[-122.39803791046143,37.794626736533836],[-122.40106344223022,37.792303711508595],[-122.3965573310852,37.789641468930114],[-122.3938751220703,37.792354581451946],[-122.39803791046143,37.794626736533836]]]}}){agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"BART"},
-		},
-		{
-			name:         "within polygon big",
-			query:        `query{agencies(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART"},
-		},
-		{
-			name:         "where bbox 1",
-			query:        `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
-			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"BART"},
-		},
-		{
-			name:         "where bbox 2",
-			query:        `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
-			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{},
-		},
-		{
-			name:        "where bbox too large",
-			query:       `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
-			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 		{
 			name:   "feed_version",
@@ -138,7 +93,7 @@ func TestAgencyResolver(t *testing.T) {
 			query:        `query { agencies(where:{adm0_iso: "US"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
 			vars:         vars,
 			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit"},
+			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"},
 		},
 		{
 			name:         "places iso3166 state",
@@ -192,6 +147,14 @@ func TestAgencyResolver(t *testing.T) {
 		{
 			name:         "places state no result",
 			query:        `query { agencies(where:{adm1_name: "New York"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			vars:         vars,
+			selector:     "agencies.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
+			// `%` is an ILIKE wildcard; unescaped it would match every adm0_iso.
+			name:         "places adm0_iso escapes ilike wildcards",
+			query:        `query { agencies(where:{adm0_iso: "%"}) {onestop_id}}`,
 			vars:         vars,
 			selector:     "agencies.#.onestop_id",
 			selectExpect: []string{},
@@ -342,6 +305,103 @@ func TestAgencyResolver_Authz(t *testing.T) {
 	}
 }
 
+func TestAgencyResolver_Location(t *testing.T) {
+	c, cfg := newTestClient(t)
+	testAgencyID := 0
+	if err := cfg.Finder.DBX().
+		QueryRowx(`select gtfs_agencies.id from gtfs_agencies join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = 'BA' and agency_id = $1`, "BART").
+		Scan(&testAgencyID); err != nil {
+		t.Errorf("could not get agency ID for test: %s", err.Error())
+	}
+	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
+	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
+	testcases := []testcase{
+		{
+			name:         "near 100m",
+			query:        `query {agencies(where:{near:{lon:-122.407974,lat:37.784471,radius:100.0}}) {agency_id}}`,
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{"BART"},
+		},
+		{
+			name:         "near 10000m",
+			query:        `query {agencies(where:{near:{lon:-122.407974,lat:37.784471,radius:10000.0}}) {agency_id}}`,
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{"caltrain-ca-us", "BART"},
+		},
+		{
+			name:         "within polygon",
+			query:        `query{agencies(where:{within:{type:"Polygon",coordinates:[[[-122.39803791046143,37.794626736533836],[-122.40106344223022,37.792303711508595],[-122.3965573310852,37.789641468930114],[-122.3938751220703,37.792354581451946],[-122.39803791046143,37.794626736533836]]]}}){agency_id}}`,
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{"BART"},
+		},
+		{
+			name:         "within polygon big",
+			query:        `query{agencies(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id agency_id}}`,
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{"caltrain-ca-us", "BART"},
+		},
+		{
+			name:         "where bbox 1",
+			query:        `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
+			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{"BART"},
+		},
+		{
+			name:         "where bbox 2",
+			query:        `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
+			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{},
+		},
+		{
+			name:        "where bbox too large",
+			query:       `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
+			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
+			expectError: true,
+		},
+		// Focus tests
+		{
+			name: "focus basic: West coast focus returns CA agencies before FL agencies",
+			query: `query($lat:Float!, $lon:Float!) {
+				agencies(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					agency_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "agencies.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"CT", "BA", "HA", "WMATA", "ctran-flex"},
+		},
+		{
+			name: "focus basic: East coast focus returns FL agency before CA agencies",
+			query: `query($lat:Float!, $lon:Float!) {
+				agencies(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					agency_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "agencies.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "WMATA", "BA", "CT", "ctran-flex"},
+		},
+		{
+			name: "focus with pagination: maintains ordering",
+			query: `query($lat:Float!, $lon:Float!, $after:Int) {
+				agencies(limit: 2, after: $after, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					agency_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testAgencyID},
+			selector:     "agencies.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "WMATA"},
+		},
+	}
+	queryTestcases(t, c, testcases)
+}
+
 func TestAgencyResolver_License(t *testing.T) {
 	q := `
 	query ($lic: LicenseFilter) {
@@ -368,8 +428,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: share_alike_optional = no",
@@ -384,8 +444,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: create_derived_product
 		{
@@ -393,8 +453,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: create_derived_product = no",
@@ -409,8 +469,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: commercial_use_allowed
 		{
@@ -418,8 +478,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = no",
@@ -434,8 +494,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: redistribution_allowed
 		{
@@ -443,8 +503,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: redistribution_allowed = no",
@@ -459,8 +519,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 		// license: use_without_attribution
 		{
@@ -468,8 +528,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  1,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  2,
 		},
 		{
 			name:               "license filter: use_without_attribution = no",
@@ -484,8 +544,8 @@ func TestAgencyResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4,
 		},
 	}
 	c, _ := newTestClient(t)

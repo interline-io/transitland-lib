@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS "feed_version_gtfs_imports" (
   "in_progress" bool,
   "exception_log" blob,
   "import_level" integer not null,
+  "import_source" text not null default 'automatic',
   "interpolated_stop_time_count" integer not null,
   "skip_entity_error_count" blob,
   "skip_entity_reference_count" blob,
@@ -80,7 +81,10 @@ CREATE TABLE IF NOT EXISTS "gtfs_stops" (
   "level_id" integer,
   "tts_stop_name" text,
   "platform_code" text,
+  "stop_access" integer,
+  "area_id" text,
   "geometry" BLOB,
+  "textsearch" TEXT,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(parent_station) references gtfs_stops(id),
   foreign key(level_id) references gtfs_levels(id)
@@ -263,6 +267,8 @@ CREATE TABLE IF NOT EXISTS "gtfs_trips" (
   "feed_version_id" integer NOT NULL,
   "journey_pattern_id" integer,
   "journey_pattern_offset" integer,
+  "safe_duration_factor" real,
+  "safe_duration_offset" real,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
@@ -288,6 +294,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_agencies" (
   "feed_version_id" integer NOT NULL,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "textsearch" TEXT,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
 CREATE INDEX idx_gtfs_agencies_agency_id ON "gtfs_agencies"(agency_id);
@@ -374,6 +381,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_routes" (
   "as_route" integer,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "textsearch" TEXT,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(agency_id) references gtfs_agencies(id)
 );
@@ -396,13 +404,32 @@ CREATE TABLE IF NOT EXISTS "gtfs_stop_times" (
   "continuous_drop_off" integer,
   "interpolated" integer,
   "feed_version_id" integer NOT NULL,
+  -- GTFS-Flex fields
+  "location_group_id" integer,
+  "location_id" integer,
+  "start_pickup_drop_off_window" integer,
+  "end_pickup_drop_off_window" integer,
+  "pickup_booking_rule_id" integer,
+  "drop_off_booking_rule_id" integer,
+  "mean_duration_factor" real,
+  "mean_duration_offset" real,
+  "safe_duration_factor" real,
+  "safe_duration_offset" real,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(trip_id) references gtfs_trips(id),
-  foreign key(stop_id) references gtfs_stops(id)
+  foreign key(stop_id) references gtfs_stops(id),
+  foreign key(location_group_id) references gtfs_location_groups(id),
+  foreign key(location_id) references gtfs_locations(id),
+  foreign key(pickup_booking_rule_id) references gtfs_booking_rules(id),
+  foreign key(drop_off_booking_rule_id) references gtfs_booking_rules(id)
 );
 CREATE INDEX idx_stop_times_trip_id ON "gtfs_stop_times"(trip_id);
 CREATE INDEX idx_gtfs_stop_times_stop_id ON "gtfs_stop_times"(stop_id);
 CREATE INDEX idx_gtfs_stop_times_feed_version_id ON "gtfs_stop_times"(feed_version_id);
+CREATE INDEX idx_gtfs_stop_times_location_group_id ON "gtfs_stop_times"(location_group_id) WHERE location_group_id IS NOT NULL;
+CREATE INDEX idx_gtfs_stop_times_location_id ON "gtfs_stop_times"(location_id) WHERE location_id IS NOT NULL;
+CREATE INDEX idx_gtfs_stop_times_pickup_booking_rule_id ON "gtfs_stop_times"(pickup_booking_rule_id) WHERE pickup_booking_rule_id IS NOT NULL;
+CREATE INDEX idx_gtfs_stop_times_drop_off_booking_rule_id ON "gtfs_stop_times"(drop_off_booking_rule_id) WHERE drop_off_booking_rule_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS "gtfs_fare_rules" (
   "fare_id" integer NOT NULL,
   "route_id" int,
@@ -528,6 +555,13 @@ CREATE TABLE IF NOT EXISTS "tl_route_geometries" (
   "combined_geometry" blob,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
   foreign key(route_id) references gtfs_routes(id)
+);
+CREATE TABLE IF NOT EXISTS "tl_feed_version_geohashes" (
+  "feed_version_id" integer not null,
+  "geohash" text not null,
+  "stop_count" integer not null,
+  primary key("feed_version_id", "geohash"),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
 ---------------
 CREATE TABLE IF NOT EXISTS "gtfs_translations" (
@@ -824,3 +858,225 @@ CREATE TABLE feed_version_stop_onestop_ids (
   "onestop_id" varchar(255) not null,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
+
+-- Materialized active routes table
+CREATE TABLE tl_materialized_active_routes (
+    -- Primary route data
+    id INTEGER NOT NULL,
+    route_id TEXT NOT NULL,
+    route_short_name TEXT,
+    route_long_name TEXT,
+    route_desc TEXT,
+    route_type INTEGER,
+    route_url TEXT,
+    route_color TEXT,
+    route_text_color TEXT,
+    route_sort_order INTEGER,
+    agency_id INTEGER,
+    network_id TEXT,
+    as_route INTEGER,
+    continuous_pickup INTEGER,
+    continuous_drop_off INTEGER,
+    feed_version_id INTEGER NOT NULL,
+
+    -- Derived
+    gtfs_agency_id TEXT,
+    agency_name TEXT,
+    feed_id INTEGER NOT NULL,
+    onestop_id TEXT,
+    
+    -- Materialization metadata
+    materialized_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    -- Search optimization
+    textsearch TEXT,
+
+    -- Spatial column (full geometry in SQLite, simplified in PostGIS)
+    geometry_simplified BLOB,
+
+    -- Source entity timestamps
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
+    FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
+);
+
+-- Indexes for tl_materialized_active_routes
+CREATE UNIQUE INDEX tl_materialized_active_routes_id_idx ON tl_materialized_active_routes(id);
+CREATE INDEX tl_materialized_active_routes_route_id_idx ON tl_materialized_active_routes(route_id);
+CREATE INDEX tl_materialized_active_routes_feed_version_id_idx ON tl_materialized_active_routes(feed_version_id);
+CREATE INDEX tl_materialized_active_routes_onestop_id_idx ON tl_materialized_active_routes(onestop_id);
+
+-- Materialized active stops table
+CREATE TABLE tl_materialized_active_stops (
+    -- Primary stop data
+    id INTEGER NOT NULL,
+    stop_id TEXT NOT NULL,
+    stop_code TEXT,
+    stop_name TEXT,
+    stop_desc TEXT,
+    zone_id TEXT,
+    stop_url TEXT,
+    location_type INTEGER,
+    stop_timezone TEXT,
+    parent_station INTEGER,
+    level_id INTEGER,
+    platform_code TEXT,
+    tts_stop_name TEXT,
+    stop_access INTEGER,
+    area_id TEXT,
+    wheelchair_boarding INTEGER,
+    geometry BLOB,
+    
+    -- Derived
+    feed_version_id INTEGER NOT NULL,
+    feed_id INTEGER NOT NULL,
+    onestop_id TEXT,
+    
+    -- Materialization metadata
+    materialized_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    -- Search optimization
+    textsearch TEXT,
+
+    -- Source entity timestamps
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
+    FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
+);
+
+-- Indexes for tl_materialized_active_stops
+CREATE UNIQUE INDEX tl_materialized_active_stops_id_idx ON tl_materialized_active_stops(id);
+CREATE INDEX tl_materialized_active_stops_stop_id_idx ON tl_materialized_active_stops(stop_id);
+CREATE INDEX tl_materialized_active_stops_feed_version_id_idx ON tl_materialized_active_stops(feed_version_id);
+CREATE INDEX tl_materialized_active_stops_onestop_id_idx ON tl_materialized_active_stops(onestop_id);
+
+-- Materialized active agencies table
+CREATE TABLE tl_materialized_active_agencies (
+    -- Primary agency data
+    id INTEGER NOT NULL,
+    agency_id TEXT NOT NULL,
+    agency_name TEXT,
+    agency_url TEXT,
+    agency_timezone TEXT,
+    agency_lang TEXT,
+    agency_phone TEXT,
+    agency_fare_url TEXT,
+    agency_email TEXT,
+    
+    -- Feed metadata
+    feed_version_id INTEGER NOT NULL,
+    feed_id INTEGER NOT NULL,
+    onestop_id TEXT,
+    
+    -- Materialization metadata
+    materialized_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- Search optimization
+    textsearch TEXT,
+
+    -- Source entity timestamps
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    FOREIGN KEY (feed_id) REFERENCES current_feeds(id),
+    FOREIGN KEY (feed_version_id) REFERENCES feed_versions(id)
+);
+
+-- Indexes for tl_materialized_active_agencies
+CREATE UNIQUE INDEX tl_materialized_active_agencies_id_idx ON tl_materialized_active_agencies(id);
+CREATE INDEX tl_materialized_active_agencies_agency_id_idx ON tl_materialized_active_agencies(agency_id);
+CREATE INDEX tl_materialized_active_agencies_feed_version_id_idx ON tl_materialized_active_agencies(feed_version_id);
+CREATE INDEX tl_materialized_active_agencies_onestop_id_idx ON tl_materialized_active_agencies(onestop_id);
+
+-- GTFS-Flex: location_groups.txt
+CREATE TABLE IF NOT EXISTS "gtfs_location_groups" (
+  "id" integer primary key autoincrement,
+  "feed_version_id" integer NOT NULL,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "location_group_id" varchar(255) NOT NULL,
+  "location_group_name" varchar(255),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
+CREATE INDEX idx_gtfs_location_groups_feed_version_id ON "gtfs_location_groups"(feed_version_id);
+CREATE UNIQUE INDEX idx_gtfs_location_groups_fv_id ON "gtfs_location_groups"(feed_version_id, location_group_id);
+
+-- GTFS-Flex: location_group_stops.txt
+CREATE TABLE IF NOT EXISTS "gtfs_location_group_stops" (
+  "id" integer primary key autoincrement,
+  "feed_version_id" integer NOT NULL,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "location_group_id" integer NOT NULL,
+  "stop_id" integer NOT NULL,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(location_group_id) references gtfs_location_groups(id),
+  foreign key(stop_id) references gtfs_stops(id)
+);
+CREATE INDEX idx_gtfs_location_group_stops_feed_version_id ON "gtfs_location_group_stops"(feed_version_id);
+CREATE INDEX idx_gtfs_location_group_stops_location_group_id ON "gtfs_location_group_stops"(location_group_id);
+CREATE INDEX idx_gtfs_location_group_stops_stop_id ON "gtfs_location_group_stops"(stop_id);
+CREATE UNIQUE INDEX idx_gtfs_location_group_stops_lg_stop ON "gtfs_location_group_stops"(location_group_id, stop_id);
+
+-- GTFS-Flex: booking_rules.txt
+CREATE TABLE IF NOT EXISTS "gtfs_booking_rules" (
+  "id" integer primary key autoincrement,
+  "feed_version_id" integer NOT NULL,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "booking_rule_id" varchar(255) NOT NULL,
+  "booking_type" integer NOT NULL,
+  "prior_notice_duration_min" integer,
+  "prior_notice_duration_max" integer,
+  "prior_notice_last_day" integer,
+  "prior_notice_last_time" integer,
+  "prior_notice_start_day" integer,
+  "prior_notice_start_time" integer,
+  "prior_notice_service_id" integer,
+  "message" text,
+  "pickup_message" text,
+  "drop_off_message" text,
+  "phone_number" varchar(255),
+  "info_url" text,
+  "booking_url" text,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(prior_notice_service_id) references gtfs_calendars(id)
+);
+CREATE INDEX idx_gtfs_booking_rules_feed_version_id ON "gtfs_booking_rules"(feed_version_id);
+CREATE UNIQUE INDEX idx_gtfs_booking_rules_fv_id ON "gtfs_booking_rules"(feed_version_id, booking_rule_id);
+
+-- GTFS-Flex: locations.geojson
+CREATE TABLE IF NOT EXISTS "gtfs_locations" (
+  "id" integer primary key autoincrement,
+  "feed_version_id" integer NOT NULL,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "location_id" varchar(255) NOT NULL,
+  "stop_name" varchar(255),
+  "stop_desc" text,
+  "zone_id" varchar(255),
+  "stop_url" text,
+  "geometry" BLOB,
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
+CREATE INDEX idx_gtfs_locations_feed_version_id ON "gtfs_locations"(feed_version_id);
+CREATE UNIQUE INDEX idx_gtfs_locations_fv_id ON "gtfs_locations"(feed_version_id, location_id);
+CREATE TABLE tl_job_artifacts (
+  "id" integer primary key autoincrement,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "job_id" text not null,
+  "job_kind" text not null default '',
+  "user_id" text not null default '',
+  "filename" text not null,
+  "content_type" text not null default 'application/octet-stream',
+  "size_bytes" integer not null default 0,
+  "sha1" text not null default '',
+  "storage_key" text not null
+);
+CREATE INDEX idx_tl_job_artifacts_job_id ON "tl_job_artifacts"(job_id);
+CREATE INDEX idx_tl_job_artifacts_user_id ON "tl_job_artifacts"(user_id);

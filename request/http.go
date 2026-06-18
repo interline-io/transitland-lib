@@ -5,25 +5,183 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
+	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
+	"code.dny.dev/ssrf"
+	"github.com/interline-io/log"
 	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
-func init() {
-	var _ Downloader = &Http{}
+// defaultGuardian denies connections to IP ranges in the IANA Special-Purpose
+// Registries (loopback, RFC1918, link-local, multicast, the cloud metadata
+// address, etc.) and restricts IPv6 to global unicast. It runs as a
+// net.Dialer.Control hook, so it sees the resolved IP rather than the
+// hostname, closing basic DNS rebinding and multi-A-record gaps. Connections
+// to private destinations require opting out via Http.AllowHTTPUnfiltered.
+//
+// Port restriction is disabled (WithAnyPort): legitimate public GTFS feeds
+// commonly serve from non-standard HTTPS ports (8443, 4443, etc.). The
+// library only ever uses http.Client, so the dial port doesn't change the
+// protocol — port allowlisting would block real feeds without preventing
+// any attack the IP-based filter doesn't already cover.
+var defaultGuardian = ssrf.New(ssrf.WithAnyPort())
+
+// safeTransport is shared across all DownloadAuth calls so that connection
+// pooling and HTTP/2 reuse work across feed fetches.
+var safeTransport = func() *http.Transport {
+	var t *http.Transport
+	if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+		t = dt.Clone()
+	} else {
+		t = &http.Transport{}
+	}
+	t.DialContext = (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		Control:   defaultGuardian.Safe,
+	}).DialContext
+	return t
+}()
+
+var _ Downloader = (*Http)(nil)
+
+const (
+	// Default retry configuration for transient HTTP errors (429, 502, 503, 504).
+	// Retry schedule:
+	//   Attempt 1: immediate
+	//   Attempt 2: after ~10s (10s + jitter)
+	//   Attempt 3: after ~30s (30s + jitter)
+	//   Attempt 4: after ~90s (90s + jitter)
+	// Total max wait time: ~130s (~2 minutes)
+	defaultMaxRetries = 3
+
+	// defaultMaxRedirects matches the Go net/http default, which is otherwise
+	// replaced when a custom CheckRedirect is set.
+	defaultMaxRedirects = 10
+)
+
+// defaultBackoffSchedule defines the backoff duration for each retry attempt.
+var defaultBackoffSchedule = []time.Duration{
+	10 * time.Second,
+	30 * time.Second,
+	90 * time.Second,
 }
 
 type Http struct {
 	secret dmfr.Secret
+	// MaxRetries sets the maximum number of retry attempts for a request.
+	// If MaxRetries is zero or negative, a default value (defaultMaxRetries) is used.
+	MaxRetries int
+	// MaxRedirects follows Go net/http CheckRedirect semantics and limits the
+	// total number of requests in a redirect chain, including the initial
+	// request — a value of N therefore allows up to N-1 redirects to be
+	// followed. If MaxRedirects is zero or negative, defaultMaxRedirects (10)
+	// is used, matching the net/http default.
+	MaxRedirects int
+	// BackoffSchedule defines the backoff duration for each retry attempt.
+	// If nil or empty, defaultBackoffSchedule is used.
+	BackoffSchedule []time.Duration
+	// AllowHTTPUnfiltered disables SSRF protection (private/loopback/metadata
+	// IPs are allowed). Off by default — only set in CLI contexts where the
+	// operator legitimately fetches from internal addresses.
+	AllowHTTPUnfiltered bool
 }
 
 func (r *Http) SetSecret(secret dmfr.Secret) error {
 	r.secret = secret
 	return nil
+}
+
+func (r *Http) getMaxRetries() int {
+	if r.MaxRetries > 0 {
+		return r.MaxRetries
+	}
+	return defaultMaxRetries
+}
+
+func (r *Http) getBackoffSchedule() []time.Duration {
+	if len(r.BackoffSchedule) > 0 {
+		return r.BackoffSchedule
+	}
+	return defaultBackoffSchedule
+}
+
+func (r *Http) getMaxRedirects() int {
+	if r.MaxRedirects > 0 {
+		return r.MaxRedirects
+	}
+	return defaultMaxRedirects
+}
+
+// isRetryableStatus returns true for HTTP status codes that indicate
+// transient errors worth retrying.
+func isRetryableStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusTooManyRequests, // 429
+		http.StatusBadGateway,         // 502
+		http.StatusServiceUnavailable, // 503
+		http.StatusGatewayTimeout:     // 504
+		return true
+	}
+	return false
+}
+
+// parseRetryAfter parses the Retry-After header value.
+// It can be either a number of seconds or an HTTP-date.
+func parseRetryAfter(value string) time.Duration {
+	if value == "" {
+		return 0
+	}
+	// Try parsing as seconds first
+	if seconds, err := strconv.Atoi(value); err == nil {
+		if seconds < 0 {
+			// Per RFC 7231, delay-seconds must be a non-negative decimal integer.
+			// Treat negative values as invalid and fall back to default logic.
+			return 0
+		}
+		return time.Duration(seconds) * time.Second
+	}
+	// Try parsing as HTTP-date (supports RFC 1123, RFC 850, and ANSI C asctime)
+	if t, err := http.ParseTime(value); err == nil {
+		d := time.Until(t)
+		if d < 0 {
+			return 0
+		}
+		return d
+	}
+	return 0
+}
+
+// calculateBackoff returns the backoff duration for the given attempt.
+// It uses the backoff schedule with jitter, or the Retry-After header if provided.
+func (r *Http) calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
+	schedule := r.getBackoffSchedule()
+	// Get the base backoff from schedule, capping at the last value
+	var backoff time.Duration
+	if attempt < len(schedule) {
+		backoff = schedule[attempt]
+	} else if len(schedule) > 0 {
+		backoff = schedule[len(schedule)-1]
+	}
+	// Use Retry-After header if provided and greater than scheduled backoff
+	if retryAfter > backoff {
+		backoff = retryAfter
+	}
+	// Add jitter: random value between 0 and 25% of backoff.
+	// Guard against very small backoff values that would make backoff/4 == 0
+	maxJitter := backoff / 4
+	if maxJitter <= 0 {
+		return backoff
+	}
+	jitter := rand.N(maxJitter)
+	return backoff + jitter
 }
 
 func removeDefaultPortFromHost(req *http.Request) {
@@ -84,20 +242,81 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	// may break pre-signed S3 URLs or other systems that rely on the host header
 	removeDefaultPortFromHost(req)
 
+	maxRedirects := r.getMaxRedirects()
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("stopped after %d redirects", maxRedirects)
+			}
 			removeDefaultPortFromHost(req)
 			return nil
 		},
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		// return error directly
-		return nil, 0, err
+	if !r.AllowHTTPUnfiltered {
+		client.Transport = safeTransport
 	}
-	if resp.StatusCode >= 400 {
+
+	maxRetries := r.getMaxRetries()
+	var lastErr error
+	var lastStatusCode int
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Clone the request for retry (body is nil for GET, so this is safe)
+		reqCopy := req.Clone(ctx)
+
+		resp, err := client.Do(reqCopy)
+		if err != nil {
+			// Network error - return immediately
+			return nil, 0, err
+		}
+
+		// Success
+		if resp.StatusCode < 400 {
+			// Wrap response body to preserve Content-Length for verification
+			return &httpResponseReader{
+				ReadCloser:    resp.Body,
+				ContentLength: resp.ContentLength,
+			}, resp.StatusCode, nil
+		}
+
+		// Handle retryable errors (429, 502, 503, 504)
+		if isRetryableStatus(resp.StatusCode) && attempt < maxRetries {
+			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+			backoff := r.calculateBackoff(attempt, retryAfter)
+
+			log.Info().
+				Str("url", ustr).
+				Int("status_code", resp.StatusCode).
+				Int("attempt", attempt+1).
+				Int("max_retries", maxRetries).
+				Dur("backoff", backoff).
+				Str("retry_after", resp.Header.Get("Retry-After")).
+				Msg("transient error, retrying")
+
+			resp.Body.Close()
+
+			// Wait for backoff duration or until context is cancelled
+			select {
+			case <-ctx.Done():
+				return nil, 0, ctx.Err()
+			case <-time.After(backoff):
+				// Continue to next retry attempt
+			}
+			continue
+		}
+
+		// Non-retryable error or max retries exceeded
+		lastErr = fmt.Errorf("response status code: %d", resp.StatusCode)
+		lastStatusCode = resp.StatusCode
 		resp.Body.Close()
-		return nil, resp.StatusCode, fmt.Errorf("response status code: %d", resp.StatusCode)
+		break
 	}
-	return resp.Body, resp.StatusCode, nil
+
+	return nil, lastStatusCode, lastErr
+}
+
+// httpResponseReader wraps http.Response.Body to preserve Content-Length
+type httpResponseReader struct {
+	io.ReadCloser
+	ContentLength int64
 }

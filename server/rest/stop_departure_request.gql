@@ -11,6 +11,7 @@ fragment stop on Stop {
   location_type
   platform_code
   tts_stop_name
+  stop_access
   wheelchair_boarding
   zone_id
 }

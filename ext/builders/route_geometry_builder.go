@@ -37,17 +37,19 @@ func (ent *RouteGeometry) TableName() string {
 ///////
 
 type shapeInfo struct {
-	Line                  []tlxy.Point
+	sourceID              string // source shape_id; the points live in the shared geom cache
 	Generated             bool
 	Length                float64
 	MaxSegmentLength      float64
 	FirstPointMaxDistance float64
+	hasZeroPoint          bool
 }
 
 ////////
 
 // RouteGeometryBuilder creates default shapes for routes.
 type RouteGeometryBuilder struct {
+	geomCache   tlxy.GeomCache
 	shapeInfos  map[string]shapeInfo
 	shapeCounts map[string]map[int]map[string]int
 }
@@ -60,6 +62,13 @@ func NewRouteGeometryBuilder() *RouteGeometryBuilder {
 	}
 }
 
+// SetGeomCache receives the copier's shared geometry cache. Route geometries are
+// assembled from the shape points it already holds (keyed by source shape_id), so
+// the builder keeps only per-shape scalar stats and not a second copy of the points.
+func (pp *RouteGeometryBuilder) SetGeomCache(g tlxy.GeomCache) {
+	pp.geomCache = g
+}
+
 // Counts the number of times a shape is used for each route,direction_id
 func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
@@ -68,22 +77,23 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 		for i, c := range v.Geometry.Val.Coords() {
 			pts[i] = tlxy.Point{Lon: c[0], Lat: c[1]}
 		}
-		// If we've already seen this line, re-use shapeInfo to reduce mem usage
-		for _, si := range pp.shapeInfos {
-			// Match on generated value too
-			if tlxy.LineEquals(pts, si.Line) && si.Generated == v.Generated {
-				// Add to shape cache
-				pp.shapeInfos[eid] = si
-				return nil
-			}
+		// Skip shapes with no coordinates (invalid shapes)
+		if len(pts) == 0 {
+			return nil
 		}
-		// Get distances
+		// Derive the scalar stats now; the points themselves already live in the
+		// shared geom cache (keyed by the source shape_id), so the builder keeps only
+		// these scalars and fetches the points back when assembling route geometries.
 		maxSegmentLength := 0.0
 		length := 0.0
 		firstPoint := pts[0]
 		firstPointMaxDistance := 0.0
+		hasZeroPoint := false
 		prevPoint := tlxy.Point{}
 		for i, pt := range pts {
+			if pt.Lon == 0 || pt.Lat == 0 {
+				hasZeroPoint = true
+			}
 			if i > 0 {
 				d := tlxy.DistanceHaversine(prevPoint, pt)
 				length += d
@@ -96,13 +106,13 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 			}
 			prevPoint = pt
 		}
-		// Add to shape cache
 		pp.shapeInfos[eid] = shapeInfo{
+			sourceID:              v.ShapeID.Val,
 			Generated:             v.Generated,
 			Length:                length,
 			MaxSegmentLength:      maxSegmentLength,
 			FirstPointMaxDistance: firstPointMaxDistance,
-			Line:                  pts,
+			hasZeroPoint:          hasZeroPoint,
 		}
 	case *gtfs.Trip:
 		// shapeCounts is layered by: route id, direction id, shape id
@@ -119,21 +129,43 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 	return nil
 }
 
-// Collects and assembles the default shapes and writes to the database
-func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
+// eachRouteGeometry builds each route's representative geometry one at a time and
+// passes it to fn, reading from the accumulated counts and shared geom cache without
+// mutating either. Routes whose geometry can't be built are skipped (and logged).
+// Streaming one at a time keeps the whole set from being held in memory at once.
+func (pp *RouteGeometryBuilder) eachRouteGeometry(fn func(*RouteGeometry) error) error {
 	ctx := context.TODO()
-	// Process shapes for each route
 	for rid := range pp.shapeCounts {
 		ent, err := pp.buildRouteShape(rid)
 		if err != nil {
 			log.For(ctx).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
-		if err := copier.CopyEntity(ent); err != nil {
+		if err := fn(ent); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// RouteGeometries assembles every route's geometry into a map keyed by route_id, for
+// callers that need random access (e.g. a validation report). Copy streams instead;
+// prefer that when you only need to write them, since this holds the whole set.
+func (pp *RouteGeometryBuilder) RouteGeometries() map[string]*RouteGeometry {
+	out := make(map[string]*RouteGeometry, len(pp.shapeCounts))
+	_ = pp.eachRouteGeometry(func(ent *RouteGeometry) error {
+		out[ent.RouteID] = ent
+		return nil
+	})
+	return out
+}
+
+// Collects and assembles the default shapes and writes them, streaming one route at a
+// time so the full set is never held in memory.
+func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
+	return pp.eachRouteGeometry(func(ent *RouteGeometry) error {
+		return copier.CopyEntity(ent)
+	})
 }
 
 func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, error) {
@@ -163,18 +195,8 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			if !ok {
 				continue
 			}
-			// Ignore if any point is 0,0
-			valid := true
-			for _, pt := range si.Line {
-				if pt.Lon == 0 || pt.Lat == 0 {
-					valid = false
-				}
-			}
-			// Ignore if max segment distance > 1000km
-			if si.MaxSegmentLength > 1000*1000 {
-				valid = false
-			}
-			if !valid {
+			// Ignore if any point is 0,0, or if max segment distance > 1000km
+			if si.hasZeroPoint || si.MaxSegmentLength > 1000*1000 {
 				continue
 			}
 			// Include if it is the longest shape
@@ -214,13 +236,18 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		if !ok {
 			continue
 		}
+		// Points live in the shared geom cache, keyed by the source shape_id.
+		pts := pp.geomCache.GetShape(si.sourceID)
+		if len(pts) == 0 {
+			continue
+		}
 		// Check if we've already included this shape entirely
 		// This would probably work better if sorted from shortest to longest
 		// instead of most frequent to least frequent.
 		// A line will only be skipped if it's contained in a more frequent shape.
 		// TODO: TopoJson style only store unique segments.
 		for _, match := range matches {
-			if tlxy.LineContains(si.Line, match) {
+			if tlxy.LineContains(pts, match) {
 				continue
 			}
 		}
@@ -241,7 +268,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			ent.MaxSegmentLength.Set(si.MaxSegmentLength)
 		}
 		// OK
-		matches = append(matches, si.Line)
+		matches = append(matches, pts)
 	}
 
 	// Build geom

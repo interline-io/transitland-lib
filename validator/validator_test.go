@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -55,28 +54,6 @@ func (cr *testErrorHandler) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 	cr.expectErrorCount += len(expecterrs)
 	testutil.CheckErrors(expecterrs, errs, cr.t)
 	return nil
-}
-
-//////////////
-
-func TestEntityErrors(t *testing.T) {
-	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/gtfs-examples/bad-entities"))
-	if err != nil {
-		t.Error(err)
-	}
-	if err := reader.Open(); err != nil {
-		t.Error(err)
-	}
-	testutil.AllEntities(reader, func(ent tt.Entity) {
-		t.Run(fmt.Sprintf("%s:%s", ent.Filename(), ent.EntityID()), func(t *testing.T) {
-			errs := tt.CheckErrors(ent)
-			expecterrs := testutil.GetExpectErrors(ent)
-			testutil.CheckErrors(expecterrs, errs, t)
-		})
-	})
-	if err := reader.Close(); err != nil {
-		t.Error(err)
-	}
 }
 
 //////////////

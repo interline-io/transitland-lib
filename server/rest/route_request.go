@@ -14,26 +14,27 @@ var routeQuery string
 
 // RouteRequest holds options for a Route request
 type RouteRequest struct {
-	ID                int       `json:"id,string"`
-	RouteKey          string    `json:"route_key"`
-	AgencyKey         string    `json:"agency_key"`
-	RouteID           string    `json:"route_id"`
-	RouteType         string    `json:"route_type"`
-	RouteTypes        string    `json:"route_types"`
-	OnestopID         string    `json:"onestop_id"`
-	OperatorOnestopID string    `json:"operator_onestop_id"`
-	Format            string    `json:"format"`
-	Search            string    `json:"search"`
-	AgencyID          int       `json:"agency_id,string"`
-	FeedVersionSHA1   string    `json:"feed_version_sha1"`
-	FeedOnestopID     string    `json:"feed_onestop_id"`
-	Lon               float64   `json:"lon,string"`
-	Lat               float64   `json:"lat,string"`
-	Radius            float64   `json:"radius,string"`
-	Bbox              *restBbox `json:"bbox"`
-	IncludeGeometry   bool      `json:"include_geometry,string"`
-	IncludeAlerts     bool      `json:"include_alerts,string"`
-	IncludeStops      bool      `json:"include_stops,string"`
+	ID                  int       `json:"id,string"`
+	RouteKey            string    `json:"route_key"`
+	AgencyKey           string    `json:"agency_key"`
+	RouteID             string    `json:"route_id"`
+	RouteType           string    `json:"route_type"`
+	RouteTypes          string    `json:"route_types"`
+	OnestopID           string    `json:"onestop_id"`
+	OperatorOnestopID   string    `json:"operator_onestop_id"`
+	ServesStopOnestopID string    `json:"serves_stop_onestop_id"`
+	Format              string    `json:"format"`
+	Search              string    `json:"search"`
+	AgencyID            int       `json:"agency_id,string"`
+	FeedVersionSHA1     string    `json:"feed_version_sha1"`
+	FeedOnestopID       string    `json:"feed_onestop_id"`
+	Lon                 float64   `json:"lon,string"`
+	Lat                 float64   `json:"lat,string"`
+	Radius              float64   `json:"radius,string"`
+	Bbox                *restBbox `json:"bbox"`
+	IncludeGeometry     bool      `json:"include_geometry,string"`
+	IncludeAlerts       bool      `json:"include_alerts,string"`
+	IncludeStops        bool      `json:"include_stops,string"`
 	LicenseFilter
 	WithCursor
 }
@@ -41,7 +42,7 @@ type RouteRequest struct {
 func (r RouteRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/routes",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: routeQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for routes`,
@@ -49,7 +50,7 @@ func (r RouteRequest) RequestInfo() RequestInfo {
 					"x-alternates": []RequestAltPath{
 						{"GET", "/routes.{format}", "Request routes in specified format"},
 						{"GET", "/routes/{route_key}", "Request a route by ID or Onestop ID"},
-						{"GET", "/routes/{route_key}.format", "Request a route by ID or Onestop ID in specified format"},
+						{"GET", "/routes/{route_key}.{format}", "Request a route by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{
@@ -92,6 +93,13 @@ func (r RouteRequest) RequestInfo() RequestInfo {
 						Description: `Search for records by operator OnestopID`,
 						Schema:      newSRVal("string", "", nil),
 						Extensions:  newExt("", "operator_onestop_id=...", "operator_onestop_id=o-9q9-caltrain"),
+					}},
+					&pref{Value: &param{
+						Name:        "serves_stop_onestop_id",
+						In:          "query",
+						Description: `Search for routes serving a stop with this OnestopID`,
+						Schema:      newSRVal("string", "", nil),
+						Extensions:  newExt("", "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero", "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero"),
 					}},
 					newPRef("includeAlertsParam"),
 					&pref{Value: &param{
@@ -189,6 +197,9 @@ func (r RouteRequest) Query(ctx context.Context) (string, map[string]interface{}
 	if r.OperatorOnestopID != "" {
 		where["operator_onestop_id"] = r.OperatorOnestopID
 	}
+	if r.ServesStopOnestopID != "" {
+		where["serves_stop_onestop_id"] = r.ServesStopOnestopID
+	}
 	if r.AgencyID > 0 {
 		where["agency_ids"] = []int{r.AgencyID}
 	}
@@ -222,7 +233,7 @@ type RouteKeyRequest struct {
 func (r RouteKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/routes/{route_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: routeQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for routes`,
@@ -267,7 +278,7 @@ func (r RouteKeyRequest) RequestInfo() RequestInfo {
 // 	}
 // 	return RequestInfo{
 // 		Path: "/agencies/{agency_key}/routes",
-// 		Get: RequestOperation{
+// 		Get: &RequestOperation{
 // 			Query: routeQuery,
 // 			Operation: &oa.Operation{
 // 				Summary:     "Routes",

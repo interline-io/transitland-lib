@@ -6,6 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -17,7 +18,7 @@ func TestRouteResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query {  routes { route_id } }`,
 			selector:     "routes.#.route_id",
-			selectExpect: []string{"1", "12", "14", "15", "16", "17", "19", "20", "24", "25", "275", "30", "31", "32", "33", "34", "35", "36", "360", "37", "38", "39", "400", "42", "45", "46", "48", "5", "51", "6", "60", "7", "75", "8", "9", "96", "97", "570", "571", "572", "573", "574", "800", "PWT", "SKY", "01", "03", "05", "07", "11", "19", "Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
+			selectExpect: []string{"1", "12", "14", "15", "16", "17", "19", "20", "24", "25", "275", "30", "31", "32", "33", "34", "35", "36", "360", "37", "38", "39", "400", "42", "45", "46", "48", "5", "51", "6", "60", "7", "75", "8", "9", "96", "97", "570", "571", "572", "573", "574", "800", "PWT", "SKY", "01", "03", "05", "07", "11", "19", "Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130", "2bc6804f-9e24-4b91-8947-c73a2363e7b6", "68456f6e-2a04-4fcb-971b-fd57348e2ed7", "3dce5414-260d-4cdb-b3d8-b256802d35c5", "0553af3e-53b8-4f98-ba47-0fc03d2404de", "fb93d53e-bf9a-426b-adb2-c913e4d5ecfd", "424421e5-c7c4-4307-8893-5ab9c913cecf", "RED", "BLUE", "GREEN", "YELLOW", "ORANGE", "SILVER", "SHUTTLE"},
 		},
 		{
 			name:   "basic fields",
@@ -157,53 +158,7 @@ func TestRouteResolver(t *testing.T) {
 			selector:     "routes.#.route_id",
 			selectExpect: []string{"Bu-130"},
 		},
-		// just ensure geometry queries complete successfully; checking coordinates is a pain and flaky.
-		{
-			name:         "where near 100m",
-			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:100.0}}) {route_id route_long_name}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01", "05", "07", "11"},
-		},
-		{
-			name:         "where near 10000m",
-			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:10000.0}}) {route_id route_long_name}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
-		},
-		{
-			name:         "where within polygon",
-			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id route_id}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01", "05", "07", "11"},
-		},
-		{
-			name:         "where within polygon big",
-			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id route_id}}`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
-		},
-		{
-			name:         "where bbox 1",
-			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
-			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01", "03", "07"},
-		},
-		{
-			name:         "where bbox 2",
-			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
-			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
-			selector:     "routes.#.route_id",
-			selectExpect: []string{},
-		},
-		{
-			name:        "where bbox too large",
-			query:       `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
-			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
-		},
+
 		// route patterns
 		{
 			name: "route patterns",
@@ -262,6 +217,27 @@ func TestRouteResolver(t *testing.T) {
 				assert.EqualValues(t, 1, gjson.Get(jj, "routes.0.route_attribute.running_way").Int())
 			},
 		},
+		// serves_stop_onestop_id
+		{
+			name: "serves_stop_onestop_id",
+			query: `{
+				routes(where: {serves_stop_onestop_id: "s-9q8yyufxmv-sanfranciscocaltrain"}) {
+					route_id
+				}
+			}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Gi-130", "Li-130", "Lo-130", "Sp-130"},
+		},
+		{
+			name: "serves_stop_onestop_id:none",
+			query: `{
+				routes(where: {serves_stop_onestop_id: "s-invalid-stop"}) {
+					route_id
+				}
+			}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
 		// route serviced
 		{
 			name: "route serviced=true",
@@ -286,6 +262,123 @@ func TestRouteResolver(t *testing.T) {
 		// TODO: census_geographies
 	}
 	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+func TestRouteResolver_Location(t *testing.T) {
+	c, cfg := newTestClient(t)
+
+	// Florida coordinates: approximately in the center of Tampa Bay area
+	// This should put HA stops (Tampa area) much closer than BA/CT stops (San Francisco Bay area)
+	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
+
+	// San Jose coordinates: approximately in downtown San Jose
+	// This should put CT stops (Caltrain San Jose area) much closer than HA stops (Florida)
+	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
+	var testRouteId int
+	if err := cfg.Finder.DBX().
+		QueryRowx(`select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = $1 and route_id = $2`, "HA", "96").
+		Scan(&testRouteId); err != nil {
+		t.Errorf("could not get route ID for test: %s", err.Error())
+	}
+
+	testcases := []testcase{
+		// just ensure geometry queries complete successfully; checking coordinates is a pain and flaky.
+		{
+			name:         "where near 100m",
+			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:100.0}}) {route_id route_long_name}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01", "05", "07", "11"},
+		},
+		{
+			name:         "where near 10000m",
+			query:        `query {routes(where:{near:{lon:-122.407974,lat:37.784471,radius:10000.0}}) {route_id route_long_name}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
+		},
+		{
+			name:         "where within polygon",
+			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id route_id}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01", "05", "07", "11"},
+		},
+		{
+			name:         "where within polygon big",
+			query:        `query{routes(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id route_id}}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
+		},
+		{
+			name:         "where bbox 1",
+			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
+			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01", "03", "07"},
+		},
+		{
+			name:         "where bbox 2",
+			query:        `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
+			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
+		{
+			name:        "where bbox too large",
+			query:       `query($bbox:BoundingBox) {routes(where:{bbox:$bbox}) {route_id route_long_name}}`,
+			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
+			expectError: true,
+		},
+		// Focus test cases
+		{
+			name: "focus basic: Florida focus point returns HA routes first",
+			query: `query($lat:Float!, $lon:Float!) {
+				routes(limit: 5, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "routes.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "HA", "HA", "HA", "HA"},
+		},
+		{
+			name: "focus basic: San Jose focus point returns West Coast routes first",
+			query: `query($lat:Float!, $lon:Float!) {
+				routes(limit: 5, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "routes.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"CT", "CT", "CT", "CT", "CT"},
+		},
+		{
+			name: "focus with feed filter: HA routes only, ordered by distance",
+			query: `query($lat:Float!, $lon:Float!) {
+				routes(limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					geometry
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"20", "51", "8", "400", "96", "97", "12", "9", "19", "30"},
+		},
+		{
+			// Should start after "96" in above test
+			name: "focus with pagination",
+			query: `query($lat:Float!, $lon:Float!, $after: Int!) {
+				routes(after:$after,limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
+					route_id
+					geometry
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon, "after": testRouteId},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"97", "12", "9", "19", "30", "60", "7", "24", "25", "275"},
+		},
+	}
 	queryTestcases(t, c, testcases)
 }
 
@@ -548,8 +641,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  45,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  52,
 		},
 		{
 			name:               "license filter: share_alike_optional = no",
@@ -564,8 +657,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  64,
 		},
 		// license: create_derived_product
 		{
@@ -573,8 +666,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  45,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  52,
 		},
 		{
 			name:               "license filter: create_derived_product = no",
@@ -589,8 +682,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  64,
 		},
 		// license: commercial_use_allowed
 		{
@@ -598,8 +691,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  45,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  52,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = no",
@@ -614,8 +707,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  64,
 		},
 		// license: redistribution_allowed
 		{
@@ -623,8 +716,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  45,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  52,
 		},
 		{
 			name:               "license filter: redistribution_allowed = no",
@@ -639,8 +732,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  64,
 		},
 		// license: use_without_attribution
 		{
@@ -648,8 +741,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  45,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  52,
 		},
 		{
 			name:               "license filter: use_without_attribution = no",
@@ -664,8 +757,8 @@ func TestRouteResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "routes.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  51,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  64,
 		},
 	}
 	c, _ := newTestClient(t)

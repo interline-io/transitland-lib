@@ -10,30 +10,33 @@ import (
 
 func (f *Finder) ValidationReportsByFeedVersionIDs(ctx context.Context, limit *int, where *model.ValidationReportFilter, keys []int) ([][]*model.ValidationReport, error) {
 	q := sq.StatementBuilder.
-		Select("*").
+		Select("tl_validation_reports.*").
 		From("tl_validation_reports").
-		Limit(checkLimit(limit)).
+		Join("feed_versions on feed_versions.id = tl_validation_reports.feed_version_id").
+		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
+		Limit(finderCheckLimit(limit)).
 		OrderBy("tl_validation_reports.created_at desc, tl_validation_reports.id desc")
 	if where != nil {
 		if len(where.ReportIds) > 0 {
 			q = q.Where(In("tl_validation_reports.id", where.ReportIds))
 		}
 		if where.Success != nil {
-			q = q.Where(sq.Eq{"success": where.Success})
+			q = q.Where(sq.Eq{"tl_validation_reports.success": where.Success})
 		}
 		if where.Validator != nil {
-			q = q.Where(sq.Eq{"validator": where.Validator})
+			q = q.Where(sq.Eq{"tl_validation_reports.validator": where.Validator})
 		}
 		if where.ValidatorVersion != nil {
-			q = q.Where(sq.Eq{"validator_version": where.ValidatorVersion})
+			q = q.Where(sq.Eq{"tl_validation_reports.validator_version": where.ValidatorVersion})
 		}
 		if where.IncludesRt != nil {
-			q = q.Where(sq.Eq{"includes_rt": where.IncludesRt})
+			q = q.Where(sq.Eq{"tl_validation_reports.includes_rt": where.IncludesRt})
 		}
 		if where.IncludesStatic != nil {
-			q = q.Where(sq.Eq{"includes_static": where.IncludesStatic})
+			q = q.Where(sq.Eq{"tl_validation_reports.includes_static": where.IncludesStatic})
 		}
 	}
+	q = pfJoinCheckFv(q, f.PermFilter(ctx))
 	var ents []*model.ValidationReport
 	err := dbutil.Select(ctx,
 		f.db,

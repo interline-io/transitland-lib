@@ -9,17 +9,18 @@ import (
 
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testpath"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/request"
 )
 
 func getTestAdapters() map[string]func() Adapter {
 	adapters := map[string]func() Adapter{
-		"DirAdapter":               func() Adapter { return NewDirAdapter(testutil.ExampleDir.URL) },
-		"ZipAdapter":               func() Adapter { return NewZipAdapter(testutil.ExampleZip.URL) },
-		"ZipAdapterNestedDir":      func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedDir.URL) },
-		"ZipAdapterNestedTwoFeeds": func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedTwoFeeds2.URL) },
-		"ZipAdapterNestedZip":      func() Adapter { return NewZipAdapter(testutil.ExampleZipNestedZip.URL) },
-		"OverlayAdapter":           func() Adapter { return NewOverlayAdapter(testutil.ExampleDir.URL) },
+		"DirAdapter":               func() Adapter { return NewDirAdapter(testreader.ExampleDir.URL) },
+		"ZipAdapter":               func() Adapter { return NewZipAdapter(testreader.ExampleZip.URL) },
+		"ZipAdapterNestedDir":      func() Adapter { return NewZipAdapter(testreader.ExampleZipNestedDir.URL) },
+		"ZipAdapterNestedTwoFeeds": func() Adapter { return NewZipAdapter(testreader.ExampleZipNestedTwoFeeds2.URL) },
+		"ZipAdapterNestedZip":      func() Adapter { return NewZipAdapter(testreader.ExampleZipNestedZip.URL) },
+		"OverlayAdapter":           func() Adapter { return NewOverlayAdapter(testreader.ExampleDir.URL) },
 	}
 	return adapters
 }
@@ -40,8 +41,8 @@ func TestDirAdapter(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if s != testutil.ExampleDir.DirSHA1 {
-			t.Errorf("got %s expect %s", s, testutil.ExampleDir.DirSHA1)
+		if s != testreader.ExampleDir.DirSHA1 {
+			t.Errorf("got %s expect %s", s, testreader.ExampleDir.DirSHA1)
 		}
 	})
 }
@@ -70,8 +71,8 @@ func TestZipAdapter(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if s != testutil.ExampleZip.SHA1 {
-			t.Errorf("got %s expect %s", s, testutil.ExampleZip.SHA1)
+		if s != testreader.ExampleZip.SHA1 {
+			t.Errorf("got %s expect %s", s, testreader.ExampleZip.SHA1)
 		}
 	})
 	t.Run("DirSHA1", func(t *testing.T) {
@@ -84,8 +85,8 @@ func TestZipAdapter(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if s != testutil.ExampleZip.DirSHA1 {
-			t.Errorf("got %s expect %s", s, testutil.ExampleZip.DirSHA1)
+		if s != testreader.ExampleZip.DirSHA1 {
+			t.Errorf("got %s expect %s", s, testreader.ExampleZip.DirSHA1)
 		}
 	})
 }
@@ -169,7 +170,7 @@ func TestZipAdapterNestedZip(t *testing.T) {
 
 func TestURLAdapter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		buf, err := os.ReadFile(testutil.ExampleZip.URL)
+		buf, err := os.ReadFile(testreader.ExampleZip.URL)
 		if err != nil {
 			t.Error(err)
 		}
@@ -177,10 +178,10 @@ func TestURLAdapter(t *testing.T) {
 	}))
 	defer ts.Close()
 	// Main tests
-	testAdapter(t, &URLAdapter{url: ts.URL})
+	testAdapter(t, &URLAdapter{url: ts.URL, reqOpts: []request.RequestOption{request.WithAllowHTTPUnfiltered}})
 	//
 	t.Run("Download", func(t *testing.T) {
-		a := URLAdapter{url: ts.URL}
+		a := URLAdapter{url: ts.URL, reqOpts: []request.RequestOption{request.WithAllowHTTPUnfiltered}}
 		if err := a.Open(); err != nil {
 			t.Error(err)
 		}

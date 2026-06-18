@@ -37,15 +37,15 @@ type OperatorRequest struct {
 func (r OperatorRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/operators",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: operatorQuery,
 			Operation: &oa.Operation{
 				Summary: `Search for operators`,
 				Extensions: map[string]any{
 					"x-alternates": []RequestAltPath{
 						{"GET", "/operators.{format}", "Request operators in specified format"},
-						{"GET", "/operators/{onestop_id}", "Request an operator by Onestop ID"},
-						{"GET", "/operators/{onestop_id}.format", "Request an operator by Onestop ID in specified format"},
+						{"GET", "/operators/{operator_key}", "Request an operator by ID or Onestop ID"},
+						{"GET", "/operators/{operator_key}.{format}", "Request an operator by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{
@@ -97,7 +97,7 @@ type OperatorKeyRequest struct {
 func (r OperatorKeyRequest) RequestInfo() RequestInfo {
 	return RequestInfo{
 		Path: "/operators/{operator_key}",
-		Get: RequestOperation{
+		Get: &RequestOperation{
 			Query: operatorQuery,
 			Operation: &oa.Operation{
 				Summary: "Operators",

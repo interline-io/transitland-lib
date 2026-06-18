@@ -9,7 +9,7 @@ import (
 
 // Pathway pathways.txt
 type Pathway struct {
-	PathwayID           tt.String `csv:",required"`
+	PathwayID           tt.String `csv:",required" standardized_sort:"1"`
 	FromStopID          tt.String `csv:",required" target:"stops.txt"`
 	ToStopID            tt.String `csv:",required" target:"stops.txt"`
 	PathwayMode         tt.Int    `csv:",required" enum:"1,2,3,4,5,6,7"`

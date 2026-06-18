@@ -40,6 +40,7 @@ query ($limit: Int, $after: Int, $ids: [Int!], $include_alerts: Boolean!, $inclu
     zone_id
     platform_code
     tts_stop_name
+    stop_access
     wheelchair_boarding
     location_type
     onestop_id

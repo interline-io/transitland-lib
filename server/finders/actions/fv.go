@@ -11,6 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/importer"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlcsv"
@@ -29,6 +30,10 @@ func FeedVersionImport(ctx context.Context, fvid int) (*model.FeedVersionImportR
 	opts := importer.Options{
 		FeedVersionID: fvid,
 		Storage:       cfg.Storage,
+		// Imports initiated through this action (e.g. the GraphQL
+		// feed_version_import mutation) are user-initiated. Direct/maintenance
+		// imports go through importer.ImportFeedVersion and default to automatic.
+		ImportSource: dmfr.ImportSourceManual,
 		Options: copier.Options{
 			InterpolateStopTimes:       true,
 			CreateMissingShapes:        true,
@@ -37,7 +42,7 @@ func FeedVersionImport(ctx context.Context, fvid int) (*model.FeedVersionImportR
 		},
 	}
 	db := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
-	fr, fe := importer.MainImportFeedVersion(ctx, db, opts)
+	fr, fe := importer.ImportFeedVersion(ctx, db, opts)
 	if fe != nil {
 		return nil, fe
 	}
@@ -145,7 +150,11 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 		}
 	} else if feedURL != nil {
 		var err error
-		reader, err = tlcsv.NewReader(*feedURL)
+		var reqOpts []request.RequestOption
+		if cfg.AllowHTTPFetchUnfiltered {
+			reqOpts = append(reqOpts, request.WithAllowHTTPUnfiltered)
+		}
+		reader, err = tlcsv.NewReaderFromAdapter(tlcsv.NewURLAdapter(*feedURL, reqOpts...))
 		if err != nil {
 			result.FailureReason = strptr("Could not load URL")
 			return &result, nil
@@ -170,6 +179,7 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 		IncludeRealtimeJson:      true,
 		IncludeEntitiesLimit:     10_000,
 		MaxRTMessageSize:         10_000_000,
+		AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
 		ValidateRealtimeMessages: rturls,
 		Options:                  copier.Options{Quiet: true},
 	}
@@ -304,11 +314,14 @@ func checkFeedEdit(ctx context.Context, fvid int) error {
 		return errors.New("invalid feed version id")
 	}
 	cfg := model.ForContext(ctx)
-	if checker := cfg.Checker; checker == nil {
-		return nil
-	} else if check, err := checker.FeedVersionPermissions(ctx, &authz.FeedVersionRequest{Id: int64(fvid)}); err != nil {
+	if cfg.Checker == nil {
+		return authz.ErrUnauthorized
+	}
+	ok, err := cfg.Checker.Check(ctx, authz.ObjectRef{Type: authz.FeedVersionType, ID: int64(fvid)}, authz.CanEdit)
+	if err != nil {
 		return err
-	} else if !check.Actions.CanEdit {
+	}
+	if !ok {
 		return authz.ErrUnauthorized
 	}
 	return nil

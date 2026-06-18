@@ -102,11 +102,13 @@ func pathwaySelect(limit *int, after *model.Cursor, ids []int, permFilter *model
 			"gtfs_pathways.min_width",
 			"gtfs_pathways.signposted_as",
 			"gtfs_pathways.reverse_signposted_as",
+			"gtfs_pathways.created_at",
+			"gtfs_pathways.updated_at",
 		).
 		From("gtfs_pathways").
 		Join("feed_versions on feed_versions.id = gtfs_pathways.feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
-		Limit(checkLimit(limit)).
+		Limit(finderCheckLimit(limit)).
 		OrderBy("gtfs_pathways.id")
 
 	if where != nil {

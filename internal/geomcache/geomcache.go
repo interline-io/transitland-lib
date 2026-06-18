@@ -24,8 +24,20 @@ func arePositionsSorted(a []float64) bool {
 }
 
 type ShapeInfo struct {
-	Line       []tlxy.Point
+	encoded    []byte // polyline-encoded coordinates; inflate with points()
 	DistLength float64
+}
+
+// points inflates the polyline-encoded shape back to coordinates.
+func (si ShapeInfo) points() []tlxy.Point {
+	if len(si.encoded) == 0 {
+		return nil
+	}
+	pts, err := tlxy.DecodePolyline(si.encoded)
+	if err != nil {
+		return nil
+	}
+	return pts
 }
 
 type stopPositionInfo struct {
@@ -59,26 +71,25 @@ func (g *GeomCache) GetStop(eid string) tlxy.Point {
 	return g.stops[eid]
 }
 
-// GetShape returns the coordinates for the cached shape.
+// GetShape returns the cached shape's coordinates, inflated from their compact
+// polyline encoding (~1m precision; callers do coarse distance checks).
 func (g *GeomCache) GetShape(eid string) []tlxy.Point {
-	return g.shapes[eid].Line
-}
-
-func (g *GeomCache) GetShapeInfo(eid string) ShapeInfo {
-	return g.shapes[eid]
+	return g.shapes[eid].points()
 }
 
 func (g *GeomCache) AddShapeGeom(eid string, line []tlxy.Point, dists []float64) {
-	// Create shapeInfo
-	si := ShapeInfo{Line: line}
+	si := ShapeInfo{}
 	// Validate ShapeDistTraveled values
 	if len(dists) > 0 && len(dists) == len(line) && dists[len(dists)-1]-dists[0] > 0 {
 		si.DistLength = dists[len(dists)-1]
 	}
-	// If we don't have ShapeDistTraveled values, calculate them
+	// Compute length from the full-precision line before encoding, so it isn't
+	// affected by the polyline quantization below.
 	if si.DistLength == 0 {
 		si.DistLength = tlxy.LengthHaversine(line)
 	}
+	// Store points polyline-encoded to keep the cache compact.
+	si.encoded = tlxy.EncodePolyline(line)
 	g.shapes[eid] = si
 }
 
@@ -111,6 +122,11 @@ func (g *GeomCache) InterpolateStopTimes(trip *gtfs.Trip) ([]gtfs.StopTime, erro
 		return sts, nil
 	}
 
+	// Skip flex trips that cannot use stop-based geometry
+	if !gtfs.CheckFlexStopTimes(sts).CanUseStopBasedGeometry() {
+		return sts, nil
+	}
+
 	// Do we have valid ShapeDistTraveled values?
 	validDists := true
 	if sts[len(sts)-1].ShapeDistTraveled.Val-sts[0].ShapeDistTraveled.Val <= 0 {
@@ -140,20 +156,20 @@ func (g *GeomCache) setStopTimeDists(shapeId string, patternId int64, sts []gtfs
 	stopPositionInfo, ok := g.stopPositions[stopPositionsKey]
 	if !ok {
 		// Generate the stop-to-stop geometry
-		stopLine := make([]tlxy.Point, len(sts))
+		stopLine := make([]tlxy.Point, 0, len(sts))
 		for i := 0; i < len(sts); i++ {
 			point, ok := g.stops[sts[i].StopID.Val]
 			if !ok {
 				return fmt.Errorf("stop '%s' not in cache", sts[i].StopID)
 			}
-			stopLine[i] = point
+			stopLine = append(stopLine, point)
 		}
 
 		// Get the known shape line and known shape distance
 		var shapeLength float64
 		var shapeLine []tlxy.Point
 		if si, ok := g.shapes[shapeId]; ok {
-			shapeLine = si.Line
+			shapeLine = si.points()
 			shapeLength = si.DistLength
 		} else {
 			shapeLine = stopLine

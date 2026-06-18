@@ -2,7 +2,6 @@ package gtfs
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/tt"
@@ -10,9 +9,11 @@ import (
 
 // StopTime stop_times.txt
 type StopTime struct {
-	TripID            tt.String `csv:",required" target:"trips.txt"`
-	StopID            tt.String `csv:",required" target:"stops.txt"`
-	StopSequence      tt.Int    `csv:",required"`
+	TripID            tt.String `csv:",required" target:"trips.txt" standardized_sort:"1"`
+	StopID            tt.Key    `target:"stops.txt"`
+	LocationGroupID   tt.Key    `target:"location_groups.txt"`
+	LocationID        tt.Key    `target:"locations.txt"`
+	StopSequence      tt.Int    `csv:",required" standardized_sort:"2"`
 	StopHeadsign      tt.String
 	ArrivalTime       tt.Seconds
 	DepartureTime     tt.Seconds
@@ -23,6 +24,24 @@ type StopTime struct {
 	ShapeDistTraveled tt.Float
 	Timepoint         tt.Int
 	Interpolated      tt.Int `csv:"-"` // interpolated times: 0 for provided, 1 interpolated // TODO: 1 for shape, 2 for straight-line
+	// GTFS-Flex fields (officially adopted)
+	StartPickupDropOffWindow tt.Seconds
+	EndPickupDropOffWindow   tt.Seconds
+	PickupBookingRuleID      tt.Key `target:"booking_rules.txt"`
+	DropOffBookingRuleID     tt.Key `target:"booking_rules.txt"`
+	// Deprecated: safe_duration_factor / safe_duration_offset were adopted into GTFS
+	// on trips.txt (google/transit#598, merged 2026-04), not stop_times.txt. The
+	// GTFS-Flex proposal originally placed them on stop_times.txt, and some feeds
+	// still emit them there, so they are retained here for backward compat. See
+	// gtfs.Trip for the spec-conformant fields.
+	SafeDurationFactor tt.Float
+	SafeDurationOffset tt.Float
+	// Deprecated: mean_duration_factor / mean_duration_offset remain only in the
+	// (unadopted) GTFS-Flex proposal on stop_times.txt; they were not part of the
+	// GTFS adoption (google/transit#598) and have no official home. Retained for
+	// backward compat with feeds that still emit them on stop_times.
+	MeanDurationFactor tt.Float
+	MeanDurationOffset tt.Float
 	tt.MinEntity
 	tt.ErrorEntity
 	tt.ExtraEntity
@@ -44,7 +63,6 @@ func (ent *StopTime) Errors() []error {
 	// Don't use reflection based path
 	errs := []error{}
 	errs = append(errs, tt.CheckPresent("trip_id", ent.TripID.Val)...)
-	errs = append(errs, tt.CheckPresent("stop_id", ent.StopID.Val)...)
 	errs = append(errs, tt.CheckPositiveInt("stop_sequence", ent.StopSequence.Val)...)
 	errs = append(errs, tt.CheckInsideRangeInt("pickup_type", ent.PickupType.Val, 0, 3)...)
 	errs = append(errs, tt.CheckInsideRangeInt("drop_off_type", ent.DropOffType.Val, 0, 3)...)
@@ -62,12 +80,186 @@ func (ent *StopTime) Errors() []error {
 	return errs
 }
 
+// ConditionalErrors for StopTime - includes GTFS-Flex validation
+func (ent *StopTime) ConditionalErrors() (errs []error) {
+	// Check which location identifier is used
+	hasStopID := ent.StopID.IsPresent()
+	hasLocationGroupID := ent.LocationGroupID.IsPresent()
+	hasLocationID := ent.LocationID.IsPresent()
+	hasTimeWindow := ent.StartPickupDropOffWindow.Valid || ent.EndPickupDropOffWindow.Valid
+
+	// 1. Mutual exclusion: stop_id, location_id, location_group_id
+	// Exactly one of these must be defined
+	if !hasStopID && !hasLocationGroupID && !hasLocationID {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("stop_id"))
+	}
+
+	if hasStopID && hasLocationGroupID {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"location_group_id",
+			ent.LocationGroupID.Val,
+			"location_group_id is forbidden when stop_id is defined",
+		))
+	}
+	if hasStopID && hasLocationID {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"location_id",
+			ent.LocationID.Val,
+			"location_id is forbidden when stop_id is defined",
+		))
+	}
+	if hasLocationGroupID && hasLocationID {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"location_id",
+			ent.LocationID.Val,
+			"location_id is forbidden when location_group_id is defined",
+		))
+	}
+
+	// 2. Time windows required if location_group_id or location_id is defined
+	if hasLocationGroupID || hasLocationID {
+		if !ent.StartPickupDropOffWindow.Valid {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("start_pickup_drop_off_window"))
+		}
+		if !ent.EndPickupDropOffWindow.Valid {
+			errs = append(errs, causes.NewConditionallyRequiredFieldError("end_pickup_drop_off_window"))
+		}
+	}
+
+	// 3. Time windows consistency
+	hasStartWindow := ent.StartPickupDropOffWindow.Valid
+	hasEndWindow := ent.EndPickupDropOffWindow.Valid
+
+	if hasStartWindow && !hasEndWindow {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("end_pickup_drop_off_window"))
+	}
+	if hasEndWindow && !hasStartWindow {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("start_pickup_drop_off_window"))
+	}
+
+	// 4. If both windows are present, end must be >= start
+	if hasStartWindow && hasEndWindow {
+		if ent.EndPickupDropOffWindow.Val < ent.StartPickupDropOffWindow.Val {
+			errs = append(errs, causes.NewInvalidFieldError(
+				"end_pickup_drop_off_window",
+				fmt.Sprintf("%d", ent.EndPickupDropOffWindow.Val),
+				fmt.Errorf("must be greater than or equal to start_pickup_drop_off_window (%d)", ent.StartPickupDropOffWindow.Val),
+			))
+		}
+	}
+
+	// 5. Time windows vs fixed times
+	// If using time windows, arrival_time and departure_time are forbidden
+	if hasTimeWindow {
+		if ent.ArrivalTime.Valid && ent.ArrivalTime.Int() > 0 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"arrival_time",
+				ent.ArrivalTime.String(),
+				"arrival_time is forbidden when start_pickup_drop_off_window or end_pickup_drop_off_window are defined",
+			))
+		}
+		if ent.DepartureTime.Valid && ent.DepartureTime.Int() > 0 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"departure_time",
+				ent.DepartureTime.String(),
+				"departure_time is forbidden when start_pickup_drop_off_window or end_pickup_drop_off_window are defined",
+			))
+		}
+	}
+
+	// 6. pickup_type restrictions with time windows
+	// pickup_type=0 (regularly scheduled) is forbidden if time windows are defined
+	// pickup_type=3 (coordinate with driver) is forbidden if time windows are defined
+	if hasTimeWindow && ent.PickupType.Valid {
+		if ent.PickupType.Val == 0 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"pickup_type",
+				fmt.Sprintf("%d", ent.PickupType.Val),
+				"pickup_type=0 (regularly scheduled) is forbidden when time windows are defined",
+			))
+		}
+		if ent.PickupType.Val == 3 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"pickup_type",
+				fmt.Sprintf("%d", ent.PickupType.Val),
+				"pickup_type=3 (coordinate with driver) is forbidden when time windows are defined",
+			))
+		}
+	}
+
+	// 7. drop_off_type restrictions with time windows
+	// drop_off_type=0 (regularly scheduled) is forbidden if time windows are defined
+	if hasTimeWindow && ent.DropOffType.Valid && ent.DropOffType.Val == 0 {
+		errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+			"drop_off_type",
+			fmt.Sprintf("%d", ent.DropOffType.Val),
+			"drop_off_type=0 (regularly scheduled) is forbidden when time windows are defined",
+		))
+	}
+
+	// 8. continuous_pickup restrictions with time windows
+	// Any value other than 1 or empty is forbidden if time windows are defined
+	if hasTimeWindow && ent.ContinuousPickup.Valid {
+		if ent.ContinuousPickup.Val != 1 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"continuous_pickup",
+				fmt.Sprintf("%d", ent.ContinuousPickup.Val),
+				"continuous_pickup must be 1 (no continuous pickup) or empty when time windows are defined",
+			))
+		}
+	}
+
+	// 9. continuous_drop_off restrictions with time windows
+	// Any value other than 1 or empty is forbidden if time windows are defined
+	if hasTimeWindow && ent.ContinuousDropOff.Valid {
+		if ent.ContinuousDropOff.Val != 1 {
+			errs = append(errs, causes.NewConditionallyForbiddenFieldError(
+				"continuous_drop_off",
+				fmt.Sprintf("%d", ent.ContinuousDropOff.Val),
+				"continuous_drop_off must be 1 (no continuous drop off) or empty when time windows are defined",
+			))
+		}
+	}
+
+	// 10. Validate mean/safe duration factor/offset
+	// mean_duration_factor and mean_duration_offset work together
+	if ent.MeanDurationFactor.Valid && !ent.MeanDurationOffset.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("mean_duration_offset"))
+	}
+	if ent.MeanDurationOffset.Valid && !ent.MeanDurationFactor.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("mean_duration_factor"))
+	}
+
+	// safe_duration_factor and safe_duration_offset work together
+	if ent.SafeDurationFactor.Valid && !ent.SafeDurationOffset.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("safe_duration_offset"))
+	}
+	if ent.SafeDurationOffset.Valid && !ent.SafeDurationFactor.Valid {
+		errs = append(errs, causes.NewConditionallyRequiredFieldError("safe_duration_factor"))
+	}
+
+	// mean_duration_factor should be positive
+	if ent.MeanDurationFactor.Valid && ent.MeanDurationFactor.Val <= 0 {
+		errs = append(errs, causes.NewInvalidFieldError(
+			"mean_duration_factor",
+			fmt.Sprintf("%f", ent.MeanDurationFactor.Val),
+			fmt.Errorf("must be positive"),
+		))
+	}
+
+	return errs
+}
+
 // UpdateKeys updates Entity references.
 func (ent *StopTime) UpdateKeys(emap *tt.EntityMap) error {
 	// Don't use reflection based path
 	return tt.FirstError(
 		tt.TrySetField(emap.UpdateKey(&ent.TripID, "trips.txt"), "trip_id"),
 		tt.TrySetField(emap.UpdateKey(&ent.StopID, "stops.txt"), "stop_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.LocationGroupID, "location_groups.txt"), "location_group_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.LocationID, "locations.geojson"), "location_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.PickupBookingRuleID, "booking_rules.txt"), "pickup_booking_rule_id"),
+		tt.TrySetField(emap.UpdateKey(&ent.DropOffBookingRuleID, "booking_rules.txt"), "drop_off_booking_rule_id"),
 	)
 }
 
@@ -82,6 +274,10 @@ func (ent *StopTime) GetString(key string) (string, error) {
 		v = ent.StopHeadsign.Val
 	case "stop_id":
 		v = ent.StopID.Val
+	case "location_group_id":
+		v = ent.LocationGroupID.Val
+	case "location_id":
+		v = ent.LocationID.Val
 	case "arrival_time":
 		v = ent.ArrivalTime.String()
 	case "departure_time":
@@ -102,6 +298,30 @@ func (ent *StopTime) GetString(key string) (string, error) {
 		v = ent.ContinuousPickup.String()
 	case "continuous_drop_off":
 		v = ent.ContinuousDropOff.String()
+	case "start_pickup_drop_off_window":
+		v = ent.StartPickupDropOffWindow.String()
+	case "end_pickup_drop_off_window":
+		v = ent.EndPickupDropOffWindow.String()
+	case "pickup_booking_rule_id":
+		v = ent.PickupBookingRuleID.Val
+	case "drop_off_booking_rule_id":
+		v = ent.DropOffBookingRuleID.Val
+	case "mean_duration_factor":
+		if ent.MeanDurationFactor.Valid {
+			v = fmt.Sprintf("%0.5f", ent.MeanDurationFactor.Val)
+		}
+	case "mean_duration_offset":
+		if ent.MeanDurationOffset.Valid {
+			v = fmt.Sprintf("%0.5f", ent.MeanDurationOffset.Val)
+		}
+	case "safe_duration_factor":
+		if ent.SafeDurationFactor.Valid {
+			v = fmt.Sprintf("%0.5f", ent.SafeDurationFactor.Val)
+		}
+	case "safe_duration_offset":
+		if ent.SafeDurationOffset.Valid {
+			v = fmt.Sprintf("%0.5f", ent.SafeDurationOffset.Val)
+		}
 	default:
 		return v, fmt.Errorf("unknown key: %s", key)
 	}
@@ -120,76 +340,140 @@ func (ent *StopTime) SetString(key, value string) error {
 		ent.StopHeadsign.Set(hi)
 	case "stop_id":
 		ent.StopID.Set(hi)
+	case "location_group_id":
+		ent.LocationGroupID.Set(hi)
+	case "location_id":
+		ent.LocationID.Set(hi)
 	case "arrival_time":
-		if hi == "" {
-		} else if s, err := tt.NewSecondsFromString(hi); err != nil {
+		if err := ent.ArrivalTime.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("arrival_time", hi)
-		} else {
-			ent.ArrivalTime = s
 		}
 	case "departure_time":
-		if hi == "" {
-		} else if s, err := tt.NewSecondsFromString(hi); err != nil {
+		if err := ent.DepartureTime.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("departure_time", hi)
-		} else {
-			ent.DepartureTime = s
 		}
 	case "stop_sequence":
-		if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.StopSequence.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("stop_sequence", hi)
-		} else {
-			ent.StopSequence.Set(int64(a))
 		}
 	case "pickup_type":
-		if hi == "" {
-			ent.PickupType = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.PickupType.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("pickup_type", hi)
-		} else {
-			ent.PickupType.SetInt(a)
 		}
 	case "drop_off_type":
-		if hi == "" {
-			ent.DropOffType = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.DropOffType.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("drop_off_type", hi)
-		} else {
-			ent.DropOffType.SetInt(a)
 		}
 	case "continuous_pickup":
-		if hi == "" {
-			ent.ContinuousPickup = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.ContinuousPickup.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_pickup", hi)
-		} else {
-			ent.ContinuousPickup.SetInt(a)
 		}
 	case "continuous_drop_off":
-		if hi == "" {
-			ent.ContinuousDropOff = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.ContinuousDropOff.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("continuous_drop_off", hi)
-		} else {
-			ent.ContinuousDropOff.SetInt(a)
 		}
 	case "shape_dist_traveled":
-		if hi == "" {
-			ent.ShapeDistTraveled = tt.Float{}
-		} else if a, err := strconv.ParseFloat(hi, 64); err != nil {
+		if err := ent.ShapeDistTraveled.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("shape_dist_traveled", hi)
-		} else {
-			ent.ShapeDistTraveled.Set(a)
 		}
 	case "timepoint":
-		if hi == "" {
-			ent.Timepoint = tt.Int{}
-		} else if a, err := strconv.Atoi(hi); err != nil {
+		if err := ent.Timepoint.Scan(hi); err != nil {
 			perr = causes.NewFieldParseError("timepoint", hi)
-		} else {
-			ent.Timepoint.SetInt(a)
+		}
+	case "start_pickup_drop_off_window":
+		if err := ent.StartPickupDropOffWindow.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("start_pickup_drop_off_window", hi)
+		}
+	case "end_pickup_drop_off_window":
+		if err := ent.EndPickupDropOffWindow.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("end_pickup_drop_off_window", hi)
+		}
+	case "pickup_booking_rule_id":
+		ent.PickupBookingRuleID.Set(hi)
+	case "drop_off_booking_rule_id":
+		ent.DropOffBookingRuleID.Set(hi)
+	case "mean_duration_factor":
+		if err := ent.MeanDurationFactor.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("mean_duration_factor", hi)
+		}
+	case "mean_duration_offset":
+		if err := ent.MeanDurationOffset.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("mean_duration_offset", hi)
+		}
+	case "safe_duration_factor":
+		if err := ent.SafeDurationFactor.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("safe_duration_factor", hi)
+		}
+	case "safe_duration_offset":
+		if err := ent.SafeDurationOffset.Scan(hi); err != nil {
+			perr = causes.NewFieldParseError("safe_duration_offset", hi)
 		}
 	default:
 		ent.SetExtra(key, hi)
 	}
 	return perr
+}
+
+// FlexInfo contains information about flex characteristics of a trip's stop times
+type FlexInfo struct {
+	HasFlexStopTimes     bool // Any StopTime uses Location or LocationGroup instead of StopID
+	HasFlexTimeWindows   bool // Any StopTime uses pickup/dropoff time windows
+	HasMixedStopTypes    bool // Mix of regular stops and flex locations
+	AllStopsHaveStopID   bool // All StopTimes have a valid StopID
+	FlexStopTimeCount    int  // Number of StopTimes with flex characteristics
+	RegularStopTimeCount int  // Number of StopTimes with regular StopID
+}
+
+// IsFlexTrip returns true if any StopTime has flex characteristics
+func (f FlexInfo) IsFlexTrip() bool {
+	return f.HasFlexStopTimes || f.HasFlexTimeWindows
+}
+
+// CanUseStopBasedGeometry returns true if the trip can use stop-based geometry calculations
+// (i.e., all StopTimes have valid StopIDs)
+func (f FlexInfo) CanUseStopBasedGeometry() bool {
+	return f.AllStopsHaveStopID
+}
+
+// CheckFlexStopTimes analyzes a slice of StopTimes and returns information about
+// whether they represent fixed-route service or flex service.
+func CheckFlexStopTimes(stoptimes []StopTime) FlexInfo {
+	info := FlexInfo{
+		AllStopsHaveStopID: true,
+	}
+
+	for i := 0; i < len(stoptimes); i++ {
+		st := stoptimes[i]
+
+		// Check for flex location types
+		hasLocationID := st.LocationID.Valid && st.LocationID.Val != ""
+		hasLocationGroupID := st.LocationGroupID.Valid && st.LocationGroupID.Val != ""
+		hasStopID := st.StopID.Valid && st.StopID.Val != ""
+
+		// Check for flex time windows
+		hasTimeWindow := (st.StartPickupDropOffWindow.Valid && st.StartPickupDropOffWindow.Val > 0) ||
+			(st.EndPickupDropOffWindow.Valid && st.EndPickupDropOffWindow.Val > 0)
+
+		if hasLocationID || hasLocationGroupID {
+			info.HasFlexStopTimes = true
+			info.FlexStopTimeCount++
+		}
+
+		if hasTimeWindow {
+			info.HasFlexTimeWindows = true
+		}
+
+		if hasStopID {
+			info.RegularStopTimeCount++
+		} else {
+			info.AllStopsHaveStopID = false
+		}
+	}
+
+	// Mixed if we have both regular stops and flex locations
+	if info.RegularStopTimeCount > 0 && info.FlexStopTimeCount > 0 {
+		info.HasMixedStopTypes = true
+	}
+
+	return info
 }

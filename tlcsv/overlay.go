@@ -1,6 +1,7 @@
 package tlcsv
 
 import (
+	"context"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -9,6 +10,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
+
+	"github.com/interline-io/log"
 )
 
 // OverlayAdapter searches a specified list of directories for the specified file.
@@ -118,7 +122,11 @@ func (adapter OverlayAdapter) DirSHA1() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		io.Copy(h, f)
+		_, copyErr := io.Copy(h, f)
+		f.Close()
+		if copyErr != nil {
+			return "", copyErr
+		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
@@ -139,9 +147,13 @@ func (adapter OverlayAdapter) OpenFile(filename string, cb func(io.Reader)) erro
 
 // ReadRows implements CSV Adapter ReadRows.
 func (adapter OverlayAdapter) ReadRows(filename string, cb func(Row)) error {
-	return adapter.OpenFile(filename, func(in io.Reader) {
+	t0 := time.Now()
+	log.For(context.TODO()).Trace().Str("filename", filename).Msg("tlcsv: read pass")
+	err := adapter.OpenFile(filename, func(in io.Reader) {
 		ReadRows(in, cb)
 	})
+	log.For(context.TODO()).Trace().Str("filename", filename).Int("elapsed_ms", int(time.Since(t0).Milliseconds())).Msg("tlcsv: read pass complete")
+	return err
 }
 
 // Open implements CSV Adapter Open.

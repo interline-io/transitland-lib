@@ -16,7 +16,7 @@ func (r *agencyResolver) Cursor(ctx context.Context, obj *model.Agency) (*model.
 }
 
 func (r *agencyResolver) Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error) {
-	return LoaderFor(ctx).RoutesByAgencyIDs.Load(ctx, routeLoaderParam{AgencyID: obj.ID, Limit: checkLimit(limit), Where: where})()
+	return LoaderFor(ctx).RoutesByAgencyIDs.Load(ctx, routeLoaderParam{AgencyID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *agencyResolver) FeedVersion(ctx context.Context, obj *model.Agency) (*model.FeedVersion, error) {
@@ -24,7 +24,7 @@ func (r *agencyResolver) FeedVersion(ctx context.Context, obj *model.Agency) (*m
 }
 
 func (r *agencyResolver) Places(ctx context.Context, obj *model.Agency, limit *int, where *model.AgencyPlaceFilter) ([]*model.AgencyPlace, error) {
-	return LoaderFor(ctx).AgencyPlacesByAgencyIDs.Load(ctx, agencyPlaceLoaderParam{AgencyID: obj.ID, Limit: checkLimit(limit), Where: where})()
+	return LoaderFor(ctx).AgencyPlacesByAgencyIDs.Load(ctx, agencyPlaceLoaderParam{AgencyID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
 func (r *agencyResolver) Operator(ctx context.Context, obj *model.Agency) (*model.Operator, error) {
@@ -35,6 +35,6 @@ func (r *agencyResolver) Operator(ctx context.Context, obj *model.Agency) (*mode
 }
 
 func (r *agencyResolver) Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error) {
-	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForAgency(ctx, obj, checkLimit(limit), active)
+	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForAgency(ctx, obj, resolverCheckLimit(limit), active)
 	return rtAlerts, nil
 }

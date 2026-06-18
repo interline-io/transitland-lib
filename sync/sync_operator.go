@@ -19,7 +19,8 @@ func UpdateOperator(ctx context.Context, atx tldb.Adapter, operator dmfr.Operato
 	var errTx error
 	ent := dmfr.Operator{}
 	err := atx.Get(ctx, &ent, "SELECT * FROM current_operators WHERE onestop_id = ?", operator.OnestopID)
-	if err == nil {
+	switch err {
+	case nil:
 		// Exists, update key values
 		found = true
 		operator.ID = ent.ID
@@ -29,10 +30,10 @@ func UpdateOperator(ctx context.Context, atx tldb.Adapter, operator dmfr.Operato
 			operator.DeletedAt = tt.Time{}
 			errTx = atx.Update(ctx, &operator)
 		}
-	} else if err == sql.ErrNoRows {
+	case sql.ErrNoRows:
 		// Insert
 		operator.ID, errTx = atx.Insert(ctx, &operator)
-	} else {
+	default:
 		// Error
 		errTx = err
 	}
