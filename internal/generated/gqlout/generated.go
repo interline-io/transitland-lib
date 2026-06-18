@@ -1112,6 +1112,7 @@ type ComplexityRoot struct {
 		PlatformCode       func(childComplexity int) int
 		RouteStops         func(childComplexity int, limit *int) int
 		SearchRank         func(childComplexity int) int
+		StopAccess         func(childComplexity int) int
 		StopCode           func(childComplexity int) int
 		StopDesc           func(childComplexity int) int
 		StopID             func(childComplexity int) int
@@ -6649,6 +6650,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Stop.SearchRank(childComplexity), true
+	case "Stop.stop_access":
+		if e.ComplexityRoot.Stop.StopAccess == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Stop.StopAccess(childComplexity), true
 	case "Stop.stop_code":
 		if e.ComplexityRoot.Stop.StopCode == nil {
 			break
@@ -9648,7 +9655,10 @@ type Stop {
   
   "GTFS ` + "`" + `stops.tts_stop_name` + "`" + `; readable version of stop_name for use with text-to-speech systems"
   tts_stop_name: String
-  
+
+  "GTFS ` + "`" + `stops.stop_access` + "`" + ` [0=access only via station entrance/pathways, 1=route directly to the stop]; only valid for platforms (location_type 0) with a parent_station"
+  stop_access: Int
+
   "Geographic location of this stop as a GeoJSON Point"
   geometry: Point!
 
@@ -13907,6 +13917,8 @@ func (ec *executionContext) childFields_Stop(ctx context.Context, field graphql.
 		return ec.fieldContext_Stop_platform_code(ctx, field)
 	case "tts_stop_name":
 		return ec.fieldContext_Stop_tts_stop_name(ctx, field)
+	case "stop_access":
+		return ec.fieldContext_Stop_stop_access(ctx, field)
 	case "geometry":
 		return ec.fieldContext_Stop_geometry(ctx, field)
 	case "feed_version_sha1":
@@ -36259,6 +36271,29 @@ func (ec *executionContext) fieldContext_Stop_tts_stop_name(_ context.Context, f
 	return graphql.NewScalarFieldContext("Stop", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Stop_stop_access(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Stop_stop_access(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StopAccess, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Stop_stop_access(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Stop", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _Stop_geometry(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -54664,6 +54699,8 @@ func (ec *executionContext) _Stop(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Stop_platform_code(ctx, field, obj)
 		case "tts_stop_name":
 			out.Values[i] = ec._Stop_tts_stop_name(ctx, field, obj)
+		case "stop_access":
+			out.Values[i] = ec._Stop_stop_access(ctx, field, obj)
 		case "geometry":
 			out.Values[i] = ec._Stop_geometry(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

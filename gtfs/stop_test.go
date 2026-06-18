@@ -194,6 +194,42 @@ func TestStop_Errors(t *testing.T) {
 			}),
 			expectedErrors: PE("ConditionallyRequiredFieldError:stop_lon"),
 		},
+		{
+			name: "Valid: stop_access=0 on platform with parent_station",
+			stop: newStop(func(s *Stop) {
+				s.LocationType = tt.NewInt(0)
+				s.ParentStation = tt.NewKey("ok_station")
+				s.StopAccess = tt.NewInt(0)
+			}),
+			expectedErrors: nil,
+		},
+		{
+			name: "Valid: stop_access=1 on platform with parent_station",
+			stop: newStop(func(s *Stop) {
+				s.LocationType = tt.NewInt(0)
+				s.ParentStation = tt.NewKey("ok_station")
+				s.StopAccess = tt.NewInt(1)
+			}),
+			expectedErrors: nil,
+		},
+		{
+			name: "Invalid stop_access on entrance (location_type=2)",
+			stop: newStop(func(s *Stop) {
+				s.LocationType = tt.NewInt(2)
+				s.ParentStation = tt.NewKey("ok_station")
+				s.StopAccess = tt.NewInt(1)
+			}),
+			expectedErrors: PE("InvalidFieldError:stop_access"),
+		},
+		{
+			name: "Invalid stop_access on platform without parent_station",
+			stop: newStop(func(s *Stop) {
+				s.LocationType = tt.NewInt(0)
+				s.ParentStation = tt.Key{}
+				s.StopAccess = tt.NewInt(1)
+			}),
+			expectedErrors: PE("InvalidFieldError:stop_access"),
+		},
 	}
 
 	for _, tc := range tests {

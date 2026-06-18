@@ -923,6 +923,7 @@ CREATE TABLE tl_materialized_active_stops (
     level_id INTEGER,
     platform_code TEXT,
     tts_stop_name TEXT,
+    stop_access INTEGER,
     area_id TEXT,
     wheelchair_boarding INTEGER,
     geometry BLOB,
