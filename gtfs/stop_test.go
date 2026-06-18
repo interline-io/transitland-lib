@@ -230,6 +230,15 @@ func TestStop_Errors(t *testing.T) {
 			}),
 			expectedErrors: PE("InvalidFieldError:stop_access"),
 		},
+		{
+			name: "Invalid stop_access on station reports a single error (not both conditions)",
+			stop: newStop(func(s *Stop) {
+				s.LocationType = tt.NewInt(1)
+				s.ParentStation = tt.Key{}
+				s.StopAccess = tt.NewInt(1)
+			}),
+			expectedErrors: PE("InvalidFieldError:stop_access"),
+		},
 	}
 
 	for _, tc := range tests {
