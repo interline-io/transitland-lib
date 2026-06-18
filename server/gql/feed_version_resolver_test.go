@@ -22,7 +22,7 @@ func TestFeedVersionResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query {  feed_versions {sha1} }`,
 			selector:     "feed_versions.#.sha1",
-			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "40b1560b9767ca4ee5d9cc3f70947822e0e346be", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", "148d00724546e1526d5d84d1f9d095df24f6517c"},
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", "148d00724546e1526d5d84d1f9d095df24f6517c"},
 		},
 		{
 			name:   "basic fields",
@@ -621,7 +621,7 @@ func TestFeedVersionResolver_BookingRules(t *testing.T) {
 
 func TestFeedVersionResolver_License(t *testing.T) {
 	q := `query($lic:LicenseFilter) {feed_versions(where: {license: $lic}) {sha1 feed { onestop_id} }}`
-	restrictiveNoFvs := []string{"40b1560b9767ca4ee5d9cc3f70947822e0e346be", "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
+	baFvs := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 	haFvs := []string{"c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c"}
 	ctFvs := []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
 	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}
@@ -639,7 +639,7 @@ func TestFeedVersionResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"share_alike_optional": "NO"}},
 			selector:     "feed_versions.#.sha1",
-			selectExpect: restrictiveNoFvs,
+			selectExpect: baFvs,
 		},
 		{
 			name:         "license filter: share_alike_optional = unknown",
@@ -668,7 +668,7 @@ func TestFeedVersionResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"create_derived_product": "NO"}},
 			selector:     "feed_versions.#.sha1",
-			selectExpect: restrictiveNoFvs,
+			selectExpect: baFvs,
 		},
 		{
 			name:         "license filter: create_derived_product = unknown",
@@ -697,7 +697,7 @@ func TestFeedVersionResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"commercial_use_allowed": "NO"}},
 			selector:     "feed_versions.#.sha1",
-			selectExpect: restrictiveNoFvs,
+			selectExpect: baFvs,
 		},
 		{
 			name:         "license filter: commercial_use_allowed = unknown",
@@ -726,7 +726,7 @@ func TestFeedVersionResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"redistribution_allowed": "NO"}},
 			selector:     "feed_versions.#.sha1",
-			selectExpect: restrictiveNoFvs,
+			selectExpect: baFvs,
 		},
 		{
 			name:         "license filter: redistribution_allowed = unknown",
@@ -756,7 +756,7 @@ func TestFeedVersionResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"use_without_attribution": "NO"}},
 			selector:     "feed_versions.#.sha1",
-			selectExpect: restrictiveNoFvs,
+			selectExpect: baFvs,
 		},
 		{
 			name:         "license filter: use_without_attribution = unknown",

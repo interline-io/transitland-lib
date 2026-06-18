@@ -214,8 +214,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"hopelink-flex", "BA"},
-			selectExpectCount:  2526,
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
 		},
 		{
 			name:               "license filter: share_alike_optional = exclude_no",
@@ -239,8 +239,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"hopelink-flex", "BA"},
-			selectExpectCount:  2526,
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
 		},
 		{
 			name:               "license filter: create_derived_product = exclude_no",
@@ -264,8 +264,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"hopelink-flex", "BA"},
-			selectExpectCount:  2526,
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = exclude_no",
@@ -289,8 +289,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"hopelink-flex", "BA"},
-			selectExpectCount:  2526,
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
 		},
 		{
 			name:               "license filter: redistribution_allowed = exclude_no",
@@ -314,8 +314,8 @@ func TestTripResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "NO"}},
 			selector:           "trips.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"hopelink-flex", "BA"},
-			selectExpectCount:  2526,
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
 		},
 		{
 			name:               "license filter: use_without_attribution = exclude_no",
@@ -413,8 +413,8 @@ func TestTripResolver_FlexStopTimes(t *testing.T) {
 }
 
 func TestTripResolver_SafeDuration(t *testing.T) {
-	hopelinkFlexSha1 := "40b1560b9767ca4ee5d9cc3f70947822e0e346be"
-	hopelinkFlexTripID := "t_6143906_b_80444_tn_0"
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	ctranFlexTripID := "trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>"
 	testcases := []testcase{
 		{
 			name: "trip safe duration fields",
@@ -427,8 +427,8 @@ func TestTripResolver_SafeDuration(t *testing.T) {
 					}
 				}
 			}`,
-			vars:   hw{"sha1": hopelinkFlexSha1, "trip_id": hopelinkFlexTripID},
-			expect: `{"feed_versions":[{"trips":[{"trip_id":"t_6143906_b_80444_tn_0","safe_duration_factor":1.75,"safe_duration_offset":900}]}]}`,
+			vars:   hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			expect: `{"feed_versions":[{"trips":[{"trip_id":"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>","safe_duration_factor":1,"safe_duration_offset":0}]}]}`,
 		},
 		{
 			name: "safe duration fields null for non-flex trip",

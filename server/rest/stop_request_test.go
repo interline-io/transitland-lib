@@ -320,7 +320,7 @@ func TestStopRequest_License(t *testing.T) {
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 52,
+			expectLength: 50,
 		},
 		{
 			name:         "license:share_alike_optional exclude_no",
@@ -341,7 +341,7 @@ func TestStopRequest_License(t *testing.T) {
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 52,
+			expectLength: 50,
 		},
 		{
 			name:         "license:commercial_use_allowed exclude_no",
@@ -362,7 +362,7 @@ func TestStopRequest_License(t *testing.T) {
 			h:            StopRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}},
 			selector:     "stops.#.stop_id",
 			expectSelect: nil,
-			expectLength: 52,
+			expectLength: 50,
 		},
 		{
 			name:         "license:create_derived_product exclude_no",

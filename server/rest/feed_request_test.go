@@ -17,7 +17,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "ctran-flex", "hopelink-flex", "test-gbfs", "BA", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
+			expectSelect: []string{"CT", "ctran-flex", "test-gbfs", "BA", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name:         "onestop_id",
@@ -38,7 +38,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{Spec: "gtfs"},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "ctran-flex", "hopelink-flex", "BA", "HA", "WMATA", "test", "EX"},
+			expectSelect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "test", "EX"},
 		},
 		{
 			name:         "spec lower case dash",
@@ -67,7 +67,7 @@ func TestFeedRequest(t *testing.T) {
 			h:            &FeedRequest{FetchError: "false"},
 			format:       "",
 			selector:     "feeds.#.onestop_id",
-			expectSelect: []string{"CT", "ctran-flex", "hopelink-flex", "BA", "HA", "WMATA", "EX"},
+			expectSelect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "EX"},
 		},
 		{
 			name:         "tags test=ok",
@@ -190,7 +190,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:share_alike_optional no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"hopelink-flex", "BA"},
+			expectSelect: []string{"BA"},
 		},
 		{
 			name: "license:share_alike_optional exclude_no",
@@ -205,7 +205,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:commercial_use_allowed no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"hopelink-flex", "BA"},
+			expectSelect: []string{"BA"},
 		},
 		{
 			name: "license:commercial_use_allowed exclude_no",
@@ -220,7 +220,7 @@ func TestFeedRequest_License(t *testing.T) {
 		{
 			name: "license:create_derived_product no",
 			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "feeds.#.onestop_id",
-			expectSelect: []string{"hopelink-flex", "BA"},
+			expectSelect: []string{"BA"},
 		},
 		{
 			name: "license:create_derived_product exclude_no",
