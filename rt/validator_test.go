@@ -129,10 +129,13 @@ func TestValidatorErrors(t *testing.T) {
 			var expMatches []match
 			if fnSplit := strings.Split(filepath.Base(tc.rt), "."); len(fnSplit) > 2 {
 				fnCode := fnSplit[0]
-				expMatches = append(expMatches, match{
-					err:   fnCode,
-					field: strings.ReplaceAll(fnSplit[1], "-", "."),
-				})
+				m := match{field: strings.ReplaceAll(fnSplit[1], "-", ".")}
+				if strings.HasPrefix(fnCode, "W") {
+					m.warn = fnCode
+				} else {
+					m.err = fnCode
+				}
+				expMatches = append(expMatches, m)
 			}
 			expMatches = append(expMatches, tc.matches...)
 

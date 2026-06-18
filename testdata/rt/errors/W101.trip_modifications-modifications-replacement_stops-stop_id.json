@@ -1,0 +1,27 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "2.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405801"
+    },
+    "entity": [
+      {
+        "id": "trip_modifications_500286",
+        "tripModifications": {
+          "selectedTrips": [
+            { "tripIds": ["124"], "shapeId": "rt_shape_500286" }
+          ],
+          "serviceDates": ["20231108"],
+          "modifications": [
+            {
+              "startStopSelector": { "stopId": "70012" },
+              "endStopSelector":   { "stopId": "70012" },
+              "replacementStops":  [
+                { "stopId": "stop_500012_undefined" }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }

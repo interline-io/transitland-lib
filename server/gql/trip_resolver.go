@@ -88,3 +88,10 @@ func (r *tripResolver) Alerts(ctx context.Context, obj *model.Trip, active *bool
 	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForTrip(ctx, obj, resolverCheckLimit(limit), active)
 	return rtAlerts, nil
 }
+
+// TODO: GTFS-RT TripModifications — expose a Trip.modified_trip resolver that
+// returns the matching TripUpdate's modified_trip selector
+// (modifications_id, affected_trip_id, start_time, start_date). Requires adding
+// an RTModifiedTripSelector type and Trip.modified_trip field to the GraphQL
+// schema, and (together with the rtfinder TODOs) indexing TripUpdates by
+// affected_trip_id so modified trips are findable.

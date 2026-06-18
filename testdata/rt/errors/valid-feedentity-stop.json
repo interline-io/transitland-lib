@@ -1,0 +1,18 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "2.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405801"
+    },
+    "entity": [
+      {
+        "id": "inline-stop-only",
+        "stop": {
+          "stopId": "rt_only_500013",
+          "stopName": { "translation": [{ "text": "Standalone Inline Stop" }] },
+          "stopLat": 36.98,
+          "stopLon": -122.01
+        }
+      }
+    ]
+  }
