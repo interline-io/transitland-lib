@@ -17,6 +17,7 @@ func TestAgency_Errors(t *testing.T) {
 			AgencyPhone:    tt.NewString("515 555-5555"),
 			AgencyFareURL:  tt.NewUrl("http://example.com"),
 			AgencyEmail:    tt.NewEmail("info@example.com"),
+			CEMVSupport:    tt.NewInt(1),
 		}
 		if fn != nil {
 			fn(agency)
@@ -54,6 +55,13 @@ func TestAgency_Errors(t *testing.T) {
 				a.AgencyLang = tt.NewLanguage("xyz")
 			}),
 			expectedErrors: PE("InvalidFieldError:agency_lang"),
+		},
+		{
+			name: "Invalid cemv_support",
+			agency: newAgency(func(a *Agency) {
+				a.CEMVSupport = tt.NewInt(100)
+			}),
+			expectedErrors: PE("InvalidFieldError:cemv_support"),
 		},
 	}
 

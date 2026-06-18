@@ -42,6 +42,7 @@ query ($limit: Int, $ids: [Int!], $after: Int, $where: RouteFilter, $include_geo
     route_url
     continuous_pickup
     continuous_drop_off
+    cemv_support
     onestop_id
     geometry @include(if: $include_geometry)
     alerts @include(if: $include_alerts) {

@@ -25,9 +25,9 @@ func TestAgencyResolver(t *testing.T) {
 		},
 		{
 			name:   "basic fields",
-			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {onestop_id agency_id agency_name agency_lang agency_phone agency_timezone agency_url agency_email agency_fare_url feed_version_sha1 feed_onestop_id}}`,
+			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {onestop_id agency_id agency_name agency_lang agency_phone agency_timezone agency_url agency_email agency_fare_url cemv_support feed_version_sha1 feed_onestop_id}}`,
 			vars:   vars,
-			expect: `{"agencies":[{"agency_email":null,"agency_fare_url":null,"agency_id":"caltrain-ca-us","agency_lang":"en","agency_name":"Caltrain","agency_phone":"800-660-4287","agency_timezone":"America/Los_Angeles","agency_url":"http://www.caltrain.com","feed_onestop_id":"CT","feed_version_sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","onestop_id":"o-9q9-caltrain"}]}`,
+			expect: `{"agencies":[{"agency_email":null,"agency_fare_url":null,"agency_id":"caltrain-ca-us","agency_lang":"en","agency_name":"Caltrain","agency_phone":"800-660-4287","agency_timezone":"America/Los_Angeles","agency_url":"http://www.caltrain.com","cemv_support":null,"feed_onestop_id":"CT","feed_version_sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","onestop_id":"o-9q9-caltrain"}]}`,
 		},
 		{
 			// just ensure this query completes successfully; checking coordinates is a pain and flaky.

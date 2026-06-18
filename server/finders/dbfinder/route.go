@@ -200,6 +200,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		"gtfs_routes.as_route",
 		"gtfs_routes.continuous_pickup",
 		"gtfs_routes.continuous_drop_off",
+		"gtfs_routes.cemv_support",
 		"current_feeds.id AS feed_id",
 		"current_feeds.onestop_id AS feed_onestop_id",
 		"feed_versions.sha1 AS feed_version_sha1",

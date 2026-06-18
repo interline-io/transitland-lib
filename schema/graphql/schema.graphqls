@@ -674,10 +674,13 @@ type Agency {
   
   "GTFS `agency.agency_url`"
   agency_url: Url!
-  
+
+  "GTFS `agency.cemv_support`; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips associated with this agency [0=no information, 1=supported, 2=not supported]"
+  cemv_support: Int
+
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String
-  
+
   "Feed Onestop ID associated with this entity"
   feed_onestop_id: String
   
@@ -750,7 +753,10 @@ type Route {
   
   "GTFS `routes.continuous_drop_off`; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
-  
+
+  "GTFS `routes.cemv_support`; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips on this route [0=no information, 1=supported, 2=not supported]; takes precedence over `agency.cemv_support`"
+  cemv_support: Int
+
   "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`"
   geometry: Geometry @goField(forceResolver: true)
   
