@@ -20,6 +20,7 @@ type Route struct {
 	ContinuousPickup  tt.Int `enum:"0,1,2,3"`
 	ContinuousDropOff tt.Int `enum:"0,1,2,3"`
 	NetworkID         tt.String
+	CEMVSupport       tt.Int `enum:"0,1,2"`
 	AsRoute           tt.Int
 	Geometry          tt.Geometry `csv:"-" db:"-"`
 	tt.BaseEntity

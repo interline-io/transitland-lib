@@ -83,6 +83,7 @@ type ComplexityRoot struct {
 		AgencyTimezone    func(childComplexity int) int
 		AgencyURL         func(childComplexity int) int
 		Alerts            func(childComplexity int, active *bool, limit *int) int
+		CEMVSupport       func(childComplexity int) int
 		CensusGeographies func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		FeedOnestopID     func(childComplexity int) int
 		FeedVersion       func(childComplexity int) int
@@ -968,6 +969,7 @@ type ComplexityRoot struct {
 	Route struct {
 		Agency            func(childComplexity int) int
 		Alerts            func(childComplexity int, active *bool, limit *int) int
+		CEMVSupport       func(childComplexity int) int
 		CensusGeographies func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		ContinuousDropOff func(childComplexity int) int
 		ContinuousPickup  func(childComplexity int) int
@@ -1678,6 +1680,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agency.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int)), true
+	case "Agency.cemv_support":
+		if e.ComplexityRoot.Agency.CEMVSupport == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agency.CEMVSupport(childComplexity), true
 	case "Agency.census_geographies":
 		if e.ComplexityRoot.Agency.CensusGeographies == nil {
 			break
@@ -5859,6 +5867,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Route.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int)), true
+	case "Route.cemv_support":
+		if e.ComplexityRoot.Route.CEMVSupport == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Route.CEMVSupport(childComplexity), true
 	case "Route.census_geographies":
 		if e.ComplexityRoot.Route.CensusGeographies == nil {
 			break
@@ -9486,10 +9500,13 @@ type Agency {
   
   "GTFS ` + "`" + `agency.agency_url` + "`" + `"
   agency_url: Url!
-  
+
+  "GTFS ` + "`" + `agency.cemv_support` + "`" + `; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips associated with this agency [0=no information, 1=supported, 2=not supported]"
+  cemv_support: Int
+
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String
-  
+
   "Feed Onestop ID associated with this entity"
   feed_onestop_id: String
   
@@ -9562,7 +9579,10 @@ type Route {
   
   "GTFS ` + "`" + `routes.continuous_drop_off` + "`" + `; indicates whether a rider can alight along the route between stops [0=continuous stopping drop-off, 1=no continuous stopping, 2=must phone agency, 3=must coordinate with driver]"
   continuous_drop_off: Int
-  
+
+  "GTFS ` + "`" + `routes.cemv_support` + "`" + `; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips on this route [0=no information, 1=supported, 2=not supported]; takes precedence over ` + "`" + `agency.cemv_support` + "`" + `"
+  cemv_support: Int
+
   "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see ` + "`" + `geometries` + "`" + `"
   geometry: Geometry @goField(forceResolver: true)
   
@@ -12039,6 +12059,8 @@ func (ec *executionContext) childFields_Agency(ctx context.Context, field graphq
 		return ec.fieldContext_Agency_agency_timezone(ctx, field)
 	case "agency_url":
 		return ec.fieldContext_Agency_agency_url(ctx, field)
+	case "cemv_support":
+		return ec.fieldContext_Agency_cemv_support(ctx, field)
 	case "feed_version_sha1":
 		return ec.fieldContext_Agency_feed_version_sha1(ctx, field)
 	case "feed_onestop_id":
@@ -13691,6 +13713,8 @@ func (ec *executionContext) childFields_Route(ctx context.Context, field graphql
 		return ec.fieldContext_Route_continuous_pickup(ctx, field)
 	case "continuous_drop_off":
 		return ec.fieldContext_Route_continuous_drop_off(ctx, field)
+	case "cemv_support":
+		return ec.fieldContext_Route_cemv_support(ctx, field)
 	case "geometry":
 		return ec.fieldContext_Route_geometry(ctx, field)
 	case "agency":
@@ -16885,6 +16909,29 @@ func (ec *executionContext) _Agency_agency_url(ctx context.Context, field graphq
 }
 func (ec *executionContext) fieldContext_Agency_agency_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Agency", field, false, false, errors.New("field of type Url does not have child fields"))
+}
+
+func (ec *executionContext) _Agency_cemv_support(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agency_cemv_support(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CEMVSupport, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agency_cemv_support(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agency", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _Agency_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
@@ -33941,6 +33988,29 @@ func (ec *executionContext) fieldContext_Route_continuous_drop_off(_ context.Con
 	return graphql.NewScalarFieldContext("Route", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _Route_cemv_support(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_cemv_support(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CEMVSupport, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Route_cemv_support(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Route", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _Route_geometry(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -45511,6 +45581,8 @@ func (ec *executionContext) _Agency(ctx context.Context, sel ast.SelectionSet, o
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "cemv_support":
+			out.Values[i] = ec._Agency_cemv_support(ctx, field, obj)
 		case "feed_version_sha1":
 			out.Values[i] = ec._Agency_feed_version_sha1(ctx, field, obj)
 		case "feed_onestop_id":
@@ -53284,6 +53356,8 @@ func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Route_continuous_pickup(ctx, field, obj)
 		case "continuous_drop_off":
 			out.Values[i] = ec._Route_continuous_drop_off(ctx, field, obj)
+		case "cemv_support":
+			out.Values[i] = ec._Route_cemv_support(ctx, field, obj)
 		case "geometry":
 			field := field
 

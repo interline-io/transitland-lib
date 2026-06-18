@@ -22,6 +22,7 @@ func TestRoute_Errors(t *testing.T) {
 			NetworkID:         tt.NewString("ok"),
 			ContinuousPickup:  tt.NewInt(0),
 			ContinuousDropOff: tt.NewInt(0),
+			CEMVSupport:       tt.NewInt(1),
 		}
 		if fn != nil {
 			fn(route)
@@ -102,6 +103,13 @@ func TestRoute_Errors(t *testing.T) {
 				r.ContinuousDropOff = tt.NewInt(100)
 			}),
 			expectedErrors: PE("InvalidFieldError:continuous_drop_off"),
+		},
+		{
+			name: "Invalid cemv_support",
+			route: newRoute(func(r *Route) {
+				r.CEMVSupport = tt.NewInt(100)
+			}),
+			expectedErrors: PE("InvalidFieldError:cemv_support"),
 		},
 	}
 

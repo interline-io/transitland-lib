@@ -117,6 +117,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 			"gtfs_agencies.agency_phone",
 			"gtfs_agencies.agency_fare_url",
 			"gtfs_agencies.agency_email",
+			"gtfs_agencies.cemv_support",
 			"tl_agency_geometries.geometry",
 			"feed_versions.sha1 AS feed_version_sha1",
 			"current_feeds.onestop_id AS feed_onestop_id",

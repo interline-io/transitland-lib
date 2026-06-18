@@ -12,6 +12,7 @@ type Agency struct {
 	AgencyPhone    tt.String
 	AgencyFareURL  tt.Url
 	AgencyEmail    tt.Email
+	CEMVSupport    tt.Int `enum:"0,1,2"`
 	tt.BaseEntity
 }
 

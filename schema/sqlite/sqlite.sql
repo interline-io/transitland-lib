@@ -290,6 +290,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_agencies" (
   "agency_phone" varchar(255),
   "agency_fare_url" varchar(255),
   "agency_email" varchar(255),
+  "cemv_support" integer,
   "id" integer primary key autoincrement,
   "feed_version_id" integer NOT NULL,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
@@ -378,6 +379,7 @@ CREATE TABLE IF NOT EXISTS "gtfs_routes" (
   "id" integer primary key autoincrement,
   "feed_version_id" integer NOT NULL,
   "network_id" varchar(255),
+  "cemv_support" integer,
   "as_route" integer,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
@@ -877,6 +879,7 @@ CREATE TABLE tl_materialized_active_routes (
     as_route INTEGER,
     continuous_pickup INTEGER,
     continuous_drop_off INTEGER,
+    cemv_support INTEGER,
     feed_version_id INTEGER NOT NULL,
 
     -- Derived
@@ -966,7 +969,8 @@ CREATE TABLE tl_materialized_active_agencies (
     agency_phone TEXT,
     agency_fare_url TEXT,
     agency_email TEXT,
-    
+    cemv_support INTEGER,
+
     -- Feed metadata
     feed_version_id INTEGER NOT NULL,
     feed_id INTEGER NOT NULL,

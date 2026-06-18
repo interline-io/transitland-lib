@@ -36,6 +36,7 @@ fragment route on Route {
   route_url
   continuous_drop_off
   continuous_pickup
+  cemv_support
 }
 
 fragment trip on Trip {
