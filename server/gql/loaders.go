@@ -29,6 +29,8 @@ type Loaders struct {
 	AgenciesByIDs                                                 *dataloader.Loader[int, *model.Agency]
 	AgenciesByOnestopIDs                                          *dataloader.Loader[agencyLoaderParam, []*model.Agency]
 	AgencyPlacesByAgencyIDs                                       *dataloader.Loader[agencyPlaceLoaderParam, []*model.AgencyPlace]
+	BookingRulesByFeedVersionIDs                                  *dataloader.Loader[bookingRuleLoaderParam, []*model.BookingRule]
+	BookingRulesByIDs                                             *dataloader.Loader[int, *model.BookingRule]
 	CalendarDatesByServiceIDs                                     *dataloader.Loader[calendarDateLoaderParam, []*model.CalendarDate]
 	CalendarsByIDs                                                *dataloader.Loader[int, *model.Calendar]
 	CensusDatasetLayersByDatasetIDs                               *dataloader.Loader[int, []*model.CensusLayer]
@@ -38,6 +40,7 @@ type Loaders struct {
 	CensusGeographiesBySourceIDs                                  *dataloader.Loader[censusSourceGeographyLoaderParam, []*model.CensusGeography]
 	CensusGeographiesByEntityIDs                                  *dataloader.Loader[censusGeographyLoaderParam, []*model.CensusGeography]
 	CensusSourcesByDatasetIDs                                     *dataloader.Loader[censusSourceLoaderParam, []*model.CensusSource]
+	CensusTablesByDatasetIDs                                      *dataloader.Loader[censusTableLoaderParam, []*model.CensusTable]
 	CensusGeographiesByLayerIDs                                   *dataloader.Loader[censusSourceGeographyLoaderParam, []*model.CensusGeography]
 	CensusSourcesByIDs                                            *dataloader.Loader[int, *model.CensusSource]
 	CensusLayersByIDs                                             *dataloader.Loader[int, *model.CensusLayer]
@@ -55,9 +58,19 @@ type Loaders struct {
 	FeedVersionsByIDs                                             *dataloader.Loader[int, *model.FeedVersion]
 	FeedVersionServiceLevelsByFeedVersionIDs                      *dataloader.Loader[feedVersionServiceLevelLoaderParam, []*model.FeedVersionServiceLevel]
 	FeedVersionServiceWindowByFeedVersionIDs                      *dataloader.Loader[int, *model.FeedVersionServiceWindow]
+	FlexStopTimesByTripIDs                                        *dataloader.Loader[tripStopTimeLoaderParam, []*model.FlexStopTime]
+	FlexStopTimesByStopIDs                                        *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
+	FlexStopTimesByLocationIDs                                    *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
+	FlexStopTimesByLocationGroupIDs                               *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
 	FrequenciesByTripIDs                                          *dataloader.Loader[frequencyLoaderParam, []*model.Frequency]
 	LevelsByIDs                                                   *dataloader.Loader[int, *model.Level]
 	LevelsByParentStationIDs                                      *dataloader.Loader[levelLoaderParam, []*model.Level]
+	LocationGroupsByFeedVersionIDs                                *dataloader.Loader[locationGroupLoaderParam, []*model.LocationGroup]
+	LocationGroupsByIDs                                           *dataloader.Loader[int, *model.LocationGroup]
+	LocationGroupsByStopIDs                                       *dataloader.Loader[locationGroupsByStopLoaderParam, []*model.LocationGroup]
+	StopsByLocationGroupIDs                                       *dataloader.Loader[stopsByLocationGroupLoaderParam, []*model.Stop]
+	LocationsByFeedVersionIDs                                     *dataloader.Loader[locationLoaderParam, []*model.Location]
+	LocationsByIDs                                                *dataloader.Loader[int, *model.Location]
 	OperatorsByAgencyIDs                                          *dataloader.Loader[int, *model.Operator]
 	OperatorsByCOIFs                                              *dataloader.Loader[int, *model.Operator]
 	OperatorsByFeedIDs                                            *dataloader.Loader[operatorLoaderParam, []*model.Operator]
@@ -128,6 +141,13 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.AgencyID, p.Where, p.Limit
 			},
 		),
+		BookingRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			dbf.BookingRulesByFeedVersionIDs,
+			func(p bookingRuleLoaderParam) (int, *model.BookingRuleFilter, *int) {
+				return p.FeedVersionID, p.Where, p.Limit
+			},
+		),
+		BookingRulesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.BookingRulesByIDs),
 		CalendarDatesByServiceIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.CalendarDatesByServiceIDs,
 			func(p calendarDateLoaderParam) (int, *model.CalendarDateFilter, *int) {
 				return p.ServiceID, p.Where, p.Limit
@@ -161,6 +181,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		),
 		CensusSourcesByDatasetIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.CensusSourcesByDatasetIDs,
 			func(p censusSourceLoaderParam) (int, *model.CensusSourceFilter, *int) {
+				return p.DatasetID, p.Where, p.Limit
+			},
+		),
+		CensusTablesByDatasetIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.CensusTablesByDatasetIDs,
+			func(p censusTableLoaderParam) (int, *model.CensusTableFilter, *int) {
 				return p.DatasetID, p.Where, p.Limit
 			},
 		),
@@ -233,6 +258,26 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		),
 
 		FeedVersionServiceWindowByFeedVersionIDs: withWaitAndCapacity(waitTime, maxBatch, dbf.FeedVersionServiceWindowByFeedVersionIDs),
+		FlexStopTimesByTripIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.FlexStopTimesByTripIDs,
+			func(p tripStopTimeLoaderParam) (model.FVPair, *model.TripStopTimeFilter, *int) {
+				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.TripID}, p.Where, p.Limit
+			},
+		),
+		FlexStopTimesByStopIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.FlexStopTimesByStopIDs,
+			func(p stopTimeLoaderParam) (model.FVPair, *model.StopTimeFilter, *int) {
+				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.StopID}, p.Where, p.Limit
+			},
+		),
+		FlexStopTimesByLocationIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.FlexStopTimesByLocationIDs,
+			func(p stopTimeLoaderParam) (model.FVPair, *model.StopTimeFilter, *int) {
+				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.LocationID}, p.Where, p.Limit
+			},
+		),
+		FlexStopTimesByLocationGroupIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.FlexStopTimesByLocationGroupIDs,
+			func(p stopTimeLoaderParam) (model.FVPair, *model.StopTimeFilter, *int) {
+				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.LocationGroupID}, p.Where, p.Limit
+			},
+		),
 		FrequenciesByTripIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FrequenciesByTripIDs),
 			func(p frequencyLoaderParam) (int, bool, *int) {
@@ -247,6 +292,31 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.ParentStationID, false, p.Limit
 			},
 		),
+
+		LocationGroupsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.LocationGroupsByFeedVersionIDs,
+			func(p locationGroupLoaderParam) (int, *model.LocationGroupFilter, *int) {
+				return p.FeedVersionID, p.Where, p.Limit
+			},
+		),
+		LocationGroupsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.LocationGroupsByIDs),
+		LocationGroupsByStopIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			paramGroupAdapter(dbf.LocationGroupsByStopIDs),
+			func(p locationGroupsByStopLoaderParam) (int, bool, *int) {
+				return p.StopID, false, p.Limit
+			},
+		),
+		StopsByLocationGroupIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			paramGroupAdapter(dbf.StopsByLocationGroupIDs),
+			func(p stopsByLocationGroupLoaderParam) (int, bool, *int) {
+				return p.LocationGroupID, false, p.Limit
+			},
+		),
+		LocationsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.LocationsByFeedVersionIDs,
+			func(p locationLoaderParam) (int, *model.LocationFilter, *int) {
+				return p.FeedVersionID, p.Where, p.Limit
+			},
+		),
+		LocationsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.LocationsByIDs),
 
 		OperatorsByAgencyIDs: withWaitAndCapacity(waitTime, batchSize, dbf.OperatorsByAgencyIDs),
 		OperatorsByCOIFs:     withWaitAndCapacity(waitTime, batchSize, dbf.OperatorsByCOIFs),
@@ -405,12 +475,13 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 func loaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This is per request scoped loaders/cache
-		// Is this OK to use as a long term cache?
 		ctx := r.Context()
 		cfg := model.ForContext(ctx)
-		loaders := NewLoaders(cfg.Finder, cfg.LoaderBatchSize, cfg.LoaderStopTimeBatchSize)
-		nextCtx := context.WithValue(ctx, loadersKey, loaders)
-		r = r.WithContext(nextCtx)
+		if cfg.Finder != nil {
+			loaders := NewLoaders(cfg.Finder, cfg.LoaderBatchSize, cfg.LoaderStopTimeBatchSize)
+			ctx = context.WithValue(ctx, loadersKey, loaders)
+		}
+		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -556,7 +627,13 @@ func paramGroupQuery[
 			// Run query function
 			ents, err := queryFunc(ctx, pgroup.Limit, pgroup.Where, pgroup.Keys)
 			if err != nil {
-				panic(err)
+				// Surface the failure to every caller in this group via the
+				// per-index errs slice (the existing dataloader path consumes
+				// errs[idx]), and skip merging results for this group.
+				for _, idx := range pgroup.Index {
+					errs[idx] = err
+				}
+				continue
 			}
 
 			// Group using keyFunc and merge into output

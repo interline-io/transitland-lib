@@ -11,6 +11,8 @@ import (
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/azchecker"
+	"github.com/interline-io/transitland-lib/server/auth/fga"
+	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/finders/actions"
 	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
 	"github.com/interline-io/transitland-lib/server/finders/gbfsfinder"
@@ -21,7 +23,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/querylogger"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -35,12 +36,18 @@ type Options struct {
 	FGAEndpoint    string
 	FGAModelFile   string
 	FGAModelTuples []authz.TupleKey
+	// AllowAll installs an AllowAllChecker. Required for tests that exercise
+	// mutations. Ignored when FGAEndpoint is set.
+	AllowAll bool
+	// UseGeohashFilter enables the secondary stop-geohash filter on bbox/within/near
+	// queries. Requires the test database to have tl_feed_version_geohashes populated.
+	UseGeohashFilter bool
 }
 
 func Config(t testing.TB, opts Options) model.Config {
 	ctx := context.Background()
 	db := testutil.MustOpenTestDB(t)
-	return newTestConfig(t, ctx, &querylogger.QueryLogger{Ext: db}, opts)
+	return newTestConfig(t, ctx, db, opts)
 }
 
 func ConfigTx(t testing.TB, opts Options, cb func(model.Config) error) {
@@ -51,7 +58,7 @@ func ConfigTx(t testing.TB, opts Options, cb func(model.Config) error) {
 	defer tx.Rollback()
 
 	// Get finders
-	testEnv := newTestConfig(t, ctx, &querylogger.QueryLogger{Ext: tx}, opts)
+	testEnv := newTestConfig(t, ctx, tx, opts)
 
 	// Commit or rollback
 	if err := cb(testEnv); err != nil {
@@ -83,6 +90,8 @@ func DefaultRTJson() []RTJsonFile {
 }
 
 func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options) model.Config {
+	db = dbutil.WithQueryLogger(db, false, 0)
+
 	// Default time
 	if opts.WhenUtc == "" {
 		opts.WhenUtc = "2022-09-01T00:00:00Z"
@@ -94,18 +103,39 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	}
 	cl := &clock.Mock{T: when}
 
-	// Setup Checker
-	var checker model.Checker
+	// model.Config requires a non-nil Checker. Default to deny-all; tests that
+	// exercise mutations must opt in via Options.AllowAll.
+	var checker model.Checker = &authz.DenyAllChecker{}
+	if opts.AllowAll {
+		checker = &authz.AllowAllChecker{}
+	}
 	if opts.FGAEndpoint != "" {
-		checkerCfg := azchecker.CheckerConfig{
-			FGAEndpoint:      opts.FGAEndpoint,
-			FGALoadModelFile: opts.FGAModelFile,
-			FGALoadTestData:  opts.FGAModelTuples,
+		fgaClient, fgaErr := fga.NewFGAClient(opts.FGAEndpoint, "", "")
+		if fgaErr != nil {
+			t.Fatal(fgaErr)
 		}
-		checker, err = azchecker.NewCheckerFromConfig(ctx, checkerCfg, db)
-		if err != nil {
-			t.Fatal(err)
+		if opts.FGAModelFile != "" {
+			if _, fgaErr := fgaClient.CreateStore(ctx, "test"); fgaErr != nil {
+				t.Fatal(fgaErr)
+			}
+			if _, fgaErr := fgaClient.CreateModel(ctx, opts.FGAModelFile); fgaErr != nil {
+				t.Fatal(fgaErr)
+			}
 		}
+		for _, tk := range opts.FGAModelTuples {
+			ltk, _, lookupErr := azchecker.EKLookup(db, tk)
+			if lookupErr != nil {
+				t.Fatal(lookupErr)
+			}
+			if fgaErr := fgaClient.WriteTuple(ctx, ltk); fgaErr != nil {
+				t.Fatal(fgaErr)
+			}
+		}
+		c, cErr := azchecker.NewChecker(azchecker.NewMockUserProvider(), fgaClient, db)
+		if cErr != nil {
+			t.Fatal(cErr)
+		}
+		checker = c
 	}
 
 	// Setup DB
@@ -141,22 +171,26 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		opts.RTStorage = t.TempDir()
 	}
 
-	// Initialize job queue - do not start
-	jobQueue := jobs.NewJobLogger(localjobs.NewLocalJobs())
+	// Initialize job runner + backend - do not start
+	jobRunner := jobs.NewRunner()
+	jobBackend := localjobs.NewLocalBackend(jobRunner, nil, nil)
 
 	// Action finder
 	actionFinder := &actions.Actions{}
 
 	return model.Config{
-		Finder:     dbf,
-		RTFinder:   rtf,
-		GbfsFinder: gbf,
-		Checker:    checker,
-		JobQueue:   jobQueue,
-		Actions:    actionFinder,
-		Clock:      cl,
-		Storage:    opts.Storage,
-		RTStorage:  opts.RTStorage,
-		MaxRadius:  100_000,
+		Finder:                   dbf,
+		RTFinder:                 rtf,
+		GbfsFinder:               gbf,
+		Checker:                  checker,
+		Jobs:                     jobBackend,
+		JobRunner:                jobRunner,
+		Actions:                  actionFinder,
+		Clock:                    cl,
+		Storage:                  opts.Storage,
+		RTStorage:                opts.RTStorage,
+		MaxRadius:                100_000,
+		AllowHTTPFetchUnfiltered: true,
+		UseGeohashFilter:         opts.UseGeohashFilter,
 	}
 }

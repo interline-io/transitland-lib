@@ -36,6 +36,105 @@ func TestStopResolver_License(t *testing.T) {
 	queryTestcases(t, c, stopResolverLicenseTestcases(t, cfg))
 }
 
+func TestStopResolver_LocationGroups(t *testing.T) {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	// These stops are part of the Fairgrounds location group
+	fairgroundsStop1 := "stop_id__756c0e65-32d2-4e32-a6b7-a15c3c22e6cf"
+	fairgroundsStop2 := "stop_id__2e44e463-310b-4069-a709-fa0eb8f73ba9"
+	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
+
+	testcases := []testcase{
+		{
+			name: "stop with location groups - returns location group id",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_id
+						}
+					}
+				}
+			}`,
+			vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			selector: "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			selectExpect: []string{
+				fairgroundsLocationGroupID,
+			},
+		},
+		{
+			name: "stop with location groups - returns location group name",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_name
+						}
+					}
+				}
+			}`,
+			vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop2},
+			selector: "feed_versions.0.stops.0.location_groups.0.location_group_name",
+			selectExpect: []string{
+				"Clark County Fairgroun...",
+			},
+		},
+		{
+			name: "stop location groups - navigate to feed metadata",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_id
+							feed_onestop_id
+							feed_version_sha1
+						}
+					}
+				}
+			}`,
+			vars:   hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			expect: `{"feed_versions":[{"stops":[{"location_groups":[{"feed_onestop_id":"ctran-flex","feed_version_sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c","location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}],"stop_id":"stop_id__756c0e65-32d2-4e32-a6b7-a15c3c22e6cf"}]}]}`,
+		},
+		{
+			name: "stop without location groups - returns empty",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups {
+							location_group_id
+						}
+					}
+				}
+			}`,
+			// BART stop - not part of any location group
+			vars:         hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "MCAR"},
+			selector:     "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			selectExpect: []string{},
+		},
+		{
+			name: "stop location groups with limit",
+			query: `query($sha1: String!, $stop_id: String!) {
+				feed_versions(where: {sha1: $sha1}) {
+					stops(where: {stop_id: $stop_id}) {
+						stop_id
+						location_groups(limit: 1) {
+							location_group_id
+						}
+					}
+				}
+			}`,
+			vars:              hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			selector:          "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			selectExpectCount: 1,
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
 func TestStopResolver_AdminCache(t *testing.T) {
 	type canLoadAdmins interface {
 		LoadAdmins(context.Context) error
@@ -144,6 +243,17 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			vars:         vars,
 			selector:     "stops.0.route_stops.#.route.route_id",
 			selectExpect: []string{"01", "03", "07"},
+		},
+		{
+			name:  "timestamps",
+			query: `query($stop_id: String!) { stops(where:{stop_id:$stop_id}) { created_at updated_at } }`,
+			vars:  vars,
+			f: func(t *testing.T, jj string) {
+				createdAt := gjson.Get(jj, "stops.0.created_at").String()
+				updatedAt := gjson.Get(jj, "stops.0.updated_at").String()
+				assert.NotEmpty(t, createdAt, "created_at should be exposed and non-empty")
+				assert.NotEmpty(t, updatedAt, "updated_at should be exposed and non-empty")
+			},
 		},
 
 		{
@@ -268,7 +378,7 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		// },
 		// TODO: parent, children; test data has no stations.
 		// TODO: level, pathways_from_stop, pathways_to_stop: test data has no pathways...
-		// TODO: census_geographies
+		// census_geographies: see per-stop buffer cases below
 		// stop_times
 		{
 			name:         "stop_times",
@@ -372,10 +482,9 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			  }`,
-			vars: hw{"fvid": stopObsFvid, "day": "2023-03-08"},
-			f: func(t *testing.T, jj string) {
-				assert.EqualValues(t, 0, len(gjson.Get(jj, "stops.0.observations").Array()))
-			},
+			vars:         hw{"fvid": stopObsFvid, "day": "2023-03-08"},
+			selector:     "stops.0.observations.#.trip_id",
+			selectExpect: []string{},
 		},
 		// serviced
 		{
@@ -443,7 +552,41 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			selector:     "stops.#.stop_id",
 			selectExpect: []string{},
 		},
-		// TODO: census_geographies
+		// census_geographies (per-stop buffer attribution)
+		{
+			name:         "census_geographies tract by stop buffer",
+			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			selector:     "stops.0.census_geographies.#.geoid",
+			selectExpect: []string{"1400000US06001406100"},
+		},
+		{
+			name:         "census_geographies county by stop buffer",
+			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"MCAR"}) { stop_id census_geographies(where:{layer:"county", radius:1000.0}) { geoid } } }`,
+			selector:     "stops.0.census_geographies.#.geoid",
+			selectExpect: []string{"0500000US06001"},
+		},
+		{
+			// Two stops resolved in one request batch into a single
+			// CensusGeographiesByEntityIDs call; each must get its own
+			// geographies (including the tracts shared by both buffers).
+			// Before per-stop attribution every row carried match_entity_id=0
+			// and both stops resolved to empty lists.
+			name: "census_geographies per-stop attribution across batch",
+			query: `query{
+				s12: stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+				s19: stops(where:{feed_onestop_id:"BA", stop_id:"19TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+			}`,
+			sel: []testcaseSelector{
+				{
+					selector: "s12.0.census_geographies.#.geoid",
+					expect:   []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"},
+				},
+				{
+					selector: "s19.0.census_geographies.#.geoid",
+					expect:   []string{"1400000US06001402801", "1400000US06001402900"},
+				},
+			},
+		},
 		// TODO: route_stop_buffer
 	}
 	return testcases
@@ -637,10 +780,7 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 				}
 			  }			  `,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			selector:    "stops.#.stop_id",
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 
 		// this test is just for debugging purposes
@@ -880,8 +1020,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: share_alike_optional = no",
@@ -896,8 +1036,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: create_derived_product
 		{
@@ -905,8 +1045,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: create_derived_product = no",
@@ -921,8 +1061,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: commercial_use_allowed
 		{
@@ -930,8 +1070,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: commercial_use_allowed = no",
@@ -946,8 +1086,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: redistribution_allowed
 		{
@@ -955,8 +1095,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: redistribution_allowed = no",
@@ -971,8 +1111,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 		// license: use_without_attribution
 		{
@@ -980,8 +1120,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA"},
-			selectExpectCount:  2349,
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  4524,
 		},
 		{
 			name:               "license filter: use_without_attribution = no",
@@ -996,8 +1136,8 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA"},
-			selectExpectCount:  2413,
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  4881,
 		},
 	}
 	return testcases

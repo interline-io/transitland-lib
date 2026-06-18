@@ -9,9 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/meters"
 )
 
-func init() {
-	var _ meters.MeterProvider = &LocalMeterProvider{}
-}
+var _ meters.MeterProvider = (*LocalMeterProvider)(nil)
 
 type LocalMeterProvider struct {
 	values map[string]localMeterUserEvents

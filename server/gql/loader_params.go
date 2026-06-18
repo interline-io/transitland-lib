@@ -43,11 +43,13 @@ type pathwayLoaderParam struct {
 }
 
 type stopTimeLoaderParam struct {
-	TripID        int
-	StopID        int
-	FeedVersionID int
-	Limit         *int
-	Where         *model.StopTimeFilter
+	TripID          int
+	StopID          int
+	LocationID      int
+	LocationGroupID int
+	FeedVersionID   int
+	Limit           *int
+	Where           *model.StopTimeFilter
 }
 
 type tripStopTimeLoaderParam struct {
@@ -178,10 +180,6 @@ type censusValueLoaderParam struct {
 	Limit      *int
 }
 
-type censusTableLoaderParam struct {
-	Limit *int
-}
-
 type censusFieldLoaderParam struct {
 	Limit   *int
 	TableID int
@@ -191,6 +189,12 @@ type censusSourceLoaderParam struct {
 	DatasetID int
 	Limit     *int
 	Where     *model.CensusSourceFilter
+}
+
+type censusTableLoaderParam struct {
+	DatasetID int
+	Limit     *int
+	Where     *model.CensusTableFilter
 }
 
 type routeStopPatternLoaderParam struct {
@@ -226,4 +230,32 @@ type validationReportErrorExemplarLoaderParam struct {
 type validationReportErrorGroupLoaderParam struct {
 	ValidationReportID int
 	Limit              *int
+}
+
+type bookingRuleLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+	Where         *model.BookingRuleFilter
+}
+
+type locationGroupLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+	Where         *model.LocationGroupFilter
+}
+
+type stopsByLocationGroupLoaderParam struct {
+	LocationGroupID int
+	Limit           *int
+}
+
+type locationGroupsByStopLoaderParam struct {
+	StopID int
+	Limit  *int
+}
+
+type locationLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+	Where         *model.LocationFilter
 }

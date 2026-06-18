@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"runtime/debug"
-	"strings"
 	"time"
 	_ "time/tzdata"
 
@@ -16,15 +14,14 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-redis/redis/v8"
 	"github.com/interline-io/log"
-	tl "github.com/interline-io/transitland-lib"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
+	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/meters"
 	localmeter "github.com/interline-io/transitland-lib/server/meters/local"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/querylogger"
 
 	"github.com/interline-io/transitland-lib/server/finders/actions"
 	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
@@ -55,6 +52,7 @@ type ServerCommand struct {
 	LoadAdmins              bool
 	ValidateLargeFiles      bool
 	UseMaterialized         bool
+	UseGeohashFilter        bool
 	LoaderBatchSize         int
 	LoaderStopTimeBatchSize int
 	SecretsFile             string
@@ -90,6 +88,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
 	fl.BoolVar(&cmd.UseMaterialized, "use-materialized", false, "Use materialized views for active entities")
+	fl.BoolVar(&cmd.UseGeohashFilter, "use-geohash-filter", false, "Filter feed/feed_version bbox queries by precomputed stop geohash cells (requires populated tl_feed_version_geohashes)")
 }
 
 func (cmd *ServerCommand) Parse(args []string) error {
@@ -116,15 +115,13 @@ func (cmd *ServerCommand) Parse(args []string) error {
 
 func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// Open database
-	var db tldb.Ext
 	dbx, err := dbutil.OpenDB(cmd.DBURL)
 	if err != nil {
 		return err
 	}
-	db = dbx
-	if log.Logger.GetLevel() == zerolog.TraceLevel {
-		db = &querylogger.QueryLogger{Ext: dbx, LongQueryDuration: time.Duration(cmd.LongQueryDuration) * time.Millisecond}
-	}
+	trace := log.Logger.GetLevel() == zerolog.TraceLevel
+	longQueryDuration := time.Duration(cmd.LongQueryDuration) * time.Millisecond
+	var db tldb.Ext = dbutil.WithQueryLogger(dbx, trace, longQueryDuration)
 
 	// Open redis
 	var redisClient *redis.Client
@@ -133,6 +130,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		defer redisClient.Close()
 	}
 
 	// Create Finder
@@ -146,7 +144,9 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	var gbfsFinder model.GbfsFinder
 	if redisClient != nil {
 		// Use redis backed finders
-		rtFinder = rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		rtf := rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
+		defer rtf.Close()
+		rtFinder = rtf
 		gbfsFinder = gbfsfinder.NewFinder(redisClient)
 	} else {
 		// Default to in-memory cache
@@ -156,17 +156,21 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 
 	var actionFinder model.Actions = &actions.Actions{}
 
-	// Setup config
+	// Demo binary: authorization disabled. Production deployments should
+	// compose their own binary with a real Checker.
+	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
 	cfg := model.Config{
 		Finder:                  dbFinder,
 		RTFinder:                rtFinder,
 		GbfsFinder:              gbfsFinder,
+		Checker:                 allowAllCheckerInstance,
 		Actions:                 actionFinder,
 		Secrets:                 cmd.secrets,
 		Storage:                 cmd.Storage,
 		RTStorage:               cmd.RTStorage,
 		ValidateLargeFiles:      cmd.ValidateLargeFiles,
 		UseMaterialized:         cmd.UseMaterialized,
+		UseGeohashFilter:        cmd.UseGeohashFilter,
 		RestPrefix:              cmd.RestPrefix,
 		LoaderBatchSize:         cmd.LoaderBatchSize,
 		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,
@@ -248,55 +252,4 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	return srv.ListenAndServe()
 }
 
-////////////
-
-// Read version from compiled in git details
-var Version VersionInfo
-
-type VersionInfo struct {
-	Tag        string
-	Commit     string
-	CommitTime string
-}
-
-func getVersion() VersionInfo {
-	ret := VersionInfo{}
-	info, _ := debug.ReadBuildInfo()
-	tagPrefix := "main.tag="
-	for _, kv := range info.Settings {
-		switch kv.Key {
-		case "vcs.revision":
-			ret.Commit = kv.Value
-		case "vcs.time":
-			ret.CommitTime = kv.Value
-		case "-ldflags":
-			for _, ss := range strings.Split(kv.Value, " ") {
-				if strings.HasPrefix(ss, tagPrefix) {
-					ret.Tag = strings.TrimPrefix(ss, tagPrefix)
-				}
-			}
-		}
-	}
-	return ret
-}
-
-type versionCommand struct{}
-
-func (cmd *versionCommand) AddFlags(fl *pflag.FlagSet) {}
-
-func (cmd *versionCommand) HelpDesc() (string, string) {
-	return "Program version and supported GTFS and GTFS-RT versions", ""
-}
-
-func (cmd *versionCommand) Parse(args []string) error {
-	return nil
-}
-
-func (cmd *versionCommand) Run(context.Context) error {
-	vi := getVersion()
-	log.Print("transitland-lib version: %s", vi.Tag)
-	log.Print("transitland-lib commit: https://github.com/interline-io/transitland-lib/commit/%s (time: %s)", vi.Commit, vi.CommitTime)
-	log.Print("GTFS specification version: https://github.com/google/transit/blob/%s/gtfs/spec/en/reference.md", tl.GTFSVERSION)
-	log.Print("GTFS Realtime specification version: https://github.com/google/transit/blob/%s/gtfs-realtime/proto/gtfs-realtime.proto", tl.GTFSRTVERSION)
-	return nil
-}
+var allowAllCheckerInstance = &authz.AllowAllChecker{}

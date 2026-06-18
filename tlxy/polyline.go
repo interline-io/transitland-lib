@@ -21,20 +21,50 @@ func DecodePolylineString(p string) ([]Point, error) {
 }
 
 func DecodePolyline(p []byte) ([]Point, error) {
-	coords, _, err := polyline.DecodeCoords(p)
+	// Decode directly into Points with go-polyline's integer primitive, avoiding the
+	// [][]float64 (and a 2-float64 slice per point) that polyline.DecodeCoords builds.
 	var ret []Point
-	for _, c := range coords {
-		ret = append(ret, Point{Lon: c[1], Lat: c[0]})
+	var lat, lon int
+	for len(p) > 0 {
+		dlat, rest, err := polyline.DecodeInt(p)
+		if err != nil {
+			return ret, err
+		}
+		dlon, rest, err := polyline.DecodeInt(rest)
+		if err != nil {
+			return ret, err
+		}
+		lat += dlat
+		lon += dlon
+		ret = append(ret, Point{Lat: float64(lat) / 1e5, Lon: float64(lon) / 1e5})
+		p = rest
 	}
-	return ret, err
+	return ret, nil
 }
 
 func EncodePolyline(coords []Point) []byte {
-	var g [][]float64
+	// Encode directly with go-polyline's integer primitive (scale 1e5, matching its
+	// default Codec) instead of building a [][]float64 with a throwaway 2-float64
+	// slice per point. That intermediate is a heavy transient allocation when caching
+	// millions of shape points and shows up as a multi-GB heap spike during import.
+	buf := make([]byte, 0, len(coords)*4)
+	var lastLat, lastLon int
 	for _, c := range coords {
-		g = append(g, []float64{c.Lat, c.Lon})
+		lat := polylineRound(1e5 * c.Lat)
+		lon := polylineRound(1e5 * c.Lon)
+		buf = polyline.EncodeInt(buf, lat-lastLat)
+		buf = polyline.EncodeInt(buf, lon-lastLon)
+		lastLat, lastLon = lat, lon
 	}
-	return polyline.EncodeCoords(g)
+	return buf
+}
+
+// polylineRound matches go-polyline's rounding (round half away from zero).
+func polylineRound(x float64) int {
+	if x < 0 {
+		return int(-math.Floor(-x + 0.5))
+	}
+	return int(math.Floor(x + 0.5))
 }
 
 func PolylinesToGeojson(r io.Reader) (geojson.FeatureCollection, error) {

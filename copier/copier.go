@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
-	"maps"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -17,7 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/filters"
+	"github.com/interline-io/transitland-lib/ext/filters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rules"
@@ -291,6 +289,11 @@ func NewCopier(ctx context.Context, reader adapters.Reader, writer adapters.Writ
 			&rules.CalendarDuplicateDates{},
 			&rules.FareProductRiderCategoryDefaultCheck{},
 			&rules.TransferStopLocationTypeCheck{},
+			// GTFS-Flex validators
+			&rules.FlexGeographyIDUniqueCheck{},
+			&rules.FlexStopLocationTypeCheck{},
+			&rules.FlexLocationGeometryCheck{},
+			&rules.FlexZoneIDConditionalCheck{},
 		)
 	}
 
@@ -584,11 +587,15 @@ func (copier *Copier) Copy(ctx context.Context) (*Result, error) {
 	copier.log.Trace().Msg("Begin processing feed")
 	r := copier.reader
 	bs := copier.options.BatchSize
+	// Shapes carry full-resolution geometry, so a 1000-row batch makes the writer
+	// build a single INSERT holding ~1000 geometries (and their encoded args) at once.
+	// Batch them much smaller so the writer's in-flight geometry stays bounded.
+	shapeBs := 32
 	fns := []func() error{
 		func() error { return batchCopy(copier, batchChan(r.Agencies(), 1, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Routes(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.Levels(), bs, nil)) },
-		func() error { return batchCopy(copier, batchChan(shapeLines(r.ShapesByShapeID()), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(shapeLines(r.ShapesByShapeID()), shapeBs, nil)) },
 		func() error {
 			return batchCopy(copier,
 				batchChan(r.Stops(), bs, func(ent gtfs.Stop) bool {
@@ -612,6 +619,10 @@ func (copier *Copier) Copy(ctx context.Context) (*Result, error) {
 			)
 		},
 		copier.copyCalendars,
+		func() error { return batchCopy(copier, batchChan(r.BookingRules(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.Locations(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.LocationGroups(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.LocationGroupStops(), bs, nil)) },
 		copier.copyTripsAndStopTimes,
 		func() error { return batchCopy(copier, batchChan(r.Pathways(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.FareAttributes(), bs, nil)) },
@@ -821,157 +832,238 @@ type patInfo struct {
 	firstArrival int
 }
 
-// copyTripsAndStopTimes writes Trips and StopTimes
+// tripStopTimeState holds the cross-batch accounting for copyTripsAndStopTimes:
+// the stop-pattern and journey-pattern dedup tables (sized by distinct patterns)
+// and the per-trip journey-pattern offsets used to deduplicate stop_times. These
+// must persist across every stop_time batch, unlike the trip and stop_time
+// records, which are per-batch. Separating the two is what lets trip loading be
+// batched without losing cross-feed pattern deduplication.
+type tripStopTimeState struct {
+	stopPatterns        map[string]int
+	stopPatternShapeIDs map[int]string
+	journeyPatterns     map[string]patInfo
+	tripOffsets         map[string]int // per-trip; used for deduplicating StopTimes
+}
+
+func newTripStopTimeState() *tripStopTimeState {
+	return &tripStopTimeState{
+		stopPatterns:        map[string]int{},
+		stopPatternShapeIDs: map[int]string{},
+		journeyPatterns:     map[string]patInfo{},
+		tripOffsets:         map[string]int{},
+	}
+}
+
+// copyTripsAndStopTimes writes Trips and StopTimes. It consumes a stream of trips
+// that already carry their stop_times (from the reader when it supports it, or from
+// a generic caching join otherwise) and processes them a batch at a time, so memory
+// stays flat regardless of feed size.
 func (copier *Copier) copyTripsAndStopTimes() error {
-	// Cache all trips in memory
-	trips := map[string]*gtfs.Trip{}
-	duplicateTrips := []*gtfs.Trip{}
-	allTripIds := map[string]struct{}{}
-	for trip := range copier.reader.Trips() {
-		eid := trip.EntityID()
-		allTripIds[eid] = struct{}{}
-		// Handle duplicate trips later
-		tripCopy := trip
-		if _, ok := trips[eid]; ok {
-			duplicateTrips = append(duplicateTrips, &tripCopy)
-			continue
-		}
-		trips[eid] = &tripCopy
-	}
-	copier.log.Trace().Msgf("Loaded %d trips", len(allTripIds))
-
-	// Process each set of Trip/StopTimes
-	stopPatterns := map[string]int{}
-	stopPatternShapeIDs := map[int]string{}
-	journeyPatterns := map[string]patInfo{}
-	tripOffsets := map[string]int{} // used for deduplicating StopTimes
-
-	// Process trips and stop times
-	for stsGroup := range batchChan(copier.reader.StopTimesByTripID(), copier.options.BatchSize, nil) {
-		count := 0
-		for _, sts := range stsGroup {
-			count += len(sts)
-		}
-		batchTrips := make([]*gtfs.Trip, 0, len(stsGroup))
-		batchStopTimes := make([]*gtfs.StopTime, 0, count)
-		for _, sts := range stsGroup {
-			if len(sts) == 0 {
-				continue
-			}
-
-			// Does this trip exist?
-			tripid := sts[0].TripID.Val
-			if _, ok := allTripIds[tripid]; !ok {
-				// Trip doesn't exist, try to copy stop times anyway
-				for _, st := range sts {
-					batchStopTimes = append(batchStopTimes, &st)
-				}
-				continue
-			}
-
-			// Is this trip marked?
-			trip, ok := trips[tripid]
-			if !ok {
-				// Trip exists but is not marked
-				copier.result.SkipEntityMarkedCount["stop_times.txt"] += len(sts)
-				continue
-			}
-
-			// Mark trip as associated with at least 1 stop_time
-			// Remaining trips will be processed later
-			delete(trips, tripid)
-
-			// Set stop times
-			trip.StopTimes = sts
-
-			// Set StopPattern
-			patkey := stopPatternKey(trip.StopTimes)
-			if pat, ok := stopPatterns[patkey]; ok {
-				trip.StopPatternID.SetInt(pat)
-			} else {
-				trip.StopPatternID.SetInt(len(stopPatterns))
-				stopPatterns[patkey] = trip.StopPatternID.Int()
-			}
-
-			// Create missing shape if necessary
-			if !trip.ShapeID.Valid && copier.options.CreateMissingShapes {
-				// Note: if the trip has errors, may result in unused shapes!
-				if shapeid, ok := stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
-					trip.ShapeID.Set(shapeid)
-				} else {
-					if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
-						copier.log.Error().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("failed to create shape")
-						trip.AddWarning(err)
-					} else {
-						// Set ShapeID
-						stopPatternShapeIDs[trip.StopPatternID.Int()] = shapeid
-						trip.ShapeID.Set(shapeid)
-					}
-				}
-			}
-
-			// Interpolate stop times
-			if copier.options.InterpolateStopTimes {
-				if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip); err != nil {
-					trip.AddWarning(err)
-				} else {
-					trip.StopTimes = stoptimes2
-				}
-			}
-
-			// Set JourneyPattern
-			jkey := copier.options.JourneyPatternKey(trip)
-			if jpat, ok := journeyPatterns[jkey]; ok {
-				trip.JourneyPatternID.Set(jpat.key)
-				trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
-				tripOffsets[trip.TripID.Val] = trip.JourneyPatternOffset.Int() // do not write stop times for this trip
-			} else {
-				trip.JourneyPatternID.Set(trip.TripID.Val)
-				trip.JourneyPatternOffset.Set(0)
-				journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID.Val}
-			}
-
-			// Add to group
-			batchTrips = append(batchTrips, trip)
-		}
-
-		// Write trips
-		okTrips, err := copyEntities(copier, batchTrips)
-		if err != nil {
-			return err
-		}
-
-		// Process regular stop times
-		for _, ent := range okTrips {
-			if v, ok := ent.(*gtfs.Trip); ok {
-				if _, dedupOk := tripOffsets[v.TripID.Val]; dedupOk && copier.options.DeduplicateJourneyPatterns {
-					copier.log.Trace().Msgf("deduplicating: %s", v.TripID)
-					continue
-				}
-				for _, st := range v.StopTimes {
-					batchStopTimes = append(batchStopTimes, &st)
-				}
-			}
-		}
-
-		// Write stop times
-		if _, err := copyEntities(copier, batchStopTimes); err != nil {
-			return err
-		}
+	var source chan gtfs.TripStopTimes
+	if r, ok := copier.reader.(tripStopTimeReader); ok {
+		source = r.TripsWithStopTimes()
+	} else {
+		source = genericTripsWithStopTimes(copier.reader)
 	}
 
-	// Add any Trips that were not visited/did not have StopTimes
-	if _, err := copyEntities(copier, slices.Collect(maps.Values(trips))); err != nil {
-		return err
+	state := newTripStopTimeState()
+	var batch []gtfs.TripStopTimes
+	for tst := range source {
+		batch = append(batch, tst)
+		if len(batch) >= copier.options.BatchSize {
+			if err := copier.processTripBatch(batch, state); err != nil {
+				return err
+			}
+			batch = nil
+		}
 	}
-
-	// Add any duplicate trips
-	if _, err := copyEntities(copier, duplicateTrips); err != nil {
+	if err := copier.processTripBatch(batch, state); err != nil {
 		return err
 	}
 
 	copier.logCount(&gtfs.Trip{})
 	copier.logCount(&gtfs.StopTime{})
+	return nil
+}
+
+// tripStopTimeReader is an optional Reader capability: it yields each trip with its
+// StopTimes attached, batching internally so the copier never holds the whole feed in
+// memory. Readers without it fall back to genericTripsWithStopTimes.
+//
+// Contract for the yielded channel:
+//   - Each trip is yielded once, stop_times sorted by stop_sequence.
+//   - In a deterministic order that order-sensitive validators (e.g. block-overlap)
+//     rely on; the tlcsv reader uses stop_times.txt first-appearance order.
+//   - A stop_time-less trip is yielded with empty StopTimes; for a duplicate trip_id
+//     the first occurrence carries the stop_times and later ones are empty.
+//   - stop_times whose trip_id is absent from trips.txt are yielded on a zero-value
+//     Trip so the caller can still validate them.
+type tripStopTimeReader interface {
+	TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes
+}
+
+// genericTripsWithStopTimes is the generic fallback for readers that don't implement
+// tripStopTimeReader: it caches all trips, then attaches stop_times streamed from
+// StopTimesByTripID. It honors the contract's join semantics (orphans, duplicates,
+// stop_times sorted by stop_sequence) but not its emission order: that follows the
+// reader's StopTimesByTripID, which is map-based for some readers and so not
+// deterministic. Deterministic order is only guaranteed by readers that implement
+// TripsWithStopTimes natively (tlcsv).
+func genericTripsWithStopTimes(reader adapters.Reader) chan gtfs.TripStopTimes {
+	out := make(chan gtfs.TripStopTimes, 1000)
+	go func() {
+		defer close(out)
+		// Cache all trips up front (the O(trips) cost this fallback accepts) so
+		// stop_times can stream past without being held. First row of a trip_id wins;
+		// later duplicate rows trail at the end.
+		trips := map[string]*gtfs.Trip{}
+		var duplicates []*gtfs.Trip
+		allIDs := map[string]struct{}{}
+		for trip := range reader.Trips() {
+			tripCopy := trip
+			eid := tripCopy.EntityID()
+			allIDs[eid] = struct{}{}
+			if _, ok := trips[eid]; ok {
+				duplicates = append(duplicates, &tripCopy)
+				continue
+			}
+			trips[eid] = &tripCopy
+		}
+		// Stream stop_times past the cached trips. A trip_id absent from trips was
+		// either already emitted (and deleted) or never a trip; allIDs tells them apart
+		// so only true orphans are surfaced for validation.
+		for grp := range reader.StopTimesByTripID() {
+			if len(grp) == 0 {
+				continue
+			}
+			eid := grp[0].TripID.Val
+			if trip, ok := trips[eid]; ok {
+				out <- gtfs.TripStopTimes{Valid: true, Trip: *trip, StopTimes: grp}
+				delete(trips, eid)
+			} else if _, exists := allIDs[eid]; !exists {
+				out <- gtfs.TripStopTimes{StopTimes: grp}
+			}
+		}
+		// Whatever's left never matched a stop_time group: leftover trips, then
+		// duplicate rows, all with empty StopTimes.
+		for _, trip := range trips {
+			out <- gtfs.TripStopTimes{Valid: true, Trip: *trip}
+		}
+		for _, trip := range duplicates {
+			out <- gtfs.TripStopTimes{Valid: true, Trip: *trip}
+		}
+	}()
+	return out
+}
+
+// processTripBatch processes one batch of trips that already carry their stop_times.
+// It assigns the stop/journey pattern (optionally generating a shape and
+// interpolating) to each trip that has stop_times, writes the trips, then writes the
+// stop_times of the trips that were accepted (skipping journey-pattern duplicates).
+// Trips with no stop_times are written as-is. Invalid entries carry only orphan
+// stop_times (no trips.txt row): those stop_times are written so reference errors
+// surface, but no trip is written. state carries cross-batch pattern accounting.
+func (copier *Copier) processTripBatch(batch []gtfs.TripStopTimes, state *tripStopTimeState) error {
+	if len(batch) == 0 {
+		return nil
+	}
+	batchStopTimes := []*gtfs.StopTime{}
+	batchTrips := make([]*gtfs.Trip, 0, len(batch))
+	for i := range batch {
+		item := &batch[i]
+		if !item.Valid {
+			// Orphan stop_times: no trip to write, but still validate them.
+			for j := range item.StopTimes {
+				batchStopTimes = append(batchStopTimes, &item.StopTimes[j])
+			}
+			continue
+		}
+		trip := &item.Trip
+		trip.StopTimes = item.StopTimes
+		batchTrips = append(batchTrips, trip)
+		if len(trip.StopTimes) == 0 {
+			// Stop_time-less or duplicate trip: written as-is, no pattern assignment.
+			continue
+		}
+
+		// Set StopPattern
+		// Empty key means flex trip - assign unique pattern ID without caching
+		patkey := stopPatternKey(trip.StopTimes)
+		if patkey == "" {
+			trip.StopPatternID.SetInt(len(state.stopPatterns))
+			state.stopPatterns[trip.TripID.Val] = trip.StopPatternID.Int() // Use trip ID as unique key
+		} else if pat, ok := state.stopPatterns[patkey]; ok {
+			trip.StopPatternID.SetInt(pat)
+		} else {
+			trip.StopPatternID.SetInt(len(state.stopPatterns))
+			state.stopPatterns[patkey] = trip.StopPatternID.Int()
+		}
+
+		// Create missing shape if necessary
+		if !trip.ShapeID.Valid && copier.options.CreateMissingShapes {
+			// Note: if the trip has errors, may result in unused shapes!
+			if shapeid, ok := state.stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
+				trip.ShapeID.Set(shapeid)
+			} else {
+				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
+					copier.log.Debug().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("skipping shape generation")
+				} else {
+					// Set ShapeID
+					state.stopPatternShapeIDs[trip.StopPatternID.Int()] = shapeid
+					trip.ShapeID.Set(shapeid)
+				}
+			}
+		}
+
+		// Interpolate stop times
+		if copier.options.InterpolateStopTimes {
+			if stoptimes2, err := copier.geomCache.InterpolateStopTimes(trip); err != nil {
+				trip.AddWarning(err)
+			} else {
+				trip.StopTimes = stoptimes2
+			}
+		}
+
+		// Set JourneyPattern
+		// Empty key means flex trip - don't deduplicate
+		jkey := copier.options.JourneyPatternKey(trip)
+		if jkey == "" {
+			trip.JourneyPatternID.Set(trip.TripID.Val)
+			trip.JourneyPatternOffset.Set(0)
+		} else if jpat, ok := state.journeyPatterns[jkey]; ok {
+			trip.JourneyPatternID.Set(jpat.key)
+			trip.JourneyPatternOffset.SetInt(trip.StopTimes[0].ArrivalTime.Int() - jpat.firstArrival)
+			state.tripOffsets[trip.TripID.Val] = trip.JourneyPatternOffset.Int() // do not write stop times for this trip
+		} else {
+			trip.JourneyPatternID.Set(trip.TripID.Val)
+			trip.JourneyPatternOffset.Set(0)
+			state.journeyPatterns[jkey] = patInfo{firstArrival: trip.StopTimes[0].ArrivalTime.Int(), key: trip.JourneyPatternID.Val}
+		}
+	}
+
+	// Write trips
+	okTrips, err := copyEntities(copier, batchTrips)
+	if err != nil {
+		return err
+	}
+
+	// Write the stop_times of accepted trips, skipping journey-pattern duplicates
+	for _, ent := range okTrips {
+		if v, ok := ent.(*gtfs.Trip); ok {
+			if _, dedupOk := state.tripOffsets[v.TripID.Val]; dedupOk && copier.options.DeduplicateJourneyPatterns {
+				copier.log.Trace().Msgf("deduplicating: %s", v.TripID)
+				continue
+			}
+			for j := range v.StopTimes {
+				batchStopTimes = append(batchStopTimes, &v.StopTimes[j])
+			}
+		}
+	}
+
+	// Write stop times
+	if _, err := copyEntities(copier, batchStopTimes); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1014,7 +1106,15 @@ func (copier *Copier) logCount(ent tt.Entity) {
 }
 
 func (copier *Copier) createMissingShape(shapeID string, stoptimes []gtfs.StopTime) (string, error) {
-	stopids := []string{}
+	// Only create shapes when ALL stop_times have stop_id set
+	// Fallback shape is undefined for location/location_group based stops
+	if !gtfs.CheckFlexStopTimes(stoptimes).CanUseStopBasedGeometry() {
+		return "", errors.New("cannot create shape: not all stop_times have stop_id (trip may use flex locations)")
+	}
+	if len(stoptimes) == 0 {
+		return "", errors.New("cannot create shape: no stop_times")
+	}
+	stopids := make([]string, 0, len(stoptimes))
 	for _, st := range stoptimes {
 		stopids = append(stopids, st.StopID.Val)
 	}

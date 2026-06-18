@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
@@ -13,7 +14,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { feeds {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "BA", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "BA", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name:   "basic fields",
@@ -88,7 +89,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where spec=gtfs",
 			query:        `query { feeds(where:{spec:[GTFS]}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "BA", "test", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "test", "EX"},
 		},
 		{
 			name:         "where spec=gtfs-rt",
@@ -106,13 +107,13 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where fetch_error=false",
 			query:        `query { feeds(where:{fetch_error:false}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA", "CT", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "EX"},
 		},
 		{
 			name:         "where import_status=success",
 			query:        `query { feeds(where:{import_status:SUCCESS}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"BA", "CT", "HA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "EX"},
 		},
 		{
 			name:         "where import_status=in_progress", // TODO: mock an in-progress import
@@ -143,6 +144,13 @@ func TestFeedResolver(t *testing.T) {
 			query:        `query { feeds(where:{search:"~r"}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
 			selectExpect: []string{"CT~rt", "BA~rt"},
+		},
+		{
+			// `_` and `%` are ILIKE wildcards; unescaped they over-match every row.
+			name:         "where search escapes ilike wildcards",
+			query:        `query { feeds(where:{search:"__"}) {onestop_id}}`,
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{},
 		},
 		{
 			name:         "where tags test=ok",
@@ -240,15 +248,67 @@ func TestFeedResolver(t *testing.T) {
 			name:        "bbox too large",
 			query:       `query($bbox:BoundingBox) {feeds(where: {bbox:$bbox}) {onestop_id}}`,
 			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			selector:    "feeds.#.onestop_id",
 			expectError: true,
-			f: func(t *testing.T, jj string) {
-			},
 		},
 		// TODO: authorization,
 		// TODO: associated_operators
 	}
 	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+// TestFeedResolver_GeohashFilter runs the spatial filter cases with the
+// geohash secondary filter enabled. Same expected results as the polygon-only
+// path for these clean fixtures — proves the cells SQL is correct and
+// doesn't drop legitimate matches.
+func TestFeedResolver_GeohashFilter(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:         "bbox SF",
+			query:        `query($bbox:BoundingBox) {feeds(where: {bbox:$bbox}) {onestop_id}}`,
+			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"BA"},
+		},
+		{
+			name:         "bbox empty area",
+			query:        `query($bbox:BoundingBox) {feeds(where: {bbox:$bbox}) {onestop_id}}`,
+			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
+			name:  "within SF polygon",
+			query: `query($within:Polygon) {feeds(where: {within:$within}) {onestop_id}}`,
+			vars: hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{
+				{-122.39803791046143, 37.794626736533836},
+				{-122.40106344223022, 37.792303711508595},
+				{-122.3965573310852, 37.789641468930114},
+				{-122.3938751220703, 37.792354581451946},
+				{-122.39803791046143, 37.794626736533836},
+			}}}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"BA"},
+		},
+		{
+			name:         "near SF point",
+			query:        `query($near:PointRadius) {feeds(where: {near:$near}) {onestop_id}}`,
+			vars:         hw{"near": hw{"lon": -122.2698781543005, "lat": 37.80700393130445, "radius": 1000}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"BA"},
+		},
+		{
+			name:         "near Tampa point",
+			query:        `query($near:PointRadius) {feeds(where: {near:$near}) {onestop_id}}`,
+			vars:         hw{"near": hw{"lon": -82.45717479225324, "lat": 27.95070842389974, "radius": 1000}},
+			selector:     "feeds.#.onestop_id",
+			selectExpect: []string{"HA"},
+		},
+	}
+	c, _ := newTestClientWithOpts(t, testconfig.Options{
+		RTJsons:          testconfig.DefaultRTJson(),
+		UseGeohashFilter: true,
+	})
 	queryTestcases(t, c, testcases)
 }
 
@@ -295,7 +355,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"share_alike_optional": "YES"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"HA"},
+			selectExpect: []string{"HA", "WMATA"},
 		},
 		{
 			name:         "license filter: share_alike_optional = no",
@@ -316,7 +376,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: create_derived_product
 		{
@@ -324,7 +384,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"create_derived_product": "YES"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"HA"},
+			selectExpect: []string{"HA", "WMATA"},
 		},
 		{
 			name:         "license filter: create_derived_product = no",
@@ -345,7 +405,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: commercial_use_allowed
 		{
@@ -353,7 +413,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"commercial_use_allowed": "YES"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"HA"},
+			selectExpect: []string{"HA", "WMATA"},
 		},
 		{
 			name:         "license filter: commercial_use_allowed = no",
@@ -374,7 +434,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		// license: redistribution_allowed
 		{
@@ -382,7 +442,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"redistribution_allowed": "YES"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"HA"},
+			selectExpect: []string{"HA", "WMATA"},
 		},
 		{
 			name:         "license filter: redistribution_allowed = no",
@@ -403,7 +463,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 
 		// license: use_without_attribution
@@ -412,7 +472,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"use_without_attribution": "YES"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"HA"},
+			selectExpect: []string{"HA", "WMATA"},
 		},
 		{
 			name:         "license filter: use_without_attribution = no",
@@ -433,7 +493,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "test-gbfs", "HA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 	}
 	c, _ := newTestClient(t)

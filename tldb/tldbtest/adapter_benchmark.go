@@ -9,7 +9,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -98,11 +98,11 @@ func Benchmark_Adapter_MultiInsert(b *testing.B) {
 			}
 			// Load the minimal test feed...
 			writer := tldb.Writer{Adapter: adapter}
-			_, reader := testutil.NewMinimalTestFeed()
+			_, reader := testreader.NewMinimalTestFeed()
 			if err := reader.Open(); err != nil {
 				b.Error(err)
 			}
-			if err := testutil.DirectCopy(reader, &writer); err != nil {
+			if err := testreader.DirectCopy(reader, &writer); err != nil {
 				b.Error(err)
 			}
 			// get ids

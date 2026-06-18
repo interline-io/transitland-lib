@@ -110,7 +110,7 @@ func TestUpdateFeed(t *testing.T) {
 			rfeed.License.UseWithoutAttribution = "yes"
 			rfeed.Authorization.ParamName = "test"
 			rfeed.Languages = dmfr.FeedLanguages{"en"}
-			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed)
+			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed, nil)
 			if err != nil {
 				t.Error(err)
 			}
@@ -151,7 +151,7 @@ func TestUpdateFeed(t *testing.T) {
 			rfeed := dmfr.Feed{}
 			rfeed.FeedID = "caltrain"
 			rfeed.Name = tt.NewString("An Updated Name")
-			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed)
+			feedid, found, _, err := UpdateFeed(ctx, atx, rfeed, nil)
 			if err != nil {
 				t.Error(err)
 			}
@@ -163,7 +163,7 @@ func TestUpdateFeed(t *testing.T) {
 			//
 			dfeed := dmfr.Feed{}
 			dfeed.FeedID = "caltrain"
-			feedid2, found2, _, err2 := UpdateFeed(ctx, atx, dfeed)
+			feedid2, found2, _, err2 := UpdateFeed(ctx, atx, dfeed, nil)
 			if err2 != nil {
 				t.Error(err)
 			}

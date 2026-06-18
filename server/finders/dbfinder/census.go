@@ -2,7 +2,6 @@ package dbfinder
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -79,10 +78,14 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		}
 	}
 
-	// Process stops in 1 batch, others one-by-one (and set MatchEntityID for grouping later)
 	var entityGeogs []*model.CensusGeography
 	fields := getCensusGeographySelectFields(ctx)
 	if entityType == "stop" {
+		// One batched query for every requested stop. The select keeps
+		// per-stop attribution (match_entity_id = stop.id) so arrangeGroup
+		// below can bucket results back to the right stop without needing a
+		// loop-then-tag pass.
+		fields.perStopAttribution = true
 		var ents []*model.CensusGeography
 		pw := forStopids(entityIds)
 		if err := dbutil.Select(ctx, f.db, censusDatasetGeographySelect(limit, pw, fields), &ents); err != nil {
@@ -90,6 +93,10 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		}
 		entityGeogs = append(entityGeogs, ents...)
 	} else {
+		// Routes / agencies: the union over the entity's stop set is what we
+		// want (avoids double-counting tracts hit by multiple stops). One
+		// query per entity; tag MatchEntityID after scan since the SQL emits
+		// 0 for the unioned buffer.
 		for _, entityId := range entityIds {
 			stopIds, err := getBufferStopIds(ctx, f.db, entityType, entityId)
 			if err != nil {
@@ -267,6 +274,36 @@ func (f *Finder) CensusFieldsByTableIDs(ctx context.Context, limit *int, keys []
 	return arrangeGroup(keys, ents, func(ent *model.CensusField) int { return ent.TableID }), err
 }
 
+func (f *Finder) CensusTablesByDatasetIDs(ctx context.Context, limit *int, where *model.CensusTableFilter, keys []int) ([][]*model.CensusTable, error) {
+	q := censusTableSelect(limit, where)
+	var ents []*model.CensusTable
+	err := dbutil.Select(ctx,
+		f.db,
+		lateralWrap(
+			q,
+			"tl_census_datasets",
+			"id",
+			"tl_census_tables",
+			"dataset_id",
+			keys,
+		),
+		&ents,
+	)
+	return arrangeGroup(keys, ents, func(ent *model.CensusTable) int { return ent.DatasetID }), err
+}
+
+// FindCensusValuesByDatasetID finds census values by dataset ID with optional filters.
+// Supports Relay-style cursor pagination for large result sets (e.g., querying all NTD agencies).
+// Cursor encodes composite key (geoid, table_id) to enable proper pagination.
+func (f *Finder) FindCensusValuesByDatasetID(ctx context.Context, limit *int, after model.CensusCursor, datasetID int, where *model.CensusDatasetValueFilter) ([]*model.CensusValue, error) {
+	var ents []*model.CensusValue
+	q := censusValueFilterSelect(limit, after, datasetID, where)
+	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
+		return nil, logErr(ctx, err)
+	}
+	return ents, nil
+}
+
 func censusDatasetSelect(_ *int, _ *model.Cursor, _ []int, where *model.CensusDatasetFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
 		Select("*").
@@ -276,7 +313,7 @@ func censusDatasetSelect(_ *int, _ *model.Cursor, _ []int, where *model.CensusDa
 			q = q.Where(sq.Eq{"name": *where.Name})
 		}
 		if where.Search != nil {
-			q = q.Where(sq.Like{"name": fmt.Sprintf("%%%s%%", *where.Search)})
+			q = q.Where(sq.Like{"name": dbutil.EscapeLike(*where.Search, true, true)})
 		}
 	}
 	return q
@@ -297,6 +334,12 @@ type censusGeographySelectFields struct {
 	intersectionGeometry bool
 	geometryArea         bool
 	geometry             bool
+	// Caller flag (not GraphQL-driven): when true, the buffer CTE for the
+	// `stop_buffer` filter emits one row per stop with match_entity_id =
+	// gtfs_stops.id instead of unioning all stops into a single polygon.
+	// Used by CensusGeographiesByEntityIDs for entityType == "stop" so a
+	// single batched query can be grouped back per requesting stop.
+	perStopAttribution bool
 }
 
 func getCensusGeographySelectFields(ctx context.Context) censusGeographySelectFields {
@@ -385,7 +428,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
-				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?) as buffer", loc.Near.Lon, loc.Near.Lat, radius).
+				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?)::geometry as buffer", loc.Near.Lon, loc.Near.Lat, radius).
 				Column("0 as match_entity_id")
 		} else if loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0 {
 			radius := checkFloat(loc.StopBuffer.Radius, 0, 1_000)
@@ -396,8 +439,21 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 					Column("gtfs_stops.id as match_entity_id").
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+			} else if fields.perStopAttribution {
+				// One buffer per stop, attribution preserved as
+				// match_entity_id. Tract rows are duplicated when a tract
+				// intersects multiple stops in the input set; that's the
+				// intent — callers want per-stop apportionment.
+				qBufferUse = true
+				qBuffer = sq.StatementBuilder.Select().
+					Column("gtfs_stops.id as match_entity_id").
+					Column("ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry as buffer", radius).
+					From("gtfs_stops").
+					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 			} else {
-				// Add this as a pre-CTE
+				// Default: union over the input stop set, one polygon. Used
+				// by routes/agencies (which want the union over their stops)
+				// and by top-level aggregation queries.
 				qBufferUse = true
 				qBufferOuter := sq.StatementBuilder.Select().
 					Column("ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry) as buffer", radius).
@@ -421,12 +477,15 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Expression:   qBuffer,
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
-				Where(sq.Expr("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) > 0"))
+				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
 			if fields.intersectionArea {
 				q = q.Column("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) as intersection_area")
 			}
 			if fields.intersectionGeometry {
 				q = q.Column("ST_Intersection(tlcg.geometry, buffer.buffer) as intersection_geometry")
+			}
+			if fields.perStopAttribution {
+				q = q.Column("buffer.match_entity_id")
 			}
 		}
 		if qPointsUse {
@@ -437,7 +496,18 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
 				Column("buffer.match_entity_id").
-				Where(sq.Expr("ST_Intersects(tlcg.geometry, buffer.buffer)"))
+				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
+		}
+		// Pin layer_id as a scalar so the composite (layer_id, geometry) GiST
+		// index can serve the spatial join. Only safe when both dataset and
+		// layer are set, since (dataset, layer) resolves to a single layer_id.
+		if (qBufferUse || qPointsUse) && where.Dataset != nil && where.Layer != nil {
+			layerID := sq.StatementBuilder.
+				Select("clsub.id").
+				From("tl_census_layers clsub").
+				Join("tl_census_datasets cdsub ON cdsub.id = clsub.dataset_id").
+				Where(sq.Eq{"clsub.name": *where.Layer, "cdsub.name": *where.Dataset})
+			q = q.Where(layerID.Prefix("tlcg.layer_id = (").Suffix(")"))
 		}
 		if loc.Focus != nil {
 			orderBy = sq.Expr("ST_Distance(tlcg.geometry, ST_MakePoint(?,?))", loc.Focus.Lon, loc.Focus.Lat)
@@ -453,7 +523,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			q = q.Where(sq.Eq{"tlcl.name": where.Layer})
 		}
 		if where.Search != nil {
-			q = q.Where(sq.ILike{"tlcg.name": fmt.Sprintf("%%%s%%", *where.Search)})
+			q = q.Where(sq.ILike{"tlcg.name": dbutil.EscapeLike(*where.Search, true, true)})
 		}
 		if len(where.Ids) > 0 {
 			q = q.Where(sq.Eq{"tlcg.id": where.Ids})
@@ -503,6 +573,60 @@ func censusValueSelect(limit *int, datasetName string, tnames []string, geoids [
 		OrderBy("tlcv.table_id")
 	if datasetName != "" {
 		q = q.Where(sq.Eq{"tlcd.name": datasetName})
+	}
+	return q
+}
+
+func censusTableSelect(limit *int, where *model.CensusTableFilter) sq.SelectBuilder {
+	q := quickSelectOrder("tl_census_tables", limit, nil, nil, "id")
+	if where != nil {
+		if where.Search != nil {
+			q = q.Where(sq.ILike{"table_name": dbutil.EscapeLike(*where.Search, true, true)})
+		}
+	}
+	return q
+}
+
+func censusValueFilterSelect(limit *int, after model.CensusCursor, datasetID int, where *model.CensusDatasetValueFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.
+		Select(
+			"tlcv.table_values as values",
+			"tlcv.geoid",
+			"tlcv.table_id",
+			"tlcs.name as source_name",
+			"tlcd.name as dataset_name",
+		).
+		From("tl_census_values tlcv").
+		Limit(finderCheckLimit(limit)).
+		Join("tl_census_tables tlct ON tlct.id = tlcv.table_id").
+		Join("tl_census_sources tlcs on tlcs.id = tlcv.source_id").
+		Join("tl_census_datasets tlcd on tlcd.id = tlct.dataset_id").
+		Where(sq.Eq{"tlcd.id": datasetID}).
+		OrderBy("tlcv.geoid", "tlcv.table_id")
+
+	// Composite key cursor pagination using (geoid, table_id)
+	// Implements: WHERE (geoid, table_id) > (last_geoid, last_table_id)
+	// SQL: WHERE geoid > last_geoid OR (geoid = last_geoid AND table_id > last_table_id)
+	if after.Valid {
+		q = q.Where(sq.Or{
+			sq.Gt{"tlcv.geoid": after.Geoid},
+			sq.And{
+				sq.Eq{"tlcv.geoid": after.Geoid},
+				sq.Gt{"tlcv.table_id": after.TableID},
+			},
+		})
+	}
+
+	if where != nil {
+		if where.Table != nil {
+			q = q.Where(sq.Eq{"tlct.table_name": *where.Table})
+		}
+		if where.Geoid != nil {
+			q = q.Where(sq.Eq{"tlcv.geoid": *where.Geoid})
+		}
+		if where.GeoidPrefix != nil {
+			q = q.Where(sq.Like{"tlcv.geoid": dbutil.EscapeLike(*where.GeoidPrefix, false, true)})
+		}
 	}
 	return q
 }

@@ -44,15 +44,14 @@ func (ent *FeedVersionGeometry) TableName() string {
 //////////
 
 type ConvexHullBuilder struct {
-	stops          map[string]*stopGeom
-	tripRoutes     map[string]string
-	routeStopGeoms map[string]*routeStopGeoms
+	stops              map[string]*stopGeom
+	routeStopGeoms     map[string]*routeStopGeoms
+	locationGeometries []tt.Geometry
 }
 
 func NewConvexHullBuilder() *ConvexHullBuilder {
 	return &ConvexHullBuilder{
 		stops:          map[string]*stopGeom{},
-		tripRoutes:     map[string]string{},
 		routeStopGeoms: map[string]*routeStopGeoms{},
 	}
 }
@@ -65,47 +64,50 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 			lon: v.Geometry.X(),
 			lat: v.Geometry.Y(),
 		}
+	case *gtfs.Location:
+		// Include location geometries in feed version convex hull
+		pp.locationGeometries = append(pp.locationGeometries, v.Geometry)
 	case *gtfs.Route:
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
 			agency:    v.AgencyID.Val,
 			stopGeoms: map[string]*stopGeom{},
 		}
 	case *gtfs.Trip:
-		pp.tripRoutes[eid] = v.RouteID.Val
-	case *gtfs.StopTime:
-		r, ok := pp.routeStopGeoms[pp.tripRoutes[v.TripID.Val]]
+		// Record the route's visited stop geometries from the trip's own stop_times
+		// (see RouteStopBuilder); resolve stop ids through the EntityMap.
+		r, ok := pp.routeStopGeoms[v.RouteID.Val]
 		if !ok {
-			// log.For(ctx).Debug().Msgf("no route:", v.TripID, pp.tripRoutes[v.TripID])
 			return nil
 		}
-		s, ok := pp.stops[v.StopID.Val]
-		if !ok {
-			// log.For(ctx).Debug().Msgf("no stop:", v.StopID)
-			return nil
+		for _, st := range v.StopTimes {
+			if !st.StopID.Valid {
+				continue
+			}
+			stopId, ok := emap.Get("stops.txt", st.StopID.Val)
+			if !ok {
+				continue
+			}
+			s, ok := pp.stops[stopId]
+			if !ok {
+				continue
+			}
+			r.stopGeoms[stopId] = s
 		}
-		r.stopGeoms[v.StopID.Val] = s
 	}
 	return nil
 }
 
 func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 	// build feed version convex hulls
-	fvStops := map[int][]*stopGeom{}
-	for _, sg := range pp.stops {
-		fvStops[sg.fvid] = append(fvStops[sg.fvid], sg)
+	coords := []float64{}
+	for _, v := range pp.stops {
+		coords = append(coords, v.lon, v.lat)
 	}
-	for fvid, v := range fvStops {
-		_ = fvid
-		coords := []float64{}
-		for _, coord := range v {
-			coords = append(coords, coord.lon, coord.lat)
-		}
-		ch := xy.ConvexHullFlat(geom.XY, coords)
-		v, ok := ch.(*geom.Polygon)
-		if !ok {
-			// log.For(ctx).Debug().Msgf("feed version convex hull is not polygon:", fvid)
-			continue
-		}
+	for _, v := range pp.locationGeometries {
+		coords = append(coords, v.FlatCoords()...)
+	}
+	ch := xy.ConvexHullFlat(geom.XY, coords)
+	if v, ok := ch.(*geom.Polygon); ok {
 		ent := FeedVersionGeometry{
 			Geometry: tt.NewPolygon(v),
 		}
@@ -113,6 +115,7 @@ func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 			return err
 		}
 	}
+
 	// now build agency convex hulls
 	agencyStops := map[string]map[string]*stopGeom{}
 	for _, rsg := range pp.routeStopGeoms {

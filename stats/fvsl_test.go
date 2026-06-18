@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
@@ -39,13 +39,13 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 	}{
 		{
 			"example",
-			testutil.ExampleZip.URL,
+			testreader.ExampleZip.URL,
 			msi{"CITY": 4, "AB": 4, "STBA": 4, "": 4},
 			[]string{},
 		},
 		{
 			"bart",
-			testutil.ExampleFeedBART.URL,
+			testreader.ExampleFeedBART.URL,
 			msi{"01": 12, "11": 12, "03": 12},
 			[]string{
 				// feed

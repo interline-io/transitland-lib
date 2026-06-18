@@ -11,7 +11,7 @@ import (
 func Benchmark_stopPatternKey(b *testing.B) {
 	stoptimes := []gtfs.StopTime{}
 	for i := 0; i < 50; i++ {
-		stoptimes = append(stoptimes, gtfs.StopTime{StopID: tt.NewString(fmt.Sprintf("%d", i*100))})
+		stoptimes = append(stoptimes, gtfs.StopTime{StopID: tt.NewKey(fmt.Sprintf("%d", i*100))})
 	}
 	m := map[string]int{}
 	b.ResetTimer()

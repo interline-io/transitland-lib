@@ -73,10 +73,11 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	// Open reader
 	fragment := ""
 	readerPath := fn
-	if a := strings.SplitN(opts.FeedURL, "#", 2); len(a) > 1 {
-		readerPath = readerPath + "#" + a[1]
-		fragment = a[1]
+	if _, frag, ok := strings.Cut(opts.FeedURL, "#"); ok {
+		readerPath = readerPath + "#" + frag
+		fragment = frag
 	}
+
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(readerPath))
 	if err != nil {
 		fetchValidationResult.Error = err
@@ -188,8 +189,8 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		return fetchValidationResult, err
 	}
 
-	// Save stats records
-	if err := stats.WriteFeedVersionStats(ctx, atx, feedVersionStats, fv.ID); err != nil {
+	// Save stats records (includes stop geohash cells for feed/feed_version spatial queries)
+	if err := stats.WriteFeedVersionStats(ctx, atx, feedVersionStats, fv.ID, stats.WriteOptions{}); err != nil {
 		// Fatal err
 		return fetchValidationResult, err
 	}

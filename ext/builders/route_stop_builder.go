@@ -26,14 +26,12 @@ func (rs *RouteStop) Filename() string {
 
 type RouteStopBuilder struct {
 	routeAgencies map[string]string
-	tripRoutes    map[string]string
 	routeStops    map[string]map[string]bool
 }
 
 func NewRouteStopBuilder() *RouteStopBuilder {
 	return &RouteStopBuilder{
 		routeAgencies: map[string]string{},
-		tripRoutes:    map[string]string{},
 		routeStops:    map[string]map[string]bool{},
 	}
 }
@@ -43,15 +41,27 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 	case *gtfs.Route:
 		pp.routeAgencies[eid] = v.AgencyID.Val
 	case *gtfs.Trip:
-		pp.tripRoutes[eid] = v.RouteID.Val
-	case *gtfs.StopTime:
-		rid := pp.tripRoutes[v.TripID.Val]
-		rs, ok := pp.routeStops[rid]
-		if !ok {
-			rs = map[string]bool{}
-			pp.routeStops[rid] = rs
+		// The trip carries its stop_times, so record the route's stops here from
+		// v.RouteID rather than keeping a trip->route map until each StopTime arrives.
+		// The attached stop_times are raw, so resolve stop ids through the EntityMap.
+		rid := v.RouteID.Val
+		var rs map[string]bool // bound on the first kept stop; nil until then avoids an empty route entry
+		for _, st := range v.StopTimes {
+			if !st.StopID.Valid {
+				continue
+			}
+			stopId, ok := emap.Get("stops.txt", st.StopID.Val)
+			if !ok {
+				continue
+			}
+			if rs == nil {
+				if rs = pp.routeStops[rid]; rs == nil {
+					rs = map[string]bool{}
+					pp.routeStops[rid] = rs
+				}
+			}
+			rs[stopId] = true
 		}
-		rs[v.StopID.Val] = true
 	}
 	return nil
 }

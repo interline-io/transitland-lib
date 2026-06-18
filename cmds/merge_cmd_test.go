@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/ext"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,8 +13,8 @@ import (
 func TestMerge(t *testing.T) {
 	ctx := context.TODO()
 	t.Run("merge", func(t *testing.T) {
-		f1 := testutil.ExampleFeedBART
-		f2 := testutil.ExampleFeedCaltrain
+		f1 := testreader.ExampleFeedBART
+		f2 := testreader.ExampleFeedCaltrain
 		cmd := MergeCommand{}
 		tdir := t.TempDir()
 		if err := cmd.Parse([]string{tdir, f1.URL, f2.URL}); err != nil {
@@ -28,7 +28,7 @@ func TestMerge(t *testing.T) {
 			t.Fatal(err)
 		}
 		entCount := map[string]int{}
-		testutil.AllEntities(outReader, func(ent tt.Entity) {
+		testreader.AllEntities(outReader, func(ent tt.Entity) {
 			entCount[ent.Filename()] += 1
 		})
 		expectCount := map[string]int{}

@@ -33,6 +33,9 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) ([]GbfsFeed, Res
 	if opts.AllowS3Fetch {
 		reqOpts = append(reqOpts, request.WithAllowS3)
 	}
+	if opts.AllowHTTPFetchUnfiltered {
+		reqOpts = append(reqOpts, request.WithAllowHTTPUnfiltered)
+	}
 
 	// Fetch system file
 	systemFile := SystemFile{}
@@ -50,7 +53,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) ([]GbfsFeed, Res
 		if sflang == nil {
 			continue
 		}
-		if feed, err := fetchAll(ctx, *sflang); err == nil {
+		if feed, err := fetchAll(ctx, *sflang, reqOpts...); err == nil {
 			feeds = append(feeds, feed)
 		}
 	}

@@ -59,6 +59,9 @@ func (r *Seconds) Scan(src interface{}) error {
 	case nil:
 		return nil
 	case string:
+		if len(v) == 0 {
+			return nil
+		}
 		r.Val, p = StringToSeconds(v)
 		r.Valid = (p == nil)
 	case int:

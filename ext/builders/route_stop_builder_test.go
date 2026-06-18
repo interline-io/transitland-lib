@@ -6,7 +6,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/copier"
-	"github.com/interline-io/transitland-lib/internal/testutil"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +31,7 @@ func newMockCopier(url string, exts ...any) (*copier.Result, *direct.Writer, err
 
 func TestRouteStopBuilder(t *testing.T) {
 	e := NewRouteStopBuilder()
-	_, writer, err := newMockCopier(testutil.ExampleFeedBART.URL, e)
+	_, writer, err := newMockCopier(testreader.ExampleFeedBART.URL, e)
 	if err != nil {
 		t.Fatal(err)
 	}

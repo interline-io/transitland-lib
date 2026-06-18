@@ -47,8 +47,8 @@ func (r AgencyRequest) RequestInfo() RequestInfo {
 				Extensions: map[string]any{
 					"x-alternates": []RequestAltPath{
 						{"GET", "/agencies.{format}", "Request agencies in specified format"},
-						{"GET", "/agencies/{agency_key}", "Request an agency"},
-						{"GET", "/agencies/{agency_key}.format", "Request an agency in a specified format"},
+						{"GET", "/agencies/{agency_key}", "Request an agency by ID or Onestop ID"},
+						{"GET", "/agencies/{agency_key}.{format}", "Request an agency by ID or Onestop ID in specified format"},
 					},
 				},
 				Parameters: oa.Parameters{

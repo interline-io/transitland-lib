@@ -41,7 +41,7 @@ func (r FeedVersionRequest) RequestInfo() RequestInfo {
 					"x-alternates": []RequestAltPath{
 						{"GET", "/feed_versions.{format}", "Request feed versions in specified format"},
 						{"GET", "/feed_versions/{feed_version_key}", "Request a feed version by ID or SHA1"},
-						{"GET", "/feed_versions/{feed_version_key}.format", "Request a feed version by ID or SHA1 in specifed format"},
+						{"GET", "/feed_versions/{feed_version_key}.{format}", "Request a feed version by ID or SHA1 in specified format"},
 						{"GET", "/feeds/{feed_key}/feed_versions", "Request feed versions by feed ID or Onestop ID"},
 					},
 				},

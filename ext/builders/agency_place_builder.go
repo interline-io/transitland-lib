@@ -37,7 +37,6 @@ func (rs *AgencyPlace) Filename() string {
 type AgencyPlaceBuilder struct {
 	stops       map[string]string // store just geohash
 	routeAgency map[string]string
-	tripAgency  map[string]string
 	agencyStops map[string]map[string]int
 }
 
@@ -45,7 +44,6 @@ func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
 	return &AgencyPlaceBuilder{
 		stops:       map[string]string{},
 		routeAgency: map[string]string{},
-		tripAgency:  map[string]string{},
 		agencyStops: map[string]map[string]int{},
 	}
 }
@@ -60,12 +58,24 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Ent
 	case *gtfs.Route:
 		pp.routeAgency[eid] = v.AgencyID.Val
 	case *gtfs.Trip:
-		pp.tripAgency[eid] = pp.routeAgency[v.RouteID.Val]
-	case *gtfs.StopTime:
-		aid := pp.tripAgency[v.TripID.Val]
-		if sg, ok := pp.stops[v.StopID.Val]; ok {
-			if v, ok := pp.agencyStops[aid]; ok {
-				v[sg] += 1
+		// Tally the agency's stop geohashes from the trip's own stop_times rather than
+		// keeping a trip->agency map for every trip. With journey-pattern dedup this also
+		// counts deduplicated trips, weighting by service frequency; stop ids resolve
+		// through the EntityMap.
+		agencyStops, ok := pp.agencyStops[pp.routeAgency[v.RouteID.Val]]
+		if !ok {
+			return nil
+		}
+		for _, st := range v.StopTimes {
+			if !st.StopID.Valid {
+				continue
+			}
+			stopId, ok := emap.Get("stops.txt", st.StopID.Val)
+			if !ok {
+				continue
+			}
+			if sg, ok := pp.stops[stopId]; ok {
+				agencyStops[sg] += 1
 			}
 		}
 	}

@@ -198,7 +198,9 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 		pp.freqs[v.TripID.Val] += v.RepeatCount()
 	case *gtfs.Trip:
 		stoptimes := v.StopTimes
-		if len(stoptimes) > 1 {
+		// Only track fixed-route trips with arrival/departure times
+		// Flex trips use time windows and don't have meaningful duration semantics
+		if len(stoptimes) > 1 && !gtfs.CheckFlexStopTimes(stoptimes).IsFlexTrip() {
 			d := stoptimes[len(stoptimes)-1].ArrivalTime.Int() - stoptimes[0].DepartureTime.Int()
 			pp.tripdurations[v.TripID.Val] = fvslTripInfo{
 				ServiceID: v.ServiceID.Val,
