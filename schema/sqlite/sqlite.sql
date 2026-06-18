@@ -668,6 +668,9 @@ CREATE TABLE gtfs_fare_leg_rules (
   "from_area_id" varchar(255),
   "to_area_id" varchar(255),
   "fare_product_id" varchar(255),
+  "from_timeframe_group_id" varchar(255),
+  "to_timeframe_group_id" varchar(255),
+  "rule_priority" integer,
   "transfer_only" integer,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
@@ -683,6 +686,7 @@ CREATE TABLE gtfs_fare_transfer_rules (
   duration_limit_type int,
   fare_transfer_type int,
   fare_product_id varchar(255),
+  filter_fare_product_id varchar(255),
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
 CREATE TABLE gtfs_fare_products (
