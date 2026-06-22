@@ -79,6 +79,10 @@ func (mw *Writer) AddEntity(ent tt.Entity) (string, error) {
 		mw.Reader.TransferList = append(mw.Reader.TransferList, *v)
 	case *gtfs.Trip:
 		mw.Reader.TripList = append(mw.Reader.TripList, *v)
+	case *gtfs.Pathway:
+		mw.Reader.PathwayList = append(mw.Reader.PathwayList, *v)
+	case *gtfs.Level:
+		mw.Reader.LevelList = append(mw.Reader.LevelList, *v)
 	case *gtfs.Translation:
 		mw.Reader.TranslationList = append(mw.Reader.TranslationList, *v)
 	case *gtfs.Attribution:
