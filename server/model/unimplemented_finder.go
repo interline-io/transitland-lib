@@ -19,6 +19,20 @@ type UnimplementedFinder struct{}
 
 var _ Finder = UnimplementedFinder{}
 
+// notImplBatch is the stub return for a batched ("...ByIDs") loader: a result
+// and error slice sized to the keys, with ErrNotImplemented at every index. The
+// dataloader adapter requires len(results)==len(keys) (see server/gql/loaders.go
+// unwrapResult), so a per-key error surfaces an unimplemented loader clearly
+// rather than as an opaque length-mismatch or a misleading "not found".
+func notImplBatch[T any, K any](keys []K) ([]T, []error) {
+	data := make([]T, len(keys))
+	errs := make([]error, len(keys))
+	for i := range errs {
+		errs[i] = ErrNotImplemented
+	}
+	return data, errs
+}
+
 // PermFinder
 
 func (UnimplementedFinder) PermFilter(context.Context) *PermFilter { return nil }
@@ -68,7 +82,9 @@ func (UnimplementedFinder) DBX() tldb.Ext { return nil }
 func (UnimplementedFinder) AgenciesByFeedVersionIDs(context.Context, *int, *AgencyFilter, []int) ([][]*Agency, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) AgenciesByIDs(context.Context, []int) ([]*Agency, []error) { return nil, nil }
+func (UnimplementedFinder) AgenciesByIDs(_ context.Context, ids []int) ([]*Agency, []error) {
+	return notImplBatch[*Agency](ids)
+}
 func (UnimplementedFinder) AgenciesByOnestopIDs(context.Context, *int, *AgencyFilter, []string) ([][]*Agency, error) {
 	return nil, ErrNotImplemented
 }
@@ -78,17 +94,17 @@ func (UnimplementedFinder) AgencyPlacesByAgencyIDs(context.Context, *int, *Agenc
 func (UnimplementedFinder) BookingRulesByFeedVersionIDs(context.Context, *int, *BookingRuleFilter, []int) ([][]*BookingRule, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error) {
-	return nil, nil
+func (UnimplementedFinder) BookingRulesByIDs(_ context.Context, ids []int) ([]*BookingRule, []error) {
+	return notImplBatch[*BookingRule](ids)
 }
 func (UnimplementedFinder) CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) CalendarsByIDs(context.Context, []int) ([]*Calendar, []error) {
-	return nil, nil
+func (UnimplementedFinder) CalendarsByIDs(_ context.Context, ids []int) ([]*Calendar, []error) {
+	return notImplBatch[*Calendar](ids)
 }
-func (UnimplementedFinder) CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error) {
-	return nil, nil
+func (UnimplementedFinder) CensusDatasetLayersByDatasetIDs(_ context.Context, ids []int) ([][]*CensusLayer, []error) {
+	return notImplBatch[[]*CensusLayer](ids)
 }
 func (UnimplementedFinder) CensusFieldsByTableIDs(context.Context, *int, []int) ([][]*CensusField, error) {
 	return nil, ErrNotImplemented
@@ -105,14 +121,14 @@ func (UnimplementedFinder) CensusGeographiesByLayerIDs(context.Context, *int, *C
 func (UnimplementedFinder) CensusGeographiesBySourceIDs(context.Context, *int, *CensusSourceGeographyFilter, []int) ([][]*CensusGeography, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) CensusLayersByIDs(context.Context, []int) ([]*CensusLayer, []error) {
-	return nil, nil
+func (UnimplementedFinder) CensusLayersByIDs(_ context.Context, ids []int) ([]*CensusLayer, []error) {
+	return notImplBatch[*CensusLayer](ids)
 }
-func (UnimplementedFinder) CensusSourcesByIDs(context.Context, []int) ([]*CensusSource, []error) {
-	return nil, nil
+func (UnimplementedFinder) CensusSourcesByIDs(_ context.Context, ids []int) ([]*CensusSource, []error) {
+	return notImplBatch[*CensusSource](ids)
 }
-func (UnimplementedFinder) CensusSourceLayersBySourceIDs(context.Context, []int) ([][]*CensusLayer, []error) {
-	return nil, nil
+func (UnimplementedFinder) CensusSourceLayersBySourceIDs(_ context.Context, ids []int) ([][]*CensusLayer, []error) {
+	return notImplBatch[[]*CensusLayer](ids)
 }
 func (UnimplementedFinder) CensusSourcesByDatasetIDs(context.Context, *int, *CensusSourceFilter, []int) ([][]*CensusSource, error) {
 	return nil, ErrNotImplemented
@@ -120,8 +136,8 @@ func (UnimplementedFinder) CensusSourcesByDatasetIDs(context.Context, *int, *Cen
 func (UnimplementedFinder) CensusTablesByDatasetIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) CensusTableByIDs(context.Context, []int) ([]*CensusTable, []error) {
-	return nil, nil
+func (UnimplementedFinder) CensusTableByIDs(_ context.Context, ids []int) ([]*CensusTable, []error) {
+	return notImplBatch[*CensusTable](ids)
 }
 func (UnimplementedFinder) CensusValuesByGeographyIDs(context.Context, *int, string, []string, []string) ([][]*CensusValue, error) {
 	return nil, ErrNotImplemented
@@ -132,33 +148,35 @@ func (UnimplementedFinder) FeedFetchesByFeedIDs(context.Context, *int, *FeedFetc
 func (UnimplementedFinder) FeedInfosByFeedVersionIDs(context.Context, *int, []int) ([][]*FeedInfo, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) FeedsByIDs(context.Context, []int) ([]*Feed, []error) { return nil, nil }
+func (UnimplementedFinder) FeedsByIDs(_ context.Context, ids []int) ([]*Feed, []error) {
+	return notImplBatch[*Feed](ids)
+}
 func (UnimplementedFinder) FeedsByOperatorOnestopIDs(context.Context, *int, *FeedFilter, []string) ([][]*Feed, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) FeedStatesByFeedIDs(context.Context, []int) ([]*FeedState, []error) {
-	return nil, nil
+func (UnimplementedFinder) FeedStatesByFeedIDs(_ context.Context, ids []int) ([]*FeedState, []error) {
+	return notImplBatch[*FeedState](ids)
 }
 func (UnimplementedFinder) FeedVersionFileInfosByFeedVersionIDs(context.Context, *int, []int) ([][]*FeedVersionFileInfo, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) FeedVersionGeometryByIDs(context.Context, []int) ([]*tt.Polygon, []error) {
-	return nil, nil
+func (UnimplementedFinder) FeedVersionGeometryByIDs(_ context.Context, ids []int) ([]*tt.Polygon, []error) {
+	return notImplBatch[*tt.Polygon](ids)
 }
-func (UnimplementedFinder) FeedVersionGtfsImportByFeedVersionIDs(context.Context, []int) ([]*FeedVersionGtfsImport, []error) {
-	return nil, nil
+func (UnimplementedFinder) FeedVersionGtfsImportByFeedVersionIDs(_ context.Context, ids []int) ([]*FeedVersionGtfsImport, []error) {
+	return notImplBatch[*FeedVersionGtfsImport](ids)
 }
 func (UnimplementedFinder) FeedVersionsByFeedIDs(context.Context, *int, *FeedVersionFilter, []int) ([][]*FeedVersion, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) FeedVersionsByIDs(context.Context, []int) ([]*FeedVersion, []error) {
-	return nil, nil
+func (UnimplementedFinder) FeedVersionsByIDs(_ context.Context, ids []int) ([]*FeedVersion, []error) {
+	return notImplBatch[*FeedVersion](ids)
 }
 func (UnimplementedFinder) FeedVersionServiceLevelsByFeedVersionIDs(context.Context, *int, *FeedVersionServiceLevelFilter, []int) ([][]*FeedVersionServiceLevel, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) FeedVersionServiceWindowByFeedVersionIDs(context.Context, []int) ([]*FeedVersionServiceWindow, []error) {
-	return nil, nil
+func (UnimplementedFinder) FeedVersionServiceWindowByFeedVersionIDs(_ context.Context, ids []int) ([]*FeedVersionServiceWindow, []error) {
+	return notImplBatch[*FeedVersionServiceWindow](ids)
 }
 func (UnimplementedFinder) FlexStopTimesByStopIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error) {
 	return nil, ErrNotImplemented
@@ -175,15 +193,17 @@ func (UnimplementedFinder) FlexStopTimesByTripIDs(context.Context, *int, *TripSt
 func (UnimplementedFinder) FrequenciesByTripIDs(context.Context, *int, []int) ([][]*Frequency, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) LevelsByIDs(context.Context, []int) ([]*Level, []error) { return nil, nil }
+func (UnimplementedFinder) LevelsByIDs(_ context.Context, ids []int) ([]*Level, []error) {
+	return notImplBatch[*Level](ids)
+}
 func (UnimplementedFinder) LevelsByParentStationIDs(context.Context, *int, []int) ([][]*Level, error) {
 	return nil, ErrNotImplemented
 }
 func (UnimplementedFinder) LocationGroupsByFeedVersionIDs(context.Context, *int, *LocationGroupFilter, []int) ([][]*LocationGroup, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) LocationGroupsByIDs(context.Context, []int) ([]*LocationGroup, []error) {
-	return nil, nil
+func (UnimplementedFinder) LocationGroupsByIDs(_ context.Context, ids []int) ([]*LocationGroup, []error) {
+	return notImplBatch[*LocationGroup](ids)
 }
 func (UnimplementedFinder) LocationGroupsByStopIDs(context.Context, *int, []int) ([][]*LocationGroup, error) {
 	return nil, ErrNotImplemented
@@ -191,14 +211,14 @@ func (UnimplementedFinder) LocationGroupsByStopIDs(context.Context, *int, []int)
 func (UnimplementedFinder) LocationsByFeedVersionIDs(context.Context, *int, *LocationFilter, []int) ([][]*Location, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) LocationsByIDs(context.Context, []int) ([]*Location, []error) {
-	return nil, nil
+func (UnimplementedFinder) LocationsByIDs(_ context.Context, ids []int) ([]*Location, []error) {
+	return notImplBatch[*Location](ids)
 }
-func (UnimplementedFinder) OperatorsByAgencyIDs(context.Context, []int) ([]*Operator, []error) {
-	return nil, nil
+func (UnimplementedFinder) OperatorsByAgencyIDs(_ context.Context, ids []int) ([]*Operator, []error) {
+	return notImplBatch[*Operator](ids)
 }
-func (UnimplementedFinder) OperatorsByCOIFs(context.Context, []int) ([]*Operator, []error) {
-	return nil, nil
+func (UnimplementedFinder) OperatorsByCOIFs(_ context.Context, ids []int) ([]*Operator, []error) {
+	return notImplBatch[*Operator](ids)
 }
 func (UnimplementedFinder) OperatorsByFeedIDs(context.Context, *int, *OperatorFilter, []int) ([][]*Operator, error) {
 	return nil, ErrNotImplemented
@@ -206,14 +226,14 @@ func (UnimplementedFinder) OperatorsByFeedIDs(context.Context, *int, *OperatorFi
 func (UnimplementedFinder) PathwaysByFromStopIDs(context.Context, *int, *PathwayFilter, []int) ([][]*Pathway, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) PathwaysByIDs(context.Context, []int) ([]*Pathway, []error) {
-	return nil, nil
+func (UnimplementedFinder) PathwaysByIDs(_ context.Context, ids []int) ([]*Pathway, []error) {
+	return notImplBatch[*Pathway](ids)
 }
 func (UnimplementedFinder) PathwaysByToStopIDs(context.Context, *int, *PathwayFilter, []int) ([][]*Pathway, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) RouteAttributesByRouteIDs(context.Context, []int) ([]*RouteAttribute, []error) {
-	return nil, nil
+func (UnimplementedFinder) RouteAttributesByRouteIDs(_ context.Context, ids []int) ([]*RouteAttribute, []error) {
+	return notImplBatch[*RouteAttribute](ids)
 }
 func (UnimplementedFinder) RouteGeometriesByRouteIDs(context.Context, *int, []int) ([][]*RouteGeometry, error) {
 	return nil, ErrNotImplemented
@@ -227,7 +247,9 @@ func (UnimplementedFinder) RoutesByAgencyIDs(context.Context, *int, *RouteFilter
 func (UnimplementedFinder) RoutesByFeedVersionIDs(context.Context, *int, *RouteFilter, []int) ([][]*Route, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) RoutesByIDs(context.Context, []int) ([]*Route, []error) { return nil, nil }
+func (UnimplementedFinder) RoutesByIDs(_ context.Context, ids []int) ([]*Route, []error) {
+	return notImplBatch[*Route](ids)
+}
 func (UnimplementedFinder) RouteStopPatternsByRouteIDs(context.Context, *int, []int) ([][]*RouteStopPattern, error) {
 	return nil, ErrNotImplemented
 }
@@ -246,26 +268,30 @@ func (UnimplementedFinder) SegmentPatternsBySegmentIDs(context.Context, *int, *S
 func (UnimplementedFinder) SegmentsByFeedVersionIDs(context.Context, *int, *SegmentFilter, []int) ([][]*Segment, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) SegmentsByIDs(context.Context, []int) ([]*Segment, []error) {
-	return nil, nil
+func (UnimplementedFinder) SegmentsByIDs(_ context.Context, ids []int) ([]*Segment, []error) {
+	return notImplBatch[*Segment](ids)
 }
 func (UnimplementedFinder) SegmentsByRouteIDs(context.Context, *int, *SegmentFilter, []int) ([][]*Segment, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) ShapesByIDs(context.Context, []int) ([]*Shape, []error) { return nil, nil }
-func (UnimplementedFinder) StopExternalReferencesByStopIDs(context.Context, []int) ([]*StopExternalReference, []error) {
-	return nil, nil
+func (UnimplementedFinder) ShapesByIDs(_ context.Context, ids []int) ([]*Shape, []error) {
+	return notImplBatch[*Shape](ids)
+}
+func (UnimplementedFinder) StopExternalReferencesByStopIDs(_ context.Context, ids []int) ([]*StopExternalReference, []error) {
+	return notImplBatch[*StopExternalReference](ids)
 }
 func (UnimplementedFinder) StopObservationsByStopIDs(context.Context, *int, *StopObservationFilter, []int) ([][]*StopObservation, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) StopPlacesByStopID(context.Context, []StopPlaceParam) ([]*StopPlace, []error) {
-	return nil, nil
+func (UnimplementedFinder) StopPlacesByStopID(_ context.Context, keys []StopPlaceParam) ([]*StopPlace, []error) {
+	return notImplBatch[*StopPlace](keys)
 }
 func (UnimplementedFinder) StopsByFeedVersionIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) StopsByIDs(context.Context, []int) ([]*Stop, []error) { return nil, nil }
+func (UnimplementedFinder) StopsByIDs(_ context.Context, ids []int) ([]*Stop, []error) {
+	return notImplBatch[*Stop](ids)
+}
 func (UnimplementedFinder) StopsByLevelIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {
 	return nil, ErrNotImplemented
 }
@@ -284,13 +310,15 @@ func (UnimplementedFinder) StopTimesByStopIDs(context.Context, *int, *StopTimeFi
 func (UnimplementedFinder) StopTimesByTripIDs(context.Context, *int, *TripStopTimeFilter, []FVPair) ([][]*StopTime, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) TargetStopsByStopIDs(context.Context, []int) ([]*Stop, []error) {
-	return nil, nil
+func (UnimplementedFinder) TargetStopsByStopIDs(_ context.Context, ids []int) ([]*Stop, []error) {
+	return notImplBatch[*Stop](ids)
 }
 func (UnimplementedFinder) TripsByFeedVersionIDs(context.Context, *int, *TripFilter, []int) ([][]*Trip, error) {
 	return nil, ErrNotImplemented
 }
-func (UnimplementedFinder) TripsByIDs(context.Context, []int) ([]*Trip, []error) { return nil, nil }
+func (UnimplementedFinder) TripsByIDs(_ context.Context, ids []int) ([]*Trip, []error) {
+	return notImplBatch[*Trip](ids)
+}
 func (UnimplementedFinder) TripsByRouteIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error) {
 	return nil, ErrNotImplemented
 }
