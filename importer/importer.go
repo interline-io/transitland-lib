@@ -38,12 +38,12 @@ type Result struct {
 
 // ActivateFeedVersion sets the feed version as active and refreshes materialized tables
 func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error {
-	return feedmanager.NewPostgresFeedManager(atx).ActivateFeedVersion(ctx, fvid)
+	return feedmanager.NewDBFeedManager(atx).ActivateFeedVersion(ctx, fvid)
 }
 
 // ImportFeedVersion create FVI and run Copier inside a Tx. The FeedManager
 // supplies the metadata bookkeeping and entity-write sink; pass
-// feedmanager.NewPostgresFeedManager(adapter) for the database backend.
+// feedmanager.NewDBFeedManager(adapter) for the database backend.
 func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Options) (Result, error) {
 	// Get FV
 	importSource := opts.ImportSource

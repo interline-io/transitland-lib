@@ -1,17 +1,12 @@
-// Package feedmanager defines a narrow, semantic interface for the feed /
-// feed-version / import metadata bookkeeping that the fetch and import flows
-// perform — the operations that the Copier's entity writes (adapters.Writer) do
-// NOT cover (feed_version dedup/creation, the feed_version_gtfs_import lifecycle,
-// activation).
+// Package feedmanager covers the bookkeeping the import and fetch flows need
+// beyond the Copier's entity writes (adapters.Writer): feed_version
+// dedup/creation, the feed_version_gtfs_import lifecycle, and activation.
 //
-// It exists so that bookkeeping can target more than one backend. PostgresFeedManager
-// wraps a tldb.Adapter and is behavior-identical to the direct adapter calls it
-// replaces; an in-memory implementation (in tlv2/memfinder) can satisfy the same
-// contract without a SQL database, letting the real import flow produce real
-// derived metadata under js/wasm.
-//
-// The interface is domain-shaped, not SQL-shaped: no Sqrl/Get/Select leak
-// through, and GTFS entity writes stay on adapters.Writer.
+// It's an interface so this bookkeeping can run against either a SQL database
+// (DBFeedManager) or an in-memory backend — the latter lets the real import flow
+// run under js/wasm with no database at all. Deliberately domain-shaped, not
+// SQL-shaped: no Sqrl/Get/Select leaks through, and entity writes stay on
+// adapters.Writer.
 package feedmanager
 
 import (
@@ -22,44 +17,34 @@ import (
 )
 
 // FeedManager is the metadata-bookkeeping surface for the import (and, later,
-// fetch) flows. Methods that mutate are expected to run inside WithTx when
-// atomicity with the Copier's entity writes is required.
+// fetch) flows. Mutating methods run inside WithTx when they must commit
+// atomically with the Copier's entity writes.
 type FeedManager interface {
-	// GetFeedVersion loads a feed_version by id.
 	GetFeedVersion(ctx context.Context, fvid int) (*dmfr.FeedVersion, error)
 
-	// GetFeedVersionImport returns the import record for a feed version, or
-	// (nil, nil) if none exists — absence is not an error.
+	// Returns (nil, nil) when no import exists yet — absence is not an error.
 	GetFeedVersionImport(ctx context.Context, fvid int) (*dmfr.FeedVersionImport, error)
 
-	// CreateFeedVersionImport inserts an import record, sets its new id on fvi, and
-	// returns the id.
+	// Inserts the import record and sets its new id on fvi.
 	CreateFeedVersionImport(ctx context.Context, fvi *dmfr.FeedVersionImport) (int, error)
 
-	// UpdateFeedVersionImport writes an existing import record (result counts /
-	// success / exception log).
+	// Writes back an existing import record's result counts / success / log.
 	UpdateFeedVersionImport(ctx context.Context, fvi *dmfr.FeedVersionImport) error
 
-	// ActivateFeedVersion marks a feed version active and refreshes any derived
-	// materialized state.
+	// Marks the version active and refreshes any derived materialized state.
 	ActivateFeedVersion(ctx context.Context, fvid int) error
 
-	// EntityWriter returns the adapters.Writer the Copier should write a feed
-	// version's GTFS entities to. On a SQL backend (obtained from the tx-bound
-	// manager inside WithTx) this is a transaction-bound writer, so entity writes
-	// commit atomically with the import's metadata; the in-memory backend returns
-	// its store.
+	// EntityWriter is the Copier's entity sink. Taken from the tx-bound manager
+	// inside WithTx on a SQL backend, so writes commit atomically with the import
+	// metadata; in memory it's the store.
 	EntityWriter(fvid int) adapters.Writer
 
-	// OpenReader returns an unopened adapters.Reader for a feed version's GTFS
-	// data — the source the Copier reads. The SQL backend builds it from storage
-	// (storage + fv.File/Fragment); the in-memory backend returns the reader the
-	// feed was loaded from. This is the read-side symmetry of EntityWriter, so the
-	// import flow never has to know where a feed's bytes live.
+	// OpenReader is the Copier's source, returned unopened. It hides where a
+	// feed's bytes live — storage+File/Fragment on SQL, the loaded reader in
+	// memory — so the import flow doesn't have to know.
 	OpenReader(ctx context.Context, fv *dmfr.FeedVersion, storage string) (adapters.Reader, error)
 
-	// WithTx runs fn against a FeedManager bound to a single transaction. On a
-	// SQL backend this is a real transaction; a nested WithTx joins the existing
-	// one rather than opening another (the underlying adapter is not re-entrant).
+	// WithTx runs fn in one transaction; a nested WithTx joins the open one (the
+	// adapter isn't re-entrant), so the whole import commits or rolls back together.
 	WithTx(ctx context.Context, fn func(ctx context.Context, tx FeedManager) error) error
 }

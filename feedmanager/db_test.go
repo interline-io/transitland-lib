@@ -9,14 +9,14 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// TestPostgresFeedManager proves the metadata transcriptions behave like the
+// TestDBFeedManager proves the metadata transcriptions behave like the
 // direct adapter calls they replace, against an in-memory sqlite tldb.Adapter.
 // The adapter handed to the callback is already inside a transaction, so the
 // manager is constructed with inTx=true.
-func TestPostgresFeedManager(t *testing.T) {
+func TestDBFeedManager(t *testing.T) {
 	if err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		ctx := context.Background()
-		fm := &PostgresFeedManager{adapter: atx, inTx: true}
+		fm := &DBFeedManager{adapter: atx, inTx: true}
 
 		// Seed a feed + feed version.
 		feedID, err := atx.Insert(ctx, &dmfr.Feed{FeedID: "test", Spec: "gtfs"})

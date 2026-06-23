@@ -49,7 +49,7 @@ func setupImport(ctx context.Context, t *testing.T, atx tldb.Adapter) int {
 		t.Fatal(err)
 	}
 	// Import
-	if _, err := ImportFeedVersion(ctx, feedmanager.NewPostgresFeedManager(atx), Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
+	if _, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
 		t.Fatal(err)
 	}
 	return fv.ID

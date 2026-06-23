@@ -9,9 +9,9 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 )
 
-// TestPostgresFeedManager_WithTx exercises the real-transaction branch (inTx=false):
+// TestDBFeedManager_WithTx exercises the real-transaction branch (inTx=false):
 // a failing callback rolls back its writes, a succeeding one commits them.
-func TestPostgresFeedManager_WithTx(t *testing.T) {
+func TestDBFeedManager_WithTx(t *testing.T) {
 	adapter := testdb.TempSqliteAdapter()
 	ctx := context.Background()
 
@@ -26,7 +26,7 @@ func TestPostgresFeedManager_WithTx(t *testing.T) {
 		t.Fatalf("seed feed_version: %v", err)
 	}
 
-	fm := NewPostgresFeedManager(adapter) // inTx=false → WithTx opens a real Tx
+	fm := NewDBFeedManager(adapter) // inTx=false → WithTx opens a real Tx
 
 	newImport := func(ctx context.Context, tx FeedManager) error {
 		fvi := &dmfr.FeedVersionImport{InProgress: true, ImportSource: dmfr.ImportSourceManual}

@@ -323,7 +323,7 @@ func dmfrImportWorker(ctx context.Context, adapter tldb.Adapter, dryrun bool, jo
 		jobLog.Info().Msg("begin")
 		jobCtx := log.WithLogger(ctx, jobLog)
 		t := time.Now()
-		result, err := importer.ImportFeedVersion(jobCtx, feedmanager.NewPostgresFeedManager(adapter), opts)
+		result, err := importer.ImportFeedVersion(jobCtx, feedmanager.NewDBFeedManager(adapter), opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
 			jobLog.Error().Err(err).Float64("duration", t2).Msg("critical failure, rolled back")
