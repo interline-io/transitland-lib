@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io"
 	"net/url"
-	"os"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -133,18 +133,24 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 	result := model.ValidationReport{}
 	var reader adapters.Reader
 	if src != nil {
-		// Prepare reader
-		var err error
-		tmpfile, err := os.CreateTemp("", "validator-upload")
+		// Read the upload into memory and read it as a zip directly — no temp file,
+		// so this works where there is no usable filesystem (e.g. js/wasm). This
+		// buffers the whole upload in memory; a future enhancement could spill to a
+		// temp file when a filesystem IS available, to cut memory in server processes.
+		b, err := io.ReadAll(src)
 		if err != nil {
 			// This should result in a failed request
 			return nil, err
 		}
-		io.Copy(tmpfile, src)
-		tmpfile.Close()
-		defer os.Remove(tmpfile.Name())
-		reader, err = tlcsv.NewReader(tmpfile.Name())
+		za, err := tlcsv.NewZipReaderAdapterFromBytes(b)
 		if err != nil {
+			log.For(ctx).Error().Err(err).Msg("validate: could not open uploaded zip")
+			result.FailureReason = strptr("Could not read file")
+			return &result, nil
+		}
+		reader, err = tlcsv.NewReaderFromAdapter(za)
+		if err != nil {
+			log.For(ctx).Error().Err(err).Msg("validate: could not create reader")
 			result.FailureReason = strptr("Could not read file")
 			return &result, nil
 		}
@@ -165,6 +171,7 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 	}
 
 	if err := reader.Open(); err != nil {
+		log.For(ctx).Error().Err(err).Msg("validate: could not open feed reader")
 		result.FailureReason = strptr("Could not read file")
 		return &result, nil
 	}
@@ -190,11 +197,13 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 
 	vt, err := validator.NewValidator(reader, opts)
 	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("validate: could not create validator")
 		result.FailureReason = strptr("Could not validate file")
 		return &result, nil
 	}
 	r, err := vt.Validate(ctx)
 	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("validate: validation failed")
 		result.FailureReason = strptr("Could not validate file")
 		return &result, nil
 	}

@@ -27,8 +27,9 @@ const maxMultipartMemory int64 = 32 << 20 // 32 MiB
 // serverConfig holds NewServer settings populated by ServerOptions before the
 // gqlgen server is constructed.
 type serverConfig struct {
-	maxUploadSize int64
-	extensions    []graphql.HandlerExtension
+	maxUploadSize      int64
+	maxMultipartMemory int64
+	extensions         []graphql.HandlerExtension
 }
 
 // ServerOption configures the gqlgen server instance
@@ -49,9 +50,19 @@ func WithMaxUploadSize(n int64) ServerOption {
 	}
 }
 
+// WithMaxMultipartMemory sets the per-part threshold above which gqlgen spills an
+// upload to a temp file. Environments without a usable filesystem (js/wasm) must
+// raise this to at least the upload size so nothing spills to disk.
+func WithMaxMultipartMemory(n int64) ServerOption {
+	return func(c *serverConfig) {
+		c.maxMultipartMemory = n
+	}
+}
+
 func NewServer(opts ...ServerOption) (http.Handler, error) {
 	cfg := serverConfig{
-		maxUploadSize: DefaultMaxUploadSize,
+		maxUploadSize:      DefaultMaxUploadSize,
+		maxMultipartMemory: maxMultipartMemory,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -75,7 +86,7 @@ func NewServer(opts ...ServerOption) (http.Handler, error) {
 	srv.AddTransport(transport.POST{})
 	srv.AddTransport(transport.MultipartForm{
 		MaxUploadSize: cfg.maxUploadSize,
-		MaxMemory:     maxMultipartMemory,
+		MaxMemory:     cfg.maxMultipartMemory,
 	})
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
 	srv.Use(extension.Introspection{})
