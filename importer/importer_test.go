@@ -115,8 +115,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
-		fviresult, err := importFeedVersionTx(ctx, writer, fv, Options{Storage: "/"})
+		fviresult, err := importFeedVersionTx(ctx, feedmanager.NewPostgresFeedManager(atx), fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}

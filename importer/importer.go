@@ -7,12 +7,10 @@ import (
 	"strings"
 
 	"github.com/interline-io/log"
-	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/feedmanager"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -76,7 +74,7 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	fviresult := dmfr.FeedVersionImport{} // keep result
 	errImport := fm.WithTx(ctx, func(ctx context.Context, tx feedmanager.FeedManager) error {
 		var err error
-		fviresult, err = importFeedVersionTx(ctx, tx.EntityWriter(fv.ID), *fv, opts)
+		fviresult, err = importFeedVersionTx(ctx, tx, *fv, opts)
 		if err != nil {
 			return err
 		}
@@ -119,18 +117,14 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	return Result{FeedVersionImport: fviresult}, nil
 }
 
-// importFeedVersion runs the Copier from the feed version's reader into writer
-// (the entity sink supplied by the FeedManager, transaction-bound on a SQL
+// importFeedVersion runs the Copier from the feed version's reader into the
+// entity sink, both vended by the FeedManager (transaction-bound on a SQL
 // backend), returning the import counts.
-func importFeedVersionTx(ctx context.Context, writer adapters.Writer, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader
-	tladapter, err := tlcsv.NewStoreAdapter(ctx, opts.Storage, fv.File, fv.Fragment.Val)
-	if err != nil {
-		return fvi, err
-	}
-	reader, err := tlcsv.NewReaderFromAdapter(tladapter)
+	reader, err := fm.OpenReader(ctx, &fv, opts.Storage)
 	if err != nil {
 		return fvi, err
 	}
@@ -149,7 +143,7 @@ func importFeedVersionTx(ctx context.Context, writer adapters.Writer, fv dmfr.Fe
 	fvi.InProgress = false
 
 	// Go
-	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, writer, opts.Options)
+	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, fm.EntityWriter(fv.ID), opts.Options)
 	if cpErr != nil {
 		return fvi, cpErr
 	}

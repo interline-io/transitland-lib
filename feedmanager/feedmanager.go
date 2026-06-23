@@ -51,6 +51,13 @@ type FeedManager interface {
 	// its store.
 	EntityWriter(fvid int) adapters.Writer
 
+	// OpenReader returns an unopened adapters.Reader for a feed version's GTFS
+	// data — the source the Copier reads. The SQL backend builds it from storage
+	// (storage + fv.File/Fragment); the in-memory backend returns the reader the
+	// feed was loaded from. This is the read-side symmetry of EntityWriter, so the
+	// import flow never has to know where a feed's bytes live.
+	OpenReader(ctx context.Context, fv *dmfr.FeedVersion, storage string) (adapters.Reader, error)
+
 	// WithTx runs fn against a FeedManager bound to a single transaction. On a
 	// SQL backend this is a real transaction; a nested WithTx joins the existing
 	// one rather than opening another (the underlying adapter is not re-entrant).
