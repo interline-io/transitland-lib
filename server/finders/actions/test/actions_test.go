@@ -268,3 +268,30 @@ func TestValidateUpload(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateUploadFile exercises the file-upload path (src != nil), which reads
+// the archive into memory and validates it via an in-memory zip reader, with no
+// temp file.
+func TestValidateUploadFile(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		ctx := model.WithConfig(context.Background(), cfg)
+		f, err := os.Open(testdata.Path() + "/server/gtfs/caltrain.zip")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		result, err := actions.ValidateUpload(ctx, f, nil, nil)
+		if err != nil {
+			t.Fatal("unexpected error", err)
+		}
+		if result == nil || result.Details == nil {
+			t.Fatal("no validation report details")
+		}
+		if result.FailureReason != nil {
+			t.Errorf("validation failed: %s", *result.FailureReason)
+		}
+		if result.Details.Sha1 == "" {
+			t.Error("expected a sha1 in the report")
+		}
+	})
+}
