@@ -369,11 +369,11 @@ func (UnimplementedFinder) PathwayCreate(context.Context, PathwaySetInput) (int,
 func (UnimplementedFinder) PathwayUpdate(context.Context, PathwaySetInput) (int, error) {
 	return 0, notImplErr()
 }
-func (UnimplementedFinder) PathwayDelete(context.Context, int) error { return ErrNotImplemented }
+func (UnimplementedFinder) PathwayDelete(context.Context, int) error { return notImplErr() }
 func (UnimplementedFinder) LevelCreate(context.Context, LevelSetInput) (int, error) {
 	return 0, notImplErr()
 }
 func (UnimplementedFinder) LevelUpdate(context.Context, LevelSetInput) (int, error) {
 	return 0, notImplErr()
 }
-func (UnimplementedFinder) LevelDelete(context.Context, int) error { return ErrNotImplemented }
+func (UnimplementedFinder) LevelDelete(context.Context, int) error { return notImplErr() }
