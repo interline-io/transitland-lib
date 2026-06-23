@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/importer"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
@@ -42,7 +43,7 @@ func FeedVersionImport(ctx context.Context, fvid int) (*model.FeedVersionImportR
 		},
 	}
 	db := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
-	fr, fe := importer.ImportFeedVersion(ctx, db, opts)
+	fr, fe := importer.ImportFeedVersion(ctx, feedmanager.NewPostgresFeedManager(db), opts)
 	if fe != nil {
 		return nil, fe
 	}
