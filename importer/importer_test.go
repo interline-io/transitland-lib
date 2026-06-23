@@ -114,7 +114,8 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := importFeedVersionTx(ctx, atx, fv, Options{Storage: "/"})
+		writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
+		fviresult, err := importFeedVersionTx(ctx, writer, fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}
