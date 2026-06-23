@@ -27,11 +27,19 @@ func TestZipReaderAdapter(t *testing.T) {
 	}
 	// Parity with the path-based ZipAdapter: the known whole-archive and per-dir
 	// checksums for example.zip.
-	if got, _ := adapter.SHA1(); got != "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8" {
-		t.Errorf("SHA1 = %s, want ce0a38dd...", got)
+	sha1, err := adapter.SHA1()
+	if err != nil {
+		t.Fatalf("SHA1: %v", err)
 	}
-	if got, _ := adapter.DirSHA1(); got != "7a5c69b5466746213eb3cb6d907a7004073eca4d" {
-		t.Errorf("DirSHA1 = %s, want 7a5c69b5...", got)
+	if sha1 != "ce0a38dd6d4cfdac6aebe003181b6b915390a3b8" {
+		t.Errorf("SHA1 = %s, want ce0a38dd...", sha1)
+	}
+	dirSHA1, err := adapter.DirSHA1()
+	if err != nil {
+		t.Fatalf("DirSHA1: %v", err)
+	}
+	if dirSHA1 != "7a5c69b5466746213eb3cb6d907a7004073eca4d" {
+		t.Errorf("DirSHA1 = %s, want 7a5c69b5...", dirSHA1)
 	}
 	reader, err := NewReaderFromAdapter(adapter)
 	if err != nil {

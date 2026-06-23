@@ -49,8 +49,12 @@ func notImplErr() error {
 func finderUnimpl(up int) error {
 	name := "unknown"
 	if pc, _, _, ok := runtime.Caller(up); ok {
-		full := runtime.FuncForPC(pc).Name()
-		name = full[strings.LastIndex(full, ".")+1:]
+		// FuncForPC may return nil; a panic here would turn a graceful
+		// "not implemented" stub into a server crash.
+		if fn := runtime.FuncForPC(pc); fn != nil {
+			full := fn.Name()
+			name = full[strings.LastIndex(full, ".")+1:]
+		}
 	}
 	return fmt.Errorf("%w: %s", ErrNotImplemented, name)
 }
