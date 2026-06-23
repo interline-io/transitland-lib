@@ -14,11 +14,13 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/stats"
+	"github.com/interline-io/transitland-lib/validator"
 )
 
-// FeedManager is the metadata-bookkeeping surface for the import (and, later,
-// fetch) flows. Mutating methods run inside WithTx when they must commit
-// atomically with the Copier's entity writes.
+// FeedManager is the metadata-bookkeeping surface for the import and fetch
+// flows. Mutating methods run inside WithTx when they must commit atomically
+// with the Copier's entity writes.
 type FeedManager interface {
 	GetFeedVersion(ctx context.Context, fvid int) (*dmfr.FeedVersion, error)
 
@@ -33,6 +35,28 @@ type FeedManager interface {
 
 	// Marks the version active and refreshes any derived materialized state.
 	ActivateFeedVersion(ctx context.Context, fvid int) error
+
+	// Fetch flow (in addition to the import methods above):
+
+	// GetFeed loads a current_feeds row by id — feed identity + authorization.
+	GetFeed(ctx context.Context, feedID int) (*dmfr.Feed, error)
+
+	// GetFeedVersionBySHA1 finds a feed version by content hash for fetch dedup;
+	// (nil, nil) when none matches.
+	GetFeedVersionBySHA1(ctx context.Context, sha1, sha1dir string) (*dmfr.FeedVersion, error)
+
+	// CreateFeedVersion inserts a feed_version and sets its new id on fv.
+	CreateFeedVersion(ctx context.Context, fv *dmfr.FeedVersion) (int, error)
+
+	// CreateFeedFetch records a feed_fetch attempt (response metadata, success).
+	CreateFeedFetch(ctx context.Context, ff *dmfr.FeedFetch) error
+
+	// WriteFeedVersionStats persists the computed per-feed-version stats — service
+	// levels/windows, file infos, onestop ids, geohash cells.
+	WriteFeedVersionStats(ctx context.Context, fvid int, fvstats stats.FeedVersionStats) error
+
+	// SaveValidationReport persists a validation report and its child rows.
+	SaveValidationReport(ctx context.Context, fvid int, result *validator.Result, reportStorage string) error
 
 	// EntityWriter is the Copier's entity sink. Taken from the tx-bound manager
 	// inside WithTx on a SQL backend, so writes commit atomically with the import

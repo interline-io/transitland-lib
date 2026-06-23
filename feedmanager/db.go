@@ -9,8 +9,10 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/feedstate"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/validator"
 )
 
 // DBFeedManager implements FeedManager over a tldb.Adapter — Postgres in
@@ -73,6 +75,52 @@ func (m *DBFeedManager) ActivateFeedVersion(ctx context.Context, fvid int) error
 	}
 	log.For(ctx).Info().Int("feed_version_id", fvid).Msg("Successfully activated feed version")
 	return nil
+}
+
+func (m *DBFeedManager) GetFeed(ctx context.Context, feedID int) (*dmfr.Feed, error) {
+	feed := dmfr.Feed{}
+	if err := m.adapter.Get(ctx, &feed, "select * from current_feeds where id = ?", feedID); err != nil {
+		return nil, err
+	}
+	return &feed, nil
+}
+
+func (m *DBFeedManager) GetFeedVersionBySHA1(ctx context.Context, sha1, sha1dir string) (*dmfr.FeedVersion, error) {
+	fv := dmfr.FeedVersion{}
+	err := m.adapter.Get(ctx, &fv, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", sha1, sha1dir)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &fv, nil
+}
+
+func (m *DBFeedManager) CreateFeedVersion(ctx context.Context, fv *dmfr.FeedVersion) (int, error) {
+	id, err := m.adapter.Insert(ctx, fv)
+	if err != nil {
+		return 0, err
+	}
+	fv.ID = id
+	return id, nil
+}
+
+func (m *DBFeedManager) CreateFeedFetch(ctx context.Context, ff *dmfr.FeedFetch) error {
+	id, err := m.adapter.Insert(ctx, ff)
+	if err != nil {
+		return err
+	}
+	ff.ID = id
+	return nil
+}
+
+func (m *DBFeedManager) WriteFeedVersionStats(ctx context.Context, fvid int, fvstats stats.FeedVersionStats) error {
+	return stats.WriteFeedVersionStats(ctx, m.adapter, fvstats, fvid, stats.WriteOptions{})
+}
+
+func (m *DBFeedManager) SaveValidationReport(ctx context.Context, fvid int, result *validator.Result, reportStorage string) error {
+	return validator.SaveValidationReport(ctx, m.adapter, result, fvid, reportStorage)
 }
 
 func (m *DBFeedManager) EntityWriter(fvid int) adapters.Writer {

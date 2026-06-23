@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/request"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -51,17 +51,17 @@ type FetchValidationResult struct {
 }
 
 type FetchValidator interface {
-	ValidateResponse(context.Context, tldb.Adapter, string, request.FetchResponse) (FetchValidationResult, error)
+	ValidateResponse(context.Context, feedmanager.FeedManager, string, request.FetchResponse) (FetchValidationResult, error)
 }
 
 // Fetch and check for serious errors - regular errors are in fr.FetchError
-func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidator) (Result, error) {
+func Fetch(ctx context.Context, fm feedmanager.FeedManager, opts Options, cb FetchValidator) (Result, error) {
 	result := Result{URL: opts.FeedURL}
 	if cb == nil {
 		return result, errors.New("no validator provided")
 	}
-	feed := dmfr.Feed{}
-	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
+	feed, err := fm.GetFeed(ctx, opts.FeedID)
+	if err != nil {
 		return result, err
 	}
 	if opts.FeedURL == "" {
@@ -120,7 +120,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	uploadFile := ""
 	uploadDest := ""
 	if result.FetchError == nil {
-		vr, err := cb.ValidateResponse(ctx, atx, tmpfile, fetchResponse)
+		vr, err := cb.ValidateResponse(ctx, fm, tmpfile, fetchResponse)
 		if err != nil {
 			return result, err
 		}
@@ -187,7 +187,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 		tlfetch.Success = false
 		tlfetch.FetchError.Set(result.FetchError.Error())
 	}
-	if _, err := atx.Insert(ctx, &tlfetch); err != nil {
+	if err := fm.CreateFeedFetch(ctx, &tlfetch); err != nil {
 		return result, err
 	}
 	return result, nil

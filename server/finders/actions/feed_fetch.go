@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/internal/gbfs"
 	"github.com/interline-io/transitland-lib/rt/pb"
@@ -70,7 +71,7 @@ func StaticFetch(ctx context.Context, feedId string, feedSrc io.Reader, feedUrl 
 	mr := model.FeedVersionFetchResult{}
 	db := postgres.NewPostgresAdapterFromDBX(dbf.DBX())
 	if err := db.Tx(func(atx tldb.Adapter) error {
-		fr, err := fetch.StaticFetch(ctx, atx, fetchOpts)
+		fr, err := fetch.StaticFetch(ctx, feedmanager.NewDBFeedManager(atx), fetchOpts)
 		if err != nil {
 			return err
 		}
@@ -117,7 +118,7 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 	var rtMsg *pb.FeedMessage
 	var fetchErr error
 	if err := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX()).Tx(func(atx tldb.Adapter) error {
-		fr, err := fetch.RTFetch(ctx, atx, fetchOpts)
+		fr, err := fetch.RTFetch(ctx, feedmanager.NewDBFeedManager(atx), fetchOpts)
 		if err != nil {
 			return err
 		}

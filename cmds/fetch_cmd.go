@@ -11,6 +11,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcli"
@@ -308,7 +309,7 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		t := time.Now()
 		fatalError := adapter.Tx(func(atx tldb.Adapter) error {
 			var fatalError error
-			result, fatalError = fetch.StaticFetch(jobCtx, atx, job.StaticFetchOptions)
+			result, fatalError = fetch.StaticFetch(jobCtx, feedmanager.NewDBFeedManager(atx), job.StaticFetchOptions)
 			return fatalError
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0

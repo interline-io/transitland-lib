@@ -2,7 +2,6 @@ package fetch
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -10,10 +9,10 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/interline-io/transitland-lib/validator"
 )
@@ -21,9 +20,9 @@ import (
 // StaticFetch from a URL. Creates FeedVersion and FeedFetch records.
 // Returns an error if a serious failure occurs, such as database or filesystem access.
 // Sets Result.FetchError if a regular failure occurs, such as a 404.
-func StaticFetch(ctx context.Context, atx tldb.Adapter, opts StaticFetchOptions) (StaticFetchResult, error) {
+func StaticFetch(ctx context.Context, fm feedmanager.FeedManager, opts StaticFetchOptions) (StaticFetchResult, error) {
 	sfv := NewStaticFetchValidator(opts)
-	return sfv.Fetch(ctx, atx)
+	return sfv.Fetch(ctx, fm)
 }
 
 type StaticFetchResult struct {
@@ -53,8 +52,8 @@ func NewStaticFetchValidator(opts StaticFetchOptions) *StaticFetchValidator {
 	return &StaticFetchValidator{StaticFetchOptions: opts}
 }
 
-func (sfv *StaticFetchValidator) Fetch(ctx context.Context, atx tldb.Adapter) (StaticFetchResult, error) {
-	fetchResult, err := Fetch(ctx, atx, sfv.StaticFetchOptions.Options, sfv)
+func (sfv *StaticFetchValidator) Fetch(ctx context.Context, fm feedmanager.FeedManager) (StaticFetchResult, error) {
+	fetchResult, err := Fetch(ctx, fm, sfv.StaticFetchOptions.Options, sfv)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
 	}
@@ -66,7 +65,7 @@ func (sfv *StaticFetchValidator) Fetch(ctx context.Context, atx tldb.Adapter) (S
 	return staticFetchResult, err
 }
 
-func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fn string, fetchResponse request.FetchResponse) (FetchValidationResult, error) {
+func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, fm feedmanager.FeedManager, fn string, fetchResponse request.FetchResponse) (FetchValidationResult, error) {
 	opts := sfv.StaticFetchOptions
 	fetchValidationResult := FetchValidationResult{}
 
@@ -108,7 +107,7 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 
 	// If the fv is already present, return.
 	// This is to skip unncessary work, not avoid duplicates. A second check is done later.
-	if checkFv, err := checkFeedVersion(ctx, atx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
+	if checkFv, err := fm.GetFeedVersionBySHA1(ctx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
 		// Fatal error
 		return fetchValidationResult, err
 	} else if checkFv != nil {
@@ -172,7 +171,7 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 
 	// The validation after the initial check may take some time to complete, so check again.
 	// We want to avoid database write failures (unique index on sha1) because those are considered fatal.
-	if checkFv, err := checkFeedVersion(ctx, atx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
+	if checkFv, err := fm.GetFeedVersionBySHA1(ctx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
 		// Fatal error
 		return fetchValidationResult, err
 	} else if checkFv != nil {
@@ -184,20 +183,20 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	}
 
 	// Create fv record
-	if _, err = atx.Insert(ctx, &fv); err != nil {
+	if _, err = fm.CreateFeedVersion(ctx, &fv); err != nil {
 		// Fatal err
 		return fetchValidationResult, err
 	}
 
 	// Save stats records (includes stop geohash cells for feed/feed_version spatial queries)
-	if err := stats.WriteFeedVersionStats(ctx, atx, feedVersionStats, fv.ID, stats.WriteOptions{}); err != nil {
+	if err := fm.WriteFeedVersionStats(ctx, fv.ID, feedVersionStats); err != nil {
 		// Fatal err
 		return fetchValidationResult, err
 	}
 
 	// Save validation report
 	if opts.ValidationReportStorage != "" {
-		if err := validator.SaveValidationReport(ctx, atx, validationResult, fv.ID, opts.ValidationReportStorage); err != nil {
+		if err := fm.SaveValidationReport(ctx, fv.ID, validationResult, opts.ValidationReportStorage); err != nil {
 			// Fatal error
 			return fetchValidationResult, err
 		}
@@ -209,21 +208,6 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 	sfv.FeedVersionValidatorResult = validationResult
 	sfv.FeedVersion = &fv
 	return fetchValidationResult, nil
-}
-
-// Is this SHA1 already present?
-func checkFeedVersion(ctx context.Context, atx tldb.Adapter, sha1 string, sha1dir string) (*dmfr.FeedVersion, error) {
-	checkFeedVersion := dmfr.FeedVersion{}
-	err := atx.Get(ctx, &checkFeedVersion, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", sha1, sha1dir)
-	if err == nil {
-		return &checkFeedVersion, nil
-	} else if err == sql.ErrNoRows {
-		// Not present, create below
-	} else {
-		// Fatal error
-		return nil, err
-	}
-	return nil, nil
 }
 
 func copyFileContents(dst, src string) (err error) {
