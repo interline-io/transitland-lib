@@ -8,7 +8,6 @@ import (
 	"github.com/interline-io/transitland-lib/internal/gbfs"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -43,7 +42,6 @@ type EntityFinder interface {
 	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
 	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)
 	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
-	DBX() tldb.Ext // escape hatch, for now
 }
 
 type EntityLoader interface {

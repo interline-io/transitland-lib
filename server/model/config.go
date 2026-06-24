@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/server/jobs"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 type Config struct {
@@ -15,8 +17,17 @@ type Config struct {
 	GbfsFinder GbfsFinder
 	Checker    Checker
 	Actions    Actions
-	Jobs       jobs.Backend
-	JobRunner  *jobs.Runner
+	// Adapter is the DB handle for the operations that are inherently
+	// database-backed (editor entity CRUD, feed-version DB readers, fleet
+	// maintenance) and the FeedManager for the import/fetch bookkeeping flows.
+	// Both are set only in DB-backed deployments; an in-memory finder leaves
+	// them nil and those operations are simply unavailable. This replaces the
+	// former Finder.DBX() escape hatch, which forced every Finder (including the
+	// in-memory one) to expose a DB handle it might not have.
+	Adapter     tldb.Adapter
+	FeedManager feedmanager.FeedManager
+	Jobs        jobs.Backend
+	JobRunner   *jobs.Runner
 	// JobPolicy gates the synchronous /run endpoint (which doesn't go
 	// through a Queue). Nil means no kind-level RBAC on /run.
 	JobPolicy                jobs.AccessPolicy

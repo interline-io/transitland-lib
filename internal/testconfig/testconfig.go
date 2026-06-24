@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
@@ -23,6 +24,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -178,10 +180,15 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	// Action finder
 	actionFinder := &actions.Actions{}
 
+	// DB-backed seam (see model.Config): the same adapter the finder wraps.
+	dbAdapter := postgres.NewPostgresAdapterFromDBX(db)
+
 	return model.Config{
 		Finder:                   dbf,
 		RTFinder:                 rtf,
 		GbfsFinder:               gbf,
+		Adapter:                  dbAdapter,
+		FeedManager:              feedmanager.NewDBFeedManager(dbAdapter),
 		Checker:                  checker,
 		Jobs:                     jobBackend,
 		JobRunner:                jobRunner,

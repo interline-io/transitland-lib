@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -101,7 +100,6 @@ func (UnimplementedFinder) RouteStopBuffer(context.Context, *int, *float64, int)
 func (UnimplementedFinder) FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) DBX() tldb.Ext { return nil }
 
 // EntityLoader
 

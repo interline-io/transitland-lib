@@ -11,7 +11,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -265,7 +264,7 @@ func fvint(fvi *model.FeedVersionInput) *int {
 }
 
 func toAtx(ctx context.Context) tldb.Adapter {
-	return postgres.NewPostgresAdapterFromDBX(model.ForContext(ctx).Finder.DBX())
+	return model.ForContext(ctx).Adapter
 }
 
 // ensure we have edit rights to fvid
@@ -337,7 +336,7 @@ func deleteEnt(ctx context.Context, ent hasTableName, deleteRefs ...deleteRef) e
 	// Get fvid
 	entId := ent.GetID()
 	fvid := ent.GetFeedVersionID()
-	db := model.ForContext(ctx).Finder.DBX()
+	db := toAtx(ctx).DBX()
 	if err := dbutil.Get(
 		ctx,
 		db,

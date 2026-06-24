@@ -179,7 +179,7 @@ func TestStaticFetchWorker(t *testing.T) {
 				ff := dmfr.FeedFetch{}
 				if err := dbutil.Get(
 					ctx,
-					cfg.Finder.DBX(),
+					cfg.Adapter.DBX(),
 					sq.StatementBuilder.
 						Select("ff.*").
 						From("feed_fetches ff").

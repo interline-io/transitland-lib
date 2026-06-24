@@ -276,7 +276,7 @@ func TestRouteResolver_Location(t *testing.T) {
 	// This should put CT stops (Caltrain San Jose area) much closer than HA stops (Florida)
 	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
 	var testRouteId int
-	if err := cfg.Finder.DBX().
+	if err := cfg.Adapter.DBX().
 		QueryRowx(`select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = $1 and route_id = $2`, "HA", "96").
 		Scan(&testRouteId); err != nil {
 		t.Errorf("could not get route ID for test: %s", err.Error())

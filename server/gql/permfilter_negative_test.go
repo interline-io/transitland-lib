@@ -16,7 +16,7 @@ import (
 func TestPermFilter_Negative(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
-		if _, err := cfg.Finder.DBX().ExecContext(ctx, "update feed_states set public = false"); err != nil {
+		if _, err := cfg.Adapter.DBX().ExecContext(ctx, "update feed_states set public = false"); err != nil {
 			t.Fatal(err)
 		}
 
