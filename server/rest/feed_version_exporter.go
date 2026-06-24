@@ -28,9 +28,11 @@ func NewFeedVersionExporter(cfg *model.Config) *FeedVersionExporter {
 
 // Export performs the feed version export with optional transformations
 func (e *FeedVersionExporter) Export(ctx context.Context, fvids []int, transforms *ExportTransforms, writer adapters.Writer) (*copier.Result, error) {
-	// Create database readers for each feed version
+	// Create database readers for each feed version. Each reader gets its own
+	// adapter wrapping the shared handle: Reader.Close calls Adapter.Close, which
+	// nils the adapter's db, so the readers must not share cfg.Adapter itself.
 	var readers []adapters.Reader
-	dbx := e.cfg.Finder.DBX()
+	dbx := e.cfg.Adapter.DBX()
 
 	for _, fvid := range fvids {
 		reader := &tldb.Reader{

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -53,7 +54,7 @@ func TestRTFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := RTFetch(ctx, atx, RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
+				fr, err := RTFetch(ctx, feedmanager.NewDBFeedManager(atx), RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 				if err != nil {
 					t.Error(err)
 					return err

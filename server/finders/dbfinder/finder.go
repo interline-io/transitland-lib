@@ -60,10 +60,6 @@ func NewFinder(db tldb.Ext) *Finder {
 	return finder
 }
 
-func (f *Finder) DBX() tldb.Ext {
-	return f.db
-}
-
 func (f *Finder) LoadAdmins(ctx context.Context) error {
 	log.For(ctx).Trace().Msg("loading admins")
 	c, err := newAdminCache(context.Background(), f.db)

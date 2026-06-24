@@ -2,7 +2,6 @@ package importer
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,8 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/internal/feedstate"
-	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -40,23 +38,13 @@ type Result struct {
 
 // ActivateFeedVersion sets the feed version as active and refreshes materialized tables
 func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error {
-	// Use the feedstate system to handle activation
-	manager := feedstate.NewManager(atx)
-
-	// Activate this feed version (will automatically replace any existing version for this feed)
-	if err := manager.ActivateFeedVersion(ctx, fvid); err != nil {
-		return fmt.Errorf("failed to activate feed version: %w", err)
-	}
-
-	log.For(ctx).Info().
-		Int("feed_version_id", fvid).
-		Msg("Successfully activated feed version")
-
-	return nil
+	return feedmanager.NewDBFeedManager(atx).ActivateFeedVersion(ctx, fvid)
 }
 
-// ImportFeedVersion create FVI and run Copier inside a Tx.
-func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
+// ImportFeedVersion create FVI and run Copier inside a Tx. The FeedManager
+// supplies the metadata bookkeeping and entity-write sink; pass
+// feedmanager.NewDBFeedManager(adapter) for the database backend.
+func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Options) (Result, error) {
 	// Get FV
 	importSource := opts.ImportSource
 	if importSource == "" {
@@ -64,36 +52,29 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 	}
 	fvi := dmfr.FeedVersionImport{InProgress: true, ImportSource: importSource}
 	fvi.FeedVersionID = opts.FeedVersionID
-	fv := dmfr.FeedVersion{}
-	fv.ID = opts.FeedVersionID
-	if err := adapter.Find(ctx, &fv); err != nil {
+	fv, err := fm.GetFeedVersion(ctx, opts.FeedVersionID)
+	if err != nil {
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Check FVI
-	checkfviid := 0
-	if err := adapter.Get(ctx, &checkfviid, `SELECT id FROM feed_version_gtfs_imports WHERE feed_version_id = ?`, fv.ID); err == sql.ErrNoRows {
-		// ok
-	} else if err == nil {
-		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
-		return Result{FeedVersionImport: fvi}, nil
-	} else {
+	if existing, err := fm.GetFeedVersionImport(ctx, fv.ID); err != nil {
 		// Serious error
 		return Result{FeedVersionImport: fvi}, err
+	} else if existing != nil {
+		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
+		return Result{FeedVersionImport: fvi}, nil
 	}
 	// Create FVI
-	if fviid, err := adapter.Insert(ctx, &fvi); err == nil {
-		// note: handle OK first
-		fvi.ID = fviid
-	} else {
+	if _, err := fm.CreateFeedVersionImport(ctx, &fvi); err != nil {
 		// Serious error
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Import
 	fviresult := dmfr.FeedVersionImport{} // keep result
-	errImport := adapter.Tx(func(atx tldb.Adapter) error {
+	errImport := fm.WithTx(ctx, func(ctx context.Context, tx feedmanager.FeedManager) error {
 		var err error
-		fviresult, err = importFeedVersionTx(ctx, atx, fv, opts)
+		fviresult, err = importFeedVersionTx(ctx, tx, *fv, opts)
 		if err != nil {
 			return err
 		}
@@ -101,7 +82,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		log.For(ctx).Info().Msgf("Finalizing import")
 		if opts.Activate {
 			log.For(ctx).Info().Msgf("Activating feed version")
-			if err := ActivateFeedVersion(ctx, atx, fv.ID); err != nil {
+			if err := tx.ActivateFeedVersion(ctx, fv.ID); err != nil {
 				return fmt.Errorf("error activating feed version: %s", err.Error())
 			}
 		}
@@ -114,7 +95,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fviresult.Success = true
 		fviresult.InProgress = false
 		fviresult.ExceptionLog = ""
-		if err := atx.Update(ctx, &fviresult); err != nil {
+		if err := tx.UpdateFeedVersionImport(ctx, &fviresult); err != nil {
 			// Serious error
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return err
@@ -126,7 +107,7 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if err := adapter.Update(ctx, &fvi); err != nil {
+		if err := fm.UpdateFeedVersionImport(ctx, &fvi); err != nil {
 			// Serious error
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
@@ -136,16 +117,14 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 	return Result{FeedVersionImport: fviresult}, nil
 }
 
-// importFeedVersion .
-func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+// importFeedVersion runs the Copier from the feed version's reader into the
+// entity sink, both vended by the FeedManager (transaction-bound on a SQL
+// backend), returning the import counts.
+func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader
-	tladapter, err := tlcsv.NewStoreAdapter(ctx, opts.Storage, fv.File, fv.Fragment.Val)
-	if err != nil {
-		return fvi, err
-	}
-	reader, err := tlcsv.NewReaderFromAdapter(tladapter)
+	reader, err := fm.OpenReader(ctx, &fv, opts.Storage)
 	if err != nil {
 		return fvi, err
 	}
@@ -153,9 +132,6 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 		return fvi, err
 	}
 	defer reader.Close()
-
-	// Get writer with existing tx
-	writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 
 	// Non-settable options
 	opts.Options.AllowEntityErrors = false
@@ -167,7 +143,7 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	fvi.InProgress = false
 
 	// Go
-	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, writer, opts.Options)
+	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, fm.EntityWriter(fv.ID), opts.Options)
 	if cpErr != nil {
 		return fvi, cpErr
 	}

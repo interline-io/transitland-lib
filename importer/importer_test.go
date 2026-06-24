@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
@@ -27,7 +28,7 @@ func TestImportFeedVersion(t *testing.T) {
 		testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testreader.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := ImportFeedVersion(ctx, &atx2, Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
+			_, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(&atx2), Options{Activate: true, FeedVersionID: fvid, Storage: "/"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -64,7 +65,7 @@ func TestImportFeedVersion(t *testing.T) {
 		testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid := setup(atx, testreader.ExampleZip.URL)
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := ImportFeedVersion(ctx, &atx2, Options{FeedVersionID: fvid, Storage: "/", ImportSource: dmfr.ImportSourceManual})
+			_, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(&atx2), Options{FeedVersionID: fvid, Storage: "/", ImportSource: dmfr.ImportSourceManual})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -81,7 +82,7 @@ func TestImportFeedVersion(t *testing.T) {
 		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 			fvid = setup(atx, testpath.RelPath("testdata/gtfs-examples/does-not-exist"))
 			atx2 := testdb.AdapterIgnoreTx{Adapter: atx}
-			_, err := ImportFeedVersion(ctx, &atx2, Options{FeedVersionID: fvid, Storage: "/"})
+			_, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(&atx2), Options{FeedVersionID: fvid, Storage: "/"})
 			if err == nil {
 				t.Errorf("expected an error, got none")
 			}
@@ -114,7 +115,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := importFeedVersionTx(ctx, atx, fv, Options{Storage: "/"})
+		fviresult, err := importFeedVersionTx(ctx, feedmanager.NewDBFeedManager(atx), fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}

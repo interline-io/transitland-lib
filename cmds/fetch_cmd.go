@@ -11,6 +11,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcli"
@@ -302,15 +303,11 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 			continue
 		}
 
-		// Fetch
+		// Fetch — StaticFetch owns its own transaction (around the post-upload db
+		// writes); pass the base adapter, not a tx-bound one.
 		jobCtx := log.WithLogger(ctx, jobLog)
-		var result fetch.StaticFetchResult
 		t := time.Now()
-		fatalError := adapter.Tx(func(atx tldb.Adapter) error {
-			var fatalError error
-			result, fatalError = fetch.StaticFetch(jobCtx, atx, job.StaticFetchOptions)
-			return fatalError
-		})
+		result, fatalError := fetch.StaticFetch(jobCtx, feedmanager.NewDBFeedManager(adapter), job.StaticFetchOptions)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 
 		// Log result

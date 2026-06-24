@@ -9,6 +9,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/stats"
@@ -48,7 +49,7 @@ func setupImport(ctx context.Context, t *testing.T, atx tldb.Adapter) int {
 		t.Fatal(err)
 	}
 	// Import
-	if _, err := ImportFeedVersion(ctx, atx, Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
+	if _, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
 		t.Fatal(err)
 	}
 	return fv.ID

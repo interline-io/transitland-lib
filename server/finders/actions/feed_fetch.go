@@ -11,18 +11,14 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/internal/gbfs"
-	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"google.golang.org/protobuf/proto"
 )
 
 func StaticFetch(ctx context.Context, feedId string, feedSrc io.Reader, feedUrl string) (*model.FeedVersionFetchResult, error) {
 	cfg := model.ForContext(ctx)
-	dbf := cfg.Finder
 
 	urlType := "static_current"
 	feed, err := fetchCheckFeed(ctx, feedId)
@@ -68,23 +64,17 @@ func StaticFetch(ctx context.Context, feedId string, feedSrc io.Reader, feedUrl 
 
 	// Make request
 	mr := model.FeedVersionFetchResult{}
-	db := postgres.NewPostgresAdapterFromDBX(dbf.DBX())
-	if err := db.Tx(func(atx tldb.Adapter) error {
-		fr, err := fetch.StaticFetch(ctx, atx, fetchOpts)
-		if err != nil {
-			return err
-		}
-		mr.FoundSha1 = fr.Found
-		if fr.FetchError != nil {
-			a := fr.FetchError.Error()
-			mr.FetchError = &a
-		} else if fr.FeedVersion != nil {
-			mr.FeedVersion = &model.FeedVersion{FeedVersion: *fr.FeedVersion}
-			mr.FetchError = nil
-		}
-		return nil
-	}); err != nil {
+	fr, err := fetch.StaticFetch(ctx, cfg.FeedManager, fetchOpts)
+	if err != nil {
 		return nil, err
+	}
+	mr.FoundSha1 = fr.Found
+	if fr.FetchError != nil {
+		a := fr.FetchError.Error()
+		mr.FetchError = &a
+	} else if fr.FeedVersion != nil {
+		mr.FeedVersion = &model.FeedVersion{FeedVersion: *fr.FeedVersion}
+		mr.FetchError = nil
 	}
 	return &mr, nil
 }
@@ -114,19 +104,12 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 	}
 
 	// Make request
-	var rtMsg *pb.FeedMessage
-	var fetchErr error
-	if err := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX()).Tx(func(atx tldb.Adapter) error {
-		fr, err := fetch.RTFetch(ctx, atx, fetchOpts)
-		if err != nil {
-			return err
-		}
-		rtMsg = fr.Message
-		fetchErr = fr.FetchError
-		return nil
-	}); err != nil {
+	fr, err := fetch.RTFetch(ctx, cfg.FeedManager, fetchOpts)
+	if err != nil {
 		return err
 	}
+	rtMsg := fr.Message
+	fetchErr := fr.FetchError
 
 	// Check result and cache
 	if fetchErr != nil {
@@ -164,7 +147,7 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 	}
 	feeds, result, err := gbfs.Fetch(
 		ctx,
-		postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX()),
+		cfg.Adapter,
 		opts,
 	)
 	if err != nil {

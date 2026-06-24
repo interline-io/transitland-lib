@@ -214,7 +214,7 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	vars := hw{"stop_id": "MCAR"}
 
 	stopObsFvid := 0
-	if err := cfg.Finder.DBX().QueryRowx("select feed_version_id from ext_performance_stop_observations limit 1").Scan(&stopObsFvid); err != nil {
+	if err := cfg.Adapter.DBX().QueryRowx("select feed_version_id from ext_performance_stop_observations limit 1").Scan(&stopObsFvid); err != nil {
 		t.Errorf("could not get fvid for stop observation test: %s", err.Error())
 	}
 	testcases := []testcase{
@@ -594,7 +594,7 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 
 func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 	geographyId := 0
-	if err := cfg.Finder.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001402900'`).Scan(&geographyId); err != nil {
+	if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001402900'`).Scan(&geographyId); err != nil {
 		t.Errorf("could not get geography id for test: %s", err.Error())
 	}
 	vars := hw{"stop_id": "MCAR"}
@@ -666,7 +666,7 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 	sanJoseRadiusMeters := 10_000.0 // 10km
 
 	var testStopID int
-	if err := cfg.Finder.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = $1`, "70252").Scan(&testStopID); err != nil {
+	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = $1`, "70252").Scan(&testStopID); err != nil {
 		t.Errorf("could not get stop ID for test: %s", err.Error())
 	}
 

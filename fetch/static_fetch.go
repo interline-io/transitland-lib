@@ -2,29 +2,20 @@ package fetch
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/request"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/interline-io/transitland-lib/validator"
 )
-
-// StaticFetch from a URL. Creates FeedVersion and FeedFetch records.
-// Returns an error if a serious failure occurs, such as database or filesystem access.
-// Sets Result.FetchError if a regular failure occurs, such as a 404.
-func StaticFetch(ctx context.Context, atx tldb.Adapter, opts StaticFetchOptions) (StaticFetchResult, error) {
-	sfv := NewStaticFetchValidator(opts)
-	return sfv.Fetch(ctx, atx)
-}
 
 type StaticFetchResult struct {
 	FeedVersion                *dmfr.FeedVersion
@@ -43,57 +34,64 @@ type StaticFetchOptions struct {
 	Options
 }
 
-type StaticFetchValidator struct {
-	FeedVersion                *dmfr.FeedVersion
-	FeedVersionValidatorResult *validator.Result
-	StaticFetchOptions         StaticFetchOptions
-}
-
-func NewStaticFetchValidator(opts StaticFetchOptions) *StaticFetchValidator {
-	return &StaticFetchValidator{StaticFetchOptions: opts}
-}
-
-func (sfv *StaticFetchValidator) Fetch(ctx context.Context, atx tldb.Adapter) (StaticFetchResult, error) {
-	fetchResult, err := Fetch(ctx, atx, sfv.StaticFetchOptions.Options, sfv)
-	if err != nil {
-		log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
+// StaticFetch downloads a GTFS feed, and — if it's new and valid — uploads the
+// file and creates the FeedVersion + stats records. Creates a FeedFetch record
+// either way. Returns an error only on a serious (db/filesystem) failure; a
+// regular failure such as a 404 or strict-validation error is on Result.FetchError.
+func StaticFetch(ctx context.Context, fm feedmanager.FeedManager, opts StaticFetchOptions) (StaticFetchResult, error) {
+	out := StaticFetchResult{}
+	feed, tmpfile, resp, fatal := download(ctx, fm, opts.Options)
+	if tmpfile != "" {
+		defer os.Remove(tmpfile)
 	}
-	staticFetchResult := StaticFetchResult{
-		Result:                     fetchResult,
-		FeedVersion:                sfv.FeedVersion,
-		FeedVersionValidatorResult: sfv.FeedVersionValidatorResult,
+	out.Result = resultFromResponse(opts.FeedURL, resp)
+	if fatal != nil {
+		log.For(ctx).Error().Err(fatal).Msg("fatal error during static fetch")
+		return out, fatal
 	}
-	return staticFetchResult, err
+
+	var dur fetchDurations
+	if out.FetchError == nil {
+		if err := staticProcess(ctx, fm, tmpfile, opts, &out, &dur); err != nil {
+			log.For(ctx).Error().Err(err).Msg("fatal error during static fetch")
+			return out, err
+		}
+	}
+	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur); err != nil {
+		return out, err
+	}
+	return out, nil
 }
 
-func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.Adapter, fn string, fetchResponse request.FetchResponse) (FetchValidationResult, error) {
-	opts := sfv.StaticFetchOptions
-	fetchValidationResult := FetchValidationResult{}
-
-	// Open reader
+// staticProcess validates the downloaded feed and, if it's new and valid, uploads
+// the file and writes the feed version + stats + report in one transaction. It
+// updates out (Found / FeedVersionID / FetchError / FeedVersion / validator
+// result) and returns only fatal errors. The upload happens before the writes, so
+// a rolled-back write can never leave a feed_version referencing a missing file.
+func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, opts StaticFetchOptions, out *StaticFetchResult, dur *fetchDurations) error {
+	// Open reader (handle a #fragment selecting a feed nested in the archive).
 	fragment := ""
 	readerPath := fn
 	if _, frag, ok := strings.Cut(opts.FeedURL, "#"); ok {
 		readerPath = readerPath + "#" + frag
 		fragment = frag
 	}
-
 	reader, err := tlcsv.NewReaderFromAdapter(tlcsv.NewZipAdapter(readerPath))
 	if err != nil {
-		fetchValidationResult.Error = err
-		return fetchValidationResult, nil
+		out.FetchError = err
+		return nil
 	}
 	if err := reader.Open(); err != nil {
-		fetchValidationResult.Error = err
-		return fetchValidationResult, nil
+		out.FetchError = err
+		return nil
 	}
 	defer reader.Close()
 
-	// Get initialized FeedVersion
+	// Build the feed version (sha1, service dates, structure check).
 	fv, err := stats.NewFeedVersionFromReader(reader)
 	if err != nil {
-		fetchValidationResult.Error = err
-		return fetchValidationResult, nil
+		out.FetchError = err
+		return nil
 	}
 	fv.FeedID = opts.FeedID
 	fv.FetchedAt = opts.FetchedAt
@@ -106,124 +104,99 @@ func (sfv *StaticFetchValidator) ValidateResponse(ctx context.Context, atx tldb.
 		fv.URL = opts.FeedURL
 	}
 
-	// If the fv is already present, return.
-	// This is to skip unncessary work, not avoid duplicates. A second check is done later.
-	if checkFv, err := checkFeedVersion(ctx, atx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
-		// Fatal error
-		return fetchValidationResult, err
+	// Skip the work if we already have this feed version.
+	if checkFv, err := fm.GetFeedVersionBySHA1(ctx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
+		return err
 	} else if checkFv != nil {
-		// Already present
-		fetchValidationResult.Found = true
-		fetchValidationResult.FeedVersionID.SetInt(checkFv.ID)
-		sfv.FeedVersion = checkFv
-		return fetchValidationResult, nil
+		out.Found = true
+		out.FeedVersionID.SetInt(checkFv.ID)
+		out.FeedVersion = checkFv
+		return nil
 	}
 
-	// If a second tmpfile is created, copy it out since it will be deleted on reader.Close()
-	fetchValidationResult.UploadTmpfile = reader.Path()
-	fetchValidationResult.UploadFilename = fmt.Sprintf("%s.zip", fv.SHA1)
-	if readerPath := reader.Path(); readerPath != fn {
-		// Set fragment to empty
+	// Determine the file to upload. A nested feed is extracted to its own tmpfile
+	// since reader.Path() is removed on reader.Close().
+	uploadFn := reader.Path()
+	uploadKey := fmt.Sprintf("%s.zip", fv.SHA1)
+	if uploadFn != fn {
 		fv.Fragment.Set("")
-		// This file will be removed after upload
-		uploadTmpfile, err := os.CreateTemp("", "fetch-nested")
+		nested, err := os.CreateTemp("", "fetch-nested")
 		if err != nil {
-			// Fatal error
-			return fetchValidationResult, err
+			return err
 		}
-		uploadTmpfile.Close() // close immediately
-		fetchValidationResult.UploadTmpfile = uploadTmpfile.Name()
-		// Copy file to file
-		log.For(ctx).Info().Str("dst", fetchValidationResult.UploadTmpfile).Str("src", readerPath).Msg("fetch: copying extracted nested zip file for upload")
-		if err := copyFileContents(fetchValidationResult.UploadTmpfile, readerPath); err != nil {
-			// Fatal err
-			return fetchValidationResult, err
+		nested.Close()
+		defer os.Remove(nested.Name())
+		log.For(ctx).Info().Str("dst", nested.Name()).Str("src", uploadFn).Msg("fetch: copying extracted nested zip file for upload")
+		if err := copyFileContents(nested.Name(), uploadFn); err != nil {
+			return err
 		}
+		uploadFn = nested.Name()
 	}
 
-	// Create a validation report
+	// Validate + compute stats.
+	validationStart := time.Now()
 	validatorOptions := opts.ValidatorOptions
 	validatorOptions.ErrorLimit = 10
 	v, err := validator.NewValidator(reader, validatorOptions)
 	if err != nil {
-		// Fatal error
-		return fetchValidationResult, err
+		return err
 	}
 	validationResult, err := v.Validate(ctx)
 	if err != nil {
-		// Fatal error
-		return fetchValidationResult, err
+		return err
 	}
-
-	// Generate feed version stats
-	// TODO: Integrate this with static validation, so only one pass is necessary?
+	// TODO: integrate this with validation, so only one pass is necessary?
 	feedVersionStats, err := stats.NewFeedStatsFromReader(reader)
 	if err != nil {
-		// Fatal error
-		return fetchValidationResult, err
+		return err
+	}
+	dur.validationMs = int(time.Since(validationStart).Milliseconds())
+
+	// Strict validation: reject without uploading or writing anything.
+	if opts.StrictValidation && len(validationResult.Errors) > 0 {
+		out.FetchError = fmt.Errorf("strict validation failed, errors in %d files", len(validationResult.Errors))
+		return nil
 	}
 
-	// Strict validation; do not save feed version
-	errCount := len(validationResult.Errors)
-	if opts.StrictValidation && errCount > 0 {
-		fetchValidationResult.Error = fmt.Errorf("strict validation failed, errors in %d files", errCount)
-		return fetchValidationResult, nil
+	// Upload BEFORE the database writes, so a committed feed_version can never
+	// reference a file that failed to upload (stats include the stop geohash cells
+	// for feed/feed_version spatial queries).
+	uploadMs, err := uploadFile(ctx, opts.Storage, uploadFn, uploadKey)
+	if err != nil {
+		return err
 	}
+	dur.uploadMs = uploadMs
 
-	// The validation after the initial check may take some time to complete, so check again.
-	// We want to avoid database write failures (unique index on sha1) because those are considered fatal.
-	if checkFv, err := checkFeedVersion(ctx, atx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
-		// Fatal error
-		return fetchValidationResult, err
+	// Re-check for a feed version a concurrent fetch committed during validation +
+	// upload, to avoid the fatal unique-index violation on sha1 where possible,
+	// then write feed version + stats + report in one transaction.
+	if checkFv, err := fm.GetFeedVersionBySHA1(ctx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
+		return err
 	} else if checkFv != nil {
-		// Already present
-		fetchValidationResult.Found = true
-		fetchValidationResult.FeedVersionID.SetInt(checkFv.ID)
-		sfv.FeedVersion = checkFv
-		return fetchValidationResult, nil
+		out.Found = true
+		out.FeedVersionID.SetInt(checkFv.ID)
+		out.FeedVersion = checkFv
+		return nil
 	}
-
-	// Create fv record
-	if _, err = atx.Insert(ctx, &fv); err != nil {
-		// Fatal err
-		return fetchValidationResult, err
-	}
-
-	// Save stats records (includes stop geohash cells for feed/feed_version spatial queries)
-	if err := stats.WriteFeedVersionStats(ctx, atx, feedVersionStats, fv.ID, stats.WriteOptions{}); err != nil {
-		// Fatal err
-		return fetchValidationResult, err
-	}
-
-	// Save validation report
-	if opts.ValidationReportStorage != "" {
-		if err := validator.SaveValidationReport(ctx, atx, validationResult, fv.ID, opts.ValidationReportStorage); err != nil {
-			// Fatal error
-			return fetchValidationResult, err
+	if err := fm.WithTx(ctx, func(ctx context.Context, tx feedmanager.FeedManager) error {
+		if _, err := tx.CreateFeedVersion(ctx, &fv); err != nil {
+			return err
 		}
+		if err := tx.WriteFeedVersionStats(ctx, fv.ID, feedVersionStats); err != nil {
+			return err
+		}
+		if opts.ValidationReportStorage != "" {
+			return tx.SaveValidationReport(ctx, fv.ID, validationResult, opts.ValidationReportStorage)
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
-	// OK
-	fetchValidationResult.Found = false
-	fetchValidationResult.FeedVersionID.SetInt(fv.ID)
-	sfv.FeedVersionValidatorResult = validationResult
-	sfv.FeedVersion = &fv
-	return fetchValidationResult, nil
-}
-
-// Is this SHA1 already present?
-func checkFeedVersion(ctx context.Context, atx tldb.Adapter, sha1 string, sha1dir string) (*dmfr.FeedVersion, error) {
-	checkFeedVersion := dmfr.FeedVersion{}
-	err := atx.Get(ctx, &checkFeedVersion, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", sha1, sha1dir)
-	if err == nil {
-		return &checkFeedVersion, nil
-	} else if err == sql.ErrNoRows {
-		// Not present, create below
-	} else {
-		// Fatal error
-		return nil, err
-	}
-	return nil, nil
+	out.FeedVersionID.SetInt(fv.ID)
+	out.FeedVersion = &fv
+	out.FeedVersionValidatorResult = validationResult
+	return nil
 }
 
 func copyFileContents(dst, src string) (err error) {
