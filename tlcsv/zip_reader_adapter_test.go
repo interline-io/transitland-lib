@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
@@ -15,7 +16,7 @@ func TestZipReaderAdapter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	adapter, err := NewZipReaderAdapterFromBytes(b)
+	adapter, err := NewZipReaderAdapter(bytes.NewReader(b), int64(len(b)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +73,7 @@ func TestZipReaderAdapter_NestedPrefix(t *testing.T) {
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}
-	adapter, err := NewZipReaderAdapterFromBytes(buf.Bytes())
+	adapter, err := NewZipReaderAdapter(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,5 +109,57 @@ func TestZipReaderAdapter_NestedPrefix(t *testing.T) {
 		if names[i] != n {
 			t.Errorf("FileInfos[%d] = %q, want %q (got %v)", i, names[i], n, names)
 		}
+	}
+}
+
+func TestZipReaderAdapter_ExplicitPrefix(t *testing.T) {
+	// Two complete feeds in separate directories: auto-discovery is ambiguous, so an
+	// explicit prefix is the only way to select one.
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, name := range []string{
+		"feedA/agency.txt", "feedA/stops.txt",
+		"feedB/agency.txt", "feedB/stops.txt",
+	} {
+		w, err := zw.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Tag each file with its directory so we can tell which feed we read.
+		if _, err := w.Write([]byte("id\n" + name + "\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	b := buf.Bytes()
+
+	// Auto-discovery fails on the ambiguous archive.
+	auto, err := NewZipReaderAdapter(bytes.NewReader(b), int64(len(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := auto.Open(); err == nil {
+		t.Error("Open() should fail on an ambiguous archive without an explicit prefix")
+	}
+
+	// An explicit prefix selects feedB and reads its files under that root.
+	adapter, err := NewZipReaderAdapterWithPrefix(bytes.NewReader(b), int64(len(b)), "feedB")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := adapter.Open(); err != nil {
+		t.Fatalf("Open() with explicit prefix: %v", err)
+	}
+	got := ""
+	if err := adapter.OpenFile("stops.txt", func(r io.Reader) {
+		bs, _ := io.ReadAll(r)
+		got = string(bs)
+	}); err != nil {
+		t.Fatalf("OpenFile(stops.txt): %v", err)
+	}
+	if !strings.Contains(got, "feedB/stops.txt") {
+		t.Errorf("read %q, want the feedB copy", got)
 	}
 }

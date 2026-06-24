@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -138,7 +139,7 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 			// This should result in a failed request
 			return nil, err
 		}
-		za, err := tlcsv.NewZipReaderAdapterFromBytes(b)
+		za, err := tlcsv.NewZipReaderAdapter(bytes.NewReader(b), int64(len(b)))
 		if err != nil {
 			log.For(ctx).Error().Err(err).Msg("validate: could not open uploaded zip")
 			result.FailureReason = strptr("Could not read file")

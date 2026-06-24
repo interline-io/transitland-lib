@@ -2,13 +2,11 @@ package tlcsv
 
 import (
 	"context"
-	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -85,50 +83,14 @@ func (adapter OverlayAdapter) SHA1() (string, error) {
 	return adapter.DirSHA1()
 }
 
-// DirSHA1 returns the SHA1 of all the .txt files in the main directory, sorted, and concatenated.
+// DirSHA1 returns the SHA1 of all the .txt files across the overlay paths (first
+// path wins on conflict), sorted by name and concatenated.
 func (adapter OverlayAdapter) DirSHA1() (string, error) {
-	alltxts := map[string]string{}
-	for _, path := range adapter.paths {
-		f, err := os.Open(path)
-		if err != nil {
-			return "", err
-		}
-		fis, err := f.Readdir(-1)
-		f.Close()
-		if err != nil {
-			return "", err
-		}
-		for _, fi := range fis {
-			fn := fi.Name()
-			if fi.IsDir() || !strings.HasSuffix(fn, ".txt") || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
-				continue
-			}
-			if _, ok := alltxts[fn]; ok {
-				continue
-			}
-			alltxts[fn] = filepath.Join(path, fn)
-		}
+	names, err := adapter.Files()
+	if err != nil {
+		return "", err
 	}
-	keys := []string{}
-	for k := range alltxts {
-		keys = append(keys, k)
-	}
-	// Sort the files
-	sort.Strings(keys)
-	// Hash
-	h := sha1.New()
-	for _, k := range keys {
-		f, err := os.Open(filepath.Join(alltxts[k]))
-		if err != nil {
-			return "", err
-		}
-		_, copyErr := io.Copy(h, f)
-		f.Close()
-		if copyErr != nil {
-			return "", copyErr
-		}
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return dirSHA1(names, adapter.OpenFile)
 }
 
 // OpenFile searches paths until it finds the specified file.
