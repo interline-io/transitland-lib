@@ -2,13 +2,13 @@ package tlcsv
 
 import (
 	"archive/zip"
-	"bytes"
 	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
+	"iter"
+	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/interline-io/transitland-lib/causes"
@@ -37,10 +37,18 @@ func NewZipReaderAdapter(r io.ReaderAt, size int64) (*ZipReaderAdapter, error) {
 	return &ZipReaderAdapter{r: r, size: size, zr: zr}, nil
 }
 
-// NewZipReaderAdapterFromBytes builds an adapter over raw zip bytes. The slice is
-// retained (read lazily), so the caller must not mutate it.
-func NewZipReaderAdapterFromBytes(b []byte) (*ZipReaderAdapter, error) {
-	return NewZipReaderAdapter(bytes.NewReader(b), int64(len(b)))
+// NewZipReaderAdapterWithPrefix is like NewZipReaderAdapter but pins an explicit
+// internal feed-root prefix (the subdirectory holding the feed) instead of
+// auto-discovering one in Open — for an archive that wraps the feed in a known
+// subdirectory, or whose root would otherwise be ambiguous. An empty prefix
+// auto-discovers, exactly like NewZipReaderAdapter.
+func NewZipReaderAdapterWithPrefix(r io.ReaderAt, size int64, internalPrefix string) (*ZipReaderAdapter, error) {
+	adapter, err := NewZipReaderAdapter(r, size)
+	if err != nil {
+		return nil, err
+	}
+	adapter.internalPrefix = internalPrefix
+	return adapter, nil
 }
 
 func (adapter *ZipReaderAdapter) String() string { return "memory.zip" }
@@ -59,13 +67,36 @@ func (adapter *ZipReaderAdapter) Open() error {
 		return errors.New("file does not exist or invalid data")
 	}
 	if adapter.internalPrefix == "" {
-		pfx, err := findInternalPrefixInZip(adapter.zr.File)
+		pfx, err := detectInternalPrefix(adapter)
 		if err != nil {
 			return err
 		}
 		adapter.internalPrefix = pfx
 	}
 	return nil
+}
+
+// Walk yields each archive entry under prefix as (path relative to prefix, info).
+// The zip namespace is flat, so Walk("") enumerates the whole archive — that is how
+// feed-root detection sees nested entries.
+func (adapter *ZipReaderAdapter) Walk(prefix string) iter.Seq2[WalkFile, error] {
+	return func(yield func(WalkFile, error) bool) {
+		for _, zf := range adapter.zr.File {
+			name := zf.Name
+			if prefix != "" {
+				if !strings.HasPrefix(name, prefix+"/") {
+					continue
+				}
+				name = strings.TrimPrefix(name, prefix+"/")
+			}
+			if name == "" {
+				continue
+			}
+			if !yield(WalkFile{Path: name, FileInfo: zf.FileInfo()}, nil) {
+				return
+			}
+		}
+	}
 }
 
 // OpenFile streams the named entry's decompressed bytes to cb, decompressing on
@@ -88,7 +119,21 @@ func (adapter *ZipReaderAdapter) SHA1() (string, error) {
 }
 
 func (adapter *ZipReaderAdapter) DirSHA1() (string, error) {
-	return dirSHA1InZip(adapter.zr.File, adapter.internalPrefix)
+	fis, err := adapter.FileInfos()
+	if err != nil {
+		return "", err
+	}
+	names := make([]string, len(fis))
+	for i, fi := range fis {
+		names[i] = fi.Name()
+	}
+	return dirSHA1(names, adapter.OpenFile)
+}
+
+// FileInfos returns an os.FileInfo for each top-level feed file under the internal
+// feed-root prefix. Call after Open so the prefix is resolved.
+func (adapter *ZipReaderAdapter) FileInfos() ([]os.FileInfo, error) {
+	return feedFileInfos(adapter, adapter.internalPrefix)
 }
 
 // --- shared zip helpers (used by both ZipAdapter and ZipReaderAdapter) ---
@@ -111,61 +156,4 @@ func openFileInZip(files []*zip.File, internalPrefix, filename string, cb func(i
 		return nil
 	}
 	return causes.NewFileNotPresentError(filename)
-}
-
-// findInternalPrefixInZip returns the directory containing stops.txt (the feed
-// root); "" for a flat archive, an error if more than one candidate is found.
-func findInternalPrefixInZip(files []*zip.File) (string, error) {
-	prefixes := []string{}
-	for _, zf := range files {
-		fi := zf.FileInfo()
-		fn := zf.Name
-		if fi.IsDir() || strings.HasPrefix(fn, ".") {
-			continue
-		}
-		if filepath.Base(fn) == "stops.txt" {
-			prefixes = append(prefixes, filepath.Dir(fn))
-		}
-	}
-	if len(prefixes) > 1 {
-		return "", errors.New("more than one valid prefix found")
-	} else if len(prefixes) == 1 {
-		pfx := prefixes[0]
-		if pfx == "." {
-			pfx = ""
-		}
-		return pfx, nil
-	}
-	return "", nil
-}
-
-// dirSHA1InZip hashes the sorted, concatenated top-level lowercase .txt entries
-// (under internalPrefix), matching ZipAdapter/DirAdapter.
-func dirSHA1InZip(files []*zip.File, internalPrefix string) (string, error) {
-	sorted := append([]*zip.File(nil), files...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
-	h := sha1.New()
-	for _, zf := range sorted {
-		fi := zf.FileInfo()
-		fn := zf.Name
-		if internalPrefix != "" {
-			fn = strings.Replace(zf.Name, internalPrefix+"/", "", 1)
-		}
-		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
-			continue
-		}
-		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
-			continue
-		}
-		f, err := zf.Open()
-		if err != nil {
-			return "", err
-		}
-		_, err = io.Copy(h, f)
-		f.Close()
-		if err != nil {
-			return "", err
-		}
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
