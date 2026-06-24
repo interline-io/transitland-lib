@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -89,6 +90,29 @@ func (adapter *ZipReaderAdapter) SHA1() (string, error) {
 
 func (adapter *ZipReaderAdapter) DirSHA1() (string, error) {
 	return dirSHA1InZip(adapter.zr.File, adapter.internalPrefix)
+}
+
+// FileInfos returns an os.FileInfo for each top-level .txt file (under the
+// internal feed-root prefix), so file-info stats can be computed straight from an
+// in-memory archive — mirroring ZipAdapter.FileInfos, but over the already-parsed
+// in-memory zip rather than reopening a file on disk. Call after Open so the
+// internal prefix is resolved.
+func (adapter *ZipReaderAdapter) FileInfos() ([]os.FileInfo, error) {
+	ret := []os.FileInfo{}
+	files := append([]*zip.File(nil), adapter.zr.File...)
+	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
+	for _, zf := range files {
+		fi := zf.FileInfo()
+		fn := zf.Name
+		if adapter.internalPrefix != "" {
+			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
+		}
+		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
+			continue
+		}
+		ret = append(ret, fi)
+	}
+	return ret, nil
 }
 
 // --- shared zip helpers (used by both ZipAdapter and ZipReaderAdapter) ---

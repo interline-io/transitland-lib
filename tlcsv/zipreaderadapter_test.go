@@ -86,4 +86,27 @@ func TestZipReaderAdapter_NestedPrefix(t *testing.T) {
 	if err := adapter.OpenFile("missing.txt", func(io.Reader) {}); err == nil {
 		t.Error("OpenFile(missing.txt) should error")
 	}
+
+	// FileInfos reports the feed files by base name (prefix stripped), so file-info
+	// stats and OpenFile(fi.Name()) agree even when the feed is in a subdirectory.
+	fis, err := adapter.FileInfos()
+	if err != nil {
+		t.Fatalf("FileInfos: %v", err)
+	}
+	var names []string
+	for _, fi := range fis {
+		names = append(names, fi.Name())
+		if err := adapter.OpenFile(fi.Name(), func(io.Reader) {}); err != nil {
+			t.Errorf("OpenFile(%q) from FileInfos: %v", fi.Name(), err)
+		}
+	}
+	want := []string{"agency.txt", "routes.txt", "stops.txt"}
+	if len(names) != len(want) {
+		t.Fatalf("FileInfos names = %v, want %v", names, want)
+	}
+	for i, n := range want {
+		if names[i] != n {
+			t.Errorf("FileInfos[%d] = %q, want %q (got %v)", i, names[i], n, names)
+		}
+	}
 }
