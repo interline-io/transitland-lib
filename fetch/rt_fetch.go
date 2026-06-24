@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/feedmanager"
@@ -37,7 +38,11 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 
 	var dur fetchDurations
 	if out.FetchError == nil {
+		// The protobuf parse is the RT analogue of validation; record its duration
+		// on the feed_fetch row, as the pre-rewrite fetch did.
+		validationStart := time.Now()
 		msg, err := rt.ReadFile(tmpfile)
+		dur.validationMs = int(time.Since(validationStart).Milliseconds())
 		out.Message = msg
 		if err != nil {
 			out.FetchError = err
