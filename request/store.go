@@ -113,15 +113,19 @@ func DownloadAll(ctx context.Context, r Store, outDir string, prefix string, che
 	return ret, nil
 }
 
-func copyToFile(_ context.Context, rio io.Reader, outfn string) error {
+func copyToFile(_ context.Context, rio io.Reader, outfn string) (err error) {
 	log.Trace().Msgf("copyToFile: %s", outfn)
 	outf, err := os.Create(outfn)
 	if err != nil {
 		return err
 	}
-	defer outf.Close()
+	defer func() {
+		if cerr := outf.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	if _, err := io.Copy(outf, rio); err != nil {
-		return nil
+		return err
 	}
 	return nil
 }

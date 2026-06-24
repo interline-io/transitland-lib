@@ -12,11 +12,9 @@ import (
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/internal/gbfs"
-	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"google.golang.org/protobuf/proto"
 )
@@ -70,22 +68,18 @@ func StaticFetch(ctx context.Context, feedId string, feedSrc io.Reader, feedUrl 
 	// Make request
 	mr := model.FeedVersionFetchResult{}
 	db := postgres.NewPostgresAdapterFromDBX(dbf.DBX())
-	if err := db.Tx(func(atx tldb.Adapter) error {
-		fr, err := fetch.StaticFetch(ctx, feedmanager.NewDBFeedManager(atx), fetchOpts)
-		if err != nil {
-			return err
-		}
-		mr.FoundSha1 = fr.Found
-		if fr.FetchError != nil {
-			a := fr.FetchError.Error()
-			mr.FetchError = &a
-		} else if fr.FeedVersion != nil {
-			mr.FeedVersion = &model.FeedVersion{FeedVersion: *fr.FeedVersion}
-			mr.FetchError = nil
-		}
-		return nil
-	}); err != nil {
+	// StaticFetch owns its own transaction internally; pass the base adapter.
+	fr, err := fetch.StaticFetch(ctx, feedmanager.NewDBFeedManager(db), fetchOpts)
+	if err != nil {
 		return nil, err
+	}
+	mr.FoundSha1 = fr.Found
+	if fr.FetchError != nil {
+		a := fr.FetchError.Error()
+		mr.FetchError = &a
+	} else if fr.FeedVersion != nil {
+		mr.FeedVersion = &model.FeedVersion{FeedVersion: *fr.FeedVersion}
+		mr.FetchError = nil
 	}
 	return &mr, nil
 }
@@ -115,19 +109,13 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 	}
 
 	// Make request
-	var rtMsg *pb.FeedMessage
-	var fetchErr error
-	if err := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX()).Tx(func(atx tldb.Adapter) error {
-		fr, err := fetch.RTFetch(ctx, feedmanager.NewDBFeedManager(atx), fetchOpts)
-		if err != nil {
-			return err
-		}
-		rtMsg = fr.Message
-		fetchErr = fr.FetchError
-		return nil
-	}); err != nil {
+	db := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
+	fr, err := fetch.RTFetch(ctx, feedmanager.NewDBFeedManager(db), fetchOpts)
+	if err != nil {
 		return err
 	}
+	rtMsg := fr.Message
+	fetchErr := fr.FetchError
 
 	// Check result and cache
 	if fetchErr != nil {

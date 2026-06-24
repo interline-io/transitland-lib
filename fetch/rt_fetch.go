@@ -3,18 +3,13 @@ package fetch
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/feedmanager"
-	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
 )
-
-func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOptions) (RTFetchResult, error) {
-	r := NewRTFetchValidator(opts)
-	return r.Fetch(ctx, fm)
-}
 
 type RTFetchResult struct {
 	Message *pb.FeedMessage
@@ -25,31 +20,39 @@ type RTFetchOptions struct {
 	Options
 }
 
-type RTFetchValidator struct {
-	Result         RTFetchResult
-	RTFetchOptions RTFetchOptions
-}
-
-func NewRTFetchValidator(opts RTFetchOptions) *RTFetchValidator {
-	return &RTFetchValidator{RTFetchOptions: opts}
-}
-
-func (r *RTFetchValidator) Fetch(ctx context.Context, fm feedmanager.FeedManager) (RTFetchResult, error) {
-	result, err := Fetch(ctx, fm, r.RTFetchOptions.Options, r)
-	if err != nil {
-		log.For(ctx).Error().Err(err).Msg("fatal error during rt fetch")
+// RTFetch downloads a GTFS-RT feed, parses the protobuf, uploads it, and records
+// a FeedFetch. It creates no feed version. Returns an error only on a serious
+// failure; a 404 or parse error is on Result.FetchError.
+func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOptions) (RTFetchResult, error) {
+	out := RTFetchResult{}
+	feed, tmpfile, resp, fatal := download(ctx, fm, opts.Options)
+	if tmpfile != "" {
+		defer os.Remove(tmpfile)
 	}
-	r.Result.Result = result
-	r.Result.Error = err
-	return r.Result, err
-}
+	out.Result = resultFromResponse(opts.FeedURL, resp)
+	if fatal != nil {
+		log.For(ctx).Error().Err(fatal).Msg("fatal error during rt fetch")
+		return out, fatal
+	}
 
-func (r *RTFetchValidator) ValidateResponse(ctx context.Context, _ feedmanager.FeedManager, fn string, fr request.FetchResponse) (FetchValidationResult, error) {
-	// Validate
-	v := FetchValidationResult{}
-	v.UploadTmpfile = fn
-	v.UploadFilename = fmt.Sprintf("%s.pb", fr.ResponseSHA1)
-	v.Found = false
-	r.Result.Message, v.Error = rt.ReadFile(fn)
-	return v, nil
+	var dur fetchDurations
+	if out.FetchError == nil {
+		msg, err := rt.ReadFile(tmpfile)
+		out.Message = msg
+		if err != nil {
+			out.FetchError = err
+		}
+		// Upload the protobuf (content-addressed key); matches the prior behavior
+		// of uploading even when parsing failed.
+		uploadMs, uerr := uploadFile(ctx, opts.Storage, tmpfile, fmt.Sprintf("%s.pb", resp.ResponseSHA1))
+		if uerr != nil {
+			log.For(ctx).Error().Err(uerr).Msg("fatal error during rt fetch")
+			return out, uerr
+		}
+		dur.uploadMs = uploadMs
+	}
+	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur); err != nil {
+		return out, err
+	}
+	return out, nil
 }
