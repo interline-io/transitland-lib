@@ -40,6 +40,9 @@ type StaticFetchOptions struct {
 // regular failure such as a 404 or strict-validation error is on Result.FetchError.
 func StaticFetch(ctx context.Context, fm feedmanager.FeedManager, opts StaticFetchOptions) (StaticFetchResult, error) {
 	out := StaticFetchResult{}
+	if opts.FetchedAt.IsZero() {
+		opts.FetchedAt = time.Now().UTC()
+	}
 	feed, tmpfile, resp, fatal := download(ctx, fm, opts.Options)
 	if tmpfile != "" {
 		defer os.Remove(tmpfile)
@@ -57,7 +60,8 @@ func StaticFetch(ctx context.Context, fm feedmanager.FeedManager, opts StaticFet
 			return out, err
 		}
 	}
-	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur); err != nil {
+	// Static uploads are content-addressed (<sha1>.zip), so no storage_key.
+	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur, ""); err != nil {
 		return out, err
 	}
 	return out, nil

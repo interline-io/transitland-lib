@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -116,12 +117,24 @@ func uploadFile(ctx context.Context, storage, fn, key string) (int, error) {
 	return int(time.Since(t).Milliseconds()), nil
 }
 
+// archiveKey builds the archive object key. The feed/url_type/date partitions let
+// query engines prune by those columns; the sha1 suffix keeps distinct messages at
+// distinct keys even when fetched within the same second.
+func archiveKey(onestopID, urlType, sha1 string, fetchedAt time.Time, ext string) string {
+	t := fetchedAt.UTC()
+	return fmt.Sprintf("feed=%s/url_type=%s/date=%s/%s-%s.%s",
+		onestopID, urlType, t.Format("2006-01-02"), t.Format("2006-01-02-15-04-05"), sha1, ext)
+}
+
 // recordFeedFetch writes the feed_fetch audit row for a completed attempt.
-func recordFeedFetch(ctx context.Context, fm feedmanager.FeedManager, feed *dmfr.Feed, opts Options, result Result, dur fetchDurations) error {
+func recordFeedFetch(ctx context.Context, fm feedmanager.FeedManager, feed *dmfr.Feed, opts Options, result Result, dur fetchDurations, storageKey string) error {
 	tlfetch := dmfr.FeedFetch{}
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
 	tlfetch.FetchedAt.Set(opts.FetchedAt)
+	if storageKey != "" {
+		tlfetch.StorageKey.Set(storageKey)
+	}
 	if result.ResponseCode > 0 {
 		tlfetch.ResponseCode.SetInt(result.ResponseCode)
 	}

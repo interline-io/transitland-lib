@@ -90,13 +90,23 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 		return nil
 	}
 
+	// Archive to RTStorage only when this feed opts in (rt_retention_period > 0).
+	archiveStorage := ""
+	if cfg.RTStorage != "" {
+		if states, errs := cfg.Finder.FeedStatesByFeedIDs(ctx, []int{feed.ID}); len(errs) > 0 && errs[0] != nil {
+			log.For(ctx).Error().Err(errs[0]).Int("feed_id", feed.ID).Msg("rt-fetch: could not load feed state for archive policy; not archiving")
+		} else if len(states) > 0 && states[0] != nil && states[0].RTRetentionPeriod > 0 {
+			archiveStorage = cfg.RTStorage
+		}
+	}
+
 	// Prepare
 	fetchOpts := fetch.RTFetchOptions{
 		Options: fetch.Options{
 			FeedID:                   feed.ID,
 			URLType:                  urlType,
 			FeedURL:                  feedUrl,
-			Storage:                  cfg.RTStorage,
+			Storage:                  archiveStorage,
 			Secrets:                  cfg.Secrets,
 			FetchedAt:                time.Now().In(time.UTC),
 			AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,

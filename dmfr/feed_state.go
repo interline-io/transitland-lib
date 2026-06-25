@@ -14,6 +14,7 @@ type FeedState struct {
 	FetchWait           tt.Int
 	FeedRealtimeEnabled bool
 	Public              bool
+	RTRetentionPeriod   int // days to retain archived RT messages; 0 disables
 	tt.DatabaseEntity
 	tt.Timestamps
 }
