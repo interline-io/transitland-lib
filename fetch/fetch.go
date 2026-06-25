@@ -117,12 +117,13 @@ func uploadFile(ctx context.Context, storage, fn, key string) (int, error) {
 	return int(time.Since(t).Milliseconds()), nil
 }
 
-// archiveKey builds the archive object key; the feed/url_type/date partitions let
-// query engines prune by those columns.
-func archiveKey(onestopID, urlType string, fetchedAt time.Time, ext string) string {
+// archiveKey builds the archive object key. The feed/url_type/date partitions let
+// query engines prune by those columns; the sha1 suffix keeps distinct messages at
+// distinct keys even when fetched within the same second.
+func archiveKey(onestopID, urlType, sha1 string, fetchedAt time.Time, ext string) string {
 	t := fetchedAt.UTC()
-	return fmt.Sprintf("feed=%s/url_type=%s/date=%s/%s.%s",
-		onestopID, urlType, t.Format("2006-01-02"), t.Format("2006-01-02-15-04-05"), ext)
+	return fmt.Sprintf("feed=%s/url_type=%s/date=%s/%s-%s.%s",
+		onestopID, urlType, t.Format("2006-01-02"), t.Format("2006-01-02-15-04-05"), sha1, ext)
 }
 
 // recordFeedFetch writes the feed_fetch audit row for a completed attempt.

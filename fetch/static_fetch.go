@@ -40,6 +40,9 @@ type StaticFetchOptions struct {
 // regular failure such as a 404 or strict-validation error is on Result.FetchError.
 func StaticFetch(ctx context.Context, fm feedmanager.FeedManager, opts StaticFetchOptions) (StaticFetchResult, error) {
 	out := StaticFetchResult{}
+	if opts.FetchedAt.IsZero() {
+		opts.FetchedAt = time.Now().UTC()
+	}
 	feed, tmpfile, resp, fatal := download(ctx, fm, opts.Options)
 	if tmpfile != "" {
 		defer os.Remove(tmpfile)

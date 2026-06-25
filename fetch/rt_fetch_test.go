@@ -81,6 +81,7 @@ func TestRTFetch(t *testing.T) {
 				// 200 archives to the partitioned key (even on parse failure); 404 doesn't.
 				if tc.responseCode == 200 {
 					assert.True(t, strings.HasPrefix(tlff.StorageKey.Val, "feed="), "storage_key should be a partitioned key, got %q", tlff.StorageKey.Val)
+					assert.Contains(t, tlff.StorageKey.Val, tlff.ResponseSHA1.Val, "storage_key should embed the response sha1")
 					if _, err := os.Stat(filepath.Join(tmpdir, tlff.StorageKey.Val)); err != nil {
 						t.Errorf("archived object not found at storage_key %q: %v", tlff.StorageKey.Val, err)
 					}

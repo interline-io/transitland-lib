@@ -25,6 +25,9 @@ type RTFetchOptions struct {
 // failure; a 404 or parse error is on Result.FetchError.
 func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOptions) (RTFetchResult, error) {
 	out := RTFetchResult{}
+	if opts.FetchedAt.IsZero() {
+		opts.FetchedAt = time.Now().UTC()
+	}
 	feed, tmpfile, resp, fatal := download(ctx, fm, opts.Options)
 	if tmpfile != "" {
 		defer os.Remove(tmpfile)
@@ -49,7 +52,7 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 		}
 		// Archive to a partitioned key when storage is set, even on parse failure.
 		if opts.Storage != "" {
-			storageKey = archiveKey(feed.FeedID, opts.URLType, opts.FetchedAt, "pb")
+			storageKey = archiveKey(feed.FeedID, opts.URLType, resp.ResponseSHA1, opts.FetchedAt, "pb")
 		}
 		uploadMs, uerr := uploadFile(ctx, opts.Storage, tmpfile, storageKey)
 		if uerr != nil {
