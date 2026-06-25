@@ -57,8 +57,7 @@ func StaticFetch(ctx context.Context, fm feedmanager.FeedManager, opts StaticFet
 			return out, err
 		}
 	}
-	// Static uploads stay content-addressed (<sha1>.zip, derivable from response_sha1),
-	// so no separate storage_key is recorded.
+	// Static uploads are content-addressed (<sha1>.zip), so no storage_key.
 	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur, ""); err != nil {
 		return out, err
 	}

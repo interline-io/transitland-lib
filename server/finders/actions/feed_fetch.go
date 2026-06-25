@@ -90,9 +90,7 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 		return nil
 	}
 
-	// Archive the fetched message to RTStorage only when this feed opts in via
-	// feed_states.rt_retention_period > 0. Leaving Storage empty makes the fetch skip
-	// the upload (and record no storage_key).
+	// Archive to RTStorage only when this feed opts in (rt_retention_period > 0).
 	archiveStorage := ""
 	if cfg.RTStorage != "" {
 		if states, errs := cfg.Finder.FeedStatesByFeedIDs(ctx, []int{feed.ID}); len(errs) > 0 && errs[0] != nil {

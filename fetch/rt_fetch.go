@@ -47,9 +47,7 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 		if err != nil {
 			out.FetchError = err
 		}
-		// Archive the protobuf to a date-partitioned key when storage is configured
-		// (the action only sets Storage when the feed opts into archiving). Upload
-		// even when parsing failed, matching the prior behavior.
+		// Archive to a partitioned key when storage is set, even on parse failure.
 		if opts.Storage != "" {
 			storageKey = archiveKey(feed.FeedID, opts.URLType, opts.FetchedAt, "pb")
 		}

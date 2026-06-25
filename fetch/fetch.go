@@ -117,12 +117,8 @@ func uploadFile(ctx context.Context, storage, fn, key string) (int, error) {
 	return int(time.Since(t).Milliseconds()), nil
 }
 
-// archiveKey builds the date-partitioned object key for an archived fetch message:
-//
-//	feed=<onestop_id>/url_type=<url_type>/date=<YYYY-MM-DD>/<YYYY-MM-DD-HH-MM-SS>.<ext>
-//
-// The Hive-style partitions let query engines prune by feed, url_type and date; the
-// timestamp (from FetchedAt, UTC) makes each fetch a distinct, sortable object.
+// archiveKey builds the archive object key; the feed/url_type/date partitions let
+// query engines prune by those columns.
 func archiveKey(onestopID, urlType string, fetchedAt time.Time, ext string) string {
 	t := fetchedAt.UTC()
 	return fmt.Sprintf("feed=%s/url_type=%s/date=%s/%s.%s",
@@ -130,7 +126,6 @@ func archiveKey(onestopID, urlType string, fetchedAt time.Time, ext string) stri
 }
 
 // recordFeedFetch writes the feed_fetch audit row for a completed attempt.
-// storageKey is the archive object key when the message was archived, else empty.
 func recordFeedFetch(ctx context.Context, fm feedmanager.FeedManager, feed *dmfr.Feed, opts Options, result Result, dur fetchDurations, storageKey string) error {
 	tlfetch := dmfr.FeedFetch{}
 	tlfetch.FeedID = feed.ID

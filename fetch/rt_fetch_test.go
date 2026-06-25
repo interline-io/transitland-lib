@@ -78,9 +78,7 @@ func TestRTFetch(t *testing.T) {
 				testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
 				assert.Equal(t, tc.responseCode, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
 				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
-				// Archive: a successful download (200) uploads to the partitioned key and
-				// records storage_key — even if the protobuf failed to parse. A failed
-				// download (404) archives nothing.
+				// 200 archives to the partitioned key (even on parse failure); 404 doesn't.
 				if tc.responseCode == 200 {
 					assert.True(t, strings.HasPrefix(tlff.StorageKey.Val, "feed="), "storage_key should be a partitioned key, got %q", tlff.StorageKey.Val)
 					if _, err := os.Stat(filepath.Join(tmpdir, tlff.StorageKey.Val)); err != nil {
