@@ -33,7 +33,8 @@ $$;
 -- One month, one subtree (idempotent):
 --   SELECT feed_fetches_add_month('feed_fetches_rt', date '2026-07-01');
 
--- Seed a buffer: each month-partitioned subtree, from 3 months back through 3 years ahead.
+-- Seed a buffer: each month-partitioned subtree, from 3 months back through 1 year ahead.
+-- A maintenance worker (follow-up) keeps it topped up, so the forward window is modest.
 -- Backwards months only matter if you backfill recent realtime/gbfs (e.g. storage_key
 -- rows); pure-static backfill needs none. Adjust the range as desired.
 DO $$
@@ -43,7 +44,7 @@ DECLARE
 BEGIN
     FOREACH v_parent IN ARRAY ARRAY['feed_fetches_rt', 'feed_fetches_gbfs'] LOOP
         v_month := date_trunc('month', now()) - interval '3 months';
-        WHILE v_month < date_trunc('month', now()) + interval '3 years' LOOP
+        WHILE v_month < date_trunc('month', now()) + interval '1 year' LOOP
             PERFORM feed_fetches_add_month(v_parent, v_month::date);
             v_month := v_month + interval '1 month';
         END LOOP;
