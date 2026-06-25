@@ -2,7 +2,6 @@ package fetch
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -37,6 +36,7 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 	}
 
 	var dur fetchDurations
+	var storageKey string
 	if out.FetchError == nil {
 		// The protobuf parse is the RT analogue of validation; record its duration
 		// on the feed_fetch row, as the pre-rewrite fetch did.
@@ -47,16 +47,20 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 		if err != nil {
 			out.FetchError = err
 		}
-		// Upload the protobuf (content-addressed key); matches the prior behavior
-		// of uploading even when parsing failed.
-		uploadMs, uerr := uploadFile(ctx, opts.Storage, tmpfile, fmt.Sprintf("%s.pb", resp.ResponseSHA1))
+		// Archive the protobuf to a date-partitioned key when storage is configured
+		// (the action only sets Storage when the feed opts into archiving). Upload
+		// even when parsing failed, matching the prior behavior.
+		if opts.Storage != "" {
+			storageKey = archiveKey(feed.FeedID, opts.URLType, opts.FetchedAt, "pb")
+		}
+		uploadMs, uerr := uploadFile(ctx, opts.Storage, tmpfile, storageKey)
 		if uerr != nil {
 			log.For(ctx).Error().Err(uerr).Msg("fatal error during rt fetch")
 			return out, uerr
 		}
 		dur.uploadMs = uploadMs
 	}
-	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur); err != nil {
+	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur, storageKey); err != nil {
 		return out, err
 	}
 	return out, nil

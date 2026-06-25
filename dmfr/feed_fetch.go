@@ -20,6 +20,7 @@ type FeedFetch struct {
 	FeedVersionID        tt.Int // optional field, don't use FeedVersionEntity
 	ValidationDurationMs tt.Int
 	UploadDurationMs     tt.Int
+	StorageKey           tt.String // object key where the fetched message was archived, if any
 	tt.Timestamps
 	tt.DatabaseEntity
 }

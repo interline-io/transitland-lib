@@ -213,6 +213,7 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
   "public" bool not null,
   "feed_priority" integer,
   "fetch_wait" integer,
+  "rt_retention_period" integer not null default 0,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
@@ -630,6 +631,7 @@ CREATE TABLE feed_fetches (
   "validation_duration_ms" int,
   "upload_duration_ms" int,
   "feed_version_id" int,
+  "storage_key" text,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
