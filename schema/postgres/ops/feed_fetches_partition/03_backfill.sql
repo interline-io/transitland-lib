@@ -44,7 +44,10 @@ BEGIN
 END;
 $$;
 
--- CALL feed_fetches_backfill();
+-- Run in autocommit (e.g. plain psql), NOT inside a transaction block: the per-batch
+-- COMMIT above raises "invalid transaction termination" if CALL runs inside one. Avoid
+-- BEGIN/COMMIT wrappers, psql --single-transaction, and clients that auto-wrap statements.
+--   CALL feed_fetches_backfill();
 
 -- Verify before dropping (counts should match the keep-set):
 --   SELECT count(*) FROM feed_fetches_old WHERE url_type LIKE 'static_%' OR storage_key IS NOT NULL;
