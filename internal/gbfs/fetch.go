@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -23,6 +24,9 @@ type Result struct {
 
 func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) ([]GbfsFeed, Result, error) {
 	result := Result{}
+	if opts.FetchedAt.IsZero() {
+		opts.FetchedAt = time.Now().UTC()
+	}
 	var reqOpts []request.RequestOption
 	if opts.AllowFTPFetch {
 		reqOpts = append(reqOpts, request.WithAllowFTP)

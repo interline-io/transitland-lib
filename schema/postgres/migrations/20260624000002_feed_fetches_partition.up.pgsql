@@ -5,8 +5,9 @@ BEGIN;
 --
 -- Layout: LIST (url_type) at the top.
 --   static_*                 -> one leaf, kept forever, NOT time-partitioned.
---   realtime_* / gbfs_*      -> one leaf each, sub-partitioned RANGE (fetched_at) monthly;
---                               old months are dropped by the cull job.
+--   the three realtime_*     -> feed_fetches_rt, sub-partitioned RANGE (fetched_at) monthly.
+--   gbfs_auto_discovery      -> feed_fetches_gbfs, sub-partitioned RANGE (fetched_at) monthly.
+--                               old months of both are dropped by the cull job.
 --   anything else            -> DEFAULT leaf, so an unexpected url_type can never fail to route.
 --
 -- fetched_at becomes NOT NULL here: it is a partition key and part of the primary key.
@@ -42,25 +43,21 @@ CREATE TABLE feed_fetches_new (
 CREATE TABLE feed_fetches_static PARTITION OF feed_fetches_new
     FOR VALUES IN ('static_current', 'static_planned', 'static_historic');
 
--- Realtime + GBFS: month-partitioned; month leaves are created by feed_fetches_add_month().
-CREATE TABLE feed_fetches_alerts PARTITION OF feed_fetches_new
-    FOR VALUES IN ('realtime_alerts')             PARTITION BY RANGE (fetched_at);
-CREATE TABLE feed_fetches_trip_updates PARTITION OF feed_fetches_new
-    FOR VALUES IN ('realtime_trip_updates')       PARTITION BY RANGE (fetched_at);
-CREATE TABLE feed_fetches_vehicle_positions PARTITION OF feed_fetches_new
-    FOR VALUES IN ('realtime_vehicle_positions')  PARTITION BY RANGE (fetched_at);
+-- Realtime (all three types) and GBFS: month-partitioned; month leaves are created
+-- by feed_fetches_add_month().
+CREATE TABLE feed_fetches_rt PARTITION OF feed_fetches_new
+    FOR VALUES IN ('realtime_alerts', 'realtime_trip_updates', 'realtime_vehicle_positions')
+    PARTITION BY RANGE (fetched_at);
 CREATE TABLE feed_fetches_gbfs PARTITION OF feed_fetches_new
-    FOR VALUES IN ('gbfs_auto_discovery')         PARTITION BY RANGE (fetched_at);
+    FOR VALUES IN ('gbfs_auto_discovery') PARTITION BY RANGE (fetched_at);
 
 -- LIST catch-all for unexpected/future url_types.
 CREATE TABLE feed_fetches_unknown PARTITION OF feed_fetches_new DEFAULT;
 
--- RANGE backstop under each month-partitioned type: rows land here when no month
+-- RANGE backstop under each month-partitioned subtree: rows land here when no month
 -- partition covers their fetched_at (e.g. before the buffer is seeded). Keep these
 -- empty in production by seeding ahead, or the matching month partition can't be created.
-CREATE TABLE feed_fetches_alerts_default PARTITION OF feed_fetches_alerts DEFAULT;
-CREATE TABLE feed_fetches_trip_updates_default PARTITION OF feed_fetches_trip_updates DEFAULT;
-CREATE TABLE feed_fetches_vehicle_positions_default PARTITION OF feed_fetches_vehicle_positions DEFAULT;
+CREATE TABLE feed_fetches_rt_default PARTITION OF feed_fetches_rt DEFAULT;
 CREATE TABLE feed_fetches_gbfs_default PARTITION OF feed_fetches_gbfs DEFAULT;
 
 -- Indexes are declared on the parent and propagate to all current/future partitions.

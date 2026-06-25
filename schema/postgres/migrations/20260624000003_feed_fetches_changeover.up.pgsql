@@ -19,15 +19,7 @@ ALTER TABLE feed_fetches_new RENAME TO feed_fetches;
 -- it never drops the sequence.
 ALTER SEQUENCE feed_fetches_id_seq OWNED BY feed_fetches.id;
 
--- Drop the old table only when it is empty. On a fresh/test database that is the empty
--- init table, so this leaves a partitioned feed_fetches everywhere. On production the
--- old table has rows, EXISTS short-circuits to true, and it is kept for the backfill
--- (ops/feed_fetches_partition/03_backfill.sql) and dropped manually afterward.
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM feed_fetches_old) THEN
-        DROP TABLE feed_fetches_old;
-    END IF;
-END $$;
-
+-- The old table is never auto-dropped. On production it is retained as the backfill
+-- source and dropped manually afterward (ops/feed_fetches_partition/03_backfill.sql);
+-- on fresh/test DBs it lingers empty as feed_fetches_old until dropped by hand.
 COMMIT;
