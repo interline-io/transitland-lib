@@ -676,6 +676,17 @@ CREATE TABLE gtfs_fare_leg_rules (
   "transfer_only" integer,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
 );
+CREATE TABLE gtfs_fare_leg_join_rules (
+  "id" integer primary key autoincrement,
+  "feed_version_id" int not null,
+  "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
+  "from_network_id" varchar(255),
+  "to_network_id" varchar(255),
+  "from_stop_id" varchar(255),
+  "to_stop_id" varchar(255),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
 CREATE TABLE gtfs_fare_transfer_rules (
   "id" integer primary key autoincrement,
   "feed_version_id" int not null,

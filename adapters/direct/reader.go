@@ -31,6 +31,7 @@ type Reader struct {
 	AreaList              []gtfs.Area
 	StopAreaList          []gtfs.StopArea
 	FareLegRuleList       []gtfs.FareLegRule
+	FareLegJoinRuleList   []gtfs.FareLegJoinRule
 	FareTransferRuleList  []gtfs.FareTransferRule
 	FareMediaList         []gtfs.FareMedia
 	FareProductList       []gtfs.FareProduct
@@ -353,6 +354,17 @@ func (mr *Reader) FareLegRules() chan gtfs.FareLegRule {
 	out := make(chan gtfs.FareLegRule, bufferSize)
 	go func() {
 		for _, ent := range mr.FareLegRuleList {
+			out <- ent
+		}
+		close(out)
+	}()
+	return out
+}
+
+func (mr *Reader) FareLegJoinRules() chan gtfs.FareLegJoinRule {
+	out := make(chan gtfs.FareLegJoinRule, bufferSize)
+	go func() {
+		for _, ent := range mr.FareLegJoinRuleList {
 			out <- ent
 		}
 		close(out)
