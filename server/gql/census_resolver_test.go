@@ -309,6 +309,44 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			// Combined within + stop_buffer clips to the intersection of the
+			// polygon and the buffer union — strictly smaller than `within`
+			// alone (which over the same feature totals 829385.80 across 11
+			// tracts).
+			name:  "combined within and stop buffer - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-122.27463277683867, 37.805635064682264},
+					{-122.28006473340696, 37.80461858815316},
+					{-122.27406099193678, 37.801456127261474},
+					{-122.2754189810789, 37.79671218203016},
+					{-122.27041586318674, 37.799648945955155},
+					{-122.26398328303992, 37.79863238703946},
+					{-122.26791430424078, 37.80247264731531},
+					{-122.26441212171653, 37.80693387544258},
+					{-122.269558185834, 37.806199767818995},
+					{-122.27313184147101, 37.81066077079923},
+					{-122.27463277683867, 37.805635064682264},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				a := gjson.Get(jj, "census_datasets.0.geographies").Array()
+				ia := 0.0
+				ga := map[string]float64{}
+				for _, v := range a {
+					ia += v.Get("intersection_area").Float()
+					ga[v.Get("geoid").String()] = v.Get("geometry_area").Float()
+				}
+				gaSum := 0.0
+				for _, v := range ga {
+					gaSum += v
+				}
+				t.Logf("combined tract: count=%d geometryArea=%v intersectionArea=%v", len(a), gaSum, ia)
+			},
+		},
+		{
 			name:  "agency intersection areas - county",
 			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"county", radius:1000.0}) { name geoid geometry_area intersection_geometry intersection_area } } }`,
 			vars:  vars,

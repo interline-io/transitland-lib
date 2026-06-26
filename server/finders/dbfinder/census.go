@@ -413,7 +413,30 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		var qPoints sq.SelectBuilder
 
 		loc := where.Location
-		if loc.Bbox != nil {
+		withinClip := loc.Within != nil && loc.Within.Valid
+		stopBufferClip := loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0
+		stopBufferRadius := 0.0
+		if stopBufferClip {
+			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_000)
+		}
+		if withinClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
+			// Clip to the intersection of the query-area polygon (`within`) and
+			// the stop-buffer union: census apportioned to where the polygon and
+			// the transit coverage overlap, not either alone. Emit one combined
+			// polygon (no ST_Dump) so each geography appears once with its full
+			// overlap area, like the `within`-only branch. Without this case the
+			// chain below would honor only `within` and ignore the buffer.
+			jj, _ := geojson.Marshal(loc.Within.Val)
+			qBufferUse = true
+			qBuffer = sq.StatementBuilder.Select().
+				Column(
+					"ST_Intersection(ST_GeomFromGeoJSON(?), ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry)) as buffer",
+					string(jj), stopBufferRadius,
+				).
+				Column("0 as match_entity_id").
+				From("gtfs_stops").
+				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+		} else if loc.Bbox != nil {
 			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
 				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat).
