@@ -1075,7 +1075,7 @@ type ComplexityRoot struct {
 		Geometry  func(childComplexity int) int
 		ID        func(childComplexity int) int
 		ShapeID   func(childComplexity int) int
-		Trips     func(childComplexity int, limit *int, after *int, where *model.TripFilter) int
+		Trips     func(childComplexity int, limit *int, where *model.TripFilter) int
 	}
 
 	Step struct {
@@ -1552,7 +1552,7 @@ type SegmentPatternResolver interface {
 	Segment(ctx context.Context, obj *model.SegmentPattern) (*model.Segment, error)
 }
 type ShapeResolver interface {
-	Trips(ctx context.Context, obj *model.Shape, limit *int, after *int, where *model.TripFilter) ([]*model.Trip, error)
+	Trips(ctx context.Context, obj *model.Shape, limit *int, where *model.TripFilter) ([]*model.Trip, error)
 }
 type StopResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Stop) (*model.FeedVersion, error)
@@ -6416,7 +6416,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Shape.Trips(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.TripFilter)), true
+		return e.ComplexityRoot.Shape.Trips(childComplexity, args["limit"].(*int), args["where"].(*model.TripFilter)), true
 
 	case "Step.distance":
 		if e.ComplexityRoot.Step.Distance == nil {
@@ -10009,7 +10009,7 @@ type Shape {
   generated: Boolean!
 
   "Trips that use this shape"
-  trips(limit: Int, after: Int, where: TripFilter): [Trip!]
+  trips(limit: Int, where: TripFilter): [Trip!]
 }
 
 """Search options for shapes"""
@@ -16218,22 +16218,14 @@ func (ec *executionContext) field_Shape_trips_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.TripFilter, error) {
 			return ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["where"] = arg2
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -36009,7 +36001,7 @@ func (ec *executionContext) _Shape_trips(ctx context.Context, field graphql.Coll
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Shape().Trips(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.TripFilter))
+			return ec.Resolvers.Shape().Trips(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.TripFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Trip) graphql.Marshaler {

@@ -8,11 +8,8 @@ import (
 
 type shapeResolver struct{ *Resolver }
 
-// Trips returns the trips that use this shape. The after argument is accepted
-// for forward-compatibility but not yet applied — cursor pagination will be
-// added uniformly across resolvers later.
-func (r *shapeResolver) Trips(ctx context.Context, obj *model.Shape, limit *int, after *int, where *model.TripFilter) ([]*model.Trip, error) {
-	_ = after
+// Trips returns the trips that use this shape.
+func (r *shapeResolver) Trips(ctx context.Context, obj *model.Shape, limit *int, where *model.TripFilter) ([]*model.Trip, error) {
 	return LoaderFor(ctx).TripsByShapeIDs.Load(ctx, tripLoaderParam{
 		ShapeID:       obj.ID,
 		FeedVersionID: obj.FeedVersionID,

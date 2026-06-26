@@ -1153,7 +1153,7 @@ type Shape {
   generated: Boolean!
 
   "Trips that use this shape"
-  trips(limit: Int, after: Int, where: TripFilter): [Trip!]
+  trips(limit: Int, where: TripFilter): [Trip!]
 }
 
 """Search options for shapes"""
