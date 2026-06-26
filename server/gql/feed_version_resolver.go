@@ -85,6 +85,13 @@ func (r *feedVersionResolver) Segments(ctx context.Context, obj *model.FeedVersi
 	return LoaderFor(ctx).SegmentsByFeedVersionIDs.Load(ctx, segmentLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
+// Shapes returns this feed version's shapes with keyset (after) pagination.
+// Calls the Finder directly (not a batched loader) so the per-feed-version
+// cursor works — fine since the UI pages one feed version at a time.
+func (r *feedVersionResolver) Shapes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.ShapeFilter) ([]*model.Shape, error) {
+	return model.ForContext(ctx).Finder.FindShapesByFeedVersion(ctx, obj.ID, resolverCheckLimitMax(limit, RESOLVER_SHAPE_MAXLIMIT), checkCursor(after), where)
+}
+
 // FEED VERSION GTFS IMPORT
 
 type feedVersionGtfsImportResolver struct{ *Resolver }

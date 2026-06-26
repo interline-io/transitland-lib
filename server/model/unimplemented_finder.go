@@ -73,6 +73,9 @@ func (UnimplementedFinder) FindRoutes(context.Context, *int, *Cursor, []int, *Ro
 func (UnimplementedFinder) FindStops(context.Context, *int, *Cursor, []int, *StopFilter) ([]*Stop, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) FindShapesByFeedVersion(context.Context, int, *int, *Cursor, *ShapeFilter) ([]*Shape, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) FindTrips(context.Context, *int, *Cursor, []int, *TripFilter) ([]*Trip, error) {
 	return nil, notImplErr()
 }
@@ -344,6 +347,9 @@ func (UnimplementedFinder) TripsByIDs(_ context.Context, ids []int) ([]*Trip, []
 	return notImplBatch[*Trip](ids)
 }
 func (UnimplementedFinder) TripsByRouteIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) TripsByShapeIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) ValidationReportErrorExemplarsByValidationReportErrorGroupIDs(context.Context, *int, []int) ([][]*ValidationReportError, error) {

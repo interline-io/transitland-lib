@@ -1225,6 +1225,16 @@ type ServiceCoversFilter struct {
 	LatestCalendarDate *tt.Date `json:"latest_calendar_date,omitempty"`
 }
 
+// Search options for shapes
+type ShapeFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for a shape with this GTFS shape_id
+	ShapeID *string `json:"shape_id,omitempty"`
+	// Search for shapes used by a trip on a route of this GTFS route_type
+	RouteType *int `json:"route_type,omitempty"`
+}
+
 // A single turn-by-turn navigation instruction within a walking or cycling leg.
 type Step struct {
 	// Duration of this step

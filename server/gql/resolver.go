@@ -19,6 +19,7 @@ const (
 	RESOLVER_STOP_OBSERVATION_MAXLIMIT = 100_000
 	RESOLVER_LOCATION_MAXLIMIT         = 100_000
 	RESOLVER_SEGMENT_MAXLIMIT          = 100_000
+	RESOLVER_SHAPE_MAXLIMIT            = 100_000
 )
 
 // RESOLVER_MAXLIMIT is the API limit maximum
@@ -173,6 +174,8 @@ func (r *Resolver) RouteStopPattern() gqlout.RouteStopPatternResolver {
 
 // Segment .
 func (r *Resolver) Segment() gqlout.SegmentResolver { return &segmentResolver{r} }
+
+func (r *Resolver) Shape() gqlout.ShapeResolver { return &shapeResolver{r} }
 
 // SegmentPattern .
 func (r *Resolver) SegmentPattern() gqlout.SegmentPatternResolver { return &segmentPatternResolver{r} }
