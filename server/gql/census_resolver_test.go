@@ -309,41 +309,32 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
-			// Combined within + stop_buffer clips to the intersection of the
-			// polygon and the buffer union — strictly smaller than `within`
-			// alone (which over the same feature totals 829385.80 across 11
-			// tracts).
+			// Combined within + stop_buffer must honor BOTH filters. Here
+			// `within` is a large polygon that fully contains the FTVL buffer,
+			// so the search area reduces to the buffer and the result matches
+			// the stop-buffer-only case (one tract, ~31235 m^2 of buffer area).
+			// Before the combined branch, `within` won outright and the buffer
+			// was ignored — this query would have returned every tract in the
+			// polygon instead.
 			name:  "combined within and stop buffer - tract",
 			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
 			vars: hw{
 				"stop_ids": []int{bartFtvlStopId},
 				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
-					{-122.27463277683867, 37.805635064682264},
-					{-122.28006473340696, 37.80461858815316},
-					{-122.27406099193678, 37.801456127261474},
-					{-122.2754189810789, 37.79671218203016},
-					{-122.27041586318674, 37.799648945955155},
-					{-122.26398328303992, 37.79863238703946},
-					{-122.26791430424078, 37.80247264731531},
-					{-122.26441212171653, 37.80693387544258},
-					{-122.269558185834, 37.806199767818995},
-					{-122.27313184147101, 37.81066077079923},
-					{-122.27463277683867, 37.805635064682264},
+					{-123.77489413290716, 38.794161309061735},
+					{-122.69431950796763, 35.52679604934255},
+					{-119.9104881819854, 37.991860068760204},
+					{-123.77489413290716, 38.794161309061735},
 				}}},
 			},
 			f: func(t *testing.T, jj string) {
-				a := gjson.Get(jj, "census_datasets.0.geographies").Array()
-				ia := 0.0
-				ga := map[string]float64{}
-				for _, v := range a {
-					ia += v.Get("intersection_area").Float()
-					ga[v.Get("geoid").String()] = v.Get("geometry_area").Float()
-				}
-				gaSum := 0.0
-				for _, v := range ga {
-					gaSum += v
-				}
-				t.Logf("combined tract: count=%d geometryArea=%v intersectionArea=%v", len(a), gaSum, ia)
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918910.47033,
+					31235.844716912135,
+				)
 			},
 		},
 		{
