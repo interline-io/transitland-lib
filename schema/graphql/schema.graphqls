@@ -490,6 +490,9 @@ type FeedVersion {
   
   "Normalized route segment data associated with this feed version, if available"
   segments(limit: Int): [Segment!]
+
+  "GTFS shapes associated with this feed version"
+  shapes(limit: Int, after: Int, where: ShapeFilter): [Shape!]
 }
 
 """Metadata for each file contained within a GTFS archive"""
@@ -1148,6 +1151,19 @@ type Shape {
 
   "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`"
   generated: Boolean!
+
+  "Trips that use this shape"
+  trips(limit: Int, where: TripFilter): [Trip!]
+}
+
+"""Search options for shapes"""
+input ShapeFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a shape with this GTFS shape_id"
+  shape_id: String
+  "Search for shapes used by a trip on a route of this GTFS route_type"
+  route_type: Int
 }
 
 """

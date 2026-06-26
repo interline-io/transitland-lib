@@ -85,6 +85,10 @@ func (r *feedVersionResolver) Segments(ctx context.Context, obj *model.FeedVersi
 	return LoaderFor(ctx).SegmentsByFeedVersionIDs.Load(ctx, segmentLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
+func (r *feedVersionResolver) Shapes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.ShapeFilter) ([]*model.Shape, error) {
+	return model.ForContext(ctx).Finder.FindShapesByFeedVersion(ctx, obj.ID, resolverCheckLimitMax(limit, RESOLVER_SHAPE_MAXLIMIT), checkCursor(after), where)
+}
+
 // FEED VERSION GTFS IMPORT
 
 type feedVersionGtfsImportResolver struct{ *Resolver }

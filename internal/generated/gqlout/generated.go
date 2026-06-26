@@ -60,6 +60,7 @@ type ResolverRoot interface {
 	RouteStopPattern() RouteStopPatternResolver
 	Segment() SegmentResolver
 	SegmentPattern() SegmentPatternResolver
+	Shape() ShapeResolver
 	Stop() StopResolver
 	StopExternalReference() StopExternalReferenceResolver
 	StopTime() StopTimeResolver
@@ -373,6 +374,7 @@ type ComplexityRoot struct {
 		Segments              func(childComplexity int, limit *int) int
 		ServiceLevels         func(childComplexity int, limit *int, where *model.FeedVersionServiceLevelFilter) int
 		ServiceWindow         func(childComplexity int) int
+		Shapes                func(childComplexity int, limit *int, after *int, where *model.ShapeFilter) int
 		Stops                 func(childComplexity int, limit *int, where *model.StopFilter) int
 		Trips                 func(childComplexity int, limit *int, where *model.TripFilter) int
 		URL                   func(childComplexity int) int
@@ -1073,6 +1075,7 @@ type ComplexityRoot struct {
 		Geometry  func(childComplexity int) int
 		ID        func(childComplexity int) int
 		ShapeID   func(childComplexity int) int
+		Trips     func(childComplexity int, limit *int, where *model.TripFilter) int
 	}
 
 	Step struct {
@@ -1417,6 +1420,7 @@ type FeedVersionResolver interface {
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
+	Shapes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.ShapeFilter) ([]*model.Shape, error)
 	Permissions(ctx context.Context, obj *model.FeedVersion) (*model.Permissions, error)
 }
 type FeedVersionGtfsImportResolver interface {
@@ -1546,6 +1550,9 @@ type SegmentPatternResolver interface {
 
 	Shape(ctx context.Context, obj *model.SegmentPattern) (*model.Shape, error)
 	Segment(ctx context.Context, obj *model.SegmentPattern) (*model.Segment, error)
+}
+type ShapeResolver interface {
+	Trips(ctx context.Context, obj *model.Shape, limit *int, where *model.TripFilter) ([]*model.Trip, error)
 }
 type StopResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Stop) (*model.FeedVersion, error)
@@ -3115,6 +3122,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.ServiceWindow(childComplexity), true
+	case "FeedVersion.shapes":
+		if e.ComplexityRoot.FeedVersion.Shapes == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_shapes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.Shapes(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.ShapeFilter)), true
 	case "FeedVersion.stops":
 		if e.ComplexityRoot.FeedVersion.Stops == nil {
 			break
@@ -6388,6 +6406,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Shape.ShapeID(childComplexity), true
+	case "Shape.trips":
+		if e.ComplexityRoot.Shape.Trips == nil {
+			break
+		}
+
+		args, err := ec.field_Shape_trips_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Shape.Trips(childComplexity, args["limit"].(*int), args["where"].(*model.TripFilter)), true
 
 	case "Step.distance":
 		if e.ComplexityRoot.Step.Distance == nil {
@@ -7827,6 +7856,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSegmentFilter,
 		ec.unmarshalInputSegmentPatternFilter,
 		ec.unmarshalInputServiceCoversFilter,
+		ec.unmarshalInputShapeFilter,
 		ec.unmarshalInputStopBuffer,
 		ec.unmarshalInputStopExternalReferenceSetInput,
 		ec.unmarshalInputStopFilter,
@@ -9316,6 +9346,9 @@ type FeedVersion {
   
   "Normalized route segment data associated with this feed version, if available"
   segments(limit: Int): [Segment!]
+
+  "GTFS shapes associated with this feed version"
+  shapes(limit: Int, after: Int, where: ShapeFilter): [Shape!]
 }
 
 """Metadata for each file contained within a GTFS archive"""
@@ -9974,6 +10007,19 @@ type Shape {
 
   "True if this geometry was generated from stop locations because the source feed lacks a ` + "`" + `shapes.txt` + "`" + `"
   generated: Boolean!
+
+  "Trips that use this shape"
+  trips(limit: Int, where: TripFilter): [Trip!]
+}
+
+"""Search options for shapes"""
+input ShapeFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a shape with this GTFS shape_id"
+  shape_id: String
+  "Search for shapes used by a trip on a route of this GTFS route_type"
+  route_type: Int
 }
 
 """
@@ -12645,6 +12691,8 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 	case "segments":
 		return ec.fieldContext_FeedVersion_segments(ctx, field)
+	case "shapes":
+		return ec.fieldContext_FeedVersion_shapes(ctx, field)
 	case "permissions":
 		return ec.fieldContext_FeedVersion_permissions(ctx, field)
 	}
@@ -13899,6 +13947,8 @@ func (ec *executionContext) childFields_Shape(ctx context.Context, field graphql
 		return ec.fieldContext_Shape_geometry(ctx, field)
 	case "generated":
 		return ec.fieldContext_Shape_generated(ctx, field)
+	case "trips":
+		return ec.fieldContext_Shape_trips(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Shape", field.Name)
 }
@@ -14996,6 +15046,36 @@ func (ec *executionContext) field_FeedVersion_service_levels_args(ctx context.Co
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_shapes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.ShapeFilter, error) {
+			return ec.unmarshalOShapeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShapeFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg2
 	return args, nil
 }
 
@@ -16106,6 +16186,28 @@ func (ec *executionContext) field_Route_stops_args(ctx context.Context, rawArgs 
 }
 
 func (ec *executionContext) field_Route_trips_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.TripFilter, error) {
+			return ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Shape_trips_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
@@ -22812,6 +22914,50 @@ func (ec *executionContext) fieldContext_FeedVersion_segments(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_FeedVersion_segments_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_shapes(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_shapes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().Shapes(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.ShapeFilter))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Shape) graphql.Marshaler {
+			return ec.marshalOShape2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShapeᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_shapes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Shape(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_shapes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -35845,6 +35991,50 @@ func (ec *executionContext) fieldContext_Shape_generated(_ context.Context, fiel
 	return graphql.NewScalarFieldContext("Shape", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _Shape_trips(ctx context.Context, field graphql.CollectedField, obj *model.Shape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Shape_trips(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Shape().Trips(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.TripFilter))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Trip) graphql.Marshaler {
+			return ec.marshalOTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Shape_trips(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Shape",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Trip(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Shape_trips_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Step_duration(ctx context.Context, field graphql.CollectedField, obj *model.Step) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -44646,6 +44836,50 @@ func (ec *executionContext) unmarshalInputServiceCoversFilter(ctx context.Contex
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputShapeFilter(ctx context.Context, obj any) (model.ShapeFilter, error) {
+	var it model.ShapeFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"ids", "shape_id", "route_type"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
+		case "shape_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("shape_id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ShapeID = data
+		case "route_type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_type"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RouteType = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputStopBuffer(ctx context.Context, obj any) (model.StopBuffer, error) {
 	var it model.StopBuffer
 	if obj == nil {
@@ -48709,6 +48943,39 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._FeedVersion_segments(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "shapes":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_shapes(ctx, field, obj)
 				return res
 			}
 
@@ -54657,23 +54924,56 @@ func (ec *executionContext) _Shape(ctx context.Context, sel ast.SelectionSet, ob
 		case "id":
 			out.Values[i] = ec._Shape_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "shape_id":
 			out.Values[i] = ec._Shape_shape_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "geometry":
 			out.Values[i] = ec._Shape_geometry(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "generated":
 			out.Values[i] = ec._Shape_generated(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "trips":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Shape_trips(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -61407,11 +61707,38 @@ func (ec *executionContext) unmarshalOServiceCoversFilter2ᚖgithubᚗcomᚋinte
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalOShape2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShapeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Shape) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalOShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v *model.Shape) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Shape(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOShapeFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShapeFilter(ctx context.Context, v any) (*model.ShapeFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputShapeFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOStep2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStepᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Step) graphql.Marshaler {
