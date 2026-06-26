@@ -8,13 +8,8 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-// FindShapesByFeedVersion returns a feed version's shapes with keyset (after)
-// pagination on the integer id:
-//
-//	... where feed_version_id = ? [and id > after] order by id asc limit ?
-//
-// Direct (non-batched) query so the per-feed-version cursor works; fine since
-// shapes are paged within a single feed version.
+// FindShapesByFeedVersion pages a feed version's shapes by integer-id cursor.
+// Direct query, not a batched loader, so the per-parent `after` cursor works.
 func (f *Finder) FindShapesByFeedVersion(ctx context.Context, fvid int, limit *int, after *model.Cursor, where *model.ShapeFilter) ([]*model.Shape, error) {
 	var ents []*model.Shape
 	if err := dbutil.Select(ctx, f.db, shapeSelect(limit, after, fvid, f.PermFilter(ctx), where), &ents); err != nil {
