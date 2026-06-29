@@ -30,18 +30,19 @@ type ImportJob struct {
 
 // ImportCommand imports FeedVersions into a database.
 type ImportCommand struct {
-	FeedIDs    []string    // Filter by feed onestop_id
-	FVSHA1     []string    // Filter by feed version SHA1
-	ImportJobs []ImportJob // Programmatic list of import operations
-	Options    importer.Options
-	Workers    int
-	Limit      int
-	Fail       bool
-	DBURL      string
-	Latest     bool
-	DryRun     bool
-	Results    []ImportCommandResult
-	Adapter    tldb.Adapter // allow for mocks
+	FeedIDs         []string    // Filter by feed onestop_id
+	FVSHA1          []string    // Filter by feed version SHA1
+	ImportJobs      []ImportJob // Programmatic list of import operations
+	Options         importer.Options
+	Workers         int
+	Limit           int
+	Fail            bool
+	ContinueOnError bool
+	DBURL           string
+	Latest          bool
+	DryRun          bool
+	Results         []ImportCommandResult
+	Adapter         tldb.Adapter // allow for mocks
 	// internal
 	fvids           []string
 	fvidfile        string
@@ -67,6 +68,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.IntVar(&cmd.Limit, "limit", 0, "Import at most n feeds")
 	fl.BoolVar(&cmd.Fail, "fail", false, "Exit with error code if any fetch is not successful")
+	fl.BoolVar(&cmd.ContinueOnError, "continue-on-error", false, "Do not exit with an error if individual feed versions fail to import; errors that prevent the run from starting still fail")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage location; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
@@ -264,22 +266,47 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 	close(results)
 
 	// Check results
-	var fatalError error
 	for result := range results {
 		cmd.Results = append(cmd.Results, result)
+	}
+	fatalError, failedCount := importResultsError(cmd.Results, cmd.Fail, cmd.ContinueOnError)
+	if failedCount > 0 {
+		log.For(ctx).Warn().Int("failed_count", failedCount).Int("total_count", len(cmd.Results)).Msg("some feed versions failed to import")
+	}
+	if fatalError != nil {
+		log.For(ctx).Error().Err(fatalError).Msg("Exiting because at least one import had a fatal error")
+		return fatalError
+	}
+	return nil
+}
+
+// importResultsError evaluates per-feed import results and returns a process-level
+// error (or nil) along with the number of feed versions that failed.
+//
+// A feed version "fails" if its import returned a fatal error or finished
+// unsuccessfully. By default a fatal error fails the whole run, while an
+// unsuccessful (but non-fatal) import fails it only when --fail is set. With
+// continueOnError, an individual feed failure never fails the run, so one bad
+// feed — e.g. a validation rollback — does not abort a batch import of many
+// feeds. Errors that prevent the run from starting are returned before results
+// are collected and are unaffected by this.
+func importResultsError(results []ImportCommandResult, fail bool, continueOnError bool) (error, int) {
+	var fatalError error
+	failedCount := 0
+	for _, result := range results {
 		if result.FatalError != nil {
-			fatalError = result.FatalError
+			failedCount++
+			if !continueOnError {
+				fatalError = result.FatalError
+			}
 		} else if fvi := result.Result.FeedVersionImport; !fvi.Success {
-			if cmd.Fail {
+			failedCount++
+			if fail && !continueOnError {
 				fatalError = fmt.Errorf("import failed: %s", fvi.ExceptionLog)
 			}
 		}
 	}
-	if fatalError != nil {
-		log.For(ctx).Error().Err(fatalError).Msg("Exiting because at least one import had fatal error")
-		return fatalError
-	}
-	return nil
+	return fatalError, failedCount
 }
 
 func dmfrImportWorker(ctx context.Context, adapter tldb.Adapter, dryrun bool, jobs <-chan importer.Options, results chan<- ImportCommandResult, wg *sync.WaitGroup) {
