@@ -43,6 +43,13 @@ func TestAgency_Errors(t *testing.T) {
 			expectedErrors: PE("InvalidFieldError:agency_url"),
 		},
 		{
+			name: "Missing agency_url is a warning, not an error",
+			agency: newAgency(func(a *Agency) {
+				a.AgencyURL = tt.Url{}
+			}),
+			expectedErrors: nil,
+		},
+		{
 			name: "Missing agency_timezone (required field)",
 			agency: newAgency(func(a *Agency) {
 				a.AgencyTimezone = tt.Timezone{}
@@ -69,6 +76,45 @@ func TestAgency_Errors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := tt.CheckErrors(tc.agency)
 			CheckErrors(tc.expectedErrors, errs, t)
+		})
+	}
+}
+
+func TestAgency_Warnings(t *testing.T) {
+	validAgency := func() *Agency {
+		return &Agency{
+			AgencyID:       tt.NewString("ok"),
+			AgencyName:     tt.NewString("valid agency"),
+			AgencyURL:      tt.NewUrl("http://google.com"),
+			AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+		}
+	}
+
+	tests := []struct {
+		name             string
+		agency           *Agency
+		expectedWarnings []ExpectError
+	}{
+		{
+			name:             "Complete agency has no warnings",
+			agency:           validAgency(),
+			expectedWarnings: nil,
+		},
+		{
+			name: "Missing agency_url warns",
+			agency: func() *Agency {
+				a := validAgency()
+				a.AgencyURL = tt.Url{}
+				return a
+			}(),
+			expectedWarnings: PE("RequiredFieldError:agency_url"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			warns := tt.CheckWarnings(tc.agency)
+			CheckErrors(tc.expectedWarnings, warns, t)
 		})
 	}
 }

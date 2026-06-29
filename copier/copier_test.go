@@ -342,3 +342,33 @@ func TestCopier_CreateMissingShapes_FlexTrips(t *testing.T) {
 	// Verify generated shapes count
 	assert.Equal(t, 1, cpResult.GeneratedCount["shapes.txt"], "should have generated exactly 1 shape")
 }
+
+// TestCopier_MissingAgencyURL_NoCascade overlays an agency.txt whose only agency
+// is missing agency_url onto an otherwise valid feed. A missing agency_url must
+// not drop the agency: if it did, the agency's routes would reference an unknown
+// agency_id and be dropped, and that route's trips would cascade-drop as well,
+// failing the required-minimum-entities check on import.
+func TestCopier_MissingAgencyURL_NoCascade(t *testing.T) {
+	reader, err := tlcsv.NewReader(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader.Adapter = tlcsv.NewOverlayAdapter(
+		testpath.RelPath("testdata/gtfs-validator-layers/best-practices/agency-missing-agency_url"),
+		testpath.RelPath("testdata/gtfs-validator-layers/base"),
+	)
+
+	writer := direct.NewWriter()
+	cpResult, err := CopyWithOptions(context.Background(), reader, writer, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The agency and everything that references it still copies.
+	assert.Equal(t, 1, cpResult.EntityCount["agency.txt"], "agency should copy despite missing agency_url")
+	assert.Equal(t, 1, cpResult.EntityCount["routes.txt"], "route should not be dropped as an orphan")
+	assert.Equal(t, 1, cpResult.EntityCount["trips.txt"], "trip should not cascade-drop")
+	// Nothing is skipped for an entity or reference error.
+	assert.Zero(t, cpResult.SkipEntityErrorCount["agency.txt"], "missing agency_url must not skip the agency")
+	assert.Zero(t, cpResult.SkipEntityReferenceCount["routes.txt"], "route must not become a reference error")
+}
