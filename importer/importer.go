@@ -28,6 +28,11 @@ type Options struct {
 	// If any file exceeds its threshold, the import is considered failed.
 	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
 	ErrorThreshold map[string]float64
+	// DefaultAgencyURL, when set, fills a missing agency_url with this value so the
+	// agency is not dropped (which would cascade to its routes and trips). Empty
+	// disables. The value is used verbatim; callers that want a per-feed URL build
+	// it themselves.
+	DefaultAgencyURL string
 	copier.Options
 }
 
@@ -139,6 +144,9 @@ func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmf
 	opts.Options.NormalizeServiceIDs = true
 	for _, b := range builders.DefaultImportBuilders() {
 		opts.Options.AddExtension(b)
+	}
+	if opts.DefaultAgencyURL != "" {
+		opts.Options.AddExtension(NewDefaultAgencyURLFilter(opts.DefaultAgencyURL))
 	}
 	fvi.InProgress = false
 

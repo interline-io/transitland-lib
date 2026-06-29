@@ -81,6 +81,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
 	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail import if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
+	fl.StringVar(&cmd.Options.DefaultAgencyURL, "default-agency-url", "", "Fill a missing agency_url with this value (used verbatim)")
 }
 
 // Parse command line flags
@@ -246,10 +247,11 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 	results := make(chan ImportCommandResult, len(cmd.ImportJobs))
 	for _, job := range cmd.ImportJobs {
 		jobs <- importer.Options{
-			FeedVersionID: job.FeedVersionID,
-			Storage:       cmd.Options.Storage,
-			Activate:      cmd.Options.Activate,
-			Options:       cmd.Options.Options,
+			FeedVersionID:    job.FeedVersionID,
+			Storage:          cmd.Options.Storage,
+			Activate:         cmd.Options.Activate,
+			DefaultAgencyURL: cmd.Options.DefaultAgencyURL,
+			Options:          cmd.Options.Options,
 		}
 	}
 	close(jobs)
