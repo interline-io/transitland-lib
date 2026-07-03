@@ -29,10 +29,11 @@ const (
 )
 
 var (
-	_ jobs.Backend       = (*LocalBackend)(nil)
-	_ jobs.Queue         = (*localQueue)(nil)
-	_ jobs.StatusQueue   = (*localQueue)(nil)
-	_ jobs.PeriodicQueue = (*localQueue)(nil)
+	_ jobs.Backend        = (*LocalBackend)(nil)
+	_ jobs.Queue          = (*localQueue)(nil)
+	_ jobs.StatusQueue    = (*localQueue)(nil)
+	_ jobs.DeletableQueue = (*localQueue)(nil)
+	_ jobs.PeriodicQueue  = (*localQueue)(nil)
 )
 
 // LocalBackend is a development backend that runs jobs in-process via
@@ -457,6 +458,30 @@ func (q *localQueue) Cancel(ctx context.Context, jobId string) error {
 	if wasQueued {
 		q.updateStatus(jobId, jobs.JobStateCancelled, "cancelled")
 	}
+	return nil
+}
+
+// Delete removes a terminal job's record from the registry. Returns
+// ErrJobNotFound if unknown, ErrJobNotTerminal if the job is still queued or
+// running (cancel it first), or a policy error if the caller may not read the
+// job. Artifacts are stored separately and are left untouched.
+func (q *localQueue) Delete(ctx context.Context, jobId string) error {
+	entry := q.getEntry(jobId)
+	if entry == nil {
+		return jobs.ErrJobNotFound
+	}
+	entry.mu.Lock()
+	st := entry.status
+	entry.mu.Unlock()
+	if err := q.policy.CanRead(ctx, st); err != nil {
+		return err
+	}
+	if !st.State.Terminal() {
+		return jobs.ErrJobNotTerminal
+	}
+	q.registryMu.Lock()
+	delete(q.registry, jobId)
+	q.registryMu.Unlock()
 	return nil
 }
 

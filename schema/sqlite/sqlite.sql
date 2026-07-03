@@ -1086,7 +1086,8 @@ CREATE TABLE tl_job_artifacts (
   "content_type" text not null default 'application/octet-stream',
   "size_bytes" integer not null default 0,
   "sha1" text not null default '',
-  "storage_key" text not null
+  "storage_key" text not null,
+  "deleted_at" datetime
 );
 CREATE INDEX idx_tl_job_artifacts_job_id ON "tl_job_artifacts"(job_id);
 CREATE INDEX idx_tl_job_artifacts_user_id ON "tl_job_artifacts"(user_id);
