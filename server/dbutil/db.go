@@ -114,6 +114,23 @@ func Get(ctx context.Context, db sqlx.Ext, q sq.SelectBuilder, dest interface{})
 	return err
 }
 
+// Update runs an update statement.
+func Update(ctx context.Context, db sqlx.Ext, q sq.UpdateBuilder) error {
+	q = q.PlaceholderFormat(sq.Dollar)
+	qstr, qargs, err := q.ToSql()
+	if err == nil {
+		if a, ok := db.(sqlx.ExecerContext); ok {
+			_, err = a.ExecContext(ctx, qstr, qargs...)
+		} else {
+			_, err = db.Exec(qstr, qargs...)
+		}
+	}
+	if err != nil {
+		log.Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update failed")
+	}
+	return err
+}
+
 // EscapeLike escapes SQL LIKE/ILIKE wildcard characters (%, _, and \) in a string
 // and optionally adds prefix/suffix wildcards for pattern matching.
 func EscapeLike(s string, prefix bool, suffix bool) string {

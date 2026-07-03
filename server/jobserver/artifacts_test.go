@@ -49,6 +49,13 @@ func (f *fakeArtifactFactory) GetByID(ctx context.Context, id int) (*model.JobAr
 	return nil, model.ErrArtifactNotFound
 }
 
+// SoftDelete stands in for the real soft-delete by dropping the row from the read
+// map, so subsequent reads 404 — enough to exercise the endpoint.
+func (f *fakeArtifactFactory) SoftDelete(ctx context.Context, id int) error {
+	delete(f.byID, id)
+	return nil
+}
+
 func newArtifactTestServer(t *testing.T, factory model.ArtifactStoreFactory, storage string) (*httptest.Server, *localjobs.LocalBackend) {
 	t.Helper()
 	runner := jobs.NewRunner()
@@ -75,6 +82,43 @@ func newArtifactTestServer(t *testing.T, factory model.ArtifactStoreFactory, sto
 	srv := httptest.NewServer(testAuthMiddleware(model.AddConfig(cfg)(h)))
 	t.Cleanup(srv.Close)
 	return srv, backend
+}
+
+func TestArtifactDeleteEndpoint(t *testing.T) {
+	owner := authn.NewCtxUser("alice", "", "")
+	stranger := authn.NewCtxUser("bob", "", "")
+	dir := t.TempDir()
+
+	factory := &fakeArtifactFactory{byID: map[int]*model.JobArtifact{}}
+	srv, backend := newArtifactTestServer(t, factory, dir)
+
+	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner),
+		jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
+	jobID := st.Job.ID
+
+	art := &model.JobArtifact{JobID: jobID, JobKind: "test", UserID: "alice", Filename: "out.svg", StorageKey: "k", SizeBytes: 1}
+	art.ID = 1
+	factory.byID[1] = art
+
+	url := srv.URL + "/queues/" + testQueue + "/jobs/" + jobID + "/artifacts/1"
+
+	// Stranger: 404, and the artifact is left untouched.
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodDelete, url, stranger))
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	assert.Contains(t, factory.byID, 1)
+
+	// Owner: 204, then it's gone from reads (GET 404).
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodDelete, url, owner))
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, owner))
+	require.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestArtifactEndpoints(t *testing.T) {

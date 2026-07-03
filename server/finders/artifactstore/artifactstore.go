@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/interline-io/log"
@@ -39,6 +40,7 @@ type Store struct {
 
 var (
 	_ model.ArtifactStoreFactory = (*Store)(nil)
+	_ model.ArtifactDeleter      = (*Store)(nil)
 	_ model.ArtifactStore        = (*scoped)(nil)
 )
 
@@ -55,9 +57,10 @@ func (s *Store) For(jobID, userID, kind string) model.ArtifactStore {
 	return &scoped{store: s, jobID: jobID, userID: userID, kind: kind}
 }
 
-// ListByJob returns the artifacts produced by jobID, newest first.
+// ListByJob returns the live (not soft-deleted) artifacts produced by jobID,
+// newest first.
 func (s *Store) ListByJob(ctx context.Context, jobID string) ([]*model.JobArtifact, error) {
-	q := sq.Select("*").From("tl_job_artifacts").Where(sq.Eq{"job_id": jobID}).OrderBy("id desc")
+	q := sq.Select("*").From("tl_job_artifacts").Where(sq.Eq{"job_id": jobID, "deleted_at": nil}).OrderBy("id desc")
 	var ret []*model.JobArtifact
 	if err := dbutil.Select(ctx, s.dbx, q, &ret); err != nil {
 		return nil, err
@@ -65,9 +68,10 @@ func (s *Store) ListByJob(ctx context.Context, jobID string) ([]*model.JobArtifa
 	return ret, nil
 }
 
-// GetByID returns a single artifact row, or ErrArtifactNotFound.
+// GetByID returns a single live (not soft-deleted) artifact row, or
+// ErrArtifactNotFound.
 func (s *Store) GetByID(ctx context.Context, artifactID int) (*model.JobArtifact, error) {
-	q := sq.Select("*").From("tl_job_artifacts").Where(sq.Eq{"id": artifactID}).Limit(1)
+	q := sq.Select("*").From("tl_job_artifacts").Where(sq.Eq{"id": artifactID, "deleted_at": nil}).Limit(1)
 	var ret []*model.JobArtifact
 	if err := dbutil.Select(ctx, s.dbx, q, &ret); err != nil {
 		return nil, err
@@ -76,6 +80,16 @@ func (s *Store) GetByID(ctx context.Context, artifactID int) (*model.JobArtifact
 		return nil, model.ErrArtifactNotFound
 	}
 	return ret[0], nil
+}
+
+// SoftDelete flags an artifact row deleted (deleted_at = now()); its stored bytes
+// are left for a later blob-culling pass, and reads skip soft-deleted rows.
+// Deleting an already-deleted or missing row is a no-op.
+func (s *Store) SoftDelete(ctx context.Context, artifactID int) error {
+	q := sq.Update("tl_job_artifacts").
+		Set("deleted_at", time.Now().UTC()).
+		Where(sq.Eq{"id": artifactID, "deleted_at": nil})
+	return dbutil.Update(ctx, s.dbx, q)
 }
 
 // scoped is an ArtifactStore bound to one job's identity.

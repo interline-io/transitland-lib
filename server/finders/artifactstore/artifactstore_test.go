@@ -50,6 +50,48 @@ func TestCreateWithoutStorageErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "no artifact storage configured")
 }
 
+// TestSoftDelete confirms a soft-deleted artifact is hidden from reads while its
+// row and blob are retained for a later culling pass. Requires a Postgres test DB;
+// skips otherwise.
+func TestSoftDelete(t *testing.T) {
+	if msg, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(msg)
+	}
+	db := testutil.MustOpenTestDB(t)
+	ctx := context.Background()
+	store := NewStore(db, t.TempDir())
+
+	const jobID = "artifactstore-softdelete-job"
+	_, _ = db.ExecContext(ctx, "DELETE FROM tl_job_artifacts WHERE job_id = $1", jobID)
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM tl_job_artifacts WHERE job_id = $1", jobID)
+	})
+
+	sc := store.For(jobID, "alice", "test")
+	keep, err := sc.CreateReader(ctx, model.ArtifactOpts{Filename: "keep.txt", ContentType: "text/plain"}, strings.NewReader("a"))
+	require.NoError(t, err)
+	gone, err := sc.CreateReader(ctx, model.ArtifactOpts{Filename: "gone.txt", ContentType: "text/plain"}, strings.NewReader("b"))
+	require.NoError(t, err)
+
+	require.NoError(t, store.SoftDelete(ctx, gone.ID))
+
+	// Hidden from both reads.
+	_, err = store.GetByID(ctx, gone.ID)
+	assert.ErrorIs(t, err, model.ErrArtifactNotFound)
+	list, err := store.ListByJob(ctx, jobID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, keep.ID, list[0].ID)
+
+	// Retained: the blob is still on disk (a culling job removes it later).
+	blob, err := os.ReadFile(filepath.Join(store.storageURL, gone.StorageKey))
+	require.NoError(t, err)
+	assert.Equal(t, "b", string(blob))
+
+	// Idempotent: re-deleting an already-deleted row is a no-op.
+	require.NoError(t, store.SoftDelete(ctx, gone.ID))
+}
+
 // TestStoreRoundTrip exercises the full create -> storage + row -> read path.
 // Requires a Postgres test DB (with the tl_job_artifacts migration applied);
 // skips otherwise.
