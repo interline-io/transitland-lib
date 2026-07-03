@@ -125,7 +125,9 @@ func Update(ctx context.Context, db sqlx.Ext, q sq.UpdateBuilder) error {
 			_, err = db.Exec(qstr, qargs...)
 		}
 	}
-	if err != nil {
+	if ctx.Err() == context.Canceled {
+		log.Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update canceled")
+	} else if err != nil {
 		log.Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update failed")
 	}
 	return err
