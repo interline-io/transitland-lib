@@ -1,4 +1,4 @@
-// Package set provides a minimal generic set backed by a map.
+// Package set provides a minimal generic set.
 package set
 
 import "iter"
