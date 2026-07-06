@@ -9,6 +9,7 @@ func init() {
 	ext.RegisterExtension("Redate", func(args string) (ext.Extension, error) { return newRedateFilterFromJson(args) })
 	ext.RegisterExtension("Prefix", func(args string) (ext.Extension, error) { return newPrefixFilterFromJson(args) })
 	ext.RegisterExtension("ApplyDefaultAgency", func(string) (ext.Extension, error) { return &ApplyDefaultAgencyFilter{}, nil })
+	ext.RegisterExtension("ApplyDefaultAgencyURL", func(args string) (ext.Extension, error) { return newApplyDefaultAgencyURLFilterFromJson(args) })
 	ext.RegisterExtension("ApplyParentTimezone", func(string) (ext.Extension, error) { return &ApplyParentTimezoneFilter{}, nil })
 	ext.RegisterExtension("BasicRouteType", func(string) (ext.Extension, error) { return &BasicRouteTypeFilter{}, nil })
 	ext.RegisterExtension("NormalizeTimezone", func(string) (ext.Extension, error) { return &NormalizeTimezoneFilter{}, nil })
