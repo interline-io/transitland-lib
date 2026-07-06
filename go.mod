@@ -16,7 +16,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.26
 	github.com/aws/aws-sdk-go-v2/service/location v1.51.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.103.3
-	github.com/deckarep/golang-set/v2 v2.9.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/flopp/go-staticmaps v0.0.0-20260318105611-d3eb636a6468
 	github.com/getkin/kin-openapi v0.133.0
@@ -162,7 +161,6 @@ require (
 	github.com/urfave/cli/v3 v3.8.0 // indirect
 	github.com/woodsbury/decimal128 v1.3.0 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
-	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect

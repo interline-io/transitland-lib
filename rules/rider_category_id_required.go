@@ -1,14 +1,14 @@
 package rules
 
 import (
-	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
 type fareProductRiderCategories struct {
-	riderCategories mapset.Set[string]
+	riderCategories set.Set[string]
 }
 
 // FareProductRiderCategoryDefaultCheck checks if agency_id is missing when more than one agency is present.
@@ -35,7 +35,7 @@ func (e *FareProductRiderCategoryDefaultCheck) Validate(ent tt.Entity) []error {
 		fid := v.FareProductID.Val
 		a, ok := e.fareProductRiderCategories[fid]
 		if !ok {
-			a = fareProductRiderCategories{riderCategories: mapset.NewSet[string]()}
+			a = fareProductRiderCategories{riderCategories: set.New[string]()}
 		}
 
 		// Add the rider category to the set of rider categories for this fare product
