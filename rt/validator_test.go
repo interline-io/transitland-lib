@@ -7,11 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	mapset "github.com/deckarep/golang-set/v2"
-
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tlcsv"
 )
@@ -95,13 +94,6 @@ func TestValidatorErrors(t *testing.T) {
 		}
 		return b
 	}
-	// ms := func(vals ...int) mapset.Set[int] {
-	// 	a := mapset.NewSet[int]()
-	// 	for _, v := range vals {
-	// 		a.Add(v)
-	// 	}
-	// 	return a
-	// }
 
 	type match struct {
 		field string
@@ -160,7 +152,7 @@ func TestValidatorErrors(t *testing.T) {
 			rterrs := ex.ValidateFeedMessage(msg, nil)
 
 			// Check results
-			foundSet := mapset.NewSet[match]()
+			foundSet := set.New[match]()
 			for _, rterr := range rterrs {
 				if a, ok := rterr.(*RealtimeError); ok {
 					foundSet.Add(match{
@@ -175,7 +167,7 @@ func TestValidatorErrors(t *testing.T) {
 					})
 				}
 			}
-			expSet := mapset.NewSet[match]()
+			expSet := set.New[match]()
 			for _, m := range expMatches {
 				expSet.Add(m)
 			}
