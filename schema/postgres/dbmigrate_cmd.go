@@ -32,11 +32,11 @@ type Command struct {
 }
 
 func (cmd *Command) HelpDesc() (string, string) {
-	return "Perform database migrations", "Subcommands: up (apply pending migrations); check (exit non-zero if the database is dirty or behind this binary's embedded migrations, for use as a deploy gate); reset-dirty (clear a dirty flag left by a failed migration so it can be retried)."
+	return "Perform database migrations", "Subcommands: up (apply pending migrations); check (exit non-zero if the database is dirty or behind this binary's embedded migrations, for use as a deploy gate)."
 }
 
 func (cmd *Command) HelpArgs() string {
-	return "[flags] <up|check|reset-dirty>"
+	return "[flags] <up|check>"
 }
 
 func (cmd *Command) AddFlags(fl *pflag.FlagSet) {
@@ -93,8 +93,6 @@ func (cmd *Command) Run(ctx context.Context) error {
 		return err
 	case "check":
 		return checkMigrations(m, src)
-	case "reset-dirty":
-		return resetDirty(m, src)
 	case "natural-earth":
 		return errors.New("natural-earth has moved to its own command; use 'transitland dbmigrate-natural-earth' instead")
 	case "down":
@@ -117,7 +115,7 @@ func checkMigrations(m *migrate.Migrate, src source.Driver) error {
 		return err
 	}
 	if dirty {
-		return fmt.Errorf("database is dirty at version %d; run 'dbmigrate reset-dirty' then 'dbmigrate up' before deploying", current)
+		return fmt.Errorf("database is dirty at version %d: a previous migration failed and must be resolved before deploying", current)
 	}
 	if pending := pendingVersions(current, available); len(pending) > 0 {
 		applied := fmt.Sprintf("%d", current)
@@ -126,43 +124,11 @@ func checkMigrations(m *migrate.Migrate, src source.Driver) error {
 		}
 		return fmt.Errorf("database is behind: %d migration(s) pending (applied through %s, latest available %d)", len(pending), applied, available[len(available)-1])
 	}
-	log.Info().Msgf("Database schema is up to date (version %d)", current)
 	if len(available) > 0 && current > available[len(available)-1] {
-		log.Info().Msgf("Database version %d is ahead of this binary's latest embedded migration %d", current, available[len(available)-1])
+		log.Info().Msgf("Database schema is ahead of this binary (version %d, latest embedded migration %d)", current, available[len(available)-1])
+	} else {
+		log.Info().Msgf("Database schema is up to date (version %d)", current)
 	}
-	return nil
-}
-
-// resetDirty clears a dirty flag left by a failed migration by stepping the
-// recorded version back to the preceding migration, so 'up' re-runs the failed
-// one. This is golang-migrate's Force in the backward (safe) direction; it never
-// records an unapplied migration as done. Idempotent: a no-op when not dirty.
-func resetDirty(m *migrate.Migrate, src source.Driver) error {
-	current, dirty, err := currentVersion(m)
-	if err != nil {
-		return err
-	}
-	if current < 0 {
-		log.Info().Msg("No migrations applied; nothing to reset")
-		return nil
-	}
-	if !dirty {
-		log.Info().Msgf("Database is not dirty (version %d); nothing to reset", current)
-		return nil
-	}
-	// Step back to the version before the dirty one. If it was the first
-	// migration, reset to NilVersion so 'up' re-runs from the start.
-	target := -1
-	if prev, err := src.Prev(uint(current)); err == nil {
-		target = int(prev)
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	log.Info().Msgf("Database dirty at version %d; resetting recorded version to %d and clearing dirty flag", current, target)
-	if err := m.Force(target); err != nil {
-		return err
-	}
-	log.Info().Msgf("Dirty flag cleared. Re-run 'dbmigrate up' to retry migration %d. For non-transactional migrations (e.g. CREATE INDEX CONCURRENTLY) undo any partial effects first.", current)
 	return nil
 }
 
