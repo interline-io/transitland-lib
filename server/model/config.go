@@ -34,7 +34,6 @@ type Config struct {
 	Clock                    clock.Clock
 	Secrets                  []dmfr.Secret
 	ValidateLargeFiles       bool
-	DisableImage             bool
 	UseMaterialized          bool
 	UseGeohashFilter         bool
 	AllowHTTPFetchUnfiltered bool
