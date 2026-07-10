@@ -112,6 +112,13 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 	if !opts.HideURL {
 		fv.URL = opts.FeedURL
 	}
+	// A partial feed may have no scheduled service and thus no calendar date range,
+	// but feed_versions requires one (NOT NULL). Fall back to the fetched date.
+	if !fv.EarliestCalendarDate.Valid || !fv.LatestCalendarDate.Valid {
+		d := tt.NewDate(opts.FetchedAt)
+		fv.EarliestCalendarDate = d
+		fv.LatestCalendarDate = d
+	}
 
 	// Skip the work if we already have this feed version.
 	if checkFv, err := fm.GetFeedVersionBySHA1(ctx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
