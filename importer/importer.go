@@ -28,6 +28,10 @@ type Options struct {
 	// If any file exceeds its threshold, the import is considered failed.
 	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
 	ErrorThreshold map[string]float64
+	// AllowPartial imports feeds missing the normally-required files
+	// (agency/routes/trips/stop_times/calendar) and skips the required
+	// minimum-entity check, for feeds such as stops/levels/pathways only.
+	AllowPartial bool
 	copier.Options
 }
 
@@ -128,6 +132,11 @@ func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmf
 	if err != nil {
 		return fvi, err
 	}
+	if opts.AllowPartial {
+		if pr, ok := reader.(interface{ SetAllowPartial(bool) }); ok {
+			pr.SetAllowPartial(true)
+		}
+	}
 	if err := reader.Open(); err != nil {
 		return fvi, err
 	}
@@ -174,6 +183,9 @@ func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmf
 
 	// Check required files have at least minimum entities
 	requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
+	if opts.AllowPartial {
+		requiredMinEntities = nil
+	}
 	minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
 	if !minEntitiesResult.OK {
 		var failedFiles []string

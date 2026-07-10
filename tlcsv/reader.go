@@ -19,6 +19,16 @@ type s2D = [][]string
 // Reader reads GTFS entities from CSV files.
 type Reader struct {
 	Adapter
+	// AllowPartial relaxes the required-file structure check so a feed containing
+	// only a subset of files (e.g. stops/levels/pathways) passes validation without
+	// the normally-required agency/routes/trips/stop_times/calendar files.
+	AllowPartial bool
+}
+
+// SetAllowPartial sets AllowPartial. Provided so callers holding an adapters.Reader
+// can enable partial mode without a concrete type assertion.
+func (reader *Reader) SetAllowPartial(v bool) {
+	reader.AllowPartial = v
 }
 
 func NewReaderFromAdapter(a Adapter) (*Reader, error) {
@@ -67,6 +77,12 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 // opens cleanly but hits a read error partway through is caught during the actual data
 // pass, not here.
 func (reader *Reader) ValidateStructure() []error {
+	// In partial mode, skip the structure check entirely so a feed containing only
+	// a subset of files (e.g. stops/levels/pathways) is accepted. A fundamentally
+	// unreadable archive is still caught by reader.Open() and the later data pass.
+	if reader.AllowPartial {
+		return nil
+	}
 	// Check if the archive can be opened
 	allerrs := []error{}
 	exists := reader.Adapter.Exists()

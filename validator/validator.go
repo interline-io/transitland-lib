@@ -57,6 +57,10 @@ type Options struct {
 	// If any file exceeds its threshold, the validation is considered failed.
 	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
 	ErrorThreshold map[string]float64
+	// AllowPartial validates feeds missing the normally-required files
+	// (agency/routes/trips/stop_times/calendar) and skips the required
+	// minimum-entity check, for feeds such as stops/levels/pathways only.
+	AllowPartial bool
 	copier.Options
 }
 
@@ -139,6 +143,7 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 	v.rtValidator = rt.NewValidator()
 	details := ResultDetails{}
 	if reader2, ok := reader.(*tlcsv.Reader); ok {
+		reader2.AllowPartial = v.Options.AllowPartial
 		result.IncludesStatic.Set(true)
 		fvfis, err := stats.NewFeedVersionFileInfosFromReader(reader2)
 		if err != nil {
@@ -270,6 +275,9 @@ func (v *Validator) ValidateStatic(reader adapters.Reader, evaluateAt time.Time,
 
 	// Check required files have at least minimum entities
 	requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
+	if v.Options.AllowPartial {
+		requiredMinEntities = nil
+	}
 	minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
 	if !minEntitiesResult.OK {
 		var failedFiles []string

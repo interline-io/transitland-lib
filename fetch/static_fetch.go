@@ -31,6 +31,10 @@ type StaticFetchOptions struct {
 	CreatedBy               tt.String
 	Name                    tt.String
 	Description             tt.String
+	// AllowPartial fetches feeds missing the normally-required files
+	// (agency/routes/trips/stop_times/calendar), for feeds such as
+	// stops/levels/pathways only.
+	AllowPartial bool
 	Options
 }
 
@@ -85,6 +89,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 		out.FetchError = err
 		return nil
 	}
+	reader.AllowPartial = opts.AllowPartial
 	if err := reader.Open(); err != nil {
 		out.FetchError = err
 		return nil
@@ -141,6 +146,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 	validationStart := time.Now()
 	validatorOptions := opts.ValidatorOptions
 	validatorOptions.ErrorLimit = 10
+	validatorOptions.AllowPartial = opts.AllowPartial
 	v, err := validator.NewValidator(reader, validatorOptions)
 	if err != nil {
 		return err

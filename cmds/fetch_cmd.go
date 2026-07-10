@@ -81,6 +81,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.AllowHTTPFetchUnfiltered, "allow-http-fetch-unfiltered", false, "Disable SSRF protection for http(s) fetches; allow private/loopback/metadata IPs (use only for local CLI runs)")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
+	fl.BoolVar(&cmd.Options.AllowPartial, "allow-partial", false, "Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
