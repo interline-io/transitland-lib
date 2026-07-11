@@ -17,8 +17,12 @@ func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) 
 		return fv, errs[0]
 	}
 	// A partial feed may have no service; leave the calendar dates unset.
+	allowPartial := false
+	if r, ok := reader.(canGetAllowPartial); ok {
+		allowPartial = r.GetAllowPartial()
+	}
 	start, end, err := FeedVersionServiceBounds(reader)
-	if err != nil && !readerAllowsPartial(reader) {
+	if err != nil && !allowPartial {
 		return fv, err
 	}
 	if err == nil {
@@ -44,11 +48,6 @@ func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) 
 
 type canGetAllowPartial interface {
 	GetAllowPartial() bool
-}
-
-func readerAllowsPartial(reader adapters.Reader) bool {
-	r, ok := reader.(canGetAllowPartial)
-	return ok && r.GetAllowPartial()
 }
 
 type canSHA1 interface {
