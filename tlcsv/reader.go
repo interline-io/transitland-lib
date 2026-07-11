@@ -19,17 +19,14 @@ type s2D = [][]string
 // Reader reads GTFS entities from CSV files.
 type Reader struct {
 	Adapter
-	// AllowPartial relaxes the required-file structure check so a feed containing
-	// only a subset of files (e.g. stops/levels/pathways) passes validation without
-	// the normally-required agency/routes/trips/stop_times/calendar files.
-	AllowPartial bool
+	allowPartial bool
 }
 
-// SetAllowPartial sets AllowPartial. Provided so callers holding an adapters.Reader
-// can enable partial mode without a concrete type assertion.
-func (reader *Reader) SetAllowPartial(v bool) {
-	reader.AllowPartial = v
-}
+// SetAllowPartial enables partial mode: read what we can, skipping the required-files check.
+func (reader *Reader) SetAllowPartial(v bool) { reader.allowPartial = v }
+
+// GetAllowPartial reports whether partial mode is enabled.
+func (reader *Reader) GetAllowPartial() bool { return reader.allowPartial }
 
 func NewReaderFromAdapter(a Adapter) (*Reader, error) {
 	return &Reader{Adapter: a}, nil
@@ -77,12 +74,6 @@ func (reader *Reader) ReadEntities(c interface{}) error {
 // opens cleanly but hits a read error partway through is caught during the actual data
 // pass, not here.
 func (reader *Reader) ValidateStructure() []error {
-	// In partial mode, skip the structure check entirely so a feed containing only
-	// a subset of files (e.g. stops/levels/pathways) is accepted. A fundamentally
-	// unreadable archive is still caught by reader.Open() and the later data pass.
-	if reader.AllowPartial {
-		return nil
-	}
 	// Check if the archive can be opened
 	allerrs := []error{}
 	exists := reader.Adapter.Exists()
@@ -164,6 +155,16 @@ func (reader *Reader) ValidateStructure() []error {
 			fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
 		}
 		return fileerrs
+	}
+	// In partial mode, no file is required: validate the ones that are present and
+	// skip the rest. Everything else (headers, columns, duplicates) still applies.
+	if reader.allowPartial {
+		for _, ent := range []tt.Entity{&gtfs.Agency{}, &gtfs.Route{}, &gtfs.Stop{}, &gtfs.Trip{}, &gtfs.StopTime{}, &gtfs.Calendar{}, &gtfs.CalendarDate{}} {
+			if reader.ContainsFile(ent.Filename()) {
+				allerrs = append(allerrs, check(ent, false)...)
+			}
+		}
+		return allerrs
 	}
 	// stops.txt is conditionally required. It may be omitted entirely when the
 	// feed provides location-based service via locations.geojson or

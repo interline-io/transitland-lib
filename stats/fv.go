@@ -6,7 +6,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -17,13 +16,14 @@ func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) 
 	if errs := reader.ValidateStructure(); len(errs) > 0 {
 		return fv, errs[0]
 	}
-	// Get service dates. A partial feed may have no service (no calendar/trips);
-	// leave the calendar dates unset rather than failing.
-	if start, end, err := FeedVersionServiceBounds(reader); err == nil {
+	// A partial feed may have no service; leave the calendar dates unset.
+	start, end, err := FeedVersionServiceBounds(reader)
+	if err != nil && !readerAllowsPartial(reader) {
+		return fv, err
+	}
+	if err == nil {
 		fv.EarliestCalendarDate.Set(start)
 		fv.LatestCalendarDate.Set(end)
-	} else if !readerAllowsPartial(reader) {
-		return fv, err
 	}
 	// Get path and sha1
 	if s, ok := reader.(canSHA1); ok {
@@ -42,10 +42,13 @@ func NewFeedVersionFromReader(reader adapters.Reader) (dmfr.FeedVersion, error) 
 	return fv, nil
 }
 
-// readerAllowsPartial reports whether reader is a CSV reader in partial mode.
+type canGetAllowPartial interface {
+	GetAllowPartial() bool
+}
+
 func readerAllowsPartial(reader adapters.Reader) bool {
-	r, ok := reader.(*tlcsv.Reader)
-	return ok && r.AllowPartial
+	r, ok := reader.(canGetAllowPartial)
+	return ok && r.GetAllowPartial()
 }
 
 type canSHA1 interface {

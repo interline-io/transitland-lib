@@ -31,9 +31,7 @@ type StaticFetchOptions struct {
 	CreatedBy               tt.String
 	Name                    tt.String
 	Description             tt.String
-	// AllowPartial fetches feeds missing the normally-required files
-	// (agency/routes/trips/stop_times/calendar), for feeds such as
-	// stops/levels/pathways only.
+	// AllowPartial fetches partial feeds missing the normally-required files.
 	AllowPartial bool
 	Options
 }
@@ -89,7 +87,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 		out.FetchError = err
 		return nil
 	}
-	reader.AllowPartial = opts.AllowPartial
+	reader.SetAllowPartial(opts.AllowPartial)
 	if err := reader.Open(); err != nil {
 		out.FetchError = err
 		return nil
@@ -112,8 +110,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 	if !opts.HideURL {
 		fv.URL = opts.FeedURL
 	}
-	// A partial feed may have no scheduled service and thus no calendar date range,
-	// but feed_versions requires one (NOT NULL). Fall back to the fetched date.
+	// Partial feeds may have no service dates, but feed_versions requires them (NOT NULL).
 	if !fv.EarliestCalendarDate.Valid || !fv.LatestCalendarDate.Valid {
 		d := tt.NewDate(opts.FetchedAt)
 		fv.EarliestCalendarDate = d
@@ -153,7 +150,6 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 	validationStart := time.Now()
 	validatorOptions := opts.ValidatorOptions
 	validatorOptions.ErrorLimit = 10
-	validatorOptions.AllowPartial = opts.AllowPartial
 	v, err := validator.NewValidator(reader, validatorOptions)
 	if err != nil {
 		return err

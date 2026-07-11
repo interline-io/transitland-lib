@@ -16,6 +16,7 @@ transitland import [flags] [feeds...]
 
 ```
       --activate                  Set as active feed version after import
+      --allow-partial             Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)
       --create-missing-shapes     Create missing Shapes from Trip stop-to-stop geometries
       --dburl string              Database URL (default: $TL_DATABASE_URL)
       --deduplicate-stop-times    Deduplicate StopTimes using Journey Patterns
