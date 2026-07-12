@@ -111,7 +111,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 		fv.URL = opts.FeedURL
 	}
 	// Partial feeds may have no service dates, but feed_versions requires them (NOT NULL).
-	if !fv.EarliestCalendarDate.Valid || !fv.LatestCalendarDate.Valid {
+	if opts.AllowPartial && (!fv.EarliestCalendarDate.Valid || !fv.LatestCalendarDate.Valid) {
 		d := tt.NewDate(opts.FetchedAt)
 		fv.EarliestCalendarDate = d
 		fv.LatestCalendarDate = d
