@@ -1,7 +1,6 @@
 package fetch
 
 import (
-	"archive/zip"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/stretchr/testify/assert"
 )
@@ -372,43 +372,6 @@ func TestStaticFetch_NestedTwoFeeds(t *testing.T) {
 // 	})
 // }
 
-// zipDirToTemp writes every regular file in dir into a new temp .zip and
-// returns its path. The flex fixtures are stored as directories so they remain
-// the single source of truth; we zip them on the fly for fetch tests.
-func zipDirToTemp(t *testing.T, dir string) string {
-	t.Helper()
-	tmp, err := os.CreateTemp("", "flexfeed-*.zip")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tmp.Close()
-	zw := zip.NewWriter(tmp)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		buf, err := os.ReadFile(filepath.Join(dir, e.Name()))
-		if err != nil {
-			t.Fatal(err)
-		}
-		f, err := zw.Create(e.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := f.Write(buf); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := zw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return tmp.Name()
-}
-
 // TestStaticFetch_FlexNoStops is a regression test for GTFS-Flex feeds that
 // locate service via locations.geojson with an empty (header-only) stops.txt.
 // Before stops.txt was treated as conditionally required, ValidateStructure
@@ -416,7 +379,7 @@ func zipDirToTemp(t *testing.T, dir string) string {
 // fetch failed with "required file 'stops.txt' not present or could not be read"
 // and no feed version was ever created. This asserts the fetch now succeeds.
 func TestStaticFetch_FlexNoStops(t *testing.T) {
-	zipPath := zipDirToTemp(t, testpath.RelPath("testdata/flex/stops-header-only"))
+	zipPath := testutil.ZipDirToTemp(t, testpath.RelPath("testdata/flex/stops-header-only"))
 	defer os.Remove(zipPath)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf, err := os.ReadFile(zipPath)
@@ -447,6 +410,63 @@ func TestStaticFetch_FlexNoStops(t *testing.T) {
 		assert.Equal(t, 200, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
 		assert.Equal(t, true, tlff.Success, "did not get expected feed_fetch success")
 		return nil
+	})
+}
+
+// TestStaticFetch_Partial covers --allow-partial: a feed of only
+// stops/levels/pathways (no agency/routes/trips/calendar) fails ValidateStructure
+// normally, but with AllowPartial it fetches successfully and — having no service —
+// gets a fallback calendar date range so the NOT NULL feed_versions columns hold.
+func TestStaticFetch_Partial(t *testing.T) {
+	zipPath := testutil.ZipDirToTemp(t, testpath.RelPath("testdata/gtfs-examples/example-partial"))
+	defer os.Remove(zipPath)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := os.ReadFile(zipPath)
+		if err != nil {
+			t.Error(err)
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+	ctx := context.TODO()
+	doFetch := func(t *testing.T, allowPartial bool) StaticFetchResult {
+		var out StaticFetchResult
+		testdb.TempSqlite(func(atx tldb.Adapter) error {
+			feed := testdb.CreateTestFeed(atx, ts.URL)
+			fr, err := StaticFetch(ctx, feedmanager.NewDBFeedManager(atx), StaticFetchOptions{
+				AllowPartial: allowPartial,
+				Options:      Options{FeedID: feed.ID, FeedURL: feed.URLs.StaticCurrent, Storage: t.TempDir(), AllowHTTPFetchUnfiltered: true},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			out = fr
+			return nil
+		})
+		return out
+	}
+
+	t.Run("rejected without allow-partial", func(t *testing.T) {
+		fr := doFetch(t, false)
+		if fr.FetchError == nil {
+			t.Fatal("expected a fetch error for a feed missing required files")
+		}
+		if fr.FeedVersion != nil {
+			t.Fatal("expected no feed version to be created")
+		}
+	})
+
+	t.Run("accepted with allow-partial", func(t *testing.T) {
+		fr := doFetch(t, true)
+		if fr.FetchError != nil {
+			t.Fatalf("expected no fetch error, got: %s", fr.FetchError.Error())
+		}
+		if fr.FeedVersion == nil || fr.FeedVersion.ID == 0 {
+			t.Fatal("expected a feed version to be created")
+		}
+		if !fr.FeedVersion.EarliestCalendarDate.Valid || !fr.FeedVersion.LatestCalendarDate.Valid {
+			t.Error("expected fallback calendar dates to be set")
+		}
 	})
 }
 

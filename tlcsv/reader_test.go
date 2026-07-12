@@ -1,6 +1,7 @@
 package tlcsv
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -407,4 +408,58 @@ func hasEntityLimitError(errs []error) bool {
 		}
 	}
 	return false
+}
+
+// TestValidateStructure_Partial pins the AllowPartial guarantee: missing required
+// files are not flagged, but a file that IS present is still fully validated.
+func TestValidateStructure_Partial(t *testing.T) {
+	// A partial feed: only a present-but-malformed stops.txt (no recognized
+	// columns) and none of the normally-required files.
+	dir := t.TempDir()
+	w := NewDirAdapter(dir)
+	if err := w.WriteRows("stops.txt", [][]string{{"foo", "bar"}, {"1", "2"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	fileRequired := func(errs []error, filename string) bool {
+		for _, err := range errs {
+			var fre *causes.FileRequiredError
+			if errors.As(err, &fre) && fre.Filename == filename {
+				return true
+			}
+		}
+		return false
+	}
+	validate := func(allowPartial bool) []error {
+		reader := &Reader{Adapter: NewDirAdapter(dir)}
+		reader.SetAllowPartial(allowPartial)
+		if err := reader.Open(); err != nil {
+			t.Fatal(err)
+		}
+		defer reader.Close()
+		return reader.ValidateStructure()
+	}
+
+	t.Run("without allow-partial the missing required files are flagged", func(t *testing.T) {
+		errs := validate(false)
+		if !fileRequired(errs, "agency.txt") || !fileRequired(errs, "routes.txt") {
+			t.Errorf("expected missing required files to be flagged, got: %v", errs)
+		}
+	})
+
+	t.Run("with allow-partial only present files are validated", func(t *testing.T) {
+		errs := validate(true)
+		// The present-but-malformed stops.txt is still flagged.
+		if !fileRequired(errs, "stops.txt") {
+			t.Errorf("expected present malformed stops.txt to be flagged, got: %v", errs)
+		}
+		// Missing required files are not flagged.
+		for _, fn := range []string{"agency.txt", "routes.txt", "trips.txt", "stop_times.txt"} {
+			if fileRequired(errs, fn) {
+				t.Errorf("did not expect %s to be flagged in partial mode, got: %v", fn, errs)
+			}
+		}
+	})
 }

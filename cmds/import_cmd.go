@@ -81,6 +81,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.SimplifyCalendars, "simplify-calendars", false, "Attempt to simplify CalendarDates into regular Calendars")
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
 	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail import if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
+	fl.BoolVar(&cmd.Options.AllowPartial, "allow-partial", false, "Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)")
 }
 
 // Parse command line flags

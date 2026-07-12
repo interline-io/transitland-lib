@@ -44,7 +44,12 @@ type ValidatorCommand struct {
 	AllowLocalFetch          bool
 	AllowS3Fetch             bool
 	AllowHTTPFetchUnfiltered bool
+	AllowPartial             bool
 	secrets                  []dmfr.Secret
+}
+
+type canSetAllowPartial interface {
+	SetAllowPartial(bool)
 }
 
 func (cmd *ValidatorCommand) HelpDesc() (string, string) {
@@ -81,6 +86,7 @@ func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.rtFiles, "rt", nil, "Include GTFS-RT proto message in validation report")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
 	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
+	fl.BoolVar(&cmd.AllowPartial, "allow-partial", false, "Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)")
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file (requires --dmfr and --feed-id)")
 	fl.StringArrayVar(&cmd.SecretEnv, "secret-env", nil, "Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR (requires --dmfr and --feed-id)")
 	fl.StringVar(&cmd.DMFRFile, "dmfr", "", "DMFR file providing feed URL and authorization config; used with --feed-id")
@@ -171,6 +177,9 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 		return err
 	}
 	defer reader.Close()
+	if r, ok := reader.(canSetAllowPartial); ok {
+		r.SetAllowPartial(cmd.AllowPartial)
+	}
 	v, err := validator.NewValidator(reader, cmd.Options)
 	if err != nil {
 		return err

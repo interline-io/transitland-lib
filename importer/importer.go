@@ -28,6 +28,8 @@ type Options struct {
 	// If any file exceeds its threshold, the import is considered failed.
 	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
 	ErrorThreshold map[string]float64
+	// AllowPartial imports partial feeds and skips the required minimum-entity check.
+	AllowPartial bool
 	copier.Options
 }
 
@@ -117,6 +119,10 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	return Result{FeedVersionImport: fviresult}, nil
 }
 
+type canSetAllowPartial interface {
+	SetAllowPartial(bool)
+}
+
 // importFeedVersion runs the Copier from the feed version's reader into the
 // entity sink, both vended by the FeedManager (transaction-bound on a SQL
 // backend), returning the import counts.
@@ -127,6 +133,9 @@ func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmf
 	reader, err := fm.OpenReader(ctx, &fv, opts.Storage)
 	if err != nil {
 		return fvi, err
+	}
+	if r, ok := reader.(canSetAllowPartial); ok {
+		r.SetAllowPartial(opts.AllowPartial)
 	}
 	if err := reader.Open(); err != nil {
 		return fvi, err
@@ -172,24 +181,26 @@ func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmf
 		}
 	}
 
-	// Check required files have at least minimum entities
-	requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
-	minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
-	if !minEntitiesResult.OK {
-		var failedFiles []string
-		for fn, detail := range minEntitiesResult.Details {
-			if !detail.OK {
-				log.For(ctx).Error().Str("filename", fn).Int("total_count", detail.TotalCount).Int("required", detail.Required).Msg("file did not meet required minimum entities")
-				failedFiles = append(failedFiles, fn)
+	// Check required files have at least minimum entities (skipped for partial feeds).
+	if !opts.AllowPartial {
+		requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
+		minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
+		if !minEntitiesResult.OK {
+			var failedFiles []string
+			for fn, detail := range minEntitiesResult.Details {
+				if !detail.OK {
+					log.For(ctx).Error().Str("filename", fn).Int("total_count", detail.TotalCount).Int("required", detail.Required).Msg("file did not meet required minimum entities")
+					failedFiles = append(failedFiles, fn)
+				}
 			}
+			sort.Strings(failedFiles)
+			var errMsgs []string
+			for _, fn := range failedFiles {
+				detail := minEntitiesResult.Details[fn]
+				errMsgs = append(errMsgs, fmt.Sprintf("%s: %d entities (required: %d)", fn, detail.TotalCount, detail.Required))
+			}
+			return fvi, fmt.Errorf("required minimum entities not met: %s", strings.Join(errMsgs, "; "))
 		}
-		sort.Strings(failedFiles)
-		var errMsgs []string
-		for _, fn := range failedFiles {
-			detail := minEntitiesResult.Details[fn]
-			errMsgs = append(errMsgs, fmt.Sprintf("%s: %d entities (required: %d)", fn, detail.TotalCount, detail.Required))
-		}
-		return fvi, fmt.Errorf("required minimum entities not met: %s", strings.Join(errMsgs, "; "))
 	}
 
 	// Save feed version import
