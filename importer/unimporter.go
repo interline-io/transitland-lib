@@ -58,13 +58,38 @@ type UnimportOptions struct {
 // and not successful.
 var ErrImportInProgress = errors.New("feed version import is in progress; unimport it with force to override")
 
-// CheckUnimportAllowed refuses a feed version whose import is in flight. The copier commits as it
-// goes, so deleting under it would remove rows the import has already written, and the import
-// would then finalize success = true over the hole.
+// ErrFeedVersionActive is returned for a feed version that is the active version for its feed.
+var ErrFeedVersionActive = errors.New("feed version is active; activate a different one first")
+
+// CheckFeedVersionNotActive returns ErrFeedVersionActive if the feed version is the one its feed
+// currently serves.
+func CheckFeedVersionNotActive(ctx context.Context, atx tldb.Adapter, id int) error {
+	active, err := feedstate.NewManager(atx).IsFeedVersionActive(ctx, id)
+	if err != nil {
+		return err
+	}
+	if active {
+		return fmt.Errorf("feed version %d: %w", id, ErrFeedVersionActive)
+	}
+	return nil
+}
+
+// CheckUnimportAllowed refuses a feed version that must not be unimported.
+//
+// An active feed version is refused outright, force or not: unimporting one would take a live feed
+// offline, and unlike a stale import record there is nothing ambiguous about it. Deactivate it, or
+// activate another version, first.
+//
+// An import in flight is refused unless forced. The copier commits as it goes, so deleting under it
+// would remove rows the import has already written, and the import would then finalize
+// success = true over the hole.
 //
 // A feed version with no import record is allowed: its entity rows can outlive the record, and
 // unimport and delete are the only things that will remove them.
 func CheckUnimportAllowed(ctx context.Context, atx tldb.Adapter, id int, force bool) error {
+	if err := CheckFeedVersionNotActive(ctx, atx, id); err != nil {
+		return err
+	}
 	if force {
 		return nil
 	}
@@ -97,19 +122,14 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, opts Uni
 	if err := deleteTables(ctx, atx, fvt.ImportedTables(), id, false); err != nil {
 		return err
 	}
-	// Deactivation and dropping the import record commit together: the record is the only marker
-	// that this feed version still needs an unimport, so it must not disappear unless the
-	// deactivation happened too.
-	return atx.Tx(func(atx tldb.Adapter) error {
-		if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
-			return err
-		}
-		_, err := atx.Sqrl().
-			Delete("feed_version_gtfs_imports").
-			Where(sq.Eq{"feed_version_id": id}).
-			ExecContext(ctx)
-		return err
-	})
+	// Dropping the record last is what makes the unimport retryable: until it is gone, the feed
+	// version still looks like it needs one. Nothing to deactivate -- an active feed version is
+	// refused above.
+	_, err := atx.Sqrl().
+		Delete("feed_version_gtfs_imports").
+		Where(sq.Eq{"feed_version_id": id}).
+		ExecContext(ctx)
+	return err
 }
 
 // ErrFeedVersionImported is returned for a feed version that still holds imported data.
@@ -141,12 +161,15 @@ func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTable
 		if err := CheckFeedVersionUnimported(ctx, atx, id); err != nil {
 			return err
 		}
-		// A missing import record is only a proxy for "not imported": one lost to a crash leaves
-		// entity rows with nothing pointing at them, and can leave feed_states still pointing here.
-		// This is the last thing to run, so it sweeps every table rather than trust the proxy.
-		if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
+		// A lost import record can leave a feed version imported and active with nothing pointing
+		// at it, which the check above reads as "not imported". Refusing here keeps delete from
+		// taking a live feed offline, and from stranding its materialized rows.
+		if err := CheckFeedVersionNotActive(ctx, atx, id); err != nil {
 			return err
 		}
+		// A missing import record is only a proxy for "not imported": one lost to a crash leaves
+		// entity rows with nothing pointing at them. This is the last thing to run, so it sweeps
+		// every table rather than trust the proxy.
 		fvt := dmfr.GetFeedVersionTables()
 		if err := deleteTables(ctx, atx, slices.Concat(extraTables, fvt.GtfsExtTables), id, true); err != nil {
 			return err

@@ -154,6 +154,9 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 	}
 	close(jobs)
 	// Start workers
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)

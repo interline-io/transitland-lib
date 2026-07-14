@@ -60,6 +60,6 @@ type FeedManager interface {
 	OpenReader(ctx context.Context, fv *dmfr.FeedVersion, storage string) (adapters.Reader, error)
 
 	// Runs fn in a single transaction; a nested WithTx joins the open one rather than
-	// starting another. The import's entity writes are not covered -- they commit as they go.
+	// starting another.
 	WithTx(ctx context.Context, fn func(ctx context.Context, tx FeedManager) error) error
 }

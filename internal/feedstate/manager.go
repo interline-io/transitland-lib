@@ -16,9 +16,20 @@ import (
 // Manager handles feed state and materialized table operations
 //
 // ActivateFeedVersion and DeactivateFeedVersion are self-transactional, joining the caller's
-// transaction if one is open; other methods leave transactions to the caller.
+// transaction if one is open, and SetActiveFeedVersions transacts per feed version through them.
+// Other methods leave transactions to the caller.
 type Manager struct {
 	adapter tldb.Adapter
+}
+
+// IsFeedVersionActive reports whether the feed version is the active version for its feed.
+func (m *Manager) IsFeedVersionActive(ctx context.Context, feedVersionID int) (bool, error) {
+	count := 0
+	if err := m.adapter.Get(ctx, &count,
+		"SELECT count(*) FROM feed_states WHERE feed_version_id = ?", feedVersionID); err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // NewManager creates a new feed state manager

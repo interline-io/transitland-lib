@@ -5,10 +5,12 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/stats"
@@ -247,6 +249,56 @@ func TestUnimportFeedVersion_InterruptedUnimportCanRetry(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+// The active feed version is the one its feed serves. Unimporting or deleting it would take the
+// feed offline, so both refuse -- and force does not override it, because unlike a stale import
+// record there is nothing ambiguous to override. Deactivate it first.
+func TestUnimportFeedVersion_RefusesActive(t *testing.T) {
+	ctx := context.TODO()
+	dburl := os.Getenv("TL_TEST_DATABASE_URL")
+	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
+		fvid := setupImport(ctx, t, atx)
+		// Activation only updates feed_states; the row itself comes from the dmfr sync.
+		feedID := 0
+		testdb.MustGet(atx, &feedID, "SELECT feed_id FROM feed_versions WHERE id = ?", fvid)
+		if _, err := atx.Sqrl().Insert("feed_states").
+			Columns("feed_id", "created_at", "updated_at").
+			Values(feedID, time.Now(), time.Now()).
+			ExecContext(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if err := feedstate.NewManager(atx).ActivateFeedVersion(ctx, fvid); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := UnimportFeedVersion(ctx, atx, fvid, UnimportOptions{}); !errors.Is(err, ErrFeedVersionActive) {
+			t.Errorf("unimport: expected ErrFeedVersionActive, got %v", err)
+		}
+		if err := UnimportFeedVersion(ctx, atx, fvid, UnimportOptions{Force: true}); !errors.Is(err, ErrFeedVersionActive) {
+			t.Errorf("unimport --force: expected ErrFeedVersionActive, got %v", err)
+		}
+		if err := DeleteFeedVersion(ctx, atx, fvid, nil); err == nil {
+			t.Error("delete: expected a refusal for an active feed version")
+		}
+		// Nothing was touched.
+		if countFV(t, atx, "gtfs_stops", fvid) == 0 {
+			t.Error("a refused unimport must not delete anything")
+		}
+
+		// Deactivating is what unblocks it.
+		if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, fvid); err != nil {
+			t.Fatal(err)
+		}
+		if err := UnimportFeedVersion(ctx, atx, fvid, UnimportOptions{}); err != nil {
+			t.Fatalf("unimport after deactivating: %v", err)
+		}
+		assert.Equal(t, 0, countFV(t, atx, "gtfs_stops", fvid), "gtfs_stops")
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

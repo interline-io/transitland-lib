@@ -80,13 +80,20 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	// open for the whole import, pinning the xmin horizon and stopping autovacuum from
 	// reclaiming dead tuples database-wide.
 	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
+
+	// The import record is what hides a partial import, so it has to be written even when ctx is
+	// already cancelled -- a client disconnecting mid-import is the common way that happens. On the
+	// cancelled ctx these updates would fail too, leaving the record marked in progress forever:
+	// invisible, and refused by unimport as an import still in flight.
+	finishCtx := context.WithoutCancel(ctx)
+
 	if errImport != nil {
 		// Rows the copier already wrote stay in place; recording the import as failed keeps them
 		// hidden from entity queries until an unimport removes them.
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if err := fm.UpdateFeedVersionImport(ctx, &fvi); err != nil {
+		if err := fm.UpdateFeedVersionImport(finishCtx, &fvi); err != nil {
 			// Serious error
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
@@ -105,7 +112,7 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	fviresult.Success = true
 	fviresult.InProgress = false
 	fviresult.ExceptionLog = ""
-	if err := fm.UpdateFeedVersionImport(ctx, &fviresult); err != nil {
+	if err := fm.UpdateFeedVersionImport(finishCtx, &fviresult); err != nil {
 		// Serious error
 		log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fviresult}, err

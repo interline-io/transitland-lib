@@ -14,6 +14,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/importer"
+	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
@@ -157,6 +158,12 @@ func TestE2E(t *testing.T) {
 			fvid := 0
 			testdb.ShouldGet(t, atx, &fvid, "select id from feed_versions order by id desc limit 1")
 			if tc.unimport {
+				// An active feed version cannot be unimported; deactivate it first.
+				if tc.activate {
+					if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, fvid); err != nil {
+						t.Fatal(err)
+					}
+				}
 				unimpcmd := UnimportCommand{
 					FVIDs:   []string{strconv.Itoa(fvid)},
 					Workers: 1,
