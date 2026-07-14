@@ -105,6 +105,57 @@ func TestImportFeedVersion(t *testing.T) {
 	})
 }
 
+// An import that fails after the copier has written its entities leaves those rows behind:
+// there is no transaction to roll them back, and nothing removes them. Recording the import as
+// failed is what keeps them out of entity queries, so that is the property to pin.
+//
+// TestImportFeedVersion/Failed cannot cover this -- it fails on a missing file, so the copier
+// never writes anything.
+func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
+	ctx := context.TODO()
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+		fv := dmfr.FeedVersion{File: testreader.ExampleZip.URL}
+		fv.EarliestCalendarDate = tt.NewDate(time.Now())
+		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		fv.ID = testdb.ShouldInsert(t, atx, &fv)
+
+		// A negative threshold can never be met, and it is checked after the copier runs, so
+		// the import fails with every entity already written.
+		result, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{
+			FeedVersionID:  fv.ID,
+			Storage:        "/",
+			ErrorThreshold: map[string]float64{"*": -1},
+		})
+		if err == nil {
+			t.Fatal("expected the import to fail on the error threshold")
+		}
+		if result.FeedVersionImport.Success {
+			t.Error("expected success = false")
+		}
+		if result.FeedVersionImport.InProgress {
+			t.Error("expected in_progress = false; a completed failure must not look like a running import")
+		}
+
+		// Both columns are what the entity queries gate on, so read them back as stored.
+		fvi := dmfr.FeedVersionImport{}
+		testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fv.ID)
+		if fvi.Success || fvi.InProgress {
+			t.Errorf("stored import record is success=%v in_progress=%v, want false/false", fvi.Success, fvi.InProgress)
+		}
+
+		// And the rows are still there, waiting to be collected.
+		count := 0
+		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fv.ID)
+		if count == 0 {
+			t.Error("expected the failed import to leave its stops behind")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func Test_importFeedVersion(t *testing.T) {
 	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
