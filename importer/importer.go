@@ -43,9 +43,11 @@ func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error 
 	return feedmanager.NewDBFeedManager(atx).ActivateFeedVersion(ctx, fvid)
 }
 
-// ImportFeedVersion create FVI and run Copier inside a Tx. The FeedManager
-// supplies the metadata bookkeeping and entity-write sink; pass
+// ImportFeedVersion creates the import record and runs the Copier. Pass
 // feedmanager.NewDBFeedManager(adapter) for the database backend.
+//
+// The copy is not transactional; a failure leaves the rows the copier wrote, hidden behind a
+// failed import record. Activation, when requested, runs afterwards in its own transaction.
 func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Options) (Result, error) {
 	// Get FV
 	importSource := opts.ImportSource
@@ -63,6 +65,8 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		// Serious error
 		return Result{FeedVersionImport: fvi}, err
 	} else if existing != nil {
+		// Any existing import record blocks a reimport -- including one left by a failed or
+		// crashed import -- so unimport must run first.
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
 		return Result{FeedVersionImport: fvi}, nil
 	}
@@ -72,49 +76,55 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
-	// Import
-	fviresult := dmfr.FeedVersionImport{} // keep result
-	errImport := fm.WithTx(ctx, func(ctx context.Context, tx feedmanager.FeedManager) error {
-		var err error
-		fviresult, err = importFeedVersionTx(ctx, tx, *fv, opts)
-		if err != nil {
-			return err
-		}
-		// Update route_stops, agency_geometries, etc...
-		log.For(ctx).Info().Msgf("Finalizing import")
-		if opts.Activate {
-			log.For(ctx).Info().Msgf("Activating feed version")
-			if err := tx.ActivateFeedVersion(ctx, fv.ID); err != nil {
-				return fmt.Errorf("error activating feed version: %s", err.Error())
-			}
-		}
-		// Update FVI with results, inside tx
-		fviresult.ID = fvi.ID
-		fviresult.CreatedAt = fvi.CreatedAt
-		fviresult.FeedVersionID = fv.ID
-		fviresult.ImportSource = fvi.ImportSource
-		fviresult.ImportLevel = 4
-		fviresult.Success = true
-		fviresult.InProgress = false
-		fviresult.ExceptionLog = ""
-		if err := tx.UpdateFeedVersionImport(ctx, &fviresult); err != nil {
-			// Serious error
-			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
-			return err
-		}
-		return err
-	})
-	// FVI error handling has to be outside of above tx, which will have aborted
+	// No enclosing transaction: one spanning millions of entity rows would hold its snapshot
+	// open for the whole import, pinning the xmin horizon and stopping autovacuum from
+	// reclaiming dead tuples database-wide.
+	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
+
+	// The import record is what hides a partial import, so it has to be written even when ctx is
+	// already cancelled -- a client disconnecting mid-import is the common way that happens. On the
+	// cancelled ctx these updates would fail too, leaving the record marked in progress forever:
+	// invisible, and refused by unimport as an import still in flight.
+	finishCtx := context.WithoutCancel(ctx)
+
 	if errImport != nil {
+		// Rows the copier already wrote stay in place; recording the import as failed keeps them
+		// hidden from entity queries until an unimport removes them.
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if err := fm.UpdateFeedVersionImport(ctx, &fvi); err != nil {
+		if err := fm.UpdateFeedVersionImport(finishCtx, &fvi); err != nil {
 			// Serious error
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport
+	}
+
+	// This update sets success and clears in_progress, which is what makes this feed version's
+	// data visible.
+	log.For(ctx).Info().Msgf("Finalizing import")
+	fviresult.ID = fvi.ID
+	fviresult.CreatedAt = fvi.CreatedAt
+	fviresult.FeedVersionID = fv.ID
+	fviresult.ImportSource = fvi.ImportSource
+	fviresult.ImportLevel = 4
+	fviresult.Success = true
+	fviresult.InProgress = false
+	fviresult.ExceptionLog = ""
+	if err := fm.UpdateFeedVersionImport(finishCtx, &fviresult); err != nil {
+		// Serious error
+		log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
+		return Result{FeedVersionImport: fviresult}, err
+	}
+
+	// Activation is its own transaction: a failure here leaves the feed version imported but not
+	// active, rather than undoing a good import.
+	if opts.Activate {
+		log.For(ctx).Info().Msgf("Activating feed version")
+		if err := fm.ActivateFeedVersion(ctx, fv.ID); err != nil {
+			return Result{FeedVersionImport: fviresult}, fmt.Errorf("error activating feed version: %s", err.Error())
+		}
 	}
 	return Result{FeedVersionImport: fviresult}, nil
 }
@@ -123,10 +133,9 @@ type canSetAllowPartial interface {
 	SetAllowPartial(bool)
 }
 
-// importFeedVersion runs the Copier from the feed version's reader into the
-// entity sink, both vended by the FeedManager (transaction-bound on a SQL
-// backend), returning the import counts.
-func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+// importFeedVersion runs the Copier from the feed version's reader into the entity sink,
+// returning the import counts.
+func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader

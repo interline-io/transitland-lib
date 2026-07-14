@@ -105,7 +105,42 @@ func TestImportFeedVersion(t *testing.T) {
 	})
 }
 
-func Test_iImportFeedVersionTx(t *testing.T) {
+// A failed import leaves behind the rows the copier already wrote: ImportFeedVersion neither
+// rolls them back nor removes them, and the failed import record is what keeps them out of
+// entity queries. TestImportFeedVersion/Failed cannot cover this: it fails on a missing file,
+// before the copier writes anything.
+func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
+	ctx := context.TODO()
+	// Not TempSqlite: that runs the callback inside a transaction, which is the thing this
+	// import no longer has.
+	atx := testdb.TempSqliteAdapter()
+	fv := testdb.CreateTestFeedVersion(atx, testreader.ExampleZip.URL)
+
+	// A negative threshold can never be met, and it is checked after the copier runs, so the
+	// import fails with every entity already written.
+	if _, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{
+		FeedVersionID:  fv.ID,
+		Storage:        "/",
+		ErrorThreshold: map[string]float64{"*": -1},
+	}); err == nil {
+		t.Fatal("expected the import to fail on the error threshold")
+	}
+
+	// Entity queries gate on success and in_progress, so check them as stored.
+	fvi := dmfr.FeedVersionImport{}
+	testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fv.ID)
+	if fvi.Success || fvi.InProgress {
+		t.Errorf("stored import record is success=%v in_progress=%v, want false/false", fvi.Success, fvi.InProgress)
+	}
+
+	count := 0
+	testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fv.ID)
+	if count == 0 {
+		t.Error("expected the failed import to leave its stops behind")
+	}
+}
+
+func Test_importFeedVersion(t *testing.T) {
 	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
@@ -115,7 +150,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := importFeedVersionTx(ctx, feedmanager.NewDBFeedManager(atx), fv, Options{Storage: "/"})
+		fviresult, err := importFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}
