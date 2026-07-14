@@ -568,6 +568,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 	}
 
 	// Handle permissions
+	q = joinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

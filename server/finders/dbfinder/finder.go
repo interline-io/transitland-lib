@@ -199,6 +199,31 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 	return ret
 }
 
+// joinImported restricts a select over imported entity rows to feed versions whose import
+// completed. It must be applied to every select that reads a table in
+// dmfr.GetFeedVersionTables().ImportedTables().
+//
+// Excluded: an import still running (in_progress), and an import that failed and left rows
+// behind (success = false). Both columns are load-bearing and neither implies the other -- a
+// failed import ends with in_progress = false, and an unimport runs against a feed version
+// that still has success = true.
+//
+// Today the import and unimport each run in one transaction, so their partial states are
+// already invisible and this mostly restates that guarantee. It is a prerequisite rather
+// than a no-op: it is what will keep those states unreachable once they stop being
+// transactional, which is why it has to be deployed first.
+//
+// Keyed off feed_versions.id rather than the entity table, so one clause covers every
+// table: each of these selects already inner joins feed_versions on its feed_version_id.
+// Applied unconditionally, including on the active path -- a feed version being active does
+// not by itself mean its data is intact.
+//
+// Feed version and validation report selects deliberately do not use this -- they describe
+// the import itself, and must still see failed and in-progress ones.
+func joinImported(q sq.SelectBuilder) sq.SelectBuilder {
+	return q.Join("feed_version_gtfs_imports fvgi on fvgi.feed_version_id = feed_versions.id and fvgi.success and not fvgi.in_progress")
+}
+
 func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuilder {
 	q = q.Join("feed_states fsp on fsp.feed_id = current_feeds.id").
 		Where(sq.Eq{"current_feeds.deleted_at": nil})
