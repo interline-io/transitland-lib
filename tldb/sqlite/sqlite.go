@@ -96,6 +96,23 @@ func (adapter *SQLiteAdapter) SupportsSpatialFunctions() bool {
 	return false
 }
 
+// DeleteFeedVersionBatch deletes at most limit of a feed version's rows from table and
+// returns how many were removed; callers loop until it removes fewer than limit.
+func (adapter *SQLiteAdapter) DeleteFeedVersionBatch(ctx context.Context, table string, fvid int, limit int) (int64, error) {
+	sub := sq.Select("rowid").
+		From(table).
+		Where(sq.Eq{"feed_version_id": fvid}).
+		Limit(uint64(limit))
+	result, err := adapter.Sqrl().
+		Delete(table).
+		Where(sub.Prefix("rowid in (").Suffix(")")).
+		ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 // Sqrl returns a properly configured Squirrel StatementBuilder.
 func (adapter *SQLiteAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db)

@@ -199,6 +199,27 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 	return ret
 }
 
+// Entity results must never include a feed version whose imported data is incomplete:
+// an import still running (in_progress), an import that failed and left partial rows
+// behind (success = false), or a feed version being unimported, which sets in_progress
+// before it begins deleting. Both conditions are load-bearing -- a failed import has
+// in_progress = false, and a feed version being unimported still has success = true.
+//
+// This gate is what lets import and unimport run without wrapping all their writes in a
+// single transaction. Only needed when selecting from the raw entity tables: active feed
+// versions are constrained by feed_states and are always fully imported.
+//
+// Feed version and validation report queries deliberately do not use these -- they
+// describe the import itself, and must still be able to see failed and in-progress ones.
+const (
+	joinImportedAgencies = "feed_version_gtfs_imports fvgi on fvgi.feed_version_id = gtfs_agencies.feed_version_id and fvgi.success and not fvgi.in_progress"
+	joinImportedPathways = "feed_version_gtfs_imports fvgi on fvgi.feed_version_id = gtfs_pathways.feed_version_id and fvgi.success and not fvgi.in_progress"
+	joinImportedRoutes   = "feed_version_gtfs_imports fvgi on fvgi.feed_version_id = gtfs_routes.feed_version_id and fvgi.success and not fvgi.in_progress"
+	joinImportedShapes   = "feed_version_gtfs_imports fvgi on fvgi.feed_version_id = gtfs_shapes.feed_version_id and fvgi.success and not fvgi.in_progress"
+	joinImportedStops    = "feed_version_gtfs_imports fvgi on fvgi.feed_version_id = gtfs_stops.feed_version_id and fvgi.success and not fvgi.in_progress"
+	joinImportedTrips    = "feed_version_gtfs_imports fvgi on fvgi.feed_version_id = gtfs_trips.feed_version_id and fvgi.success and not fvgi.in_progress"
+)
+
 func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuilder {
 	q = q.Join("feed_states fsp on fsp.feed_id = current_feeds.id").
 		Where(sq.Eq{"current_feeds.deleted_at": nil})

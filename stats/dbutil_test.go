@@ -9,6 +9,73 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
+// A feed version's rows are deleted in bounded batches, not one statement. The batch
+// primitive has to actually honor its limit -- if the adapter type assertion in
+// FeedVersionTableDelete ever stopped matching, deletes would silently fall back to a
+// single unbounded statement and nothing else here would notice.
+func TestFeedVersionTableDelete_Batched(t *testing.T) {
+	ctx := context.Background()
+	const table = "feed_version_service_levels"
+
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+		feed := testdb.CreateTestFeed(atx, "test-feed")
+		newFv := func(sha1 string) dmfr.FeedVersion {
+			fv := dmfr.FeedVersion{SHA1: sha1, File: sha1 + ".zip"}
+			fv.FeedID = feed.ID
+			fv.ID = testdb.MustInsert(atx, &fv)
+			return fv
+		}
+		addRows := func(fvid int, n int) {
+			for i := 0; i < n; i++ {
+				fvsl := dmfr.FeedVersionServiceLevel{Monday: i}
+				fvsl.FeedVersionID = fvid
+				testdb.MustInsert(atx, &fvsl)
+			}
+		}
+		count := func(fvid int) int {
+			n := 0
+			testdb.MustGet(atx, &n, "SELECT count(*) FROM feed_version_service_levels WHERE feed_version_id = ?", fvid)
+			return n
+		}
+
+		fv := newFv("aaa")
+		other := newFv("bbb")
+		addRows(fv.ID, 5)
+		addRows(other.ID, 3)
+
+		// The limit is honored: one call removes exactly 2 of the 5.
+		bd, ok := atx.(feedVersionBatchDeleter)
+		if !ok {
+			t.Fatal("adapter does not implement feedVersionBatchDeleter; deletes would not be batched")
+		}
+		n, err := bd.DeleteFeedVersionBatch(ctx, table, fv.ID, 2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n != 2 {
+			t.Errorf("DeleteFeedVersionBatch removed %d rows, want 2", n)
+		}
+		if got := count(fv.ID); got != 3 {
+			t.Errorf("after one batch: %d rows remain, want 3", got)
+		}
+
+		// And the loop drains the rest, leaving other feed versions alone.
+		if err := FeedVersionTableDelete(ctx, atx, table, fv.ID, false); err != nil {
+			t.Fatal(err)
+		}
+		if got := count(fv.ID); got != 0 {
+			t.Errorf("after delete: %d rows remain, want 0", got)
+		}
+		if got := count(other.ID); got != 3 {
+			t.Errorf("other feed version lost rows: %d remain, want 3", got)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestEnsureFeedState(t *testing.T) {
 	ctx := context.Background()
 

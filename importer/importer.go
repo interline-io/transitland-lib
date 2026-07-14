@@ -2,6 +2,7 @@ package importer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/feedmanager"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -30,6 +32,11 @@ type Options struct {
 	ErrorThreshold map[string]float64
 	// AllowPartial imports partial feeds and skips the required minimum-entity check.
 	AllowPartial bool
+	// Unimport removes an existing import before starting, rather than skipping the feed
+	// version. Imports are not transactional, so a crashed one leaves rows behind and an
+	// import record that makes every later attempt a no-op; this is how such a feed version
+	// is reimported. Cleanup otherwise happens through the unimport job.
+	Unimport bool
 	copier.Options
 }
 
@@ -63,8 +70,21 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		// Serious error
 		return Result{FeedVersionImport: fvi}, err
 	} else if existing != nil {
-		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
-		return Result{FeedVersionImport: fvi}, nil
+		if !opts.Unimport {
+			fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
+			return Result{FeedVersionImport: fvi}, nil
+		}
+		// Replace it: remove the existing data and import record so the import below starts
+		// from a clean feed version.
+		log.For(ctx).Info().Msgf("Unimporting existing feed version before import")
+		ha, ok := fm.(interface{ Adapter() tldb.Adapter })
+		if !ok {
+			return Result{FeedVersionImport: fvi}, errors.New("cannot unimport: feed manager is not backed by a database")
+		}
+		if err := UnimportFeedVersion(ctx, ha.Adapter(), fv.ID, nil); err != nil {
+			log.For(ctx).Error().Msgf("Error unimporting feed version: %s", err.Error())
+			return Result{FeedVersionImport: fvi}, err
+		}
 	}
 	// Create FVI
 	if _, err := fm.CreateFeedVersionImport(ctx, &fvi); err != nil {
@@ -72,40 +92,24 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
-	// Import
-	fviresult := dmfr.FeedVersionImport{} // keep result
-	errImport := fm.WithTx(ctx, func(ctx context.Context, tx feedmanager.FeedManager) error {
-		var err error
-		fviresult, err = importFeedVersionTx(ctx, tx, *fv, opts)
-		if err != nil {
-			return err
+	// The copier writes without an enclosing transaction. One transaction spanning millions
+	// of entity rows holds its snapshot open for the whole import, which pins the xmin
+	// horizon and stops autovacuum reclaiming dead tuples across the entire database.
+	// The import record above is already committed with in_progress = true, and entity
+	// queries exclude such feed versions, so nothing written below is reachable until the
+	// final update clears the flag.
+	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
+	if errImport == nil && opts.Activate {
+		log.For(ctx).Info().Msgf("Activating feed version")
+		if err := fm.ActivateFeedVersion(ctx, fv.ID); err != nil {
+			errImport = fmt.Errorf("error activating feed version: %s", err.Error())
 		}
-		// Update route_stops, agency_geometries, etc...
-		log.For(ctx).Info().Msgf("Finalizing import")
-		if opts.Activate {
-			log.For(ctx).Info().Msgf("Activating feed version")
-			if err := tx.ActivateFeedVersion(ctx, fv.ID); err != nil {
-				return fmt.Errorf("error activating feed version: %s", err.Error())
-			}
-		}
-		// Update FVI with results, inside tx
-		fviresult.ID = fvi.ID
-		fviresult.CreatedAt = fvi.CreatedAt
-		fviresult.FeedVersionID = fv.ID
-		fviresult.ImportSource = fvi.ImportSource
-		fviresult.ImportLevel = 4
-		fviresult.Success = true
-		fviresult.InProgress = false
-		fviresult.ExceptionLog = ""
-		if err := tx.UpdateFeedVersionImport(ctx, &fviresult); err != nil {
-			// Serious error
-			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
-			return err
-		}
-		return err
-	})
-	// FVI error handling has to be outside of above tx, which will have aborted
+	}
 	if errImport != nil {
+		// There is no transaction to roll back, so remove whatever was written. This is
+		// best effort: the rows stay unreachable regardless, because the import is recorded
+		// as failed, but nothing else would ever collect them.
+		cleanupFailedImport(ctx, fm, fv.ID)
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
@@ -116,17 +120,56 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		}
 		return Result{FeedVersionImport: fvi}, errImport
 	}
+
+	// Clearing in_progress is the last thing that happens, and the only thing that makes
+	// this feed version's data visible to the API.
+	log.For(ctx).Info().Msgf("Finalizing import")
+	fviresult.ID = fvi.ID
+	fviresult.CreatedAt = fvi.CreatedAt
+	fviresult.FeedVersionID = fv.ID
+	fviresult.ImportSource = fvi.ImportSource
+	fviresult.ImportLevel = 4
+	fviresult.Success = true
+	fviresult.InProgress = false
+	fviresult.ExceptionLog = ""
+	if err := fm.UpdateFeedVersionImport(ctx, &fviresult); err != nil {
+		// Serious error
+		log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
+		return Result{FeedVersionImport: fviresult}, err
+	}
 	return Result{FeedVersionImport: fviresult}, nil
+}
+
+// cleanupFailedImport removes the entity rows an import wrote before it failed. Managers
+// not backed by a database persist nothing and have nothing to remove.
+func cleanupFailedImport(ctx context.Context, fm feedmanager.FeedManager, fvid int) {
+	ha, ok := fm.(interface{ Adapter() tldb.Adapter })
+	if !ok {
+		return
+	}
+	fvt := dmfr.GetFeedVersionTables()
+	for _, table := range fvt.GtfsExtTables {
+		if err := stats.FeedVersionTableDelete(ctx, ha.Adapter(), table, fvid, true); err != nil {
+			log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Str("table", table).Msg("could not clean up after failed import")
+			return
+		}
+	}
+	for _, table := range fvt.ImportedTables() {
+		if err := stats.FeedVersionTableDelete(ctx, ha.Adapter(), table, fvid, false); err != nil {
+			log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Str("table", table).Msg("could not clean up after failed import")
+			return
+		}
+	}
 }
 
 type canSetAllowPartial interface {
 	SetAllowPartial(bool)
 }
 
-// importFeedVersion runs the Copier from the feed version's reader into the
-// entity sink, both vended by the FeedManager (transaction-bound on a SQL
-// backend), returning the import counts.
-func importFeedVersionTx(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+// importFeedVersion runs the Copier from the feed version's reader into the entity sink,
+// both vended by the FeedManager, returning the import counts. Writes are committed as
+// they go; the caller keeps them unreachable by leaving the import record in_progress.
+func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader

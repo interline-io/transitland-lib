@@ -105,7 +105,129 @@ func TestImportFeedVersion(t *testing.T) {
 	})
 }
 
-func Test_iImportFeedVersionTx(t *testing.T) {
+// Importing a feed version that already has an import record is a no-op, so that a
+// duplicate job cannot rebuild good data. Opts.Unimport replaces it instead, which is how
+// a feed version left partial by a crashed import gets reimported.
+func TestImportFeedVersion_Unimport(t *testing.T) {
+	ctx := context.TODO()
+	importOnce := func(atx tldb.Adapter, fvid int, unimport bool) (Result, error) {
+		return ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{
+			FeedVersionID: fvid,
+			Storage:       "/",
+			Unimport:      unimport,
+		})
+	}
+	setup := func(atx tldb.Adapter) int {
+		fv := dmfr.FeedVersion{File: testreader.ExampleZip.URL}
+		fv.EarliestCalendarDate = tt.NewDate(time.Now())
+		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		fv.ID = testdb.ShouldInsert(t, atx, &fv)
+		if _, err := importOnce(atx, fv.ID, false); err != nil {
+			t.Fatal(err)
+		}
+		return fv.ID
+	}
+	stopCount := func(atx tldb.Adapter, fvid int) int {
+		count := 0
+		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
+		return count
+	}
+	expStops := testreader.ExampleZip.Counts["stops.txt"]
+
+	t.Run("skips an already imported feed version", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			fvid := setup(atx)
+			result, err := importOnce(atx, fvid, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.FeedVersionImport.ExceptionLog == "" {
+				t.Error("expected the second import to be skipped with an exception log")
+			}
+			if got := stopCount(atx, fvid); got != expStops {
+				t.Errorf("got %d stops, want %d; a skipped import must not change anything", got, expStops)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("replaces it when Unimport is set", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			fvid := setup(atx)
+			result, err := importOnce(atx, fvid, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.FeedVersionImport.Success {
+				t.Error("expected the reimport to succeed")
+			}
+			// Reimported, not duplicated: the old rows were removed first.
+			if got := stopCount(atx, fvid); got != expStops {
+				t.Errorf("got %d stops, want %d", got, expStops)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+// An import that fails after the copier has written its entities has no transaction to
+// roll back, so it must remove them itself: the unimport job only selects successful
+// imports, so nothing else would ever collect them.
+//
+// TestImportFeedVersion covers the same feed succeeding, so the rows being counted here
+// are known to be non-zero before the failure.
+func TestImportFeedVersion_FailedImportRemovesItsRows(t *testing.T) {
+	ctx := context.TODO()
+	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+		fv := dmfr.FeedVersion{File: testreader.ExampleZip.URL}
+		fv.EarliestCalendarDate = tt.NewDate(time.Now())
+		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		fv.ID = testdb.ShouldInsert(t, atx, &fv)
+
+		// A negative threshold can never be met, and the check runs after the copier, so
+		// the import fails with every entity already written.
+		result, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{
+			FeedVersionID:  fv.ID,
+			Storage:        "/",
+			ErrorThreshold: map[string]float64{"*": -1},
+		})
+		if err == nil {
+			t.Fatal("expected the import to fail on the error threshold")
+		}
+		if result.FeedVersionImport.Success {
+			t.Error("expected success = false on a failed import")
+		}
+		if result.FeedVersionImport.InProgress {
+			t.Error("expected in_progress = false; a completed failure must not look like a running import")
+		}
+
+		count := 0
+		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fv.ID)
+		if count != 0 {
+			t.Errorf("failed import left %d gtfs_stops rows behind", count)
+		}
+		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_trips WHERE feed_version_id = ?", fv.ID)
+		if count != 0 {
+			t.Errorf("failed import left %d gtfs_trips rows behind", count)
+		}
+		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stop_times WHERE feed_version_id = ?", fv.ID)
+		if count != 0 {
+			t.Errorf("failed import left %d gtfs_stop_times rows behind", count)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func Test_importFeedVersion(t *testing.T) {
 	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		// Create FV
@@ -115,7 +237,7 @@ func Test_iImportFeedVersionTx(t *testing.T) {
 		fvid := testdb.ShouldInsert(t, atx, &fv)
 		fv.ID = fvid // TODO: ?? Should be set by canSetID
 		// Import
-		fviresult, err := importFeedVersionTx(ctx, feedmanager.NewDBFeedManager(atx), fv, Options{Storage: "/"})
+		fviresult, err := importFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), fv, Options{Storage: "/"})
 		if err != nil {
 			t.Error(err)
 		}

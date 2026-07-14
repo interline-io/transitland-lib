@@ -214,6 +214,8 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	}
 	if useActive.Active() {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_agencies.feed_version_id")
+	} else {
+		q = q.Join(joinImportedAgencies)
 	}
 
 	// Default ordering

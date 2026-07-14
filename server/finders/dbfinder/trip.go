@@ -261,6 +261,8 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 	}
 	if active {
 		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_trips.feed_version_id")
+	} else {
+		q = q.Join(joinImportedTrips)
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_trips.id", ids))

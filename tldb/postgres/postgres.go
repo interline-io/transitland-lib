@@ -89,6 +89,28 @@ func (adapter *PostgresAdapter) SupportsSpatialFunctions() bool {
 	return true
 }
 
+// DeleteFeedVersionBatch deletes at most limit of a feed version's rows from table and
+// returns how many were removed; callers loop until it removes fewer than limit.
+//
+// Bounding each statement matters for the large entity tables: one unbounded delete
+// writes a single enormous WAL record, and holds its snapshot open long enough to pin
+// the xmin horizon, which stops autovacuum from reclaiming dead tuples database-wide.
+func (adapter *PostgresAdapter) DeleteFeedVersionBatch(ctx context.Context, table string, fvid int, limit int) (int64, error) {
+	// Built with squirrel's default '?' placeholders; the outer builder renders them as $N.
+	sub := sq.Select("ctid").
+		From(table).
+		Where(sq.Eq{"feed_version_id": fvid}).
+		Limit(uint64(limit))
+	result, err := adapter.Sqrl().
+		Delete(table).
+		Where(sub.Prefix("ctid in (").Suffix(")")).
+		ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 // Tx runs a callback inside a transaction.
 func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	var err error

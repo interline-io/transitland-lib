@@ -190,18 +190,20 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 		}
 		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		err := adapter.Tx(func(atx tldb.Adapter) error {
-			var err error
-			if opts.ScheduleOnly {
-				err = importer.UnimportSchedule(ctx, atx, opts.FeedVersionID)
-			} else {
-				err = importer.UnimportFeedVersion(ctx, atx, opts.FeedVersionID, opts.ExtraTables)
-			}
-			return err
-		})
+		// Deliberately not wrapped in a transaction. Unimport marks the import record
+		// in_progress first, which hides the feed version from the API, so the deletes do
+		// not need to be atomic -- and holding one transaction across every entity table
+		// pins the xmin horizon for its whole duration, stalling autovacuum database-wide.
+		// A failure part way through leaves invisible rows that a later run removes.
+		var err error
+		if opts.ScheduleOnly {
+			err = importer.UnimportSchedule(ctx, adapter, opts.FeedVersionID)
+		} else {
+			err = importer.UnimportFeedVersion(ctx, adapter, opts.FeedVersionID, opts.ExtraTables)
+		}
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
+			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): failed, partial state left hidden for retry: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
 		} else {
 			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}

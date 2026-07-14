@@ -33,6 +33,14 @@ func NewDBFeedManager(adapter tldb.Adapter) *DBFeedManager {
 	return &DBFeedManager{adapter: adapter}
 }
 
+// Adapter returns the underlying database handle. Imports no longer run inside a
+// transaction, so a failed import has to remove the rows it already wrote; this is how it
+// reaches the database to do that. Managers not backed by a database have nothing to
+// clean up and do not provide it.
+func (m *DBFeedManager) Adapter() tldb.Adapter {
+	return m.adapter
+}
+
 func (m *DBFeedManager) GetFeedVersion(ctx context.Context, fvid int) (*dmfr.FeedVersion, error) {
 	fv := dmfr.FeedVersion{}
 	fv.ID = fvid
