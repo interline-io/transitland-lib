@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -26,67 +28,95 @@ func setImportInProgress(ctx context.Context, atx tldb.Adapter, id int) error {
 	return err
 }
 
-// UnimportSchedule removes schedule data for a feed version and updates the import record.
-// stops, routes, agencies, pathways, levels are not affected.
-// Note: calendars and calendar_dates MAY be deleted in future versions.
-func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int) error {
-	if err := setImportInProgress(ctx, atx, id); err != nil {
-		return err
-	}
-	fvt := dmfr.GetFeedVersionTables()
-	tables := fvt.ScheduleTables()
+// deleteTables removes a feed version's rows from each table. ifExists tolerates a missing table,
+// which extension tables may be.
+func deleteTables(ctx context.Context, atx tldb.Adapter, tables []string, id int, ifExists bool) error {
 	for _, table := range tables {
-		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, ifExists); err != nil {
 			return err
 		}
-	}
-	// Clearing in_progress last makes the feed version visible again, now without schedule.
-	where := sq.Eq{"feed_version_id": id}
-	if _, err := atx.Sqrl().
-		Update("feed_version_gtfs_imports").
-		Set("schedule_removed", true).
-		Set("in_progress", false).
-		Where(where).
-		ExecContext(ctx); err != nil {
-		return err
 	}
 	return nil
 }
 
-// UnimportFeedVersion unimports a feed version and removes the feed_version_gtfs_import record.
+// UnimportOptions sets options for unimporting a feed version.
+type UnimportOptions struct {
+	// ExtraTables are deleted alongside the feed version's own tables.
+	ExtraTables []string
+	// Force unimports a feed version whose import is in progress. An import that died mid-run is
+	// indistinguishable from one still running, and this is how it gets cleaned up.
+	Force bool
+}
+
+// ErrImportInProgress is returned for a feed version whose import is still running.
+var ErrImportInProgress = errors.New("feed version import is in progress; unimport it with force to override")
+
+// checkUnimportAllowed refuses a feed version whose import is in flight. The copier commits as it
+// goes, so deleting under it would remove rows the import has already written, and the import
+// would then finalize success = true over the hole.
 //
-// Not transactional: the import record is flagged in_progress first, which hides the feed
-// version, so the deletes need not be atomic; one transaction spanning every entity table would
-// pin the xmin horizon and stall autovacuum database-wide. The deletes are idempotent, so a
-// failure part way through leaves hidden rows for a later run to remove.
-func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
+// A feed version with no import record is allowed: its entity rows can outlive the record, and
+// unimport is the only thing that will remove them.
+func checkUnimportAllowed(ctx context.Context, atx tldb.Adapter, id int, force bool) error {
+	if force {
+		return nil
+	}
+	fvi, err := feedmanager.NewDBFeedManager(atx).GetFeedVersionImport(ctx, id)
+	if err != nil {
+		return err
+	}
+	if fvi != nil && !fvi.Success && fvi.InProgress {
+		return fmt.Errorf("feed version %d: %w", id, ErrImportInProgress)
+	}
+	return nil
+}
+
+// UnimportSchedule removes schedule data for a feed version and updates the import record.
+// stops, routes, agencies, pathways, levels are not affected.
+// Note: calendars and calendar_dates MAY be deleted in future versions.
+func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int, opts UnimportOptions) error {
+	if err := checkUnimportAllowed(ctx, atx, id, opts.Force); err != nil {
+		return err
+	}
 	if err := setImportInProgress(ctx, atx, id); err != nil {
 		return err
 	}
 	fvt := dmfr.GetFeedVersionTables()
-
-	// Allow extension tables to not exist
-	var optTables []string
-	optTables = append(optTables, extraTables...)
-	optTables = append(optTables, fvt.GtfsExtTables...)
-	for _, table := range optTables {
-		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, true); err != nil {
-			return err
-		}
+	if err := deleteTables(ctx, atx, fvt.ScheduleTables(), id, false); err != nil {
+		return err
 	}
+	// Clearing in_progress last makes the feed version visible again, now without schedule.
+	_, err := atx.Sqrl().
+		Update("feed_version_gtfs_imports").
+		Set("schedule_removed", true).
+		Set("in_progress", false).
+		Where(sq.Eq{"feed_version_id": id}).
+		ExecContext(ctx)
+	return err
+}
 
-	// Required tables
-	tables := []string{}
-	tables = append(tables, fvt.ImportedTables()...)
-	for _, table := range tables {
-		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
-			return err
-		}
+// UnimportFeedVersion unimports a feed version and removes the feed_version_gtfs_import record.
+func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, opts UnimportOptions) error {
+	if err := checkUnimportAllowed(ctx, atx, id, opts.Force); err != nil {
+		return err
 	}
-
-	// Deactivation (feed_states, then the materialized tables) and dropping the import record
-	// commit together: the record is the only marker that this feed version still needs an
-	// unimport, so it must not disappear unless the deactivation happened too.
+	// Hiding the feed version in its own commit is what lets the deletes run without a
+	// transaction: one spanning every entity table would pin the xmin horizon and stall
+	// autovacuum database-wide. The deletes are idempotent, so a failure part way through leaves
+	// hidden rows for a later run to remove.
+	if err := setImportInProgress(ctx, atx, id); err != nil {
+		return err
+	}
+	fvt := dmfr.GetFeedVersionTables()
+	if err := deleteTables(ctx, atx, slices.Concat(opts.ExtraTables, fvt.GtfsExtTables), id, true); err != nil {
+		return err
+	}
+	if err := deleteTables(ctx, atx, fvt.ImportedTables(), id, false); err != nil {
+		return err
+	}
+	// Deactivation and dropping the import record commit together: the record is the only marker
+	// that this feed version still needs an unimport, so it must not disappear unless the
+	// deactivation happened too.
 	return atx.Tx(func(atx tldb.Adapter) error {
 		if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
 			return err
@@ -103,54 +133,37 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 var ErrFeedVersionImported = errors.New("feed version is still imported; unimport it first")
 
 // CheckFeedVersionUnimported returns ErrFeedVersionImported if the feed version still has an
-// import record. Exported so a caller can report the precondition without attempting a delete.
+// import record, in any state.
 func CheckFeedVersionUnimported(ctx context.Context, atx tldb.Adapter, id int) error {
-	imported := 0
-	if err := atx.Get(
-		ctx,
-		&imported,
-		"SELECT count(*) FROM feed_version_gtfs_imports WHERE feed_version_id = ?",
-		id,
-	); err != nil {
+	fvi, err := feedmanager.NewDBFeedManager(atx).GetFeedVersionImport(ctx, id)
+	if err != nil {
 		return err
 	}
-	if imported > 0 {
+	if fvi != nil {
 		return fmt.Errorf("feed version %d: %w", id, ErrFeedVersionImported)
 	}
 	return nil
 }
 
 // DeleteFeedVersion removes everything belonging to a feed version and soft deletes it. The feed
-// version must already be unimported; it does not unimport on the caller's behalf.
-//
-// It still sweeps the imported tables, because a missing import record is only a proxy for "not
-// imported" -- one lost to a crash leaves entity rows with nothing pointing at them, and this is
-// the last thing that runs.
+// version must already be unimported.
 func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
 	if err := CheckFeedVersionUnimported(ctx, atx, id); err != nil {
 		return err
 	}
-
-	// A lost import record can leave feed_states still pointing at this feed version.
+	// A missing import record is only a proxy for "not imported". One lost to a crash leaves
+	// entity rows with nothing pointing at them, and can leave feed_states still pointing here.
+	// This is the last thing to run, so it sweeps every table rather than trust the proxy.
 	if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
 		return err
 	}
-
 	fvt := dmfr.GetFeedVersionTables()
-	var optTables []string
-	optTables = append(optTables, extraTables...)
-	optTables = append(optTables, fvt.GtfsExtTables...)
-	for _, table := range optTables {
-		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, true); err != nil {
-			return err
-		}
+	if err := deleteTables(ctx, atx, slices.Concat(extraTables, fvt.GtfsExtTables), id, true); err != nil {
+		return err
 	}
-	for _, table := range fvt.AllTables() {
-		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
-			return err
-		}
+	if err := deleteTables(ctx, atx, fvt.AllTables(), id, false); err != nil {
+		return err
 	}
-
 	// Soft delete feed version
 	_, err := atx.Sqrl().
 		Update("feed_versions").

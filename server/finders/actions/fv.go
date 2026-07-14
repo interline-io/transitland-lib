@@ -55,7 +55,7 @@ func FeedVersionUnimport(ctx context.Context, fvid int) (*model.FeedVersionUnimp
 	if err := checkFeedEdit(ctx, fvid); err != nil {
 		return nil, err
 	}
-	if err := importer.UnimportFeedVersion(ctx, cfg.Adapter, fvid, nil); err != nil {
+	if err := importer.UnimportFeedVersion(ctx, cfg.Adapter, fvid, importer.UnimportOptions{}); err != nil {
 		return nil, err
 	}
 	mr := model.FeedVersionUnimportResult{

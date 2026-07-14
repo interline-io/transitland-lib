@@ -2,14 +2,10 @@ package cmds
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
 
-	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tt"
 )
 
 // The refusal itself is importer.DeleteFeedVersion's, and is covered there against every import
@@ -20,16 +16,9 @@ func TestDeleteCommand(t *testing.T) {
 
 	setup := func(t *testing.T, imported bool) (tldb.Adapter, int) {
 		atx := testdb.TempSqliteAdapter()
-		feed := testdb.CreateTestFeed(atx, fmt.Sprintf("feed-%s", t.Name()))
-		fv := dmfr.FeedVersion{SHA1: t.Name(), File: "test.zip"}
-		fv.FeedID = feed.ID
-		fv.EarliestCalendarDate = tt.NewDate(time.Now())
-		fv.LatestCalendarDate = tt.NewDate(time.Now())
-		fv.ID = testdb.MustInsert(atx, &fv)
+		fv := testdb.CreateTestFeedVersion(atx, "test.zip")
 		if imported {
-			fvi := dmfr.FeedVersionImport{Success: true}
-			fvi.FeedVersionID = fv.ID
-			testdb.MustInsert(atx, &fvi)
+			testdb.CreateTestFeedVersionImport(atx, fv.ID, true, false)
 		}
 		return atx, fv.ID
 	}

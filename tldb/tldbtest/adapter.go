@@ -191,6 +191,48 @@ func AdapterTest(ctx context.Context, t *testing.T, adapter Adapter) {
 			t.Errorf("got %s expected != %s", ent2.TripHeadsign, v)
 		}
 	})
+	// An inner Tx joins the transaction already open rather than starting a second one, so only
+	// the outermost call decides whether the inner write commits.
+	t.Run("Tx Nested", func(t *testing.T) {
+		headsign := func() string {
+			ent := gtfs.Trip{}
+			ent.ID = m.TripID
+			if err := adapter.Find(ctx, &ent); err != nil {
+				t.Fatal(err)
+			}
+			return ent.TripHeadsign.Val
+		}
+		setInTx := func(outer Adapter, v string) error {
+			return outer.Tx(func(inner Adapter) error {
+				ent := gtfs.Trip{}
+				ent.ID = m.TripID
+				ent.TripHeadsign.Set(v)
+				return inner.Update(ctx, &ent, "trip_headsign")
+			})
+		}
+
+		// An outer rollback must discard the inner write.
+		before := headsign()
+		adapter.Tx(func(outer Adapter) error {
+			if err := setInTx(outer, "Test Nested Rollback"); err != nil {
+				t.Error(err)
+			}
+			return errors.New("rollback")
+		})
+		if got := headsign(); got != before {
+			t.Errorf("got %s expected %s; the inner write survived the outer rollback", got, before)
+		}
+
+		// An outer commit must keep it.
+		if err := adapter.Tx(func(outer Adapter) error {
+			return setInTx(outer, "Test Nested Commit")
+		}); err != nil {
+			t.Error(err)
+		}
+		if got := headsign(); got != "Test Nested Commit" {
+			t.Errorf("got %s expected Test Nested Commit", got)
+		}
+	})
 }
 
 func createTestFeedVersion(adapter Adapter) (int, error) {

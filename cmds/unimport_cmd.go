@@ -96,6 +96,7 @@ type jobOptions struct {
 	ScheduleOnly  bool
 	ExtraTables   []string
 	DryRun        bool
+	Force         bool
 }
 
 // Run this command
@@ -116,13 +117,11 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		OrderBy("feed_versions.id desc")
 
-	// --force requires no import record at all: entity rows can outlive theirs, and nothing else
-	// can reach them.
 	if !cmd.Force {
-		// Skip an import in flight (success = false, in_progress = true): the copier commits as
-		// it goes, so unimporting one would delete rows out from under it. A failed import and an
-		// interrupted unimport both stay selectable -- they are what this is for.
-		q = q.Where("feed_version_gtfs_imports.id IS NOT NULL AND (feed_version_gtfs_imports.success OR NOT feed_version_gtfs_imports.in_progress)")
+		// A feed version with no import record is only reachable with --force: its entity rows can
+		// outlive the record, and nothing else will remove them. UnimportFeedVersion refuses an
+		// import in flight on its own.
+		q = q.Where("feed_version_gtfs_imports.id IS NOT NULL")
 	}
 
 	if len(cmd.FeedIDs) > 0 {
@@ -158,6 +157,7 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 			ScheduleOnly:  cmd.ScheduleOnly,
 			ExtraTables:   cmd.ExtraTables,
 			DryRun:        cmd.DryRun,
+			Force:         cmd.Force,
 		}
 	}
 	close(jobs)
@@ -201,16 +201,21 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 		}
 		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
+		uopts := importer.UnimportOptions{ExtraTables: opts.ExtraTables, Force: opts.Force}
 		var err error
 		if opts.ScheduleOnly {
-			err = importer.UnimportSchedule(ctx, adapter, opts.FeedVersionID)
+			err = importer.UnimportSchedule(ctx, adapter, opts.FeedVersionID, uopts)
 		} else {
-			err = importer.UnimportFeedVersion(ctx, adapter, opts.FeedVersionID, opts.ExtraTables)
+			err = importer.UnimportFeedVersion(ctx, adapter, opts.FeedVersionID, uopts)
 		}
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
-		if err != nil {
+		switch {
+		case errors.Is(err, importer.ErrImportInProgress):
+			// Nothing was touched, so this is a skip rather than a failure.
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): skipped: %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error())
+		case err != nil:
 			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): failed, partial state left hidden for retry: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
-		} else {
+		default:
 			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
 		}
 	}

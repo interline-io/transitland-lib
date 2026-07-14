@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"os"
 	"testing"
 
@@ -17,76 +16,4 @@ func TestPostgresAdapter(t *testing.T) {
 	}
 	adapter := &PostgresAdapter{DBURL: dburl}
 	tldbtest.AdapterTest(context.TODO(), t, adapter)
-}
-
-// Tx joins an already open transaction rather than starting a second one, and only the
-// outermost call commits.
-func TestPostgresAdapter_NestedTx(t *testing.T) {
-	dburl := os.Getenv("TL_TEST_DATABASE_URL")
-	if dburl == "" {
-		t.Skip("TL_TEST_DATABASE_URL is not set")
-	}
-	ctx := context.Background()
-	adapter := &PostgresAdapter{DBURL: dburl}
-	if err := adapter.Open(); err != nil {
-		t.Fatal(err)
-	}
-	// Cleanups are LIFO; registered first so it runs after the row cleanup, which needs an open
-	// adapter.
-	t.Cleanup(func() { adapter.Close() })
-
-	countFeed := func(onestopID string) int {
-		count := 0
-		if err := adapter.Get(ctx, &count, "SELECT count(*) FROM current_feeds WHERE onestop_id = ?", onestopID); err != nil {
-			t.Fatal(err)
-		}
-		return count
-	}
-	// onestop_id is the only column without a default.
-	insertFeed := func(atx Adapter, onestopID string) error {
-		_, err := atx.DBX().ExecContext(ctx, atx.DBX().Rebind("INSERT INTO current_feeds (onestop_id) VALUES (?)"), onestopID)
-		return err
-	}
-
-	const rollbackID = "nested-tx-rollback"
-	const commitID = "nested-tx-commit"
-	// Also run up front: onestop_id is unique, so a row leaked by a run that died before its
-	// cleanup would wedge every later run on an insert conflict.
-	deleteFeeds := func() {
-		if _, err := adapter.DBX().ExecContext(ctx,
-			adapter.DBX().Rebind("DELETE FROM current_feeds WHERE onestop_id IN (?, ?)"),
-			rollbackID, commitID); err != nil {
-			t.Fatal(err)
-		}
-	}
-	deleteFeeds()
-	t.Cleanup(deleteFeeds)
-
-	// A write made by the inner Tx must not survive the outer one rolling back.
-	err := adapter.Tx(func(outer Adapter) error {
-		if err := outer.Tx(func(inner Adapter) error {
-			return insertFeed(inner, rollbackID)
-		}); err != nil {
-			return err
-		}
-		return errors.New("outer fails after the inner Tx returned")
-	})
-	if err == nil {
-		t.Fatal("expected the outer error to propagate")
-	}
-	if n := countFeed(rollbackID); n != 0 {
-		t.Errorf("inner Tx committed independently: found %d rows, want 0", n)
-	}
-
-	// And the outermost call is what commits.
-	if err := adapter.Tx(func(outer Adapter) error {
-		return outer.Tx(func(inner Adapter) error {
-			return insertFeed(inner, commitID)
-		})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if n := countFeed(commitID); n != 1 {
-		t.Errorf("outermost Tx did not commit: found %d rows, want 1", n)
-	}
 }

@@ -46,9 +46,8 @@ func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error 
 // ImportFeedVersion creates the import record and runs the Copier. Pass
 // feedmanager.NewDBFeedManager(adapter) for the database backend.
 //
-// The copy is not transactional: the import record is committed with in_progress = true before
-// the copy starts and cleared once the entities are written. Activation, when requested, runs
-// afterwards in its own transaction.
+// The copy is not transactional; a failure leaves the rows the copier wrote, hidden behind a
+// failed import record. Activation, when requested, runs afterwards in its own transaction.
 func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Options) (Result, error) {
 	// Get FV
 	importSource := opts.ImportSource

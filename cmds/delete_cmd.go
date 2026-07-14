@@ -81,12 +81,12 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 	} else if err != nil {
 		return err
 	}
-	// Ahead of the dry-run branch, so a dry run reports the precondition instead of promising a
-	// delete that would be refused.
-	if err := importer.CheckFeedVersionUnimported(ctx, cmd.Adapter, cmd.FVID); err != nil {
-		return err
-	}
 	if cmd.DryRun {
+		// DeleteFeedVersion enforces this itself, but a dry run never reaches it, and must report
+		// the precondition rather than promise a delete that would be refused.
+		if err := importer.CheckFeedVersionUnimported(ctx, cmd.Adapter, cmd.FVID); err != nil {
+			return err
+		}
 		log.For(ctx).Info().Msgf("Deleting feed version: %d (dry run)", cmd.FVID)
 	} else {
 		log.For(ctx).Info().Msgf("Deleting feed version: %d", cmd.FVID)

@@ -2,25 +2,17 @@ package cmds
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"testing"
-	"time"
 
-	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// The unimport selector must skip a feed version whose import is in flight. The copier commits
-// as it goes, so deleting under it would remove rows the import has already written, and the
-// import would then finalize success = true over the hole.
-//
-// success = false with in_progress = true is the import's own state and nothing else's. An
-// unimport interrupted mid-run leaves success = true, and has to stay selectable so a later run
-// can finish it.
+// The unimport selector must skip a feed version whose import is in flight: the copier commits as
+// it goes, so deleting under it would remove rows the import has already written.
 func TestUnimportCommand_InProgress(t *testing.T) {
 	ctx := context.TODO()
 
@@ -28,16 +20,8 @@ func TestUnimportCommand_InProgress(t *testing.T) {
 	// whether the feed version was selected at all.
 	setup := func(t *testing.T, success bool, inProgress bool) (tldb.Adapter, int) {
 		atx := testdb.TempSqliteAdapter()
-		feed := testdb.CreateTestFeed(atx, fmt.Sprintf("feed-%s", t.Name()))
-		fv := dmfr.FeedVersion{SHA1: t.Name(), File: "test.zip"}
-		fv.FeedID = feed.ID
-		fv.EarliestCalendarDate = tt.NewDate(time.Now())
-		fv.LatestCalendarDate = tt.NewDate(time.Now())
-		fv.ID = testdb.MustInsert(atx, &fv)
-
-		fvi := dmfr.FeedVersionImport{Success: success, InProgress: inProgress}
-		fvi.FeedVersionID = fv.ID
-		testdb.MustInsert(atx, &fvi)
+		fv := testdb.CreateTestFeedVersion(atx, "test.zip")
+		testdb.CreateTestFeedVersionImport(atx, fv.ID, success, inProgress)
 		return atx, fv.ID
 	}
 	imports := func(atx tldb.Adapter, fvid int) int {
@@ -96,12 +80,7 @@ func TestUnimportCommand_InProgress(t *testing.T) {
 	// "never imported" and would re-import on top of them.
 	t.Run("no import record, force", func(t *testing.T) {
 		atx := testdb.TempSqliteAdapter()
-		feed := testdb.CreateTestFeed(atx, fmt.Sprintf("feed-%s", t.Name()))
-		fv := dmfr.FeedVersion{SHA1: t.Name(), File: "test.zip"}
-		fv.FeedID = feed.ID
-		fv.EarliestCalendarDate = tt.NewDate(time.Now())
-		fv.LatestCalendarDate = tt.NewDate(time.Now())
-		fv.ID = testdb.MustInsert(atx, &fv)
+		fv := testdb.CreateTestFeedVersion(atx, "test.zip")
 
 		// An orphaned entity row, with no import record pointing at it.
 		stop := gtfs.Stop{StopID: tt.NewString("orphan"), StopName: tt.NewString("Orphan")}
