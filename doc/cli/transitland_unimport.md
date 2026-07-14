@@ -6,7 +6,7 @@ Unimport feed versions
 
 Unimport feed versions
 
-The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted. You may optionally specify removal of only schedule data, leaving routes, stops, etc. in place.
+The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted.
 
 ```
 transitland unimport [flags] <fvids...>
@@ -24,7 +24,6 @@ transitland unimport [flags] <fvids...>
       --fv-sha1-file string   Specify feed version IDs by SHA1 in file, one per line
       --fvid-file string      Specify feed version IDs in file, one per line; equivalent to multiple --fvid
   -h, --help                  help for unimport
-      --schedule-only         Unimport stop times, trips, transfers, shapes, and frequencies
 ```
 
 ### SEE ALSO

@@ -17,24 +17,23 @@ import (
 
 // UnimportCommand imports FeedVersions into a database.
 type UnimportCommand struct {
-	ScheduleOnly bool
-	ExtraTables  []string
-	DryRun       bool
-	FVIDs        []string
-	FVSHA1       []string
-	Extensions   []string
-	FeedIDs      []string
-	DBURL        string
-	Workers      int
-	Force        bool
-	Adapter      tldb.Adapter // allow for mocks
+	ExtraTables []string
+	DryRun      bool
+	FVIDs       []string
+	FVSHA1      []string
+	Extensions  []string
+	FeedIDs     []string
+	DBURL       string
+	Workers     int
+	Force       bool
+	Adapter     tldb.Adapter // allow for mocks
 	// internal
 	fvidfile   string
 	fvsha1file string
 }
 
 func (cmd *UnimportCommand) HelpDesc() (string, string) {
-	return "Unimport feed versions", "The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted. You may optionally specify removal of only schedule data, leaving routes, stops, etc. in place."
+	return "Unimport feed versions", "The `unimport` command deletes previously imported data from feed versions. The feed version record itself is not deleted."
 }
 
 func (cmd *UnimportCommand) HelpArgs() string {
@@ -50,7 +49,6 @@ func (cmd *UnimportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
-	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, and frequencies")
 	fl.BoolVar(&cmd.Force, "force", false, "Unimport all found data, skipping import record check")
 
 }
@@ -93,7 +91,6 @@ func (cmd *UnimportCommand) Parse(args []string) error {
 
 type jobOptions struct {
 	FeedVersionID int
-	ScheduleOnly  bool
 	ExtraTables   []string
 	DryRun        bool
 	Force         bool
@@ -119,8 +116,8 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 
 	if !cmd.Force {
 		// A feed version with no import record is only reachable with --force: its entity rows can
-		// outlive the record, and nothing else will remove them. UnimportFeedVersion refuses an
-		// import in flight on its own.
+		// outlive the record, and only unimport --force or delete will remove them.
+		// UnimportFeedVersion refuses an import in flight on its own.
 		q = q.Where("feed_version_gtfs_imports.id IS NOT NULL")
 	}
 
@@ -144,17 +141,12 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if cmd.ScheduleOnly {
-		log.For(ctx).Info().Msgf("Unmporting schedule data from %d feed versions", len(qrs))
-	} else {
-		log.For(ctx).Info().Msgf("Unmporting %d feed versions", len(qrs))
-	}
+	log.For(ctx).Info().Msgf("Unmporting %d feed versions", len(qrs))
 
 	jobs := make(chan jobOptions, len(qrs))
 	for _, fvid := range qrs {
 		jobs <- jobOptions{
 			FeedVersionID: fvid,
-			ScheduleOnly:  cmd.ScheduleOnly,
 			ExtraTables:   cmd.ExtraTables,
 			DryRun:        cmd.DryRun,
 			Force:         cmd.Force,
@@ -196,18 +188,21 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 			continue
 		}
 		if opts.DryRun {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			// Report what the real run would do, including a skip, rather than promising an
+			// unimport that would be refused.
+			msg := "dry-run"
+			if err := importer.CheckUnimportAllowed(ctx, adapter, opts.FeedVersionID, opts.Force); err != nil {
+				msg = "dry-run, would skip: " + err.Error()
+			}
+			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): %s", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, msg)
 			continue
 		}
 		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		uopts := importer.UnimportOptions{ExtraTables: opts.ExtraTables, Force: opts.Force}
-		var err error
-		if opts.ScheduleOnly {
-			err = importer.UnimportSchedule(ctx, adapter, opts.FeedVersionID, uopts)
-		} else {
-			err = importer.UnimportFeedVersion(ctx, adapter, opts.FeedVersionID, uopts)
-		}
+		err := importer.UnimportFeedVersion(ctx, adapter, opts.FeedVersionID, importer.UnimportOptions{
+			ExtraTables: opts.ExtraTables,
+			Force:       opts.Force,
+		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		switch {
 		case errors.Is(err, importer.ErrImportInProgress):

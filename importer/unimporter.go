@@ -18,12 +18,18 @@ import (
 
 // setImportInProgress flags the import record so entity queries stop returning this feed
 // version's rows. Must be committed before anything is deleted.
+//
+// Only a successful record is flagged. A failed import is already hidden -- the gate requires
+// success -- and flagging it would make it indistinguishable from an import in flight, which is
+// the one state unimport refuses. An unimport interrupted after flagging one would then be
+// locked out of retrying itself.
 func setImportInProgress(ctx context.Context, atx tldb.Adapter, id int) error {
 	_, err := atx.Sqrl().
 		Update("feed_version_gtfs_imports").
 		Set("in_progress", true).
 		Set("updated_at", time.Now().UTC()).
 		Where(sq.Eq{"feed_version_id": id}).
+		Where(sq.Eq{"success": true}).
 		ExecContext(ctx)
 	return err
 }
@@ -48,16 +54,17 @@ type UnimportOptions struct {
 	Force bool
 }
 
-// ErrImportInProgress is returned for a feed version whose import is still running.
+// ErrImportInProgress is returned for a feed version whose import record is marked in progress
+// and not successful.
 var ErrImportInProgress = errors.New("feed version import is in progress; unimport it with force to override")
 
-// checkUnimportAllowed refuses a feed version whose import is in flight. The copier commits as it
+// CheckUnimportAllowed refuses a feed version whose import is in flight. The copier commits as it
 // goes, so deleting under it would remove rows the import has already written, and the import
 // would then finalize success = true over the hole.
 //
 // A feed version with no import record is allowed: its entity rows can outlive the record, and
-// unimport is the only thing that will remove them.
-func checkUnimportAllowed(ctx context.Context, atx tldb.Adapter, id int, force bool) error {
+// unimport and delete are the only things that will remove them.
+func CheckUnimportAllowed(ctx context.Context, atx tldb.Adapter, id int, force bool) error {
 	if force {
 		return nil
 	}
@@ -71,33 +78,9 @@ func checkUnimportAllowed(ctx context.Context, atx tldb.Adapter, id int, force b
 	return nil
 }
 
-// UnimportSchedule removes schedule data for a feed version and updates the import record.
-// stops, routes, agencies, pathways, levels are not affected.
-// Note: calendars and calendar_dates MAY be deleted in future versions.
-func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int, opts UnimportOptions) error {
-	if err := checkUnimportAllowed(ctx, atx, id, opts.Force); err != nil {
-		return err
-	}
-	if err := setImportInProgress(ctx, atx, id); err != nil {
-		return err
-	}
-	fvt := dmfr.GetFeedVersionTables()
-	if err := deleteTables(ctx, atx, fvt.ScheduleTables(), id, false); err != nil {
-		return err
-	}
-	// Clearing in_progress last makes the feed version visible again, now without schedule.
-	_, err := atx.Sqrl().
-		Update("feed_version_gtfs_imports").
-		Set("schedule_removed", true).
-		Set("in_progress", false).
-		Where(sq.Eq{"feed_version_id": id}).
-		ExecContext(ctx)
-	return err
-}
-
 // UnimportFeedVersion unimports a feed version and removes the feed_version_gtfs_import record.
 func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, opts UnimportOptions) error {
-	if err := checkUnimportAllowed(ctx, atx, id, opts.Force); err != nil {
+	if err := CheckUnimportAllowed(ctx, atx, id, opts.Force); err != nil {
 		return err
 	}
 	// Hiding the feed version in its own commit is what lets the deletes run without a

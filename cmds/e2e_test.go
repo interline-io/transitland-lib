@@ -21,15 +21,14 @@ import (
 
 func TestE2E(t *testing.T) {
 	tcs := []struct {
-		name              string
-		fn                string
-		activate          bool
-		fvcount           int
-		unimport          bool
-		unimportSchedOnly bool
-		expectStops       int
-		expectRoutes      int
-		expectStopTimes   int
+		name            string
+		fn              string
+		activate        bool
+		fvcount         int
+		unimport        bool
+		expectStops     int
+		expectRoutes    int
+		expectStopTimes int
 	}{
 		{
 			name:            "basic",
@@ -58,17 +57,6 @@ func TestE2E(t *testing.T) {
 			expectStops:     0,
 			expectRoutes:    0,
 			expectStopTimes: 0,
-		},
-		{
-			name:              "basic unimport sched",
-			fn:                "testdata/gtfs-examples/example.zip",
-			activate:          true,
-			unimport:          true,
-			unimportSchedOnly: true,
-			fvcount:           1,
-			expectStops:       9,
-			expectRoutes:      5,
-			expectStopTimes:   0,
 		},
 		{
 			name:            "basic nested dir",
@@ -170,10 +158,9 @@ func TestE2E(t *testing.T) {
 			testdb.ShouldGet(t, atx, &fvid, "select id from feed_versions order by id desc limit 1")
 			if tc.unimport {
 				unimpcmd := UnimportCommand{
-					FVIDs:        []string{strconv.Itoa(fvid)},
-					ScheduleOnly: tc.unimportSchedOnly,
-					Workers:      1,
-					Adapter:      atx,
+					FVIDs:   []string{strconv.Itoa(fvid)},
+					Workers: 1,
+					Adapter: atx,
 				}
 				if err := unimpcmd.Run(ctx); err != nil {
 					t.Fatal(err)

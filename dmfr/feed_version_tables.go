@@ -27,18 +27,6 @@ func (t FeedVersionTables) ImportedTables() []string {
 	return ret
 }
 
-func (t FeedVersionTables) ScheduleTables() []string {
-	return []string{
-		"gtfs_stop_times",
-		"gtfs_transfers",
-		"gtfs_calendar_dates",
-		"gtfs_frequencies",
-		"gtfs_trips",
-		"gtfs_shapes",
-		"gtfs_calendars",
-	}
-}
-
 func GetFeedVersionTables() FeedVersionTables {
 	// Set of tables to delete where feed_version_id = fvid
 	// Table order is very important!

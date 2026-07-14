@@ -99,60 +99,6 @@ func TestDeleteFeedVersion_NeverImported(t *testing.T) {
 	}
 }
 
-func TestUnimportSchedule(t *testing.T) {
-	ctx := context.TODO()
-	dburl := os.Getenv("TL_TEST_DATABASE_URL")
-	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
-		// Note - it's difficult to test feed_version_gtfs_imports.schedule_removed
-		fvid := setupImport(ctx, t, atx)
-		if err := UnimportSchedule(ctx, atx, fvid, UnimportOptions{}); err != nil {
-			t.Fatal(err)
-		}
-		tcs := []struct {
-			table  string
-			expect int
-		}{
-			{
-				table:  "gtfs_stops",
-				expect: 9,
-			},
-			{
-				table:  "gtfs_trips",
-				expect: 0,
-			},
-			{
-				table:  "gtfs_stop_times",
-				expect: 0,
-			},
-			{
-				table:  "feed_version_stop_onestop_ids",
-				expect: 9,
-			},
-			{
-				table:  "tl_feed_version_geometries",
-				expect: 1,
-			},
-			{
-				table:  "feed_version_gtfs_imports",
-				expect: 1,
-			},
-		}
-		for _, tc := range tcs {
-			t.Run(tc.table, func(t *testing.T) {
-				count := 0
-				if err := atx.Sqrl().Select("count(*)").From(tc.table).Where(sq.Eq{"feed_version_id": fvid}).Scan(&count); err != nil {
-					t.Fatal(err)
-				}
-				assert.Equal(t, tc.expect, count, tc.table)
-			})
-		}
-		return nil
-	})
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func TestUnimportFeedVersion(t *testing.T) {
 	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
@@ -265,6 +211,42 @@ func TestUnimportFeedVersion_ImportInProgress(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// An unimport hides the feed version before deleting anything, and the deletes are the slow part,
+// so an interrupted unimport is ordinary. Retrying one must always be allowed -- including for a
+// failed import, which is the state the import command tells the operator to unimport.
+//
+// The trap: flagging in_progress on a failed record would produce (success=false,
+// in_progress=true), which is exactly "import in flight", the one state unimport refuses. The
+// retry would then be refused forever, and only --force could reach it.
+func TestUnimportFeedVersion_InterruptedUnimportCanRetry(t *testing.T) {
+	ctx := context.TODO()
+	dburl := os.Getenv("TL_TEST_DATABASE_URL")
+	for _, success := range []bool{true, false} {
+		name := "imported"
+		if !success {
+			name = "import failed"
+		}
+		t.Run(name, func(t *testing.T) {
+			err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
+				fv := testdb.CreateTestFeedVersion(atx, "test.zip")
+				testdb.CreateTestFeedVersionImport(atx, fv.ID, success, false)
+
+				// Start an unimport and interrupt it: the flag commits, the deletes do not run.
+				if err := setImportInProgress(ctx, atx, fv.ID); err != nil {
+					t.Fatal(err)
+				}
+				if err := UnimportFeedVersion(ctx, atx, fv.ID, UnimportOptions{}); err != nil {
+					t.Fatalf("retrying an interrupted unimport must be allowed, got %v", err)
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
