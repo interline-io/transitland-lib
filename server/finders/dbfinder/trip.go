@@ -276,6 +276,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 	}
 
 	// Handle permissions
+	q = joinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q, nil
 }
