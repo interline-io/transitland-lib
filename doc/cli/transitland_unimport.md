@@ -15,11 +15,11 @@ transitland unimport [flags] <fvids...>
 ### Options
 
 ```
-      --allow-in-progress     Also unimport feed versions whose import is still marked in progress; use to clean up after a crashed import
       --dburl string          Database URL (default: $TL_DATABASE_URL)
       --dryrun                Dry run; print feeds that would be imported and exit
       --extra-table strings   Extra tables to delete feed_version_id
       --feed strings          Feed ID
+      --force                 Unimport all found data, skipping import record check
       --fv-sha1 strings       Feed version SHA1
       --fv-sha1-file string   Specify feed version IDs by SHA1 in file, one per line
       --fvid-file string      Specify feed version IDs in file, one per line; equivalent to multiple --fvid

@@ -17,17 +17,17 @@ import (
 
 // UnimportCommand imports FeedVersions into a database.
 type UnimportCommand struct {
-	ScheduleOnly    bool
-	ExtraTables     []string
-	DryRun          bool
-	FVIDs           []string
-	FVSHA1          []string
-	Extensions      []string
-	FeedIDs         []string
-	DBURL           string
-	Workers         int
-	AllowInProgress bool
-	Adapter         tldb.Adapter // allow for mocks
+	ScheduleOnly bool
+	ExtraTables  []string
+	DryRun       bool
+	FVIDs        []string
+	FVSHA1       []string
+	Extensions   []string
+	FeedIDs      []string
+	DBURL        string
+	Workers      int
+	Force        bool
+	Adapter      tldb.Adapter // allow for mocks
 	// internal
 	fvidfile   string
 	fvsha1file string
@@ -51,7 +51,7 @@ func (cmd *UnimportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, and frequencies")
-	fl.BoolVar(&cmd.AllowInProgress, "allow-in-progress", false, "Also unimport feed versions whose import is still marked in progress; use to clean up after a crashed import")
+	fl.BoolVar(&cmd.Force, "force", false, "Unimport all found data, skipping import record check")
 
 }
 
@@ -114,18 +114,17 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 		From("feed_versions").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
-		Where("feed_version_gtfs_imports.id IS NOT NULL").
 		OrderBy("feed_versions.id desc")
-	if !cmd.AllowInProgress {
-		// Skip feed versions with an import in flight. The copier commits as it goes, so
-		// unimporting one would delete rows out from under it, and the import would then
-		// finalize success = true over the hole.
-		//
-		// An import in flight -- or one that died mid-run -- is the only state with
-		// success = false and in_progress = true. An unimport that died mid-run is
-		// success = true, in_progress = true, and stays selectable so it can be retried.
-		q = q.Where("not (feed_version_gtfs_imports.in_progress and not feed_version_gtfs_imports.success)")
+
+	// --force requires no import record at all: entity rows can outlive theirs, and nothing else
+	// can reach them.
+	if !cmd.Force {
+		// Skip an import in flight (success = false, in_progress = true): the copier commits as
+		// it goes, so unimporting one would delete rows out from under it. A failed import and an
+		// interrupted unimport both stay selectable -- they are what this is for.
+		q = q.Where("feed_version_gtfs_imports.id IS NOT NULL AND (feed_version_gtfs_imports.success OR NOT feed_version_gtfs_imports.in_progress)")
 	}
+
 	if len(cmd.FeedIDs) > 0 {
 		// Limit to specified feeds
 		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})

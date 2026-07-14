@@ -2,6 +2,8 @@ package importer
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -97,18 +99,53 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 	})
 }
 
+// ErrFeedVersionImported is returned for a feed version that still holds imported data.
+var ErrFeedVersionImported = errors.New("feed version is still imported; unimport it first")
+
+// CheckFeedVersionUnimported returns ErrFeedVersionImported if the feed version still has an
+// import record. Exported so a caller can report the precondition without attempting a delete.
+func CheckFeedVersionUnimported(ctx context.Context, atx tldb.Adapter, id int) error {
+	imported := 0
+	if err := atx.Get(
+		ctx,
+		&imported,
+		"SELECT count(*) FROM feed_version_gtfs_imports WHERE feed_version_id = ?",
+		id,
+	); err != nil {
+		return err
+	}
+	if imported > 0 {
+		return fmt.Errorf("feed version %d: %w", id, ErrFeedVersionImported)
+	}
+	return nil
+}
+
+// DeleteFeedVersion removes everything belonging to a feed version and soft deletes it. The feed
+// version must already be unimported; it does not unimport on the caller's behalf.
+//
+// It still sweeps the imported tables, because a missing import record is only a proxy for "not
+// imported" -- one lost to a crash leaves entity rows with nothing pointing at them, and this is
+// the last thing that runs.
 func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
-	// Unimport feed version first
-	if err := UnimportFeedVersion(ctx, atx, id, extraTables); err != nil {
+	if err := CheckFeedVersionUnimported(ctx, atx, id); err != nil {
 		return err
 	}
 
-	// Required tables
+	// A lost import record can leave feed_states still pointing at this feed version.
+	if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
+		return err
+	}
+
 	fvt := dmfr.GetFeedVersionTables()
-	tables := []string{}
-	tables = append(tables, extraTables...)
-	tables = append(tables, fvt.AllTables()...)
-	for _, table := range tables {
+	var optTables []string
+	optTables = append(optTables, extraTables...)
+	optTables = append(optTables, fvt.GtfsExtTables...)
+	for _, table := range optTables {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, true); err != nil {
+			return err
+		}
+	}
+	for _, table := range fvt.AllTables() {
 		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
 			return err
 		}
@@ -120,10 +157,6 @@ func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTable
 		Where(sq.Eq{"id": id}).
 		Where(sq.Eq{"deleted_at": nil}).
 		Set("deleted_at", tt.NewTime(time.Now().UTC())).
-		Exec()
-	if err != nil {
-		return err
-	}
-	return nil
-
+		ExecContext(ctx)
+	return err
 }

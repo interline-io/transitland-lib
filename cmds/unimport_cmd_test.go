@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
@@ -44,12 +45,12 @@ func TestUnimportCommand_InProgress(t *testing.T) {
 		testdb.MustGet(atx, &count, "SELECT count(*) FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fvid)
 		return count
 	}
-	unimport := func(atx tldb.Adapter, fvid int, allowInProgress bool) error {
+	unimport := func(atx tldb.Adapter, fvid int, force bool) error {
 		cmd := UnimportCommand{
-			FVIDs:           []string{strconv.Itoa(fvid)},
-			Workers:         1,
-			Adapter:         atx,
-			AllowInProgress: allowInProgress,
+			FVIDs:   []string{strconv.Itoa(fvid)},
+			Workers: 1,
+			Adapter: atx,
+			Force:   force,
 		}
 		return cmd.Run(ctx)
 	}
@@ -78,15 +79,50 @@ func TestUnimportCommand_InProgress(t *testing.T) {
 		})
 	}
 
-	// --allow-in-progress is the way to clean up after an import that died mid-run, which is
+	// --force is the way to clean up after an import that died mid-run, which is
 	// indistinguishable from one still running.
-	t.Run("import in flight, allow-in-progress", func(t *testing.T) {
+	t.Run("import in flight, force", func(t *testing.T) {
 		atx, fvid := setup(t, false, true)
 		if err := unimport(atx, fvid, true); err != nil {
 			t.Fatal(err)
 		}
 		if imports(atx, fvid) != 0 {
-			t.Error("--allow-in-progress should have unimported it")
+			t.Error("--force should have unimported it")
+		}
+	})
+
+	// Entity rows can outlive their import record. Nothing else can reach them: the default
+	// selector needs a record to match on, and the import selector reads a missing record as
+	// "never imported" and would re-import on top of them.
+	t.Run("no import record, force", func(t *testing.T) {
+		atx := testdb.TempSqliteAdapter()
+		feed := testdb.CreateTestFeed(atx, fmt.Sprintf("feed-%s", t.Name()))
+		fv := dmfr.FeedVersion{SHA1: t.Name(), File: "test.zip"}
+		fv.FeedID = feed.ID
+		fv.EarliestCalendarDate = tt.NewDate(time.Now())
+		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		fv.ID = testdb.MustInsert(atx, &fv)
+
+		// An orphaned entity row, with no import record pointing at it.
+		stop := gtfs.Stop{StopID: tt.NewString("orphan"), StopName: tt.NewString("Orphan")}
+		stop.FeedVersionID = fv.ID
+		testdb.MustInsert(atx, &stop)
+
+		if err := unimport(atx, fv.ID, false); err != nil {
+			t.Fatal(err)
+		}
+		count := 0
+		testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fv.ID)
+		if count == 0 {
+			t.Fatal("without --force the orphan should be unreachable, so this test proves nothing")
+		}
+
+		if err := unimport(atx, fv.ID, true); err != nil {
+			t.Fatal(err)
+		}
+		testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fv.ID)
+		if count != 0 {
+			t.Errorf("--force should have removed the orphaned rows, %d remain", count)
 		}
 	})
 }
