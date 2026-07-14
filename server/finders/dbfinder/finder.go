@@ -208,10 +208,9 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 // failed import ends with in_progress = false, and an unimport runs against a feed version
 // that still has success = true.
 //
-// Today the import and unimport each run in one transaction, so their partial states are
-// already invisible and this mostly restates that guarantee. It is a prerequisite rather
-// than a no-op: it is what will keep those states unreachable once they stop being
-// transactional, which is why it has to be deployed first.
+// Import and unimport do not run in a transaction -- one spanning millions of entity rows
+// would pin the xmin horizon and stall autovacuum database-wide -- so they commit as they go.
+// This gate is the only thing keeping their partial states unreachable.
 //
 // Keyed off feed_versions.id rather than the entity table, so one clause covers every table:
 // each of these selects already inner joins feed_versions on its feed_version_id. Applied
@@ -221,9 +220,9 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 // Feed version and validation report selects deliberately do not use this: they describe the
 // import itself, and must still see failed and in-progress ones.
 //
-// Not yet applied everywhere it needs to be. These still read tables in
-// dmfr.GetFeedVersionTables().ImportedTables() without a gate, and must be closed before the
-// import and unimport stop being transactional:
+// Not applied everywhere it needs to be. These read tables in
+// dmfr.GetFeedVersionTables().ImportedTables() without a gate, so they can still return rows
+// from a partial import or unimport:
 //
 //   - The FeedVersion child resolvers -- geometry, feed_infos, locations, location_groups,
 //     booking_rules -- and the stop_times reachable under locations. They hang off the

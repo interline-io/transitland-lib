@@ -111,7 +111,8 @@ func TestImportFeedVersion(t *testing.T) {
 // before the copier writes anything.
 func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
 	ctx := context.TODO()
-	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+	atx := testdb.TempSqliteAdapter()
+	err := func() error {
 		fv := dmfr.FeedVersion{File: testreader.ExampleZip.URL}
 		fv.EarliestCalendarDate = tt.NewDate(time.Now())
 		fv.LatestCalendarDate = tt.NewDate(time.Now())
@@ -147,7 +148,7 @@ func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
 			t.Error("expected the failed import to leave its stops behind")
 		}
 		return nil
-	})
+	}()
 	if err != nil {
 		t.Fatal(err)
 	}

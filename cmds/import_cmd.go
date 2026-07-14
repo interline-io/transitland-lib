@@ -327,7 +327,7 @@ func dmfrImportWorker(ctx context.Context, adapter tldb.Adapter, dryrun bool, jo
 		result, err := importer.ImportFeedVersion(jobCtx, feedmanager.NewDBFeedManager(adapter), opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			jobLog.Error().Err(err).Float64("duration", t2).Msg("critical failure, rolled back")
+			jobLog.Error().Err(err).Float64("duration", t2).Msg("critical failure, partial state left hidden; unimport the feed version to remove it")
 		} else if result.FeedVersionImport.Success {
 			jobLog.Info().
 				Float64("duration", t2).

@@ -25,7 +25,7 @@ type DeleteCommand struct {
 }
 
 func (cmd *DeleteCommand) HelpDesc() (string, string) {
-	return "Delete feed versions", ""
+	return "Delete feed versions", "The `delete` command soft deletes a feed version and removes its remaining rows. The feed version must already be unimported: run `unimport` first."
 }
 
 func (cmd *DeleteCommand) HelpArgs() string {
@@ -80,6 +80,22 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 		return fmt.Errorf("feed version %d does not exist", cmd.FVID)
 	} else if err != nil {
 		return err
+	}
+	// Deleting is only for feed versions that have already been unimported. An import record
+	// means the feed version still holds imported data -- possibly an import in flight, whose
+	// rows the copier is still committing -- and unimport is the command that knows how to
+	// remove it safely.
+	imported := 0
+	if err := cmd.Adapter.Get(
+		ctx,
+		&imported,
+		"SELECT count(*) FROM feed_version_gtfs_imports WHERE feed_version_id = ?",
+		cmd.FVID,
+	); err != nil {
+		return err
+	}
+	if imported > 0 {
+		return fmt.Errorf("feed version %d is still imported; run unimport first", cmd.FVID)
 	}
 	if cmd.DryRun {
 		log.For(ctx).Info().Msgf("Deleting feed version: %d (dry run)", cmd.FVID)

@@ -6,7 +6,7 @@ Delete feed versions
 
 Delete feed versions
 
-
+The `delete` command soft deletes a feed version and removes its remaining rows. The feed version must already be unimported: run `unimport` first.
 
 ```
 transitland delete [flags] <fvid>

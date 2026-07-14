@@ -15,9 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/validator"
 )
 
-// FeedManager is the metadata-bookkeeping surface for the import and fetch
-// flows. Mutating methods run inside WithTx when they must commit atomically
-// with the Copier's entity writes.
+// FeedManager is the metadata-bookkeeping surface for the import and fetch flows.
 type FeedManager interface {
 	GetFeedVersion(ctx context.Context, fvid int) (*dmfr.FeedVersion, error)
 
@@ -61,7 +59,7 @@ type FeedManager interface {
 	// The Copier's source for a feed version's GTFS data, returned unopened.
 	OpenReader(ctx context.Context, fv *dmfr.FeedVersion, storage string) (adapters.Reader, error)
 
-	// Runs fn in a single transaction; a nested WithTx joins the open one rather
-	// than starting another, so the whole import commits or rolls back together.
+	// Runs fn in a single transaction; a nested WithTx joins the open one rather than
+	// starting another. The import's entity writes are not covered -- they commit as they go.
 	WithTx(ctx context.Context, fn func(ctx context.Context, tx FeedManager) error) error
 }

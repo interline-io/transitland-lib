@@ -1,0 +1,92 @@
+package cmds
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
+)
+
+// The unimport selector must skip a feed version whose import is in flight. The copier commits
+// as it goes, so deleting under it would remove rows the import has already written, and the
+// import would then finalize success = true over the hole.
+//
+// success = false with in_progress = true is the import's own state and nothing else's. An
+// unimport interrupted mid-run leaves success = true, and has to stay selectable so a later run
+// can finish it.
+func TestUnimportCommand_InProgress(t *testing.T) {
+	ctx := context.TODO()
+
+	// UnimportFeedVersion removes the import record last, so its presence afterwards says
+	// whether the feed version was selected at all.
+	setup := func(t *testing.T, success bool, inProgress bool) (tldb.Adapter, int) {
+		atx := testdb.TempSqliteAdapter()
+		feed := testdb.CreateTestFeed(atx, fmt.Sprintf("feed-%s", t.Name()))
+		fv := dmfr.FeedVersion{SHA1: t.Name(), File: "test.zip"}
+		fv.FeedID = feed.ID
+		fv.EarliestCalendarDate = tt.NewDate(time.Now())
+		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		fv.ID = testdb.MustInsert(atx, &fv)
+
+		fvi := dmfr.FeedVersionImport{Success: success, InProgress: inProgress}
+		fvi.FeedVersionID = fv.ID
+		testdb.MustInsert(atx, &fvi)
+		return atx, fv.ID
+	}
+	imports := func(atx tldb.Adapter, fvid int) int {
+		count := 0
+		testdb.MustGet(atx, &count, "SELECT count(*) FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fvid)
+		return count
+	}
+	unimport := func(atx tldb.Adapter, fvid int, allowInProgress bool) error {
+		cmd := UnimportCommand{
+			FVIDs:           []string{strconv.Itoa(fvid)},
+			Workers:         1,
+			Adapter:         atx,
+			AllowInProgress: allowInProgress,
+		}
+		return cmd.Run(ctx)
+	}
+
+	tcs := []struct {
+		name       string
+		success    bool
+		inProgress bool
+		unimported bool
+	}{
+		{"imported", true, false, true},
+		{"unimport interrupted", true, true, true},
+		{"import in flight", false, true, false},
+		{"import failed", false, false, true},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			atx, fvid := setup(t, tc.success, tc.inProgress)
+			if err := unimport(atx, fvid, false); err != nil {
+				t.Fatal(err)
+			}
+			got := imports(atx, fvid) == 0
+			if got != tc.unimported {
+				t.Errorf("unimported = %v, want %v (success=%v in_progress=%v)", got, tc.unimported, tc.success, tc.inProgress)
+			}
+		})
+	}
+
+	// --allow-in-progress is the way to clean up after an import that died mid-run, which is
+	// indistinguishable from one still running.
+	t.Run("import in flight, allow-in-progress", func(t *testing.T) {
+		atx, fvid := setup(t, false, true)
+		if err := unimport(atx, fvid, true); err != nil {
+			t.Fatal(err)
+		}
+		if imports(atx, fvid) != 0 {
+			t.Error("--allow-in-progress should have unimported it")
+		}
+	})
+}
