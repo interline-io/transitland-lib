@@ -190,11 +190,6 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 		}
 		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
 		t := time.Now()
-		// Not wrapped in a transaction: unimport marks the import record in_progress first,
-		// which hides the feed version, so the deletes need not be atomic. One transaction
-		// across every entity table would pin the xmin horizon for its whole duration,
-		// stalling autovacuum database-wide. A failure part way through leaves hidden rows
-		// that a later run removes.
 		var err error
 		if opts.ScheduleOnly {
 			err = importer.UnimportSchedule(ctx, adapter, opts.FeedVersionID)

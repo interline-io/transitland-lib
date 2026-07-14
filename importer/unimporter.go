@@ -12,9 +12,8 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-// setImportInProgress flags the import record so that entity queries stop returning this feed
-// version's rows. Must be committed before anything is deleted: it is what makes the partial
-// state left by a non-transactional unimport unreachable, and a crashed one safe to re-run.
+// setImportInProgress flags the import record so entity queries stop returning this feed
+// version's rows. Must be committed before anything is deleted.
 func setImportInProgress(ctx context.Context, atx tldb.Adapter, id int) error {
 	_, err := atx.Sqrl().
 		Update("feed_version_gtfs_imports").
@@ -53,9 +52,12 @@ func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int) error {
 }
 
 // UnimportFeedVersion unimports a feed version and removes the feed_version_gtfs_import record.
+//
+// Not transactional: the import record is flagged in_progress first, which hides the feed
+// version, so the deletes need not be atomic; one transaction spanning every entity table would
+// pin the xmin horizon and stall autovacuum database-wide. The deletes are idempotent, so a
+// failure part way through leaves hidden rows for a later run to remove.
 func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
-	// Hide the feed version before touching its data. Everything below is idempotent, so a
-	// failure part way through leaves hidden rows that a later run removes.
 	if err := setImportInProgress(ctx, atx, id); err != nil {
 		return err
 	}
@@ -80,11 +82,9 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 		}
 	}
 
-	// Deactivating and dropping the import record commit together: deactivation is a
-	// multi-statement swap (feed_states, then the materialized tables) that must not be seen
-	// half done. The record goes last, because it is the only thing marking this feed version
-	// as still needing an unimport -- dropped on its own, a crash here would leave nothing to
-	// select it again.
+	// Deactivation (feed_states, then the materialized tables) and dropping the import record
+	// commit together: the record is the only marker that this feed version still needs an
+	// unimport, so it must not disappear unless the deactivation happened too.
 	return atx.Tx(func(atx tldb.Adapter) error {
 		if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
 			return err

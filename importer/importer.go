@@ -43,12 +43,12 @@ func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error 
 	return feedmanager.NewDBFeedManager(atx).ActivateFeedVersion(ctx, fvid)
 }
 
-// ImportFeedVersion creates the import record and runs the Copier. The FeedManager supplies
-// the metadata bookkeeping and entity-write sink; pass feedmanager.NewDBFeedManager(adapter)
-// for the database backend.
+// ImportFeedVersion creates the import record and runs the Copier. Pass
+// feedmanager.NewDBFeedManager(adapter) for the database backend.
 //
-// Not transactional: the import record is committed with in_progress = true before the copy
-// starts, and cleared only once everything is written.
+// The copy is not transactional: the import record is committed with in_progress = true before
+// the copy starts and cleared once the entities are written. Activation, when requested, runs
+// afterwards in its own transaction.
 func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Options) (Result, error) {
 	// Get FV
 	importSource := opts.ImportSource
@@ -66,8 +66,8 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		// Serious error
 		return Result{FeedVersionImport: fvi}, err
 	} else if existing != nil {
-		// Reimporting means unimporting first, as a separate step: the record left behind by a
-		// crashed or failed import is what makes this a no-op.
+		// Any existing import record blocks a reimport -- including one left by a failed or
+		// crashed import -- so unimport must run first.
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
 		return Result{FeedVersionImport: fvi}, nil
 	}
@@ -77,14 +77,13 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
-	// The copier writes without an enclosing transaction: one spanning millions of entity rows
-	// would hold its snapshot open for the whole import, pinning the xmin horizon and stopping
-	// autovacuum from reclaiming dead tuples database-wide. Nothing written here is reachable
-	// until the final update clears in_progress.
+	// No enclosing transaction: one spanning millions of entity rows would hold its snapshot
+	// open for the whole import, pinning the xmin horizon and stopping autovacuum from
+	// reclaiming dead tuples database-wide.
 	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
 	if errImport != nil {
-		// The rows the copier already wrote are left in place. Recording the import as failed
-		// keeps them hidden from entity queries, and removing them is a separate job.
+		// Rows the copier already wrote stay in place; recording the import as failed keeps them
+		// hidden from entity queries until an unimport removes them.
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
@@ -96,8 +95,8 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		return Result{FeedVersionImport: fvi}, errImport
 	}
 
-	// Clearing in_progress is what makes this feed version's data visible. It commits before
-	// activation, so the import is durably recorded as successful whatever happens next.
+	// This update sets success and clears in_progress, which is what makes this feed version's
+	// data visible.
 	log.For(ctx).Info().Msgf("Finalizing import")
 	fviresult.ID = fvi.ID
 	fviresult.CreatedAt = fvi.CreatedAt
@@ -113,9 +112,8 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		return Result{FeedVersionImport: fviresult}, err
 	}
 
-	// Activation is its own atomic step. A failure here leaves a feed version that is imported
-	// but not active -- the same state as an import without Activate -- rather than undoing a
-	// perfectly good import, and the previously active version keeps serving until the swap.
+	// Activation is its own transaction: a failure here leaves the feed version imported but not
+	// active, rather than undoing a good import.
 	if opts.Activate {
 		log.For(ctx).Info().Msgf("Activating feed version")
 		if err := fm.ActivateFeedVersion(ctx, fv.ID); err != nil {
@@ -129,8 +127,8 @@ type canSetAllowPartial interface {
 	SetAllowPartial(bool)
 }
 
-// importFeedVersion runs the Copier from the feed version's reader into the entity sink, both
-// vended by the FeedManager, returning the import counts. Writes commit as they go.
+// importFeedVersion runs the Copier from the feed version's reader into the entity sink,
+// returning the import counts.
 func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID

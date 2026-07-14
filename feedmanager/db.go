@@ -21,8 +21,7 @@ import (
 // behavior-identical to those call sites.
 type DBFeedManager struct {
 	adapter tldb.Adapter
-	// inTx marks a manager bound to an open transaction (see WithTx), so that a nested
-	// WithTx hands back the same manager rather than building a second one.
+	// inTx marks a manager bound to an open transaction (see WithTx).
 	inTx bool
 }
 
@@ -137,8 +136,7 @@ func (m *DBFeedManager) OpenReader(ctx context.Context, fv *dmfr.FeedVersion, st
 
 func (m *DBFeedManager) WithTx(ctx context.Context, fn func(context.Context, FeedManager) error) error {
 	if m.inTx {
-		// Already inside a transaction. adapter.Tx would join it anyway; this just avoids
-		// allocating an identical manager to hand back.
+		// Already in a transaction: adapter.Tx would join it anyway, so reuse this manager.
 		return fn(ctx, m)
 	}
 	return m.adapter.Tx(func(atx tldb.Adapter) error {

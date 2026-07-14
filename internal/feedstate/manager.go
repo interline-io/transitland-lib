@@ -15,8 +15,8 @@ import (
 
 // Manager handles feed state and materialized table operations
 //
-// NOTE: ActivateFeedVersion and DeactivateFeedVersion run in a transaction, joining the
-// caller's if one is already open. The rest do not, and the caller must manage transactions.
+// ActivateFeedVersion and DeactivateFeedVersion are self-transactional, joining the caller's
+// transaction if one is open; other methods leave transactions to the caller.
 type Manager struct {
 	adapter tldb.Adapter
 }
@@ -31,8 +31,8 @@ func NewManager(adapter tldb.Adapter) *Manager {
 // ActivateFeedVersion activates a feed version by setting it in feed_states and adding to materialized tables
 // If another version of the same feed is currently active, it will be deactivated first
 //
-// Runs in a transaction: swapping the feed_states pointer and rebuilding the materialized
-// tables must not be observed half done.
+// Runs in a transaction: the feed_states swap and materialized table rebuild must not be
+// observed half done.
 func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) error {
 	return m.adapter.Tx(func(atx tldb.Adapter) error {
 		return (&Manager{adapter: atx}).activateFeedVersion(ctx, feedVersionID)
@@ -100,8 +100,6 @@ func (m *Manager) activateFeedVersion(ctx context.Context, feedVersionID int) er
 
 // DeactivateFeedVersion deactivates a feed version by removing it from feed_states and materialized tables
 // If the feed version is not currently active, does nothing
-//
-// Runs in a transaction, joining the caller's if one is already open.
 func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) error {
 	return m.adapter.Tx(func(atx tldb.Adapter) error {
 		return (&Manager{adapter: atx}).deactivateFeedVersion(ctx, feedVersionID)

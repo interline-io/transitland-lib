@@ -105,12 +105,10 @@ func TestImportFeedVersion(t *testing.T) {
 	})
 }
 
-// An import that fails after the copier has written its entities leaves those rows behind:
-// there is no transaction to roll them back, and nothing removes them. Recording the import as
-// failed is what keeps them out of entity queries, so that is the property to pin.
-//
-// TestImportFeedVersion/Failed cannot cover this -- it fails on a missing file, so the copier
-// never writes anything.
+// A failed import leaves behind the rows the copier already wrote: ImportFeedVersion neither
+// rolls them back nor removes them, and the failed import record is what keeps them out of
+// entity queries. TestImportFeedVersion/Failed cannot cover this: it fails on a missing file,
+// before the copier writes anything.
 func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
 	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
@@ -136,14 +134,13 @@ func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
 			t.Error("expected in_progress = false; a completed failure must not look like a running import")
 		}
 
-		// Both columns are what the entity queries gate on, so read them back as stored.
+		// Entity queries gate on success and in_progress, so check them as stored.
 		fvi := dmfr.FeedVersionImport{}
 		testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fv.ID)
 		if fvi.Success || fvi.InProgress {
 			t.Errorf("stored import record is success=%v in_progress=%v, want false/false", fvi.Success, fvi.InProgress)
 		}
 
-		// And the rows are still there, waiting to be collected.
 		count := 0
 		testdb.ShouldGet(t, atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fv.ID)
 		if count == 0 {
