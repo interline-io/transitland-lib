@@ -84,16 +84,40 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	// queries exclude such feed versions, so nothing written below is reachable until the
 	// final update clears the flag.
 	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
-	if errImport == nil && opts.Activate {
-		log.For(ctx).Info().Msgf("Activating feed version")
-		if err := fm.ActivateFeedVersion(ctx, fv.ID); err != nil {
-			errImport = fmt.Errorf("error activating feed version: %s", err.Error())
-		}
+
+	// Activation and the final import record update commit together. Activating is a
+	// multi-statement swap -- deactivate the old feed version, repoint feed_states,
+	// rebuild the materialized tables -- that must not be observed half done, and clearing
+	// in_progress in the same transaction is what makes this feed version become visible at
+	// the same instant the old one stops being active. This is a handful of statements, not
+	// the millions of entity rows the copy above writes, so it holds a snapshot only briefly.
+	if errImport == nil {
+		errImport = fm.WithTx(ctx, func(ctx context.Context, tx feedmanager.FeedManager) error {
+			if opts.Activate {
+				log.For(ctx).Info().Msgf("Activating feed version")
+				if err := tx.ActivateFeedVersion(ctx, fv.ID); err != nil {
+					return fmt.Errorf("error activating feed version: %s", err.Error())
+				}
+			}
+			// Clearing in_progress is the last thing that happens, and the only thing that
+			// makes this feed version's data visible to the API.
+			log.For(ctx).Info().Msgf("Finalizing import")
+			fviresult.ID = fvi.ID
+			fviresult.CreatedAt = fvi.CreatedAt
+			fviresult.FeedVersionID = fv.ID
+			fviresult.ImportSource = fvi.ImportSource
+			fviresult.ImportLevel = 4
+			fviresult.Success = true
+			fviresult.InProgress = false
+			fviresult.ExceptionLog = ""
+			return tx.UpdateFeedVersionImport(ctx, &fviresult)
+		})
 	}
 	if errImport != nil {
-		// There is no transaction to roll back, so remove whatever was written. This is
-		// best effort: the rows stay unreachable regardless, because the import is recorded
-		// as failed, but nothing else would ever collect them.
+		// The entity rows were written outside any transaction, so there is nothing to roll
+		// back and they have to be removed explicitly. (An activation that failed above did
+		// roll back, so feed_states and the materialized tables still describe whichever feed
+		// version was active before this import started.)
 		cleanupFailedImport(ctx, fm, fv.ID, nil)
 		fvi.Success = false
 		fvi.InProgress = false
@@ -104,23 +128,6 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport
-	}
-
-	// Clearing in_progress is the last thing that happens, and the only thing that makes
-	// this feed version's data visible to the API.
-	log.For(ctx).Info().Msgf("Finalizing import")
-	fviresult.ID = fvi.ID
-	fviresult.CreatedAt = fvi.CreatedAt
-	fviresult.FeedVersionID = fv.ID
-	fviresult.ImportSource = fvi.ImportSource
-	fviresult.ImportLevel = 4
-	fviresult.Success = true
-	fviresult.InProgress = false
-	fviresult.ExceptionLog = ""
-	if err := fm.UpdateFeedVersionImport(ctx, &fviresult); err != nil {
-		// Serious error
-		log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
-		return Result{FeedVersionImport: fviresult}, err
 	}
 	return Result{FeedVersionImport: fviresult}, nil
 }

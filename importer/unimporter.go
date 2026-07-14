@@ -87,18 +87,22 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 		return err
 	}
 
-	// Remove fvgi
-	where := sq.Eq{"feed_version_id": id}
-	if _, err := atx.Sqrl().Delete("feed_version_gtfs_imports").Where(where).ExecContext(ctx); err != nil {
+	// Deactivating and dropping the import record commit together. Deactivating is a
+	// multi-statement swap -- clear feed_states, then the materialized tables -- that must not
+	// be observed half done. The import record goes last within the transaction, because it is
+	// the only thing that marks this feed version as still needing an unimport: were it dropped
+	// on its own and the process then died, nothing would select this feed version again to
+	// finish deactivating it.
+	return atx.Tx(func(atx tldb.Adapter) error {
+		if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
+			return err
+		}
+		_, err := atx.Sqrl().
+			Delete("feed_version_gtfs_imports").
+			Where(sq.Eq{"feed_version_id": id}).
+			ExecContext(ctx)
 		return err
-	}
-	// Deactivate the feed version (handles both feed_states and materialized tables)
-	manager := feedstate.NewManager(atx)
-	if err := manager.DeactivateFeedVersion(ctx, id); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {

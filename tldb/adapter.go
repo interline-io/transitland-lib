@@ -56,4 +56,8 @@ type Adapter interface {
 	// removed; callers loop until it removes fewer than limit. Bounded statements keep a
 	// large delete from holding one snapshot open long enough to stall autovacuum.
 	DeleteFeedVersionBatch(ctx context.Context, table string, fvid int, limit int) (int64, error)
+	// As DeleteFeedVersionBatch, but restricted to gtfs_stops rows with one of the given
+	// location types. Stops carry a self-referential parent_station, so they have to be
+	// removed one level of the hierarchy at a time.
+	DeleteFeedVersionStopsBatch(ctx context.Context, fvid int, locationTypes []int, limit int) (int64, error)
 }

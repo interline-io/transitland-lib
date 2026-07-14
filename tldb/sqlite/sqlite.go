@@ -113,6 +113,24 @@ func (adapter *SQLiteAdapter) DeleteFeedVersionBatch(ctx context.Context, table 
 	return result.RowsAffected()
 }
 
+// DeleteFeedVersionStopsBatch deletes at most limit of a feed version's stops with one of the
+// given location types, and returns how many were removed.
+func (adapter *SQLiteAdapter) DeleteFeedVersionStopsBatch(ctx context.Context, fvid int, locationTypes []int, limit int) (int64, error) {
+	sub := sq.Select("rowid").
+		From("gtfs_stops").
+		Where(sq.Eq{"feed_version_id": fvid}).
+		Where(sq.Eq{"location_type": locationTypes}).
+		Limit(uint64(limit))
+	result, err := adapter.Sqrl().
+		Delete("gtfs_stops").
+		Where(sub.Prefix("rowid in (").Suffix(")")).
+		ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 // Sqrl returns a properly configured Squirrel StatementBuilder.
 func (adapter *SQLiteAdapter) Sqrl() sq.StatementBuilderType {
 	return sq.StatementBuilder.RunWith(adapter.db)

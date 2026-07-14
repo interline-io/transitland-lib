@@ -2,12 +2,79 @@ package stats
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 )
+
+// gtfs_stops.parent_station references gtfs_stops, and the constraint is not deferrable, so
+// Postgres checks it at the end of every statement. A batch that removed a station while the
+// platforms hanging from it were still present would fail -- and since batches are taken in
+// physical order, the same batch would be retried forever. Deleting a hierarchy with a batch
+// size below the number of stops must still drain it.
+//
+// Postgres only: the sqlite schema declares the foreign key but never enables enforcement.
+func TestFeedVersionTableDelete_StopHierarchy(t *testing.T) {
+	dburl := os.Getenv("TL_TEST_DATABASE_URL")
+	if dburl == "" {
+		t.Skip("TL_TEST_DATABASE_URL not set")
+	}
+	ctx := context.Background()
+
+	// One row per statement, so a boundary falls between every level of the hierarchy.
+	defer func(n int) { feedVersionDeleteBatchSize = n }(feedVersionDeleteBatchSize)
+	feedVersionDeleteBatchSize = 1
+
+	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
+		// TempPostgres commits, so the fixture has to be unique per run.
+		key := fmt.Sprintf("stop-hierarchy-%d", time.Now().UnixNano())
+		feed := testdb.CreateTestFeed(atx, key)
+		fv := dmfr.FeedVersion{SHA1: key, File: key + ".zip"}
+		fv.FeedID = feed.ID
+		fv.EarliestCalendarDate = tt.NewDate(time.Now())
+		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		fv.ID = testdb.MustInsert(atx, &fv)
+
+		// Parents are inserted first, so they occupy the earlier physical positions -- exactly
+		// the rows a batch grabs first, and the ones that cannot go first.
+		insertStop := func(stopID string, locationType int, parent *int) int {
+			id := 0
+			err := atx.Sqrl().
+				Insert("gtfs_stops").
+				Columns("feed_version_id", "stop_id", "stop_name", "location_type", "parent_station").
+				Values(fv.ID, stopID, stopID, locationType, parent).
+				Suffix("RETURNING id").
+				QueryRowContext(ctx).
+				Scan(&id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return id
+		}
+		station := insertStop("station", 1, nil)
+		platform := insertStop("platform", 0, &station)
+		insertStop("boarding-area", 4, &platform)
+
+		if err := FeedVersionTableDelete(ctx, atx, "gtfs_stops", fv.ID, false); err != nil {
+			t.Fatalf("deleting a stop hierarchy: %v", err)
+		}
+		count := 0
+		testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fv.ID)
+		if count != 0 {
+			t.Errorf("%d stops remain, want 0", count)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 // A feed version's rows are deleted in bounded batches, not one statement, and a batch
 // removes only the rows it was asked for.

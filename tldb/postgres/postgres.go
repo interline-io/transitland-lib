@@ -117,6 +117,25 @@ func (adapter *PostgresAdapter) DeleteFeedVersionBatch(ctx context.Context, tabl
 	return result.RowsAffected()
 }
 
+// DeleteFeedVersionStopsBatch deletes at most limit of a feed version's stops with one of the
+// given location types, and returns how many were removed.
+func (adapter *PostgresAdapter) DeleteFeedVersionStopsBatch(ctx context.Context, fvid int, locationTypes []int, limit int) (int64, error) {
+	sub := sq.Select("ctid").
+		From("gtfs_stops").
+		Where(sq.Eq{"feed_version_id": fvid}).
+		Where(sq.Eq{"location_type": locationTypes}).
+		Limit(uint64(limit))
+	result, err := adapter.Sqrl().
+		Delete("gtfs_stops").
+		Where(sq.Eq{"feed_version_id": fvid}).
+		Where(sub.Prefix("ctid in (").Suffix(")")).
+		ExecContext(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 // Tx runs a callback inside a transaction.
 func (adapter *PostgresAdapter) Tx(cb func(Adapter) error) error {
 	var err error
