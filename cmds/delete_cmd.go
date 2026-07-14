@@ -85,10 +85,9 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 		log.For(ctx).Info().Msgf("Deleting feed version: %d (dry run)", cmd.FVID)
 	} else {
 		log.For(ctx).Info().Msgf("Deleting feed version: %d", cmd.FVID)
-		err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-			return importer.DeleteFeedVersion(ctx, cmd.Adapter, cmd.FVID, cmd.ExtraTables)
-		})
-		if err != nil {
+		// Not wrapped in a transaction: the import record is marked in_progress before anything
+		// is removed, so partial state is unreachable and a failed run can be repeated.
+		if err := importer.DeleteFeedVersion(ctx, cmd.Adapter, cmd.FVID, cmd.ExtraTables); err != nil {
 			return err
 		}
 	}
