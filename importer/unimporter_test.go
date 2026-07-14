@@ -317,6 +317,48 @@ func TestDeleteFeedVersion_OrphanedRows(t *testing.T) {
 	}
 }
 
+// A delete that fails part way through must leave the feed version exactly as it was. Stripped of
+// its rows but with deleted_at still null and no import record, it is precisely what the import
+// command selects -- so a partial delete would be imported all over again.
+//
+// The failure is injected with a stored validation report: tl_validation_report_error_groups has
+// no feed_version_id, so nothing sweeps it, and its foreign key makes the delete of
+// tl_validation_reports -- the last table -- fail. If that is ever fixed, this test needs another
+// way to force a late failure.
+func TestDeleteFeedVersion_FailureRollsBack(t *testing.T) {
+	ctx := context.TODO()
+	// A plain adapter, not TempPostgres: the delete has to open a real transaction of its own, and
+	// atx.Tx would otherwise just join the test's.
+	atx := testdb.MustOpenWriter(os.Getenv("TL_TEST_DATABASE_URL"), true).Adapter
+	fvid := setupFetch(ctx, t, atx)
+
+	reportID := 0
+	if err := atx.DBX().QueryRowxContext(ctx, atx.DBX().Rebind(
+		`INSERT INTO tl_validation_reports (feed_version_id, created_at, updated_at, reported_at, success, includes_static, includes_rt, validator, validator_version)
+		 VALUES (?, now(), now(), now(), true, true, false, 'test', '1') RETURNING id`), fvid).Scan(&reportID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := atx.DBX().ExecContext(ctx, atx.DBX().Rebind(
+		`INSERT INTO tl_validation_report_error_groups (validation_report_id, filename, field, error_type, error_code, count, level, group_key)
+		 VALUES (?, 'stops.txt', 'f', 'E', 'c', 1, 1, 'g')`), reportID); err != nil {
+		t.Fatal(err)
+	}
+
+	before := countFV(t, atx, "feed_version_file_infos", fvid)
+	if before == 0 {
+		t.Fatal("expected the fetch to have written file infos")
+	}
+	if err := DeleteFeedVersion(ctx, atx, fvid, nil); err == nil {
+		t.Fatal("expected the delete to fail on the validation report foreign key")
+	}
+	if got := countFV(t, atx, "feed_version_file_infos", fvid); got != before {
+		t.Errorf("a failed delete did not roll back: file_infos went %d -> %d", before, got)
+	}
+	if softDeleted(t, atx, fvid) {
+		t.Error("a failed delete soft deleted the feed version anyway")
+	}
+}
+
 func TestDeleteFeedVersion(t *testing.T) {
 	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")

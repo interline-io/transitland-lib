@@ -130,29 +130,37 @@ func CheckFeedVersionUnimported(ctx context.Context, atx tldb.Adapter, id int) e
 
 // DeleteFeedVersion removes everything belonging to a feed version and soft deletes it. The feed
 // version must already be unimported.
+//
+// Unlike the unimport, this runs in a transaction. Requiring a prior unimport is what makes that
+// affordable: the imported tables are already empty, so a delete touches only the rows a fetch
+// wrote, and the transaction stays short. Atomicity is worth having, because a delete that failed
+// part way through would leave a feed version with no rows, no import record, and deleted_at still
+// null -- which is exactly what the import command selects, so it would be imported all over again.
 func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
-	if err := CheckFeedVersionUnimported(ctx, atx, id); err != nil {
+	return atx.Tx(func(atx tldb.Adapter) error {
+		if err := CheckFeedVersionUnimported(ctx, atx, id); err != nil {
+			return err
+		}
+		// A missing import record is only a proxy for "not imported": one lost to a crash leaves
+		// entity rows with nothing pointing at them, and can leave feed_states still pointing here.
+		// This is the last thing to run, so it sweeps every table rather than trust the proxy.
+		if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
+			return err
+		}
+		fvt := dmfr.GetFeedVersionTables()
+		if err := deleteTables(ctx, atx, slices.Concat(extraTables, fvt.GtfsExtTables), id, true); err != nil {
+			return err
+		}
+		if err := deleteTables(ctx, atx, fvt.AllTables(), id, false); err != nil {
+			return err
+		}
+		// Soft delete feed version
+		_, err := atx.Sqrl().
+			Update("feed_versions").
+			Where(sq.Eq{"id": id}).
+			Where(sq.Eq{"deleted_at": nil}).
+			Set("deleted_at", tt.NewTime(time.Now().UTC())).
+			ExecContext(ctx)
 		return err
-	}
-	// A missing import record is only a proxy for "not imported". One lost to a crash leaves
-	// entity rows with nothing pointing at them, and can leave feed_states still pointing here.
-	// This is the last thing to run, so it sweeps every table rather than trust the proxy.
-	if err := feedstate.NewManager(atx).DeactivateFeedVersion(ctx, id); err != nil {
-		return err
-	}
-	fvt := dmfr.GetFeedVersionTables()
-	if err := deleteTables(ctx, atx, slices.Concat(extraTables, fvt.GtfsExtTables), id, true); err != nil {
-		return err
-	}
-	if err := deleteTables(ctx, atx, fvt.AllTables(), id, false); err != nil {
-		return err
-	}
-	// Soft delete feed version
-	_, err := atx.Sqrl().
-		Update("feed_versions").
-		Where(sq.Eq{"id": id}).
-		Where(sq.Eq{"deleted_at": nil}).
-		Set("deleted_at", tt.NewTime(time.Now().UTC())).
-		ExecContext(ctx)
-	return err
+	})
 }
