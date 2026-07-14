@@ -55,9 +55,12 @@ func FeedVersionUnimport(ctx context.Context, fvid int) (*model.FeedVersionUnimp
 	if err := checkFeedEdit(ctx, fvid); err != nil {
 		return nil, err
 	}
-	if err := cfg.Adapter.Tx(func(atx tldb.Adapter) error {
-		return importer.UnimportFeedVersion(ctx, atx, fvid, nil)
-	}); err != nil {
+	// Deliberately not wrapped in a transaction. Unimport marks the import record in_progress
+	// first, which hides the feed version from entity queries, so the deletes need not be
+	// atomic. Inside a transaction that flag would not be visible until commit, the deletes
+	// would run as one long statement stream holding a snapshot open, and the batching would
+	// buy nothing.
+	if err := importer.UnimportFeedVersion(ctx, cfg.Adapter, fvid, nil); err != nil {
 		return nil, err
 	}
 	mr := model.FeedVersionUnimportResult{

@@ -9,10 +9,8 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// A feed version's rows are deleted in bounded batches, not one statement. The batch
-// primitive has to actually honor its limit -- if the adapter type assertion in
-// FeedVersionTableDelete ever stopped matching, deletes would silently fall back to a
-// single unbounded statement and nothing else here would notice.
+// A feed version's rows are deleted in bounded batches, not one statement, and a batch
+// removes only the rows it was asked for.
 func TestFeedVersionTableDelete_Batched(t *testing.T) {
 	ctx := context.Background()
 	const table = "feed_version_service_levels"
@@ -44,11 +42,7 @@ func TestFeedVersionTableDelete_Batched(t *testing.T) {
 		addRows(other.ID, 3)
 
 		// The limit is honored: one call removes exactly 2 of the 5.
-		bd, ok := atx.(feedVersionBatchDeleter)
-		if !ok {
-			t.Fatal("adapter does not implement feedVersionBatchDeleter; deletes would not be batched")
-		}
-		n, err := bd.DeleteFeedVersionBatch(ctx, table, fv.ID, 2)
+		n, err := atx.DeleteFeedVersionBatch(ctx, table, fv.ID, 2)
 		if err != nil {
 			t.Fatal(err)
 		}

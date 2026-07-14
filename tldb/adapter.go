@@ -52,4 +52,8 @@ type Adapter interface {
 	Select(context.Context, interface{}, string, ...interface{}) error
 	MultiInsert(context.Context, []interface{}) ([]int, error)
 	SupportsSpatialFunctions() bool
+	// Deletes at most limit of a feed version's rows from table, returning how many were
+	// removed; callers loop until it removes fewer than limit. Bounded statements keep a
+	// large delete from holding one snapshot open long enough to stall autovacuum.
+	DeleteFeedVersionBatch(ctx context.Context, table string, fvid int, limit int) (int64, error)
 }

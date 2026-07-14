@@ -12,12 +12,19 @@ import (
 )
 
 // A feed version whose import is incomplete must not return entities. This is what lets
-// import and unimport write without an enclosing transaction: they flip in_progress and
-// the rows become invisible immediately, whatever state they are left in.
+// import and unimport write without an enclosing transaction: they flip in_progress and the
+// rows become unreachable immediately, whatever state they are left in.
 func TestFinder_ImportGate(t *testing.T) {
 	ctx := context.Background()
+
+	// Runs in a transaction that is always rolled back. The import record has to be mutated
+	// to test the gate, and the test database is shared with the other server packages that
+	// go test runs concurrently -- hiding BART from them for the duration is not an option.
 	db := testutil.MustOpenTestDB(t)
-	f := NewFinder(dbutil.WithQueryLogger(db, false, 0))
+	tx, err := db.Beginx()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback() })
+	f := NewFinder(dbutil.WithQueryLogger(tx, false, 0))
 
 	// BART, from the standard test fixtures.
 	sha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
@@ -26,18 +33,16 @@ func TestFinder_ImportGate(t *testing.T) {
 	require.Len(t, fvs, 1, "expected the bart test feed version")
 	fvid := fvs[0].ID
 
-	// Restore the import record no matter how the test exits; other tests share this db.
 	setImport := func(t *testing.T, success bool, inProgress bool) {
 		t.Helper()
-		_, err := db.ExecContext(ctx,
+		_, err := tx.ExecContext(ctx,
 			`UPDATE feed_version_gtfs_imports SET success = $1, in_progress = $2 WHERE feed_version_id = $3`,
 			success, inProgress, fvid)
 		require.NoError(t, err)
 	}
-	t.Cleanup(func() { setImport(t, true, false) })
 
-	// counts returns the number of entities visible for this feed version across every
-	// finder that reads a raw imported table.
+	// counts returns the entities visible for this feed version across the finders that read
+	// raw imported tables.
 	counts := func(t *testing.T) map[string]int {
 		t.Helper()
 		out := map[string]int{}
@@ -62,8 +67,8 @@ func TestFinder_ImportGate(t *testing.T) {
 		assert.Greater(t, v, 0, "%s should be visible for a completed import", k)
 	}
 
-	// Both conditions are load-bearing, and neither subsumes the other: a feed version
-	// being unimported still has success = true, and a failed import has in_progress = false.
+	// Both columns are load-bearing, and neither subsumes the other: a feed version being
+	// unimported still has success = true, and a failed import has in_progress = false.
 	for _, tc := range []struct {
 		name       string
 		success    bool
@@ -79,11 +84,5 @@ func TestFinder_ImportGate(t *testing.T) {
 				assert.Equal(t, 0, v, "%s must be hidden while: %s", k, tc.name)
 			}
 		})
-	}
-
-	// And visible again once the import completes.
-	setImport(t, true, false)
-	for k, v := range counts(t) {
-		assert.Greater(t, v, 0, "%s should be visible again after the import completes", k)
 	}
 }

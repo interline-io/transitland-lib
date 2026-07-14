@@ -4,21 +4,14 @@ import (
 	"context"
 	"database/sql"
 
-	sq "github.com/irees/squirrel"
-
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// FeedVersionDeleteBatchSize bounds how many rows one delete statement removes.
-const FeedVersionDeleteBatchSize = 100_000
-
-// feedVersionBatchDeleter is implemented by adapters that can delete a bounded number of
-// a feed version's rows per statement, using the dialect's physical row identifier
-// (ctid on PostgreSQL, rowid on SQLite).
-type feedVersionBatchDeleter interface {
-	DeleteFeedVersionBatch(ctx context.Context, table string, fvid int, limit int) (int64, error)
-}
+// feedVersionDeleteBatchSize bounds how many rows one delete statement removes. The entity
+// tables run to millions of rows per feed version, and a single statement over all of them
+// holds its snapshot open for the duration, which stalls autovacuum database-wide.
+const feedVersionDeleteBatchSize = 100_000
 
 func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string, fvid int, ifExists bool) error {
 	// check if table exists before proceeding
@@ -31,26 +24,15 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 			return nil
 		}
 	}
-	// Delete in bounded batches when the adapter supports it. The entity tables run to
-	// millions of rows per feed version, and a single statement over all of them holds
-	// its snapshot open for the duration, which stalls autovacuum database-wide.
-	if bd, ok := atx.(feedVersionBatchDeleter); ok {
-		for {
-			n, err := bd.DeleteFeedVersionBatch(ctx, table, fvid, FeedVersionDeleteBatchSize)
-			if err != nil {
-				return err
-			}
-			if n < FeedVersionDeleteBatchSize {
-				return nil
-			}
+	for {
+		n, err := atx.DeleteFeedVersionBatch(ctx, table, fvid, feedVersionDeleteBatchSize)
+		if err != nil {
+			return err
+		}
+		if n < feedVersionDeleteBatchSize {
+			return nil
 		}
 	}
-	where := sq.Eq{"feed_version_id": fvid}
-	_, err := atx.Sqrl().Delete(table).Where(where).ExecContext(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // EnsureFeedState gets or creates a feed state.

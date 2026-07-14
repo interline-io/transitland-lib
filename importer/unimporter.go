@@ -15,21 +15,45 @@ import (
 // setImportInProgress flags the import record so that entity queries stop returning this
 // feed version's rows. Callers must commit this before deleting anything: it is what makes
 // the partial state left behind by a non-transactional unimport unreachable, and what
-// makes a crashed unimport safe to simply run again.
-func setImportInProgress(ctx context.Context, atx tldb.Adapter, id int, inProgress bool) error {
+// makes a crashed unimport safe to simply run again. The flag is cleared by whatever
+// finishes the job -- a completed unimport deletes the record outright.
+func setImportInProgress(ctx context.Context, atx tldb.Adapter, id int) error {
 	_, err := atx.Sqrl().
 		Update("feed_version_gtfs_imports").
-		Set("in_progress", inProgress).
+		Set("in_progress", true).
+		Set("updated_at", time.Now().UTC()).
 		Where(sq.Eq{"feed_version_id": id}).
 		ExecContext(ctx)
 	return err
+}
+
+// deleteFeedVersionEntities removes every row the import wrote for a feed version. The
+// import record itself is left alone: an unimport deletes it afterwards, while a failed
+// import keeps it to record the failure.
+func deleteFeedVersionEntities(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
+	fvt := dmfr.GetFeedVersionTables()
+	// Extension tables are allowed not to exist.
+	var optTables []string
+	optTables = append(optTables, extraTables...)
+	optTables = append(optTables, fvt.GtfsExtTables...)
+	for _, table := range optTables {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, true); err != nil {
+			return err
+		}
+	}
+	for _, table := range fvt.ImportedTables() {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // UnimportSchedule removes schedule data for a feed version and updates the import record.
 // stops, routes, agencies, pathways, levels are not affected.
 // Note: calendars and calendar_dates MAY be deleted in future versions.
 func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int) error {
-	if err := setImportInProgress(ctx, atx, id, true); err != nil {
+	if err := setImportInProgress(ctx, atx, id); err != nil {
 		return err
 	}
 	fvt := dmfr.GetFeedVersionTables()
@@ -56,28 +80,11 @@ func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int) error {
 func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
 	// Hide the feed version before touching its data. Everything below is idempotent, so a
 	// failure part way through leaves rows that are invisible and that a later run removes.
-	if err := setImportInProgress(ctx, atx, id, true); err != nil {
+	if err := setImportInProgress(ctx, atx, id); err != nil {
 		return err
 	}
-	fvt := dmfr.GetFeedVersionTables()
-
-	// Allow extension tables to not exist
-	var optTables []string
-	optTables = append(optTables, extraTables...)
-	optTables = append(optTables, fvt.GtfsExtTables...)
-	for _, table := range optTables {
-		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, true); err != nil {
-			return err
-		}
-	}
-
-	// Required tables
-	tables := []string{}
-	tables = append(tables, fvt.ImportedTables()...)
-	for _, table := range tables {
-		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
-			return err
-		}
+	if err := deleteFeedVersionEntities(ctx, atx, id, extraTables); err != nil {
+		return err
 	}
 
 	// Remove fvgi
@@ -100,11 +107,14 @@ func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTable
 		return err
 	}
 
-	// Required tables
+	// UnimportFeedVersion has already removed the extension and imported tables; deleting
+	// AllTables() here would run those ~40 statements a second time for nothing. Only the
+	// fetch-time stats and the system tables are left (the import record among them is
+	// already gone, so its delete is a no-op).
 	fvt := dmfr.GetFeedVersionTables()
-	tables := []string{}
-	tables = append(tables, extraTables...)
-	tables = append(tables, fvt.AllTables()...)
+	var tables []string
+	tables = append(tables, fvt.FetchStatDerivedTables...)
+	tables = append(tables, fvt.SystemTables...)
 	for _, table := range tables {
 		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
 			return err

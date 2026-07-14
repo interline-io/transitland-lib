@@ -30,7 +30,6 @@ func shapeSelect(limit *int, after *model.Cursor, fvid int, permFilter *model.Pe
 		From("gtfs_shapes").
 		Join("feed_versions on feed_versions.id = gtfs_shapes.feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
-		Join(joinImportedShapes).
 		Where(sq.Eq{"gtfs_shapes.feed_version_id": fvid}).
 		OrderBy("gtfs_shapes.id asc").
 		Limit(finderCheckLimit(limit))
@@ -52,6 +51,7 @@ func shapeSelect(limit *int, after *model.Cursor, fvid int, permFilter *model.Pe
 			))
 		}
 	}
+	q = joinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

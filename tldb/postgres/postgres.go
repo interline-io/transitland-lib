@@ -101,8 +101,14 @@ func (adapter *PostgresAdapter) DeleteFeedVersionBatch(ctx context.Context, tabl
 		From(table).
 		Where(sq.Eq{"feed_version_id": fvid}).
 		Limit(uint64(limit))
+	// The outer delete repeats the feed_version_id predicate. It is not redundant:
+	// gtfs_stop_times is hash partitioned on feed_version_id, and a ctid is only unique
+	// within one partition. Without the partition key the planner cannot prune, so it
+	// probes every partition and deletes any row that happens to share a ctid -- rows
+	// belonging to other feed versions.
 	result, err := adapter.Sqrl().
 		Delete(table).
+		Where(sq.Eq{"feed_version_id": fvid}).
 		Where(sub.Prefix("ctid in (").Suffix(")")).
 		ExecContext(ctx)
 	if err != nil {

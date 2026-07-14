@@ -55,6 +55,72 @@ func setupImport(ctx context.Context, t *testing.T, atx tldb.Adapter) int {
 	return fv.ID
 }
 
+// Unimporting one feed version must not touch another's rows. This is a real hazard rather
+// than a truism: gtfs_stop_times is hash partitioned on feed_version_id, and the batched
+// delete matches rows by ctid, which is only unique within a single partition. Without the
+// feed_version_id predicate on the outer delete the planner cannot prune, so it probes every
+// partition and removes any row that happens to share a ctid.
+func TestUnimportFeedVersion_LeavesOtherFeedVersionsAlone(t *testing.T) {
+	ctx := context.TODO()
+	dburl := os.Getenv("TL_TEST_DATABASE_URL")
+	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
+		keepFvid := setupImport(ctx, t, atx)
+		dropFvid := setupImport(ctx, t, atx)
+
+		// Counted across every feed version, not just the two here. A ctid collision lands on
+		// whichever rows happen to occupy the same offset in another partition, so scoping the
+		// assertion to one feed version makes it depend on how full the partitions already are.
+		total := func(table string) int {
+			count := 0
+			switch table {
+			case "gtfs_stop_times":
+				testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_stop_times")
+			case "gtfs_trips":
+				testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_trips")
+			case "gtfs_stops":
+				testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_stops")
+			}
+			return count
+		}
+		forFv := func(table string, fvid int) int {
+			count := 0
+			switch table {
+			case "gtfs_stop_times":
+				testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_stop_times WHERE feed_version_id = ?", fvid)
+			case "gtfs_trips":
+				testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_trips WHERE feed_version_id = ?", fvid)
+			case "gtfs_stops":
+				testdb.MustGet(atx, &count, "SELECT count(*) FROM gtfs_stops WHERE feed_version_id = ?", fvid)
+			}
+			return count
+		}
+
+		tables := []string{"gtfs_stop_times", "gtfs_trips", "gtfs_stops"}
+		totalBefore := map[string]int{}
+		dropBefore := map[string]int{}
+		for _, table := range tables {
+			totalBefore[table] = total(table)
+			dropBefore[table] = forFv(table, dropFvid)
+			assert.Greater(t, dropBefore[table], 0, "%s: nothing to unimport", table)
+			assert.Greater(t, forFv(table, keepFvid), 0, "%s: nothing to lose", table)
+		}
+
+		if err := UnimportFeedVersion(ctx, atx, dropFvid, nil); err != nil {
+			t.Fatal(err)
+		}
+
+		for _, table := range tables {
+			assert.Equal(t, 0, forFv(table, dropFvid), "%s: unimported feed version should have no rows", table)
+			assert.Equal(t, totalBefore[table]-dropBefore[table], total(table),
+				"%s: unimport removed rows belonging to other feed versions", table)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUnimportSchedule(t *testing.T) {
 	ctx := context.TODO()
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
