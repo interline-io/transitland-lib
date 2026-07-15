@@ -174,8 +174,8 @@ func CreateTestFeed(atx tldb.Adapter, url string) dmfr.Feed {
 // CreateTestFeedVersion inserts a feed version and its owning feed into a database, returning
 // the feed version.
 //
-// The feed is named uniquely per call rather than after the test: TempPostgres commits, and
-// current_feeds.onestop_id is unique, so a stable name would wedge every run after the first.
+// The feed is named uniquely per call: TempPostgres commits and current_feeds.onestop_id is
+// unique, so a stable name would wedge reruns.
 func CreateTestFeedVersion(atx tldb.Adapter, file string) dmfr.FeedVersion {
 	name := fmt.Sprintf("%d-%d", time.Now().UnixNano(), testFeedSeq.Add(1))
 	feed := CreateTestFeed(atx, "feed-"+name)

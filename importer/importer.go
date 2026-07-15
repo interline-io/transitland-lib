@@ -65,8 +65,8 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		// Serious error
 		return Result{FeedVersionImport: fvi}, err
 	} else if existing != nil {
-		// Any existing import record blocks a reimport -- including one left by a failed or
-		// crashed import -- so unimport must run first.
+		// An existing record -- including one left by a failed or crashed import -- blocks reimport
+		// until an unimport clears it.
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
 		return Result{FeedVersionImport: fvi}, nil
 	}
@@ -76,33 +76,27 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
-	// No enclosing transaction: one spanning millions of entity rows would hold its snapshot
-	// open for the whole import, pinning the xmin horizon and stopping autovacuum from
-	// reclaiming dead tuples database-wide.
+	// No enclosing transaction: one spanning the whole entity copy would pin the xmin horizon and
+	// stall autovacuum database-wide.
 	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
 
-	// The import record is what hides a partial import, so it has to be written even when ctx is
-	// already cancelled -- a client disconnecting mid-import is the common way that happens. On the
-	// cancelled ctx these updates would fail too, leaving the record marked in progress forever:
-	// invisible, and refused by unimport as an import still in flight.
+	// Finalize under WithoutCancel: a cancelled caller ctx (commonly a client disconnect) must not
+	// strand the record in_progress, which would leave it hidden and refused by unimport.
 	finishCtx := context.WithoutCancel(ctx)
 
 	if errImport != nil {
-		// Rows the copier already wrote stay in place; recording the import as failed keeps them
-		// hidden from entity queries until an unimport removes them.
+		// A failed record keeps the copied rows hidden until an unimport removes them.
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
 		if err := fm.UpdateFeedVersionImport(finishCtx, &fvi); err != nil {
-			// Serious error
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport
 	}
 
-	// This update sets success and clears in_progress, which is what makes this feed version's
-	// data visible.
+	// success and cleared in_progress is what makes the feed version's data visible.
 	log.For(ctx).Info().Msgf("Finalizing import")
 	fviresult.ID = fvi.ID
 	fviresult.CreatedAt = fvi.CreatedAt
@@ -113,16 +107,15 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	fviresult.InProgress = false
 	fviresult.ExceptionLog = ""
 	if err := fm.UpdateFeedVersionImport(finishCtx, &fviresult); err != nil {
-		// The finalize did not persist, so the record is still success=false, in_progress=true:
-		// the import stays hidden and needs an unimport. Report that state rather than the success
-		// we failed to write.
+		// Finalize did not persist: the record is still in_progress and hidden, so report that
+		// state (needs an unimport) rather than the success we failed to write.
 		log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 		fviresult.Success = false
 		fviresult.InProgress = true
 		return Result{FeedVersionImport: fviresult}, err
 	}
 
-	// Activation is its own transaction: a failure here leaves the feed version imported but not
+	// Activation runs in its own transaction: a failure leaves the feed version imported but not
 	// active, rather than undoing a good import.
 	if opts.Activate {
 		log.For(ctx).Info().Msgf("Activating feed version")

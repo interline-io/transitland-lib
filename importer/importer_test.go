@@ -105,19 +105,17 @@ func TestImportFeedVersion(t *testing.T) {
 	})
 }
 
-// A failed import leaves behind the rows the copier already wrote: ImportFeedVersion neither
-// rolls them back nor removes them, and the failed import record is what keeps them out of
-// entity queries. TestImportFeedVersion/Failed cannot cover this: it fails on a missing file,
-// before the copier writes anything.
+// A failed import leaves the copied rows in place -- not rolled back, kept out of entity queries
+// only by the failed import record. TestImportFeedVersion/Failed can't cover this: it fails on a
+// missing file, before the copier writes anything.
 func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
 	ctx := context.TODO()
-	// Not TempSqlite: that runs the callback inside a transaction, which is the thing this
-	// import no longer has.
+	// Not TempSqlite: it runs inside a transaction, the thing this import no longer has.
 	atx := testdb.TempSqliteAdapter()
 	fv := testdb.CreateTestFeedVersion(atx, testreader.ExampleZip.URL)
 
-	// A negative threshold can never be met, and it is checked after the copier runs, so the
-	// import fails with every entity already written.
+	// A negative threshold can never be met and is checked after the copy, so the import fails
+	// with every entity already written.
 	if _, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{
 		FeedVersionID:  fv.ID,
 		Storage:        "/",
@@ -140,24 +138,20 @@ func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
 	}
 }
 
-// A caller's context can be cancelled mid-import -- most often a client disconnecting on the
-// GraphQL path. The finalize writes run under context.WithoutCancel so they still commit: the
-// import record must not be stranded in_progress, which would hide it and refuse a reimport.
+// A cancelled caller ctx (commonly a client disconnect) must not strand the import record
+// in_progress: the finalize writes run under context.WithoutCancel so they still commit.
 func TestImportFeedVersion_CancelledContextStillFinalizes(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	atx := testdb.TempSqliteAdapter()
 	fv := testdb.CreateTestFeedVersion(atx, testreader.ExampleZip.URL)
 
-	// Cancel as soon as the record exists, so the context is already cancelled by the time the
-	// import reaches its finalize write.
+	// Cancel once the record exists, so ctx is already cancelled at the finalize write.
 	fm := &cancelOnCreateFeedManager{DBFeedManager: feedmanager.NewDBFeedManager(atx), cancel: cancel}
 	if _, err := ImportFeedVersion(ctx, fm, Options{FeedVersionID: fv.ID, Storage: "/"}); err != nil {
 		t.Fatalf("import should finalize under a cancelled context, got: %v", err)
 	}
 
-	// The finalize ran under context.WithoutCancel, so the record is flipped out of in_progress
-	// and the import is visible. Without that, the cancelled context would fail the write and
-	// strand it in_progress.
+	// Finalized out of in_progress despite the cancelled ctx: WithoutCancel let the write commit.
 	fvi := dmfr.FeedVersionImport{}
 	testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fv.ID)
 	if fvi.InProgress || !fvi.Success {
