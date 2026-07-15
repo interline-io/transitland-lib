@@ -14,7 +14,10 @@ import (
 )
 
 // Manager handles feed state and materialized table operations
-// NOTE: Methods do NOT handle transactions - the caller must manage transactions
+//
+// ActivateFeedVersion and DeactivateFeedVersion are self-transactional, joining the caller's
+// transaction if one is open, and SetActiveFeedVersions transacts per feed version through them.
+// Other methods leave transactions to the caller.
 type Manager struct {
 	adapter tldb.Adapter
 }
@@ -28,7 +31,16 @@ func NewManager(adapter tldb.Adapter) *Manager {
 
 // ActivateFeedVersion activates a feed version by setting it in feed_states and adding to materialized tables
 // If another version of the same feed is currently active, it will be deactivated first
+//
+// Runs in a transaction: the feed_states swap and materialized table rebuild must not be
+// observed half done.
 func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) error {
+	return m.adapter.Tx(func(atx tldb.Adapter) error {
+		return (&Manager{adapter: atx}).activateFeedVersion(ctx, feedVersionID)
+	})
+}
+
+func (m *Manager) activateFeedVersion(ctx context.Context, feedVersionID int) error {
 	// Get the feed_id for this feed version
 	feedID, err := m.GetFeedIDForFeedVersion(ctx, feedVersionID)
 	if err != nil {
@@ -58,7 +70,7 @@ func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) er
 			Int("new_feed_version_id", feedVersionID).
 			Int("feed_id", feedID).
 			Msg("Deactivating current feed version before activating new one")
-		if err := m.DeactivateFeedVersion(ctx, currentFeedVersionID); err != nil {
+		if err := m.deactivateFeedVersion(ctx, currentFeedVersionID); err != nil {
 			return fmt.Errorf("failed to deactivate current feed version %d: %w", currentFeedVersionID, err)
 		}
 	}
@@ -90,6 +102,12 @@ func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) er
 // DeactivateFeedVersion deactivates a feed version by removing it from feed_states and materialized tables
 // If the feed version is not currently active, does nothing
 func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) error {
+	return m.adapter.Tx(func(atx tldb.Adapter) error {
+		return (&Manager{adapter: atx}).deactivateFeedVersion(ctx, feedVersionID)
+	})
+}
+
+func (m *Manager) deactivateFeedVersion(ctx context.Context, feedVersionID int) error {
 	// Get the feed_id for this feed version
 	feedID, err := m.GetFeedIDForFeedVersion(ctx, feedVersionID)
 	if err != nil {
