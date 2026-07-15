@@ -140,6 +140,44 @@ func TestImportFeedVersion_FailedImportLeavesRows(t *testing.T) {
 	}
 }
 
+// A caller's context can be cancelled mid-import -- most often a client disconnecting on the
+// GraphQL path. The finalize writes run under context.WithoutCancel so they still commit: the
+// import record must not be stranded in_progress, which would hide it and refuse a reimport.
+func TestImportFeedVersion_CancelledContextStillFinalizes(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	atx := testdb.TempSqliteAdapter()
+	fv := testdb.CreateTestFeedVersion(atx, testreader.ExampleZip.URL)
+
+	// Cancel as soon as the record exists, so the context is already cancelled by the time the
+	// import reaches its finalize write.
+	fm := &cancelOnCreateFeedManager{DBFeedManager: feedmanager.NewDBFeedManager(atx), cancel: cancel}
+	if _, err := ImportFeedVersion(ctx, fm, Options{FeedVersionID: fv.ID, Storage: "/"}); err != nil {
+		t.Fatalf("import should finalize under a cancelled context, got: %v", err)
+	}
+
+	// The finalize ran under context.WithoutCancel, so the record is flipped out of in_progress
+	// and the import is visible. Without that, the cancelled context would fail the write and
+	// strand it in_progress.
+	fvi := dmfr.FeedVersionImport{}
+	testdb.ShouldGet(t, atx, &fvi, "SELECT * FROM feed_version_gtfs_imports WHERE feed_version_id = ?", fv.ID)
+	if fvi.InProgress || !fvi.Success {
+		t.Errorf("stored record is success=%v in_progress=%v, want true/false; finalize did not survive cancellation", fvi.Success, fvi.InProgress)
+	}
+}
+
+// cancelOnCreateFeedManager cancels the import context the moment the import record is created,
+// standing in for a client that disconnects mid-import.
+type cancelOnCreateFeedManager struct {
+	*feedmanager.DBFeedManager
+	cancel context.CancelFunc
+}
+
+func (m *cancelOnCreateFeedManager) CreateFeedVersionImport(ctx context.Context, fvi *dmfr.FeedVersionImport) (int, error) {
+	id, err := m.DBFeedManager.CreateFeedVersionImport(ctx, fvi)
+	m.cancel()
+	return id, err
+}
+
 func Test_importFeedVersion(t *testing.T) {
 	ctx := context.TODO()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {

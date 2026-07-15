@@ -113,8 +113,12 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	fviresult.InProgress = false
 	fviresult.ExceptionLog = ""
 	if err := fm.UpdateFeedVersionImport(finishCtx, &fviresult); err != nil {
-		// Serious error
+		// The finalize did not persist, so the record is still success=false, in_progress=true:
+		// the import stays hidden and needs an unimport. Report that state rather than the success
+		// we failed to write.
 		log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
+		fviresult.Success = false
+		fviresult.InProgress = true
 		return Result{FeedVersionImport: fviresult}, err
 	}
 
