@@ -127,7 +127,7 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	if opts.Activate {
 		log.For(ctx).Info().Msgf("Activating feed version")
 		if err := fm.ActivateFeedVersion(ctx, fv.ID); err != nil {
-			return Result{FeedVersionImport: fviresult}, fmt.Errorf("error activating feed version: %s", err.Error())
+			return Result{FeedVersionImport: fviresult}, fmt.Errorf("error activating feed version: %w", err)
 		}
 	}
 	return Result{FeedVersionImport: fviresult}, nil
