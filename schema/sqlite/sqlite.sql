@@ -209,6 +209,9 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
   "id" integer primary key autoincrement,
   "feed_id" integer NOT NULL,
   "feed_version_id" integer,
+  "active_feed_version_id" integer,
+  "materialized_feed_version_id" integer,
+  "exclude_from_global" bool not null default false,
   "feed_realtime_enabled" bool not null,
   "public" bool not null,
   "feed_priority" integer,
@@ -217,6 +220,8 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(active_feed_version_id) REFERENCES feed_versions(id),
+  foreign key(materialized_feed_version_id) REFERENCES feed_versions(id),
   foreign key(feed_id) references current_feeds(id)
 );
 CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
