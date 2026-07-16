@@ -135,7 +135,7 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 		if where.Adm0Iso != nil || where.Adm1Iso != nil || where.Adm0Name != nil || where.Adm1Name != nil || where.CityName != nil {
 			q = q.
 				Join("feed_states ON feed_states.feed_id = coif.feed_id").
-				Join("gtfs_agencies ON gtfs_agencies.feed_version_id = feed_states.feed_version_id AND gtfs_agencies.agency_id = coif.resolved_gtfs_agency_id").
+				Join("gtfs_agencies ON gtfs_agencies.feed_version_id = feed_states.materialized_feed_version_id AND gtfs_agencies.agency_id = coif.resolved_gtfs_agency_id").
 				Join("tl_agency_places tlap ON tlap.agency_id = gtfs_agencies.id").
 				Join("ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = tlap.adm1name and ne_admin.admin = tlap.adm0name")
 			if where.Adm0Iso != nil {
