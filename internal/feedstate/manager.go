@@ -93,7 +93,7 @@ func (m *Manager) reconcileFeed(ctx context.Context, feedID int, active tt.Int) 
 
 	// Reconcile materialized tables only when the visible version actually changes.
 	old := cur.MaterializedFeedVersionID
-	if old.Valid != materialized.Valid || (materialized.Valid && old.Int() != materialized.Int()) {
+	if old != materialized {
 		if old.Valid {
 			if err := m.DematerializeFeedVersion(ctx, old.Int()); err != nil {
 				return err
@@ -180,30 +180,6 @@ func (m *Manager) GetFeedIDForFeedVersion(ctx context.Context, fvid int) (int, e
 		From("feed_versions").
 		Where(sq.Eq{"id": fvid}), &feedID)
 	return feedID, err
-}
-
-// getActiveFeedStates returns a map of feed_id to active_feed_version_id for feeds with an active version
-func (m *Manager) getActiveFeedStates(ctx context.Context) (map[int]int, error) {
-	type feedState struct {
-		FeedID              int `db:"feed_id"`
-		ActiveFeedVersionID int `db:"active_feed_version_id"`
-	}
-
-	var states []feedState
-	err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
-		Select("feed_id", "active_feed_version_id").
-		From("feed_states").
-		Where("active_feed_version_id IS NOT NULL"), &states)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query feed_states: %w", err)
-	}
-
-	feedStates := make(map[int]int)
-	for _, state := range states {
-		feedStates[state.FeedID] = state.ActiveFeedVersionID
-	}
-
-	return feedStates, nil
 }
 
 // sortedColumnsAndSelects converts a map of column->expression into sorted parallel slices
@@ -453,21 +429,18 @@ func (m *Manager) GetMaterializedFeedVersions(ctx context.Context) ([]int, error
 	return slices.Collect(maps.Keys(feedVersionIds)), nil
 }
 
-// GetActiveFeedVersions returns a list of currently active feed version IDs
+// GetActiveFeedVersions returns the active_feed_version_id of every feed that has one.
 func (m *Manager) GetActiveFeedVersions(ctx context.Context) ([]int, error) {
-	feedStates, err := m.getActiveFeedStates(ctx)
+	var ids []int
+	err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
+		Select("active_feed_version_id").
+		From("feed_states").
+		Where("active_feed_version_id IS NOT NULL"), &ids)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query active feed versions: %w", err)
 	}
-
-	var feedVersionIDs []int
-	for _, feedVersionID := range feedStates {
-		feedVersionIDs = append(feedVersionIDs, feedVersionID)
-	}
-
-	// Sort for consistent ordering
-	sort.Ints(feedVersionIDs)
-	return feedVersionIDs, nil
+	sort.Ints(ids)
+	return ids, nil
 }
 
 // GetMaterializedFeedVersionPointers returns the materialized_feed_version_id of every feed that
