@@ -374,7 +374,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			whereExpr := sq.Expr(
 				useActive.UseTable(
 					"(ST_Distance(rep_shape.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(s.geometry, ST_MakePoint(?,?)), r.route_id from tl_route_representative_shapes r join gtfs_shapes s on s.id = r.shape_id where r.route_id = ? and r.rank = 0)",
-					"(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), route_id from gtfs_routes where route_id = ?)",
+					"(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry_simplified, ST_MakePoint(?,?)), id from tl_materialized_active_routes where id = ?)",
 				),
 				where.Location.Focus.Lon,
 				where.Location.Focus.Lat,
