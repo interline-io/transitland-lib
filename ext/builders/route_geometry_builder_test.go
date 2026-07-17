@@ -160,15 +160,32 @@ func TestRouteGeometryBuilder_RepresentativeShapes(t *testing.T) {
 				// Route-level scalars as aggregates over the pointers. Phase 3 drops the
 				// geometry columns and derives these, so the identity has to hold.
 				maxLength := 0.0
+				maxSegment := 0.0
+				maxFirstPoint := 0.0
 				anyGenerated := false
 				for _, s := range sel {
 					if s.Length.Val > maxLength {
 						maxLength = s.Length.Val
 					}
+					if s.MaxSegmentLength.Val > maxSegment {
+						maxSegment = s.MaxSegmentLength.Val
+					}
+					if s.FirstPointMaxDistance.Val > maxFirstPoint {
+						maxFirstPoint = s.FirstPointMaxDistance.Val
+					}
 					anyGenerated = anyGenerated || s.Generated
 				}
 				assert.Equal(t, rg.Length.Val, maxLength, "route %s: length != max(shape length)", rid)
+				assert.Equal(t, rg.MaxSegmentLength.Val, maxSegment, "route %s: max_segment_length != max(shape max_segment_length)", rid)
+				assert.Equal(t, rg.FirstPointMaxDistance.Val, maxFirstPoint, "route %s: first_point_max_distance != max(shape first_point_max_distance)", rid)
 				assert.Equal(t, rg.Generated, anyGenerated, "route %s: generated != any(shape generated)", rid)
+
+				// Rank 0 is the linestring stored in Geometry -- the primary line the z0
+				// tile serves; it must equal the first linestring of CombinedGeometry.
+				if assert.True(t, rg.Geometry.Valid, "route %s: Geometry not set", rid) {
+					assert.Equal(t, mls.LineString(0).FlatCoords(), rg.Geometry.Val.FlatCoords(),
+						"route %s: Geometry != CombinedGeometry linestring 0", rid)
+				}
 			}
 
 			assert.Equal(t, tg.ExpectLineStrings, len(selected[tg.RouteID]), "route %s", tg.RouteID)
