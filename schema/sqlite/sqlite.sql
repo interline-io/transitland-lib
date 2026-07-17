@@ -515,6 +515,21 @@ CREATE TABLE IF NOT EXISTS "tl_route_stops" (
   foreign key(stop_id) references gtfs_stops(id),
   foreign key(route_id) references gtfs_routes(id)
 );
+CREATE TABLE IF NOT EXISTS "tl_route_representative_shapes" (
+  "id" integer primary key autoincrement,
+  "feed_version_id" integer not null,
+  "route_id" integer not null,
+  "shape_id" integer not null,
+  "direction_id" integer,
+  "rank" integer not null,
+  "generated" boolean not null,
+  "length" real,
+  "max_segment_length" real,
+  "first_point_max_distance" real,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(route_id) references gtfs_routes(id),
+  foreign key(shape_id) references gtfs_shapes(id)
+);
 CREATE TABLE IF NOT EXISTS "tl_route_headways" (
   "id" integer primary key autoincrement,
   "feed_version_id" integer not null,

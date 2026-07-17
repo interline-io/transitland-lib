@@ -102,6 +102,97 @@ func TestRouteGeometryBuilder(t *testing.T) {
 	}
 }
 
+// The representative shapes must be able to reconstruct what the geometry columns
+// hold today: one pointer per linestring in CombinedGeometry, ranked, with rank 0
+// the linestring stored as Geometry. The route-level scalars must likewise be
+// recoverable as aggregates over the pointers.
+func TestRouteGeometryBuilder_RepresentativeShapes(t *testing.T) {
+	groups := map[string]struct {
+		URL               string
+		RouteID           string
+		ExpectLineStrings int
+	}{
+		"Caltrain": {testreader.ExampleFeedCaltrain.URL, "Bu-130", 4},
+		"BART":     {testreader.ExampleFeedBART.URL, "07", 2},
+		"TriMet":   {testpath.RelPath("testdata/gtfs-external/trimet-2routes.zip"), "200", 5},
+	}
+	for groupName, tg := range groups {
+		t.Run(groupName, func(t *testing.T) {
+			_, writer, err := newMockCopier(tg.URL, NewRouteGeometryBuilder())
+			if err != nil {
+				t.Fatal(err)
+			}
+			routeGeoms := map[string]*RouteGeometry{}
+			selected := map[string][]*RouteRepresentativeShape{}
+			for _, ent := range writer.Reader.OtherList {
+				switch v := ent.(type) {
+				case *RouteGeometry:
+					routeGeoms[v.RouteID] = v
+				case *RouteRepresentativeShape:
+					selected[v.RouteID] = append(selected[v.RouteID], v)
+				}
+			}
+			assert.NotEmpty(t, routeGeoms)
+
+			for rid, rg := range routeGeoms {
+				sel := selected[rid]
+				mls, ok := rg.CombinedGeometry.Val.(*geom.MultiLineString)
+				if !ok {
+					t.Errorf("route %s: not MultiLineString", rid)
+					continue
+				}
+				// One pointer per linestring: this is what makes the combined geometry
+				// reconstructable by collecting the pointed-at shapes.
+				assert.Equal(t, mls.NumLineStrings(), len(sel), "route %s: pointers != combined linestrings", rid)
+
+				// Ranks are 0..n-1, each exactly once -- what UNIQUE(route_id, rank)
+				// enforces, and what lets rank = 0 join without fanning out.
+				seenRank := map[int]bool{}
+				for _, s := range sel {
+					assert.False(t, seenRank[s.Rank], "route %s: duplicate rank %d", rid, s.Rank)
+					seenRank[s.Rank] = true
+					assert.GreaterOrEqual(t, s.Rank, 0, "route %s", rid)
+					assert.Less(t, s.Rank, len(sel), "route %s", rid)
+					assert.True(t, s.DirectionID.Valid, "route %s: direction_id not set", rid)
+					assert.NotEmpty(t, s.ShapeID, "route %s: shape_id not set", rid)
+				}
+
+				// Route-level scalars as aggregates over the pointers. Phase 3 drops the
+				// geometry columns and derives these, so the identity has to hold.
+				maxLength := 0.0
+				maxSegment := 0.0
+				maxFirstPoint := 0.0
+				anyGenerated := false
+				for _, s := range sel {
+					if s.Length.Val > maxLength {
+						maxLength = s.Length.Val
+					}
+					if s.MaxSegmentLength.Val > maxSegment {
+						maxSegment = s.MaxSegmentLength.Val
+					}
+					if s.FirstPointMaxDistance.Val > maxFirstPoint {
+						maxFirstPoint = s.FirstPointMaxDistance.Val
+					}
+					anyGenerated = anyGenerated || s.Generated
+				}
+				assert.Equal(t, rg.Length.Val, maxLength, "route %s: length != max(shape length)", rid)
+				assert.Equal(t, rg.MaxSegmentLength.Val, maxSegment, "route %s: max_segment_length != max(shape max_segment_length)", rid)
+				assert.Equal(t, rg.FirstPointMaxDistance.Val, maxFirstPoint, "route %s: first_point_max_distance != max(shape first_point_max_distance)", rid)
+				assert.Equal(t, rg.Generated, anyGenerated, "route %s: generated != any(shape generated)", rid)
+
+				// Rank 0 is the linestring stored in Geometry -- the primary line the z0
+				// tile serves; it must equal the first linestring of CombinedGeometry.
+				if assert.True(t, rg.Geometry.Valid, "route %s: Geometry not set", rid) {
+					assert.Equal(t, mls.LineString(0).FlatCoords(), rg.Geometry.Val.FlatCoords(),
+						"route %s: Geometry != CombinedGeometry linestring 0", rid)
+				}
+			}
+
+			assert.Equal(t, tg.ExpectLineStrings, len(selected[tg.RouteID]), "route %s", tg.RouteID)
+		})
+	}
+}
+
 func TestRouteGeometryBuilder_FlexFeed(t *testing.T) {
 	reader, err := tlcsv.NewReader(testpath.RelPath("testdata/gtfs-external/ctran-flex.zip"))
 	if err != nil {
