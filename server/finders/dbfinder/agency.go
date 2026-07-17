@@ -213,7 +213,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		q = q.Where(In("gtfs_agencies.id", ids))
 	}
 	if useActive.Active() {
-		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_agencies.feed_version_id")
+		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id")
 	}
 
 	// Default ordering
@@ -279,8 +279,8 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		Select(selKeys...).
 		Columns("json_agg(distinct tlap.agency_id) as agency_ids").
 		From("feed_states").
-		Join("tl_agency_places tlap on tlap.feed_version_id = feed_states.feed_version_id").
-		Join("feed_versions on feed_versions.id = feed_states.feed_version_id").
+		Join("tl_agency_places tlap on tlap.feed_version_id = feed_states.materialized_feed_version_id").
+		Join("feed_versions on feed_versions.id = feed_states.materialized_feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_states.feed_id").
 		GroupBy(groupKeys...)
 
