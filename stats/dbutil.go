@@ -35,6 +35,14 @@ func EnsureFeedState(ctx context.Context, atx tldb.Adapter, feedId int) (dmfr.Fe
 	fs := dmfr.FeedState{FeedID: feedId}
 	if err := atx.Get(ctx, &fs, `SELECT * FROM feed_states WHERE feed_id = ?`, feedId); err == sql.ErrNoRows {
 		fs.Public = true // Default: new feeds are public
+		// Seed exclude_from_global from the DMFR tag once, at creation; owned by feed_states after.
+		feed := dmfr.Feed{}
+		if ferr := atx.Get(ctx, &feed, `SELECT * FROM current_feeds WHERE id = ?`, feedId); ferr != nil {
+			return fs, ferr
+		}
+		if v, _ := feed.Tags.Get("exclude_from_global_query"); v == "true" {
+			fs.ExcludeFromGlobal = true
+		}
 		fs.ID, err = atx.Insert(ctx, &fs)
 		if err != nil {
 			return fs, err

@@ -349,7 +349,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	}
 
 	if useActive.Active() {
-		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_routes.feed_version_id")
+		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_routes.feed_version_id")
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_routes.id", ids))
@@ -385,6 +385,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	}
 
 	// Handle permissions
+	q = joinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

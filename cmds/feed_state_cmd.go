@@ -122,32 +122,29 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 
 	// Execute in transaction
 	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-		// Get current active feed versions to determine sync operations
-		log.Info().Msg("Getting current active feed versions")
 		txManager := feedstate.NewManager(atx)
-		activeFeedVersions, err := txManager.GetActiveFeedVersions(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get active feed versions: %w", err)
-		}
-		activeSet := toSet(activeFeedVersions)
 
-		// Sync active feed versions to materialized tables
+		// Sync materialized tables to the feeds that should be materialized
+		// (materialized_feed_version_id), which excludes globally-hidden feeds.
 		if cmd.SyncActive {
-			log.For(ctx).Info().Msg("Getting materialized feed versions to sync active feed versions")
-			var materializedFeedVersions []int
-			materializedFeedVersions, err = txManager.GetMaterializedFeedVersions(ctx)
+			log.For(ctx).Info().Msg("Syncing materialized tables to materialized feed versions")
+			targetPointers, err := txManager.GetMaterializedFeedVersionPointers(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get materialized feed version pointers: %w", err)
+			}
+			targetSet := toSet(targetPointers)
+			materializedFeedVersions, err := txManager.GetMaterializedFeedVersions(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to get materialized feed versions: %w", err)
 			}
-			// Determine which feed versions to materialize and dematerialize
 			materializedSet := toSet(materializedFeedVersions)
-			for fvid := range activeSet {
+			for fvid := range targetSet {
 				if !materializedSet[fvid] {
 					forceMaterializeIDs = append(forceMaterializeIDs, fvid)
 				}
 			}
 			for fvid := range materializedSet {
-				if !activeSet[fvid] {
+				if !targetSet[fvid] {
 					forceDematerializeIDs = append(forceDematerializeIDs, fvid)
 				}
 			}
