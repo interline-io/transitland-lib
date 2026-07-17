@@ -341,16 +341,18 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			) tlrs_near on tlrs_near.route_id = gtfs_routes.id`, loc.Near.Lon, loc.Near.Lat, radius)
 		}
 		if loc.Focus != nil {
-			// Use materialized route geometries when requested
+			// Materialized routes carry geometry_simplified; otherwise sort against the
+			// route's primary (rank 0) representative shape.
 			orderExpr := sq.Expr(
 				useActive.UseTable(
-					"tl_route_geometries.geometry <-> ST_MakePoint(?,?), gtfs_routes.id",
+					"rep_shape.geometry <-> ST_MakePoint(?,?), gtfs_routes.id",
 					"gtfs_routes.geometry_simplified <-> ST_MakePoint(?,?), gtfs_routes.id",
 				),
 				loc.Focus.Lon,
 				loc.Focus.Lat)
 			q = q.
-				Join("tl_route_geometries ON tl_route_geometries.route_id = gtfs_routes.id").
+				Join("tl_route_representative_shapes rep0 ON rep0.route_id = gtfs_routes.id AND rep0.rank = 0").
+				Join("gtfs_shapes rep_shape ON rep_shape.id = rep0.shape_id").
 				OrderByClause(orderExpr)
 		}
 	}
@@ -371,7 +373,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			// When materialized, we have tl_materialized_active_routes set as 'gtfs_routes', which has a 'geometry_simplified' column
 			whereExpr := sq.Expr(
 				useActive.UseTable(
-					"(ST_Distance(tl_route_geometries.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), route_id from tl_route_geometries where route_id = ?)",
+					"(ST_Distance(rep_shape.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(s.geometry, ST_MakePoint(?,?)), r.route_id from tl_route_representative_shapes r join gtfs_shapes s on s.id = r.shape_id where r.route_id = ? and r.rank = 0)",
 					"(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), route_id from gtfs_routes where route_id = ?)",
 				),
 				where.Location.Focus.Lon,

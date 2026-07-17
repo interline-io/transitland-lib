@@ -254,10 +254,11 @@ func routeMaterializeFields(spatial bool) map[string]string {
 		"created_at":          "gtfs_routes.created_at",
 		"updated_at":          "gtfs_routes.updated_at",
 	}
-	// Geometry column - full geometry for SQLite, simplified for PostGIS
-	fields["geometry_simplified"] = "tlrg.geometry"
+	// Geometry column - full geometry for SQLite, simplified for PostGIS.
+	// Sourced from the route's primary (rank 0) representative shape.
+	fields["geometry_simplified"] = "rep_shape.geometry"
 	if spatial {
-		fields["geometry_simplified"] = "ST_Simplify(tlrg.geometry::geometry, 0.01)"
+		fields["geometry_simplified"] = "ST_Simplify(ST_Force2D(rep_shape.geometry::geometry), 0.01)"
 	}
 	return fields
 }
@@ -351,7 +352,8 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 			Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
 			Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 			LeftJoin("feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id AND osid.feed_version_id = feed_versions.id").
-			LeftJoin("tl_route_geometries tlrg ON tlrg.route_id = gtfs_routes.id").
+			LeftJoin("tl_route_representative_shapes rep0 ON rep0.route_id = gtfs_routes.id AND rep0.rank = 0").
+			LeftJoin("gtfs_shapes rep_shape ON rep_shape.id = rep0.shape_id").
 			Where(sq.Eq{"gtfs_routes.feed_version_id": feedVersionID}))
 
 	_, err := routeQuery.ExecContext(ctx)
