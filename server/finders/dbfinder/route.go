@@ -101,20 +101,27 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, ke
 	return arrangeGroup(keys, ents, func(ent *model.RouteStopPattern) int { return ent.RouteID }), err
 }
 
+// RouteGeometriesByRouteIDs reconstructs each route's geometry from the shapes it
+// points at in tl_route_representative_shapes: rank 0 is the primary line, the ranked
+// set collected is the combined geometry, and the scalars are aggregates over the
+// pointed-at shapes. There is one geometry per route, so limit is unused.
 func (f *Finder) RouteGeometriesByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteGeometry, error) {
 	var ents []*model.RouteGeometry
-	err := dbutil.Select(ctx,
-		f.db,
-		lateralWrap(
-			quickSelectOrder("tl_route_geometries", limit, nil, nil, "route_id"),
-			"gtfs_routes",
-			"id",
-			"tl_route_geometries",
-			"route_id",
-			keys,
-		),
-		&ents,
-	)
+	q := sq.StatementBuilder.
+		Select(
+			"tl_route_representative_shapes.route_id AS route_id",
+			"bool_or(tl_route_representative_shapes.generated) AS generated",
+			"max(tl_route_representative_shapes.length) AS length",
+			"max(tl_route_representative_shapes.max_segment_length) AS max_segment_length",
+			"max(tl_route_representative_shapes.first_point_max_distance) AS first_point_max_distance",
+			"ST_Force2D((array_agg(gtfs_shapes.geometry::geometry ORDER BY tl_route_representative_shapes.rank))[1]) AS geometry",
+			"ST_Multi(ST_Collect(ST_Force2D(gtfs_shapes.geometry::geometry) ORDER BY tl_route_representative_shapes.rank)) AS combined_geometry",
+		).
+		From("tl_route_representative_shapes").
+		Join("gtfs_shapes ON gtfs_shapes.id = tl_route_representative_shapes.shape_id").
+		Where(In("tl_route_representative_shapes.route_id", keys)).
+		GroupBy("tl_route_representative_shapes.route_id")
+	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.RouteGeometry) int { return ent.RouteID }), err
 }
 
@@ -334,16 +341,18 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			) tlrs_near on tlrs_near.route_id = gtfs_routes.id`, loc.Near.Lon, loc.Near.Lat, radius)
 		}
 		if loc.Focus != nil {
-			// Use materialized route geometries when requested
+			// Materialized routes carry geometry_simplified; otherwise sort against the
+			// route's primary (rank 0) representative shape.
 			orderExpr := sq.Expr(
 				useActive.UseTable(
-					"tl_route_geometries.geometry <-> ST_MakePoint(?,?), gtfs_routes.id",
+					"rep_shape.geometry <-> ST_MakePoint(?,?), gtfs_routes.id",
 					"gtfs_routes.geometry_simplified <-> ST_MakePoint(?,?), gtfs_routes.id",
 				),
 				loc.Focus.Lon,
 				loc.Focus.Lat)
 			q = q.
-				Join("tl_route_geometries ON tl_route_geometries.route_id = gtfs_routes.id").
+				Join("tl_route_representative_shapes rep0 ON rep0.route_id = gtfs_routes.id AND rep0.rank = 0").
+				Join("gtfs_shapes rep_shape ON rep_shape.id = rep0.shape_id").
 				OrderByClause(orderExpr)
 		}
 	}
@@ -364,8 +373,8 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			// When materialized, we have tl_materialized_active_routes set as 'gtfs_routes', which has a 'geometry_simplified' column
 			whereExpr := sq.Expr(
 				useActive.UseTable(
-					"(ST_Distance(tl_route_geometries.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), route_id from tl_route_geometries where route_id = ?)",
-					"(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry, ST_MakePoint(?,?)), route_id from gtfs_routes where route_id = ?)",
+					"(ST_Distance(rep_shape.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(s.geometry, ST_MakePoint(?,?)), r.route_id from tl_route_representative_shapes r join gtfs_shapes s on s.id = r.shape_id where r.route_id = ? and r.rank = 0)",
+					"(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry_simplified, ST_MakePoint(?,?)), id from tl_materialized_active_routes where id = ?)",
 				),
 				where.Location.Focus.Lon,
 				where.Location.Focus.Lat,
