@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -53,6 +54,13 @@ func (a *FeedVersionArgs) Parse(args []string) error {
 			return err
 		}
 		a.FVSHA1 = appendNonEmpty(a.FVSHA1, lines)
+	}
+	// Reject non-integer ids up front, before they reach the database as a
+	// confusing type error.
+	for _, v := range a.FVIDs {
+		if _, err := strconv.Atoi(v); err != nil {
+			return fmt.Errorf("invalid feed version id %q: must be an integer", v)
+		}
 	}
 	return nil
 }

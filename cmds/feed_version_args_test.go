@@ -1,10 +1,15 @@
 package cmds
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,4 +61,40 @@ func TestReadFVIDFile(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestExcludeLiveVersions(t *testing.T) {
+	ctx := context.Background()
+	atx := testdb.TempSqliteAdapter()
+
+	feed := testdb.CreateTestFeed(atx, "feed-exclude-live")
+	mkfv := func(feedID int, sha1 string) int {
+		fv := dmfr.FeedVersion{SHA1: sha1, File: sha1 + ".zip"}
+		fv.FeedID = feedID
+		fv.EarliestCalendarDate = tt.NewDate(time.Now())
+		fv.LatestCalendarDate = tt.NewDate(time.Now())
+		return testdb.ShouldInsert(t, atx, &fv)
+	}
+	active := mkfv(feed.ID, "active")
+	materialized := mkfv(feed.ID, "materialized")
+	sibling := mkfv(feed.ID, "sibling")
+
+	fs := dmfr.FeedState{FeedID: feed.ID}
+	fs.ActiveFeedVersionID = tt.NewInt(active)
+	fs.MaterializedFeedVersionID = tt.NewInt(materialized)
+	testdb.ShouldInsert(t, atx, &fs)
+
+	// A feed version whose feed has no feed_state row at all.
+	feed2 := testdb.CreateTestFeed(atx, "feed-no-state")
+	orphan := mkfv(feed2.ID, "orphan")
+
+	// active + materialized are dropped; the sibling and the state-less version pass through, in input order.
+	got, err := excludeLiveVersions(ctx, atx, []int{active, materialized, sibling, orphan})
+	assert.NoError(t, err)
+	assert.Equal(t, []int{sibling, orphan}, got)
+
+	// Empty input returns empty without querying.
+	got, err = excludeLiveVersions(ctx, atx, nil)
+	assert.NoError(t, err)
+	assert.Empty(t, got)
 }

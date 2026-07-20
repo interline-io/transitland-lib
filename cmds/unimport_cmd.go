@@ -20,7 +20,6 @@ type UnimportCommand struct {
 	ScheduleOnly bool
 	ExtraTables  []string
 	DryRun       bool
-	Extensions   []string
 	DBURL        string
 	Workers      int
 	Adapter      tldb.Adapter // allow for mocks
