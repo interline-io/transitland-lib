@@ -50,7 +50,7 @@ func (cmd *StatsRemoveOnestopIDsCommand) Parse(args []string) error {
 		return err
 	}
 	if cmd.FVArgs.Empty() {
-		return errors.New("specify at least one feed version id as an argument or with --fvid-file")
+		return errors.New("must provide at least one feed version id as an argument or with --fvid-file")
 	}
 	if cmd.Workers < 1 {
 		cmd.Workers = 1

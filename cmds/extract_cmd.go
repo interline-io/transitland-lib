@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// ExtractCommand
+// ExtractCommand extracts a subset of a GTFS feed.
 type ExtractCommand struct {
 	// Default options
 	copier.Options

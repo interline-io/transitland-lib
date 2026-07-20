@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// ValidatorCommand
+// ValidatorCommand validates a GTFS feed.
 type ValidatorCommand struct {
 	Options                  validator.Options
 	rtFiles                  []string

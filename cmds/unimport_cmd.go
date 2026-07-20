@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// UnimportCommand imports FeedVersions into a database.
+// UnimportCommand removes previously imported data from feed versions.
 type UnimportCommand struct {
 	FVArgs       FeedVersionArgs
 	ScheduleOnly bool

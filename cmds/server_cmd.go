@@ -43,6 +43,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/server/directions/valhalla"
 )
 
+// ServerCommand runs the transitland API server.
 type ServerCommand struct {
 	Timeout                 int
 	LongQueryDuration       int

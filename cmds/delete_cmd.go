@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// DeleteCommand deletes feed versions.
 type DeleteCommand struct {
 	FVArgs      FeedVersionArgs
 	ExtraTables []string

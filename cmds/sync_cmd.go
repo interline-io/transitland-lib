@@ -16,7 +16,7 @@ import (
 // SyncCommand syncs a DMFR to a database.
 type SyncCommand struct {
 	DBURL      string
-	Adapter    tldb.Adapter
+	Adapter    tldb.Adapter // allow for mocks
 	setPublic  bool
 	setPrivate bool
 	sync.Options
