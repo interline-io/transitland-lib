@@ -69,7 +69,9 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 
 // RemoveOnestopIds deletes the fetch-derived onestop_id rows (agency/route/stop)
 // for a feed version. These only power AllowPrevious lookups; the feed version and
-// its other data are unaffected. Applied per the feed's onestop_id_retention_period.
+// its other data are unaffected. It deletes unconditionally: the caller selects which
+// versions to remove (e.g. per the feed's onestop_id_retention_period) and must
+// exclude the active and materialized versions.
 func RemoveOnestopIds(ctx context.Context, atx tldb.Adapter, id int) error {
 	// Mirrors the tables of stats.StatOnestopIDs.
 	tables := []string{

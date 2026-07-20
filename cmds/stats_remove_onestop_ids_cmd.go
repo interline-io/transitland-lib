@@ -3,8 +3,10 @@ package cmds
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	sq "github.com/irees/squirrel"
 	"github.com/spf13/pflag"
@@ -115,6 +117,7 @@ func (cmd *StatsRemoveOnestopIDsCommand) Run(ctx context.Context) error {
 	}
 	close(jobs)
 	var wg sync.WaitGroup
+	var failed int64
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
 		go func() {
@@ -124,6 +127,7 @@ func (cmd *StatsRemoveOnestopIDsCommand) Run(ctx context.Context) error {
 					return importer.RemoveOnestopIds(ctx, atx, fvid)
 				})
 				if err != nil {
+					atomic.AddInt64(&failed, 1)
 					log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: failed")
 				} else {
 					log.For(ctx).Info().Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: removed")
@@ -132,5 +136,8 @@ func (cmd *StatsRemoveOnestopIDsCommand) Run(ctx context.Context) error {
 		}()
 	}
 	wg.Wait()
+	if n := atomic.LoadInt64(&failed); n > 0 {
+		return fmt.Errorf("stats-remove-onestop-ids: %d of %d feed versions failed", n, len(fvids))
+	}
 	return nil
 }
