@@ -39,7 +39,7 @@ func (cmd *StatsRemoveOnestopIDsCommand) AddFlags(fl *pflag.FlagSet) {
 	cmd.FVArgs.AddFlags(fl)
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; log the feed versions that would be affected and exit")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; log the feed versions that would be affected and exit")
 }
 
 func (cmd *StatsRemoveOnestopIDsCommand) Parse(args []string) error {

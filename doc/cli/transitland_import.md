@@ -21,14 +21,13 @@ transitland import [flags] [feeds...]
       --dburl string              Database URL (default: $TL_DATABASE_URL)
       --deduplicate-stop-times    Deduplicate StopTimes using Journey Patterns
       --dmfr string               Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments
-      --dryrun                    Dry run; print feeds that would be imported and exit
+      --dry-run                   Dry run; print feeds that would be imported and exit
       --error-threshold strings   Fail import if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')
       --ext strings               Include GTFS Extension
       --fail                      Exit with error code if any fetch is not successful
       --fv-sha1 strings           Feed version SHA1
-      --fv-sha1-file string       Specify feed version IDs by SHA1 in file, one per line
       --fvid strings              Import specific feed version ID
-      --fvid-file string          Specify feed version IDs in file, one per line; equivalent to multiple --fvid
+      --fvid-file string          Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
   -h, --help                      help for import
       --interpolate-stop-times    Interpolate missing StopTime arrival/departure values
       --latest                    Only import latest feed version available for each feed

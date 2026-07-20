@@ -37,14 +37,14 @@ func (cmd *UnimportCommand) HelpArgs() string {
 func (cmd *UnimportCommand) AddFlags(fl *pflag.FlagSet) {
 	cmd.FVArgs.AddFlags(fl)
 	fl.StringSliceVar(&cmd.ExtraTables, "extra-table", nil, "Extra tables to delete feed_version_id")
+	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; log the feed versions that would be unimported and exit")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; log the feed versions that would be unimported and exit")
 	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, and frequencies")
 }
 
 // Parse command line flags
 func (cmd *UnimportCommand) Parse(args []string) error {
-	cmd.Workers = 1
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
@@ -66,6 +66,9 @@ type jobOptions struct {
 
 // Run this command
 func (cmd *UnimportCommand) Run(ctx context.Context) error {
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {

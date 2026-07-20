@@ -8,7 +8,6 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/feedstate"
-	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/spf13/pflag"
 )
@@ -37,11 +36,11 @@ func (cmd *FeedStateManagerCommand) HelpArgs() string {
 }
 
 func (cmd *FeedStateManagerCommand) AddFlags(fl *pflag.FlagSet) {
-	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringSliceVar(&cmd.ActivateFVIDs, "activate", nil, "Activate these feed version IDs (deactivates other versions in same feeds)")
 	fl.StringSliceVar(&cmd.DeactivateFVIDs, "deactivate", nil, "Deactivate these feed version IDs")
 	fl.StringSliceVar(&cmd.SetActiveFVIDs, "set-active", nil, "Set ONLY these feed version IDs as active (deactivates all others)")
-	fl.StringVar(&cmd.SetActiveFVIDFile, "set-active-fvid-file", "", "Set ONLY these feed version IDs as active from file (one per line)")
+	fl.StringVar(&cmd.SetActiveFVIDFile, "set-active-fvid-file", "", "Set ONLY these feed version IDs as active, read from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)")
 	fl.StringSliceVar(&cmd.ForceMaterialize, "force-materialize", nil, "Force materialize these feed version IDs (manual intervention)")
 	fl.StringSliceVar(&cmd.ForceDematerialize, "force-dematerialize", nil, "Force dematerialize these feed version IDs (manual intervention)")
 	fl.StringSliceVar(&cmd.ForceRematerialize, "force-rematerialize", nil, "Force rematerialize these feed version IDs (dematerialize + materialize)")
@@ -56,17 +55,13 @@ func (cmd *FeedStateManagerCommand) Parse(args []string) error {
 	}
 	// Process set-active-fvid-file if specified
 	if cmd.SetActiveFVIDFile != "" {
-		lines, err := tlcli.ReadFileLines(cmd.SetActiveFVIDFile)
+		ids, err := readFVIDFile(cmd.SetActiveFVIDFile)
 		if err != nil {
 			return err
 		}
-		for _, line := range lines {
-			if line != "" {
-				cmd.SetActiveFVIDs = append(cmd.SetActiveFVIDs, line)
-			}
-		}
+		cmd.SetActiveFVIDs = appendNonEmpty(cmd.SetActiveFVIDs, ids)
 		if len(cmd.SetActiveFVIDs) == 0 {
-			return fmt.Errorf("--set-active-fvid-file specified but no lines were read")
+			return fmt.Errorf("--set-active-fvid-file specified but no feed version ids were read")
 		}
 	}
 	return nil
@@ -81,7 +76,7 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 			return fmt.Errorf("failed to open database: %w", err)
 		}
 		cmd.Adapter = writer.Adapter
-		defer cmd.Adapter.Close()
+		defer writer.Close()
 	}
 
 	// Parse feed version IDs
@@ -242,55 +237,6 @@ func (cmd *FeedStateManagerCommand) parseFeedVersionIDs(fvidStrings []string) ([
 		feedVersionIDs = append(feedVersionIDs, fvid)
 	}
 	return feedVersionIDs, nil
-}
-
-// Help returns help text for the command
-func (cmd *FeedStateManagerCommand) Help() string {
-	return `Feed state management
-
-Manage which feed versions are active in the system and maintain materialized tables
-for improved query performance.
-
-BASIC OPERATIONS:
-  --activate <ids>         Activate feed versions (deactivates other versions of same feeds)
-  --deactivate <ids>       Deactivate feed versions  
-  --set-active <ids>       Set complete active set (replaces all active versions)
-  --set-active-fvid-file   Read feed version IDs from file (one per line)
-
-MANUAL INTERVENTION:
-  --force-materialize <ids>    Force materialize feed versions (add to materialized tables)
-  --force-dematerialize <ids>  Force dematerialize feed versions (remove from materialized tables)
-  --force-rematerialize <ids>  Force rematerialize (dematerialize + materialize)
-
-OPTIONS:
-  --dry-run               Show what would be done without making changes
-  --dburl                 Database connection URL (or use TL_DATABASE_URL env var)
-
-EXAMPLES:
-  # Show current state
-  feed-state
-  
-  # Activate specific feed versions
-  feed-state --activate 123,456
-  
-  # Set complete active set (deactivates all others)
-  feed-state --set-active 123,456,789
-  
-  # Load active set from file
-  feed-state --set-active-fvid-file active_feeds.txt
-  
-  # Force rematerialize problematic feed version
-  feed-state --force-rematerialize 789
-  
-  # Preview operations without changes
-  feed-state --dry-run --activate 123
-
-NOTES:
-  - All operations are executed in a single transaction
-  - Activating a feed version automatically deactivates other versions of the same feed
-  - Materialized tables contain denormalized data for faster queries
-  - Use force operations only when normal activation/deactivation fails
-`
 }
 
 func toSet(ints []int) map[int]bool {

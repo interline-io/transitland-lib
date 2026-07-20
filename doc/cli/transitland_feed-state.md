@@ -16,7 +16,7 @@ transitland feed-state  [flags]
 
 ```
       --activate strings              Activate these feed version IDs (deactivates other versions in same feeds)
-      --dburl string                  Database URL
+      --dburl string                  Database URL (default: $TL_DATABASE_URL)
       --deactivate strings            Deactivate these feed version IDs
       --dry-run                       Show what would be done without making changes
       --force-dematerialize strings   Force dematerialize these feed version IDs (manual intervention)
@@ -24,7 +24,7 @@ transitland feed-state  [flags]
       --force-rematerialize strings   Force rematerialize these feed version IDs (dematerialize + materialize)
   -h, --help                          help for feed-state
       --set-active strings            Set ONLY these feed version IDs as active (deactivates all others)
-      --set-active-fvid-file string   Set ONLY these feed version IDs as active from file (one per line)
+      --set-active-fvid-file string   Set ONLY these feed version IDs as active, read from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
       --sync-active                   Make materialized tables match current active feed versions
 ```
 

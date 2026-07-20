@@ -16,7 +16,7 @@ transitland stats-remove-onestop-ids [flags] <fvid>...
 
 ```
       --dburl string       Database URL (default: $TL_DATABASE_URL)
-      --dryrun             Dry run; log the feed versions that would be affected and exit
+      --dry-run            Dry run; log the feed versions that would be affected and exit
       --fvid-file string   Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
   -h, --help               help for stats-remove-onestop-ids
       --workers int        Worker threads (default 1)

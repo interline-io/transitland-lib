@@ -31,7 +31,7 @@ func (cmd *DeleteCommand) AddFlags(fl *pflag.FlagSet) {
 	cmd.FVArgs.AddFlags(fl)
 	fl.StringSliceVar(&cmd.ExtraTables, "extra-table", nil, "Extra tables to delete feed_version_id")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; log the feed versions that would be deleted and exit")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; log the feed versions that would be deleted and exit")
 }
 
 // Parse command line flags

@@ -35,6 +35,7 @@ type RebuildStatsCommand struct {
 	FVArgs  FeedVersionArgs
 	Options RebuildStatsOptions
 	Workers int
+	DryRun  bool
 	DBURL   string
 	Adapter tldb.Adapter // allow for mocks
 }
@@ -50,6 +51,7 @@ func (cmd *RebuildStatsCommand) HelpArgs() string {
 func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
 	cmd.FVArgs.AddFlags(fl)
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; log the feed versions that would be rebuilt and exit")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
@@ -73,6 +75,9 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 
 // Run this command
 func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -136,7 +141,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go rebuildStatsWorker(w, ctx, cmd.Adapter, false, jobs, results, &wg)
+		go rebuildStatsWorker(w, ctx, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	wg.Wait()
 	return nil

@@ -61,7 +61,7 @@ func (cmd *ImportCommand) HelpArgs() string {
 func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.Options.ExtensionDefs, "ext", nil, "Include GTFS Extension")
 	fl.StringSliceVar(&cmd.fvids, "fvid", nil, "Import specific feed version ID")
-	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)")
 	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
@@ -70,7 +70,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage location; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Latest, "latest", false, "Only import latest feed version available for each feed")
-	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; print feeds that would be imported and exit")
 	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
 	fl.StringVar(&cmd.dmfrFile, "dmfr", "", "Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments")
 	// Copy options
@@ -82,6 +82,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.NormalizeTimezones, "normalize-timezones", false, "Normalize timezones and apply default stop timezones based on agency and parent stops")
 	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail import if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
 	fl.BoolVar(&cmd.Options.AllowPartial, "allow-partial", false, "Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)")
+	_ = fl.MarkDeprecated("fv-sha1-file", "resolve to feed version ids and use --fvid or --fvid-file instead")
 }
 
 // Parse command line flags
@@ -103,15 +104,11 @@ func (cmd *ImportCommand) Parse(args []string) error {
 	}
 	// Read fvid file and add to fvids
 	if cmd.fvidfile != "" {
-		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
+		ids, err := readFVIDFile(cmd.fvidfile)
 		if err != nil {
 			return err
 		}
-		for _, line := range lines {
-			if line != "" {
-				cmd.fvids = append(cmd.fvids, line)
-			}
-		}
+		cmd.fvids = appendNonEmpty(cmd.fvids, ids)
 	}
 	// Convert fvids to ImportJobs
 	for _, fvidStr := range cmd.fvids {
