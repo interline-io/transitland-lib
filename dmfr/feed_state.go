@@ -19,7 +19,7 @@ type FeedState struct {
 	FeedRealtimeEnabled       bool
 	Public                    bool
 	RTRetentionPeriod         int // days to retain archived RT messages; 0 disables
-	OnestopIDRetentionPeriod  int // days to retain onestop_id stats; 0 keeps forever, -1 never generates, N>0 culls after N days
+	OnestopIDRetentionPeriod  int // days to retain onestop_id stats; 0 keeps forever, N>0 culls after N days
 	tt.DatabaseEntity
 	tt.Timestamps
 }

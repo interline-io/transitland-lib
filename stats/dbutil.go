@@ -3,7 +3,6 @@ package stats
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	sq "github.com/irees/squirrel"
 
@@ -28,39 +27,6 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 		return err
 	}
 	return nil
-}
-
-// WriteOptionsForFeedVersion returns the stats that should be written for a feed
-// version, applying each stat type's retention policy. Only onestop_id has a policy
-// today (feed_states.onestop_id_retention_period); all other types are always written.
-func WriteOptionsForFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) (WriteOptions, error) {
-	q := atx.Sqrl().
-		Select(
-			"feed_versions.fetched_at as fetched_at",
-			"coalesce(feed_states.onestop_id_retention_period, 0) as retention",
-		).
-		From("feed_versions").
-		LeftJoin("feed_states on feed_states.feed_id = feed_versions.feed_id").
-		Where(sq.Eq{"feed_versions.id": fvid})
-	qstr, qargs, err := q.ToSql()
-	if err != nil {
-		return WriteOptions{}, err
-	}
-	var row struct {
-		FetchedAt time.Time
-		Retention int
-	}
-	if err := atx.Get(ctx, &row, qstr, qargs...); err != nil {
-		return WriteOptions{}, err
-	}
-	var exclude []string
-	if !OnestopIDsRetained(row.Retention, time.Since(row.FetchedAt)) {
-		exclude = append(exclude, StatOnestopIDs)
-	}
-	if len(exclude) == 0 {
-		return WriteOptions{}, nil
-	}
-	return WriteOptions{Stats: allStatsExcept(exclude...)}, nil
 }
 
 // EnsureFeedState gets or creates a feed state.

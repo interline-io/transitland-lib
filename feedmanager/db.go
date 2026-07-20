@@ -116,13 +116,7 @@ func (m *DBFeedManager) CreateFeedFetch(ctx context.Context, ff *dmfr.FeedFetch)
 }
 
 func (m *DBFeedManager) WriteFeedVersionStats(ctx context.Context, fvid int, fvstats stats.FeedVersionStats) error {
-	// Stats are always built; WriteOptionsForFeedVersion decides which to persist,
-	// applying each stat type's retention policy (onestop_id today).
-	opts, err := stats.WriteOptionsForFeedVersion(ctx, m.adapter, fvid)
-	if err != nil {
-		return err
-	}
-	return stats.WriteFeedVersionStats(ctx, m.adapter, fvstats, fvid, opts)
+	return stats.WriteFeedVersionStats(ctx, m.adapter, fvstats, fvid, stats.WriteOptions{})
 }
 
 func (m *DBFeedManager) SaveValidationReport(ctx context.Context, fvid int, result *validator.Result, reportStorage string) error {
