@@ -98,6 +98,22 @@ func OnestopIDsRetained(retentionDays int, age time.Duration) bool {
 	}
 }
 
+// allStatsExcept returns AllStats with the given names removed, for a caller that
+// writes everything but a policy-gated stat (e.g. onestop_id retention).
+func allStatsExcept(exclude ...string) []string {
+	skip := map[string]bool{}
+	for _, s := range exclude {
+		skip[s] = true
+	}
+	ret := make([]string, 0, len(AllStats))
+	for _, s := range AllStats {
+		if !skip[s] {
+			ret = append(ret, s)
+		}
+	}
+	return ret
+}
+
 type FeedVersionStats struct {
 	ServiceWindow    dmfr.FeedVersionServiceWindow
 	ServiceLevels    []dmfr.FeedVersionServiceLevel

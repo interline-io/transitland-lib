@@ -30,10 +30,10 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 	return nil
 }
 
-// OnestopIDsRetainedForFeedVersion reports whether a feed version's onestop_id stats
-// should be written, per its feed's onestop_id_retention_period and the version's age.
-// A feed with no feed_states row keeps them (retention 0).
-func OnestopIDsRetainedForFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) (bool, error) {
+// WriteOptionsForFeedVersion returns the stats that should be written for a feed
+// version, applying each stat type's retention policy. Only onestop_id has a policy
+// today (feed_states.onestop_id_retention_period); all other types are always written.
+func WriteOptionsForFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) (WriteOptions, error) {
 	q := atx.Sqrl().
 		Select(
 			"feed_versions.fetched_at as fetched_at",
@@ -44,16 +44,23 @@ func OnestopIDsRetainedForFeedVersion(ctx context.Context, atx tldb.Adapter, fvi
 		Where(sq.Eq{"feed_versions.id": fvid})
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
-		return false, err
+		return WriteOptions{}, err
 	}
 	var row struct {
 		FetchedAt time.Time
 		Retention int
 	}
 	if err := atx.Get(ctx, &row, qstr, qargs...); err != nil {
-		return false, err
+		return WriteOptions{}, err
 	}
-	return OnestopIDsRetained(row.Retention, time.Since(row.FetchedAt)), nil
+	var exclude []string
+	if !OnestopIDsRetained(row.Retention, time.Since(row.FetchedAt)) {
+		exclude = append(exclude, StatOnestopIDs)
+	}
+	if len(exclude) == 0 {
+		return WriteOptions{}, nil
+	}
+	return WriteOptions{Stats: allStatsExcept(exclude...)}, nil
 }
 
 // EnsureFeedState gets or creates a feed state.
