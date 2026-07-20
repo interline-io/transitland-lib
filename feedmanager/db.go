@@ -116,6 +116,17 @@ func (m *DBFeedManager) CreateFeedFetch(ctx context.Context, ff *dmfr.FeedFetch)
 }
 
 func (m *DBFeedManager) WriteFeedVersionStats(ctx context.Context, fvid int, fvstats stats.FeedVersionStats) error {
+	// Honor the feed's onestop_id retention policy: stats are always built, but for a
+	// version past its feed's window we drop the onestop_id data so it is not written.
+	retained, err := stats.OnestopIDsRetainedForFeedVersion(ctx, m.adapter, fvid)
+	if err != nil {
+		return err
+	}
+	if !retained {
+		fvstats.AgencyOnestopIDs = nil
+		fvstats.RouteOnestopIDs = nil
+		fvstats.StopOnestopIDs = nil
+	}
 	return stats.WriteFeedVersionStats(ctx, m.adapter, fvstats, fvid, stats.WriteOptions{})
 }
 

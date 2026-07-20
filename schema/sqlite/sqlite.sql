@@ -217,6 +217,7 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
   "feed_priority" integer,
   "fetch_wait" integer,
   "rt_retention_period" integer not null default 0,
+  "onestop_id_retention_period" integer not null default 0,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id),

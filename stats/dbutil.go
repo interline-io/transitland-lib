@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	sq "github.com/irees/squirrel"
 
@@ -27,6 +28,32 @@ func FeedVersionTableDelete(ctx context.Context, atx tldb.Adapter, table string,
 		return err
 	}
 	return nil
+}
+
+// OnestopIDsRetainedForFeedVersion reports whether a feed version's onestop_id stats
+// should be written, per its feed's onestop_id_retention_period and the version's age.
+// A feed with no feed_states row keeps them (retention 0).
+func OnestopIDsRetainedForFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) (bool, error) {
+	q := atx.Sqrl().
+		Select(
+			"feed_versions.fetched_at as fetched_at",
+			"coalesce(feed_states.onestop_id_retention_period, 0) as retention",
+		).
+		From("feed_versions").
+		LeftJoin("feed_states on feed_states.feed_id = feed_versions.feed_id").
+		Where(sq.Eq{"feed_versions.id": fvid})
+	qstr, qargs, err := q.ToSql()
+	if err != nil {
+		return false, err
+	}
+	var row struct {
+		FetchedAt time.Time
+		Retention int
+	}
+	if err := atx.Get(ctx, &row, qstr, qargs...); err != nil {
+		return false, err
+	}
+	return OnestopIDsRetained(row.Retention, time.Since(row.FetchedAt)), nil
 }
 
 // EnsureFeedState gets or creates a feed state.

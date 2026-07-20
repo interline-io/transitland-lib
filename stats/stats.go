@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
@@ -81,6 +82,20 @@ func (o WriteOptions) resolveStats() (map[string]bool, error) {
 		enabled[s] = true
 	}
 	return enabled, nil
+}
+
+// OnestopIDsRetained reports whether onestop_id stats should exist for a feed
+// version given its feed's onestop_id_retention_period (days) and the version's
+// age: -1 never generates, 0 keeps forever, N>0 retains for N days after fetch.
+func OnestopIDsRetained(retentionDays int, age time.Duration) bool {
+	switch {
+	case retentionDays < 0:
+		return false
+	case retentionDays == 0:
+		return true
+	default:
+		return age < time.Duration(retentionDays)*24*time.Hour
+	}
 }
 
 type FeedVersionStats struct {
