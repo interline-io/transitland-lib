@@ -9,7 +9,7 @@ Remove onestop_id stats for feed versions
 Deletes agency/route/stop onestop_id rows for the given feed versions; the feed versions are otherwise unaffected. The active and materialized feed versions are always skipped.
 
 ```
-transitland stats-remove-onestop-ids [flags]
+transitland stats-remove-onestop-ids [flags] <fvid>...
 ```
 
 ### Options
@@ -17,8 +17,7 @@ transitland stats-remove-onestop-ids [flags]
 ```
       --dburl string       Database URL (default: $TL_DATABASE_URL)
       --dryrun             Dry run; log the feed versions that would be affected and exit
-      --fvid strings       Remove onestop_id stats for specific feed version ID
-      --fvid-file string   Specify feed version IDs in file, one per line; equivalent to multiple --fvid
+      --fvid-file string   Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
   -h, --help               help for stats-remove-onestop-ids
       --workers int        Worker threads (default 1)
 ```

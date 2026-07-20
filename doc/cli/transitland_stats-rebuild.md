@@ -1,26 +1,23 @@
-## transitland rebuild-stats
+## transitland stats-rebuild
 
-Rebuild statistics for feeds or specific feed versions
+Rebuild statistics for feed versions
 
 ### Synopsis
 
-Rebuild statistics for feeds or specific feed versions
+Rebuild statistics for feed versions
 
-
+With no feed version ids given, rebuilds stats for all feed versions.
 
 ```
-transitland rebuild-stats [flags] [feeds...]
+transitland stats-rebuild [flags] [fvid...]
 ```
 
 ### Options
 
 ```
       --dburl string                       Database URL (default: $TL_DATABASE_URL)
-      --fv-sha1 strings                    Feed version SHA1
-      --fv-sha1-file string                Specify feed version IDs by SHA1 in file, one per line
-      --fvid strings                       Rebuild stats for specific feed version ID
-      --fvid-file string                   Specify feed version IDs in file, one per line; equivalent to multiple --fvid
-  -h, --help                               help for rebuild-stats
+      --fvid-file string                   Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
+  -h, --help                               help for stats-rebuild
       --stats strings                      Subset of stats to rebuild (default all); valid: file_infos,service_levels,service_windows,onestop_ids,geohash
       --storage string                     Storage destination; can be s3://... az://... or path to a directory
       --validation-report                  Save validation report

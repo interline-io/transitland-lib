@@ -24,9 +24,9 @@ transitland-lib utilities
 * [transitland import](transitland_import.md)	 - Import feed versions
 * [transitland merge](transitland_merge.md)	 - Merge multiple GTFS feeds
 * [transitland polylines-create](transitland_polylines-create.md)	 - Converts input geometry file to polylines
-* [transitland rebuild-stats](transitland_rebuild-stats.md)	 - Rebuild statistics for feeds or specific feed versions
 * [transitland rt-convert](transitland_rt-convert.md)	 - Convert GTFS Realtime to JSON.
 * [transitland server](transitland_server.md)	 - Run transitland server
+* [transitland stats-rebuild](transitland_stats-rebuild.md)	 - Rebuild statistics for feed versions
 * [transitland stats-remove-onestop-ids](transitland_stats-remove-onestop-ids.md)	 - Remove onestop_id stats for feed versions
 * [transitland sync](transitland_sync.md)	 - Sync DMFR files to database
 * [transitland unimport](transitland_unimport.md)	 - Unimport feed versions
