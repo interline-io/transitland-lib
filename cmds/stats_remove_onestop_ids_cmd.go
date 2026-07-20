@@ -78,10 +78,10 @@ func (cmd *StatsRemoveOnestopIDsCommand) Run(ctx context.Context) error {
 	}
 	log.For(ctx).Info().
 		Int("selected", len(fvids)).
-		Msg("stats-remove-onestop-ids: resolved feed versions (active/materialized skipped)")
+		Msg("resolved feed versions; active/materialized skipped")
 	if cmd.DryRun {
 		for _, fvid := range fvids {
-			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: would remove (dry run)")
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("dry-run")
 		}
 		return nil
 	}
@@ -98,14 +98,15 @@ func (cmd *StatsRemoveOnestopIDsCommand) Run(ctx context.Context) error {
 		go func() {
 			defer wg.Done()
 			for fvid := range jobs {
+				log.For(ctx).Info().Int("feed_version_id", fvid).Msg("begin")
 				err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
 					return importer.RemoveOnestopIds(ctx, atx, fvid)
 				})
 				if err != nil {
 					atomic.AddInt64(&failed, 1)
-					log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: failed")
+					log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("failure")
 				} else {
-					log.For(ctx).Info().Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: removed")
+					log.For(ctx).Info().Int("feed_version_id", fvid).Msg("success")
 				}
 			}
 		}()

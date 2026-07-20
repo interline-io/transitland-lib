@@ -124,7 +124,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	}
 	///////////////
 	// Here we go
-	log.For(ctx).Info().Msgf("Rebuilding stats for %d feed versions", len(qrs))
+	log.For(ctx).Info().Msgf("rebuilding stats for %d feed versions", len(qrs))
 	jobs := make(chan RebuildStatsOptions, len(qrs))
 	results := make(chan RebuildStatsResult, len(qrs))
 	for _, fvid := range qrs {
@@ -158,21 +158,27 @@ func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryru
 	for opts := range jobs {
 		q := qr{}
 		if err := adapter.Get(ctx, &q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
-			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
+			log.For(ctx).Error().Err(err).Int("feed_version_id", opts.FeedVersionID).Msg("could not get details")
 			continue
 		}
+		jobLog := log.For(ctx).With().
+			Str("feed_onestop_id", q.FeedOnestopID).
+			Int("feed_id", q.FeedID).
+			Str("feed_version_sha1", q.FeedVersionSHA1).
+			Int("feed_version_id", q.FeedVersionID).
+			Logger()
 		if dryrun {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			jobLog.Info().Msg("dry-run")
 			continue
 		}
-		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		jobLog.Info().Msg("begin")
 		t := time.Now()
 		result, err := rebuildStatsMain(ctx, adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
+			jobLog.Error().Err(err).Float64("duration", t2).Msg("critical failure, rolled back")
 		} else {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			jobLog.Info().Float64("duration", t2).Msg("success")
 		}
 		results <- result
 	}

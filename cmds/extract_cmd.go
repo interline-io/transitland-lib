@@ -184,7 +184,7 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 
 	// Additional exclude
 	if cmd.excludeUnusedRoutes {
-		log.For(ctx).Debug().Msgf("Extract filter: excluding unused routes")
+		log.For(ctx).Debug().Msg("extract filter: excluding unused routes")
 		usedRoutes := map[string]bool{}
 		for trip := range reader.Trips() {
 			usedRoutes[trip.RouteID.Val] = true
@@ -278,12 +278,12 @@ func (cmd *ExtractCommand) Run(ctx context.Context) error {
 
 	// Marker
 	if em.Count() > 0 {
-		log.For(ctx).Debug().Msgf("Extract filter: loading graph")
+		log.For(ctx).Debug().Msg("extract filter: loading graph")
 		if err := em.Filter(reader); err != nil {
 			return err
 		}
 		cmd.Options.Marker = &em
-		log.For(ctx).Debug().Msgf("Graph loading complete")
+		log.For(ctx).Debug().Msg("graph loading complete")
 	}
 
 	_, err = copier.CopyWithOptions(ctx, reader, writer, cmd.Options)

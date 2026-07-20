@@ -64,15 +64,17 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 	}
 	for _, fvid := range fvids {
 		if cmd.DryRun {
-			log.For(ctx).Info().Msgf("Deleting feed version: %d (dry run)", fvid)
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("dry-run")
 			continue
 		}
-		log.For(ctx).Info().Msgf("Deleting feed version: %d", fvid)
+		log.For(ctx).Info().Int("feed_version_id", fvid).Msg("begin")
 		if err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
 			return importer.DeleteFeedVersion(ctx, atx, fvid, cmd.ExtraTables)
 		}); err != nil {
+			log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("failure")
 			return err
 		}
+		log.For(ctx).Info().Int("feed_version_id", fvid).Msg("success")
 	}
 	return nil
 }

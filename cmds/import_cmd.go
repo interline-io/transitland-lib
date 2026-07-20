@@ -239,7 +239,7 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 
 	///////////////
 	// Here we go
-	log.For(ctx).Info().Msgf("Importing %d feed versions", len(cmd.ImportJobs))
+	log.For(ctx).Info().Msgf("importing %d feed versions", len(cmd.ImportJobs))
 	jobs := make(chan importer.Options, len(cmd.ImportJobs))
 	results := make(chan ImportCommandResult, len(cmd.ImportJobs))
 	for _, job := range cmd.ImportJobs {
@@ -274,7 +274,7 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 		}
 	}
 	if fatalError != nil {
-		log.For(ctx).Error().Err(fatalError).Msg("Exiting because at least one import had fatal error")
+		log.For(ctx).Error().Err(fatalError).Msg("exiting; at least one import had fatal error")
 		return fatalError
 	}
 	return nil
