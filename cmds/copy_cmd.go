@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// CopyCommand
+// CopyCommand copies a GTFS feed from a reader to a writer.
 type CopyCommand struct {
 	copier.Options
 	fvid                    int
@@ -26,7 +26,7 @@ type CopyCommand struct {
 }
 
 func (cmd *CopyCommand) HelpDesc() (string, string) {
-	a := "Copy performs a basic copy from a reader to a writer."
+	a := "Copy a GTFS feed from a reader to a writer"
 	b := `Entities with errors are skipped by default; use --allow-entity-errors and --allow-reference-errors to override.
 
 Output preserves input order (with exceptions for stop relationships). Pass --standardized-sort (asc|desc) to apply an opinionated GTFS sort by primary keys, or override columns with --standardized-sort-columns.`

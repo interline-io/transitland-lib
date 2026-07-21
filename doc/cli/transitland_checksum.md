@@ -26,7 +26,7 @@ Example:
 This command is useful for verifying feed integrity and looking up feed versions on Transitland. Use --raw-dir-sha1 or --raw-zip-sha1 for scripting scenarios where only a specific hash is needed.
 
 ```
-transitland checksum <feed-path> [flags]
+transitland checksum [flags] <feed-path>
 ```
 
 ### Options

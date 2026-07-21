@@ -43,6 +43,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/server/directions/valhalla"
 )
 
+// ServerCommand runs the transitland API server.
 type ServerCommand struct {
 	Timeout                 int
 	LongQueryDuration       int
@@ -247,7 +248,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// Start server
 	timeOut := time.Duration(cmd.Timeout) * time.Second
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cmd.Port)
-	log.For(ctx).Info().Msgf("Listening on: %s", addr)
+	log.For(ctx).Info().Str("addr", addr).Msg("listening")
 	srv := &http.Server{
 		Handler:      http.TimeoutHandler(root, timeOut, "timeout"),
 		Addr:         addr,

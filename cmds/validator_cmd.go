@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// ValidatorCommand
+// ValidatorCommand validates a GTFS feed.
 type ValidatorCommand struct {
 	Options                  validator.Options
 	rtFiles                  []string
@@ -83,6 +83,7 @@ func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.SaveValidationReport, "validation-report", false, "Save static validation report in database")
 	fl.StringVar(&cmd.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
 	fl.IntVar(&cmd.FVID, "save-fvid", 0, "Save report to feed version ID")
+	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringSliceVar(&cmd.rtFiles, "rt", nil, "Include GTFS-RT proto message in validation report")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 1000, "Max number of detailed errors per error group")
 	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
@@ -170,7 +171,7 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 	}
 	// Only log if not outputting JSON to stdout
 	if cmd.shouldShowLogs() {
-		log.For(ctx).Info().Msgf("Validating: %s", cmd.readerPath)
+		log.For(ctx).Info().Str("path", cmd.readerPath).Msg("validating")
 	}
 	reader, err := ext.OpenReader(cmd.readerPath)
 	if err != nil {
@@ -216,14 +217,14 @@ func (cmd *ValidatorCommand) Run(ctx context.Context) error {
 	// Save to database
 	if cmd.SaveValidationReport {
 		if cmd.shouldShowLogs() {
-			log.For(ctx).Info().Msgf("Saving validation report to feed version: %d", cmd.FVID)
+			log.For(ctx).Info().Int("feed_version_id", cmd.FVID).Msg("saving validation report")
 		}
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
 			return err
 		}
 		atx := writer.Adapter
-		defer atx.Close()
+		defer writer.Close()
 		if err := validator.SaveValidationReport(ctx, atx, result, cmd.FVID, cmd.ValidationReportStorage); err != nil {
 			return err
 		}
@@ -285,7 +286,7 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
 	if cmd.shouldShowLogs() {
-		log.For(ctx).Info().Str("feed_id", cmd.FeedID).Str("url", feedURL).Str("auth_type", feed.Authorization.Type).Msg("Fetching feed")
+		log.For(ctx).Info().Str("feed_onestop_id", cmd.FeedID).Str("url", feedURL).Str("auth_type", feed.Authorization.Type).Msg("fetching feed")
 	}
 	tmpfile, fr, err := request.AuthenticatedRequestDownload(ctx, fetchURL, reqOpts...)
 	if err != nil {

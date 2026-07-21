@@ -29,6 +29,7 @@ transitland validate [flags] [<reader>]
       --allow-partial                      Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)
       --allow-s3-fetch                     Allow fetching from S3 urls when --dmfr is used
       --best-practices                     Include Best Practices validations
+      --dburl string                       Database URL (default: $TL_DATABASE_URL)
       --dmfr string                        DMFR file providing feed URL and authorization config; used with --feed-id
       --error-limit int                    Max number of detailed errors per error group (default 1000)
       --error-threshold strings            Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')

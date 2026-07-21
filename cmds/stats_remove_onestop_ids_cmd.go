@@ -8,13 +8,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	sq "github.com/irees/squirrel"
-	"github.com/spf13/pflag"
-
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/importer"
-	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/spf13/pflag"
 )
 
 // StatsRemoveOnestopIDsCommand removes onestop_id stats (agency/route/stop) for
@@ -22,12 +19,11 @@ import (
 // versions themselves are unaffected; the removed rows only power AllowPrevious
 // lookups. The active and materialized feed versions are always skipped.
 type StatsRemoveOnestopIDsCommand struct {
-	Workers  int
-	DBURL    string
-	DryRun   bool
-	FVIDs    []string
-	Adapter  tldb.Adapter // allow for mocks
-	fvidfile string
+	FVArgs  FeedVersionArgs
+	Workers int
+	DBURL   string
+	DryRun  bool
+	Adapter tldb.Adapter // allow for mocks
 }
 
 func (cmd *StatsRemoveOnestopIDsCommand) HelpDesc() (string, string) {
@@ -36,34 +32,25 @@ func (cmd *StatsRemoveOnestopIDsCommand) HelpDesc() (string, string) {
 }
 
 func (cmd *StatsRemoveOnestopIDsCommand) HelpArgs() string {
-	return "[flags]"
+	return "[flags] <fvid>..."
 }
 
 func (cmd *StatsRemoveOnestopIDsCommand) AddFlags(fl *pflag.FlagSet) {
-	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Remove onestop_id stats for specific feed version ID")
-	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
+	cmd.FVArgs.AddFlags(fl)
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; log the feed versions that would be affected and exit")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; log the feed versions that would be affected and exit")
 }
 
 func (cmd *StatsRemoveOnestopIDsCommand) Parse(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if cmd.fvidfile != "" {
-		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			if line != "" {
-				cmd.FVIDs = append(cmd.FVIDs, line)
-			}
-		}
+	if err := cmd.FVArgs.Parse(args); err != nil {
+		return err
 	}
-	if len(cmd.FVIDs) == 0 {
-		return errors.New("specify at least one feed version with --fvid or --fvid-file")
+	if cmd.FVArgs.Empty() {
+		return errors.New("must provide at least one feed version id as an argument or with --fvid-file")
 	}
 	if cmd.Workers < 1 {
 		cmd.Workers = 1
@@ -80,33 +67,21 @@ func (cmd *StatsRemoveOnestopIDsCommand) Run(ctx context.Context) error {
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
-	// Resolve to existing feed versions, always skipping the active and materialized
-	// versions so a stale fvid list can never strip a live version.
-	q := cmd.Adapter.Sqrl().
-		Select("feed_versions.id").
-		From("feed_versions").
-		Where(sq.Eq{"feed_versions.id": cmd.FVIDs}).
-		Where(`feed_versions.id NOT IN (
-			SELECT active_feed_version_id FROM feed_states WHERE active_feed_version_id IS NOT NULL
-			UNION
-			SELECT materialized_feed_version_id FROM feed_states WHERE materialized_feed_version_id IS NOT NULL
-		)`).
-		OrderBy("feed_versions.id")
-	qstr, qargs, err := q.ToSql()
+	fvids, err := cmd.FVArgs.SelectIDs(ctx, cmd.Adapter)
 	if err != nil {
 		return err
 	}
-	fvids := []int{}
-	if err := cmd.Adapter.Select(ctx, &fvids, qstr, qargs...); err != nil {
+	// Never strip the active or materialized version of any feed.
+	fvids, err = excludeLiveVersions(ctx, cmd.Adapter, fvids)
+	if err != nil {
 		return err
 	}
 	log.For(ctx).Info().
-		Int("requested", len(cmd.FVIDs)).
 		Int("selected", len(fvids)).
-		Msg("stats-remove-onestop-ids: resolved feed versions (active/materialized and unknown ids skipped)")
+		Msg("resolved feed versions; active/materialized skipped")
 	if cmd.DryRun {
 		for _, fvid := range fvids {
-			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: would remove (dry run)")
+			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("dry-run")
 		}
 		return nil
 	}
@@ -123,14 +98,15 @@ func (cmd *StatsRemoveOnestopIDsCommand) Run(ctx context.Context) error {
 		go func() {
 			defer wg.Done()
 			for fvid := range jobs {
+				log.For(ctx).Info().Int("feed_version_id", fvid).Msg("begin")
 				err := cmd.Adapter.Tx(func(atx tldb.Adapter) error {
 					return importer.RemoveOnestopIds(ctx, atx, fvid)
 				})
 				if err != nil {
 					atomic.AddInt64(&failed, 1)
-					log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: failed")
+					log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("failure")
 				} else {
-					log.For(ctx).Info().Int("feed_version_id", fvid).Msg("stats-remove-onestop-ids: removed")
+					log.For(ctx).Info().Int("feed_version_id", fvid).Msg("success")
 				}
 			}
 		}()
