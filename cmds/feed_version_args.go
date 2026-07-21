@@ -29,7 +29,7 @@ type FeedVersionArgs struct {
 }
 
 func (a *FeedVersionArgs) AddFlags(fl *pflag.FlagSet) {
-	fl.StringVar(&a.fvidfile, "fvid-file", "", "Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)")
+	fl.StringVar(&a.fvidfile, "fvid-file", "", "Read feed version IDs from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)")
 	fl.StringSliceVar(&a.FVIDs, "fvid", nil, "Feed version ID")
 	fl.StringSliceVar(&a.FVSHA1, "fv-sha1", nil, "Select feed versions by SHA1")
 	fl.StringVar(&a.fvsha1file, "fv-sha1-file", "", "Read feed version SHA1s from a file, one per line")

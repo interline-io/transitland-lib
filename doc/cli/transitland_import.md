@@ -27,7 +27,7 @@ transitland import [flags] [feeds...]
       --fail                      Exit with error code if any fetch is not successful
       --fv-sha1 strings           Feed version SHA1
       --fvid strings              Import specific feed version ID
-      --fvid-file string          Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
+      --fvid-file string          Read feed version IDs from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)
   -h, --help                      help for import
       --interpolate-stop-times    Interpolate missing StopTime arrival/departure values
       --latest                    Only import latest feed version available for each feed

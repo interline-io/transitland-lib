@@ -17,7 +17,7 @@ transitland stats-rebuild [flags] [fvid...]
 ```
       --dburl string                       Database URL (default: $TL_DATABASE_URL)
       --dry-run                            Dry run; log the feed versions that would be rebuilt and exit
-      --fvid-file string                   Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
+      --fvid-file string                   Read feed version IDs from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)
   -h, --help                               help for stats-rebuild
       --stats strings                      Subset of stats to rebuild (default all); valid: file_infos,service_levels,service_windows,onestop_ids,geohash
       --storage string                     Storage destination; can be s3://... az://... or path to a directory

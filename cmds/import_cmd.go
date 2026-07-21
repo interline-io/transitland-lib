@@ -61,7 +61,7 @@ func (cmd *ImportCommand) HelpArgs() string {
 func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.Options.ExtensionDefs, "ext", nil, "Include GTFS Extension")
 	fl.StringSliceVar(&cmd.fvids, "fvid", nil, "Import specific feed version ID")
-	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Read feed version IDs from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)")
+	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Read feed version IDs from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)")
 	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
 	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")

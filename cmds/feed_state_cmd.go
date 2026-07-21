@@ -40,7 +40,7 @@ func (cmd *FeedStateManagerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.ActivateFVIDs, "activate", nil, "Activate these feed version IDs (deactivates other versions in same feeds)")
 	fl.StringSliceVar(&cmd.DeactivateFVIDs, "deactivate", nil, "Deactivate these feed version IDs")
 	fl.StringSliceVar(&cmd.SetActiveFVIDs, "set-active", nil, "Set ONLY these feed version IDs as active (deactivates all others)")
-	fl.StringVar(&cmd.SetActiveFVIDFile, "set-active-fvid-file", "", "Set ONLY these feed version IDs as active, read from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)")
+	fl.StringVar(&cmd.SetActiveFVIDFile, "set-active-fvid-file", "", "Set ONLY these feed version IDs as active, read from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)")
 	fl.StringSliceVar(&cmd.ForceMaterialize, "force-materialize", nil, "Force materialize these feed version IDs (manual intervention)")
 	fl.StringSliceVar(&cmd.ForceDematerialize, "force-dematerialize", nil, "Force dematerialize these feed version IDs (manual intervention)")
 	fl.StringSliceVar(&cmd.ForceRematerialize, "force-rematerialize", nil, "Force rematerialize these feed version IDs (dematerialize + materialize)")

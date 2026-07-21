@@ -24,7 +24,7 @@ transitland feed-state  [flags]
       --force-rematerialize strings   Force rematerialize these feed version IDs (dematerialize + materialize)
   -h, --help                          help for feed-state
       --set-active strings            Set ONLY these feed version IDs as active (deactivates all others)
-      --set-active-fvid-file string   Set ONLY these feed version IDs as active, read from a csv-like file (the feed_version_id column if present, else the first column; a non-numeric header row is ignored)
+      --set-active-fvid-file string   Set ONLY these feed version IDs as active, read from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)
       --sync-active                   Make materialized tables match current active feed versions
 ```
 

@@ -63,6 +63,11 @@ func (cmd *DeleteCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Parse guarantees a selector was given, so an empty result means none of the
+	// requested feed versions exist; fail loudly rather than exiting 0.
+	if len(fvids) == 0 {
+		return errors.New("no matching feed versions found")
+	}
 	for _, fvid := range fvids {
 		if cmd.DryRun {
 			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("dry-run")
