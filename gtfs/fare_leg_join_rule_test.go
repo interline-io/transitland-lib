@@ -46,6 +46,15 @@ func TestFareLegJoinRule_Errors(t *testing.T) {
 			},
 			expectedErrors: PE("ConditionallyRequiredFieldError:to_stop_id"),
 		},
+		{
+			name: "Invalid: to_stop_id without from_stop_id",
+			fareLegJoinRule: &FareLegJoinRule{
+				FromNetworkID: tt.NewString("net1"),
+				ToNetworkID:   tt.NewString("net2"),
+				ToStopID:      tt.NewString("s2"),
+			},
+			expectedErrors: PE("ConditionallyRequiredFieldError:from_stop_id"),
+		},
 	}
 
 	for _, tc := range tests {
