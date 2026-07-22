@@ -730,6 +730,10 @@ func (reader *Reader) FareLegRules() (out chan gtfs.FareLegRule) {
 	return ReadEntities[gtfs.FareLegRule](reader, getFilename(&gtfs.FareLegRule{}))
 }
 
+func (reader *Reader) FareLegJoinRules() (out chan gtfs.FareLegJoinRule) {
+	return ReadEntities[gtfs.FareLegJoinRule](reader, getFilename(&gtfs.FareLegJoinRule{}))
+}
+
 func (reader *Reader) FareTransferRules() (out chan gtfs.FareTransferRule) {
 	return ReadEntities[gtfs.FareTransferRule](reader, getFilename(&gtfs.FareTransferRule{}))
 }

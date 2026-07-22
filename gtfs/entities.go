@@ -24,6 +24,7 @@ func AllEntities() []tt.Entity {
 		&FareMedia{},
 		&FareProduct{},
 		&FareLegRule{},
+		&FareLegJoinRule{},
 		&FareTransferRule{},
 		&Area{},
 		&StopArea{},
