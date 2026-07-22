@@ -172,9 +172,12 @@ func (f *Finder) CensusSourceLayersBySourceIDs(ctx context.Context, keys []int) 
 		model.CensusLayer
 	}
 	var ents []*qent
+	// Dedup per (source, layer): the dataloader batches multiple source ids into one
+	// query, and sources can share a layer, so deduping on layer id alone would drop a
+	// shared layer from every source but one.
 	q := sq.StatementBuilder.
 		Select("tlcg.source_id", "tlcl.*").
-		Distinct().Options("on (tlcl.id)").
+		Distinct().Options("on (tlcg.source_id, tlcl.id)").
 		From("tl_census_geographies tlcg").
 		Join("tl_census_layers tlcl on tlcl.id = tlcg.layer_id").
 		Where(sq.Eq{"tlcg.source_id": keys})
