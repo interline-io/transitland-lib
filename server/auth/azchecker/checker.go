@@ -15,6 +15,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/dbutil"
+	"github.com/interline-io/transitland-lib/tldb"
 )
 
 // For less typing
@@ -71,7 +72,7 @@ type FGAProvider interface {
 type Checker struct {
 	userClient   UserProvider
 	fgaClient    FGAProvider
-	db           sqlx.Ext
+	db           tldb.Ext
 	globalAdmins []string
 }
 
@@ -83,7 +84,7 @@ var (
 
 // NewChecker constructs an FGA-backed Checker. All arguments are required;
 // nil returns an error.
-func NewChecker(userClient UserProvider, fgaClient FGAProvider, db sqlx.Ext) (*Checker, error) {
+func NewChecker(userClient UserProvider, fgaClient FGAProvider, db tldb.Ext) (*Checker, error) {
 	if userClient == nil {
 		return nil, errors.New("azchecker.NewChecker: UserProvider must be non-nil")
 	}
@@ -840,7 +841,7 @@ func checkIds[T hasId](ents []T, ids []int64) error {
 	return nil
 }
 
-func getEntities[T hasId](ctx context.Context, db sqlx.Ext, ids []int64, table string, cols ...string) ([]T, error) {
+func getEntities[T hasId](ctx context.Context, db sqlx.ExtContext, ids []int64, table string, cols ...string) ([]T, error) {
 	var t []T
 	q := sq.StatementBuilder.Select(cols...).From(table).Where(sq.Eq{"id": ids})
 	if err := dbutil.Select(ctx, db, q, &t); err != nil {

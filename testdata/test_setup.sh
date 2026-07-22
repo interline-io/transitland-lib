@@ -65,6 +65,7 @@ createdb "$PGDATABASE"
 transitland dbmigrate --dburl="$TL_TEST_DATABASE_URL" up
 transitland dbmigrate-natural-earth --dburl="$TL_TEST_DATABASE_URL"
 
+
 #########################
 # Migrate and init server database
 #########################
@@ -80,6 +81,20 @@ createdb "$PGDATABASE"
 # Run migrations
 transitland dbmigrate --dburl="$TL_TEST_SERVER_DATABASE_URL" up
 transitland dbmigrate-natural-earth --dburl="$TL_TEST_SERVER_DATABASE_URL"
+
+#########################
+# Seed feed_fetches partitions
+#########################
+
+# Create the month partitions against the populated server DB. The fetch/import steps
+# above already wrote their (static) feed_fetches rows, which route to feed_fetches_static,
+# so this leaves a realistically partitioned table for the test suite.
+psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/../schema/postgres/ops/feed_fetches_partition/01_seed_partitions.sql"
+
+
+#########################
+# Populate data
+#########################
 
 # Remove import files
 transitland sync --dburl="$TL_TEST_SERVER_DATABASE_URL" "$SCRIPTDIR/server/server-test.dmfr.json"
@@ -101,3 +116,4 @@ psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/test_supplement.pgs
 
 # Load census data
 psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/census/census.pgsql"
+

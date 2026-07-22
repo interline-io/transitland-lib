@@ -209,13 +209,20 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
   "id" integer primary key autoincrement,
   "feed_id" integer NOT NULL,
   "feed_version_id" integer,
+  "active_feed_version_id" integer,
+  "materialized_feed_version_id" integer,
+  "exclude_from_global" bool not null default false,
   "feed_realtime_enabled" bool not null,
   "public" bool not null,
   "feed_priority" integer,
   "fetch_wait" integer,
+  "rt_retention_period" integer not null default 0,
+  "onestop_id_retention_period" integer not null default 0,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(active_feed_version_id) REFERENCES feed_versions(id),
+  foreign key(materialized_feed_version_id) REFERENCES feed_versions(id),
   foreign key(feed_id) references current_feeds(id)
 );
 CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
@@ -509,6 +516,21 @@ CREATE TABLE IF NOT EXISTS "tl_route_stops" (
   foreign key(stop_id) references gtfs_stops(id),
   foreign key(route_id) references gtfs_routes(id)
 );
+CREATE TABLE IF NOT EXISTS "tl_route_representative_shapes" (
+  "id" integer primary key autoincrement,
+  "feed_version_id" integer not null,
+  "route_id" integer not null,
+  "shape_id" integer not null,
+  "direction_id" integer,
+  "rank" integer not null,
+  "generated" boolean not null,
+  "length" real,
+  "max_segment_length" real,
+  "first_point_max_distance" real,
+  foreign key(feed_version_id) REFERENCES feed_versions(id),
+  foreign key(route_id) references gtfs_routes(id),
+  foreign key(shape_id) references gtfs_shapes(id)
+);
 CREATE TABLE IF NOT EXISTS "tl_route_headways" (
   "id" integer primary key autoincrement,
   "feed_version_id" integer not null,
@@ -630,6 +652,7 @@ CREATE TABLE feed_fetches (
   "validation_duration_ms" int,
   "upload_duration_ms" int,
   "feed_version_id" int,
+  "storage_key" text,
   "created_at" datetime DEFAULT CURRENT_TIMESTAMP,
   "updated_at" datetime DEFAULT CURRENT_TIMESTAMP,
   foreign key(feed_version_id) REFERENCES feed_versions(id)
@@ -1095,7 +1118,8 @@ CREATE TABLE tl_job_artifacts (
   "content_type" text not null default 'application/octet-stream',
   "size_bytes" integer not null default 0,
   "sha1" text not null default '',
-  "storage_key" text not null
+  "storage_key" text not null,
+  "deleted_at" datetime
 );
 CREATE INDEX idx_tl_job_artifacts_job_id ON "tl_job_artifacts"(job_id);
 CREATE INDEX idx_tl_job_artifacts_user_id ON "tl_job_artifacts"(user_id);

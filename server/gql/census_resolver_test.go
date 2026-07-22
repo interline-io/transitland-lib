@@ -12,15 +12,15 @@ func TestCensusResolver(t *testing.T) {
 	// Define checks and get IDs for tests
 	countyArea := 2126920288.43 // Area of Alameda County in m^2
 	geographyId := 0
-	if err := cfg.Finder.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001403000'`).Scan(&geographyId); err != nil {
+	if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001403000'`).Scan(&geographyId); err != nil {
 		t.Errorf("could not get geography id for test: %s", err.Error())
 	}
 	bartFtvlStopId := 0
-	if err := cfg.Finder.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'FTVL'`).Scan(&bartFtvlStopId); err != nil {
+	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'FTVL'`).Scan(&bartFtvlStopId); err != nil {
 		t.Errorf("could not get stop id for test: %s", err.Error())
 	}
 	bartMcarStopId := 0
-	if err := cfg.Finder.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'MCAR'`).Scan(&bartMcarStopId); err != nil {
+	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'MCAR'`).Scan(&bartMcarStopId); err != nil {
 		t.Errorf("could not get stop id for test: %s", err.Error())
 	}
 

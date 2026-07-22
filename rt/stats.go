@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/rt/pb"
 )
 
@@ -135,10 +135,10 @@ func (fi *Validator) compareTripSets(scheduledTrips []string, rtTrips []rtTripKe
 	var ret []RTTripStat
 	for _, k := range statAggSortedKeys {
 		v := statAgg[k]
-		scheduledSet := mapset.NewSet(v.TripScheduledIDs...)
-		updateSet := mapset.NewSet(v.TripRtIDs...)
-		updateNotFoundSet := mapset.NewSet(v.TripRtNotFoundIDs...)
-		updateAddedSet := mapset.NewSet(v.TripRtAddedIDs...)
+		scheduledSet := set.New(v.TripScheduledIDs...)
+		updateSet := set.New(v.TripRtIDs...)
+		updateNotFoundSet := set.New(v.TripRtNotFoundIDs...)
+		updateAddedSet := set.New(v.TripRtAddedIDs...)
 		tripScheduledMatched := scheduledSet.Intersect(updateSet)
 		tripScheduledNotMatched := scheduledSet.Difference(updateSet)
 		tripRtMatched := updateSet.Intersect(scheduledSet)

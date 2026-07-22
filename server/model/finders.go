@@ -8,7 +8,6 @@ import (
 	"github.com/interline-io/transitland-lib/internal/gbfs"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -34,6 +33,7 @@ type EntityFinder interface {
 	FindAgencies(context.Context, *int, *Cursor, []int, *AgencyFilter) ([]*Agency, error)
 	FindRoutes(context.Context, *int, *Cursor, []int, *RouteFilter) ([]*Route, error)
 	FindStops(context.Context, *int, *Cursor, []int, *StopFilter) ([]*Stop, error)
+	FindShapesByFeedVersion(context.Context, int, *int, *Cursor, *ShapeFilter) ([]*Shape, error)
 	FindTrips(context.Context, *int, *Cursor, []int, *TripFilter) ([]*Trip, error)
 	FindFeedVersions(context.Context, *int, *Cursor, []int, *FeedVersionFilter) ([]*FeedVersion, error)
 	FindFeeds(context.Context, *int, *Cursor, []int, *FeedFilter) ([]*Feed, error)
@@ -43,7 +43,6 @@ type EntityFinder interface {
 	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
 	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)
 	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
-	DBX() tldb.Ext // escape hatch, for now
 }
 
 type EntityLoader interface {
@@ -128,6 +127,7 @@ type EntityLoader interface {
 	TripsByFeedVersionIDs(context.Context, *int, *TripFilter, []int) ([][]*Trip, error)
 	TripsByIDs(context.Context, []int) ([]*Trip, []error)
 	TripsByRouteIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error)
+	TripsByShapeIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error)
 	ValidationReportErrorExemplarsByValidationReportErrorGroupIDs(context.Context, *int, []int) ([][]*ValidationReportError, error)
 	ValidationReportErrorGroupsByValidationReportIDs(context.Context, *int, []int) ([][]*ValidationReportErrorGroup, error)
 	ValidationReportsByFeedVersionIDs(context.Context, *int, *ValidationReportFilter, []int) ([][]*ValidationReport, error)

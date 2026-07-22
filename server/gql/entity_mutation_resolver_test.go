@@ -50,7 +50,7 @@ func TestStopCreate(t *testing.T) {
 		}
 		checkEnt := gtfs.Stop{}
 		checkEnt.ID = eid
-		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
 		if err := atx.Find(ctx, &checkEnt); err != nil {
 			t.Fatal(err)
 		}
@@ -87,7 +87,7 @@ func TestStopUpdate(t *testing.T) {
 		}
 		checkEnt := gtfs.Stop{}
 		checkEnt.ID = eid
-		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
 		if err := atx.Find(ctx, &checkEnt); err != nil {
 			t.Fatal(err)
 		}
@@ -100,7 +100,7 @@ func TestStopUpdate_BumpsUpdatedAt(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
-		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
 		fv := model.FeedVersionInput{ID: toPtr(1)}
 		stopInput := model.StopSetInput{
 			FeedVersion: &fv,
@@ -195,7 +195,7 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
-		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
 		fv := model.FeedVersionInput{ID: toPtr(1)}
 		// Create two stops to use as endpoints
 		fromStopID, err := finder.StopCreate(ctx, model.StopSetInput{
@@ -256,7 +256,7 @@ func TestLevelUpdate_BumpsUpdatedAt(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
-		atx := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
 		fv := model.FeedVersionInput{ID: toPtr(1)}
 		eid, err := finder.LevelCreate(ctx, model.LevelSetInput{
 			FeedVersion: &fv,
@@ -322,7 +322,7 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			ret := stopExternalReference{}
-			if err := sqlx.GetContext(ctx, cfg.Finder.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, eid, ret.StopID.Int())
@@ -343,7 +343,7 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			var checkIds []int
-			if err := sqlx.SelectContext(ctx, cfg.Finder.DBX(), &checkIds, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.SelectContext(ctx, cfg.Adapter.DBX(), &checkIds, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, 0, len(checkIds), "should not have created external reference")
@@ -358,12 +358,12 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			var checkIds2 []int
-			if err := sqlx.SelectContext(ctx, cfg.Finder.DBX(), &checkIds2, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.SelectContext(ctx, cfg.Adapter.DBX(), &checkIds2, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, 1, len(checkIds2), "expected to have created external reference")
 			ret := stopExternalReference{}
-			if err := sqlx.GetContext(ctx, cfg.Finder.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, eid, ret.StopID.Int())
@@ -384,7 +384,7 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			var checkIds []int
-			if err := sqlx.SelectContext(ctx, cfg.Finder.DBX(), &checkIds, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.SelectContext(ctx, cfg.Adapter.DBX(), &checkIds, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, 0, len(checkIds), "should not have created external reference")
@@ -399,7 +399,7 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			ret := stopExternalReference{}
-			if err := sqlx.GetContext(ctx, cfg.Finder.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, eid, ret.StopID.Int())
@@ -424,7 +424,7 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			ret := stopExternalReference{}
-			if err := sqlx.GetContext(ctx, cfg.Finder.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, eid, ret.StopID.Int())
@@ -436,7 +436,7 @@ func TestStopReference(t *testing.T) {
 			}
 			// Check the external reference is gone
 			var checkIds []int
-			if err := sqlx.SelectContext(ctx, cfg.Finder.DBX(), &checkIds, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.SelectContext(ctx, cfg.Adapter.DBX(), &checkIds, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, 0, len(checkIds), "deleted stop should not have external reference")
@@ -459,7 +459,7 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			ret := stopExternalReference{}
-			if err := sqlx.GetContext(ctx, cfg.Finder.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &ret, `select * from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, eid, ret.StopID.Int())
@@ -473,7 +473,7 @@ func TestStopReference(t *testing.T) {
 				t.Fatal(err)
 			}
 			var checkIds2 []int
-			if err := sqlx.SelectContext(ctx, cfg.Finder.DBX(), &checkIds2, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			if err := sqlx.SelectContext(ctx, cfg.Adapter.DBX(), &checkIds2, `select id from tl_stop_external_references where stop_id = $1`, eid); err != nil {
 				t.Fatal(err)
 			}
 			assert.Equal(t, 0, len(checkIds2), "expected to have deleted external reference")

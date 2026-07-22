@@ -124,6 +124,7 @@ func pathwaySelect(limit *int, after *model.Cursor, ids []int, permFilter *model
 	}
 
 	// Handle permissions
+	q = joinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

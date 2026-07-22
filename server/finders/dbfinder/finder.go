@@ -60,10 +60,6 @@ func NewFinder(db tldb.Ext) *Finder {
 	return finder
 }
 
-func (f *Finder) DBX() tldb.Ext {
-	return f.db
-}
-
 func (f *Finder) LoadAdmins(ctx context.Context) error {
 	log.For(ctx).Trace().Msg("loading admins")
 	c, err := newAdminCache(context.Background(), f.db)
@@ -201,6 +197,45 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 		}
 	}
 	return ret
+}
+
+// joinImported restricts a select over imported entity rows to feed versions whose import
+// completed. It is applied to the entity selects: agency, place, route, stop, trip, shape and
+// pathway.
+//
+// Excluded: an import still running (in_progress), and an import that failed and left rows
+// behind (success = false). Both columns are load-bearing and neither implies the other -- a
+// failed import ends with in_progress = false, and an unimport runs against a feed version
+// that still has success = true.
+//
+// Today the import and unimport each run in one transaction, so their partial states are
+// already invisible and this mostly restates that guarantee. It is a prerequisite rather
+// than a no-op: it is what will keep those states unreachable once they stop being
+// transactional, which is why it has to be deployed first.
+//
+// Keyed off feed_versions.id rather than the entity table, so one clause covers every table:
+// each of these selects already inner joins feed_versions on its feed_version_id. Applied
+// unconditionally, including on the active path -- a feed version being active does not by
+// itself mean its data is intact.
+//
+// Feed version and validation report selects deliberately do not use this: they describe the
+// import itself, and must still see failed and in-progress ones.
+//
+// Not yet applied everywhere it needs to be. These still read tables in
+// dmfr.GetFeedVersionTables().ImportedTables() without a gate, and must be closed before the
+// import and unimport stop being transactional:
+//
+//   - The FeedVersion child resolvers -- geometry, feed_infos, locations, location_groups,
+//     booking_rules -- and the stop_times reachable under locations. They hang off the
+//     feed version select, which is ungated by design, so nothing upstream covers them.
+//   - The operator and feed spatial filters, and the census stop buffer, which reach
+//     imported tables through feed_states or by raw entity id. These cannot use this helper
+//     as written: it keys off feed_versions.id, which is not in scope for them.
+//
+// Everything else that reads those tables is keyed by ids that can only have come from one of
+// the gated selects above.
+func joinImported(q sq.SelectBuilder) sq.SelectBuilder {
+	return q.Join("feed_version_gtfs_imports fvgi on fvgi.feed_version_id = feed_versions.id and fvgi.success and not fvgi.in_progress")
 }
 
 func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuilder {

@@ -67,9 +67,35 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 	return nil
 }
 
+// RemoveOnestopIds deletes the fetch-derived onestop_id rows (agency/route/stop)
+// for a feed version. These only power AllowPrevious lookups; the feed version and
+// its other data are unaffected. It deletes unconditionally: the caller selects which
+// versions to remove (e.g. per the feed's onestop_id_retention_period) and must
+// exclude the active and materialized versions.
+func RemoveOnestopIds(ctx context.Context, atx tldb.Adapter, id int) error {
+	// Mirrors the tables of stats.StatOnestopIDs.
+	tables := []string{
+		"feed_version_agency_onestop_ids",
+		"feed_version_route_onestop_ids",
+		"feed_version_stop_onestop_ids",
+	}
+	for _, table := range tables {
+		if err := stats.FeedVersionTableDelete(ctx, atx, table, id, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTables []string) error {
 	// Unimport feed version first
 	if err := UnimportFeedVersion(ctx, atx, id, extraTables); err != nil {
+		return err
+	}
+
+	// Validation report child rows are keyed on the report, not feed_version_id, so
+	// the generic table loop cannot reach them. Delete them before tl_validation_reports.
+	if err := deleteFeedVersionValidationReports(ctx, atx, id); err != nil {
 		return err
 	}
 
@@ -96,4 +122,33 @@ func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTable
 	}
 	return nil
 
+}
+
+// deleteFeedVersionValidationReports removes the tl_validation_reports subtree for a
+// feed version. Its child and grandchild tables are keyed on the report id, not
+// feed_version_id, and their foreign keys are NOT DEFERRABLE, so they must be deleted
+// through the parent, deepest first. tl_validation_reports itself is keyed on
+// feed_version_id and is removed by the caller's generic table loop.
+func deleteFeedVersionValidationReports(ctx context.Context, atx tldb.Adapter, id int) error {
+	// error_exemplars -> error_groups -> reports
+	if _, err := atx.Sqrl().
+		Delete("tl_validation_report_error_exemplars").
+		Where("validation_report_error_group_id IN (SELECT id FROM tl_validation_report_error_groups WHERE validation_report_id IN (SELECT id FROM tl_validation_reports WHERE feed_version_id = ?))", id).
+		ExecContext(ctx); err != nil {
+		return err
+	}
+	// The remaining children reference the report directly.
+	for _, table := range []string{
+		"tl_validation_report_error_groups",
+		"tl_validation_trip_update_stats",
+		"tl_validation_vehicle_position_stats",
+	} {
+		if _, err := atx.Sqrl().
+			Delete(table).
+			Where("validation_report_id IN (SELECT id FROM tl_validation_reports WHERE feed_version_id = ?)", id).
+			ExecContext(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -3,12 +3,12 @@ package fetch
 import (
 	"context"
 	"errors"
-	"os"
+	"fmt"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/request"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -42,31 +42,23 @@ type Result struct {
 	FeedVersionID  tt.Int
 }
 
-type FetchValidationResult struct {
-	UploadTmpfile  string
-	UploadFilename string
-	Error          error
-	Found          bool
-	FeedVersionID  tt.Int
+// fetchDurations carries the validation/upload timings into the feed_fetch record.
+type fetchDurations struct {
+	validationMs int
+	uploadMs     int
 }
 
-type FetchValidator interface {
-	ValidateResponse(context.Context, tldb.Adapter, string, request.FetchResponse) (FetchValidationResult, error)
-}
-
-// Fetch and check for serious errors - regular errors are in fr.FetchError
-func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidator) (Result, error) {
-	result := Result{URL: opts.FeedURL}
-	if cb == nil {
-		return result, errors.New("no validator provided")
-	}
-	feed := dmfr.Feed{}
-	if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", opts.FeedID); err != nil {
-		return result, err
+// download is the shared front half of every fetch: load the feed, apply auth,
+// and download the URL to a tmpfile. The caller is responsible for removing the
+// returned tmpfile. A non-nil error is fatal; a regular failure (no URL, bad
+// secret, 404) is left on the returned response's FetchError.
+func download(ctx context.Context, fm feedmanager.FeedManager, opts Options) (*dmfr.Feed, string, request.FetchResponse, error) {
+	feed, err := fm.GetFeed(ctx, opts.FeedID)
+	if err != nil {
+		return nil, "", request.FetchResponse{}, err
 	}
 	if opts.FeedURL == "" {
-		result.FetchError = errors.New("no url provided")
-		return result, nil
+		return feed, "", request.FetchResponse{FetchError: errors.New("no url provided")}, nil
 	}
 	var reqOpts []request.RequestOption
 	if opts.AllowFTPFetch {
@@ -84,84 +76,65 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	if opts.MaxSize > 0 {
 		reqOpts = append(reqOpts, request.WithMaxSize(opts.MaxSize))
 	}
-	// Get secret and set auth
 	if feed.Authorization.Type != "" {
 		secret, err := feed.MatchSecrets(opts.Secrets, opts.URLType)
 		if err != nil {
-			result.FetchError = err
-			return result, nil
+			return feed, "", request.FetchResponse{FetchError: err}, nil
 		}
 		reqOpts = append(reqOpts, request.WithAuth(secret, feed.Authorization))
 	}
+	tmpfile, resp, fatal := request.AuthenticatedRequestDownload(ctx, opts.FeedURL, reqOpts...)
+	return feed, tmpfile, resp, fatal
+}
 
-	// Fetch
-	tmpfile, fetchResponse, fetchFatalError := request.AuthenticatedRequestDownload(ctx, opts.FeedURL, reqOpts...)
-
-	// Cleanup any temporary files
-	if tmpfile != "" {
-		defer os.Remove(tmpfile)
+// resultFromResponse seeds a Result from the download response metadata.
+func resultFromResponse(url string, resp request.FetchResponse) Result {
+	return Result{
+		URL:            url,
+		FetchError:     resp.FetchError,
+		ResponseCode:   resp.ResponseCode,
+		ResponseSize:   resp.ResponseSize,
+		ResponseSHA1:   resp.ResponseSHA1,
+		ResponseTimeMs: resp.ResponseTimeMs,
+		ResponseTtfbMs: resp.ResponseTtfbMs,
 	}
+}
 
-	// Setup result
-	result.FetchError = fetchResponse.FetchError
-	result.ResponseCode = fetchResponse.ResponseCode
-	result.ResponseSize = fetchResponse.ResponseSize
-	result.ResponseSHA1 = fetchResponse.ResponseSHA1
-	result.ResponseTimeMs = fetchResponse.ResponseTimeMs
-	result.ResponseTtfbMs = fetchResponse.ResponseTtfbMs
-	if fetchFatalError != nil {
-		// Fatal error
-		return result, fetchFatalError
+// uploadFile stores a local file at key in the configured storage, returning the
+// time spent. A no-op (0, nil) when storage, file, or key is empty.
+func uploadFile(ctx context.Context, storage, fn, key string) (int, error) {
+	if storage == "" || fn == "" || key == "" {
+		return 0, nil
 	}
-
-	// Fetch OK, validate
-	validationTime := time.Now()
-	newFile := false
-	uploadFile := ""
-	uploadDest := ""
-	if result.FetchError == nil {
-		vr, err := cb.ValidateResponse(ctx, atx, tmpfile, fetchResponse)
-		if err != nil {
-			return result, err
-		}
-		result.FetchError = vr.Error
-		result.Found = vr.Found
-		if !result.Found {
-			newFile = true
-			uploadFile = vr.UploadTmpfile
-			uploadDest = vr.UploadFilename
-		}
-		if vr.FeedVersionID.Valid {
-			result.FeedVersionID.Set(vr.FeedVersionID.Val)
-		}
+	t := time.Now()
+	store, err := request.GetStore(storage)
+	if err != nil {
+		return 0, err
 	}
-	validationDuration := time.Since(validationTime)
-
-	// Cleanup any other temporary files
-	if uploadFile != "" && uploadFile != tmpfile {
-		defer os.Remove(uploadFile)
+	if err := request.Upload(ctx, store, fn, key); err != nil {
+		return 0, err
 	}
+	return int(time.Since(t).Milliseconds()), nil
+}
 
-	// Validate OK, upload
-	uploadTime := time.Now()
-	if newFile && uploadFile != "" && opts.Storage != "" {
-		store, err := request.GetStore(opts.Storage)
-		if err != nil {
-			return result, err
-		}
-		if err := request.Upload(ctx, store, uploadFile, uploadDest); err != nil {
-			return result, err
-		}
-	}
-	uploadDuration := time.Since(uploadTime)
+// archiveKey builds the archive object key. The feed/url_type/date partitions let
+// query engines prune by those columns; the sha1 suffix keeps distinct messages at
+// distinct keys even when fetched within the same second.
+func archiveKey(onestopID, urlType, sha1 string, fetchedAt time.Time, ext string) string {
+	t := fetchedAt.UTC()
+	return fmt.Sprintf("feed=%s/url_type=%s/date=%s/%s-%s.%s",
+		onestopID, urlType, t.Format("2006-01-02"), t.Format("2006-01-02-15-04-05"), sha1, ext)
+}
 
-	// Prepare and save feed fetch record
+// recordFeedFetch writes the feed_fetch audit row for a completed attempt.
+func recordFeedFetch(ctx context.Context, fm feedmanager.FeedManager, feed *dmfr.Feed, opts Options, result Result, dur fetchDurations, storageKey string) error {
 	tlfetch := dmfr.FeedFetch{}
 	tlfetch.FeedID = feed.ID
 	tlfetch.URLType = opts.URLType
 	tlfetch.FetchedAt.Set(opts.FetchedAt)
-
-	// Save response details, even if local filesystem
+	if storageKey != "" {
+		tlfetch.StorageKey.Set(storageKey)
+	}
 	if result.ResponseCode > 0 {
 		tlfetch.ResponseCode.SetInt(result.ResponseCode)
 	}
@@ -169,12 +142,8 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 	tlfetch.ResponseTimeMs.SetInt(result.ResponseTimeMs)
 	tlfetch.ResponseTtfbMs.SetInt(result.ResponseTtfbMs)
 	tlfetch.ResponseSHA1.Set(result.ResponseSHA1)
-
-	// Save timing details
-	tlfetch.ValidationDurationMs.SetInt(int(validationDuration.Milliseconds()))
-	tlfetch.UploadDurationMs.SetInt(int(uploadDuration.Milliseconds()))
-
-	// tlfetch.FeedVersionID =
+	tlfetch.ValidationDurationMs.SetInt(dur.validationMs)
+	tlfetch.UploadDurationMs.SetInt(dur.uploadMs)
 	if !opts.HideURL {
 		tlfetch.URL = opts.FeedURL
 	}
@@ -187,8 +156,5 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options, cb FetchValidato
 		tlfetch.Success = false
 		tlfetch.FetchError.Set(result.FetchError.Error())
 	}
-	if _, err := atx.Insert(ctx, &tlfetch); err != nil {
-		return result, err
-	}
-	return result, nil
+	return fm.CreateFeedFetch(ctx, &tlfetch)
 }

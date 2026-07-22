@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// MergeCommand
+// MergeCommand merges multiple GTFS feeds into one.
 type MergeCommand struct {
 	Options     copier.Options
 	readerPaths []string

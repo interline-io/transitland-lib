@@ -13,7 +13,6 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
@@ -33,32 +32,26 @@ type RebuildStatsResult struct {
 
 // RebuildStatsCommand rebuilds feed version statistics
 type RebuildStatsCommand struct {
+	FVArgs  FeedVersionArgs
 	Options RebuildStatsOptions
 	Workers int
+	DryRun  bool
 	DBURL   string
-	FeedIDs []string
-	FVIDs   []string
-	FVSHA1  []string
 	Adapter tldb.Adapter // allow for mocks
-	// internal
-	fvidfile   string
-	fvsha1file string
 }
 
 func (cmd *RebuildStatsCommand) HelpDesc() (string, string) {
-	return "Rebuild statistics for feeds or specific feed versions", ""
+	return "Rebuild statistics for feed versions", "With no feed version ids given, rebuilds stats for all feed versions."
 }
 
 func (cmd *RebuildStatsCommand) HelpArgs() string {
-	return "[flags] [feeds...]"
+	return "[flags] [fvid...]"
 }
 
 func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
-	fl.StringSliceVar(&cmd.FVIDs, "fvid", nil, "Rebuild stats for specific feed version ID")
-	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
-	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
-	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
+	cmd.FVArgs.AddFlags(fl)
 	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; log the feed versions that would be rebuilt and exit")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
 	fl.StringVar(&cmd.Options.Storage, "storage", "", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
@@ -68,32 +61,11 @@ func (cmd *RebuildStatsCommand) AddFlags(fl *pflag.FlagSet) {
 
 // Parse command line flags
 func (cmd *RebuildStatsCommand) Parse(args []string) error {
-	fl := tlcli.NewNArgs(args)
-	cmd.FeedIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if cmd.fvidfile != "" {
-		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			if line != "" {
-				cmd.FVIDs = append(cmd.FVIDs, line)
-			}
-		}
-	}
-	if cmd.fvsha1file != "" {
-		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			if line != "" {
-				cmd.FVSHA1 = append(cmd.FVSHA1, line)
-			}
-		}
+	if err := cmd.FVArgs.Parse(args); err != nil {
+		return err
 	}
 	if err := stats.ValidateStatNames(cmd.Options.Stats); err != nil {
 		return err
@@ -103,6 +75,9 @@ func (cmd *RebuildStatsCommand) Parse(args []string) error {
 
 // Run this command
 func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -121,17 +96,15 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 		Where("feed_versions.sha1 <> ''").
 		Where("feed_versions.file <> ''").
 		OrderBy("feed_versions.id desc")
-	if len(cmd.FeedIDs) > 0 {
-		// Limit to specified feeds
-		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
+	sel := sq.Or{}
+	if len(cmd.FVArgs.FVIDs) > 0 {
+		sel = append(sel, sq.Eq{"feed_versions.id": cmd.FVArgs.FVIDs})
 	}
-	if len(cmd.FVIDs) > 0 {
-		// Explicitly specify fvids
-		q = q.Where(sq.Eq{"feed_versions.id": cmd.FVIDs})
+	if len(cmd.FVArgs.FVSHA1) > 0 {
+		sel = append(sel, sq.Eq{"feed_versions.sha1": cmd.FVArgs.FVSHA1})
 	}
-	if len(cmd.FVSHA1) > 0 {
-		// Explicitly specify fv sha1
-		q = q.Where(sq.Eq{"feed_versions.sha1": cmd.FVSHA1})
+	if len(sel) > 0 {
+		q = q.Where(sel)
 	}
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
@@ -142,7 +115,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if expected := explicitSelectorCount(cmd.FVIDs, cmd.FVSHA1); expected > len(qrs) {
+	if expected := explicitSelectorCount(cmd.FVArgs.FVIDs, cmd.FVArgs.FVSHA1); expected > len(qrs) {
 		log.For(ctx).Warn().
 			Int("requested", expected).
 			Int("processed", len(qrs)).
@@ -151,7 +124,7 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	}
 	///////////////
 	// Here we go
-	log.For(ctx).Info().Msgf("Rebuilding stats for %d feed versions", len(qrs))
+	log.For(ctx).Info().Msgf("rebuilding stats for %d feed versions", len(qrs))
 	jobs := make(chan RebuildStatsOptions, len(qrs))
 	results := make(chan RebuildStatsResult, len(qrs))
 	for _, fvid := range qrs {
@@ -168,31 +141,10 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	for w := 0; w < cmd.Workers; w++ {
 		wg.Add(1)
-		go rebuildStatsWorker(w, ctx, cmd.Adapter, false, jobs, results, &wg)
+		go rebuildStatsWorker(w, ctx, cmd.Adapter, cmd.DryRun, jobs, results, &wg)
 	}
 	wg.Wait()
 	return nil
-}
-
-// explicitSelectorCount returns the number of distinct explicit FV selectors
-// when exactly one of fvids/sha1s is set. When both or neither are set,
-// returns 0: with both, they are AND'd at the SQL level and "requested count"
-// isn't meaningful; with neither, no explicit selection was made.
-func explicitSelectorCount(fvids, sha1s []string) int {
-	var sel []string
-	switch {
-	case len(fvids) > 0 && len(sha1s) == 0:
-		sel = fvids
-	case len(sha1s) > 0 && len(fvids) == 0:
-		sel = sha1s
-	default:
-		return 0
-	}
-	seen := map[string]bool{}
-	for _, v := range sel {
-		seen[v] = true
-	}
-	return len(seen)
 }
 
 func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryrun bool, jobs <-chan RebuildStatsOptions, results chan<- RebuildStatsResult, wg *sync.WaitGroup) {
@@ -206,21 +158,27 @@ func rebuildStatsWorker(id int, ctx context.Context, adapter tldb.Adapter, dryru
 	for opts := range jobs {
 		q := qr{}
 		if err := adapter.Get(ctx, &q, "SELECT feed_versions.id as feed_version_id, feed_versions.feed_id as feed_id, feed_versions.sha1 as feed_version_sha1, current_feeds.onestop_id as feed_onestop_id FROM feed_versions INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id WHERE feed_versions.id = ?", opts.FeedVersionID); err != nil {
-			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
+			log.For(ctx).Error().Err(err).Int("feed_version_id", opts.FeedVersionID).Msg("could not get details")
 			continue
 		}
+		jobLog := log.For(ctx).With().
+			Str("feed_onestop_id", q.FeedOnestopID).
+			Int("feed_id", q.FeedID).
+			Str("feed_version_sha1", q.FeedVersionSHA1).
+			Int("feed_version_id", q.FeedVersionID).
+			Logger()
 		if dryrun {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			jobLog.Info().Msg("dry-run")
 			continue
 		}
-		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		jobLog.Info().Msg("begin")
 		t := time.Now()
 		result, err := rebuildStatsMain(ctx, adapter, opts)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
+			jobLog.Error().Err(err).Float64("duration", t2).Msg("critical failure, rolled back")
 		} else {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			jobLog.Info().Float64("duration", t2).Msg("success")
 		}
 		results <- result
 	}

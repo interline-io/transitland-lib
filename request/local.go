@@ -60,23 +60,29 @@ func (r *Local) ListKeys(ctx context.Context, prefix string) ([]string, error) {
 	return ret, nil
 }
 
-func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) (err error) {
+func (r Local) Upload(ctx context.Context, key string, uploadFile io.Reader) error {
 	outfn := filepath.Join(r.Directory, key)
 	log.Debug().Msgf("local store: uploading to key '%s', full path is '%s'", key, outfn)
 	// Check if directory exists
 	if _, err := mkdir(filepath.Dir(outfn), ""); err != nil {
 		return err
 	}
-	// Do not overwrite files
-	outf, err := os.OpenFile(outfn, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	// Write to a temp file in the same directory, then atomically rename into
+	// place: an interrupted write never leaves a corrupt object at the key, and
+	// the rename overwrites idempotently — required for content-addressed retries,
+	// where a previous failed upload must not block re-uploading the same key.
+	tmpf, err := os.CreateTemp(filepath.Dir(outfn), ".upload-*")
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if cerr := outf.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
-	_, err = io.Copy(outf, uploadFile)
-	return err
+	tmpName := tmpf.Name()
+	defer os.Remove(tmpName) // no-op once renamed away; cleans up on any failure
+	if _, err := io.Copy(tmpf, uploadFile); err != nil {
+		tmpf.Close()
+		return err
+	}
+	if err := tmpf.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, outfn)
 }

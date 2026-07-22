@@ -15,6 +15,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
@@ -31,11 +32,9 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/playground"
 	"github.com/interline-io/transitland-lib/server/rest"
+	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
-
-	// Import drivers
-	_ "github.com/interline-io/transitland-lib/tldb/postgres"
 
 	// Import routers
 	_ "github.com/interline-io/transitland-lib/server/directions/awsrouter"
@@ -44,6 +43,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/server/directions/valhalla"
 )
 
+// ServerCommand runs the transitland API server.
 type ServerCommand struct {
 	Timeout                 int
 	LongQueryDuration       int
@@ -156,6 +156,10 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 
 	var actionFinder model.Actions = &actions.Actions{}
 
+	// DB-backed seam for operations that aren't expressible through the Finder
+	// (entity CRUD, DB readers, fetch/import bookkeeping). See model.Config.
+	dbAdapter := postgres.NewPostgresAdapterFromDBX(db)
+
 	// Demo binary: authorization disabled. Production deployments should
 	// compose their own binary with a real Checker.
 	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
@@ -163,6 +167,8 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		Finder:                  dbFinder,
 		RTFinder:                rtFinder,
 		GbfsFinder:              gbfsFinder,
+		Adapter:                 dbAdapter,
+		FeedManager:             feedmanager.NewDBFeedManager(dbAdapter),
 		Checker:                 allowAllCheckerInstance,
 		Actions:                 actionFinder,
 		Secrets:                 cmd.secrets,
@@ -242,7 +248,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// Start server
 	timeOut := time.Duration(cmd.Timeout) * time.Second
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cmd.Port)
-	log.For(ctx).Info().Msgf("Listening on: %s", addr)
+	log.For(ctx).Info().Str("addr", addr).Msg("listening")
 	srv := &http.Server{
 		Handler:      http.TimeoutHandler(root, timeOut, "timeout"),
 		Addr:         addr,

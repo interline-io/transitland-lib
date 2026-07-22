@@ -21,13 +21,13 @@ type ServiceWindow struct {
 }
 
 type ServiceWindowCache struct {
-	db          sqlx.Ext
+	db          sqlx.ExtContext
 	lock        sync.Mutex
 	fvslWindows map[int]*ServiceWindow
 	tzCache     *tzcache.Cache[int]
 }
 
-func NewServiceWindowCache(db sqlx.Ext) *ServiceWindowCache {
+func NewServiceWindowCache(db sqlx.ExtContext) *ServiceWindowCache {
 	return &ServiceWindowCache{
 		db:          db,
 		fvslWindows: map[int]*ServiceWindow{},

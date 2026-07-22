@@ -2,7 +2,6 @@ package importer
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,8 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/internal/feedstate"
-	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -30,6 +28,8 @@ type Options struct {
 	// If any file exceeds its threshold, the import is considered failed.
 	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
 	ErrorThreshold map[string]float64
+	// AllowPartial imports partial feeds and skips the required minimum-entity check.
+	AllowPartial bool
 	copier.Options
 }
 
@@ -40,23 +40,15 @@ type Result struct {
 
 // ActivateFeedVersion sets the feed version as active and refreshes materialized tables
 func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error {
-	// Use the feedstate system to handle activation
-	manager := feedstate.NewManager(atx)
-
-	// Activate this feed version (will automatically replace any existing version for this feed)
-	if err := manager.ActivateFeedVersion(ctx, fvid); err != nil {
-		return fmt.Errorf("failed to activate feed version: %w", err)
-	}
-
-	log.For(ctx).Info().
-		Int("feed_version_id", fvid).
-		Msg("Successfully activated feed version")
-
-	return nil
+	return feedmanager.NewDBFeedManager(atx).ActivateFeedVersion(ctx, fvid)
 }
 
-// ImportFeedVersion create FVI and run Copier inside a Tx.
-func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) (Result, error) {
+// ImportFeedVersion creates the import record and runs the Copier. Pass
+// feedmanager.NewDBFeedManager(adapter) for the database backend.
+//
+// The copy is not transactional; a failure leaves the rows the copier wrote, hidden behind a
+// failed import record. Activation, when requested, runs afterwards in its own transaction.
+func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Options) (Result, error) {
 	// Get FV
 	importSource := opts.ImportSource
 	if importSource == "" {
@@ -64,98 +56,97 @@ func ImportFeedVersion(ctx context.Context, adapter tldb.Adapter, opts Options) 
 	}
 	fvi := dmfr.FeedVersionImport{InProgress: true, ImportSource: importSource}
 	fvi.FeedVersionID = opts.FeedVersionID
-	fv := dmfr.FeedVersion{}
-	fv.ID = opts.FeedVersionID
-	if err := adapter.Find(ctx, &fv); err != nil {
+	fv, err := fm.GetFeedVersion(ctx, opts.FeedVersionID)
+	if err != nil {
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// Check FVI
-	checkfviid := 0
-	if err := adapter.Get(ctx, &checkfviid, `SELECT id FROM feed_version_gtfs_imports WHERE feed_version_id = ?`, fv.ID); err == sql.ErrNoRows {
-		// ok
-	} else if err == nil {
-		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
-		return Result{FeedVersionImport: fvi}, nil
-	} else {
+	if existing, err := fm.GetFeedVersionImport(ctx, fv.ID); err != nil {
 		// Serious error
 		return Result{FeedVersionImport: fvi}, err
+	} else if existing != nil {
+		// An existing record -- including one left by a failed or crashed import -- blocks reimport
+		// until an unimport clears it.
+		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
+		return Result{FeedVersionImport: fvi}, nil
 	}
 	// Create FVI
-	if fviid, err := adapter.Insert(ctx, &fvi); err == nil {
-		// note: handle OK first
-		fvi.ID = fviid
-	} else {
+	if _, err := fm.CreateFeedVersionImport(ctx, &fvi); err != nil {
 		// Serious error
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
 		return Result{FeedVersionImport: fvi}, err
 	}
-	// Import
-	fviresult := dmfr.FeedVersionImport{} // keep result
-	errImport := adapter.Tx(func(atx tldb.Adapter) error {
-		var err error
-		fviresult, err = importFeedVersionTx(ctx, atx, fv, opts)
-		if err != nil {
-			return err
-		}
-		// Update route_stops, agency_geometries, etc...
-		log.For(ctx).Info().Msgf("Finalizing import")
-		if opts.Activate {
-			log.For(ctx).Info().Msgf("Activating feed version")
-			if err := ActivateFeedVersion(ctx, atx, fv.ID); err != nil {
-				return fmt.Errorf("error activating feed version: %s", err.Error())
-			}
-		}
-		// Update FVI with results, inside tx
-		fviresult.ID = fvi.ID
-		fviresult.CreatedAt = fvi.CreatedAt
-		fviresult.FeedVersionID = fv.ID
-		fviresult.ImportSource = fvi.ImportSource
-		fviresult.ImportLevel = 4
-		fviresult.Success = true
-		fviresult.InProgress = false
-		fviresult.ExceptionLog = ""
-		if err := atx.Update(ctx, &fviresult); err != nil {
-			// Serious error
-			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
-			return err
-		}
-		return err
-	})
-	// FVI error handling has to be outside of above tx, which will have aborted
+	// No enclosing transaction: one spanning the whole entity copy would pin the xmin horizon and
+	// stall autovacuum database-wide.
+	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
+
+	// Finalize under WithoutCancel: a cancelled caller ctx (commonly a client disconnect) must not
+	// strand the record in_progress, which would leave it hidden and refused by unimport.
+	finishCtx := context.WithoutCancel(ctx)
+
 	if errImport != nil {
+		// A failed record keeps the copied rows hidden until an unimport removes them.
 		fvi.Success = false
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
-		if err := adapter.Update(ctx, &fvi); err != nil {
-			// Serious error
+		if err := fm.UpdateFeedVersionImport(finishCtx, &fvi); err != nil {
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
 			return Result{FeedVersionImport: fvi}, err
 		}
 		return Result{FeedVersionImport: fvi}, errImport
 	}
+
+	// success and cleared in_progress is what makes the feed version's data visible.
+	log.For(ctx).Info().Msgf("Finalizing import")
+	fviresult.ID = fvi.ID
+	fviresult.CreatedAt = fvi.CreatedAt
+	fviresult.FeedVersionID = fv.ID
+	fviresult.ImportSource = fvi.ImportSource
+	fviresult.ImportLevel = 4
+	fviresult.Success = true
+	fviresult.InProgress = false
+	fviresult.ExceptionLog = ""
+	if err := fm.UpdateFeedVersionImport(finishCtx, &fviresult); err != nil {
+		// Finalize did not persist: the record is still in_progress and hidden, so report that
+		// state (needs an unimport) rather than the success we failed to write.
+		log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
+		fviresult.Success = false
+		fviresult.InProgress = true
+		return Result{FeedVersionImport: fviresult}, err
+	}
+
+	// Activation runs in its own transaction: a failure leaves the feed version imported but not
+	// active, rather than undoing a good import.
+	if opts.Activate {
+		log.For(ctx).Info().Msgf("Activating feed version")
+		if err := fm.ActivateFeedVersion(ctx, fv.ID); err != nil {
+			return Result{FeedVersionImport: fviresult}, fmt.Errorf("error activating feed version: %w", err)
+		}
+	}
 	return Result{FeedVersionImport: fviresult}, nil
 }
 
-// importFeedVersion .
-func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+type canSetAllowPartial interface {
+	SetAllowPartial(bool)
+}
+
+// importFeedVersion runs the Copier from the feed version's reader into the entity sink,
+// returning the import counts.
+func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader
-	tladapter, err := tlcsv.NewStoreAdapter(ctx, opts.Storage, fv.File, fv.Fragment.Val)
+	reader, err := fm.OpenReader(ctx, &fv, opts.Storage)
 	if err != nil {
 		return fvi, err
 	}
-	reader, err := tlcsv.NewReaderFromAdapter(tladapter)
-	if err != nil {
-		return fvi, err
+	if r, ok := reader.(canSetAllowPartial); ok {
+		r.SetAllowPartial(opts.AllowPartial)
 	}
 	if err := reader.Open(); err != nil {
 		return fvi, err
 	}
 	defer reader.Close()
-
-	// Get writer with existing tx
-	writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
 
 	// Non-settable options
 	opts.Options.AllowEntityErrors = false
@@ -167,7 +158,7 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 	fvi.InProgress = false
 
 	// Go
-	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, writer, opts.Options)
+	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, fm.EntityWriter(fv.ID), opts.Options)
 	if cpErr != nil {
 		return fvi, cpErr
 	}
@@ -196,24 +187,26 @@ func importFeedVersionTx(ctx context.Context, atx tldb.Adapter, fv dmfr.FeedVers
 		}
 	}
 
-	// Check required files have at least minimum entities
-	requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
-	minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
-	if !minEntitiesResult.OK {
-		var failedFiles []string
-		for fn, detail := range minEntitiesResult.Details {
-			if !detail.OK {
-				log.For(ctx).Error().Str("filename", fn).Int("total_count", detail.TotalCount).Int("required", detail.Required).Msg("file did not meet required minimum entities")
-				failedFiles = append(failedFiles, fn)
+	// Check required files have at least minimum entities (skipped for partial feeds).
+	if !opts.AllowPartial {
+		requiredMinEntities := map[string]int{"agency.txt": 1, "routes.txt": 1}
+		minEntitiesResult := cpResult.CheckRequiredMinEntities(requiredMinEntities)
+		if !minEntitiesResult.OK {
+			var failedFiles []string
+			for fn, detail := range minEntitiesResult.Details {
+				if !detail.OK {
+					log.For(ctx).Error().Str("filename", fn).Int("total_count", detail.TotalCount).Int("required", detail.Required).Msg("file did not meet required minimum entities")
+					failedFiles = append(failedFiles, fn)
+				}
 			}
+			sort.Strings(failedFiles)
+			var errMsgs []string
+			for _, fn := range failedFiles {
+				detail := minEntitiesResult.Details[fn]
+				errMsgs = append(errMsgs, fmt.Sprintf("%s: %d entities (required: %d)", fn, detail.TotalCount, detail.Required))
+			}
+			return fvi, fmt.Errorf("required minimum entities not met: %s", strings.Join(errMsgs, "; "))
 		}
-		sort.Strings(failedFiles)
-		var errMsgs []string
-		for _, fn := range failedFiles {
-			detail := minEntitiesResult.Details[fn]
-			errMsgs = append(errMsgs, fmt.Sprintf("%s: %d entities (required: %d)", fn, detail.TotalCount, detail.Required))
-		}
-		return fvi, fmt.Errorf("required minimum entities not met: %s", strings.Join(errMsgs, "; "))
 	}
 
 	// Save feed version import

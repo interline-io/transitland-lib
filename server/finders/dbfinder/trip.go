@@ -87,6 +87,42 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 	}), nil
 }
 
+func (f *Finder) TripsByShapeIDs(ctx context.Context, limit *int, where *model.TripFilter, keys []model.FVPair) ([][]*model.Trip, error) {
+	var ents []*model.Trip
+	// Group by fvid so the per-feed-version service window can be applied.
+	groups := map[int][]int{}
+	for _, key := range keys {
+		groups[key.FeedVersionID] = append(groups[key.FeedVersionID], key.EntityID)
+	}
+	for fvid, entityIds := range groups {
+		fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
+		if err != nil {
+			return nil, err
+		}
+		inner, err := tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		if err != nil {
+			return nil, err
+		}
+		if err := dbutil.Select(ctx,
+			f.db,
+			lateralWrap(
+				inner,
+				"gtfs_shapes",
+				"id",
+				"gtfs_trips",
+				"shape_id",
+				entityIds,
+			),
+			&ents,
+		); err != nil {
+			return nil, err
+		}
+	}
+	return arrangeGroup(keys, ents, func(ent *model.Trip) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.ShapeID.Int()}
+	}), nil
+}
+
 func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *model.TripFilter, keys []int) ([][]*model.Trip, error) {
 	var ents []*model.Trip
 	for _, fvid := range keys {
@@ -224,7 +260,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		q = licenseFilter(where.License, q)
 	}
 	if active {
-		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_trips.feed_version_id")
+		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_trips.feed_version_id")
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_trips.id", ids))
@@ -240,6 +276,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 	}
 
 	// Handle permissions
+	q = joinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q, nil
 }

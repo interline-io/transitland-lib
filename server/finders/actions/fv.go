@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io"
 	"net/url"
-	"os"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -16,7 +16,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/interline-io/transitland-lib/validator"
 )
@@ -41,8 +40,7 @@ func FeedVersionImport(ctx context.Context, fvid int) (*model.FeedVersionImportR
 			SimplifyShapes:             5.0,
 		},
 	}
-	db := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
-	fr, fe := importer.ImportFeedVersion(ctx, db, opts)
+	fr, fe := importer.ImportFeedVersion(ctx, cfg.FeedManager, opts)
 	if fe != nil {
 		return nil, fe
 	}
@@ -57,8 +55,7 @@ func FeedVersionUnimport(ctx context.Context, fvid int) (*model.FeedVersionUnimp
 	if err := checkFeedEdit(ctx, fvid); err != nil {
 		return nil, err
 	}
-	db := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
-	if err := db.Tx(func(atx tldb.Adapter) error {
+	if err := cfg.Adapter.Tx(func(atx tldb.Adapter) error {
 		return importer.UnimportFeedVersion(ctx, atx, fvid, nil)
 	}); err != nil {
 		return nil, err
@@ -79,8 +76,7 @@ func FeedVersionUpdate(ctx context.Context, values model.FeedVersionSetInput) (i
 		return 0, err
 	}
 
-	db := postgres.NewPostgresAdapterFromDBX(cfg.Finder.DBX())
-	err := db.Tx(func(atx tldb.Adapter) error {
+	err := cfg.Adapter.Tx(func(atx tldb.Adapter) error {
 		fv := dmfr.FeedVersion{}
 		fv.ID = fvid
 		var cols []string
@@ -133,18 +129,24 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 	result := model.ValidationReport{}
 	var reader adapters.Reader
 	if src != nil {
-		// Prepare reader
-		var err error
-		tmpfile, err := os.CreateTemp("", "validator-upload")
+		// Read the upload into memory and read it as a zip directly — no temp file,
+		// so this works where there is no usable filesystem (e.g. js/wasm). This
+		// buffers the whole upload in memory; a future enhancement could spill to a
+		// temp file when a filesystem IS available, to cut memory in server processes.
+		b, err := io.ReadAll(src)
 		if err != nil {
 			// This should result in a failed request
 			return nil, err
 		}
-		io.Copy(tmpfile, src)
-		tmpfile.Close()
-		defer os.Remove(tmpfile.Name())
-		reader, err = tlcsv.NewReader(tmpfile.Name())
+		za, err := tlcsv.NewZipReaderAdapterFromBytes(b)
 		if err != nil {
+			log.For(ctx).Error().Err(err).Msg("validate: could not open uploaded zip")
+			result.FailureReason = strptr("Could not read file")
+			return &result, nil
+		}
+		reader, err = tlcsv.NewReaderFromAdapter(za)
+		if err != nil {
+			log.For(ctx).Error().Err(err).Msg("validate: could not create reader")
 			result.FailureReason = strptr("Could not read file")
 			return &result, nil
 		}
@@ -165,6 +167,7 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 	}
 
 	if err := reader.Open(); err != nil {
+		log.For(ctx).Error().Err(err).Msg("validate: could not open feed reader")
 		result.FailureReason = strptr("Could not read file")
 		return &result, nil
 	}
@@ -190,11 +193,13 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 
 	vt, err := validator.NewValidator(reader, opts)
 	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("validate: could not create validator")
 		result.FailureReason = strptr("Could not validate file")
 		return &result, nil
 	}
 	r, err := vt.Validate(ctx)
 	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("validate: validation failed")
 		result.FailureReason = strptr("Could not validate file")
 		return &result, nil
 	}

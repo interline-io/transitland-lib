@@ -19,7 +19,14 @@ type s2D = [][]string
 // Reader reads GTFS entities from CSV files.
 type Reader struct {
 	Adapter
+	allowPartial bool
 }
+
+// SetAllowPartial enables partial mode: read what we can, skipping the required-files check.
+func (reader *Reader) SetAllowPartial(v bool) { reader.allowPartial = v }
+
+// GetAllowPartial reports whether partial mode is enabled.
+func (reader *Reader) GetAllowPartial() bool { return reader.allowPartial }
 
 func NewReaderFromAdapter(a Adapter) (*Reader, error) {
 	return &Reader{Adapter: a}, nil
@@ -148,6 +155,16 @@ func (reader *Reader) ValidateStructure() []error {
 			fileerrs = append(fileerrs, causes.NewFileRequiredError(efn))
 		}
 		return fileerrs
+	}
+	// In partial mode, no file is required: validate the ones that are present and
+	// skip the rest. Everything else (headers, columns, duplicates) still applies.
+	if reader.allowPartial {
+		for _, ent := range []tt.Entity{&gtfs.Agency{}, &gtfs.Route{}, &gtfs.Stop{}, &gtfs.Trip{}, &gtfs.StopTime{}, &gtfs.Calendar{}, &gtfs.CalendarDate{}} {
+			if reader.ContainsFile(ent.Filename()) {
+				allerrs = append(allerrs, check(ent, false)...)
+			}
+		}
+		return allerrs
 	}
 	// stops.txt is conditionally required. It may be omitted entirely when the
 	// feed provides location-based service via locations.geojson or

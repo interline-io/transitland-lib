@@ -94,6 +94,7 @@ type routeGeometryLoaderParam struct {
 type tripLoaderParam struct {
 	FeedVersionID int
 	RouteID       int
+	ShapeID       int
 	Limit         *int
 	ServiceWindow *model.ServiceWindow
 	Where         *model.TripFilter

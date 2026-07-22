@@ -50,10 +50,8 @@ func init() {
 		tlcli.CobraHelper(&cmds.ImportCommand{}, pc, "import"),
 		tlcli.CobraHelper(&cmds.ChecksumCommand{}, pc, "checksum"),
 		tlcli.CobraHelper(&cmds.MergeCommand{}, pc, "merge"),
-		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "rebuild-stats"),
 		tlcli.CobraHelper(&cmds.SyncCommand{}, pc, "sync"),
-		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
-		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
+
 		tlcli.CobraHelper(&cmds.ValidatorCommand{}, pc, "validate"),
 		tlcli.CobraHelper(&cmds.RTConvertCommand{}, pc, "rt-convert"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
@@ -62,7 +60,13 @@ func init() {
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		tlcli.CobraHelper(&postgresSchema.Command{}, pc, "dbmigrate"),
 		tlcli.CobraHelper(&neSchema.Command{}, pc, "dbmigrate-natural-earth"),
+
+		tlcli.CobraHelper(&cmds.RebuildStatsCommand{}, pc, "stats-rebuild"),
+		tlcli.CobraHelper(&cmds.StatsRemoveOnestopIDsCommand{}, pc, "stats-remove-onestop-ids"),
+		tlcli.CobraHelper(&cmds.DeleteCommand{}, pc, "delete"),
+		tlcli.CobraHelper(&cmds.UnimportCommand{}, pc, "unimport"),
 		tlcli.CobraHelper(&cmds.FeedStateManagerCommand{}, pc, "feed-state"),
+
 		cmds.NewDmfrCommand(pc),
 		dmfrFormatCommand,
 		dmfrLintCommand,

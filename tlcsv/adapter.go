@@ -18,7 +18,6 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
-	"github.com/interline-io/transitland-lib/causes"
 	"github.com/interline-io/transitland-lib/internal/tags"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/twpayne/go-geom/encoding/geojson"
@@ -256,24 +255,7 @@ func (adapter *ZipAdapter) OpenFile(filename string, cb func(io.Reader)) error {
 		return err
 	}
 	defer r.Close()
-	var inFile *zip.File
-	for _, f := range r.File {
-		if f.Name != filepath.Join(adapter.internalPrefix, filename) {
-			continue
-		}
-		inFile = f
-	}
-	if inFile == nil {
-		return causes.NewFileNotPresentError(filename)
-	}
-	//
-	in, err := inFile.Open()
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	cb(in)
-	return nil
+	return openFileInZip(r.File, adapter.internalPrefix, filename, cb)
 }
 
 // ReadRows opens the specified file and runs the callback on each Row. An error is returned if the file cannot be read.
@@ -308,32 +290,7 @@ func (adapter *ZipAdapter) DirSHA1() (string, error) {
 		return "", err
 	}
 	defer r.Close()
-	// Sort the files
-	sort.Slice(r.File, func(i, j int) bool { return r.File[i].Name < r.File[j].Name })
-	// Generate SHA1
-	h := sha1.New()
-	for _, zf := range r.File {
-		fi := zf.FileInfo()
-		fn := zf.Name
-		if adapter.internalPrefix != "" {
-			fn = strings.Replace(zf.Name, adapter.internalPrefix+"/", "", 1) // remove internalPrefix
-		}
-		// Ignore directories, subdirs, dot files
-		if fi.IsDir() || strings.HasPrefix(fn, ".") || strings.Contains(fn, "/") {
-			continue
-		}
-		// Only generate stats for files with lowercase names that end with .txt
-		if fi.Name() != strings.ToLower(fi.Name()) || !strings.HasSuffix(fi.Name(), ".txt") {
-			continue
-		}
-		f, err := zf.Open()
-		if err != nil {
-			return "", err
-		}
-		defer f.Close()
-		io.Copy(h, f)
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return dirSHA1InZip(r.File, adapter.internalPrefix)
 }
 
 // FileInfos returns a list of os.FileInfo for all .txt files.
@@ -364,28 +321,8 @@ func (adapter *ZipAdapter) findInternalPrefix() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	prefixes := []string{}
 	defer r.Close()
-	for _, zf := range r.File {
-		fi := zf.FileInfo()
-		fn := zf.Name
-		if fi.IsDir() || strings.HasPrefix(fn, ".") {
-			continue
-		}
-		if filepath.Base(fn) == "stops.txt" {
-			prefixes = append(prefixes, filepath.Dir(fn))
-		}
-	}
-	if len(prefixes) > 1 {
-		return "", errors.New("more than one valid prefix found")
-	} else if len(prefixes) == 1 {
-		pfx := prefixes[0]
-		if pfx == "." {
-			pfx = ""
-		}
-		return pfx, nil
-	}
-	return "", nil
+	return findInternalPrefixInZip(r.File)
 }
 
 /////////////////////

@@ -5,9 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -53,7 +56,7 @@ func TestRTFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := RTFetch(ctx, atx, RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
+				fr, err := RTFetch(ctx, feedmanager.NewDBFeedManager(atx), RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -75,6 +78,16 @@ func TestRTFetch(t *testing.T) {
 				testdb.ShouldGet(t, atx, &tlff, `SELECT * FROM feed_fetches WHERE feed_id = ? ORDER BY id DESC LIMIT 1`, feed.ID)
 				assert.Equal(t, tc.responseCode, tlff.ResponseCode.Int(), "did not get expected feed_fetch response code")
 				assert.Equal(t, !tc.responseError, tlff.Success, "did not get expected feed_fetch success")
+				// 200 archives to the partitioned key (even on parse failure); 404 doesn't.
+				if tc.responseCode == 200 {
+					assert.True(t, strings.HasPrefix(tlff.StorageKey.Val, "feed="), "storage_key should be a partitioned key, got %q", tlff.StorageKey.Val)
+					assert.Contains(t, tlff.StorageKey.Val, tlff.ResponseSHA1.Val, "storage_key should embed the response sha1")
+					if _, err := os.Stat(filepath.Join(tmpdir, tlff.StorageKey.Val)); err != nil {
+						t.Errorf("archived object not found at storage_key %q: %v", tlff.StorageKey.Val, err)
+					}
+				} else {
+					assert.Empty(t, tlff.StorageKey.Val, "expected no storage_key when nothing was archived")
+				}
 				return nil
 			})
 		})

@@ -110,13 +110,13 @@ func feedSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int,
 		if where.Bbox != nil || where.Within != nil || where.Near != nil {
 			q = q.
 				Join("feed_states fs_geom on fs_geom.feed_id = current_feeds.id").
-				Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = fs_geom.feed_version_id")
+				Join("tl_feed_version_geometries fv_geoms on fv_geoms.feed_version_id = fs_geom.materialized_feed_version_id")
 			// Optional secondary filter on precomputed stop geohash cells.
 			// Gated on UseGeohashFilter; operators are expected to run the
 			// migration and backfill before flipping the flag on, so FVs
 			// without cells are treated as not matching.
 			useGeohashFilter := model.ForContext(ctx).UseGeohashFilter
-			fvCorrelation := sq.Expr("tl_feed_version_geohashes.feed_version_id = fs_geom.feed_version_id")
+			fvCorrelation := sq.Expr("tl_feed_version_geohashes.feed_version_id = fs_geom.materialized_feed_version_id")
 			if where.Bbox != nil {
 				b := where.Bbox
 				q = q.Where("ST_Intersects(fv_geoms.geometry, ST_MakeEnvelope(?,?,?,?,4326))", b.MinLon, b.MinLat, b.MaxLon, b.MaxLat)

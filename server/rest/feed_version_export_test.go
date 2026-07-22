@@ -36,7 +36,7 @@ func TestFeedVersionExportRequest(t *testing.T) {
 		ID   int
 	}
 	var fvs []fvQuery
-	if err := dbutil.Select(ctx, cfg.Finder.DBX(), sq.StatementBuilder.Select("id", "sha1").From("feed_versions"), &fvs); err != nil {
+	if err := dbutil.Select(ctx, cfg.Adapter.DBX(), sq.StatementBuilder.Select("id", "sha1").From("feed_versions"), &fvs); err != nil {
 		t.Fatalf("failed to query feed versions: %v", err)
 	}
 	fvidBySha1 := map[string]int{}

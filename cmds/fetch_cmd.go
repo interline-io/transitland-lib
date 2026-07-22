@@ -11,6 +11,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcli"
@@ -80,6 +81,7 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.AllowHTTPFetchUnfiltered, "allow-http-fetch-unfiltered", false, "Disable SSRF protection for http(s) fetches; allow private/loopback/metadata IPs (use only for local CLI runs)")
 	fl.BoolVar(&cmd.Options.SaveValidationReport, "validation-report", false, "Save validation report")
 	fl.BoolVar(&cmd.Options.StrictValidation, "strict", false, "Reject feeds with validation errors")
+	fl.BoolVar(&cmd.Options.AllowPartial, "allow-partial", false, "Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)")
 	fl.StringVar(&cmd.Options.FeedURL, "feed-url", "", "Manually fetch a single URL; you must specify exactly one feed_id")
 	fl.StringVar(&cmd.Options.Storage, "storage", ".", "Storage destination; can be s3://... az://... or path to a directory")
 	fl.StringVar(&cmd.Options.ValidationReportStorage, "validation-report-storage", "", "Storage path for saving validation report JSON")
@@ -236,7 +238,7 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 
 	///////////////
 	// Here we go
-	log.For(ctx).Info().Msgf("Fetching %d feeds", len(toFetch))
+	log.For(ctx).Info().Msgf("fetching %d feeds", len(toFetch))
 	jobs := make(chan fetchJob, len(toFetch))
 	results := make(chan FetchCommandResult, len(toFetch))
 	for _, opts := range toFetch {
@@ -275,9 +277,9 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 			fetchNew++
 		}
 	}
-	log.For(ctx).Info().Msgf("Existing: %d New: %d Errors: %d", fetchFound, fetchNew, fetchErrs)
+	log.For(ctx).Info().Int("existing", fetchFound).Int("new", fetchNew).Int("errors", fetchErrs).Msg("fetch complete")
 	if fatalError != nil {
-		log.For(ctx).Info().Msgf("Exiting with error because at least one fetch had fatal error: %s", fatalError.Error())
+		log.For(ctx).Error().Err(fatalError).Msg("exiting; at least one fetch had fatal error")
 		return fatalError
 	}
 	return nil
@@ -296,21 +298,17 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 			Str("url", job.FeedURL).
 			Logger()
 
-		jobLog.Info().Msg("start")
+		jobLog.Info().Msg("begin")
 		if DryRun {
 			jobLog.Info().Msg("dry-run")
 			continue
 		}
 
-		// Fetch
+		// Fetch — StaticFetch owns its own transaction (around the post-upload db
+		// writes); pass the base adapter, not a tx-bound one.
 		jobCtx := log.WithLogger(ctx, jobLog)
-		var result fetch.StaticFetchResult
 		t := time.Now()
-		fatalError := adapter.Tx(func(atx tldb.Adapter) error {
-			var fatalError error
-			result, fatalError = fetch.StaticFetch(jobCtx, atx, job.StaticFetchOptions)
-			return fatalError
-		})
+		result, fatalError := fetch.StaticFetch(jobCtx, feedmanager.NewDBFeedManager(adapter), job.StaticFetchOptions)
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 
 		// Log result
@@ -322,13 +320,13 @@ func fetchWorker(ctx context.Context, adapter tldb.Adapter, DryRun bool, jobs <-
 		} else if fv != nil && result.Found {
 			jobLog.Info().
 				Float64("duration", t2).
-				Str("sha1", fv.SHA1).
+				Str("feed_version_sha1", fv.SHA1).
 				Int("feed_version_id", fv.ID).
 				Msg("found existing")
 		} else if fv != nil {
 			jobLog.Info().
 				Float64("duration", t2).
-				Str("sha1", fv.SHA1).
+				Str("feed_version_sha1", fv.SHA1).
 				Int("feed_version_id", fv.ID).
 				Msg("new feed version")
 		} else {

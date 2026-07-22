@@ -74,8 +74,7 @@
           "enum": [
             "json",
             "geojson",
-            "geojsonl",
-            "png"
+            "geojsonl"
           ],
           "type": "string"
         }
@@ -5761,8 +5760,8 @@
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=png",
-                "url": "?format=png\u0026feed_onestop_id=f-dr5r7-nycdotsiferry"
+                "description": "format=geojson",
+                "url": "?format=geojson\u0026feed_onestop_id=f-dr5r7-nycdotsiferry"
               }
             ]
           },

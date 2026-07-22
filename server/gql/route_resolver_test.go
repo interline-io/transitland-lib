@@ -69,6 +69,29 @@ func TestRouteResolver(t *testing.T) {
 			selectExpect: []string{"false"},
 		},
 		{
+			// Migration guard: geometry is reconstructed from tl_route_representative_shapes,
+			// so pin the structural invariants on a reviewed shape (Caltrain Bu-130). These
+			// hold regardless of the source table and outlive the tl_route_geometries drop.
+			name:  "geometry invariants (Bu-130)",
+			query: `query { routes(where:{route_id:"Bu-130"}) { geometries { generated geometry combined_geometry } } }`,
+			f: func(t *testing.T, jj string) {
+				g := gjson.Get(jj, "routes.0.geometries.0")
+				// combined_geometry is a MultiLineString with one linestring per representative shape.
+				assert.Equal(t, "MultiLineString", g.Get("combined_geometry.type").String())
+				assert.Len(t, g.Get("combined_geometry.coordinates").Array(), 4, "combined_geometry linestring count")
+				// primary geometry is the rank-0 line: a LineString equal to combined_geometry[0].
+				assert.Equal(t, "LineString", g.Get("geometry.type").String())
+				assert.Equal(t, g.Get("combined_geometry.coordinates.0").Raw, g.Get("geometry.coordinates").Raw, "primary geometry == combined_geometry[0]")
+				assert.False(t, g.Get("generated").Bool())
+				// shape_id isn't exposed via the resolver, so pin the rank-0 line's point
+				// count and first vertex to lock the actual shape it resolves to.
+				pts := g.Get("geometry.coordinates").Array()
+				assert.Len(t, pts, 382, "primary geometry point count")
+				assert.InDelta(t, -121.903170, pts[0].Array()[0].Float(), 1e-5, "first vertex lon")
+				assert.InDelta(t, 37.330157, pts[0].Array()[1].Float(), 1e-5, "first vertex lat")
+			},
+		},
+		{
 			name:         "route_stop_buffer stop_points 10m",
 			query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
 			vars:         vars,
@@ -276,7 +299,7 @@ func TestRouteResolver_Location(t *testing.T) {
 	// This should put CT stops (Caltrain San Jose area) much closer than HA stops (Florida)
 	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
 	var testRouteId int
-	if err := cfg.Finder.DBX().
+	if err := cfg.Adapter.DBX().
 		QueryRowx(`select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = $1 and route_id = $2`, "HA", "96").
 		Scan(&testRouteId); err != nil {
 		t.Errorf("could not get route ID for test: %s", err.Error())

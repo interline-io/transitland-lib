@@ -23,9 +23,10 @@ type JobArtifact struct {
 	UserID      string `db:"user_id" json:"-"`
 	Filename    string `db:"filename" json:"filename"`
 	ContentType string `db:"content_type" json:"content_type"`
-	SizeBytes   int64  `db:"size_bytes" json:"size_bytes"`
-	SHA1        string `db:"sha1" json:"sha1,omitempty"`
-	StorageKey  string `db:"storage_key" json:"-"`
+	SizeBytes   int64   `db:"size_bytes" json:"size_bytes"`
+	SHA1        string  `db:"sha1" json:"sha1,omitempty"`
+	StorageKey  string  `db:"storage_key" json:"-"`
+	DeletedAt   tt.Time `db:"deleted_at" json:"-"`
 	tt.DatabaseEntity
 	tt.Timestamps
 }
@@ -65,4 +66,11 @@ type ArtifactReader interface {
 type ArtifactStoreFactory interface {
 	ArtifactReader
 	For(jobID, userID, kind string) ArtifactStore
+}
+
+// ArtifactDeleter is the optional capability to soft-delete an artifact: the row
+// is flagged (deleted_at) and hidden from reads, but its stored bytes are left for
+// a later blob-culling pass. Callers type-assert an ArtifactReader to it.
+type ArtifactDeleter interface {
+	SoftDelete(ctx context.Context, artifactID int) error
 }
