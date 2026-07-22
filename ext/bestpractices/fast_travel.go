@@ -119,9 +119,9 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		}
 		dt := trip.StopTimes[i].ArrivalTime.Int() - t.Int()
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
-		// Two distinct stops sharing an arrival time give dt == 0 and an infinite
-		// speed (dx > 0), which exceeds maxspeed. NaN (dx == 0) and negative (dt < 0)
-		// speeds compare false, so those edges are skipped.
+		// A shared arrival time between distinct stops gives dt == 0 and, with
+		// dx > 0, an infinite speed that exceeds maxspeed. Degenerate speeds --
+		// zero, NaN (0/0), or negative (dt < 0) -- all compare false and are skipped.
 		if speed > maxspeed {
 			errs = append(errs, newFastTravelError(trip.TripID.Val, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
 		}
