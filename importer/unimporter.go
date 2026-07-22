@@ -93,6 +93,12 @@ func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTable
 		return err
 	}
 
+	// Validation report child rows are keyed on the report, not feed_version_id, so
+	// the generic table loop cannot reach them. Delete them before tl_validation_reports.
+	if err := deleteFeedVersionValidationReports(ctx, atx, id); err != nil {
+		return err
+	}
+
 	// Required tables
 	fvt := dmfr.GetFeedVersionTables()
 	tables := []string{}
@@ -116,4 +122,33 @@ func DeleteFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTable
 	}
 	return nil
 
+}
+
+// deleteFeedVersionValidationReports removes the tl_validation_reports subtree for a
+// feed version. Its child and grandchild tables are keyed on the report id, not
+// feed_version_id, and their foreign keys are NOT DEFERRABLE, so they must be deleted
+// through the parent, deepest first. tl_validation_reports itself is keyed on
+// feed_version_id and is removed by the caller's generic table loop.
+func deleteFeedVersionValidationReports(ctx context.Context, atx tldb.Adapter, id int) error {
+	// error_exemplars -> error_groups -> reports
+	if _, err := atx.Sqrl().
+		Delete("tl_validation_report_error_exemplars").
+		Where("validation_report_error_group_id IN (SELECT id FROM tl_validation_report_error_groups WHERE validation_report_id IN (SELECT id FROM tl_validation_reports WHERE feed_version_id = ?))", id).
+		ExecContext(ctx); err != nil {
+		return err
+	}
+	// The remaining children reference the report directly.
+	for _, table := range []string{
+		"tl_validation_report_error_groups",
+		"tl_validation_trip_update_stats",
+		"tl_validation_vehicle_position_stats",
+	} {
+		if _, err := atx.Sqrl().
+			Delete(table).
+			Where("validation_report_id IN (SELECT id FROM tl_validation_reports WHERE feed_version_id = ?)", id).
+			ExecContext(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
