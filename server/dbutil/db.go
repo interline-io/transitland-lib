@@ -77,15 +77,11 @@ func WithQueryLogger(db querylogger.Ext, trace bool, longQueryDuration time.Dura
 }
 
 // Select runs a query and reads results into dest.
-func Select(ctx context.Context, db sqlx.Ext, q sq.SelectBuilder, dest interface{}) error {
+func Select(ctx context.Context, db sqlx.ExtContext, q sq.SelectBuilder, dest interface{}) error {
 	q = q.PlaceholderFormat(sq.Dollar)
 	qstr, qargs, err := q.ToSql()
 	if err == nil {
-		if a, ok := db.(sqlx.QueryerContext); ok {
-			err = sqlx.SelectContext(ctx, a, dest, qstr, qargs...)
-		} else {
-			err = sqlx.Select(db, dest, qstr, qargs...)
-		}
+		err = sqlx.SelectContext(ctx, db, dest, qstr, qargs...)
 	}
 	if ctx.Err() == context.Canceled {
 		log.Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query canceled")
@@ -96,15 +92,11 @@ func Select(ctx context.Context, db sqlx.Ext, q sq.SelectBuilder, dest interface
 }
 
 // Get runs a query and reads results into dest.
-func Get(ctx context.Context, db sqlx.Ext, q sq.SelectBuilder, dest interface{}) error {
+func Get(ctx context.Context, db sqlx.ExtContext, q sq.SelectBuilder, dest interface{}) error {
 	q = q.PlaceholderFormat(sq.Dollar)
 	qstr, qargs, err := q.ToSql()
 	if err == nil {
-		if a, ok := db.(sqlx.QueryerContext); ok {
-			err = sqlx.GetContext(ctx, a, dest, qstr, qargs...)
-		} else {
-			err = sqlx.Get(db, dest, qstr, qargs...)
-		}
+		err = sqlx.GetContext(ctx, db, dest, qstr, qargs...)
 	}
 	if ctx.Err() == context.Canceled {
 		log.Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query canceled")
@@ -115,15 +107,11 @@ func Get(ctx context.Context, db sqlx.Ext, q sq.SelectBuilder, dest interface{})
 }
 
 // Update runs an update statement.
-func Update(ctx context.Context, db sqlx.Ext, q sq.UpdateBuilder) error {
+func Update(ctx context.Context, db sqlx.ExtContext, q sq.UpdateBuilder) error {
 	q = q.PlaceholderFormat(sq.Dollar)
 	qstr, qargs, err := q.ToSql()
 	if err == nil {
-		if a, ok := db.(sqlx.ExecerContext); ok {
-			_, err = a.ExecContext(ctx, qstr, qargs...)
-		} else {
-			_, err = db.Exec(qstr, qargs...)
-		}
+		_, err = db.ExecContext(ctx, qstr, qargs...)
 	}
 	if ctx.Err() == context.Canceled {
 		log.Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update canceled")
