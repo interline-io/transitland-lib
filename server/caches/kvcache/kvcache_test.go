@@ -36,12 +36,14 @@ func (c *testClock) Advance(d time.Duration) {
 	c.t = c.t.Add(d)
 }
 
-// recordingStore wraps a Store and records keys and operation counts.
+// recordingStore wraps a Store, records keys and operation counts, and
+// honors context cancellation on Set so timeout behavior is observable.
 type recordingStore struct {
 	kvcache.Store
-	lock    sync.Mutex
-	setKeys []string
-	gets    int
+	lock      sync.Mutex
+	setKeys   []string
+	gets      int
+	getMultis int
 }
 
 func (s *recordingStore) Get(ctx context.Context, key string) ([]byte, bool, error) {
@@ -51,7 +53,17 @@ func (s *recordingStore) Get(ctx context.Context, key string) ([]byte, bool, err
 	return s.Store.Get(ctx, key)
 }
 
+func (s *recordingStore) GetMulti(ctx context.Context, keys []string) (map[string][]byte, error) {
+	s.lock.Lock()
+	s.getMultis++
+	s.lock.Unlock()
+	return s.Store.GetMulti(ctx, keys)
+}
+
 func (s *recordingStore) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	s.lock.Lock()
 	s.setKeys = append(s.setKeys, key)
 	s.lock.Unlock()
@@ -62,6 +74,12 @@ func (s *recordingStore) getCount() int {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	return s.gets
+}
+
+func (s *recordingStore) getMultiCount() int {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.getMultis
 }
 
 func TestCache_LocalSetGet(t *testing.T) {
@@ -364,6 +382,117 @@ func TestCache_StartStop(t *testing.T) {
 	c.Start(5 * time.Millisecond)
 	assert.Eventually(t, func() bool { return calls.Load() > after }, 2*time.Second, 5*time.Millisecond)
 	c.Stop()
+}
+
+func TestCache_ScanSingleGetMulti(t *testing.T) {
+	// The scan must be one GetMulti, not per-key Gets.
+	ctx := context.Background()
+	store := &recordingStore{Store: kvcache.NewMemoryStore()}
+	c := kvcache.NewCache[string, string](store, "test")
+	assert.NoError(t, c.Set(ctx, "a", "1"))
+	assert.NoError(t, c.Set(ctx, "b", "2"))
+	assert.NoError(t, c.Set(ctx, "c", "3"))
+	gets := store.getCount()
+	c.GetRecheckKeys(ctx)
+	assert.Equal(t, 1, store.getMultiCount())
+	assert.Equal(t, gets, store.getCount(), "scan must not issue per-key Gets")
+}
+
+func TestCache_ScanAdoptsForExpiredLocal(t *testing.T) {
+	// A valid storage envelope replaces an expired local copy even when
+	// its RecheckAt is not newer than the dead local entry's.
+	ctx := context.Background()
+	clock := newTestClock()
+	store := kvcache.NewMemoryStore()
+	a := kvcache.NewCache[string, string](store, "topic")
+	a.Clock = clock.Now
+	b := kvcache.NewCache[string, string](store, "topic")
+	b.Clock = clock.Now
+
+	assert.NoError(t, a.SetTTL(ctx, "k", "v1", 30*time.Minute, time.Hour))
+	clock.Advance(2 * time.Hour) // a's copy is now hard-expired
+	assert.NoError(t, b.SetTTL(ctx, "k", "v2", 5*time.Minute, 24*time.Hour))
+
+	a.GetRecheckKeys(ctx)
+	v, ok := a.Get(ctx, "k")
+	assert.True(t, ok)
+	assert.Equal(t, "v2", v)
+}
+
+func TestCache_NegativeSharedAcrossCaches(t *testing.T) {
+	// A tombstone written by one refresh cache suppresses the refresh
+	// function of another cache sharing the store.
+	ctx := context.Background()
+	store := kvcache.NewMemoryStore()
+	var callsA, callsB atomic.Int64
+	a := kvcache.NewRefreshCache[string, string](store, "t", func(ctx context.Context, key string) (string, error) {
+		callsA.Add(1)
+		return "", kvcache.ErrNotFound
+	})
+	a.NegativeTTL = time.Minute
+	b := kvcache.NewRefreshCache[string, string](store, "t", func(ctx context.Context, key string) (string, error) {
+		callsB.Add(1)
+		return "", kvcache.ErrNotFound
+	})
+	b.NegativeTTL = time.Minute
+
+	_, ok := a.Get(ctx, "ghost")
+	assert.False(t, ok)
+	assert.EqualValues(t, 1, callsA.Load())
+	_, ok = b.Get(ctx, "ghost")
+	assert.False(t, ok)
+	assert.EqualValues(t, 0, callsB.Load(), "b must adopt a's shared tombstone instead of refreshing")
+}
+
+func TestCache_SlowRefreshStillStored(t *testing.T) {
+	// A refresh that outlives RefreshTimeout but still returns a value
+	// must have its result written to storage under a fresh budget, not
+	// the exhausted refresh deadline.
+	ctx := context.Background()
+	store := &recordingStore{Store: kvcache.NewMemoryStore()}
+	c := kvcache.NewRefreshCache[string, string](store, "t", func(ctx context.Context, key string) (string, error) {
+		time.Sleep(60 * time.Millisecond) // ignores ctx, exceeds RefreshTimeout
+		return "v", nil
+	})
+	c.RefreshTimeout = 20 * time.Millisecond
+	v, ok := c.Get(ctx, "k")
+	assert.True(t, ok)
+	assert.Equal(t, "v", v)
+	assert.Equal(t, []string{"ecache:t:k"}, store.setKeys, "storage write must not inherit the exhausted refresh deadline")
+}
+
+func TestCache_StartStopConcurrent(t *testing.T) {
+	// Concurrent Start/Stop must neither hang nor panic.
+	c := kvcache.NewCache[string, string](nil, "test")
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			c.Start(time.Hour)
+		}()
+		go func() {
+			defer wg.Done()
+			c.Stop()
+		}()
+	}
+	wg.Wait()
+	c.Stop()
+}
+
+func TestCache_StartNonPositivePanics(t *testing.T) {
+	c := kvcache.NewCache[string, string](nil, "test")
+	assert.Panics(t, func() { c.Start(0) })
+}
+
+func TestCache_ExpireTTLNonPositiveNotStored(t *testing.T) {
+	// An envelope that is expired on arrival must not become a
+	// no-expiry key in the backend.
+	ctx := context.Background()
+	store := &recordingStore{Store: kvcache.NewMemoryStore()}
+	c := kvcache.NewCache[string, string](store, "test")
+	assert.NoError(t, c.SetTTL(ctx, "dead", "v", 0, 0))
+	assert.Empty(t, store.setKeys, "dead-on-arrival envelope must not be written to storage")
 }
 
 type stringerKey struct{ A, B string }

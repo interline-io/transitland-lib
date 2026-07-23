@@ -38,6 +38,9 @@ type Cache[K comparable, V any] struct {
 	// RefreshTimeout bounds each refresh function call (default 1s).
 	RefreshTimeout time.Duration
 	// NegativeTTL enables tombstone caching of absent keys (default off).
+	// Legacy ecache/rcache readers do not understand tombstones and see
+	// them as zero-value hits; do not enable shared tombstones on a topic
+	// until all legacy readers are retired.
 	NegativeTTL time.Duration
 	// KeyPrefix namespaces storage keys as "<prefix>:<topic>:<key>". The
 	// default "ecache" preserves the legacy wire format.
@@ -122,7 +125,8 @@ func (c *Cache[K, V]) SetTTL(ctx context.Context, key K, value V, recheckTTL tim
 }
 
 // SetMissing stores a negative tombstone for key in both tiers for
-// NegativeTTL, suppressing lookups until it lapses.
+// NegativeTTL, suppressing lookups until it lapses. See NegativeTTL for
+// the legacy-reader caveat.
 func (c *Cache[K, V]) SetMissing(ctx context.Context, key K) error {
 	if c.NegativeTTL <= 0 {
 		return errors.New("kvcache: SetMissing requires NegativeTTL")
@@ -165,8 +169,12 @@ func (c *Cache[K, V]) LocalKeys() []K {
 
 // Start launches a background goroutine that periodically reconciles
 // with the shared tier and, when a refresh function is configured,
-// refreshes due keys. Start is a no-op if already running.
+// refreshes due keys. Start is a no-op if already running. It panics on
+// a non-positive interval, like time.NewTicker.
 func (c *Cache[K, V]) Start(interval time.Duration) {
+	if interval <= 0 {
+		panic("kvcache: non-positive interval for Start")
+	}
 	c.tickerLock.Lock()
 	defer c.tickerLock.Unlock()
 	if c.tickerStop != nil {
@@ -191,14 +199,16 @@ func (c *Cache[K, V]) Start(interval time.Duration) {
 // Stop halts the background goroutine and waits for an in-flight tick.
 // The cache remains usable, and Start may be called again.
 func (c *Cache[K, V]) Stop() {
+	// The lock is held across Wait so a concurrent Start cannot slip in
+	// between shutdown and the wait; the ticker goroutine never takes
+	// this lock, so this cannot deadlock.
 	c.tickerLock.Lock()
+	defer c.tickerLock.Unlock()
 	if c.tickerStop == nil {
-		c.tickerLock.Unlock()
 		return
 	}
 	close(c.tickerStop)
 	c.tickerStop = nil
-	c.tickerLock.Unlock()
 	c.tickerWg.Wait()
 }
 
@@ -223,12 +233,16 @@ func (c *Cache[K, V]) loadOrRefresh(ctx context.Context, key K) (Item[V], bool) 
 		ok   bool
 	}
 	v, _, _ := c.sf.Do(c.keyString(key), func() (any, error) {
-		if it, ok := c.getStore(ctx, key); ok {
+		// The flight's result is shared by all waiters, so its work is
+		// detached from the leader's cancellation; backends apply their
+		// own per-op timeouts.
+		fctx := context.WithoutCancel(ctx)
+		if it, ok := c.getStore(fctx, key); ok {
 			c.setLocal(key, it)
 			return result{item: it, ok: true}, nil
 		}
 		if c.refreshFn != nil {
-			if it, err := c.runRefresh(ctx, key); err == nil {
+			if it, err := c.runRefresh(fctx, key); err == nil {
 				return result{item: it, ok: true}, nil
 			}
 			return result{}, nil
@@ -250,6 +264,9 @@ func (c *Cache[K, V]) runRefresh(ctx context.Context, key K) (Item[V], error) {
 	rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), c.RefreshTimeout)
 	defer cancel()
 	value, err := c.refreshFn(rctx, key)
+	// The storage write gets its own budget (the backend's per-op
+	// timeout), not whatever the refresh call left of RefreshTimeout.
+	sctx := context.WithoutCancel(rctx)
 	if err == nil {
 		n := c.now()
 		it := Item[V]{
@@ -258,17 +275,13 @@ func (c *Cache[K, V]) runRefresh(ctx context.Context, key K) (Item[V], error) {
 			ExpiresAt: n.Add(c.Expires),
 		}
 		c.setLocal(key, it)
-		if serr := c.setStore(rctx, key, it, c.Expires); serr != nil {
-			log.Trace().Err(serr).Str("key", c.storeKey(key)).Msg("kvcache: storage write failed")
-		}
+		_ = c.setStore(sctx, key, it, c.Expires)
 		return it, nil
 	}
 	if errors.Is(err, ErrNotFound) && c.NegativeTTL > 0 {
 		it := c.missingItem(c.NegativeTTL)
 		c.setLocal(key, it)
-		if serr := c.setStore(rctx, key, it, c.NegativeTTL); serr != nil {
-			log.Trace().Err(serr).Str("key", c.storeKey(key)).Msg("kvcache: storage write failed")
-		}
+		_ = c.setStore(sctx, key, it, c.NegativeTTL)
 		return it, nil
 	}
 	return Item[V]{}, err
@@ -362,6 +375,11 @@ func (c *Cache[K, V]) setLocal(key K, it Item[V]) {
 
 func (c *Cache[K, V]) setStore(ctx context.Context, key K, it Item[V], ttl time.Duration) error {
 	if c.store == nil {
+		return nil
+	}
+	// A non-positive ttl means the envelope is expired on arrival; on
+	// backends ttl<=0 means "no expiry", which would strand a dead key.
+	if ttl <= 0 {
 		return nil
 	}
 	skey := c.storeKey(key)

@@ -30,7 +30,11 @@ func (s *MemoryStore) Get(ctx context.Context, key string) ([]byte, bool, error)
 	s.lock.RLock()
 	ent, ok := s.m[key]
 	s.lock.RUnlock()
-	if !ok || s.expired(ent) {
+	if !ok {
+		return nil, false, nil
+	}
+	if s.expired(ent) {
+		s.deleteExpired(key)
 		return nil, false, nil
 	}
 	return ent.value, true, nil
@@ -38,14 +42,31 @@ func (s *MemoryStore) Get(ctx context.Context, key string) ([]byte, bool, error)
 
 func (s *MemoryStore) GetMulti(ctx context.Context, keys []string) (map[string][]byte, error) {
 	ret := map[string][]byte{}
+	var dead []string
 	s.lock.RLock()
-	defer s.lock.RUnlock()
 	for _, key := range keys {
-		if ent, ok := s.m[key]; ok && !s.expired(ent) {
+		if ent, ok := s.m[key]; ok {
+			if s.expired(ent) {
+				dead = append(dead, key)
+				continue
+			}
 			ret[key] = ent.value
 		}
 	}
+	s.lock.RUnlock()
+	for _, key := range dead {
+		s.deleteExpired(key)
+	}
 	return ret, nil
+}
+
+// deleteExpired evicts key if it is still expired under the write lock.
+func (s *MemoryStore) deleteExpired(key string) {
+	s.lock.Lock()
+	if ent, ok := s.m[key]; ok && s.expired(ent) {
+		delete(s.m, key)
+	}
+	s.lock.Unlock()
 }
 
 func (s *MemoryStore) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
