@@ -41,6 +41,10 @@ func init() {
 type SQLiteAdapter struct {
 	DBURL string
 	db    Ext
+	// dbOpened is true only when Open created db. A borrowed handle (injected db
+	// or a Tx child) leaves it false, so Close does not release a connection the
+	// adapter does not own.
+	dbOpened bool
 }
 
 // Open the database.
@@ -58,14 +62,20 @@ func (adapter *SQLiteAdapter) Open() error {
 	}
 	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{Ext: db.Unsafe()}
+	adapter.dbOpened = true
 	return nil
 }
 
-// Close the database.
+// Close the database. A borrowed handle is left untouched; a handle the adapter
+// opened is closed if it is closable.
 func (adapter *SQLiteAdapter) Close() error {
+	if !adapter.dbOpened {
+		return nil
+	}
 	if a, ok := adapter.db.(tldb.CanClose); ok {
 		err := a.Close()
 		adapter.db = nil
+		adapter.dbOpened = false
 		return err
 	}
 	return nil
