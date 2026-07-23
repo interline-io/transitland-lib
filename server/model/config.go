@@ -100,6 +100,24 @@ func JobArtifacts(ctx context.Context) ArtifactStore {
 	return cfg.ArtifactStoreFactory.For(m.ID, m.UserID, m.Kind)
 }
 
+// NewConfigMiddleware installs cfg into the job context, the jobs-side analogue
+// of AddConfig. Register it on a Runner (runner.Use) so background workers can
+// resolve the Config via ForContext. Always overwrites any inbound cfg.
+func NewConfigMiddleware(cfg Config) jobs.Middleware {
+	return func(w jobs.Worker, _ jobs.Job) jobs.Worker {
+		return &configWorker{cfg: cfg, Worker: w}
+	}
+}
+
+type configWorker struct {
+	jobs.Worker
+	cfg Config
+}
+
+func (w *configWorker) Run(ctx context.Context) error {
+	return w.Worker.Run(WithConfig(ctx, w.cfg))
+}
+
 func AddConfig(cfg Config) func(http.Handler) http.Handler {
 	if cfg.Checker == nil {
 		panic("model.AddConfig: Config.Checker must be set; install authz.AllowAllChecker or authz.DenyAllChecker for demo/test, or a real Checker for production")
