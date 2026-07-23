@@ -94,6 +94,9 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 				if s.Trip.GetTripId() == t.TripID.Val {
 					found = true
 				}
+				// TODO: GTFS-RT TripModifications — also match when
+				// s.Trip.GetModifiedTrip().GetAffectedTripId() == t.TripID.Val,
+				// so alerts targeting a modified trip resolve to the static trip.
 			}
 			if found {
 				foundAlerts = append(foundAlerts, makeAlert(alert))
