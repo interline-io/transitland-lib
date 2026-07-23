@@ -36,6 +36,10 @@ func init() {
 type PostgresAdapter struct {
 	DBURL string
 	db    Ext
+	// dbOpened is true only when Open created db. A borrowed handle (injected
+	// via NewPostgresAdapterFromDBX or a Tx child) leaves it false, so Close
+	// does not release a connection the adapter does not own.
+	dbOpened bool
 }
 
 func NewPostgresAdapterFromDBX(db Ext) *PostgresAdapter {
@@ -53,6 +57,7 @@ func (adapter *PostgresAdapter) Open() error {
 	}
 	db.Mapper = MapperCache.Mapper
 	adapter.db = &QueryLogger{Ext: db.Unsafe()}
+	adapter.dbOpened = true
 	return nil
 }
 
@@ -65,9 +70,19 @@ func (adapter *PostgresAdapter) OpenDB() (*sqlx.DB, error) {
 	return db, nil
 }
 
-// Close the adapter.
+// Close the adapter. Borrowed handles are left untouched; only a connection the
+// adapter opened itself is released.
 func (adapter *PostgresAdapter) Close() error {
+	if !adapter.dbOpened {
+		return nil
+	}
+	if c, ok := adapter.db.(tldb.CanClose); ok {
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
 	adapter.db = nil
+	adapter.dbOpened = false
 	return nil
 }
 
