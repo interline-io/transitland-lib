@@ -66,8 +66,8 @@ func (adapter *SQLiteAdapter) Open() error {
 	return nil
 }
 
-// Close the database. Borrowed handles are left untouched; only a connection the
-// adapter opened itself is released.
+// Close the database. A borrowed handle is left untouched; a handle the adapter
+// opened is closed if it is closable.
 func (adapter *SQLiteAdapter) Close() error {
 	if !adapter.dbOpened {
 		return nil
@@ -78,8 +78,6 @@ func (adapter *SQLiteAdapter) Close() error {
 		adapter.dbOpened = false
 		return err
 	}
-	adapter.db = nil
-	adapter.dbOpened = false
 	return nil
 }
 

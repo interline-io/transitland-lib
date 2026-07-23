@@ -70,16 +70,11 @@ func (adapter *PostgresAdapter) OpenDB() (*sqlx.DB, error) {
 	return db, nil
 }
 
-// Close the adapter. Borrowed handles are left untouched; only a connection the
-// adapter opened itself is released.
+// Close the adapter. A borrowed handle is left untouched; an opened handle is
+// dropped.
 func (adapter *PostgresAdapter) Close() error {
 	if !adapter.dbOpened {
 		return nil
-	}
-	if c, ok := adapter.db.(tldb.CanClose); ok {
-		if err := c.Close(); err != nil {
-			return err
-		}
 	}
 	adapter.db = nil
 	adapter.dbOpened = false
