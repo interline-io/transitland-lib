@@ -124,7 +124,7 @@ func enqueueAndWaitFeedVersion(ctx context.Context, kind string, fvid int) (bool
 			return false, ctx.Err()
 		case ev, open := <-ch:
 			if !open {
-				return false, nil
+				return false, errors.New("job watch ended without terminal state for job")
 			}
 			switch ev.State {
 			case jobs.JobStateSucceeded:
