@@ -18,11 +18,11 @@ var ErrArtifactNotFound = errors.New("artifact not found")
 // foreign key. UserID and StorageKey are internal (json:"-") and must not reach
 // API clients.
 type JobArtifact struct {
-	JobID       string `db:"job_id" json:"job_id"`
-	JobKind     string `db:"job_kind" json:"job_kind"`
-	UserID      string `db:"user_id" json:"-"`
-	Filename    string `db:"filename" json:"filename"`
-	ContentType string `db:"content_type" json:"content_type"`
+	JobID       string  `db:"job_id" json:"job_id"`
+	JobKind     string  `db:"job_kind" json:"job_kind"`
+	UserID      string  `db:"user_id" json:"-"`
+	Filename    string  `db:"filename" json:"filename"`
+	ContentType string  `db:"content_type" json:"content_type"`
 	SizeBytes   int64   `db:"size_bytes" json:"size_bytes"`
 	SHA1        string  `db:"sha1" json:"sha1,omitempty"`
 	StorageKey  string  `db:"storage_key" json:"-"`
