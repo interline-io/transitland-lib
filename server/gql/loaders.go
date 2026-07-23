@@ -41,6 +41,7 @@ type Loaders struct {
 	CensusGeographiesByEntityIDs                                  *dataloader.Loader[censusGeographyLoaderParam, []*model.CensusGeography]
 	CensusSourcesByDatasetIDs                                     *dataloader.Loader[censusSourceLoaderParam, []*model.CensusSource]
 	CensusTablesByDatasetIDs                                      *dataloader.Loader[censusTableLoaderParam, []*model.CensusTable]
+	CensusTablesBySourceIDs                                       *dataloader.Loader[censusSourceTableLoaderParam, []*model.CensusTable]
 	CensusGeographiesByLayerIDs                                   *dataloader.Loader[censusSourceGeographyLoaderParam, []*model.CensusGeography]
 	CensusSourcesByIDs                                            *dataloader.Loader[int, *model.CensusSource]
 	CensusLayersByIDs                                             *dataloader.Loader[int, *model.CensusLayer]
@@ -188,6 +189,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		CensusTablesByDatasetIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.CensusTablesByDatasetIDs,
 			func(p censusTableLoaderParam) (int, *model.CensusTableFilter, *int) {
 				return p.DatasetID, p.Where, p.Limit
+			},
+		),
+		CensusTablesBySourceIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.CensusTablesBySourceIDs,
+			func(p censusSourceTableLoaderParam) (int, *model.CensusTableFilter, *int) {
+				return p.SourceID, p.Where, p.Limit
 			},
 		),
 		CensusTableByIDs:   withWaitAndCapacity(waitTime, batchSize, dbf.CensusTableByIDs),

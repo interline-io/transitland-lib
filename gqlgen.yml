@@ -265,6 +265,8 @@ models:
         resolver: true
       geographies:
         resolver: true
+      tables:
+        resolver: true
     extraFields:
       DatasetID:
         type: int
