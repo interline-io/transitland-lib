@@ -212,7 +212,8 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 		Distinct().Options("on (v.source_id, tlct.id)").
 		From("tl_census_values v").
 		Join("tl_census_tables tlct on tlct.id = v.table_id").
-		Where(sq.Eq{"v.source_id": keys})
+		Where(sq.Eq{"v.source_id": keys}).
+		OrderBy("v.source_id", "tlct.id")
 	if where != nil && where.Search != nil {
 		q = q.Where(sq.ILike{"tlct.table_name": dbutil.EscapeLike(*where.Search, true, true)})
 	}
@@ -226,7 +227,7 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 		for _, ent := range group {
 			g = append(g, &ent.CensusTable)
 		}
-		if limit != nil && len(g) > *limit {
+		if limit != nil && *limit >= 0 && len(g) > *limit {
 			g = g[:*limit]
 		}
 		ret = append(ret, g)
