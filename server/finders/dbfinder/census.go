@@ -475,7 +475,10 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		// `stop_buffer` compose (clip intersection for a positive radius,
 		// polygon-restricted point matching for radius 0); otherwise the
 		// first filter present in this chain applies and the rest are
-		// ignored.
+		// ignored. Composition applies to the top-level query path only:
+		// in per-stop attribution mode (the internal by-entity loaders) a
+		// positive-radius stop_buffer takes precedence and `within` is
+		// not applied.
 		if loc.Bbox == nil && withinClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
 			// Clip to the intersection of the query-area polygon (`within`) and
 			// the stop-buffer union: census apportioned to where the polygon and
