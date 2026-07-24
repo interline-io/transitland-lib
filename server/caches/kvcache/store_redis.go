@@ -96,10 +96,9 @@ func (s *RedisStore) Publish(ctx context.Context, channel string, payload []byte
 
 func (s *RedisStore) Subscribe(ctx context.Context, channel string) (Subscription, error) {
 	if s.client == nil {
-		// No backend to deliver from; hand back a subscription that stays
-		// idle until ctx is canceled rather than an error that would spin a
-		// caller's reconnect loop.
-		return newDeadSubscription(ctx), nil
+		// No backend to deliver from; hand back an idle subscription rather
+		// than an error that would spin a caller's reconnect loop.
+		return deadSubscription{}, nil
 	}
 	sub := s.client.Subscribe(ctx, channel)
 	rctx, cancel := context.WithTimeout(ctx, s.Timeout)
@@ -174,21 +173,11 @@ func (rs *redisSubscription) pump(ctx context.Context) {
 	}
 }
 
-// deadSubscription delivers nothing and unblocks its consumer only when
-// ctx is canceled. Used for the nil-client RedisStore.
-type deadSubscription struct {
-	out chan Message
-}
+// deadSubscription delivers nothing; its nil message channel blocks the
+// consumer, which shuts down via its own context. Used for the nil-client
+// RedisStore, which has no backend to subscribe to.
+type deadSubscription struct{}
 
-func newDeadSubscription(ctx context.Context) *deadSubscription {
-	ds := &deadSubscription{out: make(chan Message)}
-	go func() {
-		<-ctx.Done()
-		close(ds.out)
-	}()
-	return ds
-}
+func (deadSubscription) Messages() <-chan Message { return nil }
 
-func (ds *deadSubscription) Messages() <-chan Message { return ds.out }
-
-func (ds *deadSubscription) Close() error { return nil }
+func (deadSubscription) Close() error { return nil }
