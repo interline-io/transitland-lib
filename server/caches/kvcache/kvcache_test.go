@@ -333,6 +333,20 @@ func TestCache_RecheckConvergence(t *testing.T) {
 	assert.Equal(t, "v2", v)
 }
 
+func TestCache_ExpiredEntryPrunedOnMiss(t *testing.T) {
+	// An expired local entry whose key no longer resolves anywhere is
+	// removed on read rather than retained until a scan.
+	ctx := context.Background()
+	clock := newTestClock()
+	c := kvcache.NewCache[string, string](kvcache.NewMemoryStore(), "test")
+	c.Clock = clock.Now
+	assert.NoError(t, c.SetTTL(ctx, "a", "v", time.Minute, time.Hour))
+	clock.Advance(2 * time.Hour)
+	_, ok := c.Get(ctx, "a")
+	assert.False(t, ok)
+	assert.Empty(t, c.LocalKeys(), "expired entry must be pruned on definite miss")
+}
+
 func TestCache_ScanPrunesExpired(t *testing.T) {
 	ctx := context.Background()
 	clock := newTestClock()

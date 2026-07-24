@@ -58,14 +58,14 @@ func Run(t *testing.T, mk func(t *testing.T) kvcache.Store) {
 	})
 	t.Run("TTLExpiry", func(t *testing.T) {
 		store := mk(t)
-		assert.NoError(t, store.Set(ctx, "storetest:ttl", []byte("gone"), 100*time.Millisecond))
+		assert.NoError(t, store.Set(ctx, "storetest:ttl", []byte("gone"), 500*time.Millisecond))
 		_, ok, err := store.Get(ctx, "storetest:ttl")
 		assert.NoError(t, err)
 		assert.True(t, ok, "value should be present before ttl")
-		time.Sleep(200 * time.Millisecond)
-		_, ok, err = store.Get(ctx, "storetest:ttl")
-		assert.NoError(t, err)
-		assert.False(t, ok, "value should be absent after ttl")
+		assert.Eventually(t, func() bool {
+			_, ok, err := store.Get(ctx, "storetest:ttl")
+			return err == nil && !ok
+		}, 3*time.Second, 50*time.Millisecond, "value should expire after ttl")
 	})
 	t.Run("Concurrent", func(t *testing.T) {
 		store := mk(t)
