@@ -323,6 +323,35 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			// Combined within + stop_buffer must honor BOTH filters. Here
+			// `within` is a large polygon that fully contains the FTVL buffer,
+			// so the search area reduces to the buffer and the result matches
+			// the stop-buffer-only case (one tract, ~31235 m^2 of buffer area).
+			// Before the combined branch, `within` won outright and the buffer
+			// was ignored — this query would have returned every tract in the
+			// polygon instead.
+			name:  "combined within and stop buffer - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-123.77489413290716, 38.794161309061735},
+					{-122.69431950796763, 35.52679604934255},
+					{-119.9104881819854, 37.991860068760204},
+					{-123.77489413290716, 38.794161309061735},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918910.47033,
+					31235.844716912135,
+				)
+			},
+		},
+		{
 			name:  "agency intersection areas - county",
 			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"county", radius:1000.0}) { name geoid geometry_area intersection_geometry intersection_area } } }`,
 			vars:  vars,
