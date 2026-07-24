@@ -245,12 +245,15 @@ func (c *Cache[K, V]) loadOrRefresh(ctx context.Context, key K) (Item[V], bool) 
 			if it, err := c.runRefresh(fctx, key); err == nil {
 				return result{item: it, ok: true}, nil
 			}
+			c.deleteExpiredLocal(key)
 			return result{}, nil
 		}
 		// Definite miss with no refresh source; optionally suppress
 		// repeated storage reads with a local-only tombstone.
 		if c.NegativeTTL > 0 {
 			c.setLocal(key, c.missingItem(c.NegativeTTL))
+		} else {
+			c.deleteExpiredLocal(key)
 		}
 		return result{}, nil
 	})
@@ -370,6 +373,18 @@ func (c *Cache[K, V]) getStore(ctx context.Context, key K) (Item[V], bool) {
 func (c *Cache[K, V]) setLocal(key K, it Item[V]) {
 	c.lock.Lock()
 	c.items[key] = it
+	c.lock.Unlock()
+}
+
+// deleteExpiredLocal removes key's local entry if it is still expired,
+// so keys that never re-materialize don't accumulate between scans. The
+// re-check under the write lock avoids clobbering a concurrent Set.
+func (c *Cache[K, V]) deleteExpiredLocal(key K) {
+	n := c.now()
+	c.lock.Lock()
+	if it, ok := c.items[key]; ok && !it.ExpiresAt.After(n) {
+		delete(c.items, key)
+	}
 	c.lock.Unlock()
 }
 

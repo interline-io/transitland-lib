@@ -50,9 +50,16 @@ func (s *RedisStore) GetMulti(ctx context.Context, keys []string) (map[string][]
 		return nil, err
 	}
 	for i, val := range vals {
-		// MGET returns nil for absent keys and strings for present ones.
-		if sval, ok := val.(string); ok && i < len(keys) {
-			ret[keys[i]] = []byte(sval)
+		if i >= len(keys) {
+			break
+		}
+		// MGET returns nil for absent keys; present values decode as
+		// string or []byte depending on client version.
+		switch v := val.(type) {
+		case string:
+			ret[keys[i]] = []byte(v)
+		case []byte:
+			ret[keys[i]] = v
 		}
 	}
 	return ret, nil

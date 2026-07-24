@@ -37,7 +37,8 @@ func (s *MemoryStore) Get(ctx context.Context, key string) ([]byte, bool, error)
 		s.deleteExpired(key)
 		return nil, false, nil
 	}
-	return ent.value, true, nil
+	// Copy so callers cannot mutate stored state, matching RedisStore.
+	return append([]byte(nil), ent.value...), true, nil
 }
 
 func (s *MemoryStore) GetMulti(ctx context.Context, keys []string) (map[string][]byte, error) {
@@ -50,7 +51,7 @@ func (s *MemoryStore) GetMulti(ctx context.Context, keys []string) (map[string][
 				dead = append(dead, key)
 				continue
 			}
-			ret[key] = ent.value
+			ret[key] = append([]byte(nil), ent.value...)
 		}
 	}
 	s.lock.RUnlock()
