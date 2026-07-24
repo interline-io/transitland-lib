@@ -1,6 +1,8 @@
 package gql
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,10 +11,12 @@ import (
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/jobs"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 )
 
 func TestFeedVersionFetchResolver(t *testing.T) {
@@ -166,4 +170,62 @@ func TestValidateGtfsResolver(t *testing.T) {
 	// 		}
 	// 	})
 	// })
+}
+
+// stubJobWorker stands in for the deployment's real import/unimport worker so
+// the resolver's submit-and-watch path can be tested without running an import.
+type stubJobWorker struct {
+	kind string
+	err  error
+}
+
+func (w *stubJobWorker) Kind() string                  { return w.kind }
+func (w *stubJobWorker) Run(ctx context.Context) error { return w.err }
+
+// TestFeedVersionImportEnqueue verifies the import/unimport mutations enqueue a
+// job and report the job's terminal state as their synchronous result.
+func TestFeedVersionImportEnqueue(t *testing.T) {
+	cases := []struct {
+		name        string
+		kind        string
+		query       string
+		field       string
+		workerErr   error
+		wantSuccess bool
+		wantErr     bool
+	}{
+		{"import success", "feed-version-import", `mutation { feed_version_import(id:1){success} }`, "feed_version_import", nil, true, false},
+		{"unimport success", "feed-version-unimport", `mutation { feed_version_unimport(id:1){success} }`, "feed_version_unimport", nil, true, false},
+		{"import failure", "feed-version-import", `mutation { feed_version_import(id:1){success} }`, "feed_version_import", errors.New("import boom"), false, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+				if err := cfg.JobRunner.Register(func() jobs.Worker {
+					return &stubJobWorker{kind: tc.kind, err: tc.workerErr}
+				}); err != nil {
+					t.Fatal(err)
+				}
+				runCtx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				go func() { _ = cfg.Jobs.Run(runCtx) }()
+
+				srv, _ := NewServer()
+				srv = model.AddConfigAndPerms(cfg, srv)
+				srv = usercheck.AdminDefaultMiddleware("test")(srv)
+				c := client.New(srv)
+				resp := make(map[string]interface{})
+				err := c.Post(tc.query, &resp)
+				if tc.wantErr {
+					assert.Error(t, err)
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				got := gjson.Get(toJson(resp), tc.field+".success").Bool()
+				assert.Equal(t, tc.wantSuccess, got)
+			})
+		})
+	}
 }

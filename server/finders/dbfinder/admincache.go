@@ -25,7 +25,7 @@ type adminCache struct {
 	index *tlxy.PolygonIndex
 }
 
-func newAdminCache(ctx context.Context, dbx sqlx.Ext) (*adminCache, error) {
+func newAdminCache(ctx context.Context, dbx sqlx.ExtContext) (*adminCache, error) {
 	ac := &adminCache{}
 	if err := ac.loadAdmins(ctx, dbx); err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func newAdminCache(ctx context.Context, dbx sqlx.Ext) (*adminCache, error) {
 	return ac, nil
 }
 
-func (c *adminCache) loadAdmins(ctx context.Context, dbx sqlx.Ext) error {
+func (c *adminCache) loadAdmins(ctx context.Context, dbx sqlx.ExtContext) error {
 	var ents []struct {
 		Adm0Name tt.String
 		Adm1Name tt.String

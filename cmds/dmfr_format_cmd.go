@@ -35,19 +35,19 @@ func (cmd *DmfrFormatCommand) AddFlags(fl *pflag.FlagSet) {
 func (cmd *DmfrFormatCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
 	cmd.Filename = fl.Arg(0)
+	if cmd.Filename == "" {
+		return errors.New("must specify filename")
+	}
 	return nil
 }
 
 // Run this command.
 func (cmd *DmfrFormatCommand) Run(ctx context.Context) error {
 	filename := cmd.Filename
-	if filename == "" {
-		return errors.New("must specify filename")
-	}
 	// First, validate DMFR
 	_, err := dmfr.LoadAndParseRegistry(filename)
 	if err != nil {
-		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
+		log.For(ctx).Error().Err(err).Str("filename", filename).Msg("could not load DMFR")
 	}
 
 	// Re-read as raw registry
@@ -58,7 +58,7 @@ func (cmd *DmfrFormatCommand) Run(ctx context.Context) error {
 	defer r.Close()
 	rr, err := dmfr.ReadRawRegistry(r)
 	if err != nil {
-		log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
+		log.For(ctx).Error().Err(err).Str("filename", filename).Msg("could not load DMFR")
 		return err
 	}
 	var buf bytes.Buffer

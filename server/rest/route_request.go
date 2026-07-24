@@ -119,7 +119,7 @@ func (r RouteRequest) RequestInfo() RequestInfo {
 					newPRef("idParam"),
 					newPRef("afterParam"),
 					newPRefExt("limitParam", "", "limit=1", ""),
-					newPRefExt("formatParam", "", "format=png", "?format=png&feed_onestop_id=f-dr5r7-nycdotsiferry"),
+					newPRefExt("formatParam", "", "format=geojson", "?format=geojson&feed_onestop_id=f-dr5r7-nycdotsiferry"),
 					newPRefExt("searchParam", "", "search=daly+city", "?search=daly+city"),
 					newPRefExt("onestopParam", "", "onestop_id=r-9q9j-l1", "onestop_id=r-9q9j-l1"),
 					newPRefExt("sha1Param", "", "feed_version_sha1=041ffeec...", "feed_version_sha1=041ffeec98316e560bc2b91960f7150ad329bd5f"),
@@ -145,7 +145,7 @@ func (r RouteRequest) ResponseKey() string { return "routes" }
 // Query returns a GraphQL query string and variables.
 func (r RouteRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	// These formats will need geometries included
-	if r.ID > 0 || r.Format == "geojson" || r.Format == "geojsonl" || r.Format == "png" {
+	if r.ID > 0 || r.Format == "geojson" || r.Format == "geojsonl" {
 		r.IncludeGeometry = true
 	}
 

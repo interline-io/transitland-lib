@@ -194,3 +194,31 @@ func downloadArtifactRequest(w http.ResponseWriter, req *http.Request) {
 	// serveArtifact writes its own success/error response and logs failures.
 	serveArtifact(w, req, store, art)
 }
+
+// deleteArtifactRequest soft-deletes an artifact: the row is flagged deleted and
+// hidden from reads; the stored bytes are reaped later by a blob-culling pass.
+// Authorized as the artifact's owner (or admin), same as the read endpoints.
+func deleteArtifactRequest(w http.ResponseWriter, req *http.Request) {
+	jobID, ok := artifactPrecheck(w, req)
+	if !ok {
+		return
+	}
+	reader, ok := requireArtifactReader(w, req)
+	if !ok {
+		return
+	}
+	art, ok := loadArtifact(w, req, reader, jobID)
+	if !ok {
+		return
+	}
+	deleter, ok := reader.(model.ArtifactDeleter)
+	if !ok {
+		http.Error(w, "delete not supported", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := deleter.SoftDelete(req.Context(), art.ID); err != nil {
+		internalError(w, req, "artifact delete failed", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -2,6 +2,8 @@ package feedstate
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -10,11 +12,15 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
 
 // Manager handles feed state and materialized table operations
-// NOTE: Methods do NOT handle transactions - the caller must manage transactions
+//
+// ActivateFeedVersion and DeactivateFeedVersion are self-transactional, joining the caller's
+// transaction if one is open, and SetActiveFeedVersions transacts per feed version through them.
+// Other methods leave transactions to the caller.
 type Manager struct {
 	adapter tldb.Adapter
 }
@@ -28,111 +34,142 @@ func NewManager(adapter tldb.Adapter) *Manager {
 
 // ActivateFeedVersion activates a feed version by setting it in feed_states and adding to materialized tables
 // If another version of the same feed is currently active, it will be deactivated first
+//
+// Runs in a transaction: the feed_states swap and materialized table rebuild must not be
+// observed half done.
 func (m *Manager) ActivateFeedVersion(ctx context.Context, feedVersionID int) error {
-	// Get the feed_id for this feed version
+	return m.adapter.Tx(func(atx tldb.Adapter) error {
+		return (&Manager{adapter: atx}).activateFeedVersion(ctx, feedVersionID)
+	})
+}
+
+func (m *Manager) activateFeedVersion(ctx context.Context, feedVersionID int) error {
 	feedID, err := m.GetFeedIDForFeedVersion(ctx, feedVersionID)
 	if err != nil {
 		return fmt.Errorf("failed to get feed_id for feed version %d: %w", feedVersionID, err)
 	}
-
-	// Get current feed states to check if this feed version is already active
-	feedStates, err := m.getActiveFeedStates(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get active feed states: %w", err)
-	}
-
-	// If this feed version is already active, do nothing
-	currentFeedVersionID, feedIsActive := feedStates[feedID]
-	if feedIsActive && currentFeedVersionID == feedVersionID {
-		log.For(ctx).Info().
-			Int("feed_version_id", feedVersionID).
-			Int("feed_id", feedID).
-			Msg("Feed version is already active")
-		return nil
-	}
-
-	// If another version is active, deactivate it first
-	if feedIsActive {
-		log.For(ctx).Info().
-			Int("old_feed_version_id", currentFeedVersionID).
-			Int("new_feed_version_id", feedVersionID).
-			Int("feed_id", feedID).
-			Msg("Deactivating current feed version before activating new one")
-		if err := m.DeactivateFeedVersion(ctx, currentFeedVersionID); err != nil {
-			return fmt.Errorf("failed to deactivate current feed version %d: %w", currentFeedVersionID, err)
-		}
-	}
-
-	// Activate the new feed version
 	log.For(ctx).Info().
 		Int("feed_version_id", feedVersionID).
 		Int("feed_id", feedID).
 		Msg("Activating feed version")
+	return m.reconcileFeed(ctx, feedID, tt.NewInt(feedVersionID))
+}
 
-	// Set in feed_states using Squirrel
+// feedStatePointers is the pointer/visibility state the reconciler derives from.
+type feedStatePointers struct {
+	ActiveFeedVersionID       tt.Int `db:"active_feed_version_id"`
+	MaterializedFeedVersionID tt.Int `db:"materialized_feed_version_id"`
+	ExcludeFromGlobal         bool   `db:"exclude_from_global"`
+}
+
+func (m *Manager) getFeedStatePointers(ctx context.Context, feedID int) (feedStatePointers, error) {
+	var fs feedStatePointers
+	err := dbutil.Get(ctx, m.adapter.DBX(), m.adapter.Sqrl().
+		Select("active_feed_version_id", "materialized_feed_version_id", "exclude_from_global").
+		From("feed_states").
+		Where(sq.Eq{"feed_id": feedID}), &fs)
+	if errors.Is(err, sql.ErrNoRows) {
+		// No feed_states row yet: no active/materialized version, not excluded.
+		return feedStatePointers{}, nil
+	}
+	return fs, err
+}
+
+// reconcileFeed sets a feed's active feed version and brings its materialized pointer and
+// materialized tables into line. materialized_feed_version_id is the active version unless the
+// feed is excluded from global queries, in which case it is null; feed_version_id is written as a
+// transitional mirror of it. Materialized rows change only when the visible version does. Assumes
+// an open transaction.
+func (m *Manager) reconcileFeed(ctx context.Context, feedID int, active tt.Int) error {
+	cur, err := m.getFeedStatePointers(ctx, feedID)
+	if err != nil {
+		return fmt.Errorf("failed to read feed_states for feed %d: %w", feedID, err)
+	}
+
+	materialized := active
+	if cur.ExcludeFromGlobal {
+		materialized = tt.Int{}
+	}
+
+	// Reconcile materialized tables only when the visible version actually changes.
+	old := cur.MaterializedFeedVersionID
+	if old != materialized {
+		if old.Valid {
+			if err := m.DematerializeFeedVersion(ctx, old.Int()); err != nil {
+				return err
+			}
+		}
+		if materialized.Valid {
+			if err := m.MaterializeFeedVersion(ctx, materialized.Int()); err != nil {
+				return err
+			}
+		}
+	}
+
 	_, err = m.adapter.Sqrl().
 		Update("feed_states").
-		Set("feed_version_id", feedVersionID).
+		Set("active_feed_version_id", active).
+		Set("materialized_feed_version_id", materialized).
+		Set("feed_version_id", materialized). // TRANSITIONAL: mirror of materialized_feed_version_id; delete with the column
 		Where(sq.Eq{"feed_id": feedID}).
 		ExecContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to set feed version in feed_states: %w", err)
+		return fmt.Errorf("failed to update feed_states for feed %d: %w", feedID, err)
 	}
-
-	// Add to materialized tables
-	if err := m.MaterializeFeedVersion(ctx, feedVersionID); err != nil {
-		return fmt.Errorf("failed to add to materialized tables: %w", err)
-	}
-
 	return nil
 }
 
 // DeactivateFeedVersion deactivates a feed version by removing it from feed_states and materialized tables
 // If the feed version is not currently active, does nothing
 func (m *Manager) DeactivateFeedVersion(ctx context.Context, feedVersionID int) error {
-	// Get the feed_id for this feed version
+	return m.adapter.Tx(func(atx tldb.Adapter) error {
+		return (&Manager{adapter: atx}).deactivateFeedVersion(ctx, feedVersionID)
+	})
+}
+
+func (m *Manager) deactivateFeedVersion(ctx context.Context, feedVersionID int) error {
 	feedID, err := m.GetFeedIDForFeedVersion(ctx, feedVersionID)
 	if err != nil {
 		return fmt.Errorf("failed to get feed_id for feed version %d: %w", feedVersionID, err)
 	}
-
-	// Get current feed states to check if this feed version is active
-	feedStates, err := m.getActiveFeedStates(ctx)
+	cur, err := m.getFeedStatePointers(ctx, feedID)
 	if err != nil {
-		return fmt.Errorf("failed to get active feed states: %w", err)
+		return fmt.Errorf("failed to read feed_states for feed %d: %w", feedID, err)
 	}
-
-	// If this feed version is not active, do nothing
-	currentFeedVersionID, feedIsActive := feedStates[feedID]
-	if !feedIsActive || currentFeedVersionID != feedVersionID {
+	// Only clear when this feed version is the feed's current active version.
+	if !cur.ActiveFeedVersionID.Valid || cur.ActiveFeedVersionID.Int() != feedVersionID {
 		log.For(ctx).Info().
 			Int("feed_version_id", feedVersionID).
 			Int("feed_id", feedID).
 			Msg("Feed version is not currently active")
 		return nil
 	}
-
 	log.For(ctx).Info().
 		Int("feed_version_id", feedVersionID).
 		Int("feed_id", feedID).
 		Msg("Deactivating feed version")
+	return m.reconcileFeed(ctx, feedID, tt.Int{})
+}
 
-	// Unset in feed_states using Squirrel
-	_, err = m.adapter.Sqrl().
-		Update("feed_states").
-		Set("feed_version_id", nil).
-		Where(sq.Eq{"feed_id": feedID}).
-		ExecContext(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to unset feed version in feed_states: %w", err)
-	}
-
-	// Remove from materialized tables
-	if err := m.DematerializeFeedVersion(ctx, feedVersionID); err != nil {
-		return fmt.Errorf("failed to remove from materialized tables: %w", err)
-	}
-
-	return nil
+// SetExcludeFromGlobal sets a feed's global-query visibility and reconciles its materialized
+// pointer and materialized tables: excluding dematerializes the active version, including
+// materializes it. Runs in a transaction.
+func (m *Manager) SetExcludeFromGlobal(ctx context.Context, feedID int, exclude bool) error {
+	return m.adapter.Tx(func(atx tldb.Adapter) error {
+		mm := &Manager{adapter: atx}
+		if _, err := mm.adapter.Sqrl().
+			Update("feed_states").
+			Set("exclude_from_global", exclude).
+			Where(sq.Eq{"feed_id": feedID}).
+			ExecContext(ctx); err != nil {
+			return fmt.Errorf("failed to set exclude_from_global for feed %d: %w", feedID, err)
+		}
+		cur, err := mm.getFeedStatePointers(ctx, feedID)
+		if err != nil {
+			return err
+		}
+		return mm.reconcileFeed(ctx, feedID, cur.ActiveFeedVersionID)
+	})
 }
 
 // GetFeedIDForFeedVersion gets the feed_id for a given feed_version_id (public version)
@@ -143,30 +180,6 @@ func (m *Manager) GetFeedIDForFeedVersion(ctx context.Context, fvid int) (int, e
 		From("feed_versions").
 		Where(sq.Eq{"id": fvid}), &feedID)
 	return feedID, err
-}
-
-// getActiveFeedStates returns a map of feed_id to feed_version_id for all active feeds
-func (m *Manager) getActiveFeedStates(ctx context.Context) (map[int]int, error) {
-	type feedState struct {
-		FeedID        int `db:"feed_id"`
-		FeedVersionID int `db:"feed_version_id"`
-	}
-
-	var states []feedState
-	err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
-		Select("feed_id", "feed_version_id").
-		From("feed_states").
-		Where("feed_version_id IS NOT NULL"), &states)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query feed_states: %w", err)
-	}
-
-	feedStates := make(map[int]int)
-	for _, state := range states {
-		feedStates[state.FeedID] = state.FeedVersionID
-	}
-
-	return feedStates, nil
 }
 
 // sortedColumnsAndSelects converts a map of column->expression into sorted parallel slices
@@ -241,10 +254,11 @@ func routeMaterializeFields(spatial bool) map[string]string {
 		"created_at":          "gtfs_routes.created_at",
 		"updated_at":          "gtfs_routes.updated_at",
 	}
-	// Geometry column - full geometry for SQLite, simplified for PostGIS
-	fields["geometry_simplified"] = "tlrg.geometry"
+	// Geometry column - full geometry for SQLite, simplified for PostGIS.
+	// Sourced from the route's primary (rank 0) representative shape.
+	fields["geometry_simplified"] = "rep_shape.geometry"
 	if spatial {
-		fields["geometry_simplified"] = "ST_Simplify(tlrg.geometry::geometry, 0.01)"
+		fields["geometry_simplified"] = "ST_Simplify(ST_Force2D(rep_shape.geometry::geometry), 0.01)"
 	}
 	return fields
 }
@@ -338,7 +352,8 @@ func (m *Manager) MaterializeFeedVersion(ctx context.Context, feedVersionID int)
 			Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
 			Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
 			LeftJoin("feed_version_route_onestop_ids osid ON osid.entity_id = gtfs_routes.route_id AND osid.feed_version_id = feed_versions.id").
-			LeftJoin("tl_route_geometries tlrg ON tlrg.route_id = gtfs_routes.id").
+			LeftJoin("tl_route_representative_shapes rep0 ON rep0.route_id = gtfs_routes.id AND rep0.rank = 0").
+			LeftJoin("gtfs_shapes rep_shape ON rep_shape.id = rep0.shape_id").
 			Where(sq.Eq{"gtfs_routes.feed_version_id": feedVersionID}))
 
 	_, err := routeQuery.ExecContext(ctx)
@@ -416,21 +431,33 @@ func (m *Manager) GetMaterializedFeedVersions(ctx context.Context) ([]int, error
 	return slices.Collect(maps.Keys(feedVersionIds)), nil
 }
 
-// GetActiveFeedVersions returns a list of currently active feed version IDs
+// GetActiveFeedVersions returns the active_feed_version_id of every feed that has one.
 func (m *Manager) GetActiveFeedVersions(ctx context.Context) ([]int, error) {
-	feedStates, err := m.getActiveFeedStates(ctx)
+	var ids []int
+	err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
+		Select("active_feed_version_id").
+		From("feed_states").
+		Where("active_feed_version_id IS NOT NULL"), &ids)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query active feed versions: %w", err)
 	}
+	sort.Ints(ids)
+	return ids, nil
+}
 
-	var feedVersionIDs []int
-	for _, feedVersionID := range feedStates {
-		feedVersionIDs = append(feedVersionIDs, feedVersionID)
+// GetMaterializedFeedVersionPointers returns the materialized_feed_version_id of every feed that
+// has one — the set that should be present in the materialized tables.
+func (m *Manager) GetMaterializedFeedVersionPointers(ctx context.Context) ([]int, error) {
+	var ids []int
+	err := dbutil.Select(ctx, m.adapter.DBX(), m.adapter.Sqrl().
+		Select("materialized_feed_version_id").
+		From("feed_states").
+		Where("materialized_feed_version_id IS NOT NULL"), &ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query materialized feed versions: %w", err)
 	}
-
-	// Sort for consistent ordering
-	sort.Ints(feedVersionIDs)
-	return feedVersionIDs, nil
+	sort.Ints(ids)
+	return ids, nil
 }
 
 type FeedVersionChanges struct {

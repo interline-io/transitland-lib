@@ -93,6 +93,8 @@ func (mw *Writer) AddEntity(ent tt.Entity) (string, error) {
 		mw.Reader.StopAreaList = append(mw.Reader.StopAreaList, *v)
 	case *gtfs.FareLegRule:
 		mw.Reader.FareLegRuleList = append(mw.Reader.FareLegRuleList, *v)
+	case *gtfs.FareLegJoinRule:
+		mw.Reader.FareLegJoinRuleList = append(mw.Reader.FareLegJoinRuleList, *v)
 	case *gtfs.FareTransferRule:
 		mw.Reader.FareTransferRuleList = append(mw.Reader.FareTransferRuleList, *v)
 	case *gtfs.FareMedia:

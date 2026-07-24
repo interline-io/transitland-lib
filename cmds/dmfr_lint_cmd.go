@@ -48,7 +48,7 @@ func (cmd *DmfrLintCommand) Run(ctx context.Context) error {
 		// first validate DMFR
 		_, err := dmfr.LoadAndParseRegistry(filename)
 		if err != nil {
-			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.For(ctx).Error().Err(err).Str("filename", filename).Msg("could not load DMFR")
 		}
 
 		// Now load again as raw dmfr
@@ -58,7 +58,7 @@ func (cmd *DmfrLintCommand) Run(ctx context.Context) error {
 		}
 		rr, err := dmfr.ReadRawRegistry(bytes.NewBuffer(rawJson))
 		if err != nil {
-			log.For(ctx).Error().Msgf("%s: Error when loading DMFR: %s", filename, err.Error())
+			log.For(ctx).Error().Err(err).Str("filename", filename).Msg("could not load DMFR")
 		}
 		var buf bytes.Buffer
 		if err := rr.Write(&buf); err != nil {
@@ -71,14 +71,14 @@ func (cmd *DmfrLintCommand) Run(ctx context.Context) error {
 
 		// Compare against input json
 		if formattedJsonString != originalJsonString {
-			log.For(ctx).Error().Msgf("%s: not formatted correctly", filename)
+			log.For(ctx).Error().Str("filename", filename).Msg("not formatted correctly")
 			fileErrors = append(fileErrors, filename)
 			// print out diff
 			dmp := diffmatchpatch.New()
 			diffs := dmp.DiffMain(originalJsonString, formattedJsonString, false)
 			fmt.Println(dmp.DiffPrettyText(diffs))
 		} else {
-			log.For(ctx).Info().Msgf("%s: Formatted properly.", filename)
+			log.For(ctx).Info().Str("filename", filename).Msg("formatted properly")
 		}
 	}
 	if len(fileErrors) > 0 {

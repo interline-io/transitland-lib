@@ -94,6 +94,10 @@ func (r *censusSourceResolver) Geographies(ctx context.Context, obj *model.Censu
 	return LoaderFor(ctx).CensusGeographiesBySourceIDs.Load(ctx, censusSourceGeographyLoaderParam{SourceID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where})()
 }
 
+func (r *censusSourceResolver) Tables(ctx context.Context, obj *model.CensusSource, limit *int, where *model.CensusTableFilter) (ret []*model.CensusTable, err error) {
+	return LoaderFor(ctx).CensusTablesBySourceIDs.Load(ctx, censusSourceTableLoaderParam{SourceID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where})()
+}
+
 type censusGeographyResolver struct{ *Resolver }
 
 func (r *censusGeographyResolver) Values(ctx context.Context, obj *model.CensusGeography, tableNames []string, datasetName *string, limit *int) ([]*model.CensusValue, error) {

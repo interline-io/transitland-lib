@@ -146,6 +146,10 @@ func (mr *Reader) FareLegRules() chan gtfs.FareLegRule {
 	return readEntities(mr, func(r adapters.Reader) chan gtfs.FareLegRule { return r.FareLegRules() }, setFv[*gtfs.FareLegRule])
 }
 
+func (mr *Reader) FareLegJoinRules() chan gtfs.FareLegJoinRule {
+	return readEntities(mr, func(r adapters.Reader) chan gtfs.FareLegJoinRule { return r.FareLegJoinRules() }, setFv[*gtfs.FareLegJoinRule])
+}
+
 func (mr *Reader) FareTransferRules() chan gtfs.FareTransferRule {
 	return readEntities(mr, func(r adapters.Reader) chan gtfs.FareTransferRule { return r.FareTransferRules() }, setFv[*gtfs.FareTransferRule])
 }

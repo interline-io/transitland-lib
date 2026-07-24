@@ -144,7 +144,7 @@ var ParameterComponents = oa.ParametersMap{
 			Name:        "format",
 			In:          "query",
 			Description: `Response format`,
-			Schema:      newSRVal("string", "", []any{"json", "geojson", "geojsonl", "png"}),
+			Schema:      newSRVal("string", "", []any{"json", "geojson", "geojsonl"}),
 		},
 	},
 	"idParam": &pref{

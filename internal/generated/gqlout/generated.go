@@ -214,7 +214,7 @@ type ComplexityRoot struct {
 		Layers      func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Sha1        func(childComplexity int) int
-		Tables      func(childComplexity int, limit *int) int
+		Tables      func(childComplexity int, limit *int, where *model.CensusTableFilter) int
 		URL         func(childComplexity int) int
 	}
 
@@ -1377,7 +1377,7 @@ type CensusLayerResolver interface {
 }
 type CensusSourceResolver interface {
 	Geographies(ctx context.Context, obj *model.CensusSource, limit *int, where *model.CensusSourceGeographyFilter) ([]*model.CensusGeography, error)
-
+	Tables(ctx context.Context, obj *model.CensusSource, limit *int, where *model.CensusTableFilter) ([]*model.CensusTable, error)
 	Layers(ctx context.Context, obj *model.CensusSource) ([]*model.CensusLayer, error)
 }
 type CensusTableResolver interface {
@@ -2384,7 +2384,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.CensusSource.Tables(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.CensusSource.Tables(childComplexity, args["limit"].(*int), args["where"].(*model.CensusTableFilter)), true
 	case "CensusSource.url":
 		if e.ComplexityRoot.CensusSource.URL == nil {
 			break
@@ -10777,7 +10777,7 @@ type CensusSource {
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
 
   "Data tables loaded from this source file"
-  tables(limit: Int): [CensusTable!]
+  tables(limit: Int, where: CensusTableFilter): [CensusTable!]
 
   "Geographic layers defined by this source file"
   layers: [CensusLayer!]
@@ -14872,6 +14872,14 @@ func (ec *executionContext) field_CensusSource_tables_args(ctx context.Context, 
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.CensusTableFilter, error) {
+			return ec.unmarshalOCensusTableFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusTableFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -19758,7 +19766,8 @@ func (ec *executionContext) _CensusSource_tables(ctx context.Context, field grap
 			return ec.fieldContext_CensusSource_tables(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.Tables, nil
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.CensusSource().Tables(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.CensusTableFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.CensusTable) graphql.Marshaler {
@@ -19772,8 +19781,8 @@ func (ec *executionContext) fieldContext_CensusSource_tables(ctx context.Context
 	fc = &graphql.FieldContext{
 		Object:     "CensusSource",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_CensusTable(ctx, field)
 		},
@@ -47063,7 +47072,38 @@ func (ec *executionContext) _CensusSource(ctx context.Context, sel ast.Selection
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "tables":
-			out.Values[i] = ec._CensusSource_tables(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CensusSource_tables(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "layers":
 			field := field
 

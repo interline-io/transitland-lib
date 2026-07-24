@@ -31,6 +31,8 @@ type StaticFetchOptions struct {
 	CreatedBy               tt.String
 	Name                    tt.String
 	Description             tt.String
+	// AllowPartial fetches partial feeds missing the normally-required files.
+	AllowPartial bool
 	Options
 }
 
@@ -85,6 +87,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 		out.FetchError = err
 		return nil
 	}
+	reader.SetAllowPartial(opts.AllowPartial)
 	if err := reader.Open(); err != nil {
 		out.FetchError = err
 		return nil
@@ -106,6 +109,12 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 	fv.Fragment.Set(fragment)
 	if !opts.HideURL {
 		fv.URL = opts.FeedURL
+	}
+	// Partial feeds may have no service dates, but feed_versions requires them (NOT NULL).
+	if opts.AllowPartial && (!fv.EarliestCalendarDate.Valid || !fv.LatestCalendarDate.Valid) {
+		d := tt.NewDate(opts.FetchedAt)
+		fv.EarliestCalendarDate = d
+		fv.LatestCalendarDate = d
 	}
 
 	// Skip the work if we already have this feed version.

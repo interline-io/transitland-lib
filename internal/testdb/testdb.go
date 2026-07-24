@@ -2,12 +2,16 @@ package testdb
 
 import (
 	"context"
+	"fmt"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tldb/sqlite"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 func MustOpenWriter(dburl string, create bool) *tldb.Writer {
@@ -166,3 +170,21 @@ func CreateTestFeed(atx tldb.Adapter, url string) dmfr.Feed {
 	tlfeed.ID = MustInsert(atx, &tlfeed)
 	return tlfeed
 }
+
+// CreateTestFeedVersion inserts a feed version and its owning feed into a database, returning
+// the feed version.
+//
+// The feed is named uniquely per call: TempPostgres commits and current_feeds.onestop_id is
+// unique, so a stable name would wedge reruns.
+func CreateTestFeedVersion(atx tldb.Adapter, file string) dmfr.FeedVersion {
+	name := fmt.Sprintf("%d-%d", time.Now().UnixNano(), testFeedSeq.Add(1))
+	feed := CreateTestFeed(atx, "feed-"+name)
+	fv := dmfr.FeedVersion{SHA1: name, File: file}
+	fv.FeedID = feed.ID
+	fv.EarliestCalendarDate = tt.NewDate(time.Now())
+	fv.LatestCalendarDate = tt.NewDate(time.Now())
+	fv.ID = MustInsert(atx, &fv)
+	return fv
+}
+
+var testFeedSeq atomic.Int64

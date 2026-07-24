@@ -1,10 +1,10 @@
 ## transitland copy
 
-Copy performs a basic copy from a reader to a writer.
+Copy a GTFS feed from a reader to a writer
 
 ### Synopsis
 
-Copy performs a basic copy from a reader to a writer.
+Copy a GTFS feed from a reader to a writer
 
 Entities with errors are skipped by default; use --allow-entity-errors and --allow-reference-errors to override.
 

@@ -134,6 +134,38 @@ func verifyFeedState(t *testing.T, adapter tldb.Adapter, feedID int, expectedFee
 	}
 }
 
+// assertIntPtr asserts a nullable int column matches want (nil means SQL NULL).
+func assertIntPtr(t *testing.T, want, got *int, name string) {
+	t.Helper()
+	if want == nil {
+		assert.Nil(t, got, "%s should be null", name)
+		return
+	}
+	require.NotNil(t, got, "%s should not be null", name)
+	assert.Equal(t, *want, *got, "wrong %s", name)
+}
+
+// verifyPointers checks active_feed_version_id and materialized_feed_version_id, and that
+// feed_version_id still mirrors materialized_feed_version_id during the transition.
+func verifyPointers(t *testing.T, adapter tldb.Adapter, feedID int, wantActive, wantMaterialized *int) {
+	t.Helper()
+	ctx := context.Background()
+	var row struct {
+		Active       *int `db:"active_feed_version_id"`
+		Materialized *int `db:"materialized_feed_version_id"`
+		Mirror       *int `db:"feed_version_id"`
+	}
+	err := dbutil.Get(ctx, adapter.DBX(), adapter.Sqrl().
+		Select("active_feed_version_id", "materialized_feed_version_id", "feed_version_id").
+		From("feed_states").
+		Where("feed_id = ?", feedID), &row)
+	require.NoError(t, err, "failed to query feed_states pointers")
+
+	assertIntPtr(t, wantActive, row.Active, "active_feed_version_id")
+	assertIntPtr(t, wantMaterialized, row.Materialized, "materialized_feed_version_id")
+	assertIntPtr(t, wantMaterialized, row.Mirror, "feed_version_id (mirror)")
+}
+
 func TestManager_ActivateFeedVersion(t *testing.T) {
 	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
 	defer adapter.Close()
@@ -389,4 +421,31 @@ func TestManager_GetFeedIDForFeedVersion(t *testing.T) {
 	// Test with non-existent feed version
 	_, err = manager.GetFeedIDForFeedVersion(ctx, 99999)
 	assert.Error(t, err, "should error for non-existent feed version")
+}
+
+func TestManager_ExcludeFromGlobal(t *testing.T) {
+	adapter, feedID, feedVersionID := setupTestDB(t, testFeedOnestopID, testreader.ExampleZip.URL)
+	defer adapter.Close()
+
+	manager := NewManager(adapter)
+	ctx := context.Background()
+
+	// Visible: active, materialized, and the mirror all point at the version, and it is materialized.
+	require.NoError(t, manager.ActivateFeedVersion(ctx, feedVersionID))
+	verifyPointers(t, adapter, feedID, &feedVersionID, &feedVersionID)
+	verifyMaterializedCounts(t, adapter, feedVersionID, map[string]int{})
+
+	// Excluding keeps the active version but drops the materialized pointer and clears the tables.
+	require.NoError(t, manager.SetExcludeFromGlobal(ctx, feedID, true))
+	verifyPointers(t, adapter, feedID, &feedVersionID, nil)
+	verifyMaterializedCounts(t, adapter, feedVersionID, map[string]int{
+		"routes":   0,
+		"stops":    0,
+		"agencies": 0,
+	})
+
+	// Re-including restores the materialized pointer and re-materializes.
+	require.NoError(t, manager.SetExcludeFromGlobal(ctx, feedID, false))
+	verifyPointers(t, adapter, feedID, &feedVersionID, &feedVersionID)
+	verifyMaterializedCounts(t, adapter, feedVersionID, map[string]int{})
 }

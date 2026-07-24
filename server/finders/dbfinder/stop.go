@@ -534,7 +534,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 		q = q.Distinct().Options("on (gtfs_stops.feed_version_id,gtfs_stops.id)")
 	}
 	if useActive.Active() {
-		q = q.Join("feed_states on feed_states.feed_version_id = gtfs_stops.feed_version_id")
+		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_stops.feed_version_id")
 	}
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_stops.id", ids))
@@ -568,6 +568,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 	}
 
 	// Handle permissions
+	q = joinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

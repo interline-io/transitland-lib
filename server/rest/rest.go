@@ -3,10 +3,8 @@ package rest
 import (
 	"bytes"
 	"context"
-	"crypto/sha1"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -126,13 +124,6 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	return r, nil
 }
 
-func getKey(value string) string {
-	h := sha1.New()
-	h.Write([]byte(value))
-	bs := h.Sum(nil)
-	return fmt.Sprintf("%x", bs)
-}
-
 // A type that can generate a GraphQL query and variables.
 type apiHandler interface {
 	Query(context.Context) (string, map[string]interface{})
@@ -184,11 +175,6 @@ type hasResponseKey interface {
 
 // checkEmptyResponse returns true if the response is empty for the given format
 func checkEmptyResponse(response []byte, format string, responseKey string) bool {
-	// For PNG format, nil response indicates empty results (checked in makeRequest)
-	if format == "png" {
-		return response == nil
-	}
-
 	// For geojsonl format, check if response bytes are empty
 	if format == "geojsonl" {
 		return len(response) == 0 || len(strings.TrimSpace(string(response))) == 0
@@ -272,7 +258,6 @@ func makeEntityHandler(graphqlHandler http.Handler, handlerName string, f func()
 func makeHandler(graphqlHandler http.Handler, handlerName string, f func() apiHandler, notFoundOnEmpty bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		cfg := model.ForContext(ctx)
 		handler := f()
 		opts := queryToMap(r.URL.Query())
 
@@ -301,23 +286,6 @@ func makeHandler(graphqlHandler http.Handler, handlerName string, f func() apiHa
 
 		// Handle format
 		format := opts["format"]
-		if format == "png" && cfg.DisableImage {
-			util.WriteJsonError(w, "image generation disabled", http.StatusInternalServerError)
-			return
-		}
-
-		// If this is a image request, check the local cache
-		urlkey := getKey(r.URL.Path + "/" + r.URL.RawQuery)
-		if format == "png" && localFileCache != nil {
-			if ok, _ := localFileCache.Has(urlkey); ok {
-				w.WriteHeader(http.StatusOK)
-				err := localFileCache.Get(w, urlkey)
-				if err != nil {
-					log.For(ctx).Error().Err(err).Msg("file cache error")
-				}
-				return
-			}
-		}
 
 		// Use json marshal/unmarshal to convert string params to correct types
 		s, err := json.Marshal(opts)
@@ -350,20 +318,9 @@ func makeHandler(graphqlHandler http.Handler, handlerName string, f func() apiHa
 		}
 
 		// Write the output data
-		if format == "png" {
-			w.Header().Add("Content-Type", "image/png")
-		} else {
-			w.Header().Add("Content-Type", "application/json")
-		}
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(response)
-
-		// Cache image response
-		if format == "png" && localFileCache != nil {
-			if err := localFileCache.Put(urlkey, bytes.NewReader(response)); err != nil {
-				log.For(ctx).Error().Err(err).Msgf("file cache error")
-			}
-		}
 	}
 }
 
@@ -402,7 +359,7 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 		}
 	}
 
-	if format == "geojson" || format == "geojsonl" || format == "png" {
+	if format == "geojson" || format == "geojsonl" {
 		// TODO: Don't process response in-place.
 		if v, ok := ent.(canProcessGeoJSON); ok {
 			if err := v.ProcessGeoJSON(ctx, response); err != nil {
@@ -413,19 +370,8 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 				return nil, err
 			}
 		}
-		switch format {
-		case "geojsonl":
+		if format == "geojsonl" {
 			return renderGeojsonl(response)
-		case "png":
-			// Return nil for empty results so caller can return 404
-			if features, ok := response["features"].([]map[string]any); ok && len(features) == 0 {
-				return nil, nil
-			}
-			b, err := json.Marshal(response)
-			if err != nil {
-				return nil, err
-			}
-			return renderMap(ctx, b, 800, 800)
 		}
 	}
 	return json.Marshal(response)

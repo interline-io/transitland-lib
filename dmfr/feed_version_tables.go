@@ -56,6 +56,7 @@ func GetFeedVersionTables() FeedVersionTables {
 			"tl_feed_version_geometries",
 			"tl_route_headways",
 			"tl_agency_places",
+			"tl_route_representative_shapes",
 			"tl_route_stops",
 			"tl_agency_geometries",
 			"tl_route_geometries",

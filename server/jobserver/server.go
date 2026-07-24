@@ -36,10 +36,12 @@ func NewServer() (http.Handler, error) {
 		r.Post("/", submitJobRequest)
 		r.Get("/", listJobsRequest)
 		r.Get("/{jobId}", statusJobRequest)
+		r.Delete("/{jobId}", deleteJobRequest)
 		r.Get("/{jobId}/watch", watchJobRequest)
 		r.Post("/{jobId}/cancel", cancelJobRequest)
 		r.Get("/{jobId}/artifacts", listArtifactsRequest)
 		r.Get("/{jobId}/artifacts/{artifactId}", artifactMetaRequest)
+		r.Delete("/{jobId}/artifacts/{artifactId}", deleteArtifactRequest)
 		r.Get("/{jobId}/artifacts/{artifactId}/download", downloadArtifactRequest)
 	})
 	return r, nil
@@ -193,6 +195,30 @@ func cancelJobRequest(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if err := sq.Cancel(req.Context(), chi.URLParam(req, "jobId")); err != nil {
+		mapJobLookupError(w, req, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// deleteJobRequest removes a terminal job's record from the queue. Requires a
+// DeletableQueue (405 otherwise); a still-running job yields 409. Artifacts are
+// stored independently and are not affected.
+func deleteJobRequest(w http.ResponseWriter, req *http.Request) {
+	sq, ok := requireStatusQueue(w, req)
+	if !ok {
+		return
+	}
+	dq, ok := sq.(jobs.DeletableQueue)
+	if !ok {
+		http.Error(w, "delete not supported", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := dq.Delete(req.Context(), chi.URLParam(req, "jobId")); err != nil {
+		if errors.Is(err, jobs.ErrJobNotTerminal) {
+			http.Error(w, "job is not terminal; cancel it first", http.StatusConflict)
+			return
+		}
 		mapJobLookupError(w, req, err)
 		return
 	}

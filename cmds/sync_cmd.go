@@ -16,7 +16,7 @@ import (
 // SyncCommand syncs a DMFR to a database.
 type SyncCommand struct {
 	DBURL      string
-	Adapter    tldb.Adapter
+	Adapter    tldb.Adapter // allow for mocks
 	setPublic  bool
 	setPrivate bool
 	sync.Options
@@ -97,7 +97,7 @@ func (cmd *SyncCommand) Run(ctx context.Context) error {
 			return err
 		}
 		cmd.Adapter = writer.Adapter
-		defer cmd.Adapter.Close()
+		defer writer.Close()
 	}
 	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
 		_, err := sync.Sync(ctx, atx, cmd.Options)

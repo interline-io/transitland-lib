@@ -1,10 +1,10 @@
 ## transitland rt-convert
 
-Convert GTFS Realtime to JSON.
+Convert GTFS Realtime to JSON
 
 ### Synopsis
 
-Convert GTFS Realtime to JSON.
+Convert GTFS Realtime to JSON
 
 Convert GTFS Realtime protocol buffer files to JSON format. Eases inspecting live feeds. Enables processing with JSON-based tools like jq. For vehicle position feeds, you can also convert to GeoJSON (FeatureCollection) or GeoJSONL (one feature per line) formats for visualization or geographic analysis. See https://www.interline.io/blog/geojsonl-extracts/ for more information about GeoJSONL. Note: GeoJSON formats only include vehicle position; trip updates and service alerts can be converted to JSON but not GeoJSON/GeoJSONL.
 

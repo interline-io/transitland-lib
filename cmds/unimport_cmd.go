@@ -9,27 +9,20 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/importer"
-	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	sq "github.com/irees/squirrel"
 	"github.com/spf13/pflag"
 )
 
-// UnimportCommand imports FeedVersions into a database.
+// UnimportCommand removes previously imported data from feed versions.
 type UnimportCommand struct {
+	FVArgs       FeedVersionArgs
 	ScheduleOnly bool
 	ExtraTables  []string
 	DryRun       bool
-	FVIDs        []string
-	FVSHA1       []string
-	Extensions   []string
-	FeedIDs      []string
 	DBURL        string
 	Workers      int
 	Adapter      tldb.Adapter // allow for mocks
-	// internal
-	fvidfile   string
-	fvsha1file string
 }
 
 func (cmd *UnimportCommand) HelpDesc() (string, string) {
@@ -37,54 +30,28 @@ func (cmd *UnimportCommand) HelpDesc() (string, string) {
 }
 
 func (cmd *UnimportCommand) HelpArgs() string {
-	return "[flags] <fvids...>"
+	return "[flags] <fvid>..."
 }
 
 func (cmd *UnimportCommand) AddFlags(fl *pflag.FlagSet) {
-	// fl.Var(&cmd.Extensions, "ext", "Include GTFS Extension") // TODO
+	cmd.FVArgs.AddFlags(fl)
 	fl.StringSliceVar(&cmd.ExtraTables, "extra-table", nil, "Extra tables to delete feed_version_id")
-	fl.StringSliceVar(&cmd.FeedIDs, "feed", nil, "Feed ID")
-	fl.StringSliceVar(&cmd.FVSHA1, "fv-sha1", nil, "Feed version SHA1")
-	fl.StringVar(&cmd.fvidfile, "fvid-file", "", "Specify feed version IDs in file, one per line; equivalent to multiple --fvid")
-	fl.StringVar(&cmd.fvsha1file, "fv-sha1-file", "", "Specify feed version IDs by SHA1 in file, one per line")
+	fl.IntVar(&cmd.Workers, "workers", 1, "Worker threads")
 	fl.StringVar(&cmd.DBURL, "dburl", "", "Database URL (default: $TL_DATABASE_URL)")
-	fl.BoolVar(&cmd.DryRun, "dryrun", false, "Dry run; print feeds that would be imported and exit")
+	addDryRunFlag(fl, &cmd.DryRun, "Dry run; log the feed versions that would be unimported and exit")
 	fl.BoolVar(&cmd.ScheduleOnly, "schedule-only", false, "Unimport stop times, trips, transfers, shapes, and frequencies")
-
 }
 
 // Parse command line flags
 func (cmd *UnimportCommand) Parse(args []string) error {
-	fl := tlcli.NewNArgs(args)
-	cmd.Workers = 1
-	cmd.FVIDs = fl.Args()
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
-	if cmd.fvidfile != "" {
-		lines, err := tlcli.ReadFileLines(cmd.fvidfile)
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			if line != "" {
-				cmd.FVIDs = append(cmd.FVIDs, line)
-			}
-		}
+	if err := cmd.FVArgs.Parse(args); err != nil {
+		return err
 	}
-	if cmd.fvsha1file != "" {
-		lines, err := tlcli.ReadFileLines(cmd.fvsha1file)
-		if err != nil {
-			return err
-		}
-		for _, line := range lines {
-			if line != "" {
-				cmd.FVSHA1 = append(cmd.FVSHA1, line)
-			}
-		}
-	}
-	if len(cmd.FeedIDs)+len(cmd.FVIDs)+len(cmd.FVSHA1) == 0 {
-		return errors.New("must provide feed ids, feed version ids, or feed version sha1s")
+	if cmd.FVArgs.Empty() {
+		return errors.New("must provide at least one feed version id as an argument or with --fvid-file")
 	}
 	return nil
 }
@@ -98,6 +65,9 @@ type jobOptions struct {
 
 // Run this command
 func (cmd *UnimportCommand) Run(ctx context.Context) error {
+	if cmd.Workers < 1 {
+		cmd.Workers = 1
+	}
 	if cmd.Adapter == nil {
 		writer, err := tldb.OpenWriter(cmd.DBURL, true)
 		if err != nil {
@@ -106,38 +76,34 @@ func (cmd *UnimportCommand) Run(ctx context.Context) error {
 		cmd.Adapter = writer.Adapter
 		defer writer.Close()
 	}
+	// Resolve to imported feed versions; unimport only applies to versions that
+	// have an import record.
+	sel := sq.Or{}
+	if len(cmd.FVArgs.FVIDs) > 0 {
+		sel = append(sel, sq.Eq{"feed_versions.id": cmd.FVArgs.FVIDs})
+	}
+	if len(cmd.FVArgs.FVSHA1) > 0 {
+		sel = append(sel, sq.Eq{"feed_versions.sha1": cmd.FVArgs.FVSHA1})
+	}
 	qrs := []int{}
 	q := cmd.Adapter.Sqrl().
 		Select("feed_versions.id").
 		From("feed_versions").
-		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("feed_version_gtfs_imports ON feed_versions.id = feed_version_gtfs_imports.feed_version_id").
 		Where("feed_version_gtfs_imports.id IS NOT NULL").
+		Where(sel).
 		OrderBy("feed_versions.id desc")
-	if len(cmd.FeedIDs) > 0 {
-		// Limit to specified feeds
-		q = q.Where(sq.Eq{"onestop_id": cmd.FeedIDs})
-	}
-	if len(cmd.FVIDs) > 0 {
-		// Explicitly specify fvids
-		q = q.Where(sq.Eq{"feed_versions.id": cmd.FVIDs})
-	}
-	if len(cmd.FVSHA1) > 0 {
-		// Explicitly specify fv sha1
-		q = q.Where(sq.Eq{"feed_versions.sha1": cmd.FVSHA1})
-	}
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
 		return err
 	}
-	err = cmd.Adapter.Select(ctx, &qrs, qstr, qargs...)
-	if err != nil {
+	if err := cmd.Adapter.Select(ctx, &qrs, qstr, qargs...); err != nil {
 		return err
 	}
 	if cmd.ScheduleOnly {
-		log.For(ctx).Info().Msgf("Unmporting schedule data from %d feed versions", len(qrs))
+		log.For(ctx).Info().Msgf("unimporting schedule data from %d feed versions", len(qrs))
 	} else {
-		log.For(ctx).Info().Msgf("Unmporting %d feed versions", len(qrs))
+		log.For(ctx).Info().Msgf("unimporting %d feed versions", len(qrs))
 	}
 
 	jobs := make(chan jobOptions, len(qrs))
@@ -171,24 +137,30 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 	for opts := range jobs {
 		q := qr{}
 		query := `
-		SELECT 
-			feed_versions.id as feed_version_id, 
-			feed_versions.feed_id as feed_id, 
-			feed_versions.sha1 as feed_version_sha1, 
-			current_feeds.onestop_id as feed_onestop_id 
-		FROM feed_versions 
-		INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id 
+		SELECT
+			feed_versions.id as feed_version_id,
+			feed_versions.feed_id as feed_id,
+			feed_versions.sha1 as feed_version_sha1,
+			current_feeds.onestop_id as feed_onestop_id
+		FROM feed_versions
+		INNER JOIN current_feeds ON current_feeds.id = feed_versions.feed_id
 		WHERE feed_versions.id = ?
 		`
 		if err := adapter.Get(ctx, &q, query, opts.FeedVersionID); err != nil {
-			log.For(ctx).Error().Msgf("Could not get details for FeedVersion %d", opts.FeedVersionID)
+			log.For(ctx).Error().Err(err).Int("feed_version_id", opts.FeedVersionID).Msg("could not get details")
 			continue
 		}
+		jobLog := log.For(ctx).With().
+			Str("feed_onestop_id", q.FeedOnestopID).
+			Int("feed_id", q.FeedID).
+			Str("feed_version_sha1", q.FeedVersionSHA1).
+			Int("feed_version_id", q.FeedVersionID).
+			Logger()
 		if opts.DryRun {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): dry-run", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+			jobLog.Info().Msg("dry-run")
 			continue
 		}
-		log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): begin", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID)
+		jobLog.Info().Msg("begin")
 		t := time.Now()
 		err := adapter.Tx(func(atx tldb.Adapter) error {
 			var err error
@@ -201,9 +173,9 @@ func dmfrUnimportWorker(id int, ctx context.Context, adapter tldb.Adapter, jobs 
 		})
 		t2 := float64(time.Now().UnixNano()-t.UnixNano()) / 1e9 // 1000000000.0
 		if err != nil {
-			log.For(ctx).Error().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): critical failure, rolled back: %s (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, err.Error(), t2)
+			jobLog.Error().Err(err).Float64("duration", t2).Msg("critical failure, rolled back")
 		} else {
-			log.For(ctx).Info().Msgf("Feed %s (id:%d): FeedVersion %s (id:%d): success (t:%0.2fs)", q.FeedOnestopID, q.FeedID, q.FeedVersionSHA1, q.FeedVersionID, t2)
+			jobLog.Info().Float64("duration", t2).Msg("success")
 		}
 	}
 	wg.Done()

@@ -8,7 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// FastTravelError reports when reasonable maximum speeds have been exceeded for at least 30 seconds.
+// FastTravelError reports when the implied speed between two consecutive stops exceeds the assumed maximum for the route type.
 type FastTravelError struct {
 	TripID       string
 	StopSequence int
@@ -119,7 +119,10 @@ func (e *StopTimeFastTravelCheck) Validate(ent tt.Entity) []error {
 		}
 		dt := trip.StopTimes[i].ArrivalTime.Int() - t.Int()
 		speed := (dx / 1000.0) / (float64(dt) / 3600.0)
-		if dt > 30 && speed > maxspeed {
+		// A shared arrival time between distinct stops gives dt == 0 and, with
+		// dx > 0, an infinite speed that exceeds maxspeed. Degenerate speeds --
+		// zero, NaN (0/0), or negative (dt < 0) -- all compare false and are skipped.
+		if speed > maxspeed {
 			errs = append(errs, newFastTravelError(trip.TripID.Val, trip.StopTimes[i].StopSequence.Int(), s1, s2, dt, dx, speed, maxspeed))
 		}
 		s1 = s2

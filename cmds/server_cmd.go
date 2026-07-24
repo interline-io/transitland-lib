@@ -29,9 +29,12 @@ import (
 	"github.com/interline-io/transitland-lib/server/finders/gbfsfinder"
 	"github.com/interline-io/transitland-lib/server/finders/rtfinder"
 	"github.com/interline-io/transitland-lib/server/gql"
+	"github.com/interline-io/transitland-lib/server/jobs"
+	localjobs "github.com/interline-io/transitland-lib/server/jobs/local"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/playground"
 	"github.com/interline-io/transitland-lib/server/rest"
+	"github.com/interline-io/transitland-lib/server/workers"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/rs/zerolog"
 	"github.com/spf13/pflag"
@@ -43,6 +46,7 @@ import (
 	_ "github.com/interline-io/transitland-lib/server/directions/valhalla"
 )
 
+// ServerCommand runs the transitland API server.
 type ServerCommand struct {
 	Timeout                 int
 	LongQueryDuration       int
@@ -159,6 +163,21 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// (entity CRUD, DB readers, fetch/import bookkeeping). See model.Config.
 	dbAdapter := postgres.NewPostgresAdapterFromDBX(db)
 
+	// In-process job backend so the import/unimport mutations run on a job
+	// context that outlives the request. Production deployments register their
+	// own workers; these are the reference implementations.
+	jobRunner := jobs.NewRunner()
+	if err := jobRunner.Register(func() jobs.Worker { return &workers.FeedVersionImportWorker{} }); err != nil {
+		return err
+	}
+	if err := jobRunner.Register(func() jobs.Worker { return &workers.FeedVersionUnimportWorker{} }); err != nil {
+		return err
+	}
+	jobBackend := localjobs.NewLocalBackend(jobRunner, map[string]localjobs.QueueOpts{
+		"feed-version-import":   {},
+		"feed-version-unimport": {},
+	}, nil)
+
 	// Demo binary: authorization disabled. Production deployments should
 	// compose their own binary with a real Checker.
 	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
@@ -170,6 +189,8 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		FeedManager:             feedmanager.NewDBFeedManager(dbAdapter),
 		Checker:                 allowAllCheckerInstance,
 		Actions:                 actionFinder,
+		Jobs:                    jobBackend,
+		JobRunner:               jobRunner,
 		Secrets:                 cmd.secrets,
 		Storage:                 cmd.Storage,
 		RTStorage:               cmd.RTStorage,
@@ -181,6 +202,14 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,
 		MaxRadius:               cmd.MaxRadius,
 	}
+
+	// Install cfg into the job context and start the in-process worker pool.
+	jobRunner.Use(model.NewConfigMiddleware(cfg))
+	go func() {
+		if err := jobBackend.Run(ctx); err != nil {
+			log.For(ctx).Error().Err(err).Msg("job backend stopped")
+		}
+	}()
 
 	// Setup router
 	root := chi.NewRouter()
@@ -247,7 +276,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// Start server
 	timeOut := time.Duration(cmd.Timeout) * time.Second
 	addr := fmt.Sprintf("%s:%s", "0.0.0.0", cmd.Port)
-	log.For(ctx).Info().Msgf("Listening on: %s", addr)
+	log.For(ctx).Info().Str("addr", addr).Msg("listening")
 	srv := &http.Server{
 		Handler:      http.TimeoutHandler(root, timeOut, "timeout"),
 		Addr:         addr,

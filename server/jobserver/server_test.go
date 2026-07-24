@@ -165,6 +165,74 @@ func TestStatusEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
+func TestDeleteEndpoint(t *testing.T) {
+	srv, backend, _ := newTestServer(t)
+	owner := authn.NewCtxUser("alice", "", "")
+	stranger := authn.NewCtxUser("bob", "", "")
+
+	st := runOneAndStop(t, backend, authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
+	url := srv.URL + "/queues/" + testQueue + "/jobs/" + st.Job.ID
+
+	// Stranger: 404 (no leak, and it stays put).
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodDelete, url, stranger))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Unauthenticated: 403.
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodDelete, url, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+	// Owner deletes the terminal job: 204, then it's gone (GET 404).
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodDelete, url, owner))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodGet, url, owner))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	// Unknown id: 404.
+	resp, err = http.DefaultClient.Do(authedRequest(t, http.MethodDelete, srv.URL+"/queues/"+testQueue+"/jobs/does-not-exist", owner))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+// A queued (non-terminal) job can't be deleted — the backend is never run here,
+// so the submitted job stays queued.
+func TestDeleteEndpointRejectsNonTerminal(t *testing.T) {
+	srv, backend, _ := newTestServer(t)
+	owner := authn.NewCtxUser("alice", "", "")
+
+	q, _ := backend.Queue(testQueue)
+	queued, err := q.Submit(authn.WithUser(context.Background(), owner), jobs.Job{Kind: "test", Opts: jobs.JobOpts{UserID: "alice"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(authedRequest(t, http.MethodDelete, srv.URL+"/queues/"+testQueue+"/jobs/"+queued.Job.ID, owner))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	assert.Equal(t, http.StatusConflict, resp.StatusCode)
+}
+
 func TestListEndpoint(t *testing.T) {
 	srv, backend, _ := newTestServer(t)
 	owner := authn.NewCtxUser("alice", "", "")

@@ -1,0 +1,5 @@
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,level_id
+STATION,Test Station,40.0000,-74.0000,1,,
+PLAT1,Platform 1,40.0001,-74.0001,0,STATION,L1
+PLAT2,Platform 2,40.0002,-74.0002,0,STATION,L1
+ENT1,Main Entrance,40.0003,-74.0003,2,STATION,L0

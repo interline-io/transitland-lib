@@ -8,7 +8,16 @@ import (
 	"strings"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/spf13/pflag"
 )
+
+// addDryRunFlag registers the canonical --dry-run flag plus a deprecated --dryrun
+// alias, so every command spells dry-run the same way.
+func addDryRunFlag(fl *pflag.FlagSet, p *bool, usage string) {
+	fl.BoolVar(p, "dry-run", false, usage)
+	fl.BoolVar(p, "dryrun", false, usage)
+	_ = fl.MarkDeprecated("dryrun", "use --dry-run instead")
+}
 
 // parseErrorThresholds parses a slice of "filename:percent" strings into a map.
 // Percentages are specified as 0-100 (e.g., "stops.txt:5" means 5%).

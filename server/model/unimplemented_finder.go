@@ -163,6 +163,10 @@ func (UnimplementedFinder) CensusSourcesByDatasetIDs(context.Context, *int, *Cen
 func (UnimplementedFinder) CensusTablesByDatasetIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error) {
 	return nil, notImplErr()
 }
+
+func (UnimplementedFinder) CensusTablesBySourceIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) CensusTableByIDs(_ context.Context, ids []int) ([]*CensusTable, []error) {
 	return notImplBatch[*CensusTable](ids)
 }

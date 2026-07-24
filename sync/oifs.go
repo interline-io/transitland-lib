@@ -95,7 +95,7 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 		}
 		// Get agencies
 		agencies := []gtfs.Agency{}
-		if err := atx.Select(ctx, &agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states using(feed_version_id) where feed_states.feed_id = ?", oif.FeedID); err != nil {
+		if err := atx.Select(ctx, &agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id where feed_states.feed_id = ?", oif.FeedID); err != nil {
 			return false, err
 		}
 		agencyID := 0
@@ -163,7 +163,7 @@ func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool
 	agencyQuery := atx.Sqrl().
 		Select("gtfs_agencies.*", "feed_version_agency_onestop_ids.onestop_id as onestop_id").
 		From("gtfs_agencies").
-		Join("feed_states using(feed_version_id)").
+		Join("feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_states.feed_id").
 		JoinClause("left join feed_version_agency_onestop_ids on feed_version_agency_onestop_ids.entity_id = gtfs_agencies.agency_id and feed_version_agency_onestop_ids.feed_version_id = gtfs_agencies.feed_version_id").
 		Where(sq.Eq{"current_feeds.id": feedid})

@@ -188,6 +188,20 @@ func TestCensusResolver(t *testing.T) {
 			vars:   vars,
 			expect: `{"census_datasets":[{"name":"tiger2024","sources":[{"layers":[{"description":"Layer: tract","name":"tract"}],"name":"tl_2024_06_tract.zip"}]}]}`,
 		},
+		// Source tables: an ACS source resolves to the table it loaded; a TIGER source
+		// (geographies only) resolves to none -- the tables-vs-layers distinction.
+		{
+			name:   "source tables",
+			query:  `query { census_datasets(where:{name:"acsdt5y2022"}) {name sources(where:{name:"acsdt5y2022-b01001.dat"}) {name tables { table_name }} } }`,
+			vars:   vars,
+			expect: `{"census_datasets":[{"name":"acsdt5y2022","sources":[{"name":"acsdt5y2022-b01001.dat","tables":[{"table_name":"b01001"}]}]}]}`,
+		},
+		{
+			name:   "source tables empty for tiger",
+			query:  `query { census_datasets(where:{name:"tiger2024"}) {name sources(where:{name:"tl_2024_06_tract.zip"}) {name tables { table_name }} } }`,
+			vars:   vars,
+			expect: `{"census_datasets":[{"name":"tiger2024","sources":[{"name":"tl_2024_06_tract.zip","tables":null}]}]}`,
+		},
 		{
 			name:   "source geographies",
 			query:  `query { census_datasets(where:{name:"tiger2024"}) {name sources(where:{name:"tl_2024_us_county.zip"}) {name geographies(where:{search:"ala"}) { name } } } }`,

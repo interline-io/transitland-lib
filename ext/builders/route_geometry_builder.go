@@ -36,6 +36,32 @@ func (ent *RouteGeometry) TableName() string {
 
 ///////
 
+// RouteRepresentativeShape points a route at one of the shapes selected to represent it.
+// Rank 0 is the route's primary shape; the full set spans its combined geometry.
+// The metrics describe the shape itself, not the route.
+type RouteRepresentativeShape struct {
+	RouteID               string
+	ShapeID               string
+	DirectionID           tt.Int
+	Rank                  int
+	Generated             bool
+	Length                tt.Float
+	MaxSegmentLength      tt.Float
+	FirstPointMaxDistance tt.Float
+	tt.MinEntity
+	tt.FeedVersionEntity
+}
+
+func (ent *RouteRepresentativeShape) Filename() string {
+	return "tl_route_representative_shapes.txt"
+}
+
+func (ent *RouteRepresentativeShape) TableName() string {
+	return "tl_route_representative_shapes"
+}
+
+///////
+
 type shapeInfo struct {
 	sourceID              string // source shape_id; the points live in the shared geom cache
 	Generated             bool
@@ -43,6 +69,31 @@ type shapeInfo struct {
 	MaxSegmentLength      float64
 	FirstPointMaxDistance float64
 	hasZeroPoint          bool
+}
+
+// selectedShape is a shape chosen to represent a route, in route-level rank order.
+type selectedShape struct {
+	shapeID     string
+	directionID tt.Int
+	info        shapeInfo
+}
+
+// primaryDirection returns the direction a shape carries the most trips in, or an
+// empty value if it was never counted. Ties break toward the lower direction_id so
+// repeated imports of the same feed produce identical output.
+func primaryDirection(dirCounts map[int]int) tt.Int {
+	best := 0
+	bestCount := -1
+	for dir, count := range dirCounts {
+		if count > bestCount || (count == bestCount && dir < best) {
+			best = dir
+			bestCount = count
+		}
+	}
+	if bestCount < 0 {
+		return tt.Int{}
+	}
+	return tt.NewInt(best)
 }
 
 ////////
@@ -130,18 +181,19 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 }
 
 // eachRouteGeometry builds each route's representative geometry one at a time and
-// passes it to fn, reading from the accumulated counts and shared geom cache without
-// mutating either. Routes whose geometry can't be built are skipped (and logged).
-// Streaming one at a time keeps the whole set from being held in memory at once.
-func (pp *RouteGeometryBuilder) eachRouteGeometry(fn func(*RouteGeometry) error) error {
+// passes it to fn, along with the shapes it was assembled from, in rank order.
+// Reads from the accumulated counts and shared geom cache without mutating either.
+// Routes whose geometry can't be built are skipped (and logged). Streaming one at a
+// time keeps the whole set from being held in memory at once.
+func (pp *RouteGeometryBuilder) eachRouteGeometry(fn func(*RouteGeometry, []selectedShape) error) error {
 	ctx := context.TODO()
 	for rid := range pp.shapeCounts {
-		ent, err := pp.buildRouteShape(rid)
+		ent, selected, err := pp.buildRouteShape(rid)
 		if err != nil {
 			log.For(ctx).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
 			continue
 		}
-		if err := fn(ent); err != nil {
+		if err := fn(ent, selected); err != nil {
 			return err
 		}
 	}
@@ -153,7 +205,7 @@ func (pp *RouteGeometryBuilder) eachRouteGeometry(fn func(*RouteGeometry) error)
 // prefer that when you only need to write them, since this holds the whole set.
 func (pp *RouteGeometryBuilder) RouteGeometries() map[string]*RouteGeometry {
 	out := make(map[string]*RouteGeometry, len(pp.shapeCounts))
-	_ = pp.eachRouteGeometry(func(ent *RouteGeometry) error {
+	_ = pp.eachRouteGeometry(func(ent *RouteGeometry, _ []selectedShape) error {
 		out[ent.RouteID] = ent
 		return nil
 	})
@@ -161,19 +213,40 @@ func (pp *RouteGeometryBuilder) RouteGeometries() map[string]*RouteGeometry {
 }
 
 // Collects and assembles the default shapes and writes them, streaming one route at a
-// time so the full set is never held in memory.
+// time so the full set is never held in memory. Each route also emits a pointer to
+// every shape its geometry was assembled from.
 func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
-	return pp.eachRouteGeometry(func(ent *RouteGeometry) error {
-		return copier.CopyEntity(ent)
+	return pp.eachRouteGeometry(func(ent *RouteGeometry, selected []selectedShape) error {
+		if err := copier.CopyEntity(ent); err != nil {
+			return err
+		}
+		for rank, sel := range selected {
+			if err := copier.CopyEntity(&RouteRepresentativeShape{
+				RouteID:               ent.RouteID,
+				ShapeID:               sel.shapeID,
+				DirectionID:           sel.directionID,
+				Rank:                  rank,
+				Generated:             sel.info.Generated,
+				Length:                tt.NewFloat(sel.info.Length),
+				MaxSegmentLength:      tt.NewFloat(sel.info.MaxSegmentLength),
+				FirstPointMaxDistance: tt.NewFloat(sel.info.FirstPointMaxDistance),
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
-func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, error) {
+func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, []selectedShape, error) {
 	// Trip counts and selected shapes for this route
 	candidateShapes := map[string]int{}
+	// Trip counts per shape, per direction. A shape represents the direction it
+	// carries the most trips in; the counts are kept until every direction is seen.
+	shapeDirections := map[string]map[int]int{}
 	// Process shapes for each direction
 	dirs := pp.shapeCounts[rid]
-	for _, dirShapes := range dirs {
+	for dirId, dirShapes := range dirs {
 		dirCount := 0
 		longestShape := ""
 		longestShapeLength := 0.0
@@ -203,6 +276,10 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 			// or accounts for at least 20% of trips in this direction
 			if shapeId == longestShape || float64(v)/float64(dirCount) > 0.2 {
 				candidateShapes[shapeId] += v
+				if shapeDirections[shapeId] == nil {
+					shapeDirections[shapeId] = map[int]int{}
+				}
+				shapeDirections[shapeId][dirId] += v
 			}
 		}
 	}
@@ -225,12 +302,14 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		routeSelectedShapes = routeSelectedGenerated
 	}
 	if len(routeSelectedShapes) == 0 {
-		return nil, errors.New("no shapes selected")
+		return nil, nil, errors.New("no shapes selected")
 	}
 
 	// Now build the route geometry from selected shapes
 	ent := RouteGeometry{RouteID: rid}
 	matches := [][]tlxy.Point{}
+	// Tracks matches, so rank i refers to the same shape as matches[i].
+	selected := []selectedShape{}
 	for _, shapeId := range routeSelectedShapes {
 		si, ok := pp.shapeInfos[shapeId]
 		if !ok {
@@ -269,6 +348,11 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 		}
 		// OK
 		matches = append(matches, pts)
+		selected = append(selected, selectedShape{
+			shapeID:     shapeId,
+			directionID: primaryDirection(shapeDirections[shapeId]),
+			info:        si,
+		})
 	}
 
 	// Build geom
@@ -295,11 +379,11 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, err
 	}
 	if g.NumLineStrings() == 0 || len(matches) == 0 {
 		// Skip entity
-		return nil, errors.New("no geometries")
+		return nil, nil, errors.New("no geometries")
 	} else {
 		ent.CombinedGeometry = tt.NewGeometry(g)
 	}
-	return &ent, nil
+	return &ent, selected, nil
 }
 
 ///////

@@ -641,6 +641,7 @@ func (copier *Copier) Copy(ctx context.Context) (*Result, error) {
 		func() error { return batchCopy(copier, batchChan(r.FareMedia(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.FareProducts(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.FareLegRules(), bs, nil)) },
+		func() error { return batchCopy(copier, batchChan(r.FareLegJoinRules(), bs, nil)) },
 		func() error { return batchCopy(copier, batchChan(r.FareTransferRules(), bs, nil)) },
 	}
 	for i := range fns {

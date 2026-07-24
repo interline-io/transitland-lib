@@ -83,7 +83,7 @@ func allowPrevProbeQuery(osids []string) sq.SelectBuilder {
 		From("hist").
 		Join("gtfs_stops gs on gs.stop_id = hist.entity_id").
 		Join("feed_versions cur_fv on cur_fv.id = gs.feed_version_id and cur_fv.feed_id = hist.feed_id").
-		Join("feed_states fs on fs.feed_version_id = gs.feed_version_id").
+		Join("feed_states fs on fs.materialized_feed_version_id = gs.feed_version_id").
 		JoinClause("left join feed_version_stop_onestop_ids cur on cur.entity_id = gs.stop_id and cur.feed_version_id = gs.feed_version_id")
 }
 

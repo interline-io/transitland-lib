@@ -52,6 +52,7 @@ func (s JobState) Terminal() bool {
 var (
 	ErrJobAccessDenied = errors.New("job access denied")
 	ErrJobNotFound     = errors.New("job not found")
+	ErrJobNotTerminal  = errors.New("job is not terminal")
 	ErrUnknownQueue    = errors.New("unknown queue")
 )
 
@@ -181,6 +182,16 @@ type StatusQueue interface {
 	Watch(context.Context, string) (<-chan JobEvent, error)
 	List(context.Context, ListOptions) (ListResult, error)
 	Cancel(context.Context, string) error
+}
+
+// DeletableQueue is the optional capability to remove a job's record from the
+// queue once it is terminal. Callers type-assert before use; backends that can't
+// remove jobs simply don't implement it. Delete removes only the queue's own
+// record — artifacts are stored and authorized independently and outlive the job
+// (see the artifact API), so Delete leaves them untouched.
+type DeletableQueue interface {
+	StatusQueue
+	Delete(ctx context.Context, jobId string) error
 }
 
 // PeriodicQueue is the optional capability for recurring jobs. cronTab

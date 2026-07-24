@@ -44,7 +44,7 @@ This command is useful for verifying feed integrity and looking up feed versions
 }
 
 func (cmd *ChecksumCommand) HelpArgs() string {
-	return "<feed-path>"
+	return "[flags] <feed-path>"
 }
 
 func (cmd *ChecksumCommand) AddFlags(fl *pflag.FlagSet) {
