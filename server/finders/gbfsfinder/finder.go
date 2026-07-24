@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/interline-io/transitland-lib/internal/gbfs"
-	"github.com/interline-io/transitland-lib/server/caches/ecache"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/twpayne/go-geom"
@@ -18,7 +18,7 @@ import (
 
 type Finder struct {
 	client           *redis.Client
-	cache            *ecache.Cache[gbfs.GbfsFeed]
+	cache            *kvcache.Cache[string, gbfs.GbfsFeed]
 	ttlRecheck       time.Duration
 	ttlExpire        time.Duration
 	prefix           string
@@ -27,7 +27,7 @@ type Finder struct {
 }
 
 func NewFinder(client *redis.Client) *Finder {
-	c := ecache.NewCache[gbfs.GbfsFeed](client, "gbfs")
+	c := kvcache.NewCache[string, gbfs.GbfsFeed](kvcache.NewRedisStore(client), "gbfs")
 	return &Finder{
 		ttlRecheck:       5 * time.Minute,
 		ttlExpire:        24 * time.Hour,
@@ -45,8 +45,6 @@ func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) er
 		return err
 	}
 	// Geosearch index bikes
-	ts := time.Now().In(time.UTC).Unix()
-	_ = ts
 	if c.client != nil {
 		bbox := geom.NewBounds(geom.XY)
 		for _, ent := range sf.Bikes {

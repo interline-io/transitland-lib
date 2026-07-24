@@ -291,9 +291,10 @@ func TestCache_SetMissing(t *testing.T) {
 	assert.True(t, it.Missing)
 }
 
-func TestCache_NegativeLocalOnly(t *testing.T) {
-	// Without a refresh function, NegativeTTL suppresses repeat storage
-	// reads for absent keys locally without writing tombstones to storage.
+func TestCache_NegativeMissNotTombstoned(t *testing.T) {
+	// A bare storage miss is not authoritative absence: even with
+	// NegativeTTL set, it must not install a tombstone that could mask a
+	// concurrent first write.
 	ctx := context.Background()
 	store := &recordingStore{Store: kvcache.NewMemoryStore()}
 	c := kvcache.NewCache[string, string](store, "test")
@@ -302,8 +303,9 @@ func TestCache_NegativeLocalOnly(t *testing.T) {
 	assert.False(t, ok)
 	_, ok = c.Get(ctx, "absent")
 	assert.False(t, ok)
-	assert.Equal(t, 1, store.getCount(), "second read must be suppressed by the local tombstone")
-	assert.Empty(t, store.setKeys, "local-only tombstone must not be written to storage")
+	assert.Equal(t, 2, store.getCount(), "misses must keep consulting storage")
+	assert.Empty(t, c.LocalKeys(), "a bare miss must not install a tombstone")
+	assert.Empty(t, store.setKeys)
 }
 
 func TestCache_RecheckConvergence(t *testing.T) {
