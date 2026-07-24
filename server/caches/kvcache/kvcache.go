@@ -37,10 +37,11 @@ type Cache[K comparable, V any] struct {
 	Expires time.Duration
 	// RefreshTimeout bounds each refresh function call (default 1s).
 	RefreshTimeout time.Duration
-	// NegativeTTL enables tombstone caching of absent keys (default off).
-	// Legacy ecache/rcache readers do not understand tombstones and see
-	// them as zero-value hits; do not enable shared tombstones on a topic
-	// until all legacy readers are retired.
+	// NegativeTTL enables tombstone caching of authoritatively absent
+	// keys — via SetMissing or a refresh function returning ErrNotFound
+	// (default off). Legacy ecache/rcache readers do not understand
+	// tombstones and see them as zero-value hits; do not enable shared
+	// tombstones on a topic until all legacy readers are retired.
 	NegativeTTL time.Duration
 	// KeyPrefix namespaces storage keys as "<prefix>:<topic>:<key>". The
 	// default "ecache" preserves the legacy wire format.
@@ -248,13 +249,12 @@ func (c *Cache[K, V]) loadOrRefresh(ctx context.Context, key K) (Item[V], bool) 
 			c.deleteExpiredLocal(key)
 			return result{}, nil
 		}
-		// Definite miss with no refresh source; optionally suppress
-		// repeated storage reads with a local-only tombstone.
-		if c.NegativeTTL > 0 {
-			c.setLocal(key, c.missingItem(c.NegativeTTL))
-		} else {
-			c.deleteExpiredLocal(key)
-		}
+		// Definite miss with no refresh source. Absence is cached only
+		// when stated authoritatively (SetMissing, or a refresh function
+		// returning ErrNotFound) — a bare storage miss may just mean
+		// "not fetched yet", and tombstoning it would turn a concurrent
+		// first read into a spurious cached miss.
+		c.deleteExpiredLocal(key)
 		return result{}, nil
 	})
 	r, _ := v.(result)
