@@ -131,9 +131,10 @@ func TestCache_StorageMissNotPoisoned(t *testing.T) {
 }
 
 func TestCache_WireFormat(t *testing.T) {
-	// The envelope and key must match the legacy ecache format so old
-	// and new pods share warm caches during a rolling deploy. Delete
-	// this test when ecache/rcache are removed.
+	// The envelope and key composition are the persistent storage wire
+	// format (inherited from the removed ecache package): deployed
+	// processes share warm caches across versions, so any change here is
+	// cross-version breaking.
 	type legacyItem struct {
 		Value     string
 		ExpiresAt time.Time

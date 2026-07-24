@@ -1,6 +1,7 @@
 // Package kvcache provides a generic two-tier cache: a per-process local
-// tier in front of a shared Store such as Redis. It replaces the older
-// ecache and rcache packages.
+// tier in front of a shared Store such as Redis. It replaced the removed
+// ecache and rcache packages; their storage key prefix and envelope are
+// retained as the wire format.
 package kvcache
 
 import (
