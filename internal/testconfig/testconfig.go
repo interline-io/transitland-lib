@@ -173,9 +173,15 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		opts.RTStorage = t.TempDir()
 	}
 
-	// Initialize job runner + backend - do not start
+	// Initialize job runner + backend - do not start. Named queues for the
+	// feed-version import/unimport mutations are declared so tests that exercise
+	// those mutations can Submit/Watch after registering workers and starting
+	// the backend themselves.
 	jobRunner := jobs.NewRunner()
-	jobBackend := localjobs.NewLocalBackend(jobRunner, nil, nil)
+	jobBackend := localjobs.NewLocalBackend(jobRunner, map[string]localjobs.QueueOpts{
+		"feed-version-import":   {},
+		"feed-version-unimport": {},
+	}, nil)
 
 	// Action finder
 	actionFinder := &actions.Actions{}

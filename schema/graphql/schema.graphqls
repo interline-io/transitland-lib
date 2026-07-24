@@ -1921,7 +1921,7 @@ type CensusSource {
   geographies(limit: Int, where: CensusSourceGeographyFilter): [CensusGeography!]
 
   "Data tables loaded from this source file"
-  tables(limit: Int): [CensusTable!]
+  tables(limit: Int, where: CensusTableFilter): [CensusTable!]
 
   "Geographic layers defined by this source file"
   layers: [CensusLayer!]

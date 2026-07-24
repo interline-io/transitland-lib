@@ -201,6 +201,43 @@ func (f *Finder) CensusSourceLayersBySourceIDs(ctx context.Context, keys []int) 
 	return ret, nil
 }
 
+func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where *model.CensusTableFilter, keys []int) ([][]*model.CensusTable, error) {
+	type qent struct {
+		SourceID int
+		model.CensusTable
+	}
+	var ents []*qent
+	// Tables have no source_id; the source->table association lives in the loaded
+	// values. Dedup per (source, table) since the loader batches multiple source ids
+	// and a table can appear across sources.
+	q := sq.StatementBuilder.
+		Select("v.source_id", "tlct.*").
+		Distinct().Options("on (v.source_id, tlct.id)").
+		From("tl_census_values v").
+		Join("tl_census_tables tlct on tlct.id = v.table_id").
+		Where(sq.Eq{"v.source_id": keys}).
+		OrderBy("v.source_id", "tlct.id")
+	if where != nil && where.Search != nil {
+		q = q.Where(sq.ILike{"tlct.table_name": dbutil.EscapeLike(*where.Search, true, true)})
+	}
+	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
+		return nil, logErr(ctx, err)
+	}
+	grouped := arrangeGroup(keys, ents, func(ent *qent) int { return ent.SourceID })
+	var ret [][]*model.CensusTable
+	for _, group := range grouped {
+		var g []*model.CensusTable
+		for _, ent := range group {
+			g = append(g, &ent.CensusTable)
+		}
+		if limit != nil && *limit >= 0 && len(g) > *limit {
+			g = g[:*limit]
+		}
+		ret = append(ret, g)
+	}
+	return ret, nil
+}
+
 func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
 	var ents []*model.CensusGeography
 	q := censusDatasetGeographySelect(limit, p, getCensusGeographySelectFields(ctx)).Where(sq.Eq{"tlcd.id": keys})
