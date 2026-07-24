@@ -13,7 +13,7 @@ type MemoryStore struct {
 	now    func() time.Time
 	lock   sync.RWMutex
 	m      map[string]memoryEntry
-	hashes map[string]map[string][]byte
+	hashes map[string]map[string]string
 }
 
 var _ HashStore = (*MemoryStore)(nil)
@@ -27,7 +27,7 @@ func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		now:    time.Now,
 		m:      map[string]memoryEntry{},
-		hashes: map[string]map[string][]byte{},
+		hashes: map[string]map[string]string{},
 	}
 }
 
@@ -90,23 +90,23 @@ func (s *MemoryStore) expired(ent memoryEntry) bool {
 	return !ent.expiresAt.IsZero() && !ent.expiresAt.After(s.now())
 }
 
-func (s *MemoryStore) HSet(ctx context.Context, key string, field string, value []byte) error {
+func (s *MemoryStore) HSet(ctx context.Context, key string, field string, value string) error {
 	s.lock.Lock()
 	h, ok := s.hashes[key]
 	if !ok {
-		h = map[string][]byte{}
+		h = map[string]string{}
 		s.hashes[key] = h
 	}
-	h[field] = append([]byte(nil), value...)
+	h[field] = value
 	s.lock.Unlock()
 	return nil
 }
 
-func (s *MemoryStore) HGetAll(ctx context.Context, key string) (map[string][]byte, error) {
-	ret := map[string][]byte{}
+func (s *MemoryStore) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	ret := map[string]string{}
 	s.lock.RLock()
 	for field, value := range s.hashes[key] {
-		ret[field] = append([]byte(nil), value...)
+		ret[field] = value
 	}
 	s.lock.RUnlock()
 	return ret, nil

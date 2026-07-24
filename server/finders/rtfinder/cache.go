@@ -62,8 +62,13 @@ func (c *storeCache) AddData(ctx context.Context, topic string, data []byte) err
 		// the topic changed; they re-read the payload from the store.
 		return c.pubsub.Publish(rctx, updatesChannel, []byte(topic))
 	}
-	// No shared distribution: decode straight into the local Source.
-	return c.setSource(ctx, topic, data)
+	// No shared distribution: decode straight into the local map.
+	s, err := c.decode(ctx, topic, data)
+	if err != nil {
+		return err
+	}
+	c.putSource(topic, s)
+	return nil
 }
 
 func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool) {
@@ -125,11 +130,9 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 			if !ok {
 				return
 			}
-			topic := string(msg.Data)
+			topic := string(msg)
 			if s := c.loadFromStore(c.ctx, topic); s != nil {
-				c.lock.Lock()
-				c.sources[topic] = s
-				c.lock.Unlock()
+				c.putSource(topic, s)
 				log.For(c.ctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
 			}
 		}
@@ -157,26 +160,14 @@ func (c *storeCache) loadFromStore(ctx context.Context, topic string) *Source {
 	return s
 }
 
-// setSource decodes data into a fresh Source and installs it locally,
-// replacing any prior snapshot for the topic.
-func (c *storeCache) setSource(ctx context.Context, topic string, data []byte) error {
-	s, err := c.decode(ctx, topic, data)
-	if err != nil {
-		return err
-	}
-	if s == nil {
-		return nil
-	}
+// putSource installs s as the local snapshot for topic, replacing any prior one.
+func (c *storeCache) putSource(topic string, s *Source) {
 	c.lock.Lock()
 	c.sources[topic] = s
 	c.lock.Unlock()
-	return nil
 }
 
 func (c *storeCache) decode(ctx context.Context, topic string, data []byte) (*Source, error) {
-	if len(data) == 0 {
-		return nil, nil
-	}
 	s, err := NewSource(topic)
 	if err != nil {
 		return nil, err

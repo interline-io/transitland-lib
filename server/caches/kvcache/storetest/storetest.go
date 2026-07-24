@@ -92,14 +92,14 @@ func Run(t *testing.T, mk func(t *testing.T) kvcache.Store) {
 		got, err := hs.HGetAll(ctx, "storetest:h")
 		assert.NoError(t, err)
 		assert.Empty(t, got, "absent hash reads as empty")
-		assert.NoError(t, hs.HSet(ctx, "storetest:h", "a", []byte("1")))
-		assert.NoError(t, hs.HSet(ctx, "storetest:h", "b", []byte("2")))
-		assert.NoError(t, hs.HSet(ctx, "storetest:h", "a", []byte("3")))
+		assert.NoError(t, hs.HSet(ctx, "storetest:h", "a", "1"))
+		assert.NoError(t, hs.HSet(ctx, "storetest:h", "b", "2"))
+		assert.NoError(t, hs.HSet(ctx, "storetest:h", "a", "3"))
 		got, err = hs.HGetAll(ctx, "storetest:h")
 		assert.NoError(t, err)
-		assert.Equal(t, map[string][]byte{
-			"a": []byte("3"),
-			"b": []byte("2"),
+		assert.Equal(t, map[string]string{
+			"a": "3",
+			"b": "2",
 		}, got)
 	})
 	t.Run("PubSub", func(t *testing.T) {
@@ -114,7 +114,7 @@ func Run(t *testing.T, mk func(t *testing.T) kvcache.Store) {
 		assert.NoError(t, ps.Publish(ctx, "storetest:updates", []byte("ping")))
 		select {
 		case msg := <-sub.Messages():
-			assert.Equal(t, []byte("ping"), msg.Data)
+			assert.Equal(t, []byte("ping"), msg)
 		case <-time.After(3 * time.Second):
 			t.Fatal("timed out waiting for published message")
 		}

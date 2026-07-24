@@ -110,7 +110,7 @@ func (s *RedisStore) Subscribe(ctx context.Context, channel string) (Subscriptio
 	return newRedisSubscription(ctx, sub), nil
 }
 
-func (s *RedisStore) HSet(ctx context.Context, key string, field string, value []byte) error {
+func (s *RedisStore) HSet(ctx context.Context, key string, field string, value string) error {
 	if s.client == nil {
 		return nil
 	}
@@ -119,37 +119,29 @@ func (s *RedisStore) HSet(ctx context.Context, key string, field string, value [
 	return s.client.HSet(rctx, key, field, value).Err()
 }
 
-func (s *RedisStore) HGetAll(ctx context.Context, key string) (map[string][]byte, error) {
-	ret := map[string][]byte{}
+func (s *RedisStore) HGetAll(ctx context.Context, key string) (map[string]string, error) {
 	if s.client == nil {
-		return ret, nil
+		return map[string]string{}, nil
 	}
 	rctx, cancel := context.WithTimeout(ctx, s.Timeout)
 	defer cancel()
-	m, err := s.client.HGetAll(rctx, key).Result()
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range m {
-		ret[k] = []byte(v)
-	}
-	return ret, nil
+	return s.client.HGetAll(rctx, key).Result()
 }
 
-// redisSubscription adapts a *redis.PubSub to Subscription, translating
-// *redis.Message into kvcache.Message on a pump goroutine.
+// redisSubscription adapts a *redis.PubSub to Subscription, forwarding each
+// message payload on a pump goroutine.
 type redisSubscription struct {
 	sub *redis.PubSub
-	out chan Message
+	out chan []byte
 }
 
 func newRedisSubscription(ctx context.Context, sub *redis.PubSub) *redisSubscription {
-	rs := &redisSubscription{sub: sub, out: make(chan Message)}
+	rs := &redisSubscription{sub: sub, out: make(chan []byte)}
 	go rs.pump(ctx)
 	return rs
 }
 
-func (rs *redisSubscription) Messages() <-chan Message { return rs.out }
+func (rs *redisSubscription) Messages() <-chan []byte { return rs.out }
 
 func (rs *redisSubscription) Close() error { return rs.sub.Close() }
 
@@ -165,7 +157,7 @@ func (rs *redisSubscription) pump(ctx context.Context) {
 				return
 			}
 			select {
-			case rs.out <- Message{Channel: msg.Channel, Data: []byte(msg.Payload)}:
+			case rs.out <- []byte(msg.Payload):
 			case <-ctx.Done():
 				return
 			}
@@ -178,6 +170,6 @@ func (rs *redisSubscription) pump(ctx context.Context) {
 // RedisStore, which has no backend to subscribe to.
 type deadSubscription struct{}
 
-func (deadSubscription) Messages() <-chan Message { return nil }
+func (deadSubscription) Messages() <-chan []byte { return nil }
 
 func (deadSubscription) Close() error { return nil }

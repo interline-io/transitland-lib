@@ -43,22 +43,17 @@ type PubSubStore interface {
 	Subscribe(ctx context.Context, channel string) (Subscription, error)
 }
 
-// Message is a single payload delivered to a Subscription.
-type Message struct {
-	Channel string
-	Data    []byte
-}
-
-// Subscription is a live stream of published messages. Close releases the
-// underlying backend connection.
+// Subscription is a live stream of published payloads for a single
+// channel. Close releases the underlying backend connection.
 type Subscription interface {
-	Messages() <-chan Message
+	Messages() <-chan []byte
 	Close() error
 }
 
 // HashStore is an optional Store capability providing field-addressable
-// hash maps, used for small secondary indexes such as the GBFS bbox index.
+// hash maps, used for small secondary text indexes such as the GBFS bbox
+// index.
 type HashStore interface {
-	HSet(ctx context.Context, key string, field string, value []byte) error
-	HGetAll(ctx context.Context, key string) (map[string][]byte, error)
+	HSet(ctx context.Context, key string, field string, value string) error
+	HGetAll(ctx context.Context, key string) (map[string]string, error)
 }

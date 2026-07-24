@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/internal/gbfs"
@@ -51,11 +49,11 @@ func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) er
 	}
 	// Index bike and dock bounding boxes for cross-process geosearch.
 	bikeBox := bboxString(sf.Bikes, func(e *gbfs.FreeBikeStatus) (float64, float64) { return e.Lon.Val, e.Lat.Val })
-	if err := c.hashes.HSet(ctx, c.bikeSearchKey, topic, []byte(bikeBox)); err != nil {
+	if err := c.hashes.HSet(ctx, c.bikeSearchKey, topic, bikeBox); err != nil {
 		return err
 	}
 	stationBox := bboxString(sf.StationInformation, func(e *gbfs.StationInformation) (float64, float64) { return e.Lon.Val, e.Lat.Val })
-	if err := c.hashes.HSet(ctx, c.stationSearchKey, topic, []byte(stationBox)); err != nil {
+	if err := c.hashes.HSet(ctx, c.stationSearchKey, topic, stationBox); err != nil {
 		return err
 	}
 	return nil
@@ -143,17 +141,8 @@ func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius
 			return nil, err
 		}
 		for topicKey, loc := range locs {
-			var coords []float64
-			for _, c := range strings.Split(string(loc), ",") {
-				cf, err := strconv.ParseFloat(c, 64)
-				if err != nil {
-					return nil, err
-				}
-				coords = append(coords, cf)
-			}
-			bbox := geom.NewBounds(geom.XY)
-			bbox.Set(coords...)
-			if bbox.OverlapsPoint(geom.XY, geom.Coord{pt.Lon, pt.Lat}) {
+			bbox, _ := tlxy.ParseBbox(loc)
+			if bbox.Contains(tlxy.Point{Lon: pt.Lon, Lat: pt.Lat}) {
 				topicKeys[topicKey] = true
 			}
 		}

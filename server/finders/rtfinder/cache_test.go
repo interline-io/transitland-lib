@@ -82,10 +82,7 @@ func testCache(t *testing.T, rtCache Cache) {
 		topics = append(topics, fmt.Sprintf("%s-%d", feed, time.Now().UnixNano()))
 	}
 	for _, topic := range topics {
-		v := "2.0"
-		ts := uint64(time.Now().UnixNano())
-		rtdata, _ := proto.Marshal(&pb.FeedMessage{Header: &pb.FeedHeader{GtfsRealtimeVersion: &v, Timestamp: &ts}})
-		if err := rtCache.AddData(ctx, topic, rtdata); err != nil {
+		if err := rtCache.AddData(ctx, topic, mkRTData(uint64(time.Now().UnixNano()))); err != nil {
 			t.Fatal(err)
 		}
 	}
