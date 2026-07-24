@@ -19,6 +19,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/meters"
 	localmeter "github.com/interline-io/transitland-lib/server/meters/local"
@@ -142,20 +143,21 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		dbFinder.LoadAdmins(ctx)
 	}
 
-	// Create RTFinder, GbfsFinder
-	var rtFinder model.RTFinder
-	var gbfsFinder model.GbfsFinder
+	// Create RTFinder, GbfsFinder. With Redis, the shared store also provides
+	// cross-process pub/sub and the GBFS bbox index; without it, each finder
+	// runs against an in-process store.
+	var rtStore, gbfsStore kvcache.Store
 	if redisClient != nil {
-		// Use redis backed finders
-		rtf := rtfinder.NewFinder(rtfinder.NewRedisCache(redisClient), db)
-		defer rtf.Close()
-		rtFinder = rtf
-		gbfsFinder = gbfsfinder.NewFinder(redisClient)
+		rtStore = kvcache.NewRedisStore(redisClient)
+		gbfsStore = kvcache.NewRedisStore(redisClient)
 	} else {
-		// Default to in-memory cache
-		rtFinder = rtfinder.NewFinder(rtfinder.NewLocalCache(), db)
-		gbfsFinder = gbfsfinder.NewFinder(nil)
+		rtStore = kvcache.NewMemoryStore()
+		gbfsStore = kvcache.NewMemoryStore()
 	}
+	rtf := rtfinder.NewFinder(rtStore, db)
+	defer rtf.Close()
+	var rtFinder model.RTFinder = rtf
+	var gbfsFinder model.GbfsFinder = gbfsfinder.NewFinder(gbfsStore)
 
 	var actionFinder model.Actions = &actions.Actions{}
 

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/interline-io/transitland-lib/internal/gbfs"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -17,26 +16,29 @@ import (
 )
 
 type Finder struct {
-	client           *redis.Client
 	cache            *kvcache.Cache[string, gbfs.GbfsFeed]
+	hashes           kvcache.HashStore // nil when the store has no hash index
 	ttlRecheck       time.Duration
 	ttlExpire        time.Duration
-	prefix           string
 	bikeSearchKey    string
 	stationSearchKey string
 }
 
-func NewFinder(client *redis.Client) *Finder {
-	c := kvcache.NewCache[string, gbfs.GbfsFeed](kvcache.NewRedisStore(client), "gbfs")
-	return &Finder{
+// NewFinder returns a GbfsFinder backed by store. When store supports the
+// HashStore capability it holds the cross-process bounding-box index;
+// otherwise geosearch falls back to locally known topics.
+func NewFinder(store kvcache.Store) *Finder {
+	f := &Finder{
 		ttlRecheck:       5 * time.Minute,
 		ttlExpire:        24 * time.Hour,
-		cache:            c,
-		client:           client,
-		prefix:           "gbfs",
-		bikeSearchKey:    fmt.Sprintf("%s:bike-bbox", "gbfs"),
-		stationSearchKey: fmt.Sprintf("%s:station-bbox", "gbfs"),
+		cache:            kvcache.NewCache[string, gbfs.GbfsFeed](store, "gbfs"),
+		bikeSearchKey:    "gbfs:bike-bbox",
+		stationSearchKey: "gbfs:station-bbox",
 	}
+	if hs, ok := store.(kvcache.HashStore); ok {
+		f.hashes = hs
+	}
+	return f
 }
 
 func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) error {
@@ -44,27 +46,17 @@ func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) er
 	if err := c.cache.SetTTL(ctx, topic, sf, c.ttlRecheck, c.ttlExpire); err != nil {
 		return err
 	}
-	// Geosearch index bikes
-	if c.client != nil {
-		bbox := geom.NewBounds(geom.XY)
-		for _, ent := range sf.Bikes {
-			bbox.Extend(geom.NewPoint(geom.XY).MustSetCoords(geom.Coord{ent.Lon.Val, ent.Lat.Val}))
-		}
-		bc := fmt.Sprintf("%0.5f,%0.5f,%0.5f,%0.5f", bbox.Min(0), bbox.Min(1), bbox.Max(0), bbox.Max(1))
-		if err := c.client.HSet(ctx, c.bikeSearchKey, topic, bc).Err(); err != nil {
-			return err
-		}
+	if c.hashes == nil {
+		return nil
 	}
-	// Geosearch index docks
-	if c.client != nil {
-		bbox := geom.NewBounds(geom.XY)
-		for _, ent := range sf.StationInformation {
-			bbox.Extend(geom.NewPoint(geom.XY).MustSetCoords(geom.Coord{ent.Lon.Val, ent.Lat.Val}))
-		}
-		bc := fmt.Sprintf("%0.5f,%0.5f,%0.5f,%0.5f", bbox.Min(0), bbox.Min(1), bbox.Max(0), bbox.Max(1))
-		if err := c.client.HSet(ctx, c.stationSearchKey, topic, bc).Err(); err != nil {
-			return err
-		}
+	// Index bike and dock bounding boxes for cross-process geosearch.
+	bikeBox := bboxString(sf.Bikes, func(e *gbfs.FreeBikeStatus) (float64, float64) { return e.Lon.Val, e.Lat.Val })
+	if err := c.hashes.HSet(ctx, c.bikeSearchKey, topic, []byte(bikeBox)); err != nil {
+		return err
+	}
+	stationBox := bboxString(sf.StationInformation, func(e *gbfs.StationInformation) (float64, float64) { return e.Lon.Val, e.Lat.Val })
+	if err := c.hashes.HSet(ctx, c.stationSearchKey, topic, []byte(stationBox)); err != nil {
+		return err
 	}
 	return nil
 }
@@ -145,15 +137,14 @@ func (c *Finder) FindDocks(ctx context.Context, limit *int, where *model.GbfsDoc
 
 func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius) ([]string, error) {
 	topicKeys := map[string]bool{}
-	if c.client != nil {
-		cmd := c.client.HGetAll(ctx, key)
-		locs, err := cmd.Result()
+	if c.hashes != nil {
+		locs, err := c.hashes.HGetAll(ctx, key)
 		if err != nil {
 			return nil, err
 		}
 		for topicKey, loc := range locs {
 			var coords []float64
-			for _, c := range strings.Split(loc, ",") {
+			for _, c := range strings.Split(string(loc), ",") {
 				cf, err := strconv.ParseFloat(c, 64)
 				if err != nil {
 					return nil, err
@@ -163,15 +154,11 @@ func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius
 			bbox := geom.NewBounds(geom.XY)
 			bbox.Set(coords...)
 			if bbox.OverlapsPoint(geom.XY, geom.Coord{pt.Lon, pt.Lat}) {
-				// fmt.Println("in box", topicKey, pt.Lon, pt.Lat)
 				topicKeys[topicKey] = true
-			} else {
-				// fmt.Println("not in box", topicKey, pt.Lon, pt.Lat)
 			}
-
 		}
 	} else {
-		// If not using redis, get local keys. This is not perfect.
+		// No shared bbox index: fall back to locally known topics.
 		for _, k := range c.cache.LocalKeys() {
 			topicKeys[k] = true
 		}
@@ -181,6 +168,17 @@ func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius
 		ret = append(ret, k)
 	}
 	return ret, nil
+}
+
+// bboxString returns the "minX,minY,maxX,maxY" bounding box of ents, whose
+// lon/lat are read by coord.
+func bboxString[T any](ents []T, coord func(T) (lon float64, lat float64)) string {
+	bbox := geom.NewBounds(geom.XY)
+	for _, ent := range ents {
+		lon, lat := coord(ent)
+		bbox.Extend(geom.NewPoint(geom.XY).MustSetCoords(geom.Coord{lon, lat}))
+	}
+	return fmt.Sprintf("%0.5f,%0.5f,%0.5f,%0.5f", bbox.Min(0), bbox.Min(1), bbox.Max(0), bbox.Max(1))
 }
 
 func checkFloat(v *float64, min float64, max float64) float64 {

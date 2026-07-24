@@ -10,13 +10,13 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
-// Cache provides a method for looking up and listening for changed RT data
+// Cache looks up decoded RT data and stays current as feeds are refreshed.
 type Cache interface {
-	AddFeedMessage(context.Context, string, *pb.FeedMessage) error
 	AddData(context.Context, string, []byte) error
 	GetSource(context.Context, string) (*Source, bool)
 	Close() error
@@ -30,10 +30,12 @@ type Finder struct {
 	lc    *lookupCache
 }
 
-func NewFinder(cache Cache, db tldb.Ext) *Finder {
+// NewFinder returns an RTFinder backed by store for RT payload storage and
+// cross-process distribution (via the store's pub/sub capability, if any).
+func NewFinder(store kvcache.Store, db tldb.Ext) *Finder {
 	return &Finder{
 		Clock: &clock.Real{},
-		cache: cache,
+		cache: newStoreCache(store),
 		lc:    newLookupCache(db),
 	}
 }
