@@ -471,7 +471,12 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 		}
 
-		if withinClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
+		// Filter precedence: bbox wins outright; otherwise `within` and
+		// `stop_buffer` compose (clip intersection for a positive radius,
+		// polygon-restricted point matching for radius 0); otherwise the
+		// first filter present in this chain applies and the rest are
+		// ignored.
+		if loc.Bbox == nil && withinClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
 			// Clip to the intersection of the query-area polygon (`within`) and
 			// the stop-buffer union: census apportioned to where the polygon and
 			// the transit coverage overlap, not either alone. Compose the two
@@ -490,7 +495,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			qBuffer = sq.StatementBuilder.Select().
 				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat).
 				Column("0 as match_entity_id")
-		} else if withinClip {
+		} else if withinClip && !stopBufferClip {
 			qBufferUse = true
 			qBuffer = withinClipSelect().Column("0 as match_entity_id")
 		} else if loc.Near != nil {
@@ -507,6 +512,14 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 					Column("gtfs_stops.id as match_entity_id").
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+				if withinClip {
+					// A combined `within` restricts point matching to stops
+					// inside the polygon rather than being silently ignored.
+					q = q.WithCTE(sq.CTE{Alias: "clip_within", Materialized: true, Expression: withinClipSelect()})
+					qPoints = qPoints.
+						JoinClause("CROSS JOIN clip_within").
+						Where(sq.Expr("ST_Intersects(clip_within.buffer, gtfs_stops.geometry)"))
+				}
 			} else if fields.perStopAttribution {
 				// One buffer per stop, attribution preserved as
 				// match_entity_id. Tract rows are duplicated when a tract

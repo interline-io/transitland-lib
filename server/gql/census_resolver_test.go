@@ -352,6 +352,92 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			// Partial overlap: the polygon's eastern edge runs through the
+			// FTVL stop, so the clip is the west half of the 100m buffer and
+			// the intersection area is half the buffer-only case. This is the
+			// case that pins ST_Intersection semantics from both sides: if
+			// `within` were ignored the result would be the full 31235.84, and
+			// if the buffer were ignored it would be every tract in the
+			// rectangle.
+			name:  "combined within and stop buffer partial overlap - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-122.5, 37.5},
+					{-122.224175, 37.5},
+					{-122.224175, 38.0},
+					{-122.5, 38.0},
+					{-122.5, 37.5},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918910.47033,
+					15617.923982297536,
+				)
+			},
+		},
+		{
+			// Disjoint polygon and buffer: the clip intersection is empty and
+			// no geographies match, rather than erroring or falling back to
+			// either filter alone.
+			name:  "combined within and stop buffer disjoint - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-121.6, 38.4},
+					{-121.4, 38.4},
+					{-121.4, 38.7},
+					{-121.6, 38.7},
+					{-121.6, 38.4},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "disjoint clip must match no geographies")
+			},
+		},
+		{
+			// Radius 0 combines as polygon-restricted point matching: the FTVL
+			// stop point is inside the polygon, so its containing tract
+			// matches.
+			name:  "combined within and stop buffer radius 0 - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-123.77489413290716, 38.794161309061735},
+					{-122.69431950796763, 35.52679604934255},
+					{-119.9104881819854, 37.991860068760204},
+					{-123.77489413290716, 38.794161309061735},
+				}}},
+			},
+			expect: `{"census_datasets":[{"name":"tiger2024","geographies":[{"geoid":"1400000US06001406100","name":"4061"}]}]}`,
+		},
+		{
+			// Radius 0 with the stop outside the polygon: the point is
+			// filtered out, not silently matched.
+			name:  "combined within and stop buffer radius 0 outside polygon - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-121.6, 38.4},
+					{-121.4, 38.4},
+					{-121.4, 38.7},
+					{-121.6, 38.7},
+					{-121.6, 38.4},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "stop outside the polygon must not match")
+			},
+		},
+		{
 			name:  "agency intersection areas - county",
 			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"county", radius:1000.0}) { name geoid geometry_area intersection_geometry intersection_area } } }`,
 			vars:  vars,
