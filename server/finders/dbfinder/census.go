@@ -454,7 +454,8 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		stopBufferClip := loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0
 		stopBufferRadius := 0.0
 		if stopBufferClip {
-			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_000)
+			// Clamp ceiling of 1600m ~ 1 mile, a common US analysis radius.
+			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_600)
 		}
 
 		// Single-row clip-geometry builders (column `buffer`), shared between the

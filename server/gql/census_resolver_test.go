@@ -238,6 +238,23 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			// Radius at the clamp ceiling (1600m ~ 1 mile). Expected values
+			// derived independently via direct SQL; under the previous 1000m
+			// clamp this query would silently return the 1km results instead.
+			name:  "dataset intersection areas by stop buffer - tract, 1600m clamp ceiling",
+			query: `query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(limit:1000, where:{layer: "tract", location:{stop_buffer:{stop_ids:$stop_ids, radius:1600}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
+			vars:  hw{"stop_ids": []int{bartFtvlStopId}},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					16,
+					1.7083968128707554e+07,
+					7.996376116638191e+06,
+				)
+			},
+		},
+		{
 			name:  "dataset intersection areas by stop buffer, 2 stops - tract",
 			query: `query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
 			vars:  hw{"stop_ids": []int{bartFtvlStopId, bartMcarStopId}},
