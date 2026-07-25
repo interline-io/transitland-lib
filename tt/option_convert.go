@@ -112,6 +112,8 @@ func ToCsv(val any) (string, error) {
 		value = string(v)
 	case int8, int16, int32, uint, uint8, uint16, uint32, uint64:
 		value = fmt.Sprintf("%d", v)
+	case fmt.Stringer:
+		value = v.String()
 	default:
 		return "", fmt.Errorf("can not convert field to string")
 	}

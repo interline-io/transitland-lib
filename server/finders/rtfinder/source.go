@@ -47,6 +47,9 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 				v.Timestamp = &defaultTimestamp
 			}
 			tid := v.GetTrip().GetTripId()
+			// TODO: GTFS-RT TripModifications — when tid is empty, fall back to
+			// v.GetTrip().GetModifiedTrip().GetAffectedTripId() so modified trips
+			// are indexed for downstream lookups.
 			a[tid] = v
 		}
 		if v := ent.Alert; v != nil {

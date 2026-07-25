@@ -1,0 +1,15 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "2.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405801"
+    },
+    "entity": [
+      {
+        "id": "inline-shape-missing-polyline",
+        "shape": {
+          "shapeId": "rt_shape_500286"
+        }
+      }
+    ]
+  }

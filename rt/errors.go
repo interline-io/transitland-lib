@@ -12,8 +12,18 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// Errors
-// https://github.com/CUTR-at-USF/gtfs-realtime-validator/blob/master/RULES.md
+// Codes E001-E052 / W001-W009 cross-reference an external rule list published
+// by MobilityData/gtfs-realtime-validator (originally developed by USF CUTR):
+//
+//	https://github.com/MobilityData/gtfs-realtime-validator/blob/master/RULES.md
+//
+// transitland-lib's RT validator is an independent implementation, not a fork
+// of that project. The external list has been stable for several years;
+// transitland-lib currently implements 27 of the 52 errors and 0 of the 9
+// warnings (the rest appear as commented placeholders for traceability).
+//
+// Codes E100+ / W100+ are transitland-lib additions, declared in a single
+// var block further down.
 var (
 	E001 = nec("Not in POSIX time", "E001")
 	E002 = nec("stop_time_updates not strictly sorted", "E002")
@@ -65,7 +75,9 @@ var (
 	// E052 = nec("vehicle.id is not unique", "E052")
 )
 
-// Warnings
+// External warnings (W001-W009 from the MobilityData/CUTR rule list above).
+// None currently implemented in transitland-lib; left as placeholders for
+// traceability.
 var (
 // W001 = RealtimeWarning{msg: "timestamps not populated", code: 1}
 // W002 = RealtimeWarning{msg: "vehicle_id not populated", code: 2}
@@ -76,6 +88,28 @@ var (
 // W007 = RealtimeWarning{msg: "Refresh interval is more than 35 seconds", code: 7}
 // W008 = RealtimeWarning{msg: "Header timestamp is older than 65 seconds", code: 8}
 // W009 = RealtimeWarning{msg: "schedule_relationship not populated", code: 9}
+)
+
+// transitland-lib additions (E100+ / W100+), namespaced separately from the
+// external rule list above. All current additions support GTFS-RT
+// TripModifications (experimental extension): TripDescriptor.modified_trip
+// validation, inline Stop / Shape FeedEntity bodies, and the spec's
+// fallback-TripUpdate recommendation.
+var (
+	// Errors
+	E100 = nec("modified_trip is missing required affected_trip_id", "E100")
+	E101 = nec("modified_trip is missing required modifications_id", "E101")
+	E102 = nec("inline Stop entity is missing a required field", "E102")
+	E103 = nec("inline Shape entity is missing a required field", "E103")
+
+	// Warnings
+	W100 = nec("modified_trip is set alongside legacy TripDescriptor identifier fields", "W100")
+	W101 = nec("trip_modifications replacement_stops references a stop_id not defined in static or inline RT stops", "W101")
+	W102 = nec("trip_modifications selected_trips references a trip_id not defined in static GTFS", "W102")
+	W103 = nec("modified-trip TripUpdate has no parallel plain TripUpdate for legacy consumers", "W103")
+	W104 = nec("trip_modifications replacement_stops references a stop with location_type != 0", "W104")
+	W105 = nec("inline Stop.stop_id collides with a stop_id defined in static GTFS", "W105")
+	W106 = nec("inline Shape.shape_id collides with a shape_id defined in static GTFS", "W106")
 )
 
 type bc = causes.Context
@@ -114,6 +148,11 @@ func withFieldAndJson(e RealtimeError, field string, groupKey string, value any,
 	}
 	e2.entityJson = pbEntityToMap(ent)
 	return &e2
+}
+
+func withFieldAndJsonWarning(e RealtimeError, field string, groupKey string, value any, ent protoreflect.ProtoMessage, msg string, msgArgs ...any) *RealtimeWarning {
+	re := withFieldAndJson(e, field, groupKey, value, ent, msg, msgArgs...)
+	return &RealtimeWarning{RealtimeError: *re}
 }
 
 func pbEntityToMap(ent protoreflect.ProtoMessage) tt.Map {

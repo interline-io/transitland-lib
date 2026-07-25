@@ -7,6 +7,7 @@ import (
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/geomcache"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/service"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
@@ -44,8 +45,22 @@ type Validator struct {
 	tripInfo            map[string]tripInfo
 	routeInfo           map[string]routeInfo
 	stopInfo            map[string]stopInfo
-	geomCache           tlxy.GeomCache // shared with copier
-	sched               *sched.ScheduleChecker
+	staticShapeIds      map[string]bool
+	// currentInlineStops holds stop_ids declared via FeedEntity.stop in the
+	// FeedMessage currently being validated. GTFS-RT TripModifications
+	// (experimental) lets producers publish inline Stop entities that are
+	// referenced by replacement_stops and modified-trip TripUpdates without
+	// appearing in the static GTFS. Rebuilt at the start of each
+	// ValidateFeedMessage call.
+	currentInlineStops map[string]bool
+	// currentPlainTripIds holds trip_ids of every plain (non-modified)
+	// TripUpdate in the FeedMessage currently being validated. Used to
+	// detect when a modified-trip TripUpdate is missing the parallel plain
+	// fallback the spec recommends (W103). Rebuilt at the start of each
+	// ValidateFeedMessage call.
+	currentPlainTripIds map[string]bool
+	geomCache          tlxy.GeomCache // shared with copier
+	sched              *sched.ScheduleChecker
 }
 
 // NewValidator returns an initialized validator.
@@ -55,6 +70,7 @@ func NewValidator() *Validator {
 		tripInfo:            map[string]tripInfo{},
 		routeInfo:           map[string]routeInfo{},
 		stopInfo:            map[string]stopInfo{},
+		staticShapeIds:      map[string]bool{},
 		sched:               sched.NewScheduleChecker(),
 		geomCache:           geomcache.NewGeomCache(),
 	}
@@ -87,6 +103,14 @@ func (fi *Validator) Validate(ent tt.Entity) []error {
 		a := fi.tripInfo[v.TripID.Val]
 		a.UsesFrequency = true
 		fi.tripInfo[v.TripID.Val] = a
+	case *gtfs.Shape:
+		if v.ShapeID.Val != "" {
+			fi.staticShapeIds[v.ShapeID.Val] = true
+		}
+	case *service.ShapeLine:
+		if v.ShapeID.Val != "" {
+			fi.staticShapeIds[v.ShapeID.Val] = true
+		}
 	}
 
 	// Validate with schedule checker
@@ -117,6 +141,28 @@ func (fi *Validator) ValidateFeedMessage(current *pb.FeedMessage, previous *pb.F
 			))
 		}
 		errs = append(errs, fi.ValidateHeader(current.Header, current)...)
+	}
+	// Pre-pass: collect inline Stop entities so stop_id references in
+	// TripUpdates / VehiclePositions can resolve against them as well as
+	// static stops, and plain (non-modified) TripUpdate trip_ids so W103
+	// can detect missing fallbacks. See currentInlineStops and
+	// currentPlainTripIds on Validator for details.
+	fi.currentInlineStops = map[string]bool{}
+	fi.currentPlainTripIds = map[string]bool{}
+	for _, ent := range current.GetEntity() {
+		if s := ent.GetStop(); s != nil {
+			if sid := s.GetStopId(); sid != "" {
+				fi.currentInlineStops[sid] = true
+			}
+		}
+		if tu := ent.GetTripUpdate(); tu != nil {
+			td := tu.GetTrip()
+			if td != nil && td.GetModifiedTrip() == nil {
+				if tid := td.GetTripId(); tid != "" {
+					fi.currentPlainTripIds[tid] = true
+				}
+			}
+		}
 	}
 	// TODO: Validate TripDescriptors are unique
 	for _, ent := range current.GetEntity() {
@@ -206,8 +252,9 @@ func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMess
 			"",
 		))
 	}
-	if ent.TripUpdate == nil && ent.Vehicle == nil && ent.Alert == nil {
-		errs = append(errs, newError("FeedEntity must provide one of TripUpdate, VehiclePosition, or Alert", "entity"))
+	if ent.TripUpdate == nil && ent.Vehicle == nil && ent.Alert == nil &&
+		ent.Shape == nil && ent.Stop == nil && ent.TripModifications == nil {
+		errs = append(errs, newError("FeedEntity must provide one of TripUpdate, VehiclePosition, Alert, Shape, Stop, or TripModifications", "entity"))
 	}
 	if tripUpdate := ent.GetTripUpdate(); tripUpdate != nil {
 		errs = append(errs, fi.ValidateTripUpdate(tripUpdate, current)...)
@@ -218,6 +265,128 @@ func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMess
 	if alert := ent.GetAlert(); alert != nil {
 		// TODO: ValidateAlert
 		// TODO: Check that route_id is not set in a TripDescriptor
+	}
+	if tm := ent.GetTripModifications(); tm != nil {
+		errs = append(errs, fi.ValidateTripModifications(tm, ent)...)
+	}
+	if s := ent.GetStop(); s != nil {
+		errs = append(errs, fi.ValidateStop(s, ent)...)
+	}
+	if sh := ent.GetShape(); sh != nil {
+		errs = append(errs, fi.ValidateShape(sh, ent)...)
+	}
+	return errs
+}
+
+// ValidateStop validates a GTFS-RT Stop FeedEntity body (experimental
+// TripModifications extension). Per spec, stop_id / stop_name / stop_lat /
+// stop_lon are required, and stop_id MUST differ from any static stop_id.
+func (fi *Validator) ValidateStop(s *pb.Stop, ent *pb.FeedEntity) (errs []error) {
+	if s.GetStopId() == "" {
+		errs = append(errs, withFieldAndJson(E102, "stop.stop_id", "", "", ent, "inline Stop entity is missing required field stop_id"))
+	} else if _, ok := fi.stopInfo[s.GetStopId()]; ok {
+		errs = append(errs, withFieldAndJsonWarning(
+			W105,
+			"stop.stop_id",
+			"",
+			s.GetStopId(),
+			ent,
+			"inline Stop.stop_id '%s' collides with a stop_id defined in static GTFS; per spec it MUST be different",
+			s.GetStopId(),
+		))
+	}
+	if s.GetStopName().GetTranslation() == nil && s.StopName == nil {
+		errs = append(errs, withFieldAndJson(E102, "stop.stop_name", "", "", ent, "inline Stop entity is missing required field stop_name"))
+	}
+	if s.StopLat == nil {
+		errs = append(errs, withFieldAndJson(E102, "stop.stop_lat", "", "", ent, "inline Stop entity is missing required field stop_lat"))
+	}
+	if s.StopLon == nil {
+		errs = append(errs, withFieldAndJson(E102, "stop.stop_lon", "", "", ent, "inline Stop entity is missing required field stop_lon"))
+	}
+	return errs
+}
+
+// ValidateShape validates a GTFS-RT Shape FeedEntity body (experimental
+// TripModifications extension). Per spec, shape_id and encoded_polyline are
+// required, and shape_id MUST differ from any static shape_id.
+func (fi *Validator) ValidateShape(s *pb.Shape, ent *pb.FeedEntity) (errs []error) {
+	if s.GetShapeId() == "" {
+		errs = append(errs, withFieldAndJson(E103, "shape.shape_id", "", "", ent, "inline Shape entity is missing required field shape_id"))
+	} else if fi.staticShapeIds[s.GetShapeId()] {
+		errs = append(errs, withFieldAndJsonWarning(
+			W106,
+			"shape.shape_id",
+			"",
+			s.GetShapeId(),
+			ent,
+			"inline Shape.shape_id '%s' collides with a shape_id defined in static GTFS; per spec it MUST be different",
+			s.GetShapeId(),
+		))
+	}
+	if s.GetEncodedPolyline() == "" {
+		errs = append(errs, withFieldAndJson(E103, "shape.encoded_polyline", "", "", ent, "inline Shape entity is missing required field encoded_polyline"))
+	}
+	return errs
+}
+
+// ValidateTripModifications validates a TripModifications FeedEntity body
+// (GTFS-RT experimental extension). Checks that selected_trips reference real
+// static trips and that replacement_stops reference stops defined in either
+// static GTFS or an inline FeedEntity.stop in the same FeedMessage.
+func (fi *Validator) ValidateTripModifications(tm *pb.TripModifications, ent *pb.FeedEntity) (errs []error) {
+	for _, sel := range tm.GetSelectedTrips() {
+		for _, tid := range sel.GetTripIds() {
+			if tid == "" {
+				continue
+			}
+			if _, ok := fi.tripInfo[tid]; !ok {
+				errs = append(errs, withFieldAndJsonWarning(
+					W102,
+					"trip_modifications.selected_trips.trip_ids",
+					"",
+					tid,
+					ent,
+					"TripModifications selected_trips references trip_id '%s' that does not exist in static GTFS data",
+					tid,
+				))
+			}
+		}
+	}
+	for _, mod := range tm.GetModifications() {
+		for _, rs := range mod.GetReplacementStops() {
+			sid := rs.GetStopId()
+			if sid == "" {
+				continue
+			}
+			if v, ok := fi.stopInfo[sid]; ok {
+				if v.LocationType != 0 {
+					errs = append(errs, withFieldAndJsonWarning(
+						W104,
+						"trip_modifications.modifications.replacement_stops.stop_id",
+						"",
+						sid,
+						ent,
+						"TripModifications replacement_stops references stop_id '%s' with location_type=%d; per spec replacement stops MUST have location_type=0 (routable stops)",
+						sid,
+						v.LocationType,
+					))
+				}
+				continue
+			}
+			if fi.currentInlineStops[sid] {
+				continue
+			}
+			errs = append(errs, withFieldAndJsonWarning(
+				W101,
+				"trip_modifications.modifications.replacement_stops.stop_id",
+				"",
+				sid,
+				ent,
+				"TripModifications replacement_stops references stop_id '%s' that is not defined in static GTFS or as an inline FeedEntity.stop",
+				sid,
+			))
+		}
 	}
 	return errs
 }
@@ -420,7 +589,7 @@ func (fi *Validator) ValidateStopTimeUpdate(st *pb.TripUpdate_StopTimeUpdate, tr
 	}
 	if stopId := st.GetStopId(); stopId != "" {
 		v, ok := fi.stopInfo[stopId]
-		if !ok {
+		if !ok && !fi.currentInlineStops[stopId] {
 			errs = append(errs, withFieldAndJson(
 				E011,
 				"trip_update.stop_time_update.stop_id",
@@ -517,6 +686,74 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 	rtKey := fi.getRtTripKey(td)
 	agencyId := rtKey.AgencyID
 
+	// GTFS-RT TripModifications: when modified_trip is present, validate its selector
+	// and warn on legacy-field co-occurrence regardless of which identifier branch
+	// below runs. Per spec the legacy fields (trip_id, route_id, direction_id,
+	// start_time, start_date) MUST be empty when modified_trip is set; W100 is a
+	// warning rather than an error to remain lenient with producers in the wild.
+	if mt := td.GetModifiedTrip(); mt != nil {
+		if mt.GetModificationsId() == "" {
+			errs = append(errs, withFieldAndJson(
+				E101,
+				"trip_update.trip.modified_trip.modifications_id",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
+		}
+		affectedTripId := mt.GetAffectedTripId()
+		affectedExists := false
+		if affectedTripId == "" {
+			errs = append(errs, withFieldAndJson(
+				E100,
+				"trip_update.trip.modified_trip.affected_trip_id",
+				agencyId,
+				"",
+				tripUpdate,
+				"",
+			))
+		} else if _, ok := fi.tripInfo[affectedTripId]; !ok {
+			errs = append(errs, withFieldAndJson(
+				E003,
+				"trip_update.trip.modified_trip.affected_trip_id",
+				agencyId,
+				affectedTripId,
+				tripUpdate,
+				"TripUpdate modified_trip references affected_trip_id '%s' that does not exist in static GTFS data",
+				affectedTripId,
+			))
+		} else {
+			affectedExists = true
+		}
+		if td.GetTripId() != "" || td.RouteId != nil || td.DirectionId != nil || td.StartDate != nil || td.StartTime != nil {
+			errs = append(errs, withFieldAndJsonWarning(
+				W100,
+				"trip_update.trip.modified_trip",
+				agencyId,
+				"",
+				tripUpdate,
+				"TripDescriptor sets modified_trip alongside legacy identifier fields; per spec these MUST be empty when modified_trip is set",
+			))
+		}
+		// W103: per spec SHOULD, a modified-trip TripUpdate should be
+		// accompanied by a parallel plain TripUpdate (same trip_id, no
+		// modified_trip) for consumers that don't support TripModifications.
+		// Only fires when the affected trip actually exists in static — no
+		// point recommending a fallback for an invalid trip.
+		if affectedExists && !fi.currentPlainTripIds[affectedTripId] {
+			errs = append(errs, withFieldAndJsonWarning(
+				W103,
+				"trip_update.trip.modified_trip",
+				agencyId,
+				affectedTripId,
+				tripUpdate,
+				"Modified-trip TripUpdate for affected_trip_id '%s' has no parallel plain TripUpdate in the same FeedMessage; per spec SHOULD, providers should also publish an unmodified TripUpdate for legacy consumers",
+				affectedTripId,
+			))
+		}
+	}
+
 	if tripId := td.GetTripId(); tripId != "" {
 		tripInfo, ok := fi.tripInfo[tripId]
 		// Check trip exists
@@ -550,9 +787,10 @@ func (fi *Validator) validateTripDescriptor(td *pb.TripDescriptor, tripUpdate *p
 			}
 			// TODO: Additional frequency based trip checks
 		}
-	} else {
+	} else if td.GetModifiedTrip() == nil {
+		// Neither trip_id nor modified_trip is set; require the legacy tuple.
 		if td.RouteId == nil || td.DirectionId == nil || td.StartDate == nil || td.StartTime == nil {
-			errs = append(errs, newError("TripDescriptor must provided a trip_id or all of route_id, direction_id, start_date, and start_time", "trip_update.trip.trip_id"))
+			errs = append(errs, newError("TripDescriptor must provide a trip_id or all of route_id, direction_id, start_date, and start_time", "trip_update.trip.trip_id"))
 		}
 		if td.GetScheduleRelationship() != pb.TripDescriptor_SCHEDULED {
 			errs = append(errs, newError("TripDescriptor must be SCHEDULED if no trip_id is provided", "trip_update.trip.trip_id"))
@@ -615,7 +853,7 @@ func (fi *Validator) ValidateVehiclePosition(ent *pb.VehiclePosition) (errs []er
 	// Validate stop
 	if stopId := ent.GetStopId(); stopId != "" {
 		_, ok := fi.stopInfo[stopId]
-		if !ok {
+		if !ok && !fi.currentInlineStops[stopId] {
 			errs = append(errs, withFieldAndJson(
 				E011,
 				"vehicle_position.stop_id",
@@ -765,6 +1003,11 @@ func (fi *Validator) validatePosition(pos *pb.Position, vehiclePosition *pb.Vehi
 
 func (fi *Validator) getRtTripKey(trip *pb.TripDescriptor) rtTripKey {
 	tripId := trip.GetTripId()
+	// GTFS-RT TripModifications: when the TripDescriptor uses modified_trip
+	// (with no trip_id), the affected_trip_id identifies the underlying static trip.
+	if tripId == "" {
+		tripId = trip.GetModifiedTrip().GetAffectedTripId()
+	}
 	ret := rtTripKey{
 		TripID: tripId,
 	}
