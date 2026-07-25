@@ -7,12 +7,16 @@ import (
 )
 
 // MemoryStore is an in-process Store for tests and single-process use.
-// Two Caches sharing one MemoryStore emulate cross-process behavior.
+// Two Caches sharing one MemoryStore emulate cross-process behavior. It
+// also implements the HashStore capability.
 type MemoryStore struct {
-	now  func() time.Time
-	lock sync.RWMutex
-	m    map[string]memoryEntry
+	now    func() time.Time
+	lock   sync.RWMutex
+	m      map[string]memoryEntry
+	hashes map[string]map[string]string
 }
+
+var _ HashStore = (*MemoryStore)(nil)
 
 type memoryEntry struct {
 	value     []byte
@@ -21,8 +25,9 @@ type memoryEntry struct {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		now: time.Now,
-		m:   map[string]memoryEntry{},
+		now:    time.Now,
+		m:      map[string]memoryEntry{},
+		hashes: map[string]map[string]string{},
 	}
 }
 
@@ -83,4 +88,26 @@ func (s *MemoryStore) Set(ctx context.Context, key string, value []byte, ttl tim
 
 func (s *MemoryStore) expired(ent memoryEntry) bool {
 	return !ent.expiresAt.IsZero() && !ent.expiresAt.After(s.now())
+}
+
+func (s *MemoryStore) HSet(ctx context.Context, key string, field string, value string) error {
+	s.lock.Lock()
+	h, ok := s.hashes[key]
+	if !ok {
+		h = map[string]string{}
+		s.hashes[key] = h
+	}
+	h[field] = value
+	s.lock.Unlock()
+	return nil
+}
+
+func (s *MemoryStore) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	ret := map[string]string{}
+	s.lock.RLock()
+	for field, value := range s.hashes[key] {
+		ret[field] = value
+	}
+	s.lock.RUnlock()
+	return ret, nil
 }

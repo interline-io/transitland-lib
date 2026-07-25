@@ -83,4 +83,40 @@ func Run(t *testing.T, mk func(t *testing.T) kvcache.Store) {
 		}
 		wg.Wait()
 	})
+	t.Run("Hash", func(t *testing.T) {
+		store := mk(t)
+		hs, ok := store.(kvcache.HashStore)
+		if !ok {
+			t.Skip("store does not implement HashStore")
+		}
+		got, err := hs.HGetAll(ctx, "storetest:h")
+		assert.NoError(t, err)
+		assert.Empty(t, got, "absent hash reads as empty")
+		assert.NoError(t, hs.HSet(ctx, "storetest:h", "a", "1"))
+		assert.NoError(t, hs.HSet(ctx, "storetest:h", "b", "2"))
+		assert.NoError(t, hs.HSet(ctx, "storetest:h", "a", "3"))
+		got, err = hs.HGetAll(ctx, "storetest:h")
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"a": "3",
+			"b": "2",
+		}, got)
+	})
+	t.Run("PubSub", func(t *testing.T) {
+		store := mk(t)
+		ps, ok := store.(kvcache.PubSubStore)
+		if !ok {
+			t.Skip("store does not implement PubSubStore")
+		}
+		sub, err := ps.Subscribe(ctx, "storetest:updates")
+		assert.NoError(t, err)
+		defer sub.Close()
+		assert.NoError(t, ps.Publish(ctx, "storetest:updates", []byte("ping")))
+		select {
+		case msg := <-sub.Messages():
+			assert.Equal(t, []byte("ping"), msg)
+		case <-time.After(3 * time.Second):
+			t.Fatal("timed out waiting for published message")
+		}
+	})
 }

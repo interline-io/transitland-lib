@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/azchecker"
 	"github.com/interline-io/transitland-lib/server/auth/fga"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/finders/actions"
 	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
@@ -145,7 +146,7 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	dbf.Clock = cl
 
 	// Setup RT
-	rtf := rtfinder.NewFinder(rtfinder.NewLocalCache(), db)
+	rtf := rtfinder.NewFinder(kvcache.NewMemoryStore(), db)
 	rtf.Clock = cl
 	for _, rtj := range opts.RTJsons {
 		fn := testdata.Path("server", "rt", rtj.Fname)
@@ -164,7 +165,7 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	}
 
 	// Setup GBFS
-	gbf := gbfsfinder.NewFinder(nil)
+	gbf := gbfsfinder.NewFinder(kvcache.NewMemoryStore())
 
 	if opts.Storage == "" {
 		opts.Storage = t.TempDir()

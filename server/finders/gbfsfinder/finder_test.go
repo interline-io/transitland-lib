@@ -7,20 +7,15 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/gbfs"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGbfsFinder(t *testing.T) {
-	if a, ok := testutil.CheckTestRedisClient(); !ok {
-		t.Skip(a)
-		return
-	}
-	client := testutil.MustOpenTestRedisClient(t)
-	gbf := NewFinder(client)
+	gbf := NewFinder(kvcache.NewMemoryStore())
 	testSetupGbfs(gbf)
 
 	tcs := []struct {
