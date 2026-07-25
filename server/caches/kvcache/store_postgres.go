@@ -33,7 +33,10 @@ var (
 const (
 	pgKVGet = `SELECT value FROM tl_kv_cache WHERE key = ? AND (expires_at IS NULL OR expires_at > now())`
 
-	pgKVGetMulti = `SELECT key, value FROM tl_kv_cache WHERE key IN (?) AND (expires_at IS NULL OR expires_at > now())`
+	// key = ANY(?) binds the whole key slice to one array parameter, so the
+	// query text is identical regardless of key count (one plan, one
+	// pg_stat_statements entry) — unlike an expanded IN (?,?,...).
+	pgKVGetMulti = `SELECT key, value FROM tl_kv_cache WHERE key = ANY(?) AND (expires_at IS NULL OR expires_at > now())`
 
 	pgKVSetTTL = `INSERT INTO tl_kv_cache (key, value, expires_at) VALUES (?, ?, now() + (? * interval '1 second'))
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, expires_at = EXCLUDED.expires_at`
@@ -76,11 +79,8 @@ func (s *PostgresStore) GetMulti(ctx context.Context, keys []string) (map[string
 	}
 	rctx, cancel := context.WithTimeout(ctx, s.Timeout)
 	defer cancel()
-	query, args, err := sqlx.In(pgKVGetMulti, keys)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := s.db.QueryxContext(rctx, s.db.Rebind(query), args...)
+	// keys is bound as a single array parameter, not spread into args.
+	rows, err := s.db.QueryxContext(rctx, s.db.Rebind(pgKVGetMulti), keys)
 	if err != nil {
 		return nil, err
 	}
