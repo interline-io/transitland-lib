@@ -22,6 +22,12 @@ const (
 // Sources locally and, when the store supports pub/sub, learns of updates
 // from other processes via notify-then-read: a publish carries only the
 // topic, and the receiver re-reads the payload from the store.
+//
+// This is deliberately non-generic. The two-tier local map plus the
+// notify-then-read loop could be lifted into kvcache as a generic
+// PushCache[V] parameterized by a decoder (bytes -> V); it lives here
+// concretely for simplicity while rtfinder is the only consumer, and is
+// worth promoting only once a second push-distributed decoded cache appears.
 type storeCache struct {
 	store   kvcache.Store
 	pubsub  kvcache.PubSubStore // nil when the store has no pub/sub
