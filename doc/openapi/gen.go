@@ -36,7 +36,11 @@ func main() {
 	if err != nil {
 		exit(err)
 	}
-	var validationOpts []oa.ValidationOption
+	// Aggregate independent problems across paths, operations, responses, and
+	// components instead of stopping at the first, so a regeneration that breaks
+	// several things reports all of them in one run. Validation inside a single
+	// schema is still fail-fast — those checks build on each other.
+	validationOpts := []oa.ValidationOption{oa.EnableMultiError()}
 	if err := schema.Validate(ctx, validationOpts...); err != nil {
 		exit(err)
 	}
