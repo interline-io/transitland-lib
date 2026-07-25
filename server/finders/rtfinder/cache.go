@@ -52,6 +52,9 @@ func newStoreCache(store kvcache.Store) *storeCache {
 }
 
 func (c *storeCache) AddData(ctx context.Context, topic string, data []byte) error {
+	// Persisting and distributing a fetched update is best-effort work that
+	// should outlive a canceled request or job, so it is bounded by the
+	// cache's own context (canceled only on Close), not the caller's.
 	rctx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
 	defer cancel()
 	if err := c.store.Set(rctx, lastKey(topic), data, lastTTL); err != nil {
@@ -140,9 +143,10 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 }
 
 // loadFromStore reads a topic's last payload and decodes it into a fresh
-// Source. It returns nil on a miss or any error (treated as a miss).
+// Source. It returns nil on a miss or any error (treated as a miss). The
+// read honors the caller's context, so a canceled GetSource aborts promptly.
 func (c *storeCache) loadFromStore(ctx context.Context, topic string) *Source {
-	rctx, cancel := context.WithTimeout(c.ctx, 1*time.Second)
+	rctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 	data, ok, err := c.store.Get(rctx, lastKey(topic))
 	if err != nil {
