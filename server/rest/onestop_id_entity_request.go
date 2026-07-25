@@ -52,16 +52,20 @@ func (handler OnestopIdEntityRedirectRequest) RequestInfo() RequestInfo {
 func (handler *OnestopIdEntityRedirectRequest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cfg := model.ForContext(r.Context())
 	onestop_id := chi.URLParam(r, "onestop_id")
+	// Redirect targets must include the mount segment, same as the root redirect
+	// and pagination links. cfg.RestPrefix alone omits it, which sends clients to
+	// /api/v2/feeds/... instead of /api/v2/rest/feeds/...
+	prefix := mountPrefix(cfg.RestPrefix, r.URL.Path, "/onestop_id/"+onestop_id)
 	var redirectUrl string
 	if strings.HasPrefix(onestop_id, "f-") {
-		redirectUrl = fmt.Sprintf("%s/feeds/%s", cfg.RestPrefix, onestop_id)
+		redirectUrl = fmt.Sprintf("%s/feeds/%s", prefix, onestop_id)
 		// redirect to feeds/
 	} else if strings.HasPrefix(onestop_id, "o-") {
-		redirectUrl = fmt.Sprintf("%s/operators/%s", cfg.RestPrefix, onestop_id)
+		redirectUrl = fmt.Sprintf("%s/operators/%s", prefix, onestop_id)
 	} else if strings.HasPrefix(onestop_id, "s-") {
-		redirectUrl = fmt.Sprintf("%s/stops/%s", cfg.RestPrefix, onestop_id)
+		redirectUrl = fmt.Sprintf("%s/stops/%s", prefix, onestop_id)
 	} else if strings.HasPrefix(onestop_id, "r-") {
-		redirectUrl = fmt.Sprintf("%s/routes/%s", cfg.RestPrefix, onestop_id)
+		redirectUrl = fmt.Sprintf("%s/routes/%s", prefix, onestop_id)
 	}
 	if redirectUrl != "" {
 		w.Header().Add("Location", redirectUrl)

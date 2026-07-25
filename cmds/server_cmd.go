@@ -82,7 +82,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.Storage, "storage", "", "Static storage backend")
 	fl.StringVar(&cmd.RTStorage, "rt-storage", "", "RT storage backend")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
-	fl.StringVar(&cmd.RestPrefix, "rest-prefix", "", "REST prefix for generating pagination links")
+	fl.StringVar(&cmd.RestPrefix, "rest-prefix", "", "Public prefix of the REST mount's parent (e.g. https://transit.land/api/v2), used for pagination links, redirects, and the OpenAPI servers block")
 	fl.StringVar(&cmd.Port, "port", "8080", "")
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "DMFR file containing secrets")
 	fl.IntVar(&cmd.Timeout, "timeout", 60, "")

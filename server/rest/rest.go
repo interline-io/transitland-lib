@@ -29,6 +29,24 @@ var MAXLIMIT = 1_000
 // MAXRADIUS is the maximum point search radius
 const MAXRADIUS = 100 * 1000.0
 
+// mountPrefix returns the absolute public base URL of the REST mount for this
+// request: restPrefix (the public prefix of the mount's parent, e.g.
+// https://transit.land/api/v2) plus the segment the server is mounted under.
+//
+// chi does not strip r.URL.Path — it holds the full public path, e.g.
+// /rest/openapi.json — so trimming off the part of the path the route itself
+// owns recovers the mount segment. Callers pass that part as routeSuffix; a
+// route mounted at "/" owns nothing and passes "".
+//
+// This is the one construction pagination links, the root redirect, the
+// onestop_id redirects, and the OpenAPI servers block all need. restPrefix
+// alone is not enough: it does not include the mount segment, so using it
+// directly yields https://transit.land/api/v2/stops, which 404s, rather than
+// https://transit.land/api/v2/rest/stops.
+func mountPrefix(restPrefix string, urlPath string, routeSuffix string) string {
+	return restPrefix + strings.TrimSuffix(strings.TrimRight(urlPath, "/"), routeSuffix)
+}
+
 // NewServer .
 func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	r := chi.NewRouter()
@@ -52,26 +70,11 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	// Redirect root to OpenAPI documentation
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		cfg := model.ForContext(r.Context())
-		// chi does not strip r.URL.Path; it contains the full path (e.g. /rest/)
-		// Use it to build the absolute redirect URL, consistent with how pagination links work
-		path := strings.TrimRight(r.URL.Path, "/")
-		http.Redirect(w, r, cfg.RestPrefix+path+"/openapi.json", http.StatusMovedPermanently)
+		http.Redirect(w, r, mountPrefix(cfg.RestPrefix, r.URL.Path, "")+"/openapi.json", http.StatusMovedPermanently)
 	})
 
 	// OpenAPI Schema endpoint
-	r.HandleFunc("/openapi.json", func(w http.ResponseWriter, r *http.Request) {
-		cfg := model.ForContext(r.Context())
-		schema, err := GenerateOpenAPI(cfg.RestPrefix)
-		if err != nil {
-			http.Error(w, "Failed to generate schema", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(schema); err != nil {
-			http.Error(w, "Failed to encode schema", http.StatusInternalServerError)
-			return
-		}
-	})
+	r.Handle("/openapi.json", NewOpenAPIHandler())
 
 	r.HandleFunc("/feeds.{format}", feedIndexHandler)
 	r.HandleFunc("/feeds", feedIndexHandler)
