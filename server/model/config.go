@@ -40,9 +40,10 @@ type Config struct {
 	// RestPrefix is the public prefix of the REST mount's *parent*, e.g.
 	// https://transit.land/api/v2 when the REST server is mounted at /rest and
 	// reachable at https://transit.land/api/v2/rest. It does not include the
-	// mount segment itself, which is only known at request time; use
-	// rest.mountPrefix to recover the full base URL. Empty yields host-relative
-	// links.
+	// mount segment itself, which is not known at configuration time; the REST
+	// server recovers that from the request path when it builds pagination
+	// links, redirects, and the OpenAPI servers block. Empty yields
+	// host-relative links.
 	RestPrefix string
 	// JobsPrefix is the public prefix of the jobserver mount (analogue of
 	// RestPrefix for the REST mount), used to build absolute artifact download

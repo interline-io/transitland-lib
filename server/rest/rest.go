@@ -34,17 +34,34 @@ const MAXRADIUS = 100 * 1000.0
 // https://transit.land/api/v2) plus the segment the server is mounted under.
 //
 // chi does not strip r.URL.Path — it holds the full public path, e.g.
-// /rest/openapi.json — so trimming off the part of the path the route itself
-// owns recovers the mount segment. Callers pass that part as routeSuffix; a
-// route mounted at "/" owns nothing and passes "".
+// /rest/openapi.json — so removing the part of the path the route itself owns
+// recovers the mount segment. routeMarker is the literal head of the matched
+// route ("/openapi.json", "/onestop_id/"); everything from its last occurrence
+// onward is dropped. A route mounted at "/" owns nothing and passes "", which
+// keeps the whole path.
+//
+// routeMarker must be a literal taken from the route pattern, never a value
+// interpolated from a path parameter: chi.URLParam returns the raw
+// percent-encoded value while r.URL.Path is decoded, so the two disagree for
+// any parameter containing an encoded character, and the marker would not be
+// found.
 //
 // This is the one construction pagination links, the root redirect, the
 // onestop_id redirects, and the OpenAPI servers block all need. restPrefix
 // alone is not enough: it does not include the mount segment, so using it
 // directly yields https://transit.land/api/v2/stops, which 404s, rather than
 // https://transit.land/api/v2/rest/stops.
-func mountPrefix(restPrefix string, urlPath string, routeSuffix string) string {
-	return restPrefix + strings.TrimSuffix(strings.TrimRight(urlPath, "/"), routeSuffix)
+func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
+	p := strings.TrimRight(urlPath, "/")
+	i := strings.LastIndex(p, routeMarker)
+	if i < 0 {
+		// The marker is always present for a request the route actually matched.
+		// If something upstream rewrote the path so it is not, fall back to the
+		// bare prefix: merely missing the mount segment, rather than splicing the
+		// whole request path into a redirect or a servers URL.
+		return restPrefix
+	}
+	return restPrefix + p[:i]
 }
 
 // NewServer .

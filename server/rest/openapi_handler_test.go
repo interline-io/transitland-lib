@@ -20,22 +20,26 @@ func TestMountPrefix(t *testing.T) {
 		name        string
 		restPrefix  string
 		urlPath     string
-		routeSuffix string
+		routeMarker string
 		expect      string
 	}{
 		{"mounted, absolute prefix", "https://transit.land/api/v2", "/rest/openapi.json", "/openapi.json", "https://transit.land/api/v2/rest"},
 		{"mounted, root redirect", "https://transit.land/api/v2", "/rest/", "", "https://transit.land/api/v2/rest"},
 		{"mounted, no trailing slash", "https://transit.land/api/v2", "/rest", "", "https://transit.land/api/v2/rest"},
-		{"mounted, onestop_id", "https://transit.land/api/v2", "/rest/onestop_id/f-9q9-bart", "/onestop_id/f-9q9-bart", "https://transit.land/api/v2/rest"},
+		{"mounted, onestop_id", "https://transit.land/api/v2", "/rest/onestop_id/f-9q9-bart", "/onestop_id/", "https://transit.land/api/v2/rest"},
 		{"nested mount", "https://transit.land/api/v2", "/a/b/openapi.json", "/openapi.json", "https://transit.land/api/v2/a/b"},
 		{"unmounted, absolute prefix", "https://transit.land/api/v2", "/openapi.json", "/openapi.json", "https://transit.land/api/v2"},
 		{"no prefix, mounted", "", "/rest/openapi.json", "/openapi.json", "/rest"},
 		{"no prefix, unmounted", "", "/openapi.json", "/openapi.json", ""},
 		{"no prefix, root redirect", "", "/", "", ""},
+		// A marker the path does not contain means something rewrote the path.
+		// Falling back to the bare prefix is merely incomplete; splicing the
+		// request path in would be actively wrong.
+		{"marker absent falls back to prefix", "https://transit.land/api/v2", "/rest/something-else", "/openapi.json", "https://transit.land/api/v2"},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expect, mountPrefix(tc.restPrefix, tc.urlPath, tc.routeSuffix))
+			assert.Equal(t, tc.expect, mountPrefix(tc.restPrefix, tc.urlPath, tc.routeMarker))
 		})
 	}
 }
@@ -166,5 +170,25 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 	t.Run("unrecognized prefix is a 404", func(t *testing.T) {
 		rr := serveRest(t, r, "/rest", cfg, "/rest/onestop_id/x-nope", nil)
 		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	// chi.URLParam returns the raw percent-encoded value while r.URL.Path is
+	// decoded. Deriving the mount from the parameter rather than the route's
+	// literal segment produced a redirect containing the whole request path,
+	// e.g. .../rest/onestop_id/r-9q9-antioch~sfia/routes/r-9q9-antioch%7Esfia.
+	// Route Onestop IDs routinely contain ~, and clients do encode it.
+	t.Run("percent-encoded onestop_id still resolves the mount", func(t *testing.T) {
+		encoded := []struct {
+			path   string
+			expect string
+		}{
+			{"/rest/onestop_id/r-9q9-antioch%7Esfia", "https://example.test/api/v2/rest/routes/r-9q9-antioch%7Esfia"},
+			{"/rest/onestop_id/f-9q9-bart%2Fx", "https://example.test/api/v2/rest/feeds/f-9q9-bart%2Fx"},
+		}
+		for _, tc := range encoded {
+			rr := serveRest(t, r, "/rest", cfg, tc.path, nil)
+			assert.Equal(t, http.StatusFound, rr.Code)
+			assert.Equal(t, tc.expect, rr.Header().Get("Location"))
+		}
 	})
 }

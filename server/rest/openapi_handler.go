@@ -53,6 +53,13 @@ func NewOpenAPIHandler(opts ...SchemaOption) http.Handler {
 }
 
 // openAPICache memoizes generated documents by server URL.
+//
+// The map is unbounded, which is safe because the number of distinct keys is
+// fixed by how the handler is registered, not by request input: a key derives
+// from the mount path, and chi only routes the exact registered path (verified:
+// /rest//openapi.json, /rest/./openapi.json, /rest/%6fpenapi.json and friends
+// all 404). A caller registering this handler under a wildcard route would
+// break that assumption.
 type openAPICache struct {
 	opts []SchemaOption
 	mu   sync.Mutex
@@ -66,6 +73,10 @@ type openAPICache struct {
 // kilobytes of JSON. The lock is deliberately held across generation so that
 // cost is paid once per server URL rather than once per request; a burst of
 // concurrent cold requests waits rather than duplicating the work.
+//
+// This serializes lookups for every key, not just the one being generated. That
+// is fine at the one or two keys a deployment actually has, and only worth
+// revisiting if a caller registers many.
 func (c *openAPICache) get(serverURL string) (*openAPIDocument, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
