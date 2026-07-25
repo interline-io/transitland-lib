@@ -453,32 +453,80 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		var qPoints sq.SelectBuilder
 
 		loc := where.Location
-		if loc.Bbox != nil {
+		withinClip := loc.Within != nil && loc.Within.Valid
+		stopBufferClip := loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0
+		stopBufferRadius := 0.0
+		if stopBufferClip {
+			// Clamp ceiling of 1600m ~ 1 mile, a common US analysis radius.
+			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_600)
+		}
+
+		// Single-row clip-geometry builders (column `buffer`), shared between the
+		// standalone branches and the combined within+stop_buffer case so the
+		// geometry SQL lives in one place.
+		withinClipSelect := func() sq.SelectBuilder {
+			jj, _ := geojson.Marshal(loc.Within.Val)
+			return sq.StatementBuilder.Select().Column("ST_GeomFromGeoJSON(?) as buffer", string(jj))
+		}
+		stopUnionClipSelect := func() sq.SelectBuilder {
+			return sq.StatementBuilder.Select().
+				Column("ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry) as buffer", stopBufferRadius).
+				From("gtfs_stops").
+				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+		}
+
+		// Filter precedence: bbox wins outright; otherwise `within` and
+		// `stop_buffer` compose (clip intersection for a positive radius,
+		// polygon-restricted point matching for radius 0); otherwise the
+		// first filter present in this chain applies and the rest are
+		// ignored. Composition applies to the top-level query path only:
+		// in per-stop attribution mode (the internal by-entity loaders) a
+		// positive-radius stop_buffer takes precedence and `within` is
+		// not applied.
+		if loc.Bbox == nil && withinClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
+			// Clip to the intersection of the query-area polygon (`within`) and
+			// the stop-buffer union: census apportioned to where the polygon and
+			// the transit coverage overlap, not either alone. Compose the two
+			// single-row clip CTEs the standalone branches use. Without this case
+			// the chain below would honor only `within` and ignore the buffer.
+			qBufferUse = true
+			q = q.WithCTE(sq.CTE{Alias: "clip_within", Materialized: true, Expression: withinClipSelect()})
+			q = q.WithCTE(sq.CTE{Alias: "clip_stops", Materialized: true, Expression: stopUnionClipSelect()})
+			qBuffer = sq.StatementBuilder.Select().
+				Column("ST_Intersection(clip_within.buffer, clip_stops.buffer) as buffer").
+				Column("0 as match_entity_id").
+				From("clip_within").
+				JoinClause("CROSS JOIN clip_stops")
+		} else if loc.Bbox != nil {
 			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
 				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat).
 				Column("0 as match_entity_id")
-		} else if loc.Within != nil && loc.Within.Valid {
-			jj, _ := geojson.Marshal(loc.Within.Val)
+		} else if withinClip && !stopBufferClip {
 			qBufferUse = true
-			qBuffer = sq.StatementBuilder.Select().
-				Column("ST_GeomFromGeoJSON(?) as buffer", string(jj)).
-				Column("0 as match_entity_id")
+			qBuffer = withinClipSelect().Column("0 as match_entity_id")
 		} else if loc.Near != nil {
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
 				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?)::geometry as buffer", loc.Near.Lon, loc.Near.Lat, radius).
 				Column("0 as match_entity_id")
-		} else if loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0 {
-			radius := checkFloat(loc.StopBuffer.Radius, 0, 1_000)
-			if radius == 0 {
+		} else if stopBufferClip {
+			if stopBufferRadius == 0 {
 				qPointsUse = true
 				qPoints = sq.StatementBuilder.Select().
 					Column("gtfs_stops.geometry as buffer").
 					Column("gtfs_stops.id as match_entity_id").
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+				if withinClip {
+					// A combined `within` restricts point matching to stops
+					// inside the polygon rather than being silently ignored.
+					q = q.WithCTE(sq.CTE{Alias: "clip_within", Materialized: true, Expression: withinClipSelect()})
+					qPoints = qPoints.
+						JoinClause("CROSS JOIN clip_within").
+						Where(sq.Expr("ST_Intersects(clip_within.buffer, gtfs_stops.geometry)"))
+				}
 			} else if fields.perStopAttribution {
 				// One buffer per stop, attribution preserved as
 				// match_entity_id. Tract rows are duplicated when a tract
@@ -487,7 +535,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				qBufferUse = true
 				qBuffer = sq.StatementBuilder.Select().
 					Column("gtfs_stops.id as match_entity_id").
-					Column("ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry as buffer", radius).
+					Column("ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry as buffer", stopBufferRadius).
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 			} else {
@@ -495,10 +543,6 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				// by routes/agencies (which want the union over their stops)
 				// and by top-level aggregation queries.
 				qBufferUse = true
-				qBufferOuter := sq.StatementBuilder.Select().
-					Column("ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry) as buffer", radius).
-					From("gtfs_stops").
-					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 				qBuffer = sq.StatementBuilder.Select().
 					Column("0 as match_entity_id").
 					Column("(ST_Dump(buffer)).geom as buffer").
@@ -506,7 +550,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				q = q.WithCTE(sq.CTE{
 					Alias:        "buffer_outer",
 					Materialized: true,
-					Expression:   qBufferOuter,
+					Expression:   stopUnionClipSelect(),
 				})
 			}
 		}

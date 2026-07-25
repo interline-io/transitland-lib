@@ -238,6 +238,23 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			// Radius at the clamp ceiling (1600m ~ 1 mile). Expected values
+			// derived independently via direct SQL; under the previous 1000m
+			// clamp this query would silently return the 1km results instead.
+			name:  "dataset intersection areas by stop buffer - tract, 1600m clamp ceiling",
+			query: `query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(limit:1000, where:{layer: "tract", location:{stop_buffer:{stop_ids:$stop_ids, radius:1600}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
+			vars:  hw{"stop_ids": []int{bartFtvlStopId}},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					16,
+					1.7083968128707554e+07,
+					7.996376116638191e+06,
+				)
+			},
+		},
+		{
 			name:  "dataset intersection areas by stop buffer, 2 stops - tract",
 			query: `query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
 			vars:  hw{"stop_ids": []int{bartFtvlStopId, bartMcarStopId}},
@@ -320,6 +337,121 @@ func TestCensusResolver(t *testing.T) {
 					countyArea,
 					countyArea,
 				)
+			},
+		},
+		{
+			// Combined within + stop_buffer must honor BOTH filters. Here
+			// `within` is a large polygon that fully contains the FTVL buffer,
+			// so the search area reduces to the buffer and the result matches
+			// the stop-buffer-only case (one tract, ~31235 m^2 of buffer area).
+			// Before the combined branch, `within` won outright and the buffer
+			// was ignored — this query would have returned every tract in the
+			// polygon instead.
+			name:  "combined within and stop buffer - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-123.77489413290716, 38.794161309061735},
+					{-122.69431950796763, 35.52679604934255},
+					{-119.9104881819854, 37.991860068760204},
+					{-123.77489413290716, 38.794161309061735},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918910.47033,
+					31235.844716912135,
+				)
+			},
+		},
+		{
+			// Partial overlap: the polygon's eastern edge runs through the
+			// FTVL stop, so the clip is the west half of the 100m buffer and
+			// the intersection area is half the buffer-only case. This is the
+			// case that pins ST_Intersection semantics from both sides: if
+			// `within` were ignored the result would be the full 31235.84, and
+			// if the buffer were ignored it would be every tract in the
+			// rectangle.
+			name:  "combined within and stop buffer partial overlap - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_geometry intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-122.5, 37.5},
+					{-122.224175, 37.5},
+					{-122.224175, 38.0},
+					{-122.5, 38.0},
+					{-122.5, 37.5},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918910.47033,
+					15617.923982297536,
+				)
+			},
+		},
+		{
+			// Disjoint polygon and buffer: the clip intersection is empty and
+			// no geographies match, rather than erroring or falling back to
+			// either filter alone.
+			name:  "combined within and stop buffer disjoint - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-121.6, 38.4},
+					{-121.4, 38.4},
+					{-121.4, 38.7},
+					{-121.6, 38.7},
+					{-121.6, 38.4},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "disjoint clip must match no geographies")
+			},
+		},
+		{
+			// Radius 0 combines as polygon-restricted point matching: the FTVL
+			// stop point is inside the polygon, so its containing tract
+			// matches.
+			name:  "combined within and stop buffer radius 0 - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-123.77489413290716, 38.794161309061735},
+					{-122.69431950796763, 35.52679604934255},
+					{-119.9104881819854, 37.991860068760204},
+					{-123.77489413290716, 38.794161309061735},
+				}}},
+			},
+			expect: `{"census_datasets":[{"name":"tiger2024","geographies":[{"geoid":"1400000US06001406100","name":"4061"}]}]}`,
+		},
+		{
+			// Radius 0 with the stop outside the polygon: the point is
+			// filtered out, not silently matched.
+			name:  "combined within and stop buffer radius 0 outside polygon - tract",
+			query: `query($feature:Polygon, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-121.6, 38.4},
+					{-121.4, 38.4},
+					{-121.4, 38.7},
+					{-121.6, 38.7},
+					{-121.6, 38.4},
+				}}},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "stop outside the polygon must not match")
 			},
 		},
 		{
