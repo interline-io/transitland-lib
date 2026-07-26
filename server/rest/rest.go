@@ -61,7 +61,18 @@ func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
 		// whole request path into a redirect or a servers URL.
 		return restPrefix
 	}
-	return restPrefix + p[:i]
+	mount := p[:i]
+	// With an empty restPrefix the result is a relative URL, and a mount segment
+	// beginning with "//" would read as protocol-relative — //evil.com/... — in a
+	// Location header. chi does not route such a path to these handlers today,
+	// but this value reaches Location headers and the servers block, the handler
+	// is exported for callers whose routing this package does not control, and
+	// the schema endpoint is served without authentication. Refuse it outright
+	// rather than depending on the router to keep it unreachable.
+	if restPrefix == "" && strings.HasPrefix(mount, "//") {
+		return ""
+	}
+	return restPrefix + mount
 }
 
 // NewServer .

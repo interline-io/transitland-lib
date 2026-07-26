@@ -36,6 +36,13 @@ func TestMountPrefix(t *testing.T) {
 		// Falling back to the bare prefix is merely incomplete; splicing the
 		// request path in would be actively wrong.
 		{"marker absent falls back to prefix", "https://transit.land/api/v2", "/rest/something-else", "/openapi.json", "https://transit.land/api/v2"},
+		// A relative result must never start with "//" — a Location header built
+		// from it would be protocol-relative and redirect off-site.
+		{"protocol-relative mount refused", "", "//evil.com/openapi.json", "/openapi.json", ""},
+		{"protocol-relative mount refused, deep", "", "//evil.com/a/openapi.json", "/openapi.json", ""},
+		// An absolute prefix already fixes the authority, so the same mount is
+		// only path noise and is kept.
+		{"absolute prefix keeps odd mount", "https://transit.land/api/v2", "//evil.com/openapi.json", "/openapi.json", "https://transit.land/api/v2//evil.com"},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
