@@ -194,6 +194,8 @@ type CensusDatasetGeographyFilter struct {
 
 // Search options for census geographies
 //
+// A query area (`bbox`, or `within` when no bbox is given) composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. `near` does not compose and takes effect only when no other filter applies.
+//
 // Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
 // - Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
 // - A complex polygon search that touches multiple disconnected areas of the same geography will return separate entries for each intersection
@@ -239,7 +241,7 @@ type CensusField struct {
 
 // A single spatial unit within a layer — for example, a specific Census Tract, a US State, or an NTD agency record.
 //
-// Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via `values`. When queried with a spatial filter (e.g. `stop_buffer` or `bbox`), the `intersection_area` and `intersection_geometry` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
+// Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via `values`. When queried with a spatial filter, the `intersection_area` and `intersection_geometry` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
 //
 // Note: spatial queries may return the same geography multiple times when it intersects a search area in multiple places (e.g. two separate stop buffers within the same tract). Use `geoid` to deduplicate if needed.
 type CensusGeography struct {
@@ -274,7 +276,7 @@ type CensusGeography struct {
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
 	// Boundary geometry for this geography as a MultiPolygon
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
-	// When this geography was returned by a spatial query (e.g. `stop_buffer` or `bbox`), the area of overlap between this geography and the search area, in square meters.
+	// When this geography was returned by a spatial query, the area of overlap between this geography and the search area, in square meters.
 	// Divide by `geometry_area` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
 	IntersectionArea *float64 `json:"intersection_area,omitempty"`
 	// When this geography was returned by a spatial query, the geometry of the intersection between this geography and the search area.

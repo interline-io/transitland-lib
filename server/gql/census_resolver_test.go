@@ -455,6 +455,87 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			// A bbox containing the whole buffer reduces to the
+			// stop-buffer-only result, the same as the `within` case above.
+			// Before bbox composed, bbox won outright and the buffer was
+			// ignored — this would have returned every tract in the box.
+			name:  "combined bbox and stop buffer - tract",
+			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"bbox":     hw{"min_lon": -123.0, "min_lat": 37.0, "max_lon": -122.0, "max_lat": 38.0},
+			},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918910.47033,
+					31235.844716912135,
+				)
+			},
+		},
+		{
+			// Same rectangle as the `within` partial-overlap case, expressed
+			// as a bbox: its eastern edge runs through the FTVL stop, so the
+			// clip is the west half of the buffer. ST_MakeEnvelope and the
+			// equivalent polygon must therefore produce the identical area —
+			// this pins bbox composition to the same semantics as `within`,
+			// and fails in both directions if either filter is dropped.
+			name:  "combined bbox and stop buffer partial overlap - tract",
+			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"bbox":     hw{"min_lon": -122.5, "min_lat": 37.5, "max_lon": -122.224175, "max_lat": 38.0},
+			},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918910.47033,
+					15617.923982297536,
+				)
+			},
+		},
+		{
+			// Disjoint bbox and buffer: empty clip, no geographies, rather
+			// than falling back to either filter alone.
+			name:  "combined bbox and stop buffer disjoint - tract",
+			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid intersection_area }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"bbox":     hw{"min_lon": -121.6, "min_lat": 38.4, "max_lon": -121.4, "max_lat": 38.7},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "disjoint clip must match no geographies")
+			},
+		},
+		{
+			// Radius 0 with a bbox is bbox-restricted point matching, matching
+			// the `within` behavior rather than dropping the stop filter.
+			name:  "combined bbox and stop buffer radius 0 - tract",
+			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"bbox":     hw{"min_lon": -123.0, "min_lat": 37.0, "max_lon": -122.0, "max_lat": 38.0},
+			},
+			expect: `{"census_datasets":[{"name":"tiger2024","geographies":[{"geoid":"1400000US06001406100","name":"4061"}]}]}`,
+		},
+		{
+			// Radius 0 with the stop outside the bbox: filtered out, not
+			// silently matched.
+			name:  "combined bbox and stop buffer radius 0 outside bbox - tract",
+			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"bbox":     hw{"min_lon": -121.6, "min_lat": 38.4, "max_lon": -121.4, "max_lat": 38.7},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "stop outside the bbox must not match")
+			},
+		},
+		{
 			name:  "agency intersection areas - county",
 			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"county", radius:1000.0}) { name geoid geometry_area intersection_geometry intersection_area } } }`,
 			vars:  vars,
