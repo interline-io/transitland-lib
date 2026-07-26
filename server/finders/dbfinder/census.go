@@ -514,7 +514,10 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		} else if withinClip && !stopBufferClip {
 			qBufferUse = true
 			qBuffer = withinClipSelect().Column("0 as match_entity_id")
-		} else if loc.Near != nil {
+		} else if loc.Near != nil && !stopBufferClip {
+			// Guarded like the branches above so a stop_buffer isn't discarded
+			// here: without it a radius-0 buffer alongside `near` would skip
+			// the point-matching branch entirely.
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().

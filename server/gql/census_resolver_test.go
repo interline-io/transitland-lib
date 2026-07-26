@@ -500,12 +500,14 @@ func TestCensusResolver(t *testing.T) {
 		},
 		{
 			// Disjoint bbox and buffer: empty clip, no geographies, rather
-			// than falling back to either filter alone.
+			// than falling back to either filter alone. The bbox is inside the
+			// fixture extent and covers 22 tracts, ~10km from the FTVL stop, so
+			// dropping the buffer would return those 22 rather than nothing.
 			name:  "combined bbox and stop buffer disjoint - tract",
 			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid intersection_area }} }`,
 			vars: hw{
 				"stop_ids": []int{bartFtvlStopId},
-				"bbox":     hw{"min_lon": -121.6, "min_lat": 38.4, "max_lon": -121.4, "max_lat": 38.7},
+				"bbox":     hw{"min_lon": -122.30, "min_lat": 37.86, "max_lon": -122.26, "max_lat": 37.88},
 			},
 			f: func(t *testing.T, jj string) {
 				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "disjoint clip must match no geographies")
@@ -524,16 +526,43 @@ func TestCensusResolver(t *testing.T) {
 		},
 		{
 			// Radius 0 with the stop outside the bbox: filtered out, not
-			// silently matched.
+			// silently matched. Sole cover for the bbox arm of the
+			// area-restricted point match.
 			name:  "combined bbox and stop buffer radius 0 outside bbox - tract",
 			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
 			vars: hw{
 				"stop_ids": []int{bartFtvlStopId},
-				"bbox":     hw{"min_lon": -121.6, "min_lat": 38.4, "max_lon": -121.4, "max_lat": 38.7},
+				"bbox":     hw{"min_lon": -122.30, "min_lat": 37.86, "max_lon": -122.26, "max_lat": 37.88},
 			},
 			f: func(t *testing.T, jj string) {
 				assert.Empty(t, gjson.Get(jj, "census_datasets.0.geographies").Array(), "stop outside the bbox must not match")
 			},
+		},
+		{
+			// `near` yields to a stop_buffer rather than preempting it, so a
+			// radius-0 buffer still reaches the area-restricted point match.
+			// Without the guard on the `near` branch this returns the tracts
+			// around the `near` point and drops both other filters.
+			name:  "bbox and stop buffer radius 0 with near - tract",
+			query: `query($bbox:BoundingBox, $near:PointRadius, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{bbox:$bbox, near:$near, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"bbox":     hw{"min_lon": -123.0, "min_lat": 37.0, "max_lon": -122.0, "max_lat": 38.0},
+				"near":     hw{"lon": -122.270, "lat": 37.805, "radius": 1000.0},
+			},
+			expect: `{"census_datasets":[{"name":"tiger2024","geographies":[{"geoid":"1400000US06001406100","name":"4061"}]}]}`,
+		},
+		{
+			// `near` alongside a positive-radius stop_buffer: the buffer wins.
+			// The FTVL 100m buffer touches one tract; the `near` circle covers
+			// many, so this discriminates which filter took effect.
+			name:  "stop buffer with near - tract",
+			query: `query($near:PointRadius, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{near:$near, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid }} }`,
+			vars: hw{
+				"stop_ids": []int{bartFtvlStopId},
+				"near":     hw{"lon": -122.270, "lat": 37.805, "radius": 1000.0},
+			},
+			expect: `{"census_datasets":[{"name":"tiger2024","geographies":[{"geoid":"1400000US06001406100","name":"4061"}]}]}`,
 		},
 		{
 			name:  "agency intersection areas - county",
