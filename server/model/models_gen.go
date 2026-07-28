@@ -1476,8 +1476,6 @@ type StopTimeFilter struct {
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// GTFS service date (which may differ from the calendar date for trips that cross midnight)
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// Several GTFS service dates, which need not be contiguous. Returns one row per departure with every matching date in `service_dates`, rather than repeating the row once per date. Intended for bulk timetable extraction; real-time fields cannot be selected alongside more than one date.
-	ServiceDates []*tt.Date `json:"service_dates,omitempty"`
 	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Lower bound for departure time, in seconds since midnight
@@ -1518,7 +1516,7 @@ type TripFilter struct {
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
 	// Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in `Trip.service_dates`, rather than requiring one query per date.
 	ServiceDates []*tt.Date `json:"service_dates,omitempty"`
-	// Several wall calendar dates, which need not be contiguous. Unlike `service_dates` these are calendar days rather than GTFS service days, so a trip departing after midnight is selected for the calendar date it actually departs on: each requested date also matches the service date before it, whose late-night departures roll over. `Trip.service_dates` reports the service dates matched, from which each departure's calendar date is `service_date + floor(departure_time / 86400)`. Departures more than 48 hours into their service date are not reached.
+	// Several wall calendar dates, which need not be contiguous. Unlike `service_dates`, a trip departing after midnight is matched for the calendar date it departs on, so each requested date also matches the service date before it. Departures more than 48 hours into their service date are not reached.
 	Dates []*tt.Date `json:"dates,omitempty"`
 	// Calendar date relative to today; see `RelativeDate`
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`

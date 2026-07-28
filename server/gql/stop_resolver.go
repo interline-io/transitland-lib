@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strconv"
 	"time"
@@ -101,10 +100,6 @@ func (r *stopResolver) StopTimes(ctx context.Context, obj *model.Stop, limit *in
 }
 
 func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit *int, where *model.StopTimeFilter) ([]*model.StopTime, error) {
-	// A folded row covers several dates; a real-time estimate belongs to one.
-	if where != nil && len(where.ServiceDates) > 1 && (containsField(ctx, "arrival") || containsField(ctx, "departure")) {
-		return nil, errors.New("arrival and departure are per-instance and cannot be selected with more than one service_dates entry")
-	}
 	sts, err := (LoaderFor(ctx).StopTimesByStopIDs.Load(ctx, stopTimeLoaderParam{
 		StopID:        obj.ID,
 		FeedVersionID: obj.FeedVersionID,
