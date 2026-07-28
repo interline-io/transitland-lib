@@ -40,8 +40,38 @@ func TestReadFVIDFile(t *testing.T) {
 			want:    []string{"100", "200"},
 		},
 		{
+			name:    "no header, single id",
+			content: "100\n",
+			want:    []string{"100"},
+		},
+		{
+			name:    "no header, single id, no trailing newline",
+			content: "100",
+			want:    []string{"100"},
+		},
+		{
+			name:    "no header, single id with extra columns",
+			content: "100,f-a\n",
+			want:    []string{"100"},
+		},
+		{
+			name:    "feed_version_id header, single id",
+			content: "feed_version_id\n100\n",
+			want:    []string{"100"},
+		},
+		{
+			name:    "feed_version_id header, no rows",
+			content: "feed_version_id\n",
+			want:    nil,
+		},
+		{
 			name:    "non-numeric header without feed_version_id yields nothing",
 			content: "onestop_id,id\nf-a,1\nf-b,2\n",
+			want:    nil,
+		},
+		{
+			name:    "non-numeric single row yields nothing",
+			content: "onestop_id\n",
 			want:    nil,
 		},
 		{
