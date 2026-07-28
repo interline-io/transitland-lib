@@ -1476,6 +1476,8 @@ type StopTimeFilter struct {
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// GTFS service date (which may differ from the calendar date for trips that cross midnight)
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
+	// Several GTFS service dates, which need not be contiguous. Returns one row per departure carrying every matching date in `service_dates`, rather than repeating the row once per date. Real-time fields cannot be selected alongside more than one date.
+	ServiceDates []*tt.Date `json:"service_dates,omitempty"`
 	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Lower bound for departure time, in seconds since midnight

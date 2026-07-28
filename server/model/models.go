@@ -107,8 +107,10 @@ type RTStopTimeUpdate struct {
 }
 
 type StopTime struct {
-	ServiceDate      tt.Date
-	Date             tt.Date
+	ServiceDate tt.Date
+	Date        tt.Date
+	// Every requested date this departure runs.
+	ServiceDates     []tt.Date
 	RTTripID         string            // internal: for ADDED trips
 	RTStopTimeUpdate *RTStopTimeUpdate // internal
 	gtfs.StopTime
