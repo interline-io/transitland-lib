@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/interline-io/log"
@@ -44,12 +45,46 @@ func NewOpenAPIHandler(opts ...SchemaOption) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", openAPICacheControl)
 		w.Header().Set("ETag", doc.etag)
-		if r.Header.Get("If-None-Match") == doc.etag {
+		if etagMatch(r.Header.Get("If-None-Match"), doc.etag) {
 			w.WriteHeader(http.StatusNotModified)
 			return
 		}
 		w.Write(doc.body)
 	})
+}
+
+// etagMatch reports whether an If-None-Match field value matches etag.
+//
+// RFC 9110 section 13.1.2 specifies the weak comparison function for
+// If-None-Match, so W/"x" matches "x", and the field may be "*" or a
+// comma-separated list. Comparing the raw header against our tag missed all
+// three, which costs a full re-download of a large document whenever an
+// intermediary weakens the validator — something CDNs do routinely when they
+// re-encode a response.
+//
+// Splitting on commas is not strictly correct, since an entity-tag may itself
+// contain a comma, but our tags are hex and cannot, so no real tag can be split
+// into something that matches ours.
+func etagMatch(ifNoneMatch string, etag string) bool {
+	ifNoneMatch = strings.TrimSpace(ifNoneMatch)
+	if ifNoneMatch == "" {
+		return false
+	}
+	if ifNoneMatch == "*" {
+		return true
+	}
+	for _, candidate := range strings.Split(ifNoneMatch, ",") {
+		if trimWeakETag(candidate) == trimWeakETag(etag) {
+			return true
+		}
+	}
+	return false
+}
+
+// trimWeakETag drops surrounding space and the weak-validator prefix, leaving
+// the opaque tag with its quotes.
+func trimWeakETag(s string) string {
+	return strings.TrimPrefix(strings.TrimSpace(s), "W/")
 }
 
 // openAPICache memoizes generated documents by server URL.

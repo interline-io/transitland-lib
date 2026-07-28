@@ -101,6 +101,38 @@ func TestOpenAPIHandlerServers(t *testing.T) {
 	})
 }
 
+// If-None-Match uses weak comparison and may be "*" or a list, so an exact
+// string compare against our tag re-sends the whole document whenever an
+// intermediary weakens the validator.
+func TestETagMatch(t *testing.T) {
+	const etag = `"abc123"`
+	tcs := []struct {
+		name         string
+		ifNoneMatch  string
+		expectsMatch bool
+	}{
+		{"exact", `"abc123"`, true},
+		{"weak validator from client", `W/"abc123"`, true},
+		{"wildcard", "*", true},
+		{"list containing ours", `"other", "abc123"`, true},
+		{"list of weak validators containing ours", `W/"other", W/"abc123"`, true},
+		{"surrounding whitespace", `  "abc123"  `, true},
+		{"empty", "", false},
+		{"different tag", `"nope"`, false},
+		{"list without ours", `"a", "b"`, false},
+		{"unquoted", "abc123", false},
+		{"prefix only", `"abc"`, false},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectsMatch, etagMatch(tc.ifNoneMatch, etag))
+		})
+	}
+
+	// Our tag is what we would send, so a weak form of it must also match.
+	assert.True(t, etagMatch(`W/"abc123"`, `W/"abc123"`))
+}
+
 func TestOpenAPIHandlerCaching(t *testing.T) {
 	cfg := model.Config{RestPrefix: "https://example.test/api/v2"}
 	h := NewOpenAPIHandler()
@@ -124,6 +156,12 @@ func TestOpenAPIHandlerCaching(t *testing.T) {
 		rr := serveRest(t, h, "/rest", cfg, "/rest/openapi.json", hdr)
 		assert.Equal(t, http.StatusNotModified, rr.Code)
 		assert.Empty(t, rr.Body.Bytes())
+	})
+
+	t.Run("a weakened validator still revalidates", func(t *testing.T) {
+		hdr := http.Header{"If-None-Match": []string{"W/" + etag}}
+		rr := serveRest(t, h, "/rest", cfg, "/rest/openapi.json", hdr)
+		assert.Equal(t, http.StatusNotModified, rr.Code)
 	})
 
 	t.Run("a stale etag still gets the document", func(t *testing.T) {
