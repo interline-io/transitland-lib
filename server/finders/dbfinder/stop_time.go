@@ -81,8 +81,15 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		if err != nil {
 			return nil, err
 		}
+		// Copied: the expansion rewrites the filter's date in place, and each
+		// feed version resolves it against its own service window.
+		fvWhere := where
+		if where != nil {
+			w := *where
+			fvWhere = &w
+		}
 		// Run separate queries for each possible service day
-		for _, w := range stopTimeFilterExpand(where, fvsw) {
+		for _, w := range stopTimeFilterExpandDates(fvWhere, fvsw) {
 			var serviceDate *tt.Date
 			if w != nil && w.ServiceDate != nil {
 				serviceDate = w.ServiceDate
@@ -118,7 +125,48 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 			ents = append(ents, sts...)
 		}
 	}
+	if where != nil && len(where.ServiceDates) > 0 {
+		ents = foldServiceDates(ents)
+	}
 	return ents, nil
+}
+
+// Collapse rows that differ only by service date into one row carrying every
+// date it runs.
+func foldServiceDates(ents []*model.StopTime) []*model.StopTime {
+	// Trip keyed by numeric id rather than GTFS trip_id, which one query can
+	// see on two feed versions of the same feed.
+	type foldKey struct {
+		feedVersionID int
+		tripID        int
+		stopID        int
+		stopSequence  int
+		arrivalTime   int
+		departureTime int
+	}
+	folded := make([]*model.StopTime, 0, len(ents))
+	byKey := map[foldKey]*model.StopTime{}
+	for _, ent := range ents {
+		k := foldKey{
+			feedVersionID: ent.FeedVersionID,
+			tripID:        ent.TripID.Int(),
+			stopID:        ent.StopID.Int(),
+			stopSequence:  ent.StopSequence.Int(),
+			arrivalTime:   ent.ArrivalTime.Int(),
+			departureTime: ent.DepartureTime.Int(),
+		}
+		prev, ok := byKey[k]
+		if !ok {
+			// The first row keeps its ServiceDate/Date, so a folded row still
+			// reports its earliest instance.
+			ent.ServiceDates = append(ent.ServiceDates, ent.ServiceDate)
+			byKey[k] = ent
+			folded = append(folded, ent)
+			continue
+		}
+		prev.ServiceDates = append(prev.ServiceDates, ent.ServiceDate)
+	}
+	return folded
 }
 
 // stopTimeEntityType specifies which entity type to filter stop_times by
@@ -352,6 +400,28 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		}
 	}
 	return q
+}
+
+// Run the single-date expansion once per requested date, so a date set and a
+// sequence of single-date queries produce identical rows before folding.
+func stopTimeFilterExpandDates(where *model.StopTimeFilter, fvsw *model.ServiceWindow) []*model.StopTimeFilter {
+	if where == nil || len(where.ServiceDates) == 0 {
+		return stopTimeFilterExpand(where, fvsw)
+	}
+	var out []*model.StopTimeFilter
+	for _, sd := range where.ServiceDates {
+		if sd == nil {
+			continue
+		}
+		w := *where
+		w.ServiceDates = nil
+		w.Date = nil
+		w.RelativeDate = nil
+		// Copied: stopTimeFilterExpand rewrites ServiceDate in place.
+		w.ServiceDate = ptr(*sd)
+		out = append(out, stopTimeFilterExpand(&w, fvsw)...)
+	}
+	return out
 }
 
 func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow) []*model.StopTimeFilter {
