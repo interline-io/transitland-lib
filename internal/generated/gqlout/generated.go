@@ -1180,6 +1180,7 @@ type ComplexityRoot struct {
 		PickupType               func(childComplexity int) int
 		ScheduleRelationship     func(childComplexity int) int
 		ServiceDate              func(childComplexity int) int
+		ServiceDates             func(childComplexity int) int
 		ShapeDistTraveled        func(childComplexity int) int
 		StartPickupDropOffWindow func(childComplexity int) int
 		Stop                     func(childComplexity int) int
@@ -7009,6 +7010,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.StopTime.ServiceDate(childComplexity), true
+	case "StopTime.service_dates":
+		if e.ComplexityRoot.StopTime.ServiceDates == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopTime.ServiceDates(childComplexity), true
 	case "StopTime.shape_dist_traveled":
 		if e.ComplexityRoot.StopTime.ShapeDistTraveled == nil {
 			break
@@ -10109,6 +10116,14 @@ type StopTime {
   "When part of an arrival/departure query, the calendar date for this scheduled stop time"
   date: Date
 
+  """
+  Every requested service date on which this stop time runs. Populated only when
+  the query used ` + "`" + `service_dates` + "`" + `, which returns one row per departure rather than
+  one row per departure per date. Real-time fields are per-instance and cannot be
+  requested alongside multiple dates.
+  """
+  service_dates: [Date!]
+
   "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
 }
@@ -11641,6 +11656,10 @@ input StopTimeFilter {
   relative_date: RelativeDate
   "GTFS service date (which may differ from the calendar date for trips that cross midnight)"
   service_date: Date
+  """
+  Several GTFS service dates, which need not be contiguous. Returns one row per departure with every matching date in ` + "`" + `service_dates` + "`" + `, rather than repeating the row once per date. Intended for bulk timetable extraction; real-time fields cannot be selected alongside more than one date.
+  """
+  service_dates: [Date!]
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
   use_service_window: Boolean
   "Lower bound for departure time, in seconds since midnight"
@@ -14171,6 +14190,8 @@ func (ec *executionContext) childFields_StopTime(ctx context.Context, field grap
 		return ec.fieldContext_StopTime_service_date(ctx, field)
 	case "date":
 		return ec.fieldContext_StopTime_date(ctx, field)
+	case "service_dates":
+		return ec.fieldContext_StopTime_service_dates(ctx, field)
 	case "schedule_relationship":
 		return ec.fieldContext_StopTime_schedule_relationship(ctx, field)
 	}
@@ -38591,6 +38612,29 @@ func (ec *executionContext) fieldContext_StopTime_date(_ context.Context, field 
 	return graphql.NewScalarFieldContext("StopTime", field, false, false, errors.New("field of type Date does not have child fields"))
 }
 
+func (ec *executionContext) _StopTime_service_dates(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopTime_service_dates(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ServiceDates, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []tt.Date) graphql.Marshaler {
+			return ec.marshalODate2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_StopTime_service_dates(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("StopTime", field, false, false, errors.New("field of type Date does not have child fields"))
+}
+
 func (ec *executionContext) _StopTime_schedule_relationship(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -45390,7 +45434,7 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"date", "relative_date", "service_date", "use_service_window", "start_time", "end_time", "start", "end", "next", "route_onestop_ids", "allow_previous_route_onestop_ids", "exclude_first", "exclude_last"}
+	fieldsInOrder := [...]string{"date", "relative_date", "service_date", "service_dates", "use_service_window", "start_time", "end_time", "start", "end", "next", "route_onestop_ids", "allow_previous_route_onestop_ids", "exclude_first", "exclude_last"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45418,6 +45462,13 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 				return it, err
 			}
 			it.ServiceDate = data
+		case "service_dates":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_dates"))
+			data, err := ec.unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServiceDates = data
 		case "use_service_window":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("use_service_window"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -56300,6 +56351,8 @@ func (ec *executionContext) _StopTime(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._StopTime_service_date(ctx, field, obj)
 		case "date":
 			out.Values[i] = ec._StopTime_date(ctx, field, obj)
+		case "service_dates":
+			out.Values[i] = ec._StopTime_service_dates(ctx, field, obj)
 		case "schedule_relationship":
 			field := field
 
@@ -60392,6 +60445,78 @@ func (ec *executionContext) unmarshalODate2githubᚗcomᚋinterlineᚑioᚋtrans
 
 func (ec *executionContext) marshalODate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx context.Context, sel ast.SelectionSet, v tt.Date) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalODate2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx context.Context, v any) ([]tt.Date, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]tt.Date, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalODate2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx context.Context, sel ast.SelectionSet, v []tt.Date) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx context.Context, v any) ([]*tt.Date, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*tt.Date, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx context.Context, sel ast.SelectionSet, v []*tt.Date) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx context.Context, v any) (*tt.Date, error) {

@@ -1253,6 +1253,14 @@ type StopTime {
   "When part of an arrival/departure query, the calendar date for this scheduled stop time"
   date: Date
 
+  """
+  Every requested service date on which this stop time runs. Populated only when
+  the query used `service_dates`, which returns one row per departure rather than
+  one row per departure per date. Real-time fields are per-instance and cannot be
+  requested alongside multiple dates.
+  """
+  service_dates: [Date!]
+
   "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics"
   schedule_relationship: ScheduleRelationship
 }
@@ -2785,6 +2793,10 @@ input StopTimeFilter {
   relative_date: RelativeDate
   "GTFS service date (which may differ from the calendar date for trips that cross midnight)"
   service_date: Date
+  """
+  Several GTFS service dates, which need not be contiguous. Returns one row per departure with every matching date in `service_dates`, rather than repeating the row once per date. Intended for bulk timetable extraction; real-time fields cannot be selected alongside more than one date.
+  """
+  service_dates: [Date!]
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
   use_service_window: Boolean
   "Lower bound for departure time, in seconds since midnight"

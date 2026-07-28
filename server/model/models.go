@@ -107,8 +107,11 @@ type RTStopTimeUpdate struct {
 }
 
 type StopTime struct {
-	ServiceDate      tt.Date
-	Date             tt.Date
+	ServiceDate tt.Date
+	Date        tt.Date
+	// Set only for `service_dates` queries: every requested date this departure
+	// runs, folded into one row instead of one row per date.
+	ServiceDates     []tt.Date
 	RTTripID         string            // internal: for ADDED trips
 	RTStopTimeUpdate *RTStopTimeUpdate // internal
 	gtfs.StopTime
