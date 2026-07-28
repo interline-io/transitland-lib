@@ -95,6 +95,44 @@ func TestTripResolver(t *testing.T) {
 			selector:     "trips.#.trip_id",
 			selectExpect: []string{"101", "103", "305", "207", "309", "211", "313", "215", "217", "319", "221", "323", "225", "227", "329", "231", "233", "135", "237", "139", "143", "147", "151", "155", "257", "159", "261", "263", "365", "267", "269", "371", "273", "375", "277", "279", "381", "283", "385", "287", "289", "191", "193", "195", "197", "199", "102", "104", "206", "208", "310", "212", "314", "216", "218", "320", "222", "324", "226", "228", "330", "232", "134", "236", "138", "142", "146", "150", "152", "254", "156", "258", "360", "262", "264", "366", "268", "370", "272", "274", "376", "278", "380", "282", "284", "386", "288", "190", "192", "194", "196", "198"},
 		},
+		// service_dates and dates. Trip 101 runs Monday-Friday, trip 422
+		// Saturday and Sunday; 2018-05-28 is a Monday.
+		{
+			name:   "where service_dates",
+			query:  `query{trips(where:{trip_id:"101",service_dates:["2018-05-29","2018-05-30"]}){trip_id service_dates}}`,
+			expect: `{"trips":[{"service_dates":["2018-05-29","2018-05-30"],"trip_id":"101"}]}`,
+		},
+		{
+			// service_dates match exactly: the preceding day is not brought in,
+			// whether or not the trip runs on it.
+			name:   "where service_dates does not reach back",
+			query:  `query{trips(where:{trip_id:"101",service_dates:["2018-05-29"]}){service_dates}}`,
+			expect: `{"trips":[{"service_dates":["2018-05-29"]}]}`,
+		},
+		{
+			// dates also match the preceding service date, whose after-midnight
+			// departures fall on the requested calendar day.
+			name:   "where dates reaches back one service date",
+			query:  `query{trips(where:{trip_id:"101",dates:["2018-05-29"]}){service_dates}}`,
+			expect: `{"trips":[{"service_dates":["2018-05-28","2018-05-29"]}]}`,
+		},
+		{
+			// A weekend trip is selected for Monday purely by that reach-back,
+			// and reports only the Sunday it actually runs.
+			name:   "where dates selects a trip through the reach-back alone",
+			query:  `query{trips(where:{trip_id:"422",dates:["2018-05-28"]}){service_dates}}`,
+			expect: `{"trips":[{"service_dates":["2018-05-27"]}]}`,
+		},
+		{
+			name:   "where service_dates does not select that trip",
+			query:  `query{trips(where:{trip_id:"422",service_dates:["2018-05-28"]}){service_dates}}`,
+			expect: `{"trips":[]}`,
+		},
+		{
+			name:   "where dates takes precedence over service_dates",
+			query:  `query{trips(where:{trip_id:"101",dates:["2018-05-29"],service_dates:["2018-05-31"]}){service_dates}}`,
+			expect: `{"trips":[{"service_dates":["2018-05-28","2018-05-29"]}]}`,
+		},
 		// license
 		{
 			name:         "license filter: share_alike_optional = yes",
