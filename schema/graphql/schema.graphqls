@@ -1058,7 +1058,12 @@ type Trip {
 
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
-  
+
+  """
+  Every requested service date on which this trip runs. Populated only when the query used `service_dates`. All of a trip's stop times run on these same dates, so grouping departures by trip states them once rather than once per stop time.
+  """
+  service_dates: [Date!]
+
   "Calendar for this trip"
   calendar: Calendar!
   
@@ -2825,6 +2830,8 @@ input TripStopTimeFilter {
   start: Seconds
   "Upper bound for arrival time, in local `HH:MM:SS`"
   end: Seconds
+  "Restrict to stop times at these stops (database integer IDs)"
+  stop_ids: [Int!]
 }
 
 """Filters for querying archived stop observations. All three fields are required."""
@@ -2847,6 +2854,10 @@ input PathwayFilter {
 input TripFilter {
   "GTFS service date on which trips run"
   service_date: Date
+  """
+  Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in `Trip.service_dates`, rather than requiring one query per date.
+  """
+  service_dates: [Date!]
   "Calendar date relative to today; see `RelativeDate`"
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"

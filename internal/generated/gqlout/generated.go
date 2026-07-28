@@ -1229,6 +1229,7 @@ type ComplexityRoot struct {
 		SafeDurationFactor   func(childComplexity int) int
 		SafeDurationOffset   func(childComplexity int) int
 		ScheduleRelationship func(childComplexity int) int
+		ServiceDates         func(childComplexity int) int
 		Shape                func(childComplexity int) int
 		StopPatternID        func(childComplexity int) int
 		StopTimes            func(childComplexity int, limit *int, where *model.TripStopTimeFilter) int
@@ -7273,6 +7274,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Trip.ScheduleRelationship(childComplexity), true
+	case "Trip.service_dates":
+		if e.ComplexityRoot.Trip.ServiceDates == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Trip.ServiceDates(childComplexity), true
 	case "Trip.shape":
 		if e.ComplexityRoot.Trip.Shape == nil {
 			break
@@ -9921,7 +9928,12 @@ type Trip {
 
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
-  
+
+  """
+  Every requested service date on which this trip runs. Populated only when the query used ` + "`" + `service_dates` + "`" + `. All of a trip's stop times run on these same dates, so grouping departures by trip states them once rather than once per stop time.
+  """
+  service_dates: [Date!]
+
   "Calendar for this trip"
   calendar: Calendar!
   
@@ -11688,6 +11700,8 @@ input TripStopTimeFilter {
   start: Seconds
   "Upper bound for arrival time, in local ` + "`" + `HH:MM:SS` + "`" + `"
   end: Seconds
+  "Restrict to stop times at these stops (database integer IDs)"
+  stop_ids: [Int!]
 }
 
 """Filters for querying archived stop observations. All three fields are required."""
@@ -11710,6 +11724,10 @@ input PathwayFilter {
 input TripFilter {
   "GTFS service date on which trips run"
   service_date: Date
+  """
+  Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in ` + "`" + `Trip.service_dates` + "`" + `, rather than requiring one query per date.
+  """
+  service_dates: [Date!]
   "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `"
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
@@ -14272,6 +14290,8 @@ func (ec *executionContext) childFields_Trip(ctx context.Context, field graphql.
 		return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 	case "stop_pattern_id":
 		return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
+	case "service_dates":
+		return ec.fieldContext_Trip_service_dates(ctx, field)
 	case "calendar":
 		return ec.fieldContext_Trip_calendar(ctx, field)
 	case "route":
@@ -39378,6 +39398,29 @@ func (ec *executionContext) fieldContext_Trip_stop_pattern_id(_ context.Context,
 	return graphql.NewScalarFieldContext("Trip", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _Trip_service_dates(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Trip_service_dates(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ServiceDates, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*tt.Date) graphql.Marshaler {
+			return ec.marshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Trip_service_dates(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Trip", field, false, false, errors.New("field of type Date does not have child fields"))
+}
+
 func (ec *executionContext) _Trip_calendar(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -45555,7 +45598,7 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"service_date", "relative_date", "use_service_window", "trip_id", "stop_pattern_id", "license", "route_ids", "route_onestop_ids", "feed_version_sha1", "feed_onestop_id"}
+	fieldsInOrder := [...]string{"service_date", "service_dates", "relative_date", "use_service_window", "trip_id", "stop_pattern_id", "license", "route_ids", "route_onestop_ids", "feed_version_sha1", "feed_onestop_id"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45569,6 +45612,13 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj an
 				return it, err
 			}
 			it.ServiceDate = data
+		case "service_dates":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_dates"))
+			data, err := ec.unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServiceDates = data
 		case "relative_date":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relative_date"))
 			data, err := ec.unmarshalORelativeDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRelativeDate(ctx, v)
@@ -45648,7 +45698,7 @@ func (ec *executionContext) unmarshalInputTripStopTimeFilter(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"start", "end"}
+	fieldsInOrder := [...]string{"start", "end", "stop_ids"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45669,6 +45719,13 @@ func (ec *executionContext) unmarshalInputTripStopTimeFilter(ctx context.Context
 				return it, err
 			}
 			it.End = data
+		case "stop_ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StopIds = data
 		}
 	}
 	return it, nil
@@ -56631,6 +56688,8 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "service_dates":
+			out.Values[i] = ec._Trip_service_dates(ctx, field, obj)
 		case "calendar":
 			field := field
 

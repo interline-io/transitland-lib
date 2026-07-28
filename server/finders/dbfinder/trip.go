@@ -3,6 +3,8 @@ package dbfinder
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -51,6 +53,35 @@ func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []in
 	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.FeedVersionID }), err
 }
 
+// A date outside the feed version's service window is replaced by the same
+// weekday in its fallback week; a date inside is returned unchanged.
+func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
+	if !s.Before(fvsw.StartDate) && !s.After(fvsw.EndDate) {
+		return tzTruncate(s, fvsw.NowLocal.Location())
+	}
+	dow := int(s.Weekday()) - 1
+	if dow < 0 {
+		dow = 6
+	}
+	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), fvsw.NowLocal.Location())
+}
+
+// Split the aggregated service_dates column into the per-trip list the API
+// returns. A no-op unless the query filtered on service_dates.
+func expandTripServiceDates(ents []*model.Trip) {
+	for _, ent := range ents {
+		if !ent.ServiceDatesAgg.Valid || ent.ServiceDatesAgg.Val == "" {
+			continue
+		}
+		for _, s := range strings.Split(ent.ServiceDatesAgg.Val, ",") {
+			d := tt.Date{}
+			if err := d.Scan(s); err == nil {
+				ent.ServiceDates = append(ent.ServiceDates, &d)
+			}
+		}
+	}
+}
+
 func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.TripFilter, keys []model.FVPair) ([][]*model.Trip, error) {
 	var ents []*model.Trip
 	// Group by fvid
@@ -82,6 +113,7 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 			return nil, err
 		}
 	}
+	expandTripServiceDates(ents)
 	return arrangeGroup(keys, ents, func(ent *model.Trip) model.FVPair {
 		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.RouteID.Int()}
 	}), nil
@@ -118,6 +150,7 @@ func (f *Finder) TripsByShapeIDs(ctx context.Context, limit *int, where *model.T
 			return nil, err
 		}
 	}
+	expandTripServiceDates(ents)
 	return arrangeGroup(keys, ents, func(ent *model.Trip) model.FVPair {
 		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.ShapeID.Int()}
 	}), nil
@@ -152,6 +185,7 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 		}
 		ents = append(ents, q...)
 	}
+	expandTripServiceDates(ents)
 	return arrangeGroup(keys, ents, func(ent *model.Trip) int { return ent.FeedVersionID }), nil
 }
 
@@ -195,13 +229,14 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 			where.ServiceDate = tzTruncate(s, fvsw.NowLocal.Location())
 		}
 		if where.UseServiceWindow != nil && *where.UseServiceWindow {
-			s := where.ServiceDate.Val
-			if s.Before(fvsw.StartDate) || s.After(fvsw.EndDate) {
-				dow := int(s.Weekday()) - 1
-				if dow < 0 {
-					dow = 6
+			// Guarded: use_service_window with no date at all is a valid filter.
+			if where.ServiceDate != nil {
+				where.ServiceDate = mapIntoServiceWindow(where.ServiceDate.Val, fvsw)
+			}
+			for i, d := range where.ServiceDates {
+				if d != nil {
+					where.ServiceDates[i] = mapIntoServiceWindow(d.Val, fvsw)
 				}
-				where.ServiceDate = tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), fvsw.NowLocal.Location())
 			}
 		}
 	}
@@ -229,7 +264,39 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		if len(where.RouteIds) > 0 {
 			q = q.Where(In("gtfs_trips.route_id", where.RouteIds))
 		}
-		if where.ServiceDate != nil {
+		if len(where.ServiceDates) > 0 {
+			// One row per trip carrying the requested dates it runs, instead of
+			// one query per date. Aggregated as text because the dates ride back
+			// on a single column; the finder splits them into ServiceDates.
+			var dates []string
+			for _, d := range where.ServiceDates {
+				if d != nil {
+					dates = append(dates, d.Val.Format("2006-01-02"))
+				}
+			}
+			q = q.Column("svc.service_dates_agg").JoinClause(`
+			join lateral (
+				select string_agg(to_char(d.day, 'YYYY-MM-DD'), ',' order by d.day) as service_dates_agg
+				from unnest(string_to_array(?, ',')::date[]) as d(day)
+				join gtfs_calendars gc on gc.id = gtfs_trips.service_id
+				left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = d.day
+				left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = d.day
+				where ((
+						gc.start_date <= d.day AND gc.end_date >= d.day
+						AND (CASE EXTRACT(isodow FROM d.day)
+						WHEN 1 THEN monday = 1
+						WHEN 2 THEN tuesday = 1
+						WHEN 3 THEN wednesday = 1
+						WHEN 4 THEN thursday = 1
+						WHEN 5 THEN friday = 1
+						WHEN 6 THEN saturday = 1
+						WHEN 7 THEN sunday = 1
+						END)
+					) OR gcda.date IS NOT NULL)
+					AND gcdb.date is null
+			) svc on true
+			`, strings.Join(dates, ",")).Where("svc.service_dates_agg is not null")
+		} else if where.ServiceDate != nil {
 			serviceDate := where.ServiceDate.Val
 			q = q.JoinClause(`
 			join lateral (

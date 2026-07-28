@@ -97,6 +97,11 @@ type Route struct {
 
 type Trip struct {
 	RTTripID string // internal: for ADDED trips
+	// Set only for `service_dates` queries: every requested date this trip runs.
+	ServiceDates []*tt.Date
+	// Wire format for the above — the query aggregates the dates into one
+	// comma-separated column, which the finder splits into ServiceDates.
+	ServiceDatesAgg tt.String `db:"service_dates_agg"`
 	gtfs.Trip
 }
 

@@ -1516,6 +1516,8 @@ type Tenant struct {
 type TripFilter struct {
 	// GTFS service date on which trips run
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
+	// Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in `Trip.service_dates`, rather than requiring one query per date.
+	ServiceDates []*tt.Date `json:"service_dates,omitempty"`
 	// Calendar date relative to today; see `RelativeDate`
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
@@ -1542,6 +1544,8 @@ type TripStopTimeFilter struct {
 	Start *tt.Seconds `json:"start,omitempty"`
 	// Upper bound for arrival time, in local `HH:MM:SS`
 	End *tt.Seconds `json:"end,omitempty"`
+	// Restrict to stop times at these stops (database integer IDs)
+	StopIds []int `json:"stop_ids,omitempty"`
 }
 
 // A user in the authorization system
