@@ -9930,7 +9930,9 @@ type Trip {
   stop_pattern_id: Int!
 
   """
-  Every requested service date on which this trip runs. Populated only when the query used ` + "`" + `service_dates` + "`" + `. All of a trip's stop times run on these same dates, so grouping departures by trip states them once rather than once per stop time.
+  Every GTFS service date on which this trip runs, out of those matched by a ` + "`" + `dates` + "`" + ` or ` + "`" + `service_dates` + "`" + ` query. All of a trip's stop times run on these same dates, so grouping departures by trip states them once rather than once per stop time; a departure's wall calendar date is ` + "`" + `service_date + floor(departure_time / 86400)` + "`" + `.
+
+  Dates are reported in the frame the query was expressed in: a date relocated into the feed version's fallback week by ` + "`" + `use_service_window` + "`" + ` is reported as the date that was asked for. Under ` + "`" + `dates` + "`" + ` this list can extend one day before the earliest requested calendar date, since that day's after-midnight departures fall on it.
   """
   service_dates: [Date!]
 
@@ -11728,6 +11730,10 @@ input TripFilter {
   Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in ` + "`" + `Trip.service_dates` + "`" + `, rather than requiring one query per date.
   """
   service_dates: [Date!]
+  """
+  Several wall calendar dates, which need not be contiguous. Unlike ` + "`" + `service_dates` + "`" + ` these are calendar days rather than GTFS service days, so a trip departing after midnight is selected for the calendar date it actually departs on: each requested date also matches the service date before it, whose late-night departures roll over. ` + "`" + `Trip.service_dates` + "`" + ` reports the service dates matched, from which each departure's calendar date is ` + "`" + `service_date + floor(departure_time / 86400)` + "`" + `. Departures more than 48 hours into their service date are not reached.
+  """
+  dates: [Date!]
   "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `"
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
@@ -45598,7 +45604,7 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"service_date", "service_dates", "relative_date", "use_service_window", "trip_id", "stop_pattern_id", "license", "route_ids", "route_onestop_ids", "feed_version_sha1", "feed_onestop_id"}
+	fieldsInOrder := [...]string{"service_date", "service_dates", "dates", "relative_date", "use_service_window", "trip_id", "stop_pattern_id", "license", "route_ids", "route_onestop_ids", "feed_version_sha1", "feed_onestop_id"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45619,6 +45625,13 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj an
 				return it, err
 			}
 			it.ServiceDates = data
+		case "dates":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dates"))
+			data, err := ec.unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Dates = data
 		case "relative_date":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relative_date"))
 			data, err := ec.unmarshalORelativeDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRelativeDate(ctx, v)

@@ -1060,7 +1060,7 @@ type Trip {
   stop_pattern_id: Int!
 
   """
-  Every requested service date on which this trip runs. Populated only when the query used `service_dates`. All of a trip's stop times run on these same dates, so grouping departures by trip states them once rather than once per stop time.
+  Every GTFS service date matched by a `dates` or `service_dates` query, reported as the date that was asked for rather than where `use_service_window` relocated it. All of a trip's stop times run on these dates; a departure's wall calendar date is `service_date + floor(departure_time / 86400)`.
   """
   service_dates: [Date!]
 
@@ -1259,10 +1259,7 @@ type StopTime {
   date: Date
 
   """
-  Every requested service date on which this stop time runs. Populated only when
-  the query used `service_dates`, which returns one row per departure rather than
-  one row per departure per date. Real-time fields are per-instance and cannot be
-  requested alongside multiple dates.
+  Every requested service date this departure runs, folded into one row rather than one row per date. Real-time fields are per-instance and cannot be requested alongside several dates.
   """
   service_dates: [Date!]
 
@@ -2799,7 +2796,7 @@ input StopTimeFilter {
   "GTFS service date (which may differ from the calendar date for trips that cross midnight)"
   service_date: Date
   """
-  Several GTFS service dates, which need not be contiguous. Returns one row per departure with every matching date in `service_dates`, rather than repeating the row once per date. Intended for bulk timetable extraction; real-time fields cannot be selected alongside more than one date.
+  Several GTFS service dates, which need not be contiguous. Returns one row per departure carrying every matching date in `service_dates`, rather than repeating the row once per date. Real-time fields cannot be selected alongside more than one date.
   """
   service_dates: [Date!]
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
@@ -2858,6 +2855,10 @@ input TripFilter {
   Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in `Trip.service_dates`, rather than requiring one query per date.
   """
   service_dates: [Date!]
+  """
+  Several wall calendar dates, which need not be contiguous. Unlike `service_dates`, a trip departing after midnight is matched for the calendar date it departs on, so each requested date also matches the service date before it. Departures more than 48 hours into their service date are not reached.
+  """
+  dates: [Date!]
   "Calendar date relative to today; see `RelativeDate`"
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"

@@ -20,9 +20,8 @@ const (
 	RESOLVER_LOCATION_MAXLIMIT         = 100_000
 	RESOLVER_SEGMENT_MAXLIMIT          = 100_000
 	RESOLVER_SHAPE_MAXLIMIT            = 100_000
-	// Bulk timetable extraction reads a route's trips over a date range. A busy
-	// route runs close to 1,000 trips in a single week, so the default limit
-	// truncates without an error as soon as the range is longer than that.
+	// A busy route runs close to 1,000 trips in a week, so the default limit
+	// truncates a multi-week range without an error.
 	RESOLVER_TRIP_MAXLIMIT = 100_000
 )
 
