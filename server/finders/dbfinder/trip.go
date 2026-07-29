@@ -58,14 +58,19 @@ func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []in
 // Replaces a date outside the feed version's service window with the same
 // weekday in its fallback week.
 func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
-	if !s.Before(fvsw.StartDate) && !s.After(fvsw.EndDate) {
-		return tzTruncate(s, fvsw.NowLocal.Location())
+	loc := fvsw.NowLocal.Location()
+	// Compared in the feed version's timezone. The window's dates are local
+	// midnight and a date scalar parses as midnight UTC, so comparing the two
+	// as given puts the first or last day of the window outside it.
+	local := tzTruncate(s, loc)
+	if !local.Val.Before(fvsw.StartDate) && !local.Val.After(fvsw.EndDate) {
+		return local
 	}
-	dow := int(s.Weekday()) - 1
+	dow := int(local.Val.Weekday()) - 1
 	if dow < 0 {
 		dow = 6
 	}
-	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), fvsw.NowLocal.Location())
+	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
 }
 
 // tripDate is a service date to match in the database and the dates it is

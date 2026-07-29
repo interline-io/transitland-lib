@@ -38,6 +38,40 @@ func testServiceWindow(t *testing.T) *model.ServiceWindow {
 	}
 }
 
+func TestMapIntoServiceWindow(t *testing.T) {
+	// A feed version's window carries local midnight, while a date scalar
+	// parses as midnight UTC. West of UTC the requested day then sorts before
+	// the window's first day; east of it, after the window's last day. Either
+	// way an in-window boundary day would be relocated.
+	for _, tz := range []string{"America/Los_Angeles", "Asia/Kolkata", "UTC"} {
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			t.Fatal(err)
+		}
+		day := func(y int, m time.Month, d int) time.Time { return time.Date(y, m, d, 0, 0, 0, 0, loc) }
+		fvsw := &model.ServiceWindow{
+			NowLocal:     time.Date(2026, 5, 13, 9, 30, 0, 0, loc),
+			StartDate:    day(2026, 5, 11), // Monday
+			EndDate:      day(2026, 5, 17), // Sunday
+			FallbackWeek: day(2026, 3, 2),  // Monday
+		}
+		tcs := []struct{ name, in, expect string }{
+			{"first day of the window is inside it", "2026-05-11", "2026-05-11"},
+			{"last day of the window is inside it", "2026-05-17", "2026-05-17"},
+			{"mid-window is unchanged", "2026-05-13", "2026-05-13"},
+			// 2026-01-05 is a Monday, 2027-01-09 a Saturday.
+			{"before the window takes the fallback weekday", "2026-01-05", "2026-03-02"},
+			{"after the window takes the fallback weekday", "2027-01-09", "2026-03-07"},
+		}
+		for _, tc := range tcs {
+			t.Run(tz+"/"+tc.name, func(t *testing.T) {
+				got := mapIntoServiceWindow(testDate(t, tc.in), fvsw)
+				assert.Equal(t, tc.expect, got.Val.Format("2006-01-02"))
+			})
+		}
+	}
+}
+
 func TestResolveTripDates(t *testing.T) {
 	fmtPairs := func(dates []tripDate) []string {
 		var out []string
