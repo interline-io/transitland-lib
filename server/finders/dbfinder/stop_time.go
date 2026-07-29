@@ -177,6 +177,11 @@ func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *
 		if where.End != nil {
 			q = q.Where(sq.LtOrEq{"sts.arrival_time + gtfs_trips.journey_pattern_offset": where.End.Int()})
 		}
+		// Without this a route crossing a small query area returns every stop
+		// on the route.
+		if len(where.StopIds) > 0 {
+			q = q.Where(In("sts.stop_id", where.StopIds))
+		}
 	}
 	if len(pairs) > 0 {
 		eids, fvids := pairKeys(pairs)

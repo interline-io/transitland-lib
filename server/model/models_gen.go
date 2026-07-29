@@ -1512,9 +1512,13 @@ type Tenant struct {
 
 // Search options for trips
 type TripFilter struct {
-	// GTFS service date on which trips run
+	// GTFS service date on which trips run. Lowest precedence: ignored if `dates`, `service_dates` or `relative_date` is set
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// Calendar date relative to today; see `RelativeDate`
+	// Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in `Trip.service_dates`, rather than requiring one query per date. Dates are matched exactly as given: unlike `dates`, no neighbouring service date is brought in for after-midnight departures. Ignored if `dates` is set.
+	ServiceDates []*tt.Date `json:"service_dates,omitempty"`
+	// Several wall calendar dates, which need not be contiguous. Unlike `service_dates`, a trip departing after midnight is matched for the calendar date it departs on, so each requested date also matches the service date before it — and `Trip.service_dates` can therefore name a day earlier than any requested here. Departures more than 48 hours into their service date are not reached. Takes precedence over `service_date`, `service_dates` and `relative_date`.
+	Dates []*tt.Date `json:"dates,omitempty"`
+	// Calendar date relative to today; see `RelativeDate`. Ignored if `dates` or `service_dates` is set
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
@@ -1540,6 +1544,8 @@ type TripStopTimeFilter struct {
 	Start *tt.Seconds `json:"start,omitempty"`
 	// Upper bound for arrival time, in local `HH:MM:SS`
 	End *tt.Seconds `json:"end,omitempty"`
+	// Restrict to stop times at these stops (database integer IDs)
+	StopIds []int `json:"stop_ids,omitempty"`
 }
 
 // A user in the authorization system
