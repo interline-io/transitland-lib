@@ -184,16 +184,14 @@ func readFVIDFile(fn string) ([]string, error) {
 	defer f.Close()
 	var ids []string
 	col := -1
-	if err := tlcsv.ReadRows(f, func(row tlcsv.Row) {
+	header, err := tlcsv.ReadRowsHeader(f, func(row tlcsv.Row) {
 		if col < 0 {
 			if i, ok := row.Hindex["feed_version_id"]; ok {
 				col = i
 			} else if len(row.Header) > 0 {
-				if h := strings.TrimSpace(row.Header[0]); h != "" {
-					if _, err := strconv.Atoi(h); err == nil {
-						col = 0
-						ids = append(ids, h)
-					}
+				if h, ok := fvidValue(row.Header[0]); ok {
+					col = 0
+					ids = append(ids, h)
 				}
 			}
 		}
@@ -202,8 +200,28 @@ func readFVIDFile(fn string) ([]string, error) {
 				ids = append(ids, v)
 			}
 		}
-	}); err != nil && err != io.EOF { // io.EOF: empty file, no rows
+	})
+	if err != nil && err != io.EOF { // io.EOF: empty file, no rows
 		return nil, err
 	}
+	// A file holding a single id has no rows after the header, so the callback never
+	// ran and the id is in the header itself.
+	if col < 0 && len(header) > 0 {
+		if h, ok := fvidValue(header[0]); ok {
+			ids = append(ids, h)
+		}
+	}
 	return ids, nil
+}
+
+// fvidValue returns v trimmed, if it is a bare integer feed version id.
+func fvidValue(v string) (string, bool) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return "", false
+	}
+	if _, err := strconv.Atoi(v); err != nil {
+		return "", false
+	}
+	return v, true
 }
