@@ -76,16 +76,30 @@ func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
 		mount = p[:i]
 	}
 	// With an empty restPrefix the result is a relative URL, and a mount segment
-	// beginning with "//" would read as protocol-relative — //evil.com/... — in a
-	// Location header. chi does not route such a path to these handlers today,
-	// but this value reaches Location headers and the servers block, the handler
-	// is exported for callers whose routing this package does not control, and
-	// the schema endpoint is served without authentication. Refuse it outright
-	// rather than depending on the router to keep it unreachable.
-	if restPrefix == "" && strings.HasPrefix(mount, "//") {
+	// that reads as protocol-relative — //evil.com/... — would redirect off-site
+	// from a Location header. chi does not route such a path to these handlers
+	// today, but this value reaches Location headers and the servers block, the
+	// handler is exported for callers whose routing this package does not
+	// control, and the schema endpoint is served without authentication. Refuse
+	// it outright rather than depending on the router to keep it unreachable.
+	// A non-empty restPrefix already fixes the authority, so the same mount is
+	// only path noise there and is kept.
+	if restPrefix == "" && isProtocolRelative(mount) {
 		return ""
 	}
 	return restPrefix + mount
+}
+
+// isProtocolRelative reports whether s would be read as a protocol-relative
+// reference — //host/... — rather than as a path.
+//
+// Backslashes count. The WHATWG URL parser treats \ as equivalent to / while
+// parsing a special scheme, so browsers resolve /\evil.com and /\/evil.com the
+// same way they resolve //evil.com. Checking only for "//" would leave the
+// cheapest bypass of that check open.
+func isProtocolRelative(s string) bool {
+	isSlash := func(c byte) bool { return c == '/' || c == '\\' }
+	return len(s) > 1 && isSlash(s[0]) && isSlash(s[1])
 }
 
 // NewServer .

@@ -41,13 +41,19 @@ func TestMountPrefix(t *testing.T) {
 		// literal /onestop_id/ in it; matching the last one would anchor the
 		// mount inside caller-controlled input.
 		{"marker recurring in a path parameter", "https://transit.land/api/v2", "/rest/onestop_id/f-/onestop_id/evil", "/onestop_id/", "https://transit.land/api/v2/rest"},
-		// A relative result must never start with "//" — a Location header built
-		// from it would be protocol-relative and redirect off-site.
+		// A relative result must never read as protocol-relative — a Location
+		// header built from it would redirect off-site. Backslashes count: the
+		// WHATWG URL parser treats \ as / for special schemes, so browsers
+		// resolve /\evil.com exactly like //evil.com.
 		{"protocol-relative mount refused", "", "//evil.com/openapi.json", "/openapi.json", ""},
 		{"protocol-relative mount refused, deep", "", "//evil.com/a/openapi.json", "/openapi.json", ""},
-		// An absolute prefix already fixes the authority, so the same mount is
-		// only path noise and is kept.
+		{"backslash mount refused", "", `/\evil.com/openapi.json`, "/openapi.json", ""},
+		{"mixed slash mount refused", "", `/\/evil.com/openapi.json`, "/openapi.json", ""},
+		{"backslash mount refused, root redirect", "", `/\evil.com/`, "", ""},
+		// An absolute prefix already fixes the authority, so the same mounts are
+		// only path noise and are kept.
 		{"absolute prefix keeps odd mount", "https://transit.land/api/v2", "//evil.com/openapi.json", "/openapi.json", "https://transit.land/api/v2//evil.com"},
+		{"absolute prefix keeps backslash mount", "https://transit.land/api/v2", `/\evil.com/openapi.json`, "/openapi.json", `https://transit.land/api/v2/\evil.com`},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
