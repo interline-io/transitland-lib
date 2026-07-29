@@ -36,9 +36,16 @@ const MAXRADIUS = 100 * 1000.0
 // chi does not strip r.URL.Path — it holds the full public path, e.g.
 // /rest/openapi.json — so removing the part of the path the route itself owns
 // recovers the mount segment. routeMarker is the literal head of the matched
-// route ("/openapi.json", "/onestop_id/"); everything from its last occurrence
+// route ("/openapi.json", "/onestop_id/"); everything from its first occurrence
 // onward is dropped. A route mounted at "/" owns nothing and passes "", which
 // keeps the whole path.
+//
+// First occurrence, not last: everything after the marker is route-owned, and
+// for a route ending in a parameter that means caller-controlled. r.URL.Path is
+// decoded, so an id sent as f-%2Fonestop_id%2Fevil arrives here as a second
+// literal /onestop_id/ and would re-anchor the mount at /rest/onestop_id/f-.
+// The mount comes from deployment config and the parameter does not, so
+// matching the earliest marker keeps the untrusted half out of the result.
 //
 // routeMarker must be a literal taken from the route pattern, never a value
 // interpolated from a path parameter: chi.URLParam returns the raw
@@ -46,22 +53,28 @@ const MAXRADIUS = 100 * 1000.0
 // any parameter containing an encoded character, and the marker would not be
 // found.
 //
-// This is the one construction pagination links, the root redirect, the
-// onestop_id redirects, and the OpenAPI servers block all need. restPrefix
-// alone is not enough: it does not include the mount segment, so using it
-// directly yields https://transit.land/api/v2/stops, which 404s, rather than
-// https://transit.land/api/v2/rest/stops.
+// The root redirect, the onestop_id redirects, and the OpenAPI servers block
+// all share this construction. restPrefix alone is not enough: it does not
+// include the mount segment, so using it directly yields
+// https://transit.land/api/v2/stops, which 404s, rather than
+// https://transit.land/api/v2/rest/stops. Pagination links reach the same
+// result without this helper, by appending restPrefix to the whole request URL,
+// which already carries the mount segment.
 func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
 	p := strings.TrimRight(urlPath, "/")
-	i := strings.LastIndex(p, routeMarker)
-	if i < 0 {
-		// The marker is always present for a request the route actually matched.
-		// If something upstream rewrote the path so it is not, fall back to the
-		// bare prefix: merely missing the mount segment, rather than splicing the
-		// whole request path into a redirect or a servers URL.
-		return restPrefix
+	mount := p
+	if routeMarker != "" {
+		i := strings.Index(p, routeMarker)
+		if i < 0 {
+			// The marker is always present for a request the route actually
+			// matched. If something upstream rewrote the path so it is not, fall
+			// back to the bare prefix: merely missing the mount segment, rather
+			// than splicing the whole request path into a redirect or a servers
+			// URL.
+			return restPrefix
+		}
+		mount = p[:i]
 	}
-	mount := p[:i]
 	// With an empty restPrefix the result is a relative URL, and a mount segment
 	// beginning with "//" would read as protocol-relative — //evil.com/... — in a
 	// Location header. chi does not route such a path to these handlers today,

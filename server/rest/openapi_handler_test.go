@@ -36,6 +36,11 @@ func TestMountPrefix(t *testing.T) {
 		// Falling back to the bare prefix is merely incomplete; splicing the
 		// request path in would be actively wrong.
 		{"marker absent falls back to prefix", "https://transit.land/api/v2", "/rest/something-else", "/openapi.json", "https://transit.land/api/v2"},
+		// The marker is matched at its first occurrence. r.URL.Path is decoded,
+		// so an onestop_id sent as f-%2Fonestop_id%2Fevil arrives with a second
+		// literal /onestop_id/ in it; matching the last one would anchor the
+		// mount inside caller-controlled input.
+		{"marker recurring in a path parameter", "https://transit.land/api/v2", "/rest/onestop_id/f-/onestop_id/evil", "/onestop_id/", "https://transit.land/api/v2/rest"},
 		// A relative result must never start with "//" — a Location header built
 		// from it would be protocol-relative and redirect off-site.
 		{"protocol-relative mount refused", "", "//evil.com/openapi.json", "/openapi.json", ""},
@@ -229,6 +234,9 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 		}{
 			{"/rest/onestop_id/r-9q9-antioch%7Esfia", "https://example.test/api/v2/rest/routes/r-9q9-antioch%7Esfia"},
 			{"/rest/onestop_id/f-9q9-bart%2Fx", "https://example.test/api/v2/rest/feeds/f-9q9-bart%2Fx"},
+			// The decoded path here contains a second "/onestop_id/", which is
+			// why the mount is recovered from the marker's first occurrence.
+			{"/rest/onestop_id/f-%2Fonestop_id%2Fevil", "https://example.test/api/v2/rest/feeds/f-%2Fonestop_id%2Fevil"},
 		}
 		for _, tc := range encoded {
 			rr := serveRest(t, r, "/rest", cfg, tc.path, nil)
