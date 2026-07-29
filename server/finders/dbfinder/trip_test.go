@@ -38,6 +38,28 @@ func testServiceWindow(t *testing.T) *model.ServiceWindow {
 	}
 }
 
+// The callers build one filter and hand it to tripSelect once per feed version,
+// so resolving a date must not write back into it: the next feed version would
+// then resolve an already-relocated date against its own window. End to end this
+// is nearly invisible, because relocation preserves the weekday and a route on a
+// weekday calendar returns the same trips either way, so assert it directly.
+func TestTripSelectDoesNotModifyFilter(t *testing.T) {
+	requested := testDates(t, "2030-01-02")[0]
+	where := &model.TripFilter{
+		ServiceDate:      ptr(*requested),
+		UseServiceWindow: ptr(true),
+	}
+	// A window that excludes the requested date, so it is certain to relocate.
+	fvsw := testServiceWindow(t)
+	for i := 0; i < 2; i++ {
+		if _, _, err := tripSelect(nil, nil, nil, false, nil, where, fvsw); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, requested.Val.Format("2006-01-02"), where.ServiceDate.Val.Format("2006-01-02"),
+			"filter was rewritten on pass %d", i)
+	}
+}
+
 func TestMapIntoServiceWindow(t *testing.T) {
 	// A feed version's window carries local midnight, while a date scalar
 	// parses as midnight UTC. West of UTC the requested day then sorts before
