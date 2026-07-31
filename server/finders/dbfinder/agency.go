@@ -94,14 +94,19 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
 }
 
-func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor, ids []int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) ([]*model.Place, error) {
+func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor, ids []int, level *model.PlaceAggregationLevel, where *model.PlaceFilter, geom model.PlaceGeometrySelect) ([]*model.Place, error) {
 	var ents []*model.Place
-	q := placeSelect(limit, after, ids, level, f.PermFilter(ctx), where)
+	q := placeSelect(limit, after, ids, level, f.PermFilter(ctx), where, geom)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, err
 	}
 	return ents, nil
 }
+
+// Radius in meters the agency place builder uses to associate a stop with a
+// populated place; Natural Earth carries cities as points, so a city's extent is
+// that association's own catchment.
+const placeCityRadius = 40_000.0
 
 func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
 	distinct := false
@@ -247,7 +252,50 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	return q
 }
 
-func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregationLevel, permFilter *model.PermFilter, where *model.PlaceFilter) sq.SelectBuilder {
+// placeBboxSelect adds the bounding box column to a place query.
+//
+// Cities are points in Natural Earth and regions are polygons, so they come from
+// different tables. Where a group is a single Natural Earth unit — any level that
+// groups down to its own region or city — a left join covers exactly that unit
+// and the extent is the aggregate over it; a place with no match there keeps its
+// row with a null box. A country groups over the regions beneath it, where that
+// join would reach only the regions that have operators, so its box comes from a
+// subquery over every region instead.
+func placeBboxSelect(q sq.SelectBuilder, level *model.PlaceAggregationLevel) sq.SelectBuilder {
+	cityLevel := false
+	singleUnit := false
+	switch {
+	case level == nil:
+	case *level == model.PlaceAggregationLevelAdm0Adm1:
+		singleUnit = true
+	case *level == model.PlaceAggregationLevelAdm0Adm1City:
+		cityLevel = true
+	case *level == model.PlaceAggregationLevelAdm0City,
+		*level == model.PlaceAggregationLevelAdm1City,
+		*level == model.PlaceAggregationLevelCity:
+		cityLevel = true
+	}
+
+	switch {
+	case cityLevel:
+		// The join is per row, so a level that groups several cities together —
+		// same name in more than one region, or in more than one country — widens
+		// the box to cover them, the way its count already covers them.
+		q = q.
+			JoinClause("left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name").
+			Column("ST_SetSRID(ST_Extent(ST_Buffer(ne_place.geometry, ?)::geometry)::geometry, 4326) as bbox", placeCityRadius)
+	case singleUnit:
+		q = q.
+			JoinClause("left join ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = tlap.adm1name and ne_admin.admin = tlap.adm0name").
+			Column("ST_SetSRID(ST_Extent(ne_admin.geometry::geometry)::geometry, 4326) as bbox")
+	default:
+		// A country: every region it contains, not only those with operators.
+		q = q.Column("(select ST_SetSRID(ST_Extent(whole.geometry::geometry)::geometry, 4326) from ne_10m_admin_1_states_provinces whole where whole.admin = tlap.adm0name) as bbox")
+	}
+	return q
+}
+
+func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregationLevel, permFilter *model.PermFilter, where *model.PlaceFilter, geom model.PlaceGeometrySelect) sq.SelectBuilder {
 	// placeSelect is limited to active feed versions
 	var groupKeys []string
 	var selKeys []string
@@ -283,6 +331,10 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		Join("feed_versions on feed_versions.id = feed_states.materialized_feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_states.feed_id").
 		GroupBy(groupKeys...)
+
+	if geom.Bbox {
+		q = placeBboxSelect(q, level)
+	}
 
 	if where != nil {
 		if where.Adm0Name != nil {

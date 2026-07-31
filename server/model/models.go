@@ -24,6 +24,13 @@ type StopPlaceParam struct {
 	Point tlxy.Point
 }
 
+// PlaceGeometrySelect chooses which geometry columns a place query computes.
+// Each is an aggregate over the Natural Earth tables, so it is only worth paying
+// for when the caller asked for it.
+type PlaceGeometrySelect struct {
+	Bbox bool
+}
+
 //////////
 
 type Feed struct {

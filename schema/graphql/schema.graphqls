@@ -1649,6 +1649,13 @@ type Place {
   
   "Operators associated with this place"
   operators: [Operator!]
+  
+  """
+  Bounding box of this place, from Natural Earth; null where it has no match
+  there. A country covers every region it contains, so the United States reaches
+  Alaska and Hawaii.
+  """
+  bbox: Geometry
 }
 
 """
