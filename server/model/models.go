@@ -25,16 +25,10 @@ type StopPlaceParam struct {
 }
 
 // PlaceGeometrySelect chooses which geometry columns a place query computes.
-// Each is a separate aggregate over the Natural Earth tables, so they are only
-// worth paying for when the caller asked for them.
+// Each is an aggregate over the Natural Earth tables, so it is only worth paying
+// for when the caller asked for it.
 type PlaceGeometrySelect struct {
-	Geometry bool
-	Bbox     bool
-}
-
-// Any reports whether any geometry column was requested.
-func (v PlaceGeometrySelect) Any() bool {
-	return v.Geometry || v.Bbox
+	Bbox bool
 }
 
 //////////

@@ -103,10 +103,7 @@ func (r *queryResolver) Operators(ctx context.Context, limit *int, after *int, i
 
 func (r *queryResolver) Places(ctx context.Context, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) ([]*model.Place, error) {
 	cfg := model.ForContext(ctx)
-	geom := model.PlaceGeometrySelect{
-		Geometry: containsField(ctx, "geometry"),
-		Bbox:     containsField(ctx, "bbox"),
-	}
+	geom := model.PlaceGeometrySelect{Bbox: containsField(ctx, "bbox")}
 	return cfg.Finder.FindPlaces(ctx, resolverCheckLimit(limit), checkCursor(after), nil, level, where, geom)
 }
 

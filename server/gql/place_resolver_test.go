@@ -80,7 +80,7 @@ func TestPlaceResolver(t *testing.T) {
 			selector:     "places.#.city_name",
 			selectExpect: []string{"Oakland"},
 		},
-		// geometry
+		// bbox
 		{
 			name:         "region bbox comes from the admin polygon",
 			query:        `query{ places(level: ADM0_ADM1, where: {adm1_name: "California"}) { bbox } }`,
@@ -103,10 +103,11 @@ func TestPlaceResolver(t *testing.T) {
 			selectExpect: []string{"-122.73241922786842"},
 		},
 		{
-			name:         "region geometry is the admin polygon",
-			query:        `query{ places(level: ADM0_ADM1, where: {adm1_name: "California"}) { geometry } }`,
-			selector:     "places.0.geometry.type",
-			selectExpect: []string{"MultiPolygon"},
+			// A level that identifies a city by fewer names still gets a box.
+			name:         "city bbox at a coarser level",
+			query:        `query{ places(level: ADM0_CITY, where: {city_name: "Oakland"}) { bbox } }`,
+			selector:     "places.0.bbox.coordinates.0.0.0",
+			selectExpect: []string{"-122.73241922786842"},
 		},
 		// operators
 		{
