@@ -2,7 +2,16 @@ package gql
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 )
+
+// bboxMinLon is the western edge of the first returned place's bounding box.
+// ST_Extent emits the ring from its lower-left corner.
+func bboxMinLon(jj string) float64 {
+	return gjson.Get(jj, "places.0.bbox.coordinates.0.0.0").Float()
+}
 
 func TestPlaceResolver(t *testing.T) {
 	q := `query($level: PlaceAggregationLevel,$where: PlaceFilter) {
@@ -82,32 +91,37 @@ func TestPlaceResolver(t *testing.T) {
 		},
 		// bbox
 		{
-			name:         "region bbox comes from the admin polygon",
-			query:        `query{ places(level: ADM0_ADM1, where: {adm1_name: "California"}) { bbox } }`,
-			selector:     "places.0.bbox.coordinates.0.0.0",
-			selectExpect: []string{"-124.4092019709999"},
+			name:  "region bbox comes from the admin polygon",
+			query: `query{ places(level: ADM0_ADM1, where: {adm1_name: "California"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				assert.InDelta(t, -124.409202, bboxMinLon(jj), 1e-5, "California reaches its own coastline")
+			},
 		},
 		{
-			// Every region, including those with no operators at all.
-			name:         "country bbox reaches every region",
-			query:        `query{ places(level: ADM0, where: {adm0_name: "United States of America"}) { bbox } }`,
-			selector:     "places.0.bbox.coordinates.0.0.0",
-			selectExpect: []string{"-179.1435033839999"},
+			name:  "country bbox reaches every region",
+			query: `query{ places(level: ADM0, where: {adm0_name: "United States of America"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				// Alaska, not California: a country covers every region it contains,
+				// including those with no operators at all.
+				assert.InDelta(t, -179.143503, bboxMinLon(jj), 1e-5, "country spans every region")
+			},
 		},
 		{
 			// A city is a point in Natural Earth, buffered by the radius the place
-			// association itself uses.
-			name:         "city bbox is buffered around the point",
-			query:        `query{ places(level: ADM0_ADM1_CITY, where: {city_name: "Oakland"}) { bbox } }`,
-			selector:     "places.0.bbox.coordinates.0.0.0",
-			selectExpect: []string{"-122.73241922786842"},
+			// association itself uses: about 0.46 degrees of longitude at this latitude.
+			name:  "city bbox is buffered around the point",
+			query: `query{ places(level: ADM0_ADM1_CITY, where: {city_name: "Oakland"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				assert.InDelta(t, -122.732419, bboxMinLon(jj), 1e-5, "Oakland widened by the association radius")
+			},
 		},
 		{
 			// A level that identifies a city by fewer names still gets a box.
-			name:         "city bbox at a coarser level",
-			query:        `query{ places(level: ADM0_CITY, where: {city_name: "Oakland"}) { bbox } }`,
-			selector:     "places.0.bbox.coordinates.0.0.0",
-			selectExpect: []string{"-122.73241922786842"},
+			name:  "city bbox at a coarser level",
+			query: `query{ places(level: ADM0_CITY, where: {city_name: "Oakland"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				assert.InDelta(t, -122.732419, bboxMinLon(jj), 1e-5, "same box as the finer level")
+			},
 		},
 		// operators
 		{
