@@ -1649,6 +1649,19 @@ type Place {
   
   "Operators associated with this place"
   operators: [Operator!]
+  
+  """
+  Boundary of this place from Natural Earth: the region polygons, or the point of
+  a city. Null where the place has no match there. A country collects every
+  region below it and can be very large.
+  """
+  geometry: Geometry
+
+  """
+  Bounding box of this place, from Natural Earth. A country covers every region
+  it contains, so the United States reaches Alaska and Hawaii.
+  """
+  bbox: Geometry
 }
 
 """

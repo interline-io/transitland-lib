@@ -103,7 +103,11 @@ func (r *queryResolver) Operators(ctx context.Context, limit *int, after *int, i
 
 func (r *queryResolver) Places(ctx context.Context, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) ([]*model.Place, error) {
 	cfg := model.ForContext(ctx)
-	return cfg.Finder.FindPlaces(ctx, resolverCheckLimit(limit), checkCursor(after), nil, level, where)
+	geom := model.PlaceGeometrySelect{
+		Geometry: containsField(ctx, "geometry"),
+		Bbox:     containsField(ctx, "bbox"),
+	}
+	return cfg.Finder.FindPlaces(ctx, resolverCheckLimit(limit), checkCursor(after), nil, level, where, geom)
 }
 
 func (r *queryResolver) CensusDatasets(ctx context.Context, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) ([]*model.CensusDataset, error) {

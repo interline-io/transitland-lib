@@ -80,6 +80,34 @@ func TestPlaceResolver(t *testing.T) {
 			selector:     "places.#.city_name",
 			selectExpect: []string{"Oakland"},
 		},
+		// geometry
+		{
+			name:         "region bbox comes from the admin polygon",
+			query:        `query{ places(level: ADM0_ADM1, where: {adm1_name: "California"}) { bbox } }`,
+			selector:     "places.0.bbox.coordinates.0.0.0",
+			selectExpect: []string{"-124.4092019709999"},
+		},
+		{
+			// Every region, including those with no operators at all.
+			name:         "country bbox reaches every region",
+			query:        `query{ places(level: ADM0, where: {adm0_name: "United States of America"}) { bbox } }`,
+			selector:     "places.0.bbox.coordinates.0.0.0",
+			selectExpect: []string{"-179.1435033839999"},
+		},
+		{
+			// A city is a point in Natural Earth, buffered by the radius the place
+			// association itself uses.
+			name:         "city bbox is buffered around the point",
+			query:        `query{ places(level: ADM0_ADM1_CITY, where: {city_name: "Oakland"}) { bbox } }`,
+			selector:     "places.0.bbox.coordinates.0.0.0",
+			selectExpect: []string{"-122.73241922786842"},
+		},
+		{
+			name:         "region geometry is the admin polygon",
+			query:        `query{ places(level: ADM0_ADM1, where: {adm1_name: "California"}) { geometry } }`,
+			selector:     "places.0.geometry.type",
+			selectExpect: []string{"MultiPolygon"},
+		},
 		// operators
 		{
 			name:         "ADM0 operators",

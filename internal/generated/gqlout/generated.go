@@ -919,8 +919,10 @@ type ComplexityRoot struct {
 	Place struct {
 		Adm0Name  func(childComplexity int) int
 		Adm1Name  func(childComplexity int) int
+		Bbox      func(childComplexity int) int
 		CityName  func(childComplexity int) int
 		Count     func(childComplexity int) int
+		Geometry  func(childComplexity int) int
 		Operators func(childComplexity int) int
 	}
 
@@ -5595,6 +5597,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Place.Adm1Name(childComplexity), true
+	case "Place.bbox":
+		if e.ComplexityRoot.Place.Bbox == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Place.Bbox(childComplexity), true
 	case "Place.city_name":
 		if e.ComplexityRoot.Place.CityName == nil {
 			break
@@ -5607,6 +5615,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Place.Count(childComplexity), true
+	case "Place.geometry":
+		if e.ComplexityRoot.Place.Geometry == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Place.Geometry(childComplexity), true
 	case "Place.operators":
 		if e.ComplexityRoot.Place.Operators == nil {
 			break
@@ -10512,6 +10526,19 @@ type Place {
   
   "Operators associated with this place"
   operators: [Operator!]
+  
+  """
+  Boundary of this place from Natural Earth: the region polygons, or the point of
+  a city. Null where the place has no match there. A country collects every
+  region below it and can be very large.
+  """
+  geometry: Geometry
+
+  """
+  Bounding box of this place, from Natural Earth. A country covers every region
+  it contains, so the United States reaches Alaska and Hawaii.
+  """
+  bbox: Geometry
 }
 
 """
@@ -13723,6 +13750,10 @@ func (ec *executionContext) childFields_Place(ctx context.Context, field graphql
 		return ec.fieldContext_Place_count(ctx, field)
 	case "operators":
 		return ec.fieldContext_Place_operators(ctx, field)
+	case "geometry":
+		return ec.fieldContext_Place_geometry(ctx, field)
+	case "bbox":
+		return ec.fieldContext_Place_bbox(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Place", field.Name)
 }
@@ -32803,6 +32834,52 @@ func (ec *executionContext) fieldContext_Place_operators(_ context.Context, fiel
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _Place_geometry(ctx context.Context, field graphql.CollectedField, obj *model.Place) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Place_geometry(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Geometry, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *tt.Geometry) graphql.Marshaler {
+			return ec.marshalOGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐGeometry(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Place_geometry(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Place", field, false, false, errors.New("field of type Geometry does not have child fields"))
+}
+
+func (ec *executionContext) _Place_bbox(ctx context.Context, field graphql.CollectedField, obj *model.Place) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Place_bbox(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Bbox, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *tt.Geometry) graphql.Marshaler {
+			return ec.marshalOGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐGeometry(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Place_bbox(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Place", field, false, false, errors.New("field of type Geometry does not have child fields"))
 }
 
 func (ec *executionContext) _Query_feeds(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -53111,6 +53188,10 @@ func (ec *executionContext) _Place(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "geometry":
+			out.Values[i] = ec._Place_geometry(ctx, field, obj)
+		case "bbox":
+			out.Values[i] = ec._Place_bbox(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

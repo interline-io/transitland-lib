@@ -942,7 +942,14 @@ type Place struct {
 	Count int `json:"count"`
 	// Operators associated with this place
 	Operators []*Operator `json:"operators,omitempty"`
-	AgencyIDs tt.Ints     `db:"agency_ids"`
+	// Boundary of this place from Natural Earth: the region polygons, or the point of
+	// a city. Null where the place has no match there. A country collects every
+	// region below it and can be very large.
+	Geometry *tt.Geometry `json:"geometry,omitempty"`
+	// Bounding box of this place, from Natural Earth. A country covers every region
+	// it contains, so the United States reaches Alaska and Hawaii.
+	Bbox      *tt.Geometry `json:"bbox,omitempty"`
+	AgencyIDs tt.Ints      `db:"agency_ids"`
 }
 
 // Search options for associated places

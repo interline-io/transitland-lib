@@ -94,14 +94,19 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
 }
 
-func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor, ids []int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) ([]*model.Place, error) {
+func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor, ids []int, level *model.PlaceAggregationLevel, where *model.PlaceFilter, geom model.PlaceGeometrySelect) ([]*model.Place, error) {
 	var ents []*model.Place
-	q := placeSelect(limit, after, ids, level, f.PermFilter(ctx), where)
+	q := placeSelect(limit, after, ids, level, f.PermFilter(ctx), where, geom)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, err
 	}
 	return ents, nil
 }
+
+// Radius in meters the agency place builder uses to associate a stop with a
+// populated place; Natural Earth carries cities as points, so a city's extent is
+// that association's own catchment.
+const placeCityRadius = 40_000.0
 
 func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
 	distinct := false
@@ -247,7 +252,73 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	return q
 }
 
-func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregationLevel, permFilter *model.PermFilter, where *model.PlaceFilter) sq.SelectBuilder {
+// placeGeometrySelect adds the requested geometry columns to a place query.
+//
+// Cities are points in Natural Earth and regions are polygons, so they come from
+// different tables. Where a group is a single Natural Earth unit — any level that
+// groups down to its own region or city — the join covers exactly that unit and
+// the extent is the aggregate over it. A country groups over the regions beneath
+// it, where the join would reach only the regions that have operators, so its
+// extent comes from a subquery over every region instead.
+func placeGeometrySelect(q sq.SelectBuilder, geom model.PlaceGeometrySelect, level *model.PlaceAggregationLevel) sq.SelectBuilder {
+	cityLevel := false
+	singleUnit := false
+	switch {
+	case level == nil:
+	case *level == model.PlaceAggregationLevelAdm0Adm1:
+		singleUnit = true
+	case *level == model.PlaceAggregationLevelAdm0Adm1City:
+		cityLevel = true
+		singleUnit = true
+	case *level == model.PlaceAggregationLevelAdm0City,
+		*level == model.PlaceAggregationLevelAdm1City,
+		*level == model.PlaceAggregationLevelCity:
+		cityLevel = true
+	}
+
+	// Left joined: a place whose name came from a feed's own admin data has no
+	// Natural Earth match, and still belongs in the result without a geometry. The
+	// join multiplies rows where a place is several polygons, which the distinct
+	// aggregate on agency ids is already written to tolerate.
+	joined := false
+	joinNaturalEarth := func(q sq.SelectBuilder) sq.SelectBuilder {
+		if joined {
+			return q
+		}
+		joined = true
+		if cityLevel {
+			return q.JoinClause("left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name")
+		}
+		return q.JoinClause("left join ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = tlap.adm1name and ne_admin.admin = tlap.adm0name")
+	}
+
+	if geom.Geometry {
+		q = joinNaturalEarth(q)
+		if cityLevel {
+			q = q.Column("ST_SetSRID(ST_CollectionHomogenize(ST_Collect(ne_place.geometry::geometry)), 4326) as geometry")
+		} else {
+			q = q.Column("ST_SetSRID(ST_CollectionHomogenize(ST_Collect(ne_admin.geometry::geometry)), 4326) as geometry")
+		}
+	}
+
+	if geom.Bbox {
+		switch {
+		case singleUnit && cityLevel:
+			q = joinNaturalEarth(q)
+			q = q.Column("ST_SetSRID(ST_Extent(ST_Buffer(ne_place.geometry, ?)::geometry)::geometry, 4326) as bbox", placeCityRadius)
+		case singleUnit:
+			q = joinNaturalEarth(q)
+			q = q.Column("ST_SetSRID(ST_Extent(ne_admin.geometry::geometry)::geometry, 4326) as bbox")
+		case cityLevel:
+			// Grouped above the city, so there is no single point to widen.
+		default:
+			q = q.Column("(select ST_SetSRID(ST_Extent(whole.geometry::geometry)::geometry, 4326) from ne_10m_admin_1_states_provinces whole where whole.admin = tlap.adm0name) as bbox")
+		}
+	}
+	return q
+}
+
+func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregationLevel, permFilter *model.PermFilter, where *model.PlaceFilter, geom model.PlaceGeometrySelect) sq.SelectBuilder {
 	// placeSelect is limited to active feed versions
 	var groupKeys []string
 	var selKeys []string
@@ -283,6 +354,10 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		Join("feed_versions on feed_versions.id = feed_states.materialized_feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_states.feed_id").
 		GroupBy(groupKeys...)
+
+	if geom.Any() {
+		q = placeGeometrySelect(q, geom, level)
+	}
 
 	if where != nil {
 		if where.Adm0Name != nil {
