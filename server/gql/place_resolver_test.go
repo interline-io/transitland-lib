@@ -13,6 +13,11 @@ func bboxMinLon(jj string) float64 {
 	return gjson.Get(jj, "places.0.bbox.coordinates.0.0.0").Float()
 }
 
+// bboxWidth is that box's span in degrees of longitude.
+func bboxWidth(jj string) float64 {
+	return gjson.Get(jj, "places.0.bbox.coordinates.0.2.0").Float() - bboxMinLon(jj)
+}
+
 func TestPlaceResolver(t *testing.T) {
 	q := `query($level: PlaceAggregationLevel,$where: PlaceFilter) {
 		places(level: $level, where: $where) {
@@ -98,12 +103,15 @@ func TestPlaceResolver(t *testing.T) {
 			},
 		},
 		{
-			name:  "country bbox reaches every region",
+			// A country covers every region it contains, including those with no
+			// operators — and the United States crosses the antimeridian at the
+			// Aleutians, so its extent is only meaningful in the shifted frame.
+			// Measured normally it reads -179.1 to 179.8, a useless 359 degrees.
+			name:  "country bbox crossing the antimeridian",
 			query: `query{ places(level: ADM0, where: {adm0_name: "United States of America"}) { bbox } }`,
 			f: func(t *testing.T, jj string) {
-				// Alaska, not California: a country covers every region it contains,
-				// including those with no operators at all.
-				assert.InDelta(t, -179.143503, bboxMinLon(jj), 1e-5, "country spans every region")
+				assert.InDelta(t, 172.476085, bboxMinLon(jj), 1e-5, "Attu, the westernmost Aleutian")
+				assert.InDelta(t, 120.5, bboxWidth(jj), 0.1, "the real width, not 359")
 			},
 		},
 		{
