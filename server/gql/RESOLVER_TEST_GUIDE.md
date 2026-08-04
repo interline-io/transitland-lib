@@ -305,7 +305,7 @@ func TestAgencyRT_Alerts(t *testing.T) {
 **RT File Types:**
 - `realtime_alerts` - GTFS-RT Service Alerts
 - `realtime_trip_updates` - Trip Updates
-- `vehicle_positions` - Vehicle Positions
+- `realtime_vehicle_positions` - Vehicle Positions
 
 ---
 

@@ -142,6 +142,24 @@ func (f *Finder) RoutesByAgencyIDs(ctx context.Context, limit *int, where *model
 	return arrangeGroup(keys, ents, func(ent *model.Route) int { return ent.AgencyID.Int() }), err
 }
 
+// RoutesByFeedVersionRouteIDs looks up routes by GTFS route_id within a feed version.
+func (f *Finder) RoutesByFeedVersionRouteIDs(ctx context.Context, keys []model.FVEntityID) ([]*model.Route, []error) {
+	var ents []*model.Route
+	for fvid, routeIds := range groupFVEntityIDs(keys) {
+		q := routeSelect(nil, nil, nil, nil, f.PermFilter(ctx), nil).
+			Where(sq.Eq{"gtfs_routes.feed_version_id": fvid}).
+			Where(In("gtfs_routes.route_id", routeIds))
+		var group []*model.Route
+		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
+			return nil, logExtendErr(ctx, len(keys), err)
+		}
+		ents = append(ents, group...)
+	}
+	return arrangeBy(keys, ents, func(ent *model.Route) model.FVEntityID {
+		return model.FVEntityID{FeedVersionID: ent.FeedVersionID, EntityID: ent.RouteID.Val}
+	}), nil
+}
+
 func (f *Finder) RoutesByFeedVersionIDs(ctx context.Context, limit *int, where *model.RouteFilter, keys []int) ([][]*model.Route, error) {
 	var ents []*model.Route
 	err := dbutil.Select(ctx,

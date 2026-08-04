@@ -11,25 +11,29 @@ import (
 )
 
 type lookupCache struct {
-	db              sqlx.Ext
-	fvidSourceCache *simpleCache[int, []string]
-	fvidFeedCache   *simpleCache[int, string]
-	gtfsTripIdCache *simpleCache[int, string]
-	gtfsStopIdCache *simpleCache[int, string]
-	routeIdCache    *simpleCache[skey, int]
-	tzCache         *tzcache.Cache[int]
-	rtLookupLock    sync.Mutex
+	db                   sqlx.Ext
+	fvidSourceCache      *simpleCache[int, []string]
+	fvidFeedCache        *simpleCache[int, string]
+	fvidAgencyCountCache *simpleCache[int, int]
+	agencyRouteIdCache   *simpleCache[int, map[string]bool]
+	gtfsTripIdCache      *simpleCache[int, string]
+	gtfsStopIdCache      *simpleCache[int, string]
+	routeIdCache         *simpleCache[skey, int]
+	tzCache              *tzcache.Cache[int]
+	rtLookupLock         sync.Mutex
 }
 
 func newLookupCache(db sqlx.Ext) *lookupCache {
 	return &lookupCache{
-		db:              db,
-		tzCache:         tzcache.NewCache[int](),
-		fvidSourceCache: newSimpleCache[int, []string](),
-		fvidFeedCache:   newSimpleCache[int, string](),
-		gtfsTripIdCache: newSimpleCache[int, string](),
-		gtfsStopIdCache: newSimpleCache[int, string](),
-		routeIdCache:    newSimpleCache[skey, int](),
+		db:                   db,
+		tzCache:              tzcache.NewCache[int](),
+		fvidSourceCache:      newSimpleCache[int, []string](),
+		fvidFeedCache:        newSimpleCache[int, string](),
+		fvidAgencyCountCache: newSimpleCache[int, int](),
+		agencyRouteIdCache:   newSimpleCache[int, map[string]bool](),
+		gtfsTripIdCache:      newSimpleCache[int, string](),
+		gtfsStopIdCache:      newSimpleCache[int, string](),
+		routeIdCache:         newSimpleCache[skey, int](),
 	}
 }
 
@@ -64,6 +68,40 @@ func (f *lookupCache) GetGtfsStopID(id int) (string, bool) {
 	err := sqlx.Get(f.db, &eid, q, id)
 	f.gtfsStopIdCache.Set(id, eid)
 	return eid, err == nil
+}
+
+// GetFeedVersionAgencyCount returns the number of agencies in a feed version.
+// A GTFS-RT message identifies no agency, so a vehicle can only be attributed
+// to one when the feed carries more than a single agency.
+func (f *lookupCache) GetFeedVersionAgencyCount(id int) int {
+	if a, ok := f.fvidAgencyCountCache.Get(id); ok {
+		return a
+	}
+	count := 0
+	q := `select count(*) from gtfs_agencies where feed_version_id = $1`
+	if err := sqlx.Get(f.db, &count, q, id); err != nil {
+		return 0
+	}
+	f.fvidAgencyCountCache.Set(id, count)
+	return count
+}
+
+// GetAgencyRouteIDs returns the set of GTFS route_ids operated by an agency.
+func (f *lookupCache) GetAgencyRouteIDs(id int) map[string]bool {
+	if a, ok := f.agencyRouteIdCache.Get(id); ok {
+		return a
+	}
+	var routeIds []string
+	q := `select route_id from gtfs_routes where agency_id = $1`
+	if err := sqlx.Select(f.db, &routeIds, q, id); err != nil {
+		return nil
+	}
+	ret := make(map[string]bool, len(routeIds))
+	for _, routeId := range routeIds {
+		ret[routeId] = true
+	}
+	f.agencyRouteIdCache.Set(id, ret)
+	return ret
 }
 
 func (f *lookupCache) GetFeedVersionRTFeeds(id int) ([]string, bool) {

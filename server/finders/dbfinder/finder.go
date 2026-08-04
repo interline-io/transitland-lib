@@ -121,6 +121,16 @@ func arrangeMap[K comparable, T any, O any](keys []K, ents []T, cb func(T) (K, O
 	return ret
 }
 
+// groupFVEntityIDs collects GTFS entity ids by feed version, so a batch of keys
+// spanning several feed versions becomes one query per feed version.
+func groupFVEntityIDs(keys []model.FVEntityID) map[int][]string {
+	groups := map[int][]string{}
+	for _, key := range keys {
+		groups[key.FeedVersionID] = append(groups[key.FeedVersionID], key.EntityID)
+	}
+	return groups
+}
+
 func arrangeGroup[K comparable, T any](keys []K, ents []T, cb func(T) K) [][]T {
 	bykey := map[K][]T{}
 	for _, ent := range ents {

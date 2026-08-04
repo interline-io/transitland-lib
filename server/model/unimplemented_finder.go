@@ -278,6 +278,9 @@ func (UnimplementedFinder) RoutesByAgencyIDs(context.Context, *int, *RouteFilter
 func (UnimplementedFinder) RoutesByFeedVersionIDs(context.Context, *int, *RouteFilter, []int) ([][]*Route, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) RoutesByFeedVersionRouteIDs(_ context.Context, keys []FVEntityID) ([]*Route, []error) {
+	return notImplBatch[*Route](keys)
+}
 func (UnimplementedFinder) RoutesByIDs(_ context.Context, ids []int) ([]*Route, []error) {
 	return notImplBatch[*Route](ids)
 }
@@ -320,6 +323,9 @@ func (UnimplementedFinder) StopPlacesByStopID(_ context.Context, keys []StopPlac
 func (UnimplementedFinder) StopsByFeedVersionIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) StopsByFeedVersionStopIDs(_ context.Context, keys []FVEntityID) ([]*Stop, []error) {
+	return notImplBatch[*Stop](keys)
+}
 func (UnimplementedFinder) StopsByIDs(_ context.Context, ids []int) ([]*Stop, []error) {
 	return notImplBatch[*Stop](ids)
 }
@@ -346,6 +352,9 @@ func (UnimplementedFinder) TargetStopsByStopIDs(_ context.Context, ids []int) ([
 }
 func (UnimplementedFinder) TripsByFeedVersionIDs(context.Context, *int, *TripFilter, []int) ([][]*Trip, error) {
 	return nil, notImplErr()
+}
+func (UnimplementedFinder) TripsByFeedVersionTripIDs(_ context.Context, keys []FVEntityID) ([]*Trip, []error) {
+	return notImplBatch[*Trip](keys)
 }
 func (UnimplementedFinder) TripsByIDs(_ context.Context, ids []int) ([]*Trip, []error) {
 	return notImplBatch[*Trip](ids)

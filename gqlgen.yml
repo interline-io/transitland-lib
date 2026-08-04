@@ -146,6 +146,17 @@ models:
     extraFields:
       StopID:
         type: int
+  VehiclePosition:
+    fields:
+      trip:
+        resolver: true
+      route:
+        resolver: true
+      stop:
+        resolver: true
+    extraFields:
+      FeedVersionID:
+        type: int
   RouteStop:
     fields:
       route:

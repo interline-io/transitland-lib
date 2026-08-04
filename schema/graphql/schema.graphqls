@@ -151,7 +151,10 @@ type Query {
   
   "Current GBFS dock data (Station Information)"
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
-  
+
+  "Current GTFS-RT vehicle positions; requires at least one `where` filter"
+  vehicle_positions(limit: Int, where: VehiclePositionFilter!): [VehiclePosition!]!
+
   "Current user metadata; requires authentication"
   me: Me!
 
@@ -710,6 +713,9 @@ type Agency {
   
   "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
+
+  "Current GTFS-RT vehicle positions for this agency"
+  vehicle_positions(limit: Int): [VehiclePosition!]
 }
 
 """
@@ -807,7 +813,10 @@ type Route {
   
   "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
-  
+
+  "Current GTFS-RT vehicle positions for this route"
+  vehicle_positions(limit: Int): [VehiclePosition!]
+
   "Normalized route segment data for this route, if available"
   segments(limit: Int, where: SegmentFilter): [Segment!]
   
@@ -1089,6 +1098,9 @@ type Trip {
   
   "GTFS-RT service alerts for this trip; pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
+
+  "Current GTFS-RT vehicle position for this trip"
+  vehicle_position: VehiclePosition
 
   "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See `ScheduleRelationship` for per-value semantics"
   schedule_relationship: ScheduleRelationship
@@ -2214,22 +2226,44 @@ type StopTimeEvent {
   uncertainty: Int
 }
 
-"""[Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed."""
+"""
+[Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed.
+
+Values are passed through from the GTFS-RT message as-is. The `trip`, `route` and `stop` fields resolve the message's `trip_id`, `route_id` and `stop_id` against the static GTFS data of the feed version the vehicle was matched to; each is null when the id is absent from the message or not found in the schedule.
+"""
 type VehiclePosition {
+  "Onestop ID of the feed the vehicle was matched to"
+  feed_onestop_id: String!
   "Vehicle descriptor from the GTFS-RT VehiclePosition"
   vehicle: RTVehicleDescriptor
+  "Trip descriptor from the GTFS-RT VehiclePosition"
+  trip_descriptor: RTTripDescriptor
   "Current vehicle position"
   position: Point
+  "Direction of travel in degrees clockwise from true north"
+  bearing: Float
+  "Momentary speed in meters per second"
+  speed: Float
   "Sequence index of the stop the vehicle is approaching or stopped at, within the trip"
   current_stop_sequence: Int
-  "Stop the vehicle is approaching or stopped at; despite the field name, returns the resolved `Stop` entity"
-  stop_id: Stop
+  "GTFS `stop_id` of the stop the vehicle is approaching or stopped at"
+  stop_id: String
   "Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`"
   current_status: String
   "Timestamp of this vehicle position update"
   timestamp: Time
   "Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`"
   congestion_level: String
+  "Vehicle occupancy: `EMPTY`, `MANY_SEATS_AVAILABLE`, `FEW_SEATS_AVAILABLE`, `STANDING_ROOM_ONLY`, `CRUSHED_STANDING_ROOM_ONLY`, `FULL`, `NOT_ACCEPTING_PASSENGERS`, `NO_DATA_AVAILABLE`, or `NOT_BOARDABLE`"
+  occupancy_status: String
+  "Percentage of the vehicle's total capacity in use"
+  occupancy_percentage: Int
+  "Scheduled trip matched from the trip descriptor's `trip_id`"
+  trip: Trip
+  "Route matched from the trip descriptor's `route_id`, falling back to the matched trip's route"
+  route: Route
+  "Stop matched from `stop_id`"
+  stop: Stop
 }
 
 """
@@ -2624,10 +2658,14 @@ enum FeedSpecTypes {
 input AgencyFilter {
   "Search by resolved Onestop ID (operator's when associated, else agency's)"
   onestop_id: String
+  "Search by any of these resolved Onestop IDs"
+  onestop_ids: [String!]
   "Search for agencies with this feed version SHA1 hash"
   feed_version_sha1: String
   "Search for agencies with this feed Onestop ID"
   feed_onestop_id: String
+  "Search for agencies with any of these feed Onestop IDs"
+  feed_onestop_ids: [String!]
   "Search for agencies with this GTFS agency_id"
   agency_id: String
   "Search for agencies with this GTFS agency_name"
@@ -2877,6 +2915,24 @@ input TripFilter {
   feed_version_sha1: String
   "Search for trips with this feed Onestop ID"
   feed_onestop_id: String
+}
+
+"""
+Search options for GTFS-RT vehicle positions.
+
+At least one filter must be given. Filters are combined: a vehicle is returned only if it matches every filter present. `agency_onestop_ids`, `feed_onestop_ids` and `bbox` select the agencies whose realtime feeds are read; `route_onestop_ids` and `trip_ids` additionally restrict which vehicles from those feeds are returned, matched against the GTFS-RT trip descriptor.
+"""
+input VehiclePositionFilter {
+  "Search for vehicles within this bounding box"
+  bbox: BoundingBox
+  "Search for vehicles operated by agencies with these resolved Onestop IDs"
+  agency_onestop_ids: [String!]
+  "Search for vehicles from feeds with these Onestop IDs; this is the static GTFS feed, not the GTFS-RT feed"
+  feed_onestop_ids: [String!]
+  "Search for vehicles running routes with these Onestop IDs"
+  route_onestop_ids: [String!]
+  "Search for vehicles running trips with these GTFS `trip_id`s"
+  trip_ids: [String!]
 }
 
 """Search options for census datasets"""

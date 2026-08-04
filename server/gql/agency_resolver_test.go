@@ -30,6 +30,18 @@ func TestAgencyResolver(t *testing.T) {
 			expect: `{"agencies":[{"agency_email":null,"agency_fare_url":null,"agency_id":"caltrain-ca-us","agency_lang":"en","agency_name":"Caltrain","agency_phone":"800-660-4287","agency_timezone":"America/Los_Angeles","agency_url":"http://www.caltrain.com","cemv_support":null,"feed_onestop_id":"CT","feed_version_sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","onestop_id":"o-9q9-caltrain"}]}`,
 		},
 		{
+			name:         "onestop_ids",
+			query:        `query { agencies(where:{onestop_ids:["o-9q9-caltrain","o-9q9-bayarearapidtransit"]}) {agency_id}}`,
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{"caltrain-ca-us", "BART"},
+		},
+		{
+			name:         "feed_onestop_ids",
+			query:        `query { agencies(where:{feed_onestop_ids:["CT","BA"]}) {agency_id}}`,
+			selector:     "agencies.#.agency_id",
+			selectExpect: []string{"caltrain-ca-us", "BART"},
+		},
+		{
 			// just ensure this query completes successfully; checking coordinates is a pain and flaky.
 			name:         "geometry",
 			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {geometry}}`,

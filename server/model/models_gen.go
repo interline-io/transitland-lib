@@ -16,10 +16,14 @@ import (
 type AgencyFilter struct {
 	// Search by resolved Onestop ID (operator's when associated, else agency's)
 	OnestopID *string `json:"onestop_id,omitempty"`
+	// Search by any of these resolved Onestop IDs
+	OnestopIds []string `json:"onestop_ids,omitempty"`
 	// Search for agencies with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
 	// Search for agencies with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
+	// Search for agencies with any of these feed Onestop IDs
+	FeedOnestopIds []string `json:"feed_onestop_ids,omitempty"`
 	// Search for agencies with this GTFS agency_id
 	AgencyID *string `json:"agency_id,omitempty"`
 	// Search for agencies with this GTFS agency_name
@@ -1698,21 +1702,58 @@ type ValidationReportFilter struct {
 }
 
 // [Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed.
+//
+// Values are passed through from the GTFS-RT message as-is. The `trip`, `route` and `stop` fields resolve the message's `trip_id`, `route_id` and `stop_id` against the static GTFS data of the feed version the vehicle was matched to; each is null when the id is absent from the message or not found in the schedule.
 type VehiclePosition struct {
+	// Onestop ID of the feed the vehicle was matched to
+	FeedOnestopID string `json:"feed_onestop_id"`
 	// Vehicle descriptor from the GTFS-RT VehiclePosition
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`
+	// Trip descriptor from the GTFS-RT VehiclePosition
+	TripDescriptor *RTTripDescriptor `json:"trip_descriptor,omitempty"`
 	// Current vehicle position
 	Position *tt.Point `json:"position,omitempty"`
+	// Direction of travel in degrees clockwise from true north
+	Bearing *float64 `json:"bearing,omitempty"`
+	// Momentary speed in meters per second
+	Speed *float64 `json:"speed,omitempty"`
 	// Sequence index of the stop the vehicle is approaching or stopped at, within the trip
 	CurrentStopSequence *int `json:"current_stop_sequence,omitempty"`
-	// Stop the vehicle is approaching or stopped at; despite the field name, returns the resolved `Stop` entity
-	StopID *Stop `json:"stop_id,omitempty"`
+	// GTFS `stop_id` of the stop the vehicle is approaching or stopped at
+	StopID *string `json:"stop_id,omitempty"`
 	// Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`
 	CurrentStatus *string `json:"current_status,omitempty"`
 	// Timestamp of this vehicle position update
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 	// Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`
 	CongestionLevel *string `json:"congestion_level,omitempty"`
+	// Vehicle occupancy: `EMPTY`, `MANY_SEATS_AVAILABLE`, `FEW_SEATS_AVAILABLE`, `STANDING_ROOM_ONLY`, `CRUSHED_STANDING_ROOM_ONLY`, `FULL`, `NOT_ACCEPTING_PASSENGERS`, `NO_DATA_AVAILABLE`, or `NOT_BOARDABLE`
+	OccupancyStatus *string `json:"occupancy_status,omitempty"`
+	// Percentage of the vehicle's total capacity in use
+	OccupancyPercentage *int `json:"occupancy_percentage,omitempty"`
+	// Scheduled trip matched from the trip descriptor's `trip_id`
+	Trip *Trip `json:"trip,omitempty"`
+	// Route matched from the trip descriptor's `route_id`, falling back to the matched trip's route
+	Route *Route `json:"route,omitempty"`
+	// Stop matched from `stop_id`
+	Stop          *Stop `json:"stop,omitempty"`
+	FeedVersionID int   `json:"-"`
+}
+
+// Search options for GTFS-RT vehicle positions.
+//
+// At least one filter must be given. Filters are combined: a vehicle is returned only if it matches every filter present. `agency_onestop_ids`, `feed_onestop_ids` and `bbox` select the agencies whose realtime feeds are read; `route_onestop_ids` and `trip_ids` additionally restrict which vehicles from those feeds are returned, matched against the GTFS-RT trip descriptor.
+type VehiclePositionFilter struct {
+	// Search for vehicles within this bounding box
+	Bbox *BoundingBox `json:"bbox,omitempty"`
+	// Search for vehicles operated by agencies with these resolved Onestop IDs
+	AgencyOnestopIds []string `json:"agency_onestop_ids,omitempty"`
+	// Search for vehicles from feeds with these Onestop IDs; this is the static GTFS feed, not the GTFS-RT feed
+	FeedOnestopIds []string `json:"feed_onestop_ids,omitempty"`
+	// Search for vehicles running routes with these Onestop IDs
+	RouteOnestopIds []string `json:"route_onestop_ids,omitempty"`
+	// Search for vehicles running trips with these GTFS `trip_id`s
+	TripIds []string `json:"trip_ids,omitempty"`
 }
 
 // A resolved waypoint in a routing response, including optional matched stop information.

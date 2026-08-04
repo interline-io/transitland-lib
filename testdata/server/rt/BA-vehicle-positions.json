@@ -1,0 +1,87 @@
+{
+  "header": {
+    "gtfsRealtimeVersion": "2.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": "1661990400"
+  },
+  "entity": [
+    {
+      "id": "1001",
+      "vehicle": {
+        "trip": {
+          "tripId": "3210613WKDY",
+          "routeId": "01",
+          "directionId": 0,
+          "startTime": "06:13:00",
+          "startDate": "20220901",
+          "scheduleRelationship": "SCHEDULED"
+        },
+        "vehicle": {
+          "id": "1001",
+          "label": "Antioch Train",
+          "licensePlate": "BART1001"
+        },
+        "position": {
+          "latitude": 37.80377,
+          "longitude": -122.27145,
+          "bearing": 45.0,
+          "speed": 12.5
+        },
+        "currentStopSequence": 4,
+        "stopId": "12TH",
+        "currentStatus": "STOPPED_AT",
+        "congestionLevel": "RUNNING_SMOOTHLY",
+        "occupancyStatus": "FEW_SEATS_AVAILABLE",
+        "occupancyPercentage": 40,
+        "timestamp": "1661990340"
+      }
+    },
+    {
+      "id": "1002",
+      "vehicle": {
+        "trip": {
+          "tripId": "1010400WKDY",
+          "routeId": "05",
+          "directionId": 0
+        },
+        "vehicle": {
+          "id": "1002",
+          "label": "Daly City Train"
+        },
+        "position": {
+          "latitude": 37.82907,
+          "longitude": -122.26704
+        },
+        "currentStatus": "IN_TRANSIT_TO",
+        "timestamp": "1661990340"
+      }
+    },
+    {
+      "id": "1003",
+      "vehicle": {
+        "trip": {
+          "tripId": "4410518WKDY"
+        },
+        "vehicle": {
+          "id": "1003"
+        },
+        "position": {
+          "latitude": 37.78447,
+          "longitude": -122.40797
+        }
+      }
+    },
+    {
+      "id": "1004",
+      "vehicle": {
+        "vehicle": {
+          "id": "1004"
+        },
+        "position": {
+          "latitude": 37.77484,
+          "longitude": -122.22418
+        }
+      }
+    }
+  ]
+}

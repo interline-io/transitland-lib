@@ -83,6 +83,7 @@ type Loaders struct {
 	RouteHeadwaysByRouteIDs                                       *dataloader.Loader[routeHeadwayLoaderParam, []*model.RouteHeadway]
 	RoutesByAgencyIDs                                             *dataloader.Loader[routeLoaderParam, []*model.Route]
 	RoutesByFeedVersionIDs                                        *dataloader.Loader[routeLoaderParam, []*model.Route]
+	RoutesByFeedVersionRouteIDs                                   *dataloader.Loader[model.FVEntityID, *model.Route]
 	RoutesByIDs                                                   *dataloader.Loader[int, *model.Route]
 	RouteStopPatternsByRouteIDs                                   *dataloader.Loader[routeStopPatternLoaderParam, []*model.RouteStopPattern]
 	RouteStopsByRouteIDs                                          *dataloader.Loader[routeStopLoaderParam, []*model.RouteStop]
@@ -97,6 +98,7 @@ type Loaders struct {
 	StopObservationsByStopIDs                                     *dataloader.Loader[stopObservationLoaderParam, []*model.StopObservation]
 	StopPlacesByStopID                                            *dataloader.Loader[model.StopPlaceParam, *model.StopPlace]
 	StopsByFeedVersionIDs                                         *dataloader.Loader[stopLoaderParam, []*model.Stop]
+	StopsByFeedVersionStopIDs                                     *dataloader.Loader[model.FVEntityID, *model.Stop]
 	StopsByIDs                                                    *dataloader.Loader[int, *model.Stop]
 	StopsByLevelIDs                                               *dataloader.Loader[stopLoaderParam, []*model.Stop]
 	StopsByParentStopIDs                                          *dataloader.Loader[stopLoaderParam, []*model.Stop]
@@ -105,6 +107,7 @@ type Loaders struct {
 	StopTimesByTripIDs                                            *dataloader.Loader[tripStopTimeLoaderParam, []*model.StopTime]
 	TargetStopsByStopIDs                                          *dataloader.Loader[int, *model.Stop]
 	TripsByFeedVersionIDs                                         *dataloader.Loader[tripLoaderParam, []*model.Trip]
+	TripsByFeedVersionTripIDs                                     *dataloader.Loader[model.FVEntityID, *model.Trip]
 	TripsByIDs                                                    *dataloader.Loader[int, *model.Trip]
 	TripsByRouteIDs                                               *dataloader.Loader[tripLoaderParam, []*model.Trip]
 	TripsByShapeIDs                                               *dataloader.Loader[tripLoaderParam, []*model.Trip]
@@ -366,7 +369,8 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.FeedVersionID, p.Where, p.Limit
 			},
 		),
-		RoutesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.RoutesByIDs),
+		RoutesByFeedVersionRouteIDs: withWaitAndCapacity(waitTime, batchSize, dbf.RoutesByFeedVersionRouteIDs),
+		RoutesByIDs:                 withWaitAndCapacity(waitTime, batchSize, dbf.RoutesByIDs),
 		RouteStopPatternsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.RouteStopPatternsByRouteIDs),
 			func(p routeStopPatternLoaderParam) (int, bool, *int) {
@@ -419,7 +423,8 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.FeedVersionID, p.Where, p.Limit
 			},
 		),
-		StopsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.StopsByIDs),
+		StopsByFeedVersionStopIDs: withWaitAndCapacity(waitTime, batchSize, dbf.StopsByFeedVersionStopIDs),
+		StopsByIDs:                withWaitAndCapacity(waitTime, batchSize, dbf.StopsByIDs),
 		StopsByLevelIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopsByLevelIDs,
 			func(p stopLoaderParam) (int, *model.StopFilter, *int) {
 				return p.LevelID, p.Where, p.Limit
@@ -451,7 +456,8 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.FeedVersionID, p.Where, p.Limit
 			},
 		),
-		TripsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.TripsByIDs),
+		TripsByFeedVersionTripIDs: withWaitAndCapacity(waitTime, batchSize, dbf.TripsByFeedVersionTripIDs),
+		TripsByIDs:                withWaitAndCapacity(waitTime, batchSize, dbf.TripsByIDs),
 		TripsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.TripsByRouteIDs,
 			func(p tripLoaderParam) (model.FVPair, *model.TripFilter, *int) {
 				return model.FVPair{EntityID: p.RouteID, FeedVersionID: p.FeedVersionID}, p.Where, p.Limit

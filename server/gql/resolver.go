@@ -192,6 +192,11 @@ func (r *Resolver) Trip() gqlout.TripResolver { return &tripResolver{r} }
 // StopTime .
 func (r *Resolver) StopTime() gqlout.StopTimeResolver { return &stopTimeResolver{r} }
 
+// VehiclePosition .
+func (r *Resolver) VehiclePosition() gqlout.VehiclePositionResolver {
+	return &vehiclePositionResolver{r}
+}
+
 // FlexStopTime .
 func (r *Resolver) FlexStopTime() gqlout.FlexStopTimeResolver { return &flexStopTimeResolver{r} }
 

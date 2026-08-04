@@ -136,6 +136,24 @@ func (f *Finder) TargetStopsByStopIDs(ctx context.Context, ids []int) ([]*model.
 	return ents, nil
 }
 
+// StopsByFeedVersionStopIDs looks up stops by GTFS stop_id within a feed version.
+func (f *Finder) StopsByFeedVersionStopIDs(ctx context.Context, keys []model.FVEntityID) ([]*model.Stop, []error) {
+	var ents []*model.Stop
+	for fvid, stopIds := range groupFVEntityIDs(keys) {
+		q := stopSelect(nil, nil, nil, nil, f.PermFilter(ctx), nil).
+			Where(sq.Eq{"gtfs_stops.feed_version_id": fvid}).
+			Where(In("gtfs_stops.stop_id", stopIds))
+		var group []*model.Stop
+		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
+			return nil, logExtendErr(ctx, len(keys), err)
+		}
+		ents = append(ents, group...)
+	}
+	return arrangeBy(keys, ents, func(ent *model.Stop) model.FVEntityID {
+		return model.FVEntityID{FeedVersionID: ent.FeedVersionID, EntityID: ent.StopID.Val}
+	}), nil
+}
+
 func (f *Finder) StopsByFeedVersionIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
 	var ents []*model.Stop
 	err := dbutil.Select(ctx,
