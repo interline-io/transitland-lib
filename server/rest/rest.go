@@ -372,7 +372,7 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 				rq := newUrl.Query()
 				rq.Set("after", strconv.Itoa(lastId))
 				newUrl.RawQuery = rq.Encode()
-				meta["next"] = cfg.RestPrefix + newUrl.String()
+				meta["next"] = cfg.Link(ctx, cfg.RestPrefix+newUrl.String())
 			}
 			response["meta"] = meta
 		}
