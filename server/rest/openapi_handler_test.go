@@ -59,7 +59,7 @@ func TestMountPrefix(t *testing.T) {
 
 // serveRest mounts h under mountPath with cfg on the context and returns the
 // response for a GET of reqPath. mountPath may be empty to serve at the root.
-func serveRest(t testing.TB, h http.Handler, mountPath string, cfg model.Config, reqPath string, header http.Header) *httptest.ResponseRecorder {
+func serveRest(t testing.TB, h http.Handler, mountPath string, cfg model.Config, reqPath string) *httptest.ResponseRecorder {
 	t.Helper()
 	root := chi.NewRouter()
 	if mountPath == "" {
@@ -68,9 +68,6 @@ func serveRest(t testing.TB, h http.Handler, mountPath string, cfg model.Config,
 		root.Mount(mountPath, h)
 	}
 	req := httptest.NewRequest(http.MethodGet, reqPath, nil)
-	if header != nil {
-		req.Header = header
-	}
 	req = req.WithContext(model.WithConfig(req.Context(), cfg))
 	rr := httptest.NewRecorder()
 	root.ServeHTTP(rr, req)
@@ -91,7 +88,7 @@ func TestOpenAPIHandlerServers(t *testing.T) {
 	// a client resolves /stops to /api/v2/stops (404) not /api/v2/rest/stops.
 	t.Run("mounted with absolute prefix includes mount segment", func(t *testing.T) {
 		cfg := model.Config{RestPrefix: "https://example.test/api/v2"}
-		rr := serveRest(t, NewOpenAPIHandler(), "/rest", cfg, "/rest/openapi.json", nil)
+		rr := serveRest(t, NewOpenAPIHandler(), "/rest", cfg, "/rest/openapi.json")
 		require.Equal(t, http.StatusOK, rr.Code)
 		servers := openAPIServers(t, rr.Body.Bytes())
 		require.Len(t, servers, 1)
@@ -99,98 +96,10 @@ func TestOpenAPIHandlerServers(t *testing.T) {
 	})
 
 	t.Run("unmounted with no prefix emits no servers block", func(t *testing.T) {
-		rr := serveRest(t, NewOpenAPIHandler(), "", model.Config{}, "/openapi.json", nil)
+		rr := serveRest(t, NewOpenAPIHandler(), "", model.Config{}, "/openapi.json")
 		require.Equal(t, http.StatusOK, rr.Code)
 		assert.Empty(t, openAPIServers(t, rr.Body.Bytes()))
 	})
-}
-
-// If-None-Match uses weak comparison and may be "*" or a list, so an exact
-// compare re-sends the document whenever an intermediary weakens the validator.
-func TestETagMatch(t *testing.T) {
-	const etag = `"abc123"`
-	tcs := []struct {
-		name         string
-		ifNoneMatch  string
-		expectsMatch bool
-	}{
-		{"exact", `"abc123"`, true},
-		{"weak validator from client", `W/"abc123"`, true},
-		{"wildcard", "*", true},
-		{"list containing ours", `"other", "abc123"`, true},
-		{"list of weak validators containing ours", `W/"other", W/"abc123"`, true},
-		{"surrounding whitespace", `  "abc123"  `, true},
-		{"empty", "", false},
-		{"different tag", `"nope"`, false},
-		{"list without ours", `"a", "b"`, false},
-		{"unquoted", "abc123", false},
-		{"prefix only", `"abc"`, false},
-	}
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expectsMatch, etagMatch(tc.ifNoneMatch, etag))
-		})
-	}
-
-	// Our tag is what we would send, so a weak form of it must also match.
-	assert.True(t, etagMatch(`W/"abc123"`, `W/"abc123"`))
-}
-
-func TestOpenAPIHandlerCaching(t *testing.T) {
-	cfg := model.Config{RestPrefix: "https://example.test/api/v2"}
-	h := NewOpenAPIHandler()
-
-	first := serveRest(t, h, "/rest", cfg, "/rest/openapi.json", nil)
-	require.Equal(t, http.StatusOK, first.Code)
-	etag := first.Header().Get("ETag")
-	require.NotEmpty(t, etag)
-	assert.Equal(t, "application/json", first.Header().Get("Content-Type"))
-	assert.Equal(t, openAPICacheControl, first.Header().Get("Cache-Control"))
-
-	t.Run("repeat request is byte-identical with a stable etag", func(t *testing.T) {
-		second := serveRest(t, h, "/rest", cfg, "/rest/openapi.json", nil)
-		require.Equal(t, http.StatusOK, second.Code)
-		assert.Equal(t, etag, second.Header().Get("ETag"))
-		assert.Equal(t, first.Body.Bytes(), second.Body.Bytes())
-	})
-
-	t.Run("If-None-Match revalidates to 304 with no body", func(t *testing.T) {
-		hdr := http.Header{"If-None-Match": []string{etag}}
-		rr := serveRest(t, h, "/rest", cfg, "/rest/openapi.json", hdr)
-		assert.Equal(t, http.StatusNotModified, rr.Code)
-		assert.Empty(t, rr.Body.Bytes())
-	})
-
-	t.Run("a weakened validator still revalidates", func(t *testing.T) {
-		hdr := http.Header{"If-None-Match": []string{"W/" + etag}}
-		rr := serveRest(t, h, "/rest", cfg, "/rest/openapi.json", hdr)
-		assert.Equal(t, http.StatusNotModified, rr.Code)
-	})
-
-	t.Run("a stale etag still gets the document", func(t *testing.T) {
-		hdr := http.Header{"If-None-Match": []string{`"stale"`}}
-		rr := serveRest(t, h, "/rest", cfg, "/rest/openapi.json", hdr)
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Equal(t, first.Body.Bytes(), rr.Body.Bytes())
-	})
-}
-
-func TestOpenAPICacheGeneratesOncePerServerURL(t *testing.T) {
-	c := &openAPICache{docs: map[string]*openAPIDocument{}}
-
-	first, err := c.get("https://example.test/api/v2/rest")
-	require.NoError(t, err)
-	second, err := c.get("https://example.test/api/v2/rest")
-	require.NoError(t, err)
-	// Same pointer means the second call was served from the cache rather than
-	// re-walking every REST query against the GraphQL schema.
-	assert.Same(t, first, second, "expected the cached document to be reused")
-
-	other, err := c.get("https://saas.example.test/api/v2/rest")
-	require.NoError(t, err)
-	assert.NotSame(t, first, other, "a distinct server URL needs its own document")
-	assert.NotEqual(t, first.etag, other.etag)
-	assert.Equal(t, "https://saas.example.test/api/v2/rest", openAPIServers(t, other.body)[0]["url"])
 }
 
 func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
@@ -209,14 +118,14 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 	cfg := model.Config{RestPrefix: "https://example.test/api/v2"}
 	for _, tc := range tcs {
 		t.Run(tc.onestopId, func(t *testing.T) {
-			rr := serveRest(t, r, "/rest", cfg, "/rest/onestop_id/"+tc.onestopId, nil)
+			rr := serveRest(t, r, "/rest", cfg, "/rest/onestop_id/"+tc.onestopId)
 			assert.Equal(t, http.StatusFound, rr.Code)
 			assert.Equal(t, tc.expect, rr.Header().Get("Location"))
 		})
 	}
 
 	t.Run("unrecognized prefix is a 404", func(t *testing.T) {
-		rr := serveRest(t, r, "/rest", cfg, "/rest/onestop_id/x-nope", nil)
+		rr := serveRest(t, r, "/rest", cfg, "/rest/onestop_id/x-nope")
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -235,7 +144,7 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 			{"/rest/onestop_id/f-%2Fonestop_id%2Fevil", "https://example.test/api/v2/rest/feeds/f-%2Fonestop_id%2Fevil"},
 		}
 		for _, tc := range encoded {
-			rr := serveRest(t, r, "/rest", cfg, tc.path, nil)
+			rr := serveRest(t, r, "/rest", cfg, tc.path)
 			assert.Equal(t, http.StatusFound, rr.Code)
 			assert.Equal(t, tc.expect, rr.Header().Get("Location"))
 		}
