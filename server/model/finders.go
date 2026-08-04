@@ -38,7 +38,7 @@ type EntityFinder interface {
 	FindFeedVersions(context.Context, *int, *Cursor, []int, *FeedVersionFilter) ([]*FeedVersion, error)
 	FindFeeds(context.Context, *int, *Cursor, []int, *FeedFilter) ([]*Feed, error)
 	FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error)
-	FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter) ([]*Place, error)
+	FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter, PlaceGeometrySelect) ([]*Place, error)
 	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
 	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
 	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)

@@ -81,8 +81,15 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		if err != nil {
 			return nil, err
 		}
+		// Copied: the expansion rewrites the filter's date in place, and each
+		// feed version resolves it against its own service window.
+		fvWhere := where
+		if where != nil {
+			w := *where
+			fvWhere = &w
+		}
 		// Run separate queries for each possible service day
-		for _, w := range stopTimeFilterExpand(where, fvsw) {
+		for _, w := range stopTimeFilterExpand(fvWhere, fvsw) {
 			var serviceDate *tt.Date
 			if w != nil && w.ServiceDate != nil {
 				serviceDate = w.ServiceDate
@@ -169,6 +176,11 @@ func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *
 		}
 		if where.End != nil {
 			q = q.Where(sq.LtOrEq{"sts.arrival_time + gtfs_trips.journey_pattern_offset": where.End.Int()})
+		}
+		// Without this a route crossing a small query area returns every stop
+		// on the route.
+		if len(where.StopIds) > 0 {
+			q = q.Where(In("sts.stop_id", where.StopIds))
 		}
 	}
 	if len(pairs) > 0 {

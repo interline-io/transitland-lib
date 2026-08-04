@@ -462,8 +462,12 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		}
 
 		// Single-row clip-geometry builders (column `buffer`), shared between the
-		// standalone branches and the combined within+stop_buffer case so the
-		// geometry SQL lives in one place.
+		// standalone branches and the combined query-area + stop_buffer case so
+		// the geometry SQL lives in one place.
+		bboxClipSelect := func() sq.SelectBuilder {
+			return sq.StatementBuilder.Select().
+				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat)
+		}
 		withinClipSelect := func() sq.SelectBuilder {
 			jj, _ := geojson.Marshal(loc.Within.Val)
 			return sq.StatementBuilder.Select().Column("ST_GeomFromGeoJSON(?) as buffer", string(jj))
@@ -475,37 +479,45 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 		}
 
-		// Filter precedence: bbox wins outright; otherwise `within` and
-		// `stop_buffer` compose (clip intersection for a positive radius,
-		// polygon-restricted point matching for radius 0); otherwise the
-		// first filter present in this chain applies and the rest are
-		// ignored. Composition applies to the top-level query path only:
-		// in per-stop attribution mode (the internal by-entity loaders) a
-		// positive-radius stop_buffer takes precedence and `within` is
-		// not applied.
-		if loc.Bbox == nil && withinClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
-			// Clip to the intersection of the query-area polygon (`within`) and
-			// the stop-buffer union: census apportioned to where the polygon and
-			// the transit coverage overlap, not either alone. Compose the two
-			// single-row clip CTEs the standalone branches use. Without this case
-			// the chain below would honor only `within` and ignore the buffer.
+		// The query area, however it was expressed. `bbox` keeps precedence over
+		// `within` when both are set.
+		areaClipSelect := withinClipSelect
+		if loc.Bbox != nil {
+			areaClipSelect = bboxClipSelect
+		}
+		areaClip := loc.Bbox != nil || withinClip
+
+		// Filter precedence: the query area (`bbox`, or `within` when no bbox is
+		// given) composes with `stop_buffer` — clip intersection for a positive
+		// radius, area-restricted point matching for radius 0. Otherwise the
+		// first filter present in this chain applies and the rest are ignored.
+		// Composition applies to the top-level query path only: in per-stop
+		// attribution mode (the internal by-entity loaders) a positive-radius
+		// stop_buffer takes precedence and the query area is not applied.
+		if areaClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
+			// Clip to the intersection of the query area and the stop-buffer
+			// union: census apportioned to where the two overlap, not either
+			// alone. Compose the same single-row clip CTEs the standalone
+			// branches use. Without this case the chain below would honor only
+			// the query area and ignore the buffer.
 			qBufferUse = true
-			q = q.WithCTE(sq.CTE{Alias: "clip_within", Materialized: true, Expression: withinClipSelect()})
+			q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
 			q = q.WithCTE(sq.CTE{Alias: "clip_stops", Materialized: true, Expression: stopUnionClipSelect()})
 			qBuffer = sq.StatementBuilder.Select().
-				Column("ST_Intersection(clip_within.buffer, clip_stops.buffer) as buffer").
+				Column("ST_Intersection(clip_area.buffer, clip_stops.buffer) as buffer").
 				Column("0 as match_entity_id").
-				From("clip_within").
+				From("clip_area").
 				JoinClause("CROSS JOIN clip_stops")
-		} else if loc.Bbox != nil {
+		} else if loc.Bbox != nil && !stopBufferClip {
 			qBufferUse = true
-			qBuffer = sq.StatementBuilder.Select().
-				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat).
-				Column("0 as match_entity_id")
+			qBuffer = bboxClipSelect().Column("0 as match_entity_id")
 		} else if withinClip && !stopBufferClip {
 			qBufferUse = true
 			qBuffer = withinClipSelect().Column("0 as match_entity_id")
-		} else if loc.Near != nil {
+		} else if loc.Near != nil && !stopBufferClip {
+			// Guarded like the branches above so a stop_buffer isn't discarded
+			// here: without it a radius-0 buffer alongside `near` would skip
+			// the point-matching branch entirely.
 			radius := checkFloat(&loc.Near.Radius, 0, 1_000_000)
 			qBufferUse = true
 			qBuffer = sq.StatementBuilder.Select().
@@ -519,13 +531,13 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 					Column("gtfs_stops.id as match_entity_id").
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
-				if withinClip {
-					// A combined `within` restricts point matching to stops
-					// inside the polygon rather than being silently ignored.
-					q = q.WithCTE(sq.CTE{Alias: "clip_within", Materialized: true, Expression: withinClipSelect()})
+				if areaClip {
+					// A combined query area restricts point matching to stops
+					// inside it rather than being silently ignored.
+					q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
 					qPoints = qPoints.
-						JoinClause("CROSS JOIN clip_within").
-						Where(sq.Expr("ST_Intersects(clip_within.buffer, gtfs_stops.geometry)"))
+						JoinClause("CROSS JOIN clip_area").
+						Where(sq.Expr("ST_Intersects(clip_area.buffer, gtfs_stops.geometry)"))
 				}
 			} else if fields.perStopAttribution {
 				// One buffer per stop, attribution preserved as

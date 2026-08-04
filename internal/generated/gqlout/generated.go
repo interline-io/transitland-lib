@@ -919,6 +919,7 @@ type ComplexityRoot struct {
 	Place struct {
 		Adm0Name  func(childComplexity int) int
 		Adm1Name  func(childComplexity int) int
+		Bbox      func(childComplexity int) int
 		CityName  func(childComplexity int) int
 		Count     func(childComplexity int) int
 		Operators func(childComplexity int) int
@@ -1228,6 +1229,7 @@ type ComplexityRoot struct {
 		SafeDurationFactor   func(childComplexity int) int
 		SafeDurationOffset   func(childComplexity int) int
 		ScheduleRelationship func(childComplexity int) int
+		ServiceDates         func(childComplexity int) int
 		Shape                func(childComplexity int) int
 		StopPatternID        func(childComplexity int) int
 		StopTimes            func(childComplexity int, limit *int, where *model.TripStopTimeFilter) int
@@ -5594,6 +5596,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Place.Adm1Name(childComplexity), true
+	case "Place.bbox":
+		if e.ComplexityRoot.Place.Bbox == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Place.Bbox(childComplexity), true
 	case "Place.city_name":
 		if e.ComplexityRoot.Place.CityName == nil {
 			break
@@ -7266,6 +7274,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Trip.ScheduleRelationship(childComplexity), true
+	case "Trip.service_dates":
+		if e.ComplexityRoot.Trip.ServiceDates == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Trip.ServiceDates(childComplexity), true
 	case "Trip.shape":
 		if e.ComplexityRoot.Trip.Shape == nil {
 			break
@@ -9914,7 +9928,14 @@ type Trip {
 
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
-  
+
+  """
+  Every GTFS service date matched by a ` + "`" + `dates` + "`" + ` or ` + "`" + `service_dates` + "`" + ` query, reported as the date that was asked for rather than where ` + "`" + `use_service_window` + "`" + ` relocated it. All of a trip's stop times run on these dates; a departure's wall calendar date is ` + "`" + `service_date + floor(departure_time / 86400)` + "`" + `.
+
+  Under ` + "`" + `service_dates` + "`" + ` these are exactly the dates requested. Under ` + "`" + `dates` + "`" + ` they remain service dates and can fall before the requested range, so a caller wanting only the calendar days it asked for must apply the formula per stop time rather than read this list directly.
+  """
+  service_dates: [Date!]
+
   "Calendar for this trip"
   calendar: Calendar!
   
@@ -10498,6 +10519,13 @@ type Place {
   
   "Operators associated with this place"
   operators: [Operator!]
+  
+  """
+  Bounding box of this place, from Natural Earth; null where it has no match
+  there. A country covers every region it contains, so the United States reaches
+  Alaska and Hawaii.
+  """
+  bbox: Geometry
 }
 
 """
@@ -10805,7 +10833,7 @@ type CensusLayer {
 """
 A single spatial unit within a layer — for example, a specific Census Tract, a US State, or an NTD agency record.
 
-Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via ` + "`" + `values` + "`" + `. When queried with a spatial filter (e.g. ` + "`" + `stop_buffer` + "`" + ` or ` + "`" + `bbox` + "`" + `), the ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
+Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via ` + "`" + `values` + "`" + `. When queried with a spatial filter, the ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
 
 Note: spatial queries may return the same geography multiple times when it intersects a search area in multiple places (e.g. two separate stop buffers within the same tract). Use ` + "`" + `geoid` + "`" + ` to deduplicate if needed.
 """
@@ -10858,7 +10886,7 @@ type CensusGeography {
   geometry: MultiPolygon
 
   """
-  When this geography was returned by a spatial query (e.g. ` + "`" + `stop_buffer` + "`" + ` or ` + "`" + `bbox` + "`" + `), the area of overlap between this geography and the search area, in square meters.
+  When this geography was returned by a spatial query, the area of overlap between this geography and the search area, in square meters.
   Divide by ` + "`" + `geometry_area` + "`" + ` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
   """
   intersection_area: Float
@@ -11669,6 +11697,8 @@ input TripStopTimeFilter {
   start: Seconds
   "Upper bound for arrival time, in local ` + "`" + `HH:MM:SS` + "`" + `"
   end: Seconds
+  "Restrict to stop times at these stops (database integer IDs)"
+  stop_ids: [Int!]
 }
 
 """Filters for querying archived stop observations. All three fields are required."""
@@ -11689,9 +11719,17 @@ input PathwayFilter {
 
 """Search options for trips"""
 input TripFilter {
-  "GTFS service date on which trips run"
+  "GTFS service date on which trips run. Lowest precedence: ignored if ` + "`" + `dates` + "`" + `, ` + "`" + `service_dates` + "`" + ` or ` + "`" + `relative_date` + "`" + ` is set"
   service_date: Date
-  "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `"
+  """
+  Several GTFS service dates, which need not be contiguous. Returns each trip once, with the matching dates in ` + "`" + `Trip.service_dates` + "`" + `, rather than requiring one query per date. Dates are matched exactly as given: unlike ` + "`" + `dates` + "`" + `, no neighbouring service date is brought in for after-midnight departures. Ignored if ` + "`" + `dates` + "`" + ` is set.
+  """
+  service_dates: [Date!]
+  """
+  Several wall calendar dates, which need not be contiguous. Unlike ` + "`" + `service_dates` + "`" + `, a trip departing after midnight is matched for the calendar date it departs on, so each requested date also matches the service date before it — and ` + "`" + `Trip.service_dates` + "`" + ` can therefore name a day earlier than any requested here. Departures more than 48 hours into their service date are not reached. Takes precedence over ` + "`" + `service_date` + "`" + `, ` + "`" + `service_dates` + "`" + ` and ` + "`" + `relative_date` + "`" + `.
+  """
+  dates: [Date!]
+  "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `. Ignored if ` + "`" + `dates` + "`" + ` or ` + "`" + `service_dates` + "`" + ` is set"
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
   use_service_window: Boolean
@@ -11766,6 +11804,8 @@ input CensusSourceGeographyFilter {
 
 
 """Search options for census geographies
+
+A query area (` + "`" + `bbox` + "`" + `, or ` + "`" + `within` + "`" + ` when no bbox is given) composes with ` + "`" + `stop_buffer` + "`" + `: the search area is their intersection, so ` + "`" + `intersection_area` + "`" + ` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. ` + "`" + `near` + "`" + ` does not compose and takes effect only when no other filter applies.
 
 Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
 - Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
@@ -13697,6 +13737,8 @@ func (ec *executionContext) childFields_Place(ctx context.Context, field graphql
 		return ec.fieldContext_Place_count(ctx, field)
 	case "operators":
 		return ec.fieldContext_Place_operators(ctx, field)
+	case "bbox":
+		return ec.fieldContext_Place_bbox(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Place", field.Name)
 }
@@ -14249,6 +14291,8 @@ func (ec *executionContext) childFields_Trip(ctx context.Context, field graphql.
 		return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 	case "stop_pattern_id":
 		return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
+	case "service_dates":
+		return ec.fieldContext_Trip_service_dates(ctx, field)
 	case "calendar":
 		return ec.fieldContext_Trip_calendar(ctx, field)
 	case "route":
@@ -32777,6 +32821,29 @@ func (ec *executionContext) fieldContext_Place_operators(_ context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Place_bbox(ctx context.Context, field graphql.CollectedField, obj *model.Place) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Place_bbox(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Bbox, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *tt.Geometry) graphql.Marshaler {
+			return ec.marshalOGeometry2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐGeometry(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Place_bbox(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Place", field, false, false, errors.New("field of type Geometry does not have child fields"))
+}
+
 func (ec *executionContext) _Query_feeds(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -39332,6 +39399,29 @@ func (ec *executionContext) fieldContext_Trip_stop_pattern_id(_ context.Context,
 	return graphql.NewScalarFieldContext("Trip", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _Trip_service_dates(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Trip_service_dates(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ServiceDates, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*tt.Date) graphql.Marshaler {
+			return ec.marshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Trip_service_dates(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Trip", field, false, false, errors.New("field of type Date does not have child fields"))
+}
+
 func (ec *executionContext) _Trip_calendar(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -45502,7 +45592,7 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"service_date", "relative_date", "use_service_window", "trip_id", "stop_pattern_id", "license", "route_ids", "route_onestop_ids", "feed_version_sha1", "feed_onestop_id"}
+	fieldsInOrder := [...]string{"service_date", "service_dates", "dates", "relative_date", "use_service_window", "trip_id", "stop_pattern_id", "license", "route_ids", "route_onestop_ids", "feed_version_sha1", "feed_onestop_id"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45516,6 +45606,20 @@ func (ec *executionContext) unmarshalInputTripFilter(ctx context.Context, obj an
 				return it, err
 			}
 			it.ServiceDate = data
+		case "service_dates":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_dates"))
+			data, err := ec.unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServiceDates = data
+		case "dates":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dates"))
+			data, err := ec.unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Dates = data
 		case "relative_date":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relative_date"))
 			data, err := ec.unmarshalORelativeDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRelativeDate(ctx, v)
@@ -45595,7 +45699,7 @@ func (ec *executionContext) unmarshalInputTripStopTimeFilter(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"start", "end"}
+	fieldsInOrder := [...]string{"start", "end", "stop_ids"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45616,6 +45720,13 @@ func (ec *executionContext) unmarshalInputTripStopTimeFilter(ctx context.Context
 				return it, err
 			}
 			it.End = data
+		case "stop_ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StopIds = data
 		}
 	}
 	return it, nil
@@ -53039,6 +53150,8 @@ func (ec *executionContext) _Place(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "bbox":
+			out.Values[i] = ec._Place_bbox(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -56576,6 +56689,8 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "service_dates":
+			out.Values[i] = ec._Trip_service_dates(ctx, field, obj)
 		case "calendar":
 			field := field
 
@@ -60390,6 +60505,42 @@ func (ec *executionContext) unmarshalODate2githubᚗcomᚋinterlineᚑioᚋtrans
 
 func (ec *executionContext) marshalODate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx context.Context, sel ast.SelectionSet, v tt.Date) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx context.Context, v any) ([]*tt.Date, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*tt.Date, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx context.Context, sel ast.SelectionSet, v []*tt.Date) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx context.Context, v any) (*tt.Date, error) {

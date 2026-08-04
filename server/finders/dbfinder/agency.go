@@ -94,14 +94,19 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
 }
 
-func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor, ids []int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) ([]*model.Place, error) {
+func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor, ids []int, level *model.PlaceAggregationLevel, where *model.PlaceFilter, geom model.PlaceGeometrySelect) ([]*model.Place, error) {
 	var ents []*model.Place
-	q := placeSelect(limit, after, ids, level, f.PermFilter(ctx), where)
+	q := placeSelect(limit, after, ids, level, f.PermFilter(ctx), where, geom)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, err
 	}
 	return ents, nil
 }
+
+// Radius in meters the agency place builder uses to associate a stop with a
+// populated place; Natural Earth carries cities as points, so a city's extent is
+// that association's own catchment.
+const placeCityRadius = 40_000.0
 
 func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
 	distinct := false
@@ -247,7 +252,75 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	return q
 }
 
-func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregationLevel, permFilter *model.PermFilter, where *model.PlaceFilter) sq.SelectBuilder {
+// Extent of the geometry aliased as ne_geom.g, in whichever longitude frame is
+// narrower. A shape crossing the antimeridian spans nearly the whole globe in the
+// normal frame — Alaska measures 358.9 degrees — and its true width once shifted
+// into [0,360), where the same polygon is 57.5. Everything else measures the same
+// in both frames and the tie goes to the normal one, so longitudes stay within
+// [-180,180] unless the place genuinely crosses the line.
+const placeBboxSQL = `case
+	when ST_XMax(ST_Extent(ne_geom.g)) - ST_XMin(ST_Extent(ne_geom.g))
+		<= ST_XMax(ST_Extent(ST_ShiftLongitude(ne_geom.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(ne_geom.g)))
+	then ST_SetSRID(ST_Extent(ne_geom.g)::geometry, 4326)
+	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(ne_geom.g))::geometry, 4326)
+end as bbox`
+
+// The same choice for a country, which aggregates every region it contains rather
+// than the rows the query joined.
+const placeBboxCountrySQL = `(select case
+	when ST_XMax(ST_Extent(w.g)) - ST_XMin(ST_Extent(w.g))
+		<= ST_XMax(ST_Extent(ST_ShiftLongitude(w.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(w.g)))
+	then ST_SetSRID(ST_Extent(w.g)::geometry, 4326)
+	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(w.g))::geometry, 4326)
+end from (select whole.geometry::geometry as g from ne_10m_admin_1_states_provinces whole where whole.admin = tlap.adm0name) w) as bbox`
+
+// placeBboxSelect adds the bounding box column to a place query.
+//
+// Cities are points in Natural Earth and regions are polygons, so they come from
+// different tables. Where a group is a single Natural Earth unit — any level that
+// groups down to its own region or city — a left join covers exactly that unit
+// and the extent is the aggregate over it; a place with no match there keeps its
+// row with a null box. A country groups over the regions beneath it, where that
+// join would reach only the regions that have operators, so its box comes from a
+// subquery over every region instead.
+func placeBboxSelect(q sq.SelectBuilder, level *model.PlaceAggregationLevel) sq.SelectBuilder {
+	cityLevel := false
+	singleUnit := false
+	switch {
+	case level == nil:
+	case *level == model.PlaceAggregationLevelAdm0Adm1:
+		singleUnit = true
+	case *level == model.PlaceAggregationLevelAdm0Adm1City:
+		cityLevel = true
+	case *level == model.PlaceAggregationLevelAdm0City,
+		*level == model.PlaceAggregationLevelAdm1City,
+		*level == model.PlaceAggregationLevelCity:
+		cityLevel = true
+	}
+
+	switch {
+	case cityLevel:
+		// The join is per row, so a level that groups several cities together —
+		// same name in more than one region, or in more than one country — widens
+		// the box to cover them, the way its count already covers them. The buffer
+		// is aliased through a lateral so the frame comparison names it once.
+		q = q.
+			JoinClause("left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name").
+			JoinClause("left join lateral (select ST_Buffer(ne_place.geometry, ?)::geometry as g) ne_geom on true", placeCityRadius).
+			Column(placeBboxSQL)
+	case singleUnit:
+		q = q.
+			JoinClause("left join ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = tlap.adm1name and ne_admin.admin = tlap.adm0name").
+			JoinClause("left join lateral (select ne_admin.geometry::geometry as g) ne_geom on true").
+			Column(placeBboxSQL)
+	default:
+		// A country: every region it contains, not only those with operators.
+		q = q.Column(placeBboxCountrySQL)
+	}
+	return q
+}
+
+func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregationLevel, permFilter *model.PermFilter, where *model.PlaceFilter, geom model.PlaceGeometrySelect) sq.SelectBuilder {
 	// placeSelect is limited to active feed versions
 	var groupKeys []string
 	var selKeys []string
@@ -283,6 +356,10 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		Join("feed_versions on feed_versions.id = feed_states.materialized_feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_states.feed_id").
 		GroupBy(groupKeys...)
+
+	if geom.Bbox {
+		q = placeBboxSelect(q, level)
+	}
 
 	if where != nil {
 		if where.Adm0Name != nil {

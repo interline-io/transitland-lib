@@ -88,7 +88,7 @@ func (UnimplementedFinder) FindFeeds(context.Context, *int, *Cursor, []int, *Fee
 func (UnimplementedFinder) FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter) ([]*Place, error) {
+func (UnimplementedFinder) FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter, PlaceGeometrySelect) ([]*Place, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error) {

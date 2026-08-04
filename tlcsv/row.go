@@ -32,6 +32,14 @@ type csvOptFn func(*csv.Reader)
 
 // ReadRows iterates through csv rows with callback.
 func ReadRows(in io.Reader, cb func(Row)) error {
+	_, err := ReadRowsHeader(in, cb)
+	return err
+}
+
+// ReadRowsHeader iterates through csv rows with callback and returns the header row.
+// The callback is only invoked for rows after the header, so this is the only way to
+// see a file that has no data rows.
+func ReadRowsHeader(in io.Reader, cb func(Row)) ([]string, error) {
 	// Handle byte-order-marks.
 	r := csv.NewReader(utfbom.SkipOnly(in))
 	// Allow variable columns - very common in GTFS
@@ -46,11 +54,11 @@ func ReadRows(in io.Reader, cb func(Row)) error {
 	return readRows(r, cb)
 }
 
-func readRows(r *csv.Reader, cb func(Row)) error {
+func readRows(r *csv.Reader, cb func(Row)) ([]string, error) {
 	// Go for it.
 	firstRow, err := r.Read()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Copy header, since we will reuse the backing array
 	header := []string{}
@@ -73,7 +81,7 @@ func readRows(r *csv.Reader, cb func(Row)) error {
 			row = []string{}
 		} else {
 			// Serious error: break and return with error
-			return err
+			return header, err
 		}
 		// Remove whitespace
 		for i := 0; i < len(row); i++ {
@@ -87,7 +95,7 @@ func readRows(r *csv.Reader, cb func(Row)) error {
 		line, _ := r.FieldPos(0)
 		cb(Row{Row: row, Line: line, Header: header, Hindex: hindex, Err: err})
 	}
-	return nil
+	return header, nil
 }
 
 func ReadRowsIter(in io.Reader, optFns ...csvOptFn) iter.Seq2[Row, error] {

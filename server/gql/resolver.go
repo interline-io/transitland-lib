@@ -20,6 +20,9 @@ const (
 	RESOLVER_LOCATION_MAXLIMIT         = 100_000
 	RESOLVER_SEGMENT_MAXLIMIT          = 100_000
 	RESOLVER_SHAPE_MAXLIMIT            = 100_000
+	// A busy route runs close to 1,000 trips in a week, so the default limit
+	// truncates a multi-week range without an error.
+	RESOLVER_TRIP_MAXLIMIT = 100_000
 )
 
 // RESOLVER_MAXLIMIT is the API limit maximum

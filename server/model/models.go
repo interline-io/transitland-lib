@@ -24,6 +24,13 @@ type StopPlaceParam struct {
 	Point tlxy.Point
 }
 
+// PlaceGeometrySelect chooses which geometry columns a place query computes.
+// Each is an aggregate over the Natural Earth tables, so it is only worth paying
+// for when the caller asked for it.
+type PlaceGeometrySelect struct {
+	Bbox bool
+}
+
 //////////
 
 type Feed struct {
@@ -97,6 +104,11 @@ type Route struct {
 
 type Trip struct {
 	RTTripID string // internal: for ADDED trips
+	// Every service date matched by a dates or service_dates query. Under
+	// `dates` this reaches one day before the earliest requested date.
+	ServiceDates []*tt.Date
+	// Wire format for ServiceDates: one comma-separated column.
+	ServiceDatesAgg tt.String `db:"service_dates_agg"`
 	gtfs.Trip
 }
 

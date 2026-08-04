@@ -2,7 +2,21 @@ package gql
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 )
+
+// bboxMinLon is the western edge of the first returned place's bounding box.
+// ST_Extent emits the ring from its lower-left corner.
+func bboxMinLon(jj string) float64 {
+	return gjson.Get(jj, "places.0.bbox.coordinates.0.0.0").Float()
+}
+
+// bboxWidth is that box's span in degrees of longitude.
+func bboxWidth(jj string) float64 {
+	return gjson.Get(jj, "places.0.bbox.coordinates.0.2.0").Float() - bboxMinLon(jj)
+}
 
 func TestPlaceResolver(t *testing.T) {
 	q := `query($level: PlaceAggregationLevel,$where: PlaceFilter) {
@@ -79,6 +93,43 @@ func TestPlaceResolver(t *testing.T) {
 			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"city_name": "Oakland"}},
 			selector:     "places.#.city_name",
 			selectExpect: []string{"Oakland"},
+		},
+		// bbox
+		{
+			name:  "region bbox comes from the admin polygon",
+			query: `query{ places(level: ADM0_ADM1, where: {adm1_name: "California"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				assert.InDelta(t, -124.409202, bboxMinLon(jj), 1e-5, "California reaches its own coastline")
+			},
+		},
+		{
+			// A country covers every region it contains, including those with no
+			// operators — and the United States crosses the antimeridian at the
+			// Aleutians, so its extent is only meaningful in the shifted frame.
+			// Measured normally it reads -179.1 to 179.8, a useless 359 degrees.
+			name:  "country bbox crossing the antimeridian",
+			query: `query{ places(level: ADM0, where: {adm0_name: "United States of America"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				assert.InDelta(t, 172.476085, bboxMinLon(jj), 1e-5, "Attu, the westernmost Aleutian")
+				assert.InDelta(t, 120.5, bboxWidth(jj), 0.1, "the real width, not 359")
+			},
+		},
+		{
+			// A city is a point in Natural Earth, buffered by the radius the place
+			// association itself uses: about 0.46 degrees of longitude at this latitude.
+			name:  "city bbox is buffered around the point",
+			query: `query{ places(level: ADM0_ADM1_CITY, where: {city_name: "Oakland"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				assert.InDelta(t, -122.732419, bboxMinLon(jj), 1e-5, "Oakland widened by the association radius")
+			},
+		},
+		{
+			// A level that identifies a city by fewer names still gets a box.
+			name:  "city bbox at a coarser level",
+			query: `query{ places(level: ADM0_CITY, where: {city_name: "Oakland"}) { bbox } }`,
+			f: func(t *testing.T, jj string) {
+				assert.InDelta(t, -122.732419, bboxMinLon(jj), 1e-5, "same box as the finer level")
+			},
 		},
 		// operators
 		{
