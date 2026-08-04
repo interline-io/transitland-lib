@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -411,7 +410,6 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 		return order
 	}
 
-	fmt.Printf("%s %s (%s : %s : order %d)\n", strings.Repeat(" ", level*4), schema.Title, namedType, gqlType, order)
 	order += 1
 	schema.Extensions["x-order"] = order
 

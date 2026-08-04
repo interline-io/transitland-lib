@@ -37,7 +37,11 @@ type Config struct {
 	UseMaterialized          bool
 	UseGeohashFilter         bool
 	AllowHTTPFetchUnfiltered bool
-	RestPrefix               string
+	// RestPrefix is the public prefix of the REST mount's *parent*, e.g.
+	// https://transit.land/api/v2 for a server reachable at .../api/v2/rest. The
+	// mount segment is not known at config time; the server recovers it from the
+	// request path. Empty yields host-relative links.
+	RestPrefix string
 	// JobsPrefix is the public prefix of the jobserver mount (analogue of
 	// RestPrefix for the REST mount), used to build absolute artifact download
 	// links that are correct behind a path-rewriting ingress. Empty yields

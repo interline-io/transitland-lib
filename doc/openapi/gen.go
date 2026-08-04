@@ -36,7 +36,9 @@ func main() {
 	if err != nil {
 		exit(err)
 	}
-	var validationOpts []oa.ValidationOption
+	// Report every broken path/operation/response in one run instead of stopping
+	// at the first. Checks within a single schema are still fail-fast.
+	validationOpts := []oa.ValidationOption{oa.EnableMultiError()}
 	if err := schema.Validate(ctx, validationOpts...); err != nil {
 		exit(err)
 	}
