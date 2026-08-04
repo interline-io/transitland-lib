@@ -32,19 +32,14 @@ func TestMountPrefix(t *testing.T) {
 		{"no prefix, mounted", "", "/rest/openapi.json", "/openapi.json", "/rest"},
 		{"no prefix, unmounted", "", "/openapi.json", "/openapi.json", ""},
 		{"no prefix, root redirect", "", "/", "", ""},
-		// A marker the path does not contain means something rewrote the path.
-		// Falling back to the bare prefix is merely incomplete; splicing the
-		// request path in would be actively wrong.
+		// An absent marker means the path was rewritten; the bare prefix is
+		// incomplete, but splicing the request path in would be wrong.
 		{"marker absent falls back to prefix", "https://transit.land/api/v2", "/rest/something-else", "/openapi.json", "https://transit.land/api/v2"},
-		// The marker is matched at its first occurrence. r.URL.Path is decoded,
-		// so an onestop_id sent as f-%2Fonestop_id%2Fevil arrives with a second
-		// literal /onestop_id/ in it; matching the last one would anchor the
-		// mount inside caller-controlled input.
+		// Decoded paths can carry a second literal marker, so matching the last
+		// one would anchor the mount inside caller-controlled input.
 		{"marker recurring in a path parameter", "https://transit.land/api/v2", "/rest/onestop_id/f-/onestop_id/evil", "/onestop_id/", "https://transit.land/api/v2/rest"},
-		// A relative result must never read as protocol-relative — a Location
-		// header built from it would redirect off-site. Backslashes count: the
-		// WHATWG URL parser treats \ as / for special schemes, so browsers
-		// resolve /\evil.com exactly like //evil.com.
+		// A relative result reading as protocol-relative would redirect off-site.
+		// Backslashes count: browsers resolve /\evil.com like //evil.com.
 		{"protocol-relative mount refused", "", "//evil.com/openapi.json", "/openapi.json", ""},
 		{"protocol-relative mount refused, deep", "", "//evil.com/a/openapi.json", "/openapi.json", ""},
 		{"backslash mount refused", "", `/\evil.com/openapi.json`, "/openapi.json", ""},
@@ -92,10 +87,8 @@ func openAPIServers(t testing.TB, body []byte) []map[string]any {
 }
 
 func TestOpenAPIHandlerServers(t *testing.T) {
-	// The bug this guards: passing RestPrefix straight through drops the mount
-	// segment, so a generated client resolves /stops to
-	// https://transit.land/api/v2/stops (404) instead of
-	// https://transit.land/api/v2/rest/stops.
+	// Guards the bug where RestPrefix passed straight through drops the mount, so
+	// a client resolves /stops to /api/v2/stops (404) not /api/v2/rest/stops.
 	t.Run("mounted with absolute prefix includes mount segment", func(t *testing.T) {
 		cfg := model.Config{RestPrefix: "https://example.test/api/v2"}
 		rr := serveRest(t, NewOpenAPIHandler(), "/rest", cfg, "/rest/openapi.json", nil)
@@ -113,8 +106,7 @@ func TestOpenAPIHandlerServers(t *testing.T) {
 }
 
 // If-None-Match uses weak comparison and may be "*" or a list, so an exact
-// string compare against our tag re-sends the whole document whenever an
-// intermediary weakens the validator.
+// compare re-sends the document whenever an intermediary weakens the validator.
 func TestETagMatch(t *testing.T) {
 	const etag = `"abc123"`
 	tcs := []struct {
@@ -228,11 +220,9 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
-	// chi.URLParam returns the raw percent-encoded value while r.URL.Path is
-	// decoded. Deriving the mount from the parameter rather than the route's
-	// literal segment produced a redirect containing the whole request path,
-	// e.g. .../rest/onestop_id/r-9q9-antioch~sfia/routes/r-9q9-antioch%7Esfia.
-	// Route Onestop IDs routinely contain ~, and clients do encode it.
+	// chi.URLParam stays encoded while r.URL.Path is decoded, so deriving the
+	// mount from the parameter broke for any id containing ~ — which route
+	// Onestop IDs routinely do.
 	t.Run("percent-encoded onestop_id still resolves the mount", func(t *testing.T) {
 		encoded := []struct {
 			path   string

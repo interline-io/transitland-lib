@@ -24,7 +24,7 @@ transitland server [flags]
       --max-radius float                  Maximum radius for nearby stops (default 100000)
       --port string                        (default "8080")
       --redisurl string                   Redis URL (default: $TL_REDIS_URL)
-      --rest-prefix string                Public prefix of the REST mount's parent (e.g. https://transit.land/api/v2), used for pagination links, redirects, and the OpenAPI servers block
+      --rest-prefix string                Public URL prefix for generated links (e.g. https://transit.land/api/v2)
       --rt-storage string                 RT storage backend
       --secrets string                    DMFR file containing secrets
       --storage string                    Static storage backend

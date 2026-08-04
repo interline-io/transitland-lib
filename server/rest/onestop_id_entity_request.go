@@ -52,15 +52,8 @@ func (handler OnestopIdEntityRedirectRequest) RequestInfo() RequestInfo {
 func (handler *OnestopIdEntityRedirectRequest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cfg := model.ForContext(r.Context())
 	onestop_id := chi.URLParam(r, "onestop_id")
-	// Redirect targets must include the mount segment, same as the root redirect
-	// and pagination links. cfg.RestPrefix alone omits it, which sends clients to
+	// Targets need the mount segment; cfg.RestPrefix alone sends clients to
 	// /api/v2/feeds/... instead of /api/v2/rest/feeds/...
-	//
-	// The marker is the route's literal segment, not "/onestop_id/"+onestop_id:
-	// chi.URLParam yields the raw percent-encoded value while r.URL.Path is
-	// decoded, so interpolating the parameter fails to match for any id
-	// containing an encoded character (e.g. ~ sent as %7E, common in route
-	// Onestop IDs).
 	prefix := mountPrefix(cfg.RestPrefix, r.URL.Path, "/onestop_id/")
 	var redirectUrl string
 	if strings.HasPrefix(onestop_id, "f-") {

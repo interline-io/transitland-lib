@@ -29,74 +29,35 @@ var MAXLIMIT = 1_000
 // MAXRADIUS is the maximum point search radius
 const MAXRADIUS = 100 * 1000.0
 
-// mountPrefix returns the absolute public base URL of the REST mount for this
-// request: restPrefix (the public prefix of the mount's parent, e.g.
-// https://transit.land/api/v2) plus the segment the server is mounted under.
-//
-// chi does not strip r.URL.Path — it holds the full public path, e.g.
-// /rest/openapi.json — so removing the part of the path the route itself owns
-// recovers the mount segment. routeMarker is the literal head of the matched
-// route ("/openapi.json", "/onestop_id/"); everything from its first occurrence
-// onward is dropped. A route mounted at "/" owns nothing and passes "", which
-// keeps the whole path.
-//
-// First occurrence, not last: everything after the marker is route-owned, and
-// for a route ending in a parameter that means caller-controlled. r.URL.Path is
-// decoded, so an id sent as f-%2Fonestop_id%2Fevil arrives here as a second
-// literal /onestop_id/ and would re-anchor the mount at /rest/onestop_id/f-.
-// The mount comes from deployment config and the parameter does not, so
-// matching the earliest marker keeps the untrusted half out of the result.
-//
-// routeMarker must be a literal taken from the route pattern, never a value
-// interpolated from a path parameter: chi.URLParam returns the raw
-// percent-encoded value while r.URL.Path is decoded, so the two disagree for
-// any parameter containing an encoded character, and the marker would not be
-// found.
-//
-// The root redirect, the onestop_id redirects, and the OpenAPI servers block
-// all share this construction. restPrefix alone is not enough: it does not
-// include the mount segment, so using it directly yields
-// https://transit.land/api/v2/stops, which 404s, rather than
-// https://transit.land/api/v2/rest/stops. Pagination links reach the same
-// result without this helper, by appending restPrefix to the whole request URL,
-// which already carries the mount segment.
+// mountPrefix returns the mount's absolute public base URL: restPrefix (the
+// mount's parent) plus the mount segment, recovered by cutting the route-owned
+// tail off urlPath. routeMarker is the matched route's literal head ("" for a
+// route at "/"), and must come from the route pattern — chi.URLParam values
+// stay percent-encoded while urlPath is decoded.
 func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
 	p := strings.TrimRight(urlPath, "/")
 	mount := p
 	if routeMarker != "" {
+		// First occurrence, not last: urlPath is decoded, so a path parameter can
+		// carry a second literal marker and re-anchor the mount inside it.
 		i := strings.Index(p, routeMarker)
 		if i < 0 {
-			// The marker is always present for a request the route actually
-			// matched. If something upstream rewrote the path so it is not, fall
-			// back to the bare prefix: merely missing the mount segment, rather
-			// than splicing the whole request path into a redirect or a servers
-			// URL.
+			// Only reachable if something upstream rewrote the path. Fall back to
+			// the bare prefix rather than splice the request path into a URL.
 			return restPrefix
 		}
 		mount = p[:i]
 	}
-	// With an empty restPrefix the result is a relative URL, and a mount segment
-	// that reads as protocol-relative — //evil.com/... — would redirect off-site
-	// from a Location header. chi does not route such a path to these handlers
-	// today, but this value reaches Location headers and the servers block, the
-	// handler is exported for callers whose routing this package does not
-	// control, and the schema endpoint is served without authentication. Refuse
-	// it outright rather than depending on the router to keep it unreachable.
-	// A non-empty restPrefix already fixes the authority, so the same mount is
-	// only path noise there and is kept.
+	// A protocol-relative mount would redirect off-site from a relative Location.
+	// A non-empty restPrefix already fixes the authority, so only guard here.
 	if restPrefix == "" && isProtocolRelative(mount) {
 		return ""
 	}
 	return restPrefix + mount
 }
 
-// isProtocolRelative reports whether s would be read as a protocol-relative
-// reference — //host/... — rather than as a path.
-//
-// Backslashes count. The WHATWG URL parser treats \ as equivalent to / while
-// parsing a special scheme, so browsers resolve /\evil.com and /\/evil.com the
-// same way they resolve //evil.com. Checking only for "//" would leave the
-// cheapest bypass of that check open.
+// isProtocolRelative reports whether s reads as //host/... rather than a path.
+// Backslashes count: browsers treat \ as / when parsing a special scheme.
 func isProtocolRelative(s string) bool {
 	isSlash := func(c byte) bool { return c == '/' || c == '\\' }
 	return len(s) > 1 && isSlash(s[0]) && isSlash(s[1])

@@ -12,9 +12,8 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
-// openAPICacheControl is sent with every schema response. The document changes
-// only when the binary does, so a few minutes of client-side caching is safe
-// and keeps repeat fetches of a large document cheap.
+// openAPICacheControl is sent with every schema response; the document changes
+// only when the binary does.
 const openAPICacheControl = "public, max-age=300"
 
 // openAPIDocument is a generated schema, marshaled once and reused.
@@ -23,15 +22,9 @@ type openAPIDocument struct {
 	etag string
 }
 
-// NewOpenAPIHandler returns a handler that serves the REST OpenAPI document.
-//
-// The document's servers[0].url is built with mountPrefix, so it includes the
-// mount segment and a client resolving a documented path against it reaches the
-// same URL the root redirect and pagination links produce.
-//
-// Callers outside this package need this constructor rather than the route
-// NewServer registers: mounting the REST server elsewhere just to reach its
-// schema would hand chi a path it does not own.
+// NewOpenAPIHandler returns a handler serving the REST OpenAPI document, with
+// servers[0].url built from mountPrefix so documented paths resolve against it.
+// Exported for callers mounting the REST server outside this package.
 func NewOpenAPIHandler(opts ...SchemaOption) http.Handler {
 	docs := &openAPICache{opts: opts, docs: map[string]*openAPIDocument{}}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -53,18 +46,9 @@ func NewOpenAPIHandler(opts ...SchemaOption) http.Handler {
 	})
 }
 
-// etagMatch reports whether an If-None-Match field value matches etag.
-//
-// RFC 9110 section 13.1.2 specifies the weak comparison function for
-// If-None-Match, so W/"x" matches "x", and the field may be "*" or a
-// comma-separated list. Comparing the raw header against our tag missed all
-// three, which costs a full re-download of a large document whenever an
-// intermediary weakens the validator — something CDNs do routinely when they
-// re-encode a response.
-//
-// Splitting on commas is not strictly correct, since an entity-tag may itself
-// contain a comma, but our tags are hex and cannot, so no real tag can be split
-// into something that matches ours.
+// etagMatch reports whether an If-None-Match field value matches etag, using
+// the weak comparison RFC 9110 13.1.2 requires: "*", lists, and W/ prefixes all
+// match. Splitting on commas is safe only because our tags are hex.
 func etagMatch(ifNoneMatch string, etag string) bool {
 	ifNoneMatch = strings.TrimSpace(ifNoneMatch)
 	if ifNoneMatch == "" {
@@ -87,14 +71,9 @@ func trimWeakETag(s string) string {
 	return strings.TrimPrefix(strings.TrimSpace(s), "W/")
 }
 
-// openAPICache memoizes generated documents by server URL.
-//
-// The map is unbounded, which is safe because the number of distinct keys is
-// fixed by how the handler is registered, not by request input: a key derives
-// from the mount path, and chi only routes the exact registered path (verified:
-// /rest//openapi.json, /rest/./openapi.json, /rest/%6fpenapi.json and friends
-// all 404). A caller registering this handler under a wildcard route would
-// break that assumption.
+// openAPICache memoizes generated documents by server URL. The map is unbounded
+// but keys derive from the registered mount path, not request input — which
+// holds unless a caller registers this handler under a wildcard route.
 type openAPICache struct {
 	opts []SchemaOption
 	mu   sync.Mutex
@@ -102,16 +81,8 @@ type openAPICache struct {
 }
 
 // get returns the document for serverURL, generating it on first use.
-//
-// Generating rebuilds the gqlgen executable schema and walks every REST query's
-// response tree, which costs on the order of 100ms and produces hundreds of
-// kilobytes of JSON. The lock is deliberately held across generation so that
-// cost is paid once per server URL rather than once per request; a burst of
-// concurrent cold requests waits rather than duplicating the work.
-//
-// This serializes lookups for every key, not just the one being generated. That
-// is fine at the one or two keys a deployment actually has, and only worth
-// revisiting if a caller registers many.
+// Generation costs ~100ms, so the lock is held across it: concurrent cold
+// requests wait rather than duplicating the work.
 func (c *openAPICache) get(serverURL string) (*openAPIDocument, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -122,8 +93,7 @@ func (c *openAPICache) get(serverURL string) (*openAPIDocument, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Marshal eagerly: GenerateOpenAPI hands back a shared mutable *oa.T, and
-	// the bytes are what both the response body and the ETag derive from.
+	// Marshal eagerly: GenerateOpenAPI hands back a shared mutable *oa.T.
 	body, err := json.Marshal(schema)
 	if err != nil {
 		return nil, err
