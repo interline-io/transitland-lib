@@ -67,7 +67,7 @@ func (handler *OnestopIdEntityRedirectRequest) ServeHTTP(w http.ResponseWriter, 
 		redirectUrl = fmt.Sprintf("%s/routes/%s", prefix, onestop_id)
 	}
 	if redirectUrl != "" {
-		w.Header().Add("Location", redirectUrl)
+		w.Header().Add("Location", cfg.Link(r.Context(), redirectUrl))
 		w.WriteHeader(http.StatusFound)
 	} else {
 		http.Error(w, "not found", http.StatusNotFound)
