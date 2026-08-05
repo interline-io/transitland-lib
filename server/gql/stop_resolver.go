@@ -113,7 +113,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 	// Merge scheduled stop times with rt stop times
 	// TODO: handle StopTimeFilter in RT
 	// Handle scheduled trips; these can be matched on trip_id or (route_id,direction_id,...)
-	if containsField(ctx, "arrival") || containsField(ctx, "departure") {
+	if wantsRTStopTimeUpdate(ctx) {
 		for _, st := range sts {
 			ft := model.Trip{}
 			ft.FeedVersionID = obj.FeedVersionID

@@ -111,6 +111,21 @@ func containsField(ctx context.Context, fieldName string) bool {
 	return false
 }
 
+// wantsRTStopTimeUpdate reports whether the selection needs a realtime update
+// attached to each stop time.
+//
+// These are the only fields that read StopTime.RTStopTimeUpdate, so when none
+// is selected the lookup is unobservable rather than merely wasted.
+func wantsRTStopTimeUpdate(ctx context.Context) bool {
+	for _, field := range graphql.CollectFieldsCtx(ctx, nil) {
+		switch field.Name {
+		case "arrival", "departure", "schedule_relationship":
+			return true
+		}
+	}
+	return false
+}
+
 func convertScheduleRelationship(sr string) *model.ScheduleRelationship {
 	var msr model.ScheduleRelationship
 	switch sr {

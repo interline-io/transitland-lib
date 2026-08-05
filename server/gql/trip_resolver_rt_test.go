@@ -133,3 +133,28 @@ func TestTripRT_StopTimes(t *testing.T) {
 		testRt(t, tc)
 	}
 }
+
+// Realtime population on a trip's stop times is conditional on the selection,
+// so schedule_relationship has to be one of the fields that turns it on.
+func TestTripRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
+	const query = `query($trip_id: String!) {
+		trips(where: {trip_id: $trip_id}) {
+			stop_times { schedule_relationship stop_sequence }
+		}
+	}`
+	testRt(t, rtTestCase{
+		name:    "schedule_relationship alone",
+		query:   query,
+		vars:    hw{"trip_id": "1131530WKDY"},
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+		cb: func(t *testing.T, jj string) {
+			var scheduled int
+			for _, st := range gjson.Get(jj, "trips.0.stop_times").Array() {
+				if st.Get("schedule_relationship").String() == "SCHEDULED" {
+					scheduled++
+				}
+			}
+			assert.NotZero(t, scheduled, "expected realtime-matched stop times to report SCHEDULED")
+		},
+	})
+}
