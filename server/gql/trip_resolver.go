@@ -42,9 +42,11 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})()
-	for _, st := range sts {
-		if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, obj, st); ok {
-			st.RTStopTimeUpdate = ste
+	if wantsRTStopTimeUpdate(ctx) {
+		for _, st := range sts {
+			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, obj, st); ok {
+				st.RTStopTimeUpdate = ste
+			}
 		}
 	}
 	return sts, err
