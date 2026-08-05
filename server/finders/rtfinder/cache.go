@@ -12,6 +12,10 @@ import (
 const (
 	// lastTTL bounds how long a topic's last-seen payload survives in the store.
 	lastTTL = 5 * time.Minute
+	// missingTTL is how long a topic the store had nothing for is remembered
+	// as absent. Short, because a cold read is the only way a newly published
+	// topic is noticed once drain is filtered to held topics.
+	missingTTL = 5 * time.Second
 	// reconnectDelay paces re-subscription attempts.
 	reconnectDelay = 1 * time.Second
 	// updatesChannel carries topic pointers to the notify-then-read listeners.
@@ -36,6 +40,11 @@ type storeCache struct {
 	wg      sync.WaitGroup
 	lock    sync.Mutex
 	sources map[string]*Source
+	// missing records topics the store had nothing for. Callers loop over
+	// every RT feed associated with a feed version, most of which carry
+	// nothing for a given trip, and without this each one is a fresh round
+	// trip on every call.
+	missing map[string]time.Time
 }
 
 func newStoreCache(store kvcache.Store) *storeCache {
@@ -45,6 +54,7 @@ func newStoreCache(store kvcache.Store) *storeCache {
 		ctx:     ctx,
 		cancel:  cancel,
 		sources: map[string]*Source{},
+		missing: map[string]time.Time{},
 	}
 	if ps, ok := store.(kvcache.PubSubStore); ok {
 		c.pubsub = ps
@@ -86,10 +96,21 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 		c.lock.Unlock()
 		return s, true
 	}
+	if at, ok := c.missing[topic]; ok && time.Since(at) < missingTTL {
+		c.lock.Unlock()
+		return nil, false
+	}
 	c.lock.Unlock()
 	// Cold read from the shared store without holding the lock.
 	s := c.loadFromStore(ctx, topic)
+	// Only store reads are logged. The local and remembered-absent paths are
+	// map hits, and a caller looping over every associated RT feed for every
+	// stop time makes logging them thousands of lines a request.
+	log.For(ctx).Trace().Str("topic", topic).Bool("found", s != nil).Msg("rtcache: topic read")
 	if s == nil {
+		c.lock.Lock()
+		c.missing[topic] = time.Now()
+		c.lock.Unlock()
 		return nil, false
 	}
 	c.lock.Lock()
@@ -140,6 +161,12 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 				return
 			}
 			topic := string(msg)
+			// Every RT fetch in the fleet announces on this one channel, so a
+			// process must take only what it serves. Without this each process
+			// reads and decodes every feed in the system on every fetch.
+			if !c.watching(topic) {
+				continue
+			}
 			if s := c.loadFromStore(c.ctx, topic); s != nil {
 				c.putSource(topic, s)
 				log.For(c.ctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
@@ -168,6 +195,16 @@ func (c *storeCache) loadFromStore(ctx context.Context, topic string) *Source {
 		return nil
 	}
 	return s
+}
+
+// watching reports whether this process holds a snapshot for topic, which is
+// true only of topics a caller has asked for. It is the subscription filter:
+// announcements for anything else are dropped before the store is read.
+func (c *storeCache) watching(topic string) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, ok := c.sources[topic]
+	return ok
 }
 
 // putSource installs s as the local snapshot for topic, replacing any prior one.

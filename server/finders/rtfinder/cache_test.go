@@ -3,6 +3,7 @@ package rtfinder
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -96,4 +98,86 @@ func testCache(t *testing.T, rtCache Cache) {
 	if len(found) != len(feeds) {
 		t.Errorf("got %d items, expected %d", len(found), len(feeds))
 	}
+}
+
+// The updates channel carries every RT fetch in the fleet — 10 to 100 a second
+// in production. A process must ignore announcements for topics it has not been
+// asked for, or it reads and decodes every feed in the system.
+func TestStoreCache_IgnoresUnwatchedTopics(t *testing.T) {
+	if a, ok := testutil.CheckTestRedisClient(); !ok {
+		t.Skip(a)
+		return
+	}
+	ctx := context.Background()
+	store := kvcache.NewRedisStore(testutil.MustOpenTestRedisClient(t))
+	c := newStoreCache(store)
+	defer c.Close()
+
+	now := time.Now().UnixNano()
+	watched := fmt.Sprintf("rtwatched-%d", now)
+	unwatched := fmt.Sprintf("rtunwatched-%d", now)
+	const v1, v2 = uint64(1000), uint64(2000)
+
+	// Demand one topic so it is watched, and leave the other only in the store.
+	if err := store.Set(ctx, lastKey(watched), mkRTData(v1), lastTTL); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := c.GetSource(ctx, watched); !ok {
+		t.Fatal("cold read failed")
+	}
+	if err := store.Set(ctx, lastKey(watched), mkRTData(v2), lastTTL); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Set(ctx, lastKey(unwatched), mkRTData(v1), lastTTL); err != nil {
+		t.Fatal(err)
+	}
+
+	// The watched topic refreshing proves the subscription delivered in this
+	// window, which is what makes the unwatched assertion below meaningful
+	// rather than a race that simply never fired.
+	assert.Eventually(t, func() bool {
+		_ = store.Publish(ctx, updatesChannel, []byte(unwatched))
+		_ = store.Publish(ctx, updatesChannel, []byte(watched))
+		s, ok := c.GetSource(ctx, watched)
+		return ok && s.GetTimestamp() == v2
+	}, 5*time.Second, 100*time.Millisecond, "watched topic should refresh")
+
+	assert.False(t, c.watching(unwatched), "an undemanded topic must never be read from the store")
+}
+
+// countingStore counts reads so a test can assert what a sequence of lookups
+// costs in round trips.
+type countingStore struct {
+	*kvcache.MemoryStore
+	gets atomic.Int64
+}
+
+func (s *countingStore) Get(ctx context.Context, key string) ([]byte, bool, error) {
+	s.gets.Add(1)
+	return s.MemoryStore.Get(ctx, key)
+}
+
+// Callers loop over every RT feed associated with a feed version, and most of
+// them carry nothing for a given trip. Re-reading each absent topic on every
+// lookup is what turned one query into thousands of round trips.
+func TestStoreCache_RemembersMissingTopics(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	ctx := context.Background()
+	const topic = "rtabsent"
+	for i := 0; i < 50; i++ {
+		if _, ok := c.GetSource(ctx, topic); ok {
+			t.Fatal("an absent topic must not resolve")
+		}
+	}
+	assert.EqualValues(t, 1, store.gets.Load(), "an absent topic should be read once, not once per lookup")
+
+	// A topic that arrives is served straight away rather than waiting out the
+	// TTL: the local snapshot is consulted before the record of absence.
+	require.NoError(t, c.AddData(ctx, topic, mkRTData(1234)))
+	s, ok := c.GetSource(ctx, topic)
+	require.True(t, ok)
+	assert.EqualValues(t, uint64(1234), s.GetTimestamp())
 }
