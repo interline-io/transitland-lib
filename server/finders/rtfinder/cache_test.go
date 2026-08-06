@@ -204,3 +204,25 @@ func TestStoreCache_RemembersFailedReads(t *testing.T) {
 	}
 	assert.EqualValues(t, 1, store.gets.Load(), "a failing store should be read once, not once per lookup")
 }
+
+// A read cut short because the caller went away says nothing about the topic,
+// so it must not be remembered as an absence — otherwise one canceled request
+// blinds every later one for a minute.
+func TestStoreCache_DoesNotRememberAbandonedReads(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	const topic = "rtabandoned"
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, ok := c.GetSource(canceled, topic); ok {
+		t.Fatal("an abandoned read must not resolve")
+	}
+
+	// A later live lookup still has to reach the store.
+	if _, ok := c.GetSource(context.Background(), topic); ok {
+		t.Fatal("the topic is genuinely absent")
+	}
+	assert.EqualValues(t, 2, store.gets.Load(), "an abandoned read must not be remembered as absence")
+}

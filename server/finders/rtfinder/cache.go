@@ -102,6 +102,12 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 	// Cold read from the shared store without holding the lock.
 	s, err := c.loadFromStore(ctx, topic)
 	if s == nil {
+		// A caller that has gone away taught us nothing about the topic, so
+		// its cancellation must not be remembered as an absence.
+		if ctx.Err() != nil {
+			log.For(ctx).Trace().Str("topic", topic).Msg("rtcache: topic read abandoned by caller")
+			return nil, false
+		}
 		c.lock.Lock()
 		c.missing[topic] = time.Now()
 		c.lock.Unlock()
@@ -184,13 +190,19 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 // loadFromStore reads and decodes a topic's last payload.
 //
 // A nil Source with a nil error means the store definitely held nothing; a
-// non-nil error means it could not say. Callers treat both as a miss.
+// non-nil error means it could not say. Callers treat both as a miss, but must
+// check their own context before concluding anything: a read cut short by the
+// caller says nothing about the topic.
 func (c *storeCache) loadFromStore(ctx context.Context, topic string) (*Source, error) {
 	rctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 	data, ok, err := c.store.Get(rctx, lastKey(topic))
 	if err != nil {
-		log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: error reading last data")
+		// A read that failed because the caller went away is not a store
+		// problem, and logging it as one floods on every client disconnect.
+		if ctx.Err() == nil {
+			log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: error reading last data")
+		}
 		return nil, err
 	}
 	if !ok || len(data) == 0 {
