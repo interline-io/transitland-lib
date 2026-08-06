@@ -84,21 +84,61 @@ func (f *Finder) RouteHeadwaysByRouteIDs(ctx context.Context, limit *int, keys [
 	return arrangeGroup(keys, ents, func(ent *model.RouteHeadway) int { return ent.RouteID }), err
 }
 
-func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteStopPattern, error) {
-	q := sq.StatementBuilder.
-		Select("route_id", "direction_id", "stop_pattern_id", "count(*) as count").
-		From("gtfs_trips").
-		Where(In("route_id", keys)).
-		GroupBy("route_id,direction_id,stop_pattern_id").
-		OrderBy("route_id,count desc").
-		Limit(finderCheckLimit(limit))
+// RouteStopPatternsByRouteIDs aggregates each route's trips into its distinct stop
+// patterns. A service date filter applies to the trips before they are grouped, so
+// `count` is that day's trip count and a pattern nobody runs that day drops out.
+//
+// min(id) is the same trip `trips(limit: 1)` returns, since that orders by
+// (feed_version_id, id) — but scoped to the date when one is given, so the
+// representative is a trip that actually runs.
+func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, where *model.RouteStopPatternFilter, keys []model.FVPair) ([][]*model.RouteStopPattern, error) {
 	var ents []*model.RouteStopPattern
-	err := dbutil.Select(ctx,
-		f.db,
-		q,
-		&ents,
-	)
-	return arrangeGroup(keys, ents, func(ent *model.RouteStopPattern) int { return ent.RouteID }), err
+	// Grouped by feed version: each resolves the requested date against its own
+	// service window, and gtfs_trips is scanned per feed version anyway.
+	groups := map[int][]int{}
+	for _, key := range keys {
+		groups[key.FeedVersionID] = append(groups[key.FeedVersionID], key.EntityID)
+	}
+	for fvid, routeIds := range groups {
+		q := sq.StatementBuilder.
+			Select(
+				"gtfs_trips.feed_version_id",
+				"gtfs_trips.route_id",
+				"gtfs_trips.direction_id",
+				"gtfs_trips.stop_pattern_id",
+				"count(*) as count",
+				"min(gtfs_trips.id) as representative_trip_id",
+			).
+			From("gtfs_trips").
+			Where(sq.Eq{"gtfs_trips.feed_version_id": fvid}).
+			Where(In("gtfs_trips.route_id", routeIds)).
+			GroupBy("gtfs_trips.feed_version_id,gtfs_trips.route_id,gtfs_trips.direction_id,gtfs_trips.stop_pattern_id").
+			OrderBy("gtfs_trips.route_id,count desc").
+			Limit(finderCheckLimit(limit))
+		// Guarded on a date actually being asked for: the service window costs two
+		// queries of its own, and use_service_window alone resolves to nothing.
+		if where != nil && (where.ServiceDate != nil || where.RelativeDate != nil) {
+			fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
+			if err != nil {
+				return nil, err
+			}
+			serviceDate, err := resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
+			if err != nil {
+				return nil, err
+			}
+			if serviceDate != nil {
+				q = serviceDateLateral(q, *serviceDate)
+			}
+		}
+		var groupEnts []*model.RouteStopPattern
+		if err := dbutil.Select(ctx, f.db, q, &groupEnts); err != nil {
+			return nil, err
+		}
+		ents = append(ents, groupEnts...)
+	}
+	return arrangeGroup(keys, ents, func(ent *model.RouteStopPattern) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.RouteID}
+	}), nil
 }
 
 // RouteGeometriesByRouteIDs reconstructs each route's geometry from the shapes it

@@ -367,10 +367,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		RoutesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.RoutesByIDs),
-		RouteStopPatternsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			paramGroupAdapter(dbf.RouteStopPatternsByRouteIDs),
-			func(p routeStopPatternLoaderParam) (int, bool, *int) {
-				return p.RouteID, false, nil
+		RouteStopPatternsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.RouteStopPatternsByRouteIDs,
+			func(p routeStopPatternLoaderParam) (model.FVPair, *model.RouteStopPatternFilter, *int) {
+				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.RouteID}, p.Where, nil
 			},
 		),
 		RouteStopsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,

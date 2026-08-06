@@ -204,7 +204,9 @@ type censusSourceTableLoaderParam struct {
 }
 
 type routeStopPatternLoaderParam struct {
-	RouteID int
+	FeedVersionID int
+	RouteID       int
+	Where         *model.RouteStopPatternFilter
 }
 
 type segmentPatternLoaderParam struct {

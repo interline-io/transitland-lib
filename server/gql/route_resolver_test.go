@@ -203,6 +203,28 @@ func TestRouteResolver(t *testing.T) {
 			selectExpect: []string{"132", "124", "56", "50", "2"},
 		},
 		{
+			name: "route patterns representative_trip",
+			query: `{
+				routes(where: {feed_onestop_id: "BA", route_id: "03"}) {
+				  patterns {
+					count
+					representative_trip { trip_id }
+					trips(limit: 1) { trip_id }
+				  }
+				}
+			  }`,
+			f: func(t *testing.T, jj string) {
+				// min(id) in the aggregate is the same trip trips(limit:1) returns,
+				// which orders by (feed_version_id, id).
+				rep := gjson.Get(jj, "routes.0.patterns.#.representative_trip.trip_id").Array()
+				via := gjson.Get(jj, "routes.0.patterns.#.trips.0.trip_id").Array()
+				assert.Equal(t, len(via), len(rep), "a representative trip per pattern")
+				for i := range via {
+					assert.Equal(t, via[i].String(), rep[i].String(), "pattern %d", i)
+				}
+			},
+		},
+		{
 			name: "route patterns inactive fv",
 			query: `{
 				routes(where: {feed_onestop_id: "EX", feed_version_sha1: "43e2278aa272879c79460582152b04e7487f0493", route_id: "AAMV"}) {
@@ -415,6 +437,26 @@ func TestRouteResolver_Date(t *testing.T) {
 				vars:         hw{"route_id": "Bu-130", "service_date": "2018-06-18"}, // use baby bullet
 				selector:     "routes.0.trips.#.trip_id",
 				selectExpect: []string{"305", "309", "313", "319", "323", "329", "365", "371", "375", "381", "385", "310", "314", "320", "324", "330", "360", "366", "370", "376", "380", "386"},
+			},
+		},
+		{
+			whenUtc: "2018-05-30T22:00:00Z",
+			testcase: testcase{
+				name:  "patterns service date",
+				query: `query($route_id: String!, $service_date:Date) { routes(where:{route_id:$route_id}) { patterns(where:{service_date:$service_date}) { count representative_trip { trip_id } } } }`,
+				vars:  hw{"route_id": "Bu-130", "service_date": "2018-06-18"},
+				f: func(t *testing.T, jj string) {
+					// The same 22 trips the trips() query returns for this date,
+					// redistributed across the patterns that run it.
+					total := 0
+					for _, c := range gjson.Get(jj, "routes.0.patterns.#.count").Array() {
+						total += int(c.Int())
+					}
+					assert.Equal(t, 22, total, "day-scoped counts sum to that day's trips")
+					for _, r := range gjson.Get(jj, "routes.0.patterns.#.representative_trip.trip_id").Array() {
+						assert.NotEmpty(t, r.String(), "representative trip resolves")
+					}
+				},
 			},
 		},
 		{
