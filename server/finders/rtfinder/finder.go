@@ -3,7 +3,6 @@ package rtfinder
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -220,17 +219,19 @@ func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *in
 }
 
 func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
-	tid := t.TripID
 	seq := st.StopSequence.Int()
+	// Resolve the trip in each RT feed once. Both passes below ask every topic
+	// the same question, and a feed version can be associated with dozens of RT
+	// feeds, so answering twice is most of the work.
 	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
-	// Attempt to match on stop sequence
+	var rtTrips []*pb.TripUpdate
 	for _, topic := range topics {
-		// Match on trip
-		rtTrip, rtok := f.getTrip(ctx, topic, tid.Val)
-		if !rtok {
-			continue
+		if rtTrip, ok := f.getTrip(ctx, topic, t.TripID.Val); ok {
+			rtTrips = append(rtTrips, rtTrip)
 		}
-		// Match on stop sequence
+	}
+	// Attempt to match on stop sequence
+	for _, rtTrip := range rtTrips {
 		for _, ste := range rtTrip.StopTimeUpdate {
 			if int(ste.GetStopSequence()) == seq {
 				log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Int("seq", seq).Msgf("found stop time update on trip_id/stop_sequence")
@@ -239,12 +240,7 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 		}
 	}
 	// Attempt to match on stop id
-	for _, topic := range topics {
-		// Match on trip
-		rtTrip, rtok := f.getTrip(ctx, topic, tid.Val)
-		if !rtok {
-			continue
-		}
+	for _, rtTrip := range rtTrips {
 		// If no match on stop sequence, match on stop_id if stop is not visited twice
 		check := map[string]int{}
 		for _, ste := range rtTrip.StopTimeUpdate {
@@ -432,8 +428,10 @@ func newTranslation(v *pb.TranslatedString) []*model.RTTranslation {
 	return ret
 }
 
+// getTopicKey is called once per associated RT feed per stop time, so it
+// concatenates rather than formatting.
 func getTopicKey(topic string, t string) string {
-	return fmt.Sprintf("rtdata:%s:%s", topic, t)
+	return "rtdata:" + topic + ":" + t
 }
 
 func copyPtr[T any, PT *T](v PT) PT {

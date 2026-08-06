@@ -519,3 +519,37 @@ func TestStopRT_Alerts(t *testing.T) {
 		testRt(t, tc)
 	}
 }
+
+// schedule_relationship must answer the same whether or not arrival and
+// departure are also selected. It once did not — population was gated on those
+// two, so asking for it alone reported STATIC for rescheduled stop times.
+func TestStopRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
+	const query = `query($stop_id: String!, $stf: StopTimeFilter) {
+		stops(where: {stop_id: $stop_id}) {
+			stop_times(where: $stf) {
+				schedule_relationship
+				trip { trip_id }
+			}
+		}
+	}`
+	testRt(t, rtTestCase{
+		name:    "schedule_relationship alone",
+		query:   query,
+		vars:    rtTestStopQueryVars(),
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+		cb: func(t *testing.T, jj string) {
+			checkTrip := "1131530WKDY"
+			found := false
+			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
+				if st.Get("trip.trip_id").String() != checkTrip {
+					continue
+				}
+				found = true
+				assert.Equal(t, "SCHEDULED", st.Get("schedule_relationship").String(), "schedule_relationship")
+			}
+			if !found {
+				t.Errorf("expected to find trip '%s'", checkTrip)
+			}
+		},
+	})
+}

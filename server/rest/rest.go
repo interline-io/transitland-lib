@@ -29,6 +29,40 @@ var MAXLIMIT = 1_000
 // MAXRADIUS is the maximum point search radius
 const MAXRADIUS = 100 * 1000.0
 
+// mountPrefix returns the mount's absolute public base URL: restPrefix (the
+// mount's parent) plus the mount segment, recovered by cutting the route-owned
+// tail off urlPath. routeMarker is the matched route's literal head ("" for a
+// route at "/"), and must come from the route pattern — chi.URLParam values
+// stay percent-encoded while urlPath is decoded.
+func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
+	p := strings.TrimRight(urlPath, "/")
+	mount := p
+	if routeMarker != "" {
+		// First occurrence, not last: urlPath is decoded, so a path parameter can
+		// carry a second literal marker and re-anchor the mount inside it.
+		i := strings.Index(p, routeMarker)
+		if i < 0 {
+			// Only reachable if something upstream rewrote the path. Fall back to
+			// the bare prefix rather than splice the request path into a URL.
+			return restPrefix
+		}
+		mount = p[:i]
+	}
+	// A protocol-relative mount would redirect off-site from a relative Location.
+	// A non-empty restPrefix already fixes the authority, so only guard here.
+	if restPrefix == "" && isProtocolRelative(mount) {
+		return ""
+	}
+	return restPrefix + mount
+}
+
+// isProtocolRelative reports whether s reads as //host/... rather than a path.
+// Backslashes count: browsers treat \ as / when parsing a special scheme.
+func isProtocolRelative(s string) bool {
+	isSlash := func(c byte) bool { return c == '/' || c == '\\' }
+	return len(s) > 1 && isSlash(s[0]) && isSlash(s[1])
+}
+
 // NewServer .
 func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	r := chi.NewRouter()
@@ -52,26 +86,11 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	// Redirect root to OpenAPI documentation
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		cfg := model.ForContext(r.Context())
-		// chi does not strip r.URL.Path; it contains the full path (e.g. /rest/)
-		// Use it to build the absolute redirect URL, consistent with how pagination links work
-		path := strings.TrimRight(r.URL.Path, "/")
-		http.Redirect(w, r, cfg.RestPrefix+path+"/openapi.json", http.StatusMovedPermanently)
+		http.Redirect(w, r, mountPrefix(cfg.RestPrefix, r.URL.Path, "")+"/openapi.json", http.StatusMovedPermanently)
 	})
 
 	// OpenAPI Schema endpoint
-	r.HandleFunc("/openapi.json", func(w http.ResponseWriter, r *http.Request) {
-		cfg := model.ForContext(r.Context())
-		schema, err := GenerateOpenAPI(cfg.RestPrefix)
-		if err != nil {
-			http.Error(w, "Failed to generate schema", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(schema); err != nil {
-			http.Error(w, "Failed to encode schema", http.StatusInternalServerError)
-			return
-		}
-	})
+	r.Handle("/openapi.json", NewOpenAPIHandler())
 
 	r.HandleFunc("/feeds.{format}", feedIndexHandler)
 	r.HandleFunc("/feeds", feedIndexHandler)
@@ -353,7 +372,7 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 				rq := newUrl.Query()
 				rq.Set("after", strconv.Itoa(lastId))
 				newUrl.RawQuery = rq.Encode()
-				meta["next"] = cfg.RestPrefix + newUrl.String()
+				meta["next"] = cfg.Link(ctx, cfg.RestPrefix+newUrl.String())
 			}
 			response["meta"] = meta
 		}

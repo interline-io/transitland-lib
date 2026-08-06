@@ -258,6 +258,28 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	return q
 }
 
+// Extent of the geometry aliased as ne_geom.g, in whichever longitude frame is
+// narrower. A shape crossing the antimeridian spans nearly the whole globe in the
+// normal frame — Alaska measures 358.9 degrees — and its true width once shifted
+// into [0,360), where the same polygon is 57.5. Everything else measures the same
+// in both frames and the tie goes to the normal one, so longitudes stay within
+// [-180,180] unless the place genuinely crosses the line.
+const placeBboxSQL = `case
+	when ST_XMax(ST_Extent(ne_geom.g)) - ST_XMin(ST_Extent(ne_geom.g))
+		<= ST_XMax(ST_Extent(ST_ShiftLongitude(ne_geom.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(ne_geom.g)))
+	then ST_SetSRID(ST_Extent(ne_geom.g)::geometry, 4326)
+	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(ne_geom.g))::geometry, 4326)
+end as bbox`
+
+// The same choice for a country, which aggregates every region it contains rather
+// than the rows the query joined.
+const placeBboxCountrySQL = `(select case
+	when ST_XMax(ST_Extent(w.g)) - ST_XMin(ST_Extent(w.g))
+		<= ST_XMax(ST_Extent(ST_ShiftLongitude(w.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(w.g)))
+	then ST_SetSRID(ST_Extent(w.g)::geometry, 4326)
+	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(w.g))::geometry, 4326)
+end from (select whole.geometry::geometry as g from ne_10m_admin_1_states_provinces whole where whole.admin = tlap.adm0name) w) as bbox`
+
 // placeBboxSelect adds the bounding box column to a place query.
 //
 // Cities are points in Natural Earth and regions are polygons, so they come from
@@ -286,17 +308,20 @@ func placeBboxSelect(q sq.SelectBuilder, level *model.PlaceAggregationLevel) sq.
 	case cityLevel:
 		// The join is per row, so a level that groups several cities together —
 		// same name in more than one region, or in more than one country — widens
-		// the box to cover them, the way its count already covers them.
+		// the box to cover them, the way its count already covers them. The buffer
+		// is aliased through a lateral so the frame comparison names it once.
 		q = q.
 			JoinClause("left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name").
-			Column("ST_SetSRID(ST_Extent(ST_Buffer(ne_place.geometry, ?)::geometry)::geometry, 4326) as bbox", placeCityRadius)
+			JoinClause("left join lateral (select ST_Buffer(ne_place.geometry, ?)::geometry as g) ne_geom on true", placeCityRadius).
+			Column(placeBboxSQL)
 	case singleUnit:
 		q = q.
 			JoinClause("left join ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = tlap.adm1name and ne_admin.admin = tlap.adm0name").
-			Column("ST_SetSRID(ST_Extent(ne_admin.geometry::geometry)::geometry, 4326) as bbox")
+			JoinClause("left join lateral (select ne_admin.geometry::geometry as g) ne_geom on true").
+			Column(placeBboxSQL)
 	default:
 		// A country: every region it contains, not only those with operators.
-		q = q.Column("(select ST_SetSRID(ST_Extent(whole.geometry::geometry)::geometry, 4326) from ne_10m_admin_1_states_provinces whole where whole.admin = tlap.adm0name) as bbox")
+		q = q.Column(placeBboxCountrySQL)
 	}
 	return q
 }

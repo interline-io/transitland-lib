@@ -37,7 +37,20 @@ type Config struct {
 	UseMaterialized          bool
 	UseGeohashFilter         bool
 	AllowHTTPFetchUnfiltered bool
-	RestPrefix               string
+	// RestPrefix is the public prefix of the REST mount's *parent*, e.g.
+	// https://transit.land/api/v2 for a server reachable at .../api/v2/rest. The
+	// mount segment is not known at config time; the server recovers it from the
+	// request path. Empty yields host-relative links.
+	RestPrefix string
+	// LinkURL rewrites a public URL this server generated for a client to
+	// follow, such as the REST pagination link. Hosts set it to re-add
+	// parameters the caller must present again — an API key that arrived in the
+	// query string and was taken off the request before it reached a handler.
+	// Nil leaves generated URLs unchanged.
+	//
+	// This package deliberately sees only the URL: how a caller authenticated
+	// is not something it should know.
+	LinkURL func(ctx context.Context, u string) string
 	// JobsPrefix is the public prefix of the jobserver mount (analogue of
 	// RestPrefix for the REST mount), used to build absolute artifact download
 	// links that are correct behind a path-rewriting ingress. Empty yields
@@ -60,6 +73,15 @@ var finderCtxKey = &contextKey{"finderConfig"}
 
 type contextKey struct {
 	name string
+}
+
+// Link applies LinkURL to a generated URL, or returns it unchanged when no
+// host rewriter is set.
+func (cfg Config) Link(ctx context.Context, u string) string {
+	if cfg.LinkURL == nil {
+		return u
+	}
+	return cfg.LinkURL(ctx, u)
 }
 
 func ForContext(ctx context.Context) Config {

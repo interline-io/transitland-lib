@@ -90,9 +90,9 @@ Open http://localhost:8080/ in your web browser to see the GraphQL browser, or u
 
 The REST API is documented with OpenAPI 3.0:
 - **Interactive documentation**: http://localhost:8080/rest/openapi.json
-- **Static schema**: [docs/openapi/rest.json](docs/openapi/rest.json)
+- **Static schema**: [doc/openapi/rest.json](doc/openapi/rest.json)
 
-The "example" server instance configured by the  `transitland server` command runs without authentication or authorization. Auth configuration is beyond the scope of this example command but can be added by configuring the server in your own package and adding HTTP middlewares to set user context and permissions data. You can use `cmd/tlserver/main.go` as an example to get started; it uses only public APIs from this package. (Earlier versions of `transitland server` included more built-in auth middlewares, but in our experience these are almost always custom per-installation, and were removed from this repo.) Additionally, this example server configuration exposes Go profiler endpoints on `/debug/pprof/...`. 
+The "example" server instance configured by the  `transitland server` command runs without authentication or authorization. Auth configuration is beyond the scope of this example command but can be added by configuring the server in your own package and adding HTTP middlewares to set user context and permissions data. You can use `cmd/transitland/main.go` as an example to get started; it uses only public APIs from this package. (Earlier versions of `transitland server` included more built-in auth middlewares, but in our experience these are almost always custom per-installation, and were removed from this repo.) Additionally, this example server configuration exposes Go profiler endpoints on `/debug/pprof/...`. 
 
 ## Database migrations
 
@@ -126,7 +126,7 @@ For running tests locally, the following instructions should help get started:
    - Will halt with an error (intentionally) if this database already exists
    - Runs migrations in `transitland-lib/schema/postgres/migrations`
    - Unpacks and imports the Natural Earth datasets bundled with `transitland-lib`
-   - Builds and installs the `cmd/tlserver` command
+   - Builds and installs the `cmd/transitland` command
    - Sets up test feeds contained in `testdata/server/server-test.dmfr.json`
    - Fetches and imports feeds contained in `testdata/server/gtfs`
    - Creates additional fixtures defined in `testdata/server/test_supplement.pgsql`
