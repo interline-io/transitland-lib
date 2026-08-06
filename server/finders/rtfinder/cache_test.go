@@ -188,9 +188,8 @@ func TestStoreCache_RemembersMissingTopics(t *testing.T) {
 }
 
 // A store that cannot answer is remembered the same way an empty one is.
-// Callers make thousands of lookups per request, so retrying each of them
-// against a failing store would turn one slow dependency into a request that
-// never finishes.
+// Retrying every lookup against a failing store would turn one slow dependency
+// into a request that never finishes.
 func TestStoreCache_RemembersFailedReads(t *testing.T) {
 	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
 	store.fail.Store(true)

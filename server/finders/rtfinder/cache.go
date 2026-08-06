@@ -14,8 +14,7 @@ const (
 	lastTTL = 5 * time.Minute
 	// missingTTL is how long a topic the store could not answer for is
 	// remembered as absent. Roughly a feed's publish cadence: checking more
-	// often cannot find anything new, and a cold read is the only way a topic
-	// that starts publishing is noticed once drain is filtered to held topics.
+	// often cannot find anything new.
 	missingTTL = 1 * time.Minute
 	// reconnectDelay paces re-subscription attempts.
 	reconnectDelay = 1 * time.Second
@@ -41,10 +40,8 @@ type storeCache struct {
 	wg      sync.WaitGroup
 	lock    sync.Mutex
 	sources map[string]*Source
-	// missing records topics the store had nothing for. Callers loop over
-	// every RT feed associated with a feed version, most of which carry
-	// nothing for a given trip, and without this each one is a fresh round
-	// trip on every call.
+	// missing records topics the store had nothing for, so a caller looping
+	// over dozens of associated feeds does not re-read each one every time.
 	missing map[string]time.Time
 }
 
@@ -108,10 +105,9 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 		c.lock.Lock()
 		c.missing[topic] = time.Now()
 		c.lock.Unlock()
-		// Both outcomes are remembered, so a caller looping over every
-		// associated feed does not re-read each one. They are logged apart
-		// because they mean different things: absent is a quiet feed, failed
-		// is the store not answering.
+		// Both outcomes are remembered so a caller looping over every
+		// associated feed does not re-read each one, but they are logged
+		// apart: absent is a quiet feed, failed is the store not answering.
 		if err != nil {
 			log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic read failed, not retried until this expires")
 		} else {
@@ -185,13 +181,10 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 	}
 }
 
-// loadFromStore reads a topic's last payload and decodes it into a fresh
-// Source. The read honors the caller's context, so a canceled GetSource aborts
-// promptly.
+// loadFromStore reads and decodes a topic's last payload.
 //
 // A nil Source with a nil error means the store definitely held nothing; a
-// non-nil error means it could not say. Callers treat both as a miss, but only
-// the caller knows what to do about the difference.
+// non-nil error means it could not say. Callers treat both as a miss.
 func (c *storeCache) loadFromStore(ctx context.Context, topic string) (*Source, error) {
 	rctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -212,8 +205,7 @@ func (c *storeCache) loadFromStore(ctx context.Context, topic string) (*Source, 
 }
 
 // watching reports whether this process holds a snapshot for topic, which is
-// true only of topics a caller has asked for. It is the subscription filter:
-// announcements for anything else are dropped before the store is read.
+// true only of topics a caller has asked for.
 func (c *storeCache) watching(topic string) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
