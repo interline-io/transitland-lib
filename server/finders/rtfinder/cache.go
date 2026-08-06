@@ -12,6 +12,10 @@ import (
 const (
 	// lastTTL bounds how long a topic's last-seen payload survives in the store.
 	lastTTL = 5 * time.Minute
+	// missingTTL is how long a topic the store could not answer for is
+	// remembered as absent. Roughly a feed's publish cadence: checking more
+	// often cannot find anything new.
+	missingTTL = 1 * time.Minute
 	// reconnectDelay paces re-subscription attempts.
 	reconnectDelay = 1 * time.Second
 	// updatesChannel carries topic pointers to the notify-then-read listeners.
@@ -36,6 +40,9 @@ type storeCache struct {
 	wg      sync.WaitGroup
 	lock    sync.Mutex
 	sources map[string]*Source
+	// missing records topics the store had nothing for, so a caller looping
+	// over dozens of associated feeds does not re-read each one every time.
+	missing map[string]time.Time
 }
 
 func newStoreCache(store kvcache.Store) *storeCache {
@@ -45,6 +52,7 @@ func newStoreCache(store kvcache.Store) *storeCache {
 		ctx:     ctx,
 		cancel:  cancel,
 		sources: map[string]*Source{},
+		missing: map[string]time.Time{},
 	}
 	if ps, ok := store.(kvcache.PubSubStore); ok {
 		c.pubsub = ps
@@ -86,12 +94,37 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 		c.lock.Unlock()
 		return s, true
 	}
-	c.lock.Unlock()
-	// Cold read from the shared store without holding the lock.
-	s := c.loadFromStore(ctx, topic)
-	if s == nil {
+	if at, ok := c.missing[topic]; ok && time.Since(at) < missingTTL {
+		c.lock.Unlock()
 		return nil, false
 	}
+	c.lock.Unlock()
+	// Cold read from the shared store without holding the lock.
+	s, err := c.loadFromStore(ctx, topic)
+	if s == nil {
+		// A caller that has gone away taught us nothing about the topic, so
+		// its cancellation must not be remembered as an absence.
+		if ctx.Err() != nil {
+			log.For(ctx).Trace().Str("topic", topic).Msg("rtcache: topic read abandoned by caller")
+			return nil, false
+		}
+		c.lock.Lock()
+		c.missing[topic] = time.Now()
+		c.lock.Unlock()
+		// Both outcomes are remembered so a caller looping over every
+		// associated feed does not re-read each one, but they are logged
+		// apart: absent is a quiet feed, failed is the store not answering.
+		if err != nil {
+			log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic read failed, not retried until this expires")
+		} else {
+			log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic absent from store, not retried until this expires")
+		}
+		return nil, false
+	}
+	// Only store reads are logged. The local and remembered paths are map
+	// hits, and a caller looping over every associated feed for every stop
+	// time makes logging them thousands of lines a request.
+	log.For(ctx).Trace().Str("topic", topic).Msg("rtcache: topic read")
 	c.lock.Lock()
 	// Double-check: a concurrent update may have inserted it meanwhile.
 	if existing, ok := c.sources[topic]; ok {
@@ -140,7 +173,13 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 				return
 			}
 			topic := string(msg)
-			if s := c.loadFromStore(c.ctx, topic); s != nil {
+			// Every RT fetch in the fleet announces on this one channel, so a
+			// process must take only what it serves. Without this each process
+			// reads and decodes every feed in the system on every fetch.
+			if !c.watching(topic) {
+				continue
+			}
+			if s, _ := c.loadFromStore(c.ctx, topic); s != nil {
 				c.putSource(topic, s)
 				log.For(c.ctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
 			}
@@ -148,26 +187,42 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 	}
 }
 
-// loadFromStore reads a topic's last payload and decodes it into a fresh
-// Source. It returns nil on a miss or any error (treated as a miss). The
-// read honors the caller's context, so a canceled GetSource aborts promptly.
-func (c *storeCache) loadFromStore(ctx context.Context, topic string) *Source {
+// loadFromStore reads and decodes a topic's last payload.
+//
+// A nil Source with a nil error means the store definitely held nothing; a
+// non-nil error means it could not say. Callers treat both as a miss, but must
+// check their own context before concluding anything: a read cut short by the
+// caller says nothing about the topic.
+func (c *storeCache) loadFromStore(ctx context.Context, topic string) (*Source, error) {
 	rctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 	data, ok, err := c.store.Get(rctx, lastKey(topic))
 	if err != nil {
-		log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: error reading last data")
-		return nil
+		// A read that failed because the caller went away is not a store
+		// problem, and logging it as one floods on every client disconnect.
+		if ctx.Err() == nil {
+			log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: error reading last data")
+		}
+		return nil, err
 	}
 	if !ok || len(data) == 0 {
-		return nil
+		return nil, nil
 	}
 	s, err := c.decode(ctx, topic, data)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: error decoding last data")
-		return nil
+		return nil, err
 	}
-	return s
+	return s, nil
+}
+
+// watching reports whether this process holds a snapshot for topic, which is
+// true only of topics a caller has asked for.
+func (c *storeCache) watching(topic string) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, ok := c.sources[topic]
+	return ok
 }
 
 // putSource installs s as the local snapshot for topic, replacing any prior one.
