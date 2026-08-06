@@ -12,10 +12,11 @@ import (
 const (
 	// lastTTL bounds how long a topic's last-seen payload survives in the store.
 	lastTTL = 5 * time.Minute
-	// missingTTL is how long a topic the store had nothing for is remembered
-	// as absent. Short, because a cold read is the only way a newly published
-	// topic is noticed once drain is filtered to held topics.
-	missingTTL = 5 * time.Second
+	// missingTTL is how long a topic the store could not answer for is
+	// remembered as absent. Roughly a feed's publish cadence: checking more
+	// often cannot find anything new, and a cold read is the only way a topic
+	// that starts publishing is noticed once drain is filtered to held topics.
+	missingTTL = 1 * time.Minute
 	// reconnectDelay paces re-subscription attempts.
 	reconnectDelay = 1 * time.Second
 	// updatesChannel carries topic pointers to the notify-then-read listeners.
@@ -102,17 +103,26 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 	}
 	c.lock.Unlock()
 	// Cold read from the shared store without holding the lock.
-	s := c.loadFromStore(ctx, topic)
-	// Only store reads are logged. The local and remembered-absent paths are
-	// map hits, and a caller looping over every associated RT feed for every
-	// stop time makes logging them thousands of lines a request.
-	log.For(ctx).Trace().Str("topic", topic).Bool("found", s != nil).Msg("rtcache: topic read")
+	s, err := c.loadFromStore(ctx, topic)
 	if s == nil {
 		c.lock.Lock()
 		c.missing[topic] = time.Now()
 		c.lock.Unlock()
+		// Both outcomes are remembered, so a caller looping over every
+		// associated feed does not re-read each one. They are logged apart
+		// because they mean different things: absent is a quiet feed, failed
+		// is the store not answering.
+		if err != nil {
+			log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic read failed, not retried until this expires")
+		} else {
+			log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic absent from store, not retried until this expires")
+		}
 		return nil, false
 	}
+	// Only store reads are logged. The local and remembered paths are map
+	// hits, and a caller looping over every associated feed for every stop
+	// time makes logging them thousands of lines a request.
+	log.For(ctx).Trace().Str("topic", topic).Msg("rtcache: topic read")
 	c.lock.Lock()
 	// Double-check: a concurrent update may have inserted it meanwhile.
 	if existing, ok := c.sources[topic]; ok {
@@ -167,7 +177,7 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 			if !c.watching(topic) {
 				continue
 			}
-			if s := c.loadFromStore(c.ctx, topic); s != nil {
+			if s, _ := c.loadFromStore(c.ctx, topic); s != nil {
 				c.putSource(topic, s)
 				log.For(c.ctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
 			}
@@ -176,25 +186,29 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 }
 
 // loadFromStore reads a topic's last payload and decodes it into a fresh
-// Source. It returns nil on a miss or any error (treated as a miss). The
-// read honors the caller's context, so a canceled GetSource aborts promptly.
-func (c *storeCache) loadFromStore(ctx context.Context, topic string) *Source {
+// Source. The read honors the caller's context, so a canceled GetSource aborts
+// promptly.
+//
+// A nil Source with a nil error means the store definitely held nothing; a
+// non-nil error means it could not say. Callers treat both as a miss, but only
+// the caller knows what to do about the difference.
+func (c *storeCache) loadFromStore(ctx context.Context, topic string) (*Source, error) {
 	rctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 	data, ok, err := c.store.Get(rctx, lastKey(topic))
 	if err != nil {
 		log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: error reading last data")
-		return nil
+		return nil, err
 	}
 	if !ok || len(data) == 0 {
-		return nil
+		return nil, nil
 	}
 	s, err := c.decode(ctx, topic, data)
 	if err != nil {
 		log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: error decoding last data")
-		return nil
+		return nil, err
 	}
-	return s
+	return s, nil
 }
 
 // watching reports whether this process holds a snapshot for topic, which is

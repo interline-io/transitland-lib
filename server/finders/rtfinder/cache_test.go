@@ -2,6 +2,7 @@ package rtfinder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -150,10 +151,14 @@ func TestStoreCache_IgnoresUnwatchedTopics(t *testing.T) {
 type countingStore struct {
 	*kvcache.MemoryStore
 	gets atomic.Int64
+	fail atomic.Bool
 }
 
 func (s *countingStore) Get(ctx context.Context, key string) ([]byte, bool, error) {
 	s.gets.Add(1)
+	if s.fail.Load() {
+		return nil, false, errors.New("store unavailable")
+	}
 	return s.MemoryStore.Get(ctx, key)
 }
 
@@ -180,4 +185,23 @@ func TestStoreCache_RemembersMissingTopics(t *testing.T) {
 	s, ok := c.GetSource(ctx, topic)
 	require.True(t, ok)
 	assert.EqualValues(t, uint64(1234), s.GetTimestamp())
+}
+
+// A store that cannot answer is remembered the same way an empty one is.
+// Callers make thousands of lookups per request, so retrying each of them
+// against a failing store would turn one slow dependency into a request that
+// never finishes.
+func TestStoreCache_RemembersFailedReads(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	store.fail.Store(true)
+	c := newStoreCache(store)
+	defer c.Close()
+
+	ctx := context.Background()
+	for i := 0; i < 50; i++ {
+		if _, ok := c.GetSource(ctx, "rtfailing"); ok {
+			t.Fatal("a failed read must not resolve")
+		}
+	}
+	assert.EqualValues(t, 1, store.gets.Load(), "a failing store should be read once, not once per lookup")
 }
