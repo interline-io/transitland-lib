@@ -82,6 +82,23 @@
           "longitude": -122.22418
         }
       }
+    },
+    {
+      "id": "1005",
+      "vehicle": {
+        "trip": {
+          "tripId": "NOSUCHTRIP",
+          "routeId": "99"
+        },
+        "vehicle": {
+          "id": "1005"
+        },
+        "position": {
+          "latitude": 37.61597,
+          "longitude": -122.39240
+        },
+        "stopId": "NOSUCHSTOP"
+      }
     }
   ]
 }

@@ -1704,9 +1704,13 @@ type ValidationReportFilter struct {
 // [Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed.
 //
 // Values are passed through from the GTFS-RT message as-is. The `trip`, `route` and `stop` fields resolve the message's `trip_id`, `route_id` and `stop_id` against the static GTFS data of the feed version the vehicle was matched to; each is null when the id is absent from the message or not found in the schedule.
+//
+// Positions are the last values seen for each vehicle and carry no freshness guarantee; check `timestamp` before drawing a vehicle as current.
 type VehiclePosition struct {
-	// Onestop ID of the feed the vehicle was matched to
-	FeedOnestopID string `json:"feed_onestop_id"`
+	// Identifier of the GTFS-RT FeedEntity carrying this vehicle. Unique within its feed and stable between messages, so `rt_feed_onestop_id` and `id` together identify a vehicle across polls
+	ID string `json:"id"`
+	// Onestop ID of the GTFS-RT feed this vehicle came from. Unlike the `feed_onestop_ids` search filter, this is the realtime feed, not the static GTFS feed
+	RtFeedOnestopID string `json:"rt_feed_onestop_id"`
 	// Vehicle descriptor from the GTFS-RT VehiclePosition
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`
 	// Trip descriptor from the GTFS-RT VehiclePosition
@@ -1742,7 +1746,7 @@ type VehiclePosition struct {
 
 // Search options for GTFS-RT vehicle positions.
 //
-// At least one filter must be given. Filters are combined: a vehicle is returned only if it matches every filter present. `agency_onestop_ids`, `feed_onestop_ids` and `bbox` select the agencies whose realtime feeds are read; `route_onestop_ids` and `trip_ids` additionally restrict which vehicles from those feeds are returned, matched against the GTFS-RT trip descriptor.
+// At least one of `bbox`, `agency_onestop_ids`, `feed_onestop_ids` or `route_onestop_ids` must be given; `trip_ids` alone is not enough to scope a search. Filters are combined: a vehicle is returned only if it matches every filter present.
 type VehiclePositionFilter struct {
 	// Search for vehicles within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`

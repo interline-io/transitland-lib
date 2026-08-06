@@ -5,18 +5,32 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
 )
 
 const (
-	// A large operator runs well over the default 1,000 maximum, and vehicles
+	// A large operator runs well over the API-wide 1,000 maximum, and vehicles
 	// are served from the realtime cache rather than the database.
 	RESOLVER_VEHICLE_POSITION_MAXLIMIT = 10_000
+	// RESOLVER_VEHICLE_POSITION_DEFAULT_LIMIT is what an unlimited query
+	// returns. The API-wide default of 100 is far too small for a map viewport.
+	RESOLVER_VEHICLE_POSITION_DEFAULT_LIMIT = 1_000
 	// RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT bounds how many agencies and
 	// routes a single vehicle_positions query resolves its filter to.
 	RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT = 1_000
 )
+
+// vehiclePositionLimit applies this field's own default in place of the
+// API-wide one, which a map viewport would overrun immediately.
+func vehiclePositionLimit(limit *int) *int {
+	if limit == nil {
+		a := RESOLVER_VEHICLE_POSITION_DEFAULT_LIMIT
+		return &a
+	}
+	return resolverCheckLimitMax(limit, RESOLVER_VEHICLE_POSITION_MAXLIMIT)
+}
 
 type vehiclePositionResolver struct{ *Resolver }
 
@@ -34,13 +48,6 @@ func rtRouteID(td *model.RTTripDescriptor) string {
 		return ""
 	}
 	return *td.RouteID
-}
-
-func rtVehicleID(vd *model.RTVehicleDescriptor) string {
-	if vd == nil || vd.ID == nil {
-		return ""
-	}
-	return *vd.ID
 }
 
 func (r *vehiclePositionResolver) Trip(ctx context.Context, obj *model.VehiclePosition) (*model.Trip, error) {
@@ -92,17 +99,19 @@ func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where 
 
 	// Routes named by Onestop ID restrict which vehicles are returned, and
 	// select the agencies to read when nothing else does.
-	var routeIds map[string]bool
+	var routeIds map[model.FVEntityID]bool
 	var routeAgencyIds []int
 	if len(where.RouteOnestopIds) > 0 {
 		routes, err := cfg.Finder.FindRoutes(ctx, ptr(RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT), nil, nil, &model.RouteFilter{OnestopIds: where.RouteOnestopIds})
 		if err != nil {
 			return nil, err
 		}
-		routeIds = map[string]bool{}
+		// Keyed by feed version: GTFS route_id "01" belongs to almost every
+		// operator, and a bare string would match all of them.
+		routeIds = map[model.FVEntityID]bool{}
 		seenAgency := map[int]bool{}
 		for _, route := range routes {
-			routeIds[route.RouteID.Val] = true
+			routeIds[model.FVEntityID{FeedVersionID: route.FeedVersionID, EntityID: route.RouteID.Val}] = true
 			if agencyId := route.AgencyID.Int(); agencyId > 0 && !seenAgency[agencyId] {
 				seenAgency[agencyId] = true
 				routeAgencyIds = append(routeAgencyIds, agencyId)
@@ -114,6 +123,10 @@ func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where 
 	var err error
 	if byAgency {
 		agencies, err = vehiclePositionAgencies(ctx, where)
+		// A route filter narrows the agencies to scan, not just the vehicles.
+		if err == nil && len(where.RouteOnestopIds) > 0 {
+			agencies = intersectAgencies(agencies, routeAgencyIds)
+		}
 	} else {
 		agencies, err = vehiclePositionRouteAgencies(ctx, routeAgencyIds)
 	}
@@ -135,10 +148,10 @@ func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where 
 		}
 	}
 
-	var ret []*model.VehiclePosition
+	var found []*model.VehiclePosition
 	for _, agency := range agencies {
 		for _, ent := range cfg.RTFinder.FindVehiclePositionsForAgency(ctx, agency, nil) {
-			if routeIds != nil && !routeIds[rtRouteID(ent.TripDescriptor)] {
+			if routeIds != nil && !routeIds[model.FVEntityID{FeedVersionID: ent.FeedVersionID, EntityID: rtRouteID(ent.TripDescriptor)}] {
 				continue
 			}
 			if len(tripIds) > 0 && !tripIds[rtTripID(ent.TripDescriptor)] {
@@ -149,24 +162,54 @@ func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where 
 					continue
 				}
 			}
-			ret = append(ret, ent)
+			found = append(found, ent)
 		}
 	}
 	// Vehicles arrive in feed order, which a client polling for changes cannot
-	// rely on staying put.
-	sort.Slice(ret, func(i, j int) bool {
-		if ret[i].FeedOnestopID != ret[j].FeedOnestopID {
-			return ret[i].FeedOnestopID < ret[j].FeedOnestopID
-		}
-		if a, b := rtVehicleID(ret[i].Vehicle), rtVehicleID(ret[j].Vehicle); a != b {
+	// rely on staying put. Feed version is the last key so that a vehicle two
+	// agencies both claim always collapses to the same one of them below.
+	sort.Slice(found, func(i, j int) bool {
+		if a, b := found[i].RtFeedOnestopID, found[j].RtFeedOnestopID; a != b {
 			return a < b
 		}
-		return rtTripID(ret[i].TripDescriptor) < rtTripID(ret[j].TripDescriptor)
+		if a, b := found[i].ID, found[j].ID; a != b {
+			return a < b
+		}
+		return found[i].FeedVersionID < found[j].FeedVersionID
 	})
-	if lim := resolverCheckLimitMax(limit, RESOLVER_VEHICLE_POSITION_MAXLIMIT); lim != nil && len(ret) > *lim {
-		ret = ret[0:*lim]
+
+	lim := *vehiclePositionLimit(limit)
+	ret := make([]*model.VehiclePosition, 0, min(lim, len(found)))
+	// Agencies whose static feeds share a realtime feed each see the same
+	// vehicles, so one bus can arrive here once per agency in the viewport.
+	seen := map[string]bool{}
+	for _, ent := range found {
+		if len(ret) >= lim {
+			break
+		}
+		key := ent.RtFeedOnestopID + ":" + ent.ID
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		ret = append(ret, ent)
 	}
 	return ret, nil
+}
+
+// intersectAgencies keeps the agencies that operate one of the given routes.
+func intersectAgencies(agencies []*model.Agency, agencyIds []int) []*model.Agency {
+	keep := map[int]bool{}
+	for _, agencyId := range agencyIds {
+		keep[agencyId] = true
+	}
+	var ret []*model.Agency
+	for _, agency := range agencies {
+		if keep[agency.ID] {
+			ret = append(ret, agency)
+		}
+	}
+	return ret
 }
 
 // vehiclePositionAgencies resolves the agency, feed and bbox filters to the
@@ -179,7 +222,13 @@ func vehiclePositionAgencies(ctx context.Context, where model.VehiclePositionFil
 	if where.Bbox != nil {
 		agencyFilter.Location = &model.AgencyLocationFilter{Bbox: where.Bbox}
 	}
-	return model.ForContext(ctx).Finder.FindAgencies(ctx, ptr(RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT), nil, nil, agencyFilter)
+	agencies, err := model.ForContext(ctx).Finder.FindAgencies(ctx, ptr(RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT), nil, nil, agencyFilter)
+	if len(agencies) >= RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT {
+		// The result is missing whatever agencies fell off the end, which no
+		// part of the response says.
+		log.For(ctx).Warn().Int("scope_limit", RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT).Msg("vehicle_positions: agency scope limit reached, results are incomplete")
+	}
+	return agencies, err
 }
 
 // vehiclePositionRouteAgencies loads the agencies operating the routes a
@@ -204,11 +253,11 @@ func vehiclePositionRouteAgencies(ctx context.Context, agencyIds []int) ([]*mode
 }
 
 func (r *agencyResolver) VehiclePositions(ctx context.Context, obj *model.Agency, limit *int) ([]*model.VehiclePosition, error) {
-	return model.ForContext(ctx).RTFinder.FindVehiclePositionsForAgency(ctx, obj, resolverCheckLimitMax(limit, RESOLVER_VEHICLE_POSITION_MAXLIMIT)), nil
+	return model.ForContext(ctx).RTFinder.FindVehiclePositionsForAgency(ctx, obj, vehiclePositionLimit(limit)), nil
 }
 
 func (r *routeResolver) VehiclePositions(ctx context.Context, obj *model.Route, limit *int) ([]*model.VehiclePosition, error) {
-	return model.ForContext(ctx).RTFinder.FindVehiclePositionsForRoute(ctx, obj, resolverCheckLimitMax(limit, RESOLVER_VEHICLE_POSITION_MAXLIMIT)), nil
+	return model.ForContext(ctx).RTFinder.FindVehiclePositionsForRoute(ctx, obj, vehiclePositionLimit(limit)), nil
 }
 
 func (r *tripResolver) VehiclePosition(ctx context.Context, obj *model.Trip) (*model.VehiclePosition, error) {

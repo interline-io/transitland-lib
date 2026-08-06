@@ -1314,11 +1314,12 @@ type ComplexityRoot struct {
 		CongestionLevel     func(childComplexity int) int
 		CurrentStatus       func(childComplexity int) int
 		CurrentStopSequence func(childComplexity int) int
-		FeedOnestopID       func(childComplexity int) int
+		ID                  func(childComplexity int) int
 		OccupancyPercentage func(childComplexity int) int
 		OccupancyStatus     func(childComplexity int) int
 		Position            func(childComplexity int) int
 		Route               func(childComplexity int) int
+		RtFeedOnestopID     func(childComplexity int) int
 		Speed               func(childComplexity int) int
 		Stop                func(childComplexity int) int
 		StopID              func(childComplexity int) int
@@ -7742,12 +7743,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VehiclePosition.CurrentStopSequence(childComplexity), true
-	case "VehiclePosition.feed_onestop_id":
-		if e.ComplexityRoot.VehiclePosition.FeedOnestopID == nil {
+	case "VehiclePosition.id":
+		if e.ComplexityRoot.VehiclePosition.ID == nil {
 			break
 		}
 
-		return e.ComplexityRoot.VehiclePosition.FeedOnestopID(childComplexity), true
+		return e.ComplexityRoot.VehiclePosition.ID(childComplexity), true
 	case "VehiclePosition.occupancy_percentage":
 		if e.ComplexityRoot.VehiclePosition.OccupancyPercentage == nil {
 			break
@@ -7772,6 +7773,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VehiclePosition.Route(childComplexity), true
+	case "VehiclePosition.rt_feed_onestop_id":
+		if e.ComplexityRoot.VehiclePosition.RtFeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VehiclePosition.RtFeedOnestopID(childComplexity), true
 	case "VehiclePosition.speed":
 		if e.ComplexityRoot.VehiclePosition.Speed == nil {
 			break
@@ -9139,7 +9146,7 @@ type Query {
   "Current GBFS dock data (Station Information)"
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
 
-  "Current GTFS-RT vehicle positions; requires at least one ` + "`" + `where` + "`" + ` filter"
+  "Current GTFS-RT vehicle positions; requires at least one ` + "`" + `where` + "`" + ` filter. ` + "`" + `limit` + "`" + ` defaults to 1000 and is capped at 10000; beyond that, narrow the search"
   vehicle_positions(limit: Int, where: VehiclePositionFilter!): [VehiclePosition!]!
 
   "Current user metadata; requires authentication"
@@ -11217,10 +11224,14 @@ type StopTimeEvent {
 [Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed.
 
 Values are passed through from the GTFS-RT message as-is. The ` + "`" + `trip` + "`" + `, ` + "`" + `route` + "`" + ` and ` + "`" + `stop` + "`" + ` fields resolve the message's ` + "`" + `trip_id` + "`" + `, ` + "`" + `route_id` + "`" + ` and ` + "`" + `stop_id` + "`" + ` against the static GTFS data of the feed version the vehicle was matched to; each is null when the id is absent from the message or not found in the schedule.
+
+Positions are the last values seen for each vehicle and carry no freshness guarantee; check ` + "`" + `timestamp` + "`" + ` before drawing a vehicle as current.
 """
 type VehiclePosition {
-  "Onestop ID of the feed the vehicle was matched to"
-  feed_onestop_id: String!
+  "Identifier of the GTFS-RT FeedEntity carrying this vehicle. Unique within its feed and stable between messages, so ` + "`" + `rt_feed_onestop_id` + "`" + ` and ` + "`" + `id` + "`" + ` together identify a vehicle across polls"
+  id: String!
+  "Onestop ID of the GTFS-RT feed this vehicle came from. Unlike the ` + "`" + `feed_onestop_ids` + "`" + ` search filter, this is the realtime feed, not the static GTFS feed"
+  rt_feed_onestop_id: String!
   "Vehicle descriptor from the GTFS-RT VehiclePosition"
   vehicle: RTVehicleDescriptor
   "Trip descriptor from the GTFS-RT VehiclePosition"
@@ -11907,7 +11918,7 @@ input TripFilter {
 """
 Search options for GTFS-RT vehicle positions.
 
-At least one filter must be given. Filters are combined: a vehicle is returned only if it matches every filter present. ` + "`" + `agency_onestop_ids` + "`" + `, ` + "`" + `feed_onestop_ids` + "`" + ` and ` + "`" + `bbox` + "`" + ` select the agencies whose realtime feeds are read; ` + "`" + `route_onestop_ids` + "`" + ` and ` + "`" + `trip_ids` + "`" + ` additionally restrict which vehicles from those feeds are returned, matched against the GTFS-RT trip descriptor.
+At least one of ` + "`" + `bbox` + "`" + `, ` + "`" + `agency_onestop_ids` + "`" + `, ` + "`" + `feed_onestop_ids` + "`" + ` or ` + "`" + `route_onestop_ids` + "`" + ` must be given; ` + "`" + `trip_ids` + "`" + ` alone is not enough to scope a search. Filters are combined: a vehicle is returned only if it matches every filter present.
 """
 input VehiclePositionFilter {
   "Search for vehicles within this bounding box"
@@ -14644,8 +14655,10 @@ func (ec *executionContext) childFields_ValidationReportErrorGroup(ctx context.C
 
 func (ec *executionContext) childFields_VehiclePosition(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
-	case "feed_onestop_id":
-		return ec.fieldContext_VehiclePosition_feed_onestop_id(ctx, field)
+	case "id":
+		return ec.fieldContext_VehiclePosition_id(ctx, field)
+	case "rt_feed_onestop_id":
+		return ec.fieldContext_VehiclePosition_rt_feed_onestop_id(ctx, field)
 	case "vehicle":
 		return ec.fieldContext_VehiclePosition_vehicle(ctx, field)
 	case "trip_descriptor":
@@ -41469,16 +41482,16 @@ func (ec *executionContext) fieldContext_ValidationReportErrorGroup_errors(ctx c
 	return fc, nil
 }
 
-func (ec *executionContext) _VehiclePosition_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
+func (ec *executionContext) _VehiclePosition_id(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_VehiclePosition_feed_onestop_id(ctx, field)
+			return ec.fieldContext_VehiclePosition_id(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.FeedOnestopID, nil
+			return obj.ID, nil
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
@@ -41488,7 +41501,30 @@ func (ec *executionContext) _VehiclePosition_feed_onestop_id(ctx context.Context
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_VehiclePosition_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_VehiclePosition_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VehiclePosition", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VehiclePosition_rt_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.VehiclePosition) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VehiclePosition_rt_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RtFeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VehiclePosition_rt_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("VehiclePosition", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -58468,8 +58504,13 @@ func (ec *executionContext) _VehiclePosition(ctx context.Context, sel ast.Select
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("VehiclePosition")
-		case "feed_onestop_id":
-			out.Values[i] = ec._VehiclePosition_feed_onestop_id(ctx, field, obj)
+		case "id":
+			out.Values[i] = ec._VehiclePosition_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "rt_feed_onestop_id":
+			out.Values[i] = ec._VehiclePosition_rt_feed_onestop_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}

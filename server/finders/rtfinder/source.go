@@ -13,7 +13,15 @@ type Source struct {
 	msg              *pb.FeedMessage
 	entityByTrip     map[string]*pb.TripUpdate
 	alerts           []*pb.Alert
-	vehiclePositions []*pb.VehiclePosition
+	vehiclePositions []VehiclePositionEntity
+}
+
+// VehiclePositionEntity pairs a vehicle position with the id of the FeedEntity
+// that carried it. Every id on the message itself is optional, so the entity id
+// is the only key a consumer can rely on to follow a vehicle between messages.
+type VehiclePositionEntity struct {
+	ID       string
+	Position *pb.VehiclePosition
 }
 
 func NewSource(feed string) (*Source, error) {
@@ -36,20 +44,22 @@ func (f *Source) GetTrip(tid string) (*pb.TripUpdate, bool) {
 	return nil, false
 }
 
-func (f *Source) GetVehiclePositions() []*pb.VehiclePosition {
+func (f *Source) GetVehiclePositions() []VehiclePositionEntity {
 	return f.vehiclePositions
 }
 
 func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) error {
 	f.msg = rtmsg
+	// The header timestamp is itself optional; a zero is no better a time than
+	// no time at all, and would be served as 1970-01-01.
 	defaultTimestamp := rtmsg.GetHeader().GetTimestamp()
+	hasDefaultTimestamp := defaultTimestamp > 0
 	a := map[string]*pb.TripUpdate{}
 	var alerts []*pb.Alert
-	var vehiclePositions []*pb.VehiclePosition
+	var vehiclePositions []VehiclePositionEntity
 	for _, ent := range rtmsg.Entity {
 		if v := ent.TripUpdate; v != nil {
-			// Set default timestamp
-			if v.Timestamp == nil {
+			if v.Timestamp == nil && hasDefaultTimestamp {
 				v.Timestamp = &defaultTimestamp
 			}
 			tid := v.GetTrip().GetTripId()
@@ -59,11 +69,10 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 			alerts = append(alerts, v)
 		}
 		if v := ent.Vehicle; v != nil {
-			// Set default timestamp
-			if v.Timestamp == nil {
+			if v.Timestamp == nil && hasDefaultTimestamp {
 				v.Timestamp = &defaultTimestamp
 			}
-			vehiclePositions = append(vehiclePositions, v)
+			vehiclePositions = append(vehiclePositions, VehiclePositionEntity{ID: ent.GetId(), Position: v})
 		}
 	}
 	log.For(ctx).Trace().Str("feed_id", f.feed).Int("trip_updates", len(a)).Int("alerts", len(alerts)).Int("vehicle_positions", len(vehiclePositions)).Msg("rtsource: processed data")

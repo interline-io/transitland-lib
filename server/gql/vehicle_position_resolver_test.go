@@ -1,9 +1,11 @@
 package gql
 
 import (
+	"context"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -19,7 +21,8 @@ func baVehiclePositions() []testconfig.RTJsonFile {
 const vehiclePositionQuery = `
 query($where: VehiclePositionFilter!) {
 	vehicle_positions(where: $where) {
-		feed_onestop_id
+		id
+		rt_feed_onestop_id
 		vehicle { id label license_plate }
 		trip_descriptor { trip_id route_id direction_id start_time start_date schedule_relationship }
 		position
@@ -45,12 +48,12 @@ func TestVehiclePositionResolver(t *testing.T) {
 		{
 			name:   "by agency onestop id",
 			where:  hw{"agency_onestop_ids": []string{"o-9q9-bayarearapidtransit"}},
-			expect: []string{"1001", "1002", "1003", "1004"},
+			expect: []string{"1001", "1002", "1003", "1004", "1005"},
 		},
 		{
 			name:   "by feed onestop id",
 			where:  hw{"feed_onestop_ids": []string{"BA"}},
-			expect: []string{"1001", "1002", "1003", "1004"},
+			expect: []string{"1001", "1002", "1003", "1004", "1005"},
 		},
 		{
 			name:   "by feed onestop id, no match",
@@ -58,7 +61,7 @@ func TestVehiclePositionResolver(t *testing.T) {
 			expect: []string{},
 		},
 		{
-			// 12TH and MCAR are inside; POWL and FTVL are not.
+			// 12TH and MCAR are inside; POWL, FTVL and SFO are not.
 			name:   "by bbox",
 			where:  hw{"bbox": hw{"min_lon": -122.30, "min_lat": 37.79, "max_lon": -122.25, "max_lat": 37.84}},
 			expect: []string{"1001", "1002"},
@@ -94,6 +97,13 @@ func TestVehiclePositionResolver(t *testing.T) {
 			where:  hw{"feed_onestop_ids": []string{"BA"}, "route_onestop_ids": []string{"r-nope"}},
 			expect: []string{},
 		},
+		{
+			// The message names a route and a stop that are not in the schedule;
+			// the vehicle is still returned.
+			name:   "vehicle with unmatched entities",
+			where:  hw{"feed_onestop_ids": []string{"BA"}, "trip_ids": []string{"NOSUCHTRIP"}},
+			expect: []string{"1005"},
+		},
 	}
 	for _, tc := range tcs {
 		testRt(t, rtTestCase{
@@ -112,6 +122,38 @@ func TestVehiclePositionResolver(t *testing.T) {
 	}
 }
 
+// Results are ordered by feed and entity id, so a polling client sees the same
+// vehicles in the same places and a limit always cuts the same tail.
+func TestVehiclePositionResolver_OrderAndLimit(t *testing.T) {
+	q := `query($limit: Int) {
+		vehicle_positions(limit: $limit, where: {feed_onestop_ids: ["BA"]}) { id }
+	}`
+	tcs := []struct {
+		name   string
+		limit  interface{}
+		expect []string
+	}{
+		{name: "no limit", limit: nil, expect: []string{"1001", "1002", "1003", "1004", "1005"}},
+		{name: "limit 2", limit: 2, expect: []string{"1001", "1002"}},
+		{name: "limit 0", limit: 0, expect: []string{}},
+	}
+	for _, tc := range tcs {
+		testRt(t, rtTestCase{
+			name:    tc.name,
+			query:   q,
+			vars:    hw{"limit": tc.limit},
+			rtfiles: baVehiclePositions(),
+			cb: func(t *testing.T, jj string) {
+				got := []string{}
+				for _, v := range gjson.Get(jj, "vehicle_positions.#.id").Array() {
+					got = append(got, v.String())
+				}
+				assert.Equal(t, tc.expect, got)
+			},
+		})
+	}
+}
+
 func TestVehiclePositionResolver_Fields(t *testing.T) {
 	testRt(t, rtTestCase{
 		name:    "all fields",
@@ -124,7 +166,8 @@ func TestVehiclePositionResolver_Fields(t *testing.T) {
 				t.Fatalf("got %d vehicle positions, expected 1", len(vps))
 			}
 			vp := vps[0]
-			assert.Equal(t, "BA", vp.Get("feed_onestop_id").String())
+			assert.Equal(t, "1001", vp.Get("id").String())
+			assert.Equal(t, "BA", vp.Get("rt_feed_onestop_id").String())
 			assert.Equal(t, "1001", vp.Get("vehicle.id").String())
 			assert.Equal(t, "Antioch Train", vp.Get("vehicle.label").String())
 			assert.Equal(t, "BART1001", vp.Get("vehicle.license_plate").String())
@@ -188,6 +231,14 @@ func TestVehiclePositionResolver_MatchedEntities(t *testing.T) {
 			vp = byVehicle["1004"]
 			assert.Equal(t, gjson.Null, vp.Get("trip").Type)
 			assert.Equal(t, gjson.Null, vp.Get("route").Type)
+
+			// Ids present in the message but absent from the schedule. The
+			// route falls back to the trip's route only when the message names
+			// no route at all, so an unmatched route_id stays null.
+			vp = byVehicle["1005"]
+			assert.Equal(t, gjson.Null, vp.Get("trip").Type)
+			assert.Equal(t, gjson.Null, vp.Get("route").Type)
+			assert.Equal(t, gjson.Null, vp.Get("stop").Type)
 		},
 	})
 }
@@ -225,7 +276,7 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 				for _, v := range gjson.Get(jj, "agencies.0.vehicle_positions.#.vehicle.id").Array() {
 					got = append(got, v.String())
 				}
-				assert.ElementsMatch(t, []string{"1001", "1002", "1003", "1004"}, got)
+				assert.ElementsMatch(t, []string{"1001", "1002", "1003", "1004", "1005"}, got)
 			},
 		},
 		{
@@ -237,6 +288,19 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 			}`,
 			cb: func(t *testing.T, jj string) {
 				assert.Equal(t, "1001", gjson.Get(jj, "routes.0.vehicle_positions.0.vehicle.id").String())
+			},
+		},
+		{
+			// Vehicle 1003's descriptor names only a trip; the route is matched
+			// through the trip, as the `route` field does.
+			name: "route vehicle_positions, matched by trip",
+			query: `query {
+				routes(where: {feed_onestop_id: "BA", route_id: "07"}) {
+					vehicle_positions { vehicle { id } }
+				}
+			}`,
+			cb: func(t *testing.T, jj string) {
+				assert.Equal(t, "1003", gjson.Get(jj, "routes.0.vehicle_positions.0.vehicle.id").String())
 			},
 		},
 		{
@@ -276,4 +340,78 @@ func TestVehiclePositionResolver_RequiresFilter(t *testing.T) {
 		t.Fatal("expected an error when no scope filter is given")
 	}
 	assert.Contains(t, err.Error(), "requires at least one of")
+}
+
+func vehiclePositionAgency(t *testing.T, ctx context.Context, cfg model.Config, onestopId string) *model.Agency {
+	agencies, err := cfg.Finder.FindAgencies(ctx, nil, nil, nil, &model.AgencyFilter{OnestopID: &onestopId})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(agencies) != 1 {
+		t.Fatalf("got %d agencies for %s, expected 1", len(agencies), onestopId)
+	}
+	return agencies[0]
+}
+
+// vehiclePositionIDs returns the entity ids attributed to an agency, which is
+// what the attribution rules below are about.
+func vehiclePositionIDs(ctx context.Context, cfg model.Config, agency *model.Agency) []string {
+	var ret []string
+	for _, ent := range cfg.RTFinder.FindVehiclePositionsForAgency(ctx, agency, nil) {
+		ret = append(ret, ent.ID)
+	}
+	return ret
+}
+
+// A realtime feed serving one operator is that operator's, so every vehicle in
+// it is attributed even when the message names no route.
+func TestVehiclePositions_ExclusiveFeed(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{RTJsons: baVehiclePositions()}, func(cfg model.Config) {
+		ctx := model.WithConfig(context.Background(), cfg)
+		agency := vehiclePositionAgency(t, ctx, cfg, "o-9q9-bayarearapidtransit")
+		assert.ElementsMatch(t,
+			[]string{"1001", "1002", "1003", "1004", "1005"},
+			vehiclePositionIDs(ctx, cfg, agency),
+		)
+	})
+}
+
+// Regional feeds are associated with dozens of operators. Once a feed is shared
+// no operator owns it outright, so only vehicles naming one of the agency's
+// routes are attributed to it.
+func TestVehiclePositions_SharedFeed(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{RTJsons: baVehiclePositions()}, func(cfg model.Config) {
+		ctx := model.WithConfig(context.Background(), cfg)
+		agency := vehiclePositionAgency(t, ctx, cfg, "o-9q9-bayarearapidtransit")
+		if _, err := cfg.Adapter.DBX().ExecContext(ctx, `
+			insert into current_operators_in_feed(feed_id, resolved_onestop_id, resolved_name)
+			select id, 'o-9q9-someoneelse', 'Someone Else' from current_feeds where onestop_id = 'BA'`); err != nil {
+			t.Fatal(err)
+		}
+		// 1001 names route 01 and 1002 names route 05; 1005 names route 99,
+		// which is not BART's, and the rest name no route at all.
+		assert.ElementsMatch(t,
+			[]string{"1001", "1002"},
+			vehiclePositionIDs(ctx, cfg, agency),
+		)
+	})
+}
+
+// A feed version carrying more than one agency cannot hand every vehicle to
+// each of them either.
+func TestVehiclePositions_MultiAgencyFeedVersion(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{RTJsons: baVehiclePositions()}, func(cfg model.Config) {
+		ctx := model.WithConfig(context.Background(), cfg)
+		agency := vehiclePositionAgency(t, ctx, cfg, "o-9q9-bayarearapidtransit")
+		if _, err := cfg.Adapter.DBX().ExecContext(ctx, `
+			insert into gtfs_agencies(feed_version_id, agency_id, agency_name, agency_url, agency_timezone)
+			select feed_version_id, 'OTHER', 'Other Agency', 'http://example.com', agency_timezone
+			from gtfs_agencies where id = $1`, agency.ID); err != nil {
+			t.Fatal(err)
+		}
+		assert.ElementsMatch(t,
+			[]string{"1001", "1002"},
+			vehiclePositionIDs(ctx, cfg, agency),
+		)
+	})
 }

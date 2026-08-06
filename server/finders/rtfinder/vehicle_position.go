@@ -2,6 +2,7 @@ package rtfinder
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/interline-io/transitland-lib/rt/pb"
@@ -12,32 +13,51 @@ import (
 // vehiclePositionTopicKey is the GTFS-RT source URL type carrying vehicle positions.
 const vehiclePositionTopicKey = "realtime_vehicle_positions"
 
+// vehiclePositionMatch decides whether a vehicle from a realtime feed belongs
+// to the entity being asked about.
+type vehiclePositionMatch func(topic string, v *pb.VehiclePosition) bool
+
 // FindVehiclePositionsForAgency returns cached vehicle positions operated by an agency.
 //
-// GTFS-RT carries no agency identifier, so in a feed with more than one agency a
-// vehicle is attributed by matching its trip descriptor's route_id against the
-// agency's routes; vehicles reporting no route_id are not returned. In a
-// single-agency feed every vehicle belongs to the agency and is returned as-is.
+// GTFS-RT carries no agency identifier, so a vehicle is attributed by matching
+// its trip descriptor's route_id against the agency's routes. A message naming
+// no route can only be attributed when the realtime feed belongs to this agency
+// alone: one operator on the feed, one agency in the feed version. Regional
+// feeds such as 511's are associated with dozens of operators, and without that
+// check every one of them would claim every vehicle in the feed.
 func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Agency, limit *int) []*model.VehiclePosition {
-	match := func(_ *pb.VehiclePosition) bool { return true }
-	if f.lc.GetFeedVersionAgencyCount(a.FeedVersionID) > 1 {
-		routeIds := f.lc.GetAgencyRouteIDs(a.ID)
-		match = func(v *pb.VehiclePosition) bool {
-			return routeIds[v.GetTrip().GetRouteId()]
+	agencyCount, ok := f.lc.GetFeedVersionAgencyCount(ctx, a.FeedVersionID)
+	singleAgency := ok && agencyCount <= 1
+	var routeIds map[string]bool
+	match := func(topic string, v *pb.VehiclePosition) bool {
+		if singleAgency && f.feedIsExclusive(ctx, topic) {
+			return true
 		}
+		if routeIds == nil {
+			routeIds = f.lc.GetAgencyRouteIDs(ctx, a.ID)
+		}
+		return routeIds[v.GetTrip().GetRouteId()]
 	}
 	return limitVehiclePositions(f.findVehiclePositions(ctx, a.FeedVersionID, match), limit)
 }
 
 // FindVehiclePositionsForRoute returns cached vehicle positions running a route,
-// matched on the trip descriptor's route_id.
+// matched on the trip descriptor's route_id, or on its trip_id when the message
+// names no route.
 func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Route, limit *int) []*model.VehiclePosition {
 	routeId := r.RouteID.Val
 	if routeId == "" {
 		return nil
 	}
-	match := func(v *pb.VehiclePosition) bool {
-		return v.GetTrip().GetRouteId() == routeId
+	var tripIds map[string]bool
+	match := func(_ string, v *pb.VehiclePosition) bool {
+		if rid := v.GetTrip().GetRouteId(); rid != "" {
+			return rid == routeId
+		}
+		if tripIds == nil {
+			tripIds = f.lc.GetRouteTripIDs(ctx, r.ID)
+		}
+		return tripIds[v.GetTrip().GetTripId()]
 	}
 	return limitVehiclePositions(f.findVehiclePositions(ctx, r.FeedVersionID, match), limit)
 }
@@ -49,19 +69,26 @@ func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip) 
 	if tripId == "" {
 		return nil
 	}
-	match := func(v *pb.VehiclePosition) bool {
+	match := func(_ string, v *pb.VehiclePosition) bool {
 		return v.GetTrip().GetTripId() == tripId
 	}
 	found := f.findVehiclePositions(ctx, t.FeedVersionID, match)
 	if len(found) == 0 {
 		return nil
 	}
+	sortVehiclePositions(found)
 	return found[0]
+}
+
+// feedIsExclusive reports whether a realtime feed serves a single operator.
+func (f *Finder) feedIsExclusive(ctx context.Context, topic string) bool {
+	operatorCount, ok := f.lc.GetFeedOperatorCount(ctx, topic)
+	return ok && operatorCount <= 1
 }
 
 // findVehiclePositions collects matching vehicle positions from every realtime
 // feed associated with a feed version.
-func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, match func(*pb.VehiclePosition) bool) []*model.VehiclePosition {
+func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, match vehiclePositionMatch) []*model.VehiclePosition {
 	var ret []*model.VehiclePosition
 	topics, _ := f.lc.GetFeedVersionRTFeeds(fvid)
 	for _, topic := range topics {
@@ -69,27 +96,42 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, match func(
 		if !ok || src == nil {
 			continue
 		}
-		for _, v := range src.GetVehiclePositions() {
-			if v == nil || !match(v) {
+		for _, ent := range src.GetVehiclePositions() {
+			if ent.Position == nil || !match(topic, ent.Position) {
 				continue
 			}
-			ret = append(ret, makeVehiclePosition(v, topic, fvid))
+			ret = append(ret, makeVehiclePosition(ent, topic, fvid))
 		}
 	}
 	return ret
 }
 
+// limitVehiclePositions sorts and truncates a result set. Vehicles arrive in
+// feed order, which a client polling for changes cannot rely on staying put,
+// and which would otherwise decide arbitrarily what a limit cuts.
 func limitVehiclePositions(ents []*model.VehiclePosition, limit *int) []*model.VehiclePosition {
+	sortVehiclePositions(ents)
 	if limit != nil && len(ents) > *limit {
 		return ents[0:*limit]
 	}
 	return ents
 }
 
-func makeVehiclePosition(v *pb.VehiclePosition, feedOnestopID string, fvid int) *model.VehiclePosition {
+func sortVehiclePositions(ents []*model.VehiclePosition) {
+	sort.Slice(ents, func(i, j int) bool {
+		if ents[i].RtFeedOnestopID != ents[j].RtFeedOnestopID {
+			return ents[i].RtFeedOnestopID < ents[j].RtFeedOnestopID
+		}
+		return ents[i].ID < ents[j].ID
+	})
+}
+
+func makeVehiclePosition(ent VehiclePositionEntity, rtFeedOnestopID string, fvid int) *model.VehiclePosition {
+	v := ent.Position
 	r := model.VehiclePosition{
-		FeedOnestopID: feedOnestopID,
-		FeedVersionID: fvid,
+		ID:              ent.ID,
+		RtFeedOnestopID: rtFeedOnestopID,
+		FeedVersionID:   fvid,
 	}
 	if p := v.Position; p != nil {
 		pt := tt.NewPoint(float64(p.GetLongitude()), float64(p.GetLatitude()))
