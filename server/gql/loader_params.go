@@ -100,14 +100,15 @@ type tripLoaderParam struct {
 	Where         *model.TripFilter
 }
 
-// A stop pattern's representative trips. The route is carried in Where rather
-// than in the key: stop_pattern_id is scoped to a feed version but not to a
-// route, so two routes sharing a stop sequence share the id.
+// A stop pattern's representative trips. RouteID becomes a filter rather than part
+// of the key: stop_pattern_id is scoped to a feed version but not to a route, so two
+// routes sharing a stop sequence share the id and the route has to narrow the query.
+// Filtering also groups the batch by route, which is the partition the index wants.
 type routeStopPatternTripLoaderParam struct {
 	FeedVersionID int
+	RouteID       int
 	StopPatternID int
 	Limit         *int
-	Where         *model.TripFilter
 }
 
 type stopLoaderParam struct {

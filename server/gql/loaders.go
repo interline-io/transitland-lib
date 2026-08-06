@@ -460,7 +460,8 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		),
 		TripsByStopPatternIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.TripsByStopPatternIDs,
 			func(p routeStopPatternTripLoaderParam) (model.FVPair, *model.TripFilter, *int) {
-				return model.FVPair{EntityID: p.StopPatternID, FeedVersionID: p.FeedVersionID}, p.Where, p.Limit
+				return model.FVPair{EntityID: p.StopPatternID, FeedVersionID: p.FeedVersionID},
+					&model.TripFilter{RouteIds: []int{p.RouteID}}, p.Limit
 			},
 		),
 		TripsByShapeIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.TripsByShapeIDs,

@@ -187,10 +187,10 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 // (feed_version_id, stop_pattern_id).
 //
 // Unlike the route and shape loaders there is no LATERAL per key: stop_pattern_id is
-// unindexed, so a lateral would repeat a scan per pattern and win only the round trip.
-// One scan driven by the caller's route filter is cheaper. Nothing bounds the rows per
-// key here — paramGroupQuery truncates each key's slice to Limit before the resolver
-// sees it, so a representative-trip selection still costs one row of stop_times.
+// unindexed, and the caller's route filter already narrows the scan to exactly the rows
+// every pattern of that route needs, so a lateral would repeat that scan per pattern.
+// row_number trims each pattern to the requested limit in SQL instead of returning every
+// trip on the route for paramGroupQuery to discard.
 func (f *Finder) TripsByStopPatternIDs(ctx context.Context, limit *int, where *model.TripFilter, keys []model.FVPair) ([][]*model.Trip, error) {
 	var ents []*model.Trip
 	// Group by fvid so the per-feed-version service window can be applied.
@@ -203,14 +203,23 @@ func (f *Finder) TripsByStopPatternIDs(ctx context.Context, limit *int, where *m
 		if err != nil {
 			return nil, err
 		}
-		q, tripDates, err := tripSelect(nil, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		// tripSelect's limit is global, so the per-key limit goes on the window
+		// instead: passing it here would cut the batch to one pattern's worth.
+		inner, tripDates, err := tripSelect(nil, nil, nil, false, f.PermFilter(ctx), where, fvsw)
 		if err != nil {
 			return nil, err
 		}
+		inner = inner.
+			Column("row_number() over (partition by gtfs_trips.stop_pattern_id order by gtfs_trips.feed_version_id, gtfs_trips.id) as rn").
+			Where(sq.Eq{"gtfs_trips.feed_version_id": fvid}).
+			Where(In("gtfs_trips.stop_pattern_id", stopPatternIds))
 		var groupEnts []*model.Trip
 		if err := dbutil.Select(ctx,
 			f.db,
-			q.Where(In("gtfs_trips.stop_pattern_id", stopPatternIds)),
+			sq.StatementBuilder.
+				Select("t.*").
+				FromSelect(inner, "t").
+				Where(sq.LtOrEq{"t.rn": finderCheckLimit(limit)}),
 			&groupEnts,
 		); err != nil {
 			return nil, err
