@@ -183,6 +183,46 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 	}), nil
 }
 
+// TripsByStopPatternIDs loads the trips of several stop patterns at once, keyed by
+// (feed_version_id, stop_pattern_id).
+//
+// Unlike the route and shape loaders there is no LATERAL per key: stop_pattern_id is
+// unindexed, so a lateral would repeat a scan per pattern and win only the round trip.
+// One scan driven by the caller's route filter is cheaper. Nothing bounds the rows per
+// key here — paramGroupQuery truncates each key's slice to Limit before the resolver
+// sees it, so a representative-trip selection still costs one row of stop_times.
+func (f *Finder) TripsByStopPatternIDs(ctx context.Context, limit *int, where *model.TripFilter, keys []model.FVPair) ([][]*model.Trip, error) {
+	var ents []*model.Trip
+	// Group by fvid so the per-feed-version service window can be applied.
+	groups := map[int][]int{}
+	for _, key := range keys {
+		groups[key.FeedVersionID] = append(groups[key.FeedVersionID], key.EntityID)
+	}
+	for fvid, stopPatternIds := range groups {
+		fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
+		if err != nil {
+			return nil, err
+		}
+		q, tripDates, err := tripSelect(nil, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		if err != nil {
+			return nil, err
+		}
+		var groupEnts []*model.Trip
+		if err := dbutil.Select(ctx,
+			f.db,
+			q.Where(In("gtfs_trips.stop_pattern_id", stopPatternIds)),
+			&groupEnts,
+		); err != nil {
+			return nil, err
+		}
+		expandTripServiceDates(groupEnts, tripDates)
+		ents = append(ents, groupEnts...)
+	}
+	return arrangeGroup(keys, ents, func(ent *model.Trip) model.FVPair {
+		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.StopPatternID.Int()}
+	}), nil
+}
+
 func (f *Finder) TripsByShapeIDs(ctx context.Context, limit *int, where *model.TripFilter, keys []model.FVPair) ([][]*model.Trip, error) {
 	var ents []*model.Trip
 	// Group by fvid so the per-feed-version service window can be applied.

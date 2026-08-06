@@ -85,11 +85,13 @@ func (f *Finder) RouteHeadwaysByRouteIDs(ctx context.Context, limit *int, keys [
 }
 
 func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteStopPattern, error) {
+	// feed_version_id rides along so each pattern can key its own trip lookup; it is
+	// functionally determined by route_id, so grouping on it changes no cardinality.
 	q := sq.StatementBuilder.
-		Select("route_id", "direction_id", "stop_pattern_id", "count(*) as count").
+		Select("feed_version_id", "route_id", "direction_id", "stop_pattern_id", "count(*) as count").
 		From("gtfs_trips").
 		Where(In("route_id", keys)).
-		GroupBy("route_id,direction_id,stop_pattern_id").
+		GroupBy("feed_version_id,route_id,direction_id,stop_pattern_id").
 		OrderBy("route_id,count desc").
 		Limit(finderCheckLimit(limit))
 	var ents []*model.RouteStopPattern

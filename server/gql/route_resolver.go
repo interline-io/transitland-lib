@@ -129,9 +129,15 @@ func (r *routeStopResolver) Agency(ctx context.Context, obj *model.RouteStop) (*
 type routePatternResolver struct{ *Resolver }
 
 func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error) {
-	// TODO: N+1 query
-	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, resolverCheckLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
-	return trips, err
+	// The route stays in the filter rather than the loader key: every pattern of one
+	// route shares it, so they batch into a single query, and a pattern id shared with
+	// another route does not pull in that route's trips.
+	return LoaderFor(ctx).TripsByStopPatternIDs.Load(ctx, routeStopPatternTripLoaderParam{
+		FeedVersionID: obj.FeedVersionID,
+		StopPatternID: obj.StopPatternID,
+		Limit:         resolverCheckLimit(limit),
+		Where:         &model.TripFilter{RouteIds: []int{obj.RouteID}},
+	})()
 }
 
 // func (r *routePatternResolver) Stops(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Stop, error) {

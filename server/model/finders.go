@@ -129,6 +129,7 @@ type EntityLoader interface {
 	TripsByIDs(context.Context, []int) ([]*Trip, []error)
 	TripsByRouteIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error)
 	TripsByShapeIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error)
+	TripsByStopPatternIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error)
 	ValidationReportErrorExemplarsByValidationReportErrorGroupIDs(context.Context, *int, []int) ([][]*ValidationReportError, error)
 	ValidationReportErrorGroupsByValidationReportIDs(context.Context, *int, []int) ([][]*ValidationReportErrorGroup, error)
 	ValidationReportsByFeedVersionIDs(context.Context, *int, *ValidationReportFilter, []int) ([][]*ValidationReport, error)

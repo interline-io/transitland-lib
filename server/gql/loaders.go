@@ -107,6 +107,7 @@ type Loaders struct {
 	TripsByFeedVersionIDs                                         *dataloader.Loader[tripLoaderParam, []*model.Trip]
 	TripsByIDs                                                    *dataloader.Loader[int, *model.Trip]
 	TripsByRouteIDs                                               *dataloader.Loader[tripLoaderParam, []*model.Trip]
+	TripsByStopPatternIDs                                         *dataloader.Loader[routeStopPatternTripLoaderParam, []*model.Trip]
 	TripsByShapeIDs                                               *dataloader.Loader[tripLoaderParam, []*model.Trip]
 	ValidationReportErrorExemplarsByValidationReportErrorGroupIDs *dataloader.Loader[validationReportErrorExemplarLoaderParam, []*model.ValidationReportError]
 	ValidationReportErrorGroupsByValidationReportIDs              *dataloader.Loader[validationReportErrorGroupLoaderParam, []*model.ValidationReportErrorGroup]
@@ -455,6 +456,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		TripsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.TripsByRouteIDs,
 			func(p tripLoaderParam) (model.FVPair, *model.TripFilter, *int) {
 				return model.FVPair{EntityID: p.RouteID, FeedVersionID: p.FeedVersionID}, p.Where, p.Limit
+			},
+		),
+		TripsByStopPatternIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.TripsByStopPatternIDs,
+			func(p routeStopPatternTripLoaderParam) (model.FVPair, *model.TripFilter, *int) {
+				return model.FVPair{EntityID: p.StopPatternID, FeedVersionID: p.FeedVersionID}, p.Where, p.Limit
 			},
 		),
 		TripsByShapeIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.TripsByShapeIDs,

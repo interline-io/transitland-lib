@@ -1157,8 +1157,9 @@ type RouteStopPattern struct {
 	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
 	// Representative trips that follow this stop pattern; useful for fetching full stop_times
-	Trips   []*Trip `json:"trips,omitempty"`
-	RouteID int     `json:"-"`
+	Trips         []*Trip `json:"trips,omitempty"`
+	FeedVersionID int     `json:"-"`
+	RouteID       int     `json:"-"`
 }
 
 // A normalized, reusable piece of route geometry, optionally aligned with an OpenStreetMap way. Multiple route patterns may reference the same Segment.

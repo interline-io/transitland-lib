@@ -180,6 +180,8 @@ models:
     extraFields:
       RouteID:
         type: int
+      FeedVersionID:
+        type: int
   RouteGeometry:
     extraFields:
       RouteID:

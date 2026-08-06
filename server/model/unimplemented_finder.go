@@ -353,6 +353,9 @@ func (UnimplementedFinder) TripsByIDs(_ context.Context, ids []int) ([]*Trip, []
 func (UnimplementedFinder) TripsByRouteIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) TripsByStopPatternIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) TripsByShapeIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error) {
 	return nil, notImplErr()
 }

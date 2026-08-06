@@ -100,6 +100,16 @@ type tripLoaderParam struct {
 	Where         *model.TripFilter
 }
 
+// A stop pattern's representative trips. The route is carried in Where rather
+// than in the key: stop_pattern_id is scoped to a feed version but not to a
+// route, so two routes sharing a stop sequence share the id.
+type routeStopPatternTripLoaderParam struct {
+	FeedVersionID int
+	StopPatternID int
+	Limit         *int
+	Where         *model.TripFilter
+}
+
 type stopLoaderParam struct {
 	FeedVersionID int
 	ParentStopID  int
