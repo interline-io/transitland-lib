@@ -214,13 +214,20 @@ func TestRouteResolver(t *testing.T) {
 				}
 			  }`,
 			f: func(t *testing.T, jj string) {
-				// min(id) in the aggregate is the same trip trips(limit:1) returns,
-				// which orders by (feed_version_id, id).
-				rep := gjson.Get(jj, "routes.0.patterns.#.representative_trip.trip_id").Array()
-				via := gjson.Get(jj, "routes.0.patterns.#.trips.0.trip_id").Array()
-				assert.Equal(t, len(via), len(rep), "a representative trip per pattern")
-				for i := range via {
-					assert.Equal(t, via[i].String(), rep[i].String(), "pattern %d", i)
+				// Walked per pattern rather than as two `#.` arrays: gjson omits the
+				// elements whose path is missing, so a null representative_trip would
+				// shift one array against the other instead of failing.
+				//
+				// min(id) in the aggregate is the trip trips(limit:1) returns, which
+				// orders by (feed_version_id, id). They agree only where a stop pattern
+				// runs in one direction — trips() does not filter on direction, so a
+				// pattern operated both ways returns the same trip for both rows.
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					rep := pat.Get("representative_trip.trip_id")
+					assert.True(t, rep.Exists(), "pattern %d resolves a representative trip", i)
+					assert.Equal(t, pat.Get("trips.0.trip_id").String(), rep.String(), "pattern %d", i)
 				}
 			},
 		},
@@ -447,15 +454,16 @@ func TestRouteResolver_Date(t *testing.T) {
 				vars:  hw{"route_id": "Bu-130", "service_date": "2018-06-18"},
 				f: func(t *testing.T, jj string) {
 					// The same 22 trips the trips() query returns for this date,
-					// redistributed across the patterns that run it.
+					// redistributed across the patterns that run it. Walked per pattern
+					// so a null representative_trip fails rather than being skipped.
+					pats := gjson.Get(jj, "routes.0.patterns").Array()
+					assert.NotEmpty(t, pats, "patterns returned for the date")
 					total := 0
-					for _, c := range gjson.Get(jj, "routes.0.patterns.#.count").Array() {
-						total += int(c.Int())
+					for i, pat := range pats {
+						total += int(pat.Get("count").Int())
+						assert.True(t, pat.Get("representative_trip.trip_id").Exists(), "pattern %d resolves a representative trip", i)
 					}
 					assert.Equal(t, 22, total, "day-scoped counts sum to that day's trips")
-					for _, r := range gjson.Get(jj, "routes.0.patterns.#.representative_trip.trip_id").Array() {
-						assert.NotEmpty(t, r.String(), "representative trip resolves")
-					}
 				},
 			},
 		},
