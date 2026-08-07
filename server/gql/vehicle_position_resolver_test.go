@@ -18,6 +18,17 @@ func baVehiclePositions() []testconfig.RTJsonFile {
 	}
 }
 
+// Bounding boxes over the fixture. bayArea holds every vehicle; the rest each
+// isolate one part of it.
+var (
+	bayAreaBbox   = hw{"min_lon": -122.50, "min_lat": 37.50, "max_lon": -122.10, "max_lat": 37.90}
+	oaklandBbox   = hw{"min_lon": -122.30, "min_lat": 37.79, "max_lon": -122.25, "max_lat": 37.84}
+	twelfthStBbox = hw{"min_lon": -122.28, "min_lat": 37.80, "max_lon": -122.26, "max_lat": 37.81}
+	powellStBbox  = hw{"min_lon": -122.42, "min_lat": 37.78, "max_lon": -122.40, "max_lat": 37.79}
+	sfoBbox       = hw{"min_lon": -122.40, "min_lat": 37.60, "max_lon": -122.38, "max_lat": 37.63}
+	nowhereBbox   = hw{"min_lon": -60.0, "min_lat": 10.0, "max_lon": -59.9, "max_lat": 10.1}
+)
+
 const vehiclePositionQuery = `
 query($where: VehiclePositionFilter!) {
 	vehicle_positions(where: $where) {
@@ -40,76 +51,39 @@ query($where: VehiclePositionFilter!) {
 
 func TestVehiclePositionResolver(t *testing.T) {
 	tcs := []struct {
-		name     string
-		where    map[string]interface{}
-		expect   []string
-		selector string
+		name   string
+		bbox   map[string]interface{}
+		expect []string
 	}{
 		{
-			name:   "by agency onestop id",
-			where:  hw{"agency_onestop_ids": []string{"o-9q9-bayarearapidtransit"}},
+			name:   "whole bay area",
+			bbox:   bayAreaBbox,
 			expect: []string{"1001", "1002", "1003", "1004", "1005"},
-		},
-		{
-			name:   "by feed onestop id",
-			where:  hw{"feed_onestop_ids": []string{"BA"}},
-			expect: []string{"1001", "1002", "1003", "1004", "1005"},
-		},
-		{
-			name:   "by feed onestop id, no match",
-			where:  hw{"feed_onestop_ids": []string{"CT"}},
-			expect: []string{},
 		},
 		{
 			// 12TH and MCAR are inside; POWL, FTVL and SFO are not.
-			name:   "by bbox",
-			where:  hw{"bbox": hw{"min_lon": -122.30, "min_lat": 37.79, "max_lon": -122.25, "max_lat": 37.84}},
+			name:   "oakland",
+			bbox:   oaklandBbox,
 			expect: []string{"1001", "1002"},
 		},
 		{
-			name:   "by bbox, no match",
-			where:  hw{"bbox": hw{"min_lon": -60.0, "min_lat": 10.0, "max_lon": -59.9, "max_lat": 10.1}},
-			expect: []string{},
-		},
-		{
-			name:   "by route onestop id",
-			where:  hw{"route_onestop_ids": []string{"r-9q9-antioch~sfia~millbrae"}},
-			expect: []string{"1001"},
-		},
-		{
-			name:   "by trip id",
-			where:  hw{"feed_onestop_ids": []string{"BA"}, "trip_ids": []string{"1010400WKDY"}},
-			expect: []string{"1002"},
-		},
-		{
-			name:   "by feed onestop id and unmatched trip id",
-			where:  hw{"feed_onestop_ids": []string{"BA"}, "trip_ids": []string{"nope"}},
-			expect: []string{},
-		},
-		{
-			name:   "by unmatched route onestop id",
-			where:  hw{"route_onestop_ids": []string{"r-nope"}},
-			expect: []string{},
-		},
-		{
-			// Filters are combined, so an unmatched route empties the feed's vehicles.
-			name:   "by feed onestop id and unmatched route onestop id",
-			where:  hw{"feed_onestop_ids": []string{"BA"}, "route_onestop_ids": []string{"r-nope"}},
-			expect: []string{},
-		},
-		{
-			// The message names a route and a stop that are not in the schedule;
-			// the vehicle is still returned.
+			// The message names a route and a stop that are not in the
+			// schedule; the vehicle is still returned.
 			name:   "vehicle with unmatched entities",
-			where:  hw{"feed_onestop_ids": []string{"BA"}, "trip_ids": []string{"NOSUCHTRIP"}},
+			bbox:   sfoBbox,
 			expect: []string{"1005"},
+		},
+		{
+			name:   "no match",
+			bbox:   nowhereBbox,
+			expect: []string{},
 		},
 	}
 	for _, tc := range tcs {
 		testRt(t, rtTestCase{
 			name:    tc.name,
 			query:   vehiclePositionQuery,
-			vars:    hw{"where": tc.where},
+			vars:    hw{"where": hw{"bbox": tc.bbox}},
 			rtfiles: baVehiclePositions(),
 			cb: func(t *testing.T, jj string) {
 				var got []string
@@ -125,8 +99,8 @@ func TestVehiclePositionResolver(t *testing.T) {
 // Results are ordered by feed and entity id, so a polling client sees the same
 // vehicles in the same places and a limit always cuts the same tail.
 func TestVehiclePositionResolver_OrderAndLimit(t *testing.T) {
-	q := `query($limit: Int) {
-		vehicle_positions(limit: $limit, where: {feed_onestop_ids: ["BA"]}) { id }
+	q := `query($limit: Int, $where: VehiclePositionFilter!) {
+		vehicle_positions(limit: $limit, where: $where) { id }
 	}`
 	tcs := []struct {
 		name   string
@@ -141,7 +115,7 @@ func TestVehiclePositionResolver_OrderAndLimit(t *testing.T) {
 		testRt(t, rtTestCase{
 			name:    tc.name,
 			query:   q,
-			vars:    hw{"limit": tc.limit},
+			vars:    hw{"limit": tc.limit, "where": hw{"bbox": bayAreaBbox}},
 			rtfiles: baVehiclePositions(),
 			cb: func(t *testing.T, jj string) {
 				got := []string{}
@@ -158,7 +132,7 @@ func TestVehiclePositionResolver_Fields(t *testing.T) {
 	testRt(t, rtTestCase{
 		name:    "all fields",
 		query:   vehiclePositionQuery,
-		vars:    hw{"where": hw{"feed_onestop_ids": []string{"BA"}, "trip_ids": []string{"3210613WKDY"}}},
+		vars:    hw{"where": hw{"bbox": twelfthStBbox}},
 		rtfiles: baVehiclePositions(),
 		cb: func(t *testing.T, jj string) {
 			vps := gjson.Get(jj, "vehicle_positions").Array()
@@ -206,7 +180,7 @@ func TestVehiclePositionResolver_MatchedEntities(t *testing.T) {
 	testRt(t, rtTestCase{
 		name:    "matched entities",
 		query:   q,
-		vars:    hw{"where": hw{"feed_onestop_ids": []string{"BA"}}},
+		vars:    hw{"where": hw{"bbox": bayAreaBbox}},
 		rtfiles: baVehiclePositions(),
 		cb: func(t *testing.T, jj string) {
 			byVehicle := map[string]gjson.Result{}
@@ -248,12 +222,13 @@ func TestVehiclePositionResolver_MatchedEntities(t *testing.T) {
 func TestVehiclePositionResolver_RouteFromTrip(t *testing.T) {
 	testRt(t, rtTestCase{
 		name: "route resolved from trip",
-		query: `query {
-			vehicle_positions(where: {feed_onestop_ids: ["BA"], trip_ids: ["4410518WKDY"]}) {
+		query: `query($where: VehiclePositionFilter!) {
+			vehicle_positions(where: $where) {
 				trip_descriptor { route_id }
 				route { route_id }
 			}
 		}`,
+		vars:    hw{"where": hw{"bbox": powellStBbox}},
 		rtfiles: baVehiclePositions(),
 		cb: func(t *testing.T, jj string) {
 			assert.Equal(t, gjson.Null, gjson.Get(jj, "vehicle_positions.0.trip_descriptor.route_id").Type)
@@ -262,6 +237,8 @@ func TestVehiclePositionResolver_RouteFromTrip(t *testing.T) {
 	})
 }
 
+// The nested fields are how a client asks for one agency's, route's or trip's
+// vehicles; each takes the same filter as the top-level search.
 func TestVehiclePositionResolver_Nested(t *testing.T) {
 	tcs := []rtTestCase{
 		{
@@ -277,6 +254,37 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 					got = append(got, v.String())
 				}
 				assert.ElementsMatch(t, []string{"1001", "1002", "1003", "1004", "1005"}, got)
+			},
+		},
+		{
+			name: "agency vehicle_positions, bbox",
+			query: `query($where: VehiclePositionFilter) {
+				agencies(where: {onestop_id: "o-9q9-bayarearapidtransit"}) {
+					vehicle_positions(where: $where) { vehicle { id } }
+				}
+			}`,
+			vars: hw{"where": hw{"bbox": oaklandBbox}},
+			cb: func(t *testing.T, jj string) {
+				var got []string
+				for _, v := range gjson.Get(jj, "agencies.0.vehicle_positions.#.vehicle.id").Array() {
+					got = append(got, v.String())
+				}
+				assert.ElementsMatch(t, []string{"1001", "1002"}, got)
+			},
+		},
+		{
+			name: "agency vehicle_positions, limit",
+			query: `query {
+				agencies(where: {onestop_id: "o-9q9-bayarearapidtransit"}) {
+					vehicle_positions(limit: 2) { id }
+				}
+			}`,
+			cb: func(t *testing.T, jj string) {
+				var got []string
+				for _, v := range gjson.Get(jj, "agencies.0.vehicle_positions.#.id").Array() {
+					got = append(got, v.String())
+				}
+				assert.Equal(t, []string{"1001", "1002"}, got)
 			},
 		},
 		{
@@ -304,6 +312,18 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 			},
 		},
 		{
+			name: "route vehicle_positions, bbox excludes",
+			query: `query($where: VehiclePositionFilter) {
+				routes(where: {feed_onestop_id: "BA", route_id: "01"}) {
+					vehicle_positions(where: $where) { vehicle { id } }
+				}
+			}`,
+			vars: hw{"where": hw{"bbox": nowhereBbox}},
+			cb: func(t *testing.T, jj string) {
+				assert.Empty(t, gjson.Get(jj, "routes.0.vehicle_positions").Array())
+			},
+		},
+		{
 			name: "trip vehicle_position",
 			query: `query {
 				trips(where: {feed_onestop_id: "BA", trip_id: "3210613WKDY"}) {
@@ -312,6 +332,18 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 			}`,
 			cb: func(t *testing.T, jj string) {
 				assert.Equal(t, "1001", gjson.Get(jj, "trips.0.vehicle_position.vehicle.id").String())
+			},
+		},
+		{
+			name: "trip vehicle_position, bbox excludes",
+			query: `query($where: VehiclePositionFilter) {
+				trips(where: {feed_onestop_id: "BA", trip_id: "3210613WKDY"}) {
+					vehicle_position(where: $where) { vehicle { id } }
+				}
+			}`,
+			vars: hw{"where": hw{"bbox": nowhereBbox}},
+			cb: func(t *testing.T, jj string) {
+				assert.Equal(t, gjson.Null, gjson.Get(jj, "trips.0.vehicle_position").Type)
 			},
 		},
 		{
@@ -332,14 +364,16 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 	}
 }
 
-func TestVehiclePositionResolver_RequiresFilter(t *testing.T) {
+// A viewport larger than the server's maximum search radius is refused rather
+// than fanned out over every agency on the continent.
+func TestVehiclePositionResolver_BboxTooLarge(t *testing.T) {
 	c, _ := newTestClientWithOpts(t, testconfig.Options{RTJsons: baVehiclePositions()})
 	var resp map[string]interface{}
-	err := c.Post(`query { vehicle_positions(where: {trip_ids: ["3210613WKDY"]}) { stop_id } }`, &resp)
+	err := c.Post(`query { vehicle_positions(where: {bbox: {min_lon: -130.0, min_lat: 20.0, max_lon: -70.0, max_lat: 50.0}}) { id } }`, &resp)
 	if err == nil {
-		t.Fatal("expected an error when no scope filter is given")
+		t.Fatal("expected an error for an oversized bbox")
 	}
-	assert.Contains(t, err.Error(), "requires at least one of")
+	assert.Contains(t, err.Error(), "bbox too large")
 }
 
 func vehiclePositionAgency(t *testing.T, ctx context.Context, cfg model.Config, onestopId string) *model.Agency {
@@ -357,7 +391,7 @@ func vehiclePositionAgency(t *testing.T, ctx context.Context, cfg model.Config, 
 // what the attribution rules below are about.
 func vehiclePositionIDs(ctx context.Context, cfg model.Config, agency *model.Agency) []string {
 	var ret []string
-	for _, ent := range cfg.RTFinder.FindVehiclePositionsForAgency(ctx, agency, nil) {
+	for _, ent := range cfg.RTFinder.FindVehiclePositionsForAgency(ctx, agency, nil, nil) {
 		ret = append(ret, ent.ID)
 	}
 	return ret

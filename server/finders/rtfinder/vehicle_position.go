@@ -7,6 +7,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -25,7 +26,7 @@ type vehiclePositionMatch func(topic string, v *pb.VehiclePosition) bool
 // alone: one operator on the feed, one agency in the feed version. Regional
 // feeds such as 511's are associated with dozens of operators, and without that
 // check every one of them would claim every vehicle in the feed.
-func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Agency, limit *int) []*model.VehiclePosition {
+func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Agency, limit *int, where *model.VehiclePositionFilter) []*model.VehiclePosition {
 	agencyCount, ok := f.lc.GetFeedVersionAgencyCount(ctx, a.FeedVersionID)
 	singleAgency := ok && agencyCount <= 1
 	var routeIds map[string]bool
@@ -38,13 +39,13 @@ func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Age
 		}
 		return routeIds[v.GetTrip().GetRouteId()]
 	}
-	return limitVehiclePositions(f.findVehiclePositions(ctx, a.FeedVersionID, match), limit)
+	return limitVehiclePositions(f.findVehiclePositions(ctx, a.FeedVersionID, where, match), limit)
 }
 
 // FindVehiclePositionsForRoute returns cached vehicle positions running a route,
 // matched on the trip descriptor's route_id, or on its trip_id when the message
 // names no route.
-func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Route, limit *int) []*model.VehiclePosition {
+func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Route, limit *int, where *model.VehiclePositionFilter) []*model.VehiclePosition {
 	routeId := r.RouteID.Val
 	if routeId == "" {
 		return nil
@@ -59,12 +60,12 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 		}
 		return tripIds[v.GetTrip().GetTripId()]
 	}
-	return limitVehiclePositions(f.findVehiclePositions(ctx, r.FeedVersionID, match), limit)
+	return limitVehiclePositions(f.findVehiclePositions(ctx, r.FeedVersionID, where, match), limit)
 }
 
 // FindVehiclePositionForTrip returns the cached vehicle position running a trip,
 // matched on the trip descriptor's trip_id.
-func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip) *model.VehiclePosition {
+func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip, where *model.VehiclePositionFilter) *model.VehiclePosition {
 	tripId := t.TripID.Val
 	if tripId == "" {
 		return nil
@@ -72,7 +73,7 @@ func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip) 
 	match := func(_ string, v *pb.VehiclePosition) bool {
 		return v.GetTrip().GetTripId() == tripId
 	}
-	found := f.findVehiclePositions(ctx, t.FeedVersionID, match)
+	found := f.findVehiclePositions(ctx, t.FeedVersionID, where, match)
 	if len(found) == 0 {
 		return nil
 	}
@@ -88,7 +89,16 @@ func (f *Finder) feedIsExclusive(ctx context.Context, topic string) bool {
 
 // findVehiclePositions collects matching vehicle positions from every realtime
 // feed associated with a feed version.
-func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, match vehiclePositionMatch) []*model.VehiclePosition {
+func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *model.VehiclePositionFilter, match vehiclePositionMatch) []*model.VehiclePosition {
+	var bbox *tlxy.BoundingBox
+	if where != nil {
+		bbox = &tlxy.BoundingBox{
+			MinLon: where.Bbox.MinLon,
+			MinLat: where.Bbox.MinLat,
+			MaxLon: where.Bbox.MaxLon,
+			MaxLat: where.Bbox.MaxLat,
+		}
+	}
 	var ret []*model.VehiclePosition
 	topics, _ := f.lc.GetFeedVersionRTFeeds(fvid)
 	for _, topic := range topics {
@@ -97,13 +107,26 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, match vehic
 			continue
 		}
 		for _, ent := range src.GetVehiclePositions() {
-			if ent.Position == nil || !match(topic, ent.Position) {
+			if ent.Position == nil || !withinBbox(bbox, ent.Position) || !match(topic, ent.Position) {
 				continue
 			}
 			ret = append(ret, makeVehiclePosition(ent, topic, fvid))
 		}
 	}
 	return ret
+}
+
+// withinBbox tests the raw message, so vehicles outside the search area are
+// dropped before anything is built for them.
+func withinBbox(bbox *tlxy.BoundingBox, v *pb.VehiclePosition) bool {
+	if bbox == nil {
+		return true
+	}
+	p := v.Position
+	if p == nil {
+		return false
+	}
+	return bbox.Contains(tlxy.Point{Lon: float64(p.GetLongitude()), Lat: float64(p.GetLatitude())})
 }
 
 // limitVehiclePositions sorts and truncates a result set. Vehicles arrive in

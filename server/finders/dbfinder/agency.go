@@ -140,8 +140,8 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		if where.FeedVersionSha1 != nil {
 			q = q.Where("feed_versions.id = (select id from feed_versions where sha1 = ? limit 1)", *where.FeedVersionSha1)
 		}
-		if feedOnestopIds := mergeIds(where.FeedOnestopID, where.FeedOnestopIds); len(feedOnestopIds) > 0 {
-			q = q.Where(In("current_feeds.onestop_id", feedOnestopIds))
+		if where.FeedOnestopID != nil {
+			q = q.Where(sq.Eq{"current_feeds.onestop_id": *where.FeedOnestopID})
 		}
 		if where.AgencyID != nil {
 			q = q.Where(sq.Eq{"gtfs_agencies.agency_id": *where.AgencyID})
@@ -149,8 +149,8 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		if where.AgencyName != nil {
 			q = q.Where(sq.Eq{"gtfs_agencies.agency_name": *where.AgencyName})
 		}
-		if onestopIds := mergeIds(where.OnestopID, where.OnestopIds); len(onestopIds) > 0 {
-			q = q.Where(In("coif.resolved_onestop_id", onestopIds))
+		if where.OnestopID != nil {
+			q = q.Where(sq.Eq{"coif.resolved_onestop_id": *where.OnestopID})
 		}
 		// Places
 		if where.Adm0Iso != nil || where.Adm1Iso != nil || where.Adm0Name != nil || where.Adm1Name != nil || where.CityName != nil {

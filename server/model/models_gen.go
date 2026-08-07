@@ -16,14 +16,10 @@ import (
 type AgencyFilter struct {
 	// Search by resolved Onestop ID (operator's when associated, else agency's)
 	OnestopID *string `json:"onestop_id,omitempty"`
-	// Search by any of these resolved Onestop IDs
-	OnestopIds []string `json:"onestop_ids,omitempty"`
 	// Search for agencies with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
 	// Search for agencies with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
-	// Search for agencies with any of these feed Onestop IDs
-	FeedOnestopIds []string `json:"feed_onestop_ids,omitempty"`
 	// Search for agencies with this GTFS agency_id
 	AgencyID *string `json:"agency_id,omitempty"`
 	// Search for agencies with this GTFS agency_name
@@ -1746,18 +1742,10 @@ type VehiclePosition struct {
 
 // Search options for GTFS-RT vehicle positions.
 //
-// At least one of `bbox`, `agency_onestop_ids`, `feed_onestop_ids` or `route_onestop_ids` must be given; `trip_ids` alone is not enough to scope a search. Filters are combined: a vehicle is returned only if it matches every filter present.
+// To find the vehicles of a particular agency, route or trip, query `vehicle_positions` on that entity rather than searching for it here.
 type VehiclePositionFilter struct {
-	// Search for vehicles within this bounding box
-	Bbox *BoundingBox `json:"bbox,omitempty"`
-	// Search for vehicles operated by agencies with these resolved Onestop IDs
-	AgencyOnestopIds []string `json:"agency_onestop_ids,omitempty"`
-	// Search for vehicles from feeds with these Onestop IDs; this is the static GTFS feed, not the GTFS-RT feed
-	FeedOnestopIds []string `json:"feed_onestop_ids,omitempty"`
-	// Search for vehicles running routes with these Onestop IDs
-	RouteOnestopIds []string `json:"route_onestop_ids,omitempty"`
-	// Search for vehicles running trips with these GTFS `trip_id`s
-	TripIds []string `json:"trip_ids,omitempty"`
+	// Search for vehicles within this bounding box. Its size is bounded by the server's maximum search radius
+	Bbox *BoundingBox `json:"bbox"`
 }
 
 // A resolved waypoint in a routing response, including optional matched stop information.

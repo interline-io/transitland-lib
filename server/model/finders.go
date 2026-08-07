@@ -165,9 +165,9 @@ type RTFinder interface {
 	FindAlertsForStop(context.Context, *Stop, *int, *bool) []*Alert
 	FindAlertsForRoute(context.Context, *Route, *int, *bool) []*Alert
 	FindAlertsForAgency(context.Context, *Agency, *int, *bool) []*Alert
-	FindVehiclePositionsForAgency(context.Context, *Agency, *int) []*VehiclePosition
-	FindVehiclePositionsForRoute(context.Context, *Route, *int) []*VehiclePosition
-	FindVehiclePositionForTrip(context.Context, *Trip) *VehiclePosition
+	FindVehiclePositionsForAgency(context.Context, *Agency, *int, *VehiclePositionFilter) []*VehiclePosition
+	FindVehiclePositionsForRoute(context.Context, *Route, *int, *VehiclePositionFilter) []*VehiclePosition
+	FindVehiclePositionForTrip(context.Context, *Trip, *VehiclePositionFilter) *VehiclePosition
 	GetAddedTripsForStop(context.Context, *Stop) []*pb.TripUpdate
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
 	// lookup cache methods

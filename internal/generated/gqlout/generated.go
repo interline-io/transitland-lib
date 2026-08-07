@@ -97,7 +97,7 @@ type ComplexityRoot struct {
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
 		Routes            func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SearchRank        func(childComplexity int) int
-		VehiclePositions  func(childComplexity int, limit *int) int
+		VehiclePositions  func(childComplexity int, limit *int, where *model.VehiclePositionFilter) int
 	}
 
 	AgencyPlace struct {
@@ -1005,7 +1005,7 @@ type ComplexityRoot struct {
 		Segments          func(childComplexity int, limit *int, where *model.SegmentFilter) int
 		Stops             func(childComplexity int, limit *int, where *model.StopFilter) int
 		Trips             func(childComplexity int, limit *int, where *model.TripFilter) int
-		VehiclePositions  func(childComplexity int, limit *int) int
+		VehiclePositions  func(childComplexity int, limit *int, where *model.VehiclePositionFilter) int
 	}
 
 	RouteAttribute struct {
@@ -1241,7 +1241,7 @@ type ComplexityRoot struct {
 		TripHeadsign         func(childComplexity int) int
 		TripID               func(childComplexity int) int
 		TripShortName        func(childComplexity int) int
-		VehiclePosition      func(childComplexity int) int
+		VehiclePosition      func(childComplexity int, where *model.VehiclePositionFilter) int
 		WheelchairAccessible func(childComplexity int) int
 	}
 
@@ -1367,7 +1367,7 @@ type AgencyResolver interface {
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
-	VehiclePositions(ctx context.Context, obj *model.Agency, limit *int) ([]*model.VehiclePosition, error)
+	VehiclePositions(ctx context.Context, obj *model.Agency, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 }
 type BookingRuleResolver interface {
 	PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error)
@@ -1545,7 +1545,7 @@ type RouteResolver interface {
 	RouteStopBuffer(ctx context.Context, obj *model.Route, radius *float64) (*model.RouteStopBuffer, error)
 	Patterns(ctx context.Context, obj *model.Route) ([]*model.RouteStopPattern, error)
 	Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int) ([]*model.Alert, error)
-	VehiclePositions(ctx context.Context, obj *model.Route, limit *int) ([]*model.VehiclePosition, error)
+	VehiclePositions(ctx context.Context, obj *model.Route, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 	Segments(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentFilter) ([]*model.Segment, error)
 	SegmentPatterns(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentPatternFilter) ([]*model.SegmentPattern, error)
 }
@@ -1622,7 +1622,7 @@ type TripResolver interface {
 	FlexStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error)
 	Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error)
 	Alerts(ctx context.Context, obj *model.Trip, active *bool, limit *int) ([]*model.Alert, error)
-	VehiclePosition(ctx context.Context, obj *model.Trip) (*model.VehiclePosition, error)
+	VehiclePosition(ctx context.Context, obj *model.Trip, where *model.VehiclePositionFilter) (*model.VehiclePosition, error)
 	ScheduleRelationship(ctx context.Context, obj *model.Trip) (*model.ScheduleRelationship, error)
 	Timestamp(ctx context.Context, obj *model.Trip) (*time.Time, error)
 }
@@ -1810,7 +1810,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Agency.VehiclePositions(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.Agency.VehiclePositions(childComplexity, args["limit"].(*int), args["where"].(*model.VehiclePositionFilter)), true
 
 	case "AgencyPlace.adm0_iso":
 		if e.ComplexityRoot.AgencyPlace.Adm0Iso == nil {
@@ -6174,7 +6174,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Route.VehiclePositions(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.Route.VehiclePositions(childComplexity, args["limit"].(*int), args["where"].(*model.VehiclePositionFilter)), true
 
 	case "RouteAttribute.category":
 		if e.ComplexityRoot.RouteAttribute.Category == nil {
@@ -7389,7 +7389,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Trip.VehiclePosition(childComplexity), true
+		args, err := ec.field_Trip_vehicle_position_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Trip.VehiclePosition(childComplexity, args["where"].(*model.VehiclePositionFilter)), true
 	case "Trip.wheelchair_accessible":
 		if e.ComplexityRoot.Trip.WheelchairAccessible == nil {
 			break
@@ -9146,7 +9151,7 @@ type Query {
   "Current GBFS dock data (Station Information)"
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
 
-  "Current GTFS-RT vehicle positions; requires at least one ` + "`" + `where` + "`" + ` filter. ` + "`" + `limit` + "`" + ` defaults to 1000 and is capped at 10000; beyond that, narrow the search"
+  "Current GTFS-RT vehicle positions; requires at least one ` + "`" + `where` + "`" + ` filter."
   vehicle_positions(limit: Int, where: VehiclePositionFilter!): [VehiclePosition!]!
 
   "Current user metadata; requires authentication"
@@ -9709,7 +9714,7 @@ type Agency {
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle positions for this agency"
-  vehicle_positions(limit: Int): [VehiclePosition!]
+  vehicle_positions(limit: Int, where: VehiclePositionFilter): [VehiclePosition!]
 }
 
 """
@@ -9809,7 +9814,7 @@ type Route {
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle positions for this route"
-  vehicle_positions(limit: Int): [VehiclePosition!]
+  vehicle_positions(limit: Int, where: VehiclePositionFilter): [VehiclePosition!]
 
   "Normalized route segment data for this route, if available"
   segments(limit: Int, where: SegmentFilter): [Segment!]
@@ -10094,7 +10099,7 @@ type Trip {
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle position for this trip"
-  vehicle_position: VehiclePosition
+  vehicle_position(where: VehiclePositionFilter): VehiclePosition
 
   "Real-time status of this trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
   schedule_relationship: ScheduleRelationship
@@ -11656,14 +11661,10 @@ enum FeedSpecTypes {
 input AgencyFilter {
   "Search by resolved Onestop ID (operator's when associated, else agency's)"
   onestop_id: String
-  "Search by any of these resolved Onestop IDs"
-  onestop_ids: [String!]
   "Search for agencies with this feed version SHA1 hash"
   feed_version_sha1: String
   "Search for agencies with this feed Onestop ID"
   feed_onestop_id: String
-  "Search for agencies with any of these feed Onestop IDs"
-  feed_onestop_ids: [String!]
   "Search for agencies with this GTFS agency_id"
   agency_id: String
   "Search for agencies with this GTFS agency_name"
@@ -11918,19 +11919,11 @@ input TripFilter {
 """
 Search options for GTFS-RT vehicle positions.
 
-At least one of ` + "`" + `bbox` + "`" + `, ` + "`" + `agency_onestop_ids` + "`" + `, ` + "`" + `feed_onestop_ids` + "`" + ` or ` + "`" + `route_onestop_ids` + "`" + ` must be given; ` + "`" + `trip_ids` + "`" + ` alone is not enough to scope a search. Filters are combined: a vehicle is returned only if it matches every filter present.
+To find the vehicles of a particular agency, route or trip, query ` + "`" + `vehicle_positions` + "`" + ` on that entity rather than searching for it here.
 """
 input VehiclePositionFilter {
-  "Search for vehicles within this bounding box"
-  bbox: BoundingBox
-  "Search for vehicles operated by agencies with these resolved Onestop IDs"
-  agency_onestop_ids: [String!]
-  "Search for vehicles from feeds with these Onestop IDs; this is the static GTFS feed, not the GTFS-RT feed"
-  feed_onestop_ids: [String!]
-  "Search for vehicles running routes with these Onestop IDs"
-  route_onestop_ids: [String!]
-  "Search for vehicles running trips with these GTFS ` + "`" + `trip_id` + "`" + `s"
-  trip_ids: [String!]
+  "Search for vehicles within this bounding box. Its size is bounded by the server's maximum search radius"
+  bbox: BoundingBox!
 }
 
 """Search options for census datasets"""
@@ -14966,6 +14959,14 @@ func (ec *executionContext) field_Agency_vehicle_positions_args(ctx context.Cont
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.VehiclePositionFilter, error) {
+			return ec.unmarshalOVehiclePositionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -16554,6 +16555,14 @@ func (ec *executionContext) field_Route_vehicle_positions_args(ctx context.Conte
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.VehiclePositionFilter, error) {
+			return ec.unmarshalOVehiclePositionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
 	return args, nil
 }
 
@@ -16946,6 +16955,20 @@ func (ec *executionContext) field_Trip_stop_times_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Trip_vehicle_position_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.VehiclePositionFilter, error) {
+			return ec.unmarshalOVehiclePositionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg0
 	return args, nil
 }
 
@@ -17728,7 +17751,7 @@ func (ec *executionContext) _Agency_vehicle_positions(ctx context.Context, field
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Agency().VehiclePositions(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.Agency().VehiclePositions(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.VehiclePositionFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.VehiclePosition) graphql.Marshaler {
@@ -35201,7 +35224,7 @@ func (ec *executionContext) _Route_vehicle_positions(ctx context.Context, field 
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Route().VehiclePositions(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.Route().VehiclePositions(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.VehiclePositionFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.VehiclePosition) graphql.Marshaler {
@@ -40165,7 +40188,8 @@ func (ec *executionContext) _Trip_vehicle_position(ctx context.Context, field gr
 			return ec.fieldContext_Trip_vehicle_position(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Trip().VehiclePosition(ctx, obj)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Trip().VehiclePosition(ctx, obj, fc.Args["where"].(*model.VehiclePositionFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.VehiclePosition) graphql.Marshaler {
@@ -40175,7 +40199,7 @@ func (ec *executionContext) _Trip_vehicle_position(ctx context.Context, field gr
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_Trip_vehicle_position(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Trip_vehicle_position(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Trip",
 		Field:      field,
@@ -40184,6 +40208,17 @@ func (ec *executionContext) fieldContext_Trip_vehicle_position(_ context.Context
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_VehiclePosition(ctx, field)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Trip_vehicle_position_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -43457,7 +43492,7 @@ func (ec *executionContext) unmarshalInputAgencyFilter(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"onestop_id", "onestop_ids", "feed_version_sha1", "feed_onestop_id", "feed_onestop_ids", "agency_id", "agency_name", "search", "city_name", "adm0_name", "adm1_name", "adm0_iso", "adm1_iso", "license", "location", "bbox", "within", "near"}
+	fieldsInOrder := [...]string{"onestop_id", "feed_version_sha1", "feed_onestop_id", "agency_id", "agency_name", "search", "city_name", "adm0_name", "adm1_name", "adm0_iso", "adm1_iso", "license", "location", "bbox", "within", "near"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -43471,13 +43506,6 @@ func (ec *executionContext) unmarshalInputAgencyFilter(ctx context.Context, obj 
 				return it, err
 			}
 			it.OnestopID = data
-		case "onestop_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("onestop_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.OnestopIds = data
 		case "feed_version_sha1":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("feed_version_sha1"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -43492,13 +43520,6 @@ func (ec *executionContext) unmarshalInputAgencyFilter(ctx context.Context, obj 
 				return it, err
 			}
 			it.FeedOnestopID = data
-		case "feed_onestop_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("feed_onestop_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FeedOnestopIds = data
 		case "agency_id":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agency_id"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -46578,7 +46599,7 @@ func (ec *executionContext) unmarshalInputVehiclePositionFilter(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"bbox", "agency_onestop_ids", "feed_onestop_ids", "route_onestop_ids", "trip_ids"}
+	fieldsInOrder := [...]string{"bbox"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -46587,39 +46608,11 @@ func (ec *executionContext) unmarshalInputVehiclePositionFilter(ctx context.Cont
 		switch k {
 		case "bbox":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bbox"))
-			data, err := ec.unmarshalOBoundingBox2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBoundingBox(ctx, v)
+			data, err := ec.unmarshalNBoundingBox2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBoundingBox(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.Bbox = data
-		case "agency_onestop_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agency_onestop_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AgencyOnestopIds = data
-		case "feed_onestop_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("feed_onestop_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FeedOnestopIds = data
-		case "route_onestop_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_onestop_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.RouteOnestopIds = data
-		case "trip_ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("trip_ids"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TripIds = data
 		}
 	}
 	return it, nil
@@ -59277,6 +59270,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) unmarshalNBoundingBox2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBoundingBox(ctx context.Context, v any) (*model.BoundingBox, error) {
+	res, err := ec.unmarshalInputBoundingBox(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNCalendar2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v model.Calendar) graphql.Marshaler {
 	return ec._Calendar(ctx, sel, &v)
 }
@@ -63512,6 +63510,14 @@ func (ec *executionContext) marshalOVehiclePosition2ᚖgithubᚗcomᚋinterline�
 		return graphql.Null
 	}
 	return ec._VehiclePosition(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOVehiclePositionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐVehiclePositionFilter(ctx context.Context, v any) (*model.VehiclePositionFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputVehiclePositionFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOWaypoint2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐWaypoint(ctx context.Context, sel ast.SelectionSet, v *model.Waypoint) graphql.Marshaler {

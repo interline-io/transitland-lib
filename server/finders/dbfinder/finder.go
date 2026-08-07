@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -120,15 +119,6 @@ func arrangeMap[K comparable, T any, O any](keys []K, ents []T, cb func(T) (K, O
 		ret[idx] = bykey[key]
 	}
 	return ret
-}
-
-// mergeIds folds a singular filter value into its plural form, so that setting
-// both is a union rather than an unsatisfiable AND.
-func mergeIds(single *string, plural []string) []string {
-	if single == nil {
-		return plural
-	}
-	return append(slices.Clone(plural), *single)
 }
 
 // groupFVEntityIDs collects GTFS entity ids by feed version, so a batch of keys
