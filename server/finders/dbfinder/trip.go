@@ -93,6 +93,60 @@ func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
 	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
 }
 
+// Resolve a filter's date inputs into the one service date to match, in the feed
+// version's terms: a relative date becomes concrete, and use_service_window
+// relocates a date outside the window into the fallback week.
+func resolveServiceDate(serviceDate *tt.Date, relativeDate *model.RelativeDate, useServiceWindow bool, fvsw *model.ServiceWindow) (*tt.Date, error) {
+	if fvsw == nil {
+		return serviceDate, nil
+	}
+	if relativeDate != nil {
+		s, err := tt.RelativeDate(fvsw.NowLocal, kebabize(string(*relativeDate)))
+		if err != nil {
+			return nil, fmt.Errorf("invalid relative_date %q: %w", *relativeDate, err)
+		}
+		serviceDate = tzTruncate(s, fvsw.NowLocal.Location())
+	}
+	// Guarded: use_service_window with no date at all is a valid filter.
+	if useServiceWindow && serviceDate != nil {
+		serviceDate = mapIntoServiceWindow(serviceDate.Val, fvsw)
+	}
+	return serviceDate, nil
+}
+
+// Restrict a query over gtfs_trips to the trips running on a service date.
+//
+// The join is inner, so a trip whose calendar does not cover the date drops out.
+// LIMIT 1 keeps a service with several calendar_dates rows from multiplying the
+// trip, which is what makes the result safe to aggregate over.
+func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilder {
+	sd := serviceDate.Val
+	return q.JoinClause(`
+	join lateral (
+		select gc.id
+		from gtfs_calendars gc
+		left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = ?::date
+		left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = ?::date
+		where
+			gc.id = gtfs_trips.service_id
+			AND ((
+				gc.start_date <= ?::date AND gc.end_date >= ?::date
+				AND (CASE EXTRACT(isodow FROM ?::date)
+				WHEN 1 THEN monday = 1
+				WHEN 2 THEN tuesday = 1
+				WHEN 3 THEN wednesday = 1
+				WHEN 4 THEN thursday = 1
+				WHEN 5 THEN friday = 1
+				WHEN 6 THEN saturday = 1
+				WHEN 7 THEN sunday = 1
+				END)
+			) OR gcda.date IS NOT NULL)
+			AND gcdb.date is null
+		LIMIT 1
+	) gc on true
+	`, sd, sd, sd, sd, sd)
+}
+
 // tripDate is a service date to match in the database and the dates it is
 // reported as. They differ under use_service_window, which relocates a date
 // into the fallback week; several requested dates can land on the same day.
@@ -309,19 +363,10 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 	// Resolved into a local: `where` is reused for every feed version.
 	var serviceDate *tt.Date
 	if where != nil {
-		serviceDate = where.ServiceDate
-		if fvsw != nil {
-			if where.RelativeDate != nil {
-				s, err := tt.RelativeDate(fvsw.NowLocal, kebabize(string(*where.RelativeDate)))
-				if err != nil {
-					return q, nil, fmt.Errorf("invalid relative_date %q: %w", *where.RelativeDate, err)
-				}
-				serviceDate = tzTruncate(s, fvsw.NowLocal.Location())
-			}
-			// Guarded: use_service_window with no date at all is a valid filter.
-			if nilOr(where.UseServiceWindow, false) && serviceDate != nil {
-				serviceDate = mapIntoServiceWindow(serviceDate.Val, fvsw)
-			}
+		var err error
+		serviceDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
+		if err != nil {
+			return q, nil, err
 		}
 	}
 	tripDates := resolveTripDates(where, fvsw)
@@ -379,31 +424,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 			) svc on true
 			`, strings.Join(dates, ",")).Where("svc.service_dates_agg is not null")
 		} else if serviceDate != nil {
-			sd := serviceDate.Val
-			q = q.JoinClause(`
-			join lateral (
-				select gc.id
-				from gtfs_calendars gc 
-				left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = ?::date
-				left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = ?::date
-				where 
-					gc.id = gtfs_trips.service_id 
-					AND ((
-						gc.start_date <= ?::date AND gc.end_date >= ?::date
-						AND (CASE EXTRACT(isodow FROM ?::date)
-						WHEN 1 THEN monday = 1
-						WHEN 2 THEN tuesday = 1
-						WHEN 3 THEN wednesday = 1
-						WHEN 4 THEN thursday = 1
-						WHEN 5 THEN friday = 1
-						WHEN 6 THEN saturday = 1
-						WHEN 7 THEN sunday = 1
-						END)
-					) OR gcda.date IS NOT NULL)
-					AND gcdb.date is null
-				LIMIT 1
-			) gc on true
-			`, sd, sd, sd, sd, sd)
+			q = serviceDateLateral(q, *serviceDate)
 		}
 		// Handle license filtering
 		q = licenseFilter(where.License, q)

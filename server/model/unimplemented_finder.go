@@ -284,7 +284,7 @@ func (UnimplementedFinder) RoutesByFeedVersionRouteIDs(_ context.Context, keys [
 func (UnimplementedFinder) RoutesByIDs(_ context.Context, ids []int) ([]*Route, []error) {
 	return notImplBatch[*Route](ids)
 }
-func (UnimplementedFinder) RouteStopPatternsByRouteIDs(context.Context, *int, []int) ([][]*RouteStopPattern, error) {
+func (UnimplementedFinder) RouteStopPatternsByRouteIDs(context.Context, *int, *RouteStopPatternFilter, []FVPair) ([][]*RouteStopPattern, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) RouteStopsByRouteIDs(context.Context, *int, []int) ([][]*RouteStop, error) {

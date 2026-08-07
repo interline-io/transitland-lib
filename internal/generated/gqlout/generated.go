@@ -987,7 +987,7 @@ type ComplexityRoot struct {
 		Headways          func(childComplexity int, limit *int) int
 		ID                func(childComplexity int) int
 		OnestopID         func(childComplexity int) int
-		Patterns          func(childComplexity int) int
+		Patterns          func(childComplexity int, where *model.RouteStopPatternFilter) int
 		RouteAttribute    func(childComplexity int) int
 		RouteColor        func(childComplexity int) int
 		RouteDesc         func(childComplexity int) int
@@ -1050,10 +1050,11 @@ type ComplexityRoot struct {
 	}
 
 	RouteStopPattern struct {
-		Count         func(childComplexity int) int
-		DirectionID   func(childComplexity int) int
-		StopPatternID func(childComplexity int) int
-		Trips         func(childComplexity int, limit *int) int
+		Count              func(childComplexity int) int
+		DirectionID        func(childComplexity int) int
+		RepresentativeTrip func(childComplexity int) int
+		StopPatternID      func(childComplexity int) int
+		Trips              func(childComplexity int, limit *int) int
 	}
 
 	Segment struct {
@@ -1543,7 +1544,7 @@ type RouteResolver interface {
 	Geometries(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteGeometry, error)
 	CensusGeographies(ctx context.Context, obj *model.Route, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	RouteStopBuffer(ctx context.Context, obj *model.Route, radius *float64) (*model.RouteStopBuffer, error)
-	Patterns(ctx context.Context, obj *model.Route) ([]*model.RouteStopPattern, error)
+	Patterns(ctx context.Context, obj *model.Route, where *model.RouteStopPatternFilter) ([]*model.RouteStopPattern, error)
 	Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int) ([]*model.Alert, error)
 	VehiclePositions(ctx context.Context, obj *model.Route, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 	Segments(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentFilter) ([]*model.Segment, error)
@@ -1560,6 +1561,7 @@ type RouteStopResolver interface {
 	Agency(ctx context.Context, obj *model.RouteStop) (*model.Agency, error)
 }
 type RouteStopPatternResolver interface {
+	RepresentativeTrip(ctx context.Context, obj *model.RouteStopPattern) (*model.Trip, error)
 	Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error)
 }
 type SegmentResolver interface {
@@ -6031,7 +6033,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Route.Patterns(childComplexity), true
+		args, err := ec.field_Route_patterns_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Route.Patterns(childComplexity, args["where"].(*model.RouteStopPatternFilter)), true
 	case "Route.route_attribute":
 		if e.ComplexityRoot.Route.RouteAttribute == nil {
 			break
@@ -6349,6 +6356,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteStopPattern.DirectionID(childComplexity), true
+	case "RouteStopPattern.representative_trip":
+		if e.ComplexityRoot.RouteStopPattern.RepresentativeTrip == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPattern.RepresentativeTrip(childComplexity), true
 	case "RouteStopPattern.stop_pattern_id":
 		if e.ComplexityRoot.RouteStopPattern.StopPatternID == nil {
 			break
@@ -7995,6 +8008,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputPointRadius,
 		ec.unmarshalInputRouteFilter,
 		ec.unmarshalInputRouteLocationFilter,
+		ec.unmarshalInputRouteStopPatternFilter,
 		ec.unmarshalInputSegmentFilter,
 		ec.unmarshalInputSegmentPatternFilter,
 		ec.unmarshalInputServiceCoversFilter,
@@ -9808,7 +9822,7 @@ type Route {
   route_stop_buffer(radius: Float): RouteStopBuffer!
 
   "Unique stop sequences operated on this route"
-  patterns: [RouteStopPattern!]
+  patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
   
   "GTFS-RT service alerts for this route; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
@@ -10762,6 +10776,13 @@ type RouteStopPattern {
 
   "Number of trips that operate this stop pattern"
   count: Int!
+
+  """
+  One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when ` + "`" + `Route.patterns` + "`" + ` was given one.
+
+  Times, headsigns and ` + "`" + `timepoint` + "`" + ` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
+  """
+  representative_trip: Trip
 
   "Representative trips that follow this stop pattern; useful for fetching full stop_times"
   trips(limit: Int): [Trip!]
@@ -11924,6 +11945,16 @@ To find the vehicles of a particular agency, route or trip, query ` + "`" + `veh
 input VehiclePositionFilter {
   "Search for vehicles within this bounding box. Its size is bounded by the server's maximum search radius"
   bbox: BoundingBox!
+}
+
+"""Search options for a route's stop patterns"""
+input RouteStopPatternFilter {
+  "GTFS service date. Restricts the patterns returned to those a trip operates on that date, counts them over that date alone, and picks ` + "`" + `representative_trip` + "`" + ` from it. Ignored if ` + "`" + `relative_date` + "`" + ` is set"
+  service_date: Date
+  "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `. Takes precedence over ` + "`" + `service_date` + "`" + `"
+  relative_date: RelativeDate
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
+  use_service_window: Boolean
 }
 
 """Search options for census datasets"""
@@ -14134,6 +14165,8 @@ func (ec *executionContext) childFields_RouteStopPattern(ctx context.Context, fi
 		return ec.fieldContext_RouteStopPattern_direction_id(ctx, field)
 	case "count":
 		return ec.fieldContext_RouteStopPattern_count(ctx, field)
+	case "representative_trip":
+		return ec.fieldContext_RouteStopPattern_representative_trip(ctx, field)
 	case "trips":
 		return ec.fieldContext_RouteStopPattern_trips(ctx, field)
 	}
@@ -16425,6 +16458,20 @@ func (ec *executionContext) field_Route_headways_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["limit"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Route_patterns_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.RouteStopPatternFilter, error) {
+			return ec.unmarshalORouteStopPatternFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg0
 	return args, nil
 }
 
@@ -35147,7 +35194,8 @@ func (ec *executionContext) _Route_patterns(ctx context.Context, field graphql.C
 			return ec.fieldContext_Route_patterns(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Route().Patterns(ctx, obj)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Route().Patterns(ctx, obj, fc.Args["where"].(*model.RouteStopPatternFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.RouteStopPattern) graphql.Marshaler {
@@ -35157,7 +35205,7 @@ func (ec *executionContext) _Route_patterns(ctx context.Context, field graphql.C
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_Route_patterns(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Route_patterns(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Route",
 		Field:      field,
@@ -35166,6 +35214,17 @@ func (ec *executionContext) fieldContext_Route_patterns(_ context.Context, field
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_RouteStopPattern(ctx, field)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Route_patterns_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -36047,6 +36106,38 @@ func (ec *executionContext) _RouteStopPattern_count(ctx context.Context, field g
 }
 func (ec *executionContext) fieldContext_RouteStopPattern_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RouteStopPattern", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopPattern_representative_trip(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPattern_representative_trip(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPattern().RepresentativeTrip(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Trip) graphql.Marshaler {
+			return ec.marshalOTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPattern_representative_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPattern",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Trip(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _RouteStopPattern_trips(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
@@ -45545,6 +45636,50 @@ func (ec *executionContext) unmarshalInputRouteLocationFilter(ctx context.Contex
 				return it, err
 			}
 			it.Focus = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputRouteStopPatternFilter(ctx context.Context, obj any) (model.RouteStopPatternFilter, error) {
+	var it model.RouteStopPatternFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"service_date", "relative_date", "use_service_window"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "service_date":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_date"))
+			data, err := ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServiceDate = data
+		case "relative_date":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relative_date"))
+			data, err := ec.unmarshalORelativeDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRelativeDate(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RelativeDate = data
+		case "use_service_window":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("use_service_window"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UseServiceWindow = data
 		}
 	}
 	return it, nil
@@ -55628,6 +55763,39 @@ func (ec *executionContext) _RouteStopPattern(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "representative_trip":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPattern_representative_trip(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "trips":
 			field := field
 
@@ -62830,6 +62998,14 @@ func (ec *executionContext) marshalORouteStopPattern2ᚕᚖgithubᚗcomᚋinterl
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalORouteStopPatternFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternFilter(ctx context.Context, v any) (*model.RouteStopPatternFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputRouteStopPatternFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOScheduleRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐScheduleRelationship(ctx context.Context, v any) (*model.ScheduleRelationship, error) {

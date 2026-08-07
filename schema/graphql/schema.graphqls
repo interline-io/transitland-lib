@@ -809,7 +809,7 @@ type Route {
   route_stop_buffer(radius: Float): RouteStopBuffer!
 
   "Unique stop sequences operated on this route"
-  patterns: [RouteStopPattern!]
+  patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
   
   "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
@@ -1763,6 +1763,13 @@ type RouteStopPattern {
 
   "Number of trips that operate this stop pattern"
   count: Int!
+
+  """
+  One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
+
+  Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
+  """
+  representative_trip: Trip
 
   "Representative trips that follow this stop pattern; useful for fetching full stop_times"
   trips(limit: Int): [Trip!]
@@ -2925,6 +2932,16 @@ To find the vehicles of a particular agency, route or trip, query `vehicle_posit
 input VehiclePositionFilter {
   "Search for vehicles within this bounding box. Its size is bounded by the server's maximum search radius"
   bbox: BoundingBox!
+}
+
+"""Search options for a route's stop patterns"""
+input RouteStopPatternFilter {
+  "GTFS service date. Restricts the patterns returned to those a trip operates on that date, counts them over that date alone, and picks `representative_trip` from it. Ignored if `relative_date` is set"
+  service_date: Date
+  "Calendar date relative to today; see `RelativeDate`. Takes precedence over `service_date`"
+  relative_date: RelativeDate
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
+  use_service_window: Boolean
 }
 
 """Search options for census datasets"""

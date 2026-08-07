@@ -75,8 +75,12 @@ func (r *routeResolver) Alerts(ctx context.Context, obj *model.Route, active *bo
 	return model.ForContext(ctx).RTFinder.FindAlertsForRoute(ctx, obj, resolverCheckLimit(limit), active), nil
 }
 
-func (r *routeResolver) Patterns(ctx context.Context, obj *model.Route) ([]*model.RouteStopPattern, error) {
-	return LoaderFor(ctx).RouteStopPatternsByRouteIDs.Load(ctx, routeStopPatternLoaderParam{RouteID: obj.ID})()
+func (r *routeResolver) Patterns(ctx context.Context, obj *model.Route, where *model.RouteStopPatternFilter) ([]*model.RouteStopPattern, error) {
+	return LoaderFor(ctx).RouteStopPatternsByRouteIDs.Load(ctx, routeStopPatternLoaderParam{
+		FeedVersionID: obj.FeedVersionID,
+		RouteID:       obj.ID,
+		Where:         where,
+	})()
 }
 
 func (r *routeResolver) RouteAttribute(ctx context.Context, obj *model.Route) (*model.RouteAttribute, error) {
@@ -127,6 +131,15 @@ func (r *routeStopResolver) Agency(ctx context.Context, obj *model.RouteStop) (*
 // ROUTE PATTERN
 
 type routePatternResolver struct{ *Resolver }
+
+// The trip the pattern was derived from, already known from the aggregate, so this
+// is a batched lookup by id rather than a search for a trip matching the pattern.
+func (r *routePatternResolver) RepresentativeTrip(ctx context.Context, obj *model.RouteStopPattern) (*model.Trip, error) {
+	if obj.RepresentativeTripID == 0 {
+		return nil, nil
+	}
+	return LoaderFor(ctx).TripsByIDs.Load(ctx, obj.RepresentativeTripID)()
+}
 
 func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error) {
 	// TODO: N+1 query
