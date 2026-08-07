@@ -1156,9 +1156,25 @@ type RouteStopPattern struct {
 	DirectionID int `json:"direction_id"`
 	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
+	// One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
+	//
+	// Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
+	RepresentativeTrip *Trip `json:"representative_trip,omitempty"`
 	// Representative trips that follow this stop pattern; useful for fetching full stop_times
-	Trips   []*Trip `json:"trips,omitempty"`
-	RouteID int     `json:"-"`
+	Trips                []*Trip `json:"trips,omitempty"`
+	FeedVersionID        int     `json:"-"`
+	RepresentativeTripID int     `json:"-"`
+	RouteID              int     `json:"-"`
+}
+
+// Search options for a route's stop patterns
+type RouteStopPatternFilter struct {
+	// GTFS service date. Restricts the patterns returned to those a trip operates on that date, counts them over that date alone, and picks `representative_trip` from it. Ignored if `relative_date` is set
+	ServiceDate *tt.Date `json:"service_date,omitempty"`
+	// Calendar date relative to today; see `RelativeDate`. Takes precedence over `service_date`
+	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
+	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 }
 
 // A normalized, reusable piece of route geometry, optionally aligned with an OpenStreetMap way. Multiple route patterns may reference the same Segment.

@@ -104,7 +104,7 @@ type EntityLoader interface {
 	RoutesByAgencyIDs(context.Context, *int, *RouteFilter, []int) ([][]*Route, error)
 	RoutesByFeedVersionIDs(context.Context, *int, *RouteFilter, []int) ([][]*Route, error)
 	RoutesByIDs(context.Context, []int) ([]*Route, []error)
-	RouteStopPatternsByRouteIDs(context.Context, *int, []int) ([][]*RouteStopPattern, error)
+	RouteStopPatternsByRouteIDs(context.Context, *int, *RouteStopPatternFilter, []FVPair) ([][]*RouteStopPattern, error)
 	RouteStopsByRouteIDs(context.Context, *int, []int) ([][]*RouteStop, error)
 	RouteStopsByStopIDs(context.Context, *int, []int) ([][]*RouteStop, error)
 	SegmentPatternsByRouteIDs(context.Context, *int, *SegmentPatternFilter, []int) ([][]*SegmentPattern, error)

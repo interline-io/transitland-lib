@@ -203,6 +203,35 @@ func TestRouteResolver(t *testing.T) {
 			selectExpect: []string{"132", "124", "56", "50", "2"},
 		},
 		{
+			name: "route patterns representative_trip",
+			query: `{
+				routes(where: {feed_onestop_id: "BA", route_id: "03"}) {
+				  patterns {
+					count
+					representative_trip { trip_id }
+					trips(limit: 1) { trip_id }
+				  }
+				}
+			  }`,
+			f: func(t *testing.T, jj string) {
+				// Walked per pattern rather than as two `#.` arrays: gjson omits the
+				// elements whose path is missing, so a null representative_trip would
+				// shift one array against the other instead of failing.
+				//
+				// min(id) in the aggregate is the trip trips(limit:1) returns, which
+				// orders by (feed_version_id, id). They agree only where a stop pattern
+				// runs in one direction — trips() does not filter on direction, so a
+				// pattern operated both ways returns the same trip for both rows.
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					rep := pat.Get("representative_trip.trip_id")
+					assert.True(t, rep.Exists(), "pattern %d resolves a representative trip", i)
+					assert.Equal(t, pat.Get("trips.0.trip_id").String(), rep.String(), "pattern %d", i)
+				}
+			},
+		},
+		{
 			name: "route patterns inactive fv",
 			query: `{
 				routes(where: {feed_onestop_id: "EX", feed_version_sha1: "43e2278aa272879c79460582152b04e7487f0493", route_id: "AAMV"}) {
@@ -415,6 +444,27 @@ func TestRouteResolver_Date(t *testing.T) {
 				vars:         hw{"route_id": "Bu-130", "service_date": "2018-06-18"}, // use baby bullet
 				selector:     "routes.0.trips.#.trip_id",
 				selectExpect: []string{"305", "309", "313", "319", "323", "329", "365", "371", "375", "381", "385", "310", "314", "320", "324", "330", "360", "366", "370", "376", "380", "386"},
+			},
+		},
+		{
+			whenUtc: "2018-05-30T22:00:00Z",
+			testcase: testcase{
+				name:  "patterns service date",
+				query: `query($route_id: String!, $service_date:Date) { routes(where:{route_id:$route_id}) { patterns(where:{service_date:$service_date}) { count representative_trip { trip_id } } } }`,
+				vars:  hw{"route_id": "Bu-130", "service_date": "2018-06-18"},
+				f: func(t *testing.T, jj string) {
+					// The same 22 trips the trips() query returns for this date,
+					// redistributed across the patterns that run it. Walked per pattern
+					// so a null representative_trip fails rather than being skipped.
+					pats := gjson.Get(jj, "routes.0.patterns").Array()
+					assert.NotEmpty(t, pats, "patterns returned for the date")
+					total := 0
+					for i, pat := range pats {
+						total += int(pat.Get("count").Int())
+						assert.True(t, pat.Get("representative_trip.trip_id").Exists(), "pattern %d resolves a representative trip", i)
+					}
+					assert.Equal(t, 22, total, "day-scoped counts sum to that day's trips")
+				},
 			},
 		},
 		{

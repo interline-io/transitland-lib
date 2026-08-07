@@ -23,6 +23,10 @@ const (
 	// A busy route runs close to 1,000 trips in a week, so the default limit
 	// truncates a multi-week range without an error.
 	RESOLVER_TRIP_MAXLIMIT = 100_000
+	// Route.patterns takes no limit argument, but the grouped loader still needs
+	// one: paramGroupQuery falls back to RESOLVER_DEFAULT_LIMIT when a group's
+	// limit is nil, which would cut a long route's patterns to 100.
+	RESOLVER_PATTERN_MAXLIMIT = 100_000
 )
 
 // RESOLVER_MAXLIMIT is the API limit maximum

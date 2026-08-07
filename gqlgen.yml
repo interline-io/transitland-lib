@@ -177,8 +177,14 @@ models:
     fields:
       trips:
         resolver: true
+      representative_trip:
+        resolver: true
     extraFields:
       RouteID:
+        type: int
+      FeedVersionID:
+        type: int
+      RepresentativeTripID:
         type: int
   RouteGeometry:
     extraFields:
