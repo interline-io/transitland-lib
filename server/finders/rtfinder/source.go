@@ -56,7 +56,7 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 	hasDefaultTimestamp := defaultTimestamp > 0
 	a := map[string]*pb.TripUpdate{}
 	var alerts []*pb.Alert
-	var vehiclePositions []VehiclePositionEntity
+	vehiclePositions := make([]VehiclePositionEntity, 0, len(rtmsg.Entity))
 	for _, ent := range rtmsg.Entity {
 		if v := ent.TripUpdate; v != nil {
 			if v.Timestamp == nil && hasDefaultTimestamp {
@@ -69,11 +69,9 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 			alerts = append(alerts, v)
 		}
 		if v := ent.Vehicle; v != nil {
-			// Deliberately not defaulted from the header, unlike a trip update.
-			// The header carries the moment the dataset was generated, which is
-			// newer than every reading in it, so a vehicle that reported no time
-			// of its own would outrank every vehicle that reported a real one.
-			// An absent timestamp is served as null and ordered last.
+			// Not defaulted from the header, unlike a trip update: the header
+			// is newer than every reading in it, so a vehicle reporting no time
+			// would outrank every vehicle that reported a real one.
 			vehiclePositions = append(vehiclePositions, VehiclePositionEntity{ID: ent.GetId(), Position: v})
 		}
 	}

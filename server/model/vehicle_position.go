@@ -1,7 +1,8 @@
 package model
 
 import (
-	"sort"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -14,12 +15,12 @@ import (
 // and entity id: a client polling for changes needs its markers to stay put
 // rather than reshuffle every time a timestamp advances.
 func OrderVehiclePositions(ents []*VehiclePosition, limit *int) []*VehiclePosition {
-	sortVehiclePositionsByFreshness(ents)
+	slices.SortFunc(ents, compareVehiclePositionFreshness)
 	ents = dedupeVehiclePositions(ents)
 	if limit != nil && len(ents) > *limit {
 		ents = ents[0:*limit]
 	}
-	sortVehiclePositionsByID(ents)
+	slices.SortFunc(ents, compareVehiclePositionID)
 	return ents
 }
 
@@ -36,93 +37,83 @@ type vehiclePositionKey struct {
 }
 
 func vehiclePositionKeyOf(ent *VehiclePosition) vehiclePositionKey {
-	k := vehiclePositionKey{rtFeedOnestopID: ent.RtFeedOnestopID, entityID: ent.ID}
-	if vd := ent.Vehicle; vd != nil && vd.ID != nil {
-		k.vehicleID = *vd.ID
+	return vehiclePositionKey{
+		rtFeedOnestopID: ent.RtFeedOnestopID,
+		entityID:        ent.ID,
+		vehicleID:       vehiclePositionVehicleID(ent),
+		tripID:          vehiclePositionTripID(ent),
 	}
-	if td := ent.TripDescriptor; td != nil && td.TripID != nil {
-		k.tripID = *td.TripID
-	}
-	return k
 }
 
 func dedupeVehiclePositions(ents []*VehiclePosition) []*VehiclePosition {
-	var ret []*VehiclePosition
-	seen := make(map[vehiclePositionKey]bool, len(ents))
+	ret := make([]*VehiclePosition, 0, len(ents))
+	seen := make(map[vehiclePositionKey]struct{}, len(ents))
 	for _, ent := range ents {
 		key := vehiclePositionKeyOf(ent)
-		if seen[key] {
+		if _, ok := seen[key]; ok {
 			continue
 		}
-		seen[key] = true
+		seen[key] = struct{}{}
 		ret = append(ret, ent)
 	}
 	return ret
 }
 
-// sortVehiclePositionsByFreshness orders most recently reported first, so that
+// compareVehiclePositionFreshness orders most recently reported first, so that
 // truncating to a limit keeps the freshest vehicles. A vehicle reporting no
 // timestamp sorts last: nothing is known about its freshness, which is a weaker
-// claim than any timestamp at all.
-//
-// Duplicates of one vehicle tie on every key above MatchedByEntityID, so the
-// copy matched against a feed version's own GTFS ids sorts ahead of one claimed
-// only because the realtime feed belongs to a single operator. That copy is the
-// one whose schedule the message's ids actually resolve against.
-func sortVehiclePositionsByFreshness(ents []*VehiclePosition) {
-	sort.Slice(ents, func(i, j int) bool {
-		a, b := ents[i], ents[j]
-		if !timesEqual(a.Timestamp, b.Timestamp) {
-			return moreRecent(a.Timestamp, b.Timestamp)
+// claim than any timestamp at all. Duplicates of one vehicle tie until
+// MatchedByEntityID, which is what decides between them.
+func compareVehiclePositionFreshness(a *VehiclePosition, b *VehiclePosition) int {
+	if c := vehiclePositionTime(b).Compare(vehiclePositionTime(a)); c != 0 {
+		return c
+	}
+	if c := compareVehiclePositionID(a, b); c != 0 {
+		return c
+	}
+	if a.MatchedByEntityID != b.MatchedByEntityID {
+		if a.MatchedByEntityID {
+			return -1
 		}
-		ka, kb := vehiclePositionKeyOf(a), vehiclePositionKeyOf(b)
-		if ka != kb {
-			return lessVehiclePositionKey(ka, kb)
-		}
-		if a.MatchedByEntityID != b.MatchedByEntityID {
-			return a.MatchedByEntityID
-		}
-		return a.FeedVersionID < b.FeedVersionID
-	})
+		return 1
+	}
+	return a.FeedVersionID - b.FeedVersionID
 }
 
-// sortVehiclePositionsByID is the order results are returned in: stable between
-// polls, and total, so that an unstable sort cannot reorder equal elements.
-func sortVehiclePositionsByID(ents []*VehiclePosition) {
-	sort.Slice(ents, func(i, j int) bool {
-		ka, kb := vehiclePositionKeyOf(ents[i]), vehiclePositionKeyOf(ents[j])
-		if ka != kb {
-			return lessVehiclePositionKey(ka, kb)
-		}
-		return ents[i].FeedVersionID < ents[j].FeedVersionID
-	})
+// compareVehiclePositionID is the order results are returned in: stable between
+// polls, and total once duplicates have been collapsed.
+func compareVehiclePositionID(a *VehiclePosition, b *VehiclePosition) int {
+	if c := strings.Compare(a.RtFeedOnestopID, b.RtFeedOnestopID); c != 0 {
+		return c
+	}
+	if c := strings.Compare(a.ID, b.ID); c != 0 {
+		return c
+	}
+	if c := strings.Compare(vehiclePositionVehicleID(a), vehiclePositionVehicleID(b)); c != 0 {
+		return c
+	}
+	return strings.Compare(vehiclePositionTripID(a), vehiclePositionTripID(b))
 }
 
-func lessVehiclePositionKey(a vehiclePositionKey, b vehiclePositionKey) bool {
-	if a.rtFeedOnestopID != b.rtFeedOnestopID {
-		return a.rtFeedOnestopID < b.rtFeedOnestopID
+// vehiclePositionTime treats an absent timestamp as the zero time, which orders
+// it after every reported one.
+func vehiclePositionTime(ent *VehiclePosition) time.Time {
+	if ent.Timestamp == nil {
+		return time.Time{}
 	}
-	if a.entityID != b.entityID {
-		return a.entityID < b.entityID
-	}
-	if a.vehicleID != b.vehicleID {
-		return a.vehicleID < b.vehicleID
-	}
-	return a.tripID < b.tripID
+	return *ent.Timestamp
 }
 
-func timesEqual(a *time.Time, b *time.Time) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
+func vehiclePositionVehicleID(ent *VehiclePosition) string {
+	if vd := ent.Vehicle; vd != nil && vd.ID != nil {
+		return *vd.ID
 	}
-	return a.Equal(*b)
+	return ""
 }
 
-// moreRecent reports whether a is newer than b, treating an absent timestamp as
-// older than every present one.
-func moreRecent(a *time.Time, b *time.Time) bool {
-	if a == nil || b == nil {
-		return b == nil && a != nil
+func vehiclePositionTripID(ent *VehiclePosition) string {
+	if td := ent.TripDescriptor; td != nil && td.TripID != nil {
+		return *td.TripID
 	}
-	return a.After(*b)
+	return ""
 }

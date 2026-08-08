@@ -22,21 +22,15 @@ const (
 
 // checkVehiclePositionGeo bounds the search area on the nested fields, where
 // the filter is optional.
-func checkVehiclePositionGeo(cfg model.Config, where *model.VehiclePositionFilter) error {
+func checkVehiclePositionGeo(ctx context.Context, where *model.VehiclePositionFilter) error {
 	if where == nil {
 		return nil
 	}
-	return checkGeo(cfg.MaxRadius, nil, where.Bbox)
+	return checkGeo(model.ForContext(ctx).MaxRadius, nil, where.Bbox)
 }
 
-// vehiclePositionLimit applies this field's own default in place of the
-// API-wide one, which a map viewport would overrun immediately.
 func vehiclePositionLimit(limit *int) *int {
-	if limit == nil {
-		a := RESOLVER_VEHICLE_POSITION_DEFAULT_LIMIT
-		return &a
-	}
-	return resolverCheckLimitMax(limit, RESOLVER_VEHICLE_POSITION_MAXLIMIT)
+	return resolverCheckLimitDefault(limit, RESOLVER_VEHICLE_POSITION_DEFAULT_LIMIT, RESOLVER_VEHICLE_POSITION_MAXLIMIT)
 }
 
 type vehiclePositionResolver struct{ *Resolver }
@@ -95,8 +89,7 @@ func (r *vehiclePositionResolver) Stop(ctx context.Context, obj *model.VehiclePo
 
 func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where model.VehiclePositionFilter) ([]*model.VehiclePosition, error) {
 	ctx = addMetric(ctx, "vehiclePositions")
-	cfg := model.ForContext(ctx)
-	if err := checkVehiclePositionGeo(cfg, &where); err != nil {
+	if err := checkVehiclePositionGeo(ctx, &where); err != nil {
 		return nil, err
 	}
 	agencies, err := vehiclePositionAgencies(ctx, where)
@@ -104,13 +97,12 @@ func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where 
 		return nil, err
 	}
 
-	// Each agency is asked without a limit, because which vehicles survive one
-	// is decided across the whole viewport rather than per agency. Agencies
-	// whose static feeds share a realtime feed each see the same vehicles, so
-	// one bus can arrive here once per agency before being deduplicated.
+	// Each agency is asked without a limit: which vehicles survive one is
+	// decided across the whole viewport rather than per agency.
+	rtFinder := model.ForContext(ctx).RTFinder
 	var found []*model.VehiclePosition
 	for _, agency := range agencies {
-		found = append(found, cfg.RTFinder.FindVehiclePositionsForAgency(ctx, agency, nil, &where)...)
+		found = append(found, rtFinder.FindVehiclePositionsForAgency(ctx, agency, nil, &where)...)
 	}
 	return model.OrderVehiclePositions(found, vehiclePositionLimit(limit)), nil
 }
@@ -124,33 +116,28 @@ func vehiclePositionAgencies(ctx context.Context, where model.VehiclePositionFil
 	}
 	agencies, err := model.ForContext(ctx).Finder.FindAgencies(ctx, ptr(RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT), nil, nil, agencyFilter)
 	if len(agencies) >= RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT {
-		// The result is missing whatever agencies fell off the end, which no
-		// part of the response says.
 		log.For(ctx).Warn().Int("scope_limit", RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT).Msg("vehicle_positions: agency scope limit reached, results are incomplete")
 	}
 	return agencies, err
 }
 
 func (r *agencyResolver) VehiclePositions(ctx context.Context, obj *model.Agency, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error) {
-	cfg := model.ForContext(ctx)
-	if err := checkVehiclePositionGeo(cfg, where); err != nil {
+	if err := checkVehiclePositionGeo(ctx, where); err != nil {
 		return nil, err
 	}
-	return cfg.RTFinder.FindVehiclePositionsForAgency(ctx, obj, vehiclePositionLimit(limit), where), nil
+	return model.ForContext(ctx).RTFinder.FindVehiclePositionsForAgency(ctx, obj, vehiclePositionLimit(limit), where), nil
 }
 
 func (r *routeResolver) VehiclePositions(ctx context.Context, obj *model.Route, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error) {
-	cfg := model.ForContext(ctx)
-	if err := checkVehiclePositionGeo(cfg, where); err != nil {
+	if err := checkVehiclePositionGeo(ctx, where); err != nil {
 		return nil, err
 	}
-	return cfg.RTFinder.FindVehiclePositionsForRoute(ctx, obj, vehiclePositionLimit(limit), where), nil
+	return model.ForContext(ctx).RTFinder.FindVehiclePositionsForRoute(ctx, obj, vehiclePositionLimit(limit), where), nil
 }
 
 func (r *tripResolver) VehiclePosition(ctx context.Context, obj *model.Trip, where *model.VehiclePositionFilter) (*model.VehiclePosition, error) {
-	cfg := model.ForContext(ctx)
-	if err := checkVehiclePositionGeo(cfg, where); err != nil {
+	if err := checkVehiclePositionGeo(ctx, where); err != nil {
 		return nil, err
 	}
-	return cfg.RTFinder.FindVehiclePositionForTrip(ctx, obj, where), nil
+	return model.ForContext(ctx).RTFinder.FindVehiclePositionForTrip(ctx, obj, where), nil
 }
