@@ -1714,21 +1714,55 @@ type ValidationReportFilter struct {
 }
 
 // [Vehicle Position](https://gtfs.org/reference/realtime/v2/#message-vehicleposition) message provided by a source GTFS Realtime feed.
+//
+// Values are passed through from the GTFS-RT message as-is. The `trip`, `route` and `stop` fields resolve the message's `trip_id`, `route_id` and `stop_id` against the static GTFS data of the feed version the vehicle was matched to; each is null when the id is absent from the message or not found in the schedule.
+//
+// Positions are the last values seen for each vehicle and carry no freshness guarantee; check `timestamp` before drawing a vehicle as current.
 type VehiclePosition struct {
+	// Identifier of the GTFS-RT FeedEntity carrying this vehicle. Unique within its feed and stable between messages, so `rt_feed_onestop_id` and `id` together identify a vehicle across polls
+	ID string `json:"id"`
+	// Onestop ID of the GTFS-RT feed this vehicle came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema
+	RtFeedOnestopID string `json:"rt_feed_onestop_id"`
 	// Vehicle descriptor from the GTFS-RT VehiclePosition
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`
+	// Trip descriptor from the GTFS-RT VehiclePosition
+	TripDescriptor *RTTripDescriptor `json:"trip_descriptor,omitempty"`
 	// Current vehicle position
 	Position *tt.Point `json:"position,omitempty"`
+	// Direction of travel in degrees clockwise from true north
+	Bearing *float64 `json:"bearing,omitempty"`
+	// Momentary speed in meters per second
+	Speed *float64 `json:"speed,omitempty"`
 	// Sequence index of the stop the vehicle is approaching or stopped at, within the trip
 	CurrentStopSequence *int `json:"current_stop_sequence,omitempty"`
-	// Stop the vehicle is approaching or stopped at; despite the field name, returns the resolved `Stop` entity
-	StopID *Stop `json:"stop_id,omitempty"`
+	// GTFS `stop_id` of the stop the vehicle is approaching or stopped at
+	StopID *string `json:"stop_id,omitempty"`
 	// Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`
 	CurrentStatus *string `json:"current_status,omitempty"`
-	// Timestamp of this vehicle position update
+	// Moment the position was measured, as reported by the vehicle. Null when the message carries no timestamp of its own; such vehicles are ordered last when a `limit` keeps the most recently reported
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 	// Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`
 	CongestionLevel *string `json:"congestion_level,omitempty"`
+	// Vehicle occupancy: `EMPTY`, `MANY_SEATS_AVAILABLE`, `FEW_SEATS_AVAILABLE`, `STANDING_ROOM_ONLY`, `CRUSHED_STANDING_ROOM_ONLY`, `FULL`, `NOT_ACCEPTING_PASSENGERS`, `NO_DATA_AVAILABLE`, or `NOT_BOARDABLE`
+	OccupancyStatus *string `json:"occupancy_status,omitempty"`
+	// Percentage of the vehicle's total capacity in use
+	OccupancyPercentage *int `json:"occupancy_percentage,omitempty"`
+	// Scheduled trip matched from the trip descriptor's `trip_id`
+	Trip *Trip `json:"trip,omitempty"`
+	// Route matched from the trip descriptor's `route_id`, falling back to the matched trip's route
+	Route *Route `json:"route,omitempty"`
+	// Stop matched from `stop_id`
+	Stop              *Stop `json:"stop,omitempty"`
+	FeedVersionID     int   `json:"-"`
+	MatchedByEntityID bool  `json:"-"`
+}
+
+// Search options for GTFS-RT vehicle positions.
+//
+// To find the vehicles of a particular agency, route or trip, query `vehicle_positions` on that entity rather than searching for it here.
+type VehiclePositionFilter struct {
+	// Search for vehicles within this bounding box. Its size is bounded by the server's maximum search radius
+	Bbox *BoundingBox `json:"bbox"`
 }
 
 // A resolved waypoint in a routing response, including optional matched stop information.

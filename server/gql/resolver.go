@@ -39,7 +39,14 @@ func resolverCheckLimit(limit *int) *int {
 
 // checkLimit checks the limit is positive and below the maximum limit.
 func resolverCheckLimitMax(limit *int, maxLimit int) *int {
-	a := RESOLVER_DEFAULT_LIMIT
+	return resolverCheckLimitDefault(limit, RESOLVER_DEFAULT_LIMIT, maxLimit)
+}
+
+// resolverCheckLimitDefault clamps limit into [0, maxLimit], substituting
+// defaultLimit when the caller passed none. Fields whose natural result set is
+// much larger than the API-wide default set their own.
+func resolverCheckLimitDefault(limit *int, defaultLimit int, maxLimit int) *int {
+	a := defaultLimit
 	if limit == nil {
 		return &a
 	} else {
@@ -210,6 +217,11 @@ func (r *Resolver) Trip() gqlout.TripResolver { return &tripResolver{r} }
 
 // StopTime .
 func (r *Resolver) StopTime() gqlout.StopTimeResolver { return &stopTimeResolver{r} }
+
+// VehiclePosition .
+func (r *Resolver) VehiclePosition() gqlout.VehiclePositionResolver {
+	return &vehiclePositionResolver{r}
+}
 
 // FlexStopTime .
 func (r *Resolver) FlexStopTime() gqlout.FlexStopTimeResolver { return &flexStopTimeResolver{r} }

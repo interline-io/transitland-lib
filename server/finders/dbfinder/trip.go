@@ -38,6 +38,26 @@ func (f *Finder) TripsByIDs(ctx context.Context, ids []int) ([]*model.Trip, []er
 	return arrangeBy(ids, ents, func(ent *model.Trip) int { return ent.ID }), nil
 }
 
+// TripsByFeedVersionTripIDs looks up trips by GTFS trip_id within a feed version.
+func (f *Finder) TripsByFeedVersionTripIDs(ctx context.Context, keys []model.FVEntityID) ([]*model.Trip, []error) {
+	var ents []*model.Trip
+	for fvid, tripIds := range groupFVEntityIDs(keys) {
+		q, _, err := tripSelect(nil, nil, nil, false, f.PermFilter(ctx), nil, nil)
+		if err != nil {
+			return nil, logExtendErr(ctx, len(keys), err)
+		}
+		q = q.Where(sq.Eq{"gtfs_trips.feed_version_id": fvid}).Where(In("gtfs_trips.trip_id", tripIds))
+		var group []*model.Trip
+		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
+			return nil, logExtendErr(ctx, len(keys), err)
+		}
+		ents = append(ents, group...)
+	}
+	return arrangeBy(keys, ents, func(ent *model.Trip) model.FVEntityID {
+		return model.FVEntityID{FeedVersionID: ent.FeedVersionID, EntityID: ent.TripID.Val}
+	}), nil
+}
+
 func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Frequency, error) {
 	var ents []*model.Frequency
 	err := dbutil.Select(ctx,

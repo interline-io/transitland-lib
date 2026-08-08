@@ -16,6 +16,13 @@ type FVPair struct {
 	EntityID      int
 }
 
+// FVEntityID pairs a feed version with a GTFS entity id, for looking up
+// entities named by their GTFS id rather than an internal integer id.
+type FVEntityID struct {
+	FeedVersionID int
+	EntityID      string
+}
+
 // Finder provides all necessary database methods
 type Finder interface {
 	PermFinder
@@ -103,6 +110,7 @@ type EntityLoader interface {
 	RouteHeadwaysByRouteIDs(context.Context, *int, []int) ([][]*RouteHeadway, error)
 	RoutesByAgencyIDs(context.Context, *int, *RouteFilter, []int) ([][]*Route, error)
 	RoutesByFeedVersionIDs(context.Context, *int, *RouteFilter, []int) ([][]*Route, error)
+	RoutesByFeedVersionRouteIDs(context.Context, []FVEntityID) ([]*Route, []error)
 	RoutesByIDs(context.Context, []int) ([]*Route, []error)
 	RouteStopPatternsByRouteIDs(context.Context, *int, *RouteStopPatternFilter, []FVPair) ([][]*RouteStopPattern, error)
 	RouteStopsByRouteIDs(context.Context, *int, []int) ([][]*RouteStop, error)
@@ -117,6 +125,7 @@ type EntityLoader interface {
 	StopObservationsByStopIDs(context.Context, *int, *StopObservationFilter, []int) ([][]*StopObservation, error)
 	StopPlacesByStopID(context.Context, []StopPlaceParam) ([]*StopPlace, []error)
 	StopsByFeedVersionIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error)
+	StopsByFeedVersionStopIDs(context.Context, []FVEntityID) ([]*Stop, []error)
 	StopsByIDs(context.Context, []int) ([]*Stop, []error)
 	StopsByLevelIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error)
 	StopsByLocationGroupIDs(context.Context, *int, []int) ([][]*Stop, error)
@@ -126,6 +135,7 @@ type EntityLoader interface {
 	StopTimesByTripIDs(context.Context, *int, *TripStopTimeFilter, []FVPair) ([][]*StopTime, error)
 	TargetStopsByStopIDs(context.Context, []int) ([]*Stop, []error)
 	TripsByFeedVersionIDs(context.Context, *int, *TripFilter, []int) ([][]*Trip, error)
+	TripsByFeedVersionTripIDs(context.Context, []FVEntityID) ([]*Trip, []error)
 	TripsByIDs(context.Context, []int) ([]*Trip, []error)
 	TripsByRouteIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error)
 	TripsByShapeIDs(context.Context, *int, *TripFilter, []FVPair) ([][]*Trip, error)
@@ -155,6 +165,9 @@ type RTFinder interface {
 	FindAlertsForStop(context.Context, *Stop, *int, *bool) []*Alert
 	FindAlertsForRoute(context.Context, *Route, *int, *bool) []*Alert
 	FindAlertsForAgency(context.Context, *Agency, *int, *bool) []*Alert
+	FindVehiclePositionsForAgency(context.Context, *Agency, *int, *VehiclePositionFilter) []*VehiclePosition
+	FindVehiclePositionsForRoute(context.Context, *Route, *int, *VehiclePositionFilter) []*VehiclePosition
+	FindVehiclePositionForTrip(context.Context, *Trip, *VehiclePositionFilter) *VehiclePosition
 	GetAddedTripsForStop(context.Context, *Stop) []*pb.TripUpdate
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
 	// lookup cache methods
