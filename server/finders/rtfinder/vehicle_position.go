@@ -2,7 +2,6 @@ package rtfinder
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/interline-io/transitland-lib/rt/pb"
@@ -15,8 +14,10 @@ import (
 const vehiclePositionTopicKey = "realtime_vehicle_positions"
 
 // vehiclePositionMatch decides whether a vehicle from a realtime feed belongs
-// to the entity being asked about.
-type vehiclePositionMatch func(topic string, v *pb.VehiclePosition) bool
+// to the entity being asked about. byEntityID distinguishes a vehicle matched
+// against the feed version's own GTFS ids from one claimed on weaker evidence,
+// which is how a vehicle two agencies both claim is resolved to one of them.
+type vehiclePositionMatch func(topic string, v *pb.VehiclePosition) (matched bool, byEntityID bool)
 
 // FindVehiclePositionsForAgency returns cached vehicle positions operated by an agency.
 //
@@ -28,16 +29,30 @@ type vehiclePositionMatch func(topic string, v *pb.VehiclePosition) bool
 // check every one of them would claim every vehicle in the feed.
 func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Agency, limit *int, where *model.VehiclePositionFilter) []*model.VehiclePosition {
 	agencyCount, ok := f.lc.GetFeedVersionAgencyCount(ctx, a.FeedVersionID)
-	singleAgency := ok && agencyCount <= 1
+	singleAgency := ok && agencyCount == 1
+	// Both lookups answer the same question every time they are asked, so each
+	// runs at most once per call rather than once per vehicle. Exclusivity is a
+	// property of the topic, and a failed lookup must not be retried thousands
+	// of times over a large feed.
 	var routeIds map[string]bool
-	match := func(topic string, v *pb.VehiclePosition) bool {
-		if singleAgency && f.feedIsExclusive(ctx, topic) {
-			return true
+	routeIdsLoaded := false
+	exclusive := map[string]bool{}
+	match := func(topic string, v *pb.VehiclePosition) (bool, bool) {
+		if !routeIdsLoaded {
+			routeIds, routeIdsLoaded = f.lc.GetAgencyRouteIDs(ctx, a.ID), true
 		}
-		if routeIds == nil {
-			routeIds = f.lc.GetAgencyRouteIDs(ctx, a.ID)
+		if routeIds[v.GetTrip().GetRouteId()] {
+			return true, true
 		}
-		return routeIds[v.GetTrip().GetRouteId()]
+		if !singleAgency {
+			return false, false
+		}
+		ex, seen := exclusive[topic]
+		if !seen {
+			ex = f.feedIsExclusive(ctx, topic)
+			exclusive[topic] = ex
+		}
+		return ex, false
 	}
 	return limitVehiclePositions(f.findVehiclePositions(ctx, a.FeedVersionID, where, match), limit)
 }
@@ -51,14 +66,15 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 		return nil
 	}
 	var tripIds map[string]bool
-	match := func(_ string, v *pb.VehiclePosition) bool {
+	tripIdsLoaded := false
+	match := func(_ string, v *pb.VehiclePosition) (bool, bool) {
 		if rid := v.GetTrip().GetRouteId(); rid != "" {
-			return rid == routeId
+			return rid == routeId, true
 		}
-		if tripIds == nil {
-			tripIds = f.lc.GetRouteTripIDs(ctx, r.ID)
+		if !tripIdsLoaded {
+			tripIds, tripIdsLoaded = f.lc.GetRouteTripIDs(ctx, r.ID), true
 		}
-		return tripIds[v.GetTrip().GetTripId()]
+		return tripIds[v.GetTrip().GetTripId()], true
 	}
 	return limitVehiclePositions(f.findVehiclePositions(ctx, r.FeedVersionID, where, match), limit)
 }
@@ -71,14 +87,13 @@ func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip, 
 	if tripId == "" {
 		return nil
 	}
-	match := func(_ string, v *pb.VehiclePosition) bool {
-		return v.GetTrip().GetTripId() == tripId
+	match := func(_ string, v *pb.VehiclePosition) (bool, bool) {
+		return v.GetTrip().GetTripId() == tripId, true
 	}
-	found := f.findVehiclePositions(ctx, t.FeedVersionID, where, match)
+	found := model.OrderVehiclePositions(f.findVehiclePositions(ctx, t.FeedVersionID, where, match), pval(1))
 	if len(found) == 0 {
 		return nil
 	}
-	sortVehiclePositions(found)
 	return found[0]
 }
 
@@ -92,7 +107,7 @@ func (f *Finder) feedIsExclusive(ctx context.Context, topic string) bool {
 // feed associated with a feed version.
 func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *model.VehiclePositionFilter, match vehiclePositionMatch) []*model.VehiclePosition {
 	var bbox *tlxy.BoundingBox
-	if where != nil {
+	if where != nil && where.Bbox != nil {
 		bbox = &tlxy.BoundingBox{
 			MinLon: where.Bbox.MinLon,
 			MinLat: where.Bbox.MinLat,
@@ -108,10 +123,14 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *mode
 			continue
 		}
 		for _, ent := range src.GetVehiclePositions() {
-			if ent.Position == nil || !withinBbox(bbox, ent.Position) || !match(topic, ent.Position) {
+			if ent.Position == nil || !withinBbox(bbox, ent.Position) {
 				continue
 			}
-			ret = append(ret, makeVehiclePosition(ent, topic, fvid))
+			matched, byEntityID := match(topic, ent.Position)
+			if !matched {
+				continue
+			}
+			ret = append(ret, makeVehiclePosition(ent, topic, fvid, byEntityID))
 		}
 	}
 	return ret
@@ -130,59 +149,23 @@ func withinBbox(bbox *tlxy.BoundingBox, v *pb.VehiclePosition) bool {
 	return bbox.Contains(tlxy.Point{Lon: float64(p.GetLongitude()), Lat: float64(p.GetLatitude())})
 }
 
-// limitVehiclePositions sorts and truncates a result set. Vehicles arrive in
-// feed order, which a client polling for changes cannot rely on staying put,
-// and which would otherwise decide arbitrarily what a limit cuts.
+// limitVehiclePositions orders and truncates a result set. With no limit the
+// caller orders the result itself, which is what the bounding box search does
+// once it has collected every agency's vehicles.
 func limitVehiclePositions(ents []*model.VehiclePosition, limit *int) []*model.VehiclePosition {
-	sortVehiclePositions(ents)
-	if limit != nil && len(ents) > *limit {
-		return ents[0:*limit]
+	if limit == nil {
+		return ents
 	}
-	return ents
+	return model.OrderVehiclePositions(ents, limit)
 }
 
-// sortVehiclePositions orders a result set most recently reported first, so that
-// truncating to a limit keeps the freshest vehicles rather than an arbitrary
-// slice. A vehicle reporting no timestamp sorts last: nothing is known about its
-// freshness, which is the weaker claim than any timestamp at all.
-//
-// Ties break on the rt feed and entity id, which together identify a vehicle, so
-// the order is total and a client polling for changes sees it stay put.
-func sortVehiclePositions(ents []*model.VehiclePosition) {
-	sort.Slice(ents, func(i, j int) bool {
-		a, b := ents[i], ents[j]
-		if !timesEqual(a.Timestamp, b.Timestamp) {
-			return moreRecent(a.Timestamp, b.Timestamp)
-		}
-		if a.RtFeedOnestopID != b.RtFeedOnestopID {
-			return a.RtFeedOnestopID < b.RtFeedOnestopID
-		}
-		return a.ID < b.ID
-	})
-}
-
-func timesEqual(a *time.Time, b *time.Time) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	return a.Equal(*b)
-}
-
-// moreRecent reports whether a is newer than b, treating an absent timestamp as
-// older than every present one.
-func moreRecent(a *time.Time, b *time.Time) bool {
-	if a == nil || b == nil {
-		return b == nil && a != nil
-	}
-	return a.After(*b)
-}
-
-func makeVehiclePosition(ent VehiclePositionEntity, rtFeedOnestopID string, fvid int) *model.VehiclePosition {
+func makeVehiclePosition(ent VehiclePositionEntity, rtFeedOnestopID string, fvid int, matchedByEntityID bool) *model.VehiclePosition {
 	v := ent.Position
 	r := model.VehiclePosition{
-		ID:              ent.ID,
-		RtFeedOnestopID: rtFeedOnestopID,
-		FeedVersionID:   fvid,
+		ID:                ent.ID,
+		RtFeedOnestopID:   rtFeedOnestopID,
+		FeedVersionID:     fvid,
+		MatchedByEntityID: matchedByEntityID,
 	}
 	if p := v.Position; p != nil {
 		pt := tt.NewPoint(float64(p.GetLongitude()), float64(p.GetLatitude()))

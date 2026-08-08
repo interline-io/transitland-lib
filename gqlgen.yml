@@ -157,6 +157,8 @@ models:
     extraFields:
       FeedVersionID:
         type: int
+      MatchedByEntityID:
+        type: bool
   RouteStop:
     fields:
       route:

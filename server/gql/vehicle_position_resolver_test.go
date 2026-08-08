@@ -96,8 +96,9 @@ func TestVehiclePositionResolver(t *testing.T) {
 	}
 }
 
-// Results are ordered by feed and entity id, so a polling client sees the same
-// vehicles in the same places and a limit always cuts the same tail.
+// Results come back in feed and entity id order so a polling client's markers
+// stay put, while a limit keeps the freshest vehicles: 1001 and 1002 report a
+// timestamp and the rest do not.
 func TestVehiclePositionResolver_OrderAndLimit(t *testing.T) {
 	q := `query($limit: Int, $where: VehiclePositionFilter!) {
 		vehicle_positions(limit: $limit, where: $where) { id }
@@ -273,6 +274,7 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 			},
 		},
 		{
+			// The two vehicles reporting a timestamp, not the two lowest ids.
 			name: "agency vehicle_positions, limit",
 			query: `query {
 				agencies(where: {onestop_id: "o-9q9-bayarearapidtransit"}) {

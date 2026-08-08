@@ -69,9 +69,11 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 			alerts = append(alerts, v)
 		}
 		if v := ent.Vehicle; v != nil {
-			if v.Timestamp == nil && hasDefaultTimestamp {
-				v.Timestamp = &defaultTimestamp
-			}
+			// Deliberately not defaulted from the header, unlike a trip update.
+			// The header carries the moment the dataset was generated, which is
+			// newer than every reading in it, so a vehicle that reported no time
+			// of its own would outrank every vehicle that reported a real one.
+			// An absent timestamp is served as null and ordered last.
 			vehiclePositions = append(vehiclePositions, VehiclePositionEntity{ID: ent.GetId(), Position: v})
 		}
 	}

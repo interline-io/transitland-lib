@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"sort"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -97,7 +96,7 @@ func (r *vehiclePositionResolver) Stop(ctx context.Context, obj *model.VehiclePo
 func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where model.VehiclePositionFilter) ([]*model.VehiclePosition, error) {
 	ctx = addMetric(ctx, "vehiclePositions")
 	cfg := model.ForContext(ctx)
-	if err := checkGeo(cfg.MaxRadius, nil, where.Bbox); err != nil {
+	if err := checkVehiclePositionGeo(cfg, &where); err != nil {
 		return nil, err
 	}
 	agencies, err := vehiclePositionAgencies(ctx, where)
@@ -105,40 +104,15 @@ func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where 
 		return nil, err
 	}
 
+	// Each agency is asked without a limit, because which vehicles survive one
+	// is decided across the whole viewport rather than per agency. Agencies
+	// whose static feeds share a realtime feed each see the same vehicles, so
+	// one bus can arrive here once per agency before being deduplicated.
 	var found []*model.VehiclePosition
 	for _, agency := range agencies {
 		found = append(found, cfg.RTFinder.FindVehiclePositionsForAgency(ctx, agency, nil, &where)...)
 	}
-	// Vehicles arrive in feed order, which a client polling for changes cannot
-	// rely on staying put. Feed version is the last key so that a vehicle two
-	// agencies both claim always collapses to the same one of them below.
-	sort.Slice(found, func(i, j int) bool {
-		if a, b := found[i].RtFeedOnestopID, found[j].RtFeedOnestopID; a != b {
-			return a < b
-		}
-		if a, b := found[i].ID, found[j].ID; a != b {
-			return a < b
-		}
-		return found[i].FeedVersionID < found[j].FeedVersionID
-	})
-
-	lim := *vehiclePositionLimit(limit)
-	// Agencies whose static feeds share a realtime feed each see the same
-	// vehicles, so one bus can arrive here once per agency in the viewport.
-	var ret []*model.VehiclePosition
-	seen := map[string]bool{}
-	for _, ent := range found {
-		if len(ret) >= lim {
-			break
-		}
-		key := ent.RtFeedOnestopID + ":" + ent.ID
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		ret = append(ret, ent)
-	}
-	return ret, nil
+	return model.OrderVehiclePositions(found, vehiclePositionLimit(limit)), nil
 }
 
 // vehiclePositionAgencies resolves the search area to the agencies whose

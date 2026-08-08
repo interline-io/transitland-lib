@@ -3,10 +3,8 @@ package rtfinder
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
@@ -26,7 +24,7 @@ func TestMakeVehiclePosition(t *testing.T) {
 				OccupancyPercentage: proto.Uint32(50),
 			},
 		}
-		vp := makeVehiclePosition(ent, "f-rt", 7)
+		vp := makeVehiclePosition(ent, "f-rt", 7, true)
 		assert.Equal(t, "ent-1", vp.ID)
 		assert.Equal(t, "f-rt", vp.RtFeedOnestopID)
 		assert.Equal(t, 7, vp.FeedVersionID)
@@ -47,7 +45,7 @@ func TestMakeVehiclePosition(t *testing.T) {
 			ID:       "ent-2",
 			Position: &pb.VehiclePosition{Position: &pb.Position{Latitude: proto.Float32(37.8), Longitude: proto.Float32(-122.3)}},
 		}
-		vp := makeVehiclePosition(ent, "f-rt", 7)
+		vp := makeVehiclePosition(ent, "f-rt", 7, true)
 		assert.Nil(t, vp.Bearing)
 		assert.Nil(t, vp.Speed)
 		assert.Nil(t, vp.Vehicle)
@@ -75,110 +73,58 @@ func TestMakeTripDescriptor_UnparseableValues(t *testing.T) {
 	assert.Nil(t, td.StartDate)
 }
 
-func TestSourceProcessMessage_DefaultTimestamp(t *testing.T) {
+func TestSourceProcessMessage_VehicleTimestamp(t *testing.T) {
 	ctx := context.Background()
-	newMsg := func(headerTimestamp uint64) *pb.FeedMessage {
-		msg := &pb.FeedMessage{
-			Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
-			Entity: []*pb.FeedEntity{{Id: proto.String("ent-1"), Vehicle: &pb.VehiclePosition{}}},
+	const headerTime = uint64(1661990400)
+	newMsg := func(vehicleTimestamp uint64) *pb.FeedMessage {
+		vp := &pb.VehiclePosition{Trip: &pb.TripDescriptor{TripId: proto.String("t1")}}
+		if vehicleTimestamp > 0 {
+			vp.Timestamp = proto.Uint64(vehicleTimestamp)
 		}
-		if headerTimestamp > 0 {
-			msg.Header.Timestamp = proto.Uint64(headerTimestamp)
+		return &pb.FeedMessage{
+			Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0"), Timestamp: proto.Uint64(headerTime)},
+			Entity: []*pb.FeedEntity{{
+				Id:         proto.String("ent-1"),
+				Vehicle:    vp,
+				TripUpdate: &pb.TripUpdate{Trip: &pb.TripDescriptor{TripId: proto.String("t1")}},
+			}},
 		}
-		return msg
+	}
+	process := func(t *testing.T, msg *pb.FeedMessage) *Source {
+		src, err := NewSource("f-rt")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := src.processMessage(ctx, msg); err != nil {
+			t.Fatal(err)
+		}
+		return src
 	}
 
-	t.Run("header timestamp fills in", func(t *testing.T) {
-		src, err := NewSource("f-rt")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := src.processMessage(ctx, newMsg(1661990400)); err != nil {
-			t.Fatal(err)
-		}
-		vps := src.GetVehiclePositions()
+	t.Run("a reported timestamp is kept", func(t *testing.T) {
+		vps := process(t, newMsg(1661990340)).GetVehiclePositions()
 		assert.Len(t, vps, 1)
-		assert.Equal(t, uint64(1661990400), vps[0].Position.GetTimestamp())
+		assert.Equal(t, uint64(1661990340), vps[0].Position.GetTimestamp())
 	})
 
-	// The header timestamp is itself optional. Filling in a zero would serve
-	// every vehicle in the feed as 1970-01-01.
-	t.Run("no header timestamp leaves it unset", func(t *testing.T) {
-		src, err := NewSource("f-rt")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := src.processMessage(ctx, newMsg(0)); err != nil {
-			t.Fatal(err)
-		}
+	// The header carries the moment the dataset was generated, which is newer
+	// than every reading in it. Defaulting a vehicle to it would rank a vehicle
+	// that reported nothing ahead of every vehicle that reported a real time.
+	t.Run("the header timestamp does not fill in", func(t *testing.T) {
+		src := process(t, newMsg(0))
 		vps := src.GetVehiclePositions()
 		assert.Len(t, vps, 1)
 		assert.Nil(t, vps[0].Position.Timestamp)
-		assert.Nil(t, makeVehiclePosition(vps[0], "f-rt", 1).Timestamp)
+		assert.Nil(t, makeVehiclePosition(vps[0], "f-rt", 1, true).Timestamp)
+
+		// Trip updates keep the header default; their timestamp is not used to
+		// rank anything.
+		tu, ok := src.GetTrip("t1")
+		assert.True(t, ok)
+		assert.Equal(t, headerTime, tu.GetTimestamp())
 	})
 
 	t.Run("entity id is carried", func(t *testing.T) {
-		src, err := NewSource("f-rt")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := src.processMessage(ctx, newMsg(1661990400)); err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, "ent-1", src.GetVehiclePositions()[0].ID)
-	})
-}
-
-func TestSortVehiclePositions(t *testing.T) {
-	at := func(secs int) *time.Time {
-		v := time.Unix(int64(secs), 0).In(time.UTC)
-		return &v
-	}
-	keys := func(ents []*model.VehiclePosition) []string {
-		var got []string
-		for _, ent := range ents {
-			got = append(got, ent.RtFeedOnestopID+":"+ent.ID)
-		}
-		return got
-	}
-
-	t.Run("most recent first", func(t *testing.T) {
-		ents := []*model.VehiclePosition{
-			{RtFeedOnestopID: "f-a", ID: "old", Timestamp: at(100)},
-			{RtFeedOnestopID: "f-a", ID: "new", Timestamp: at(300)},
-			{RtFeedOnestopID: "f-a", ID: "mid", Timestamp: at(200)},
-		}
-		sortVehiclePositions(ents)
-		assert.Equal(t, []string{"f-a:new", "f-a:mid", "f-a:old"}, keys(ents))
-	})
-
-	t.Run("a limit keeps the freshest", func(t *testing.T) {
-		ents := []*model.VehiclePosition{
-			{RtFeedOnestopID: "f-a", ID: "old", Timestamp: at(100)},
-			{RtFeedOnestopID: "f-a", ID: "new", Timestamp: at(300)},
-			{RtFeedOnestopID: "f-a", ID: "mid", Timestamp: at(200)},
-		}
-		limit := 2
-		assert.Equal(t, []string{"f-a:new", "f-a:mid"}, keys(limitVehiclePositions(ents, &limit)))
-	})
-
-	t.Run("missing timestamps sort last", func(t *testing.T) {
-		ents := []*model.VehiclePosition{
-			{RtFeedOnestopID: "f-b", ID: "none"},
-			{RtFeedOnestopID: "f-a", ID: "none"},
-			{RtFeedOnestopID: "f-a", ID: "dated", Timestamp: at(1)},
-		}
-		sortVehiclePositions(ents)
-		assert.Equal(t, []string{"f-a:dated", "f-a:none", "f-b:none"}, keys(ents))
-	})
-
-	t.Run("equal timestamps break on feed then id", func(t *testing.T) {
-		ents := []*model.VehiclePosition{
-			{RtFeedOnestopID: "f-b", ID: "1", Timestamp: at(100)},
-			{RtFeedOnestopID: "f-a", ID: "2", Timestamp: at(100)},
-			{RtFeedOnestopID: "f-a", ID: "1", Timestamp: at(100)},
-		}
-		sortVehiclePositions(ents)
-		assert.Equal(t, []string{"f-a:1", "f-a:2", "f-b:1"}, keys(ents))
+		assert.Equal(t, "ent-1", process(t, newMsg(0)).GetVehiclePositions()[0].ID)
 	})
 }

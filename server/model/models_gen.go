@@ -1721,7 +1721,7 @@ type ValidationReportFilter struct {
 type VehiclePosition struct {
 	// Identifier of the GTFS-RT FeedEntity carrying this vehicle. Unique within its feed and stable between messages, so `rt_feed_onestop_id` and `id` together identify a vehicle across polls
 	ID string `json:"id"`
-	// Onestop ID of the GTFS-RT feed this vehicle came from. Unlike the `feed_onestop_ids` search filter, this is the realtime feed, not the static GTFS feed
+	// Onestop ID of the GTFS-RT feed this vehicle came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema
 	RtFeedOnestopID string `json:"rt_feed_onestop_id"`
 	// Vehicle descriptor from the GTFS-RT VehiclePosition
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`
@@ -1739,7 +1739,7 @@ type VehiclePosition struct {
 	StopID *string `json:"stop_id,omitempty"`
 	// Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`
 	CurrentStatus *string `json:"current_status,omitempty"`
-	// Timestamp of this vehicle position update
+	// Moment the position was measured, as reported by the vehicle. Null when the message carries no timestamp of its own; such vehicles are ordered last when a `limit` keeps the most recently reported
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 	// Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`
 	CongestionLevel *string `json:"congestion_level,omitempty"`
@@ -1752,8 +1752,9 @@ type VehiclePosition struct {
 	// Route matched from the trip descriptor's `route_id`, falling back to the matched trip's route
 	Route *Route `json:"route,omitempty"`
 	// Stop matched from `stop_id`
-	Stop          *Stop `json:"stop,omitempty"`
-	FeedVersionID int   `json:"-"`
+	Stop              *Stop `json:"stop,omitempty"`
+	FeedVersionID     int   `json:"-"`
+	MatchedByEntityID bool  `json:"-"`
 }
 
 // Search options for GTFS-RT vehicle positions.

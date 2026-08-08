@@ -152,7 +152,7 @@ type Query {
   "Current GBFS dock data (Station Information)"
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
 
-  "Current GTFS-RT vehicle positions, most recently reported first; requires at least one `where` filter."
+  "Current GTFS-RT vehicle positions within a bounding box. A `limit` keeps the most recently reported vehicles; results are ordered by `rt_feed_onestop_id` and `id`"
   vehicle_positions(limit: Int, where: VehiclePositionFilter!): [VehiclePosition!]!
 
   "Current user metadata; requires authentication"
@@ -2243,7 +2243,7 @@ Positions are the last values seen for each vehicle and carry no freshness guara
 type VehiclePosition {
   "Identifier of the GTFS-RT FeedEntity carrying this vehicle. Unique within its feed and stable between messages, so `rt_feed_onestop_id` and `id` together identify a vehicle across polls"
   id: String!
-  "Onestop ID of the GTFS-RT feed this vehicle came from. Unlike the `feed_onestop_ids` search filter, this is the realtime feed, not the static GTFS feed"
+  "Onestop ID of the GTFS-RT feed this vehicle came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema"
   rt_feed_onestop_id: String!
   "Vehicle descriptor from the GTFS-RT VehiclePosition"
   vehicle: RTVehicleDescriptor
@@ -2261,7 +2261,7 @@ type VehiclePosition {
   stop_id: String
   "Vehicle status relative to `stop_id`: `INCOMING_AT`, `STOPPED_AT`, or `IN_TRANSIT_TO`"
   current_status: String
-  "Timestamp of this vehicle position update"
+  "Moment the position was measured, as reported by the vehicle. Null when the message carries no timestamp of its own; such vehicles are ordered last when a `limit` keeps the most recently reported"
   timestamp: Time
   "Estimated congestion level: `UNKNOWN_CONGESTION_LEVEL`, `RUNNING_SMOOTHLY`, `STOP_AND_GO`, `CONGESTION`, or `SEVERE_CONGESTION`"
   congestion_level: String
