@@ -9165,7 +9165,7 @@ type Query {
   "Current GBFS dock data (Station Information)"
   docks(limit: Int, where: GbfsDockRequest): [GbfsStationInformation!]
 
-  "Current GTFS-RT vehicle positions; requires at least one ` + "`" + `where` + "`" + ` filter."
+  "Current GTFS-RT vehicle positions, most recently reported first; requires at least one ` + "`" + `where` + "`" + ` filter."
   vehicle_positions(limit: Int, where: VehiclePositionFilter!): [VehiclePosition!]!
 
   "Current user metadata; requires authentication"
@@ -9727,7 +9727,7 @@ type Agency {
   "GTFS-RT service alerts for this agency; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 
-  "Current GTFS-RT vehicle positions for this agency"
+  "Current GTFS-RT vehicle positions for this agency, most recently reported first"
   vehicle_positions(limit: Int, where: VehiclePositionFilter): [VehiclePosition!]
 }
 
@@ -9827,7 +9827,7 @@ type Route {
   "GTFS-RT service alerts for this route; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 
-  "Current GTFS-RT vehicle positions for this route"
+  "Current GTFS-RT vehicle positions for this route, most recently reported first"
   vehicle_positions(limit: Int, where: VehiclePositionFilter): [VehiclePosition!]
 
   "Normalized route segment data for this route, if available"

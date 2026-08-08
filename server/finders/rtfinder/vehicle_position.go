@@ -64,7 +64,8 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 }
 
 // FindVehiclePositionForTrip returns the cached vehicle position running a trip,
-// matched on the trip descriptor's trip_id.
+// matched on the trip descriptor's trip_id. Where more than one vehicle claims
+// the trip, the most recently reported wins.
 func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip, where *model.VehiclePositionFilter) *model.VehiclePosition {
 	tripId := t.TripID.Val
 	if tripId == "" {
@@ -140,13 +141,40 @@ func limitVehiclePositions(ents []*model.VehiclePosition, limit *int) []*model.V
 	return ents
 }
 
+// sortVehiclePositions orders a result set most recently reported first, so that
+// truncating to a limit keeps the freshest vehicles rather than an arbitrary
+// slice. A vehicle reporting no timestamp sorts last: nothing is known about its
+// freshness, which is the weaker claim than any timestamp at all.
+//
+// Ties break on the rt feed and entity id, which together identify a vehicle, so
+// the order is total and a client polling for changes sees it stay put.
 func sortVehiclePositions(ents []*model.VehiclePosition) {
 	sort.Slice(ents, func(i, j int) bool {
-		if ents[i].RtFeedOnestopID != ents[j].RtFeedOnestopID {
-			return ents[i].RtFeedOnestopID < ents[j].RtFeedOnestopID
+		a, b := ents[i], ents[j]
+		if !timesEqual(a.Timestamp, b.Timestamp) {
+			return moreRecent(a.Timestamp, b.Timestamp)
 		}
-		return ents[i].ID < ents[j].ID
+		if a.RtFeedOnestopID != b.RtFeedOnestopID {
+			return a.RtFeedOnestopID < b.RtFeedOnestopID
+		}
+		return a.ID < b.ID
 	})
+}
+
+func timesEqual(a *time.Time, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Equal(*b)
+}
+
+// moreRecent reports whether a is newer than b, treating an absent timestamp as
+// older than every present one.
+func moreRecent(a *time.Time, b *time.Time) bool {
+	if a == nil || b == nil {
+		return b == nil && a != nil
+	}
+	return a.After(*b)
 }
 
 func makeVehiclePosition(ent VehiclePositionEntity, rtFeedOnestopID string, fvid int) *model.VehiclePosition {

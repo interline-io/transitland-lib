@@ -3,6 +3,7 @@ package rtfinder
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -129,15 +130,55 @@ func TestSourceProcessMessage_DefaultTimestamp(t *testing.T) {
 }
 
 func TestSortVehiclePositions(t *testing.T) {
-	ents := []*model.VehiclePosition{
-		{RtFeedOnestopID: "f-b", ID: "1"},
-		{RtFeedOnestopID: "f-a", ID: "2"},
-		{RtFeedOnestopID: "f-a", ID: "1"},
+	at := func(secs int) *time.Time {
+		v := time.Unix(int64(secs), 0).In(time.UTC)
+		return &v
 	}
-	sortVehiclePositions(ents)
-	var got []string
-	for _, ent := range ents {
-		got = append(got, ent.RtFeedOnestopID+":"+ent.ID)
+	keys := func(ents []*model.VehiclePosition) []string {
+		var got []string
+		for _, ent := range ents {
+			got = append(got, ent.RtFeedOnestopID+":"+ent.ID)
+		}
+		return got
 	}
-	assert.Equal(t, []string{"f-a:1", "f-a:2", "f-b:1"}, got)
+
+	t.Run("most recent first", func(t *testing.T) {
+		ents := []*model.VehiclePosition{
+			{RtFeedOnestopID: "f-a", ID: "old", Timestamp: at(100)},
+			{RtFeedOnestopID: "f-a", ID: "new", Timestamp: at(300)},
+			{RtFeedOnestopID: "f-a", ID: "mid", Timestamp: at(200)},
+		}
+		sortVehiclePositions(ents)
+		assert.Equal(t, []string{"f-a:new", "f-a:mid", "f-a:old"}, keys(ents))
+	})
+
+	t.Run("a limit keeps the freshest", func(t *testing.T) {
+		ents := []*model.VehiclePosition{
+			{RtFeedOnestopID: "f-a", ID: "old", Timestamp: at(100)},
+			{RtFeedOnestopID: "f-a", ID: "new", Timestamp: at(300)},
+			{RtFeedOnestopID: "f-a", ID: "mid", Timestamp: at(200)},
+		}
+		limit := 2
+		assert.Equal(t, []string{"f-a:new", "f-a:mid"}, keys(limitVehiclePositions(ents, &limit)))
+	})
+
+	t.Run("missing timestamps sort last", func(t *testing.T) {
+		ents := []*model.VehiclePosition{
+			{RtFeedOnestopID: "f-b", ID: "none"},
+			{RtFeedOnestopID: "f-a", ID: "none"},
+			{RtFeedOnestopID: "f-a", ID: "dated", Timestamp: at(1)},
+		}
+		sortVehiclePositions(ents)
+		assert.Equal(t, []string{"f-a:dated", "f-a:none", "f-b:none"}, keys(ents))
+	})
+
+	t.Run("equal timestamps break on feed then id", func(t *testing.T) {
+		ents := []*model.VehiclePosition{
+			{RtFeedOnestopID: "f-b", ID: "1", Timestamp: at(100)},
+			{RtFeedOnestopID: "f-a", ID: "2", Timestamp: at(100)},
+			{RtFeedOnestopID: "f-a", ID: "1", Timestamp: at(100)},
+		}
+		sortVehiclePositions(ents)
+		assert.Equal(t, []string{"f-a:1", "f-a:2", "f-b:1"}, keys(ents))
+	})
 }
