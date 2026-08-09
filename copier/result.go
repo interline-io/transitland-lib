@@ -60,7 +60,7 @@ func NewValidationErrorGroup(err error, limit int) *ValidationErrorGroup {
 }
 
 func (eg *ValidationErrorGroup) Key() string {
-	return fmt.Sprintf("%s:%s:%s:%s:%s", eg.Filename, eg.Field, eg.ErrorType, eg.ErrorType, eg.GroupKey)
+	return fmt.Sprintf("%s:%s:%s:%s:%s", eg.Filename, eg.Field, eg.ErrorType, eg.ErrorCode, eg.GroupKey)
 }
 
 // Add an error to the error group.

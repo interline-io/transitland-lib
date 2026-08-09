@@ -6,7 +6,7 @@ Validate a GTFS feed
 
 Validate a GTFS feed
 
-The validate command performs a basic validation on a data source and writes the results to standard out.
+The validate command performs a basic validation on a data source and writes the results to standard out. GTFS-Realtime validation rule definitions live in rt/errors.go; codes E001-E052 and W001-W009 cross-reference the external MobilityData/gtfs-realtime-validator rule list (transitland-lib currently implements 27 of 52 errors and 0 of 9 warnings), and codes E100+ / W100+ are transitland-lib additions.
 
 ```
 transitland validate [flags] [<reader>]

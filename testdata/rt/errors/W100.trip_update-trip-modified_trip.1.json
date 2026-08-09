@@ -1,0 +1,57 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "2.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405801"
+    },
+    "entity": [
+      {
+        "id": "22",
+        "tripUpdate": {
+          "trip": {
+            "tripId": "",
+            "routeId": "L1",
+            "directionId": 1,
+            "startTime": "15:37:00",
+            "startDate": "20231107",
+            "modifiedTrip": {
+              "modificationsId": "trip_modifications_500286",
+              "affectedTripId": "124"
+            },
+            "scheduleRelationship": "SCHEDULED"
+          },
+          "stopTimeUpdate": [
+            {
+              "stopSequence": 1,
+              "stopId": "70012",
+              "arrival": {
+                "time": "1699405801"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            }
+          ],
+          "timestamp": "1699405801"
+        }
+      },
+      {
+        "id": "22-fallback",
+        "tripUpdate": {
+          "trip": {
+            "tripId": "124",
+            "scheduleRelationship": "SCHEDULED"
+          },
+          "stopTimeUpdate": [
+            {
+              "stopSequence": 1,
+              "stopId": "70012",
+              "arrival": {
+                "time": "1699405801"
+              },
+              "scheduleRelationship": "SCHEDULED"
+            }
+          ],
+          "timestamp": "1699405801"
+        }
+      }
+    ]
+  }
