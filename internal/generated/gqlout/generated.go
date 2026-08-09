@@ -97,6 +97,7 @@ type ComplexityRoot struct {
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
 		Routes            func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SearchRank        func(childComplexity int) int
+		Stops             func(childComplexity int, limit *int, where *model.StopFilter) int
 		VehiclePositions  func(childComplexity int, limit *int, where *model.VehiclePositionFilter) int
 	}
 
@@ -869,6 +870,7 @@ type ComplexityRoot struct {
 		OnestopID  func(childComplexity int) int
 		SearchRank func(childComplexity int) int
 		ShortName  func(childComplexity int) int
+		Stops      func(childComplexity int, limit *int, where *model.StopFilter) int
 		Tags       func(childComplexity int) int
 		Website    func(childComplexity int) int
 	}
@@ -1366,6 +1368,7 @@ type AgencyResolver interface {
 	Operator(ctx context.Context, obj *model.Agency) (*model.Operator, error)
 	Places(ctx context.Context, obj *model.Agency, limit *int, where *model.AgencyPlaceFilter) ([]*model.AgencyPlace, error)
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
+	Stops(ctx context.Context, obj *model.Agency, limit *int, where *model.StopFilter) ([]*model.Stop, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
 	VehiclePositions(ctx context.Context, obj *model.Agency, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
@@ -1501,6 +1504,7 @@ type MutationResolver interface {
 }
 type OperatorResolver interface {
 	Agencies(ctx context.Context, obj *model.Operator) ([]*model.Agency, error)
+	Stops(ctx context.Context, obj *model.Operator, limit *int, where *model.StopFilter) ([]*model.Stop, error)
 	Feeds(ctx context.Context, obj *model.Operator, limit *int, where *model.FeedFilter) ([]*model.Feed, error)
 }
 type PathwayResolver interface {
@@ -1802,6 +1806,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agency.SearchRank(childComplexity), true
+	case "Agency.stops":
+		if e.ComplexityRoot.Agency.Stops == nil {
+			break
+		}
+
+		args, err := ec.field_Agency_stops_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Agency.Stops(childComplexity, args["limit"].(*int), args["where"].(*model.StopFilter)), true
 	case "Agency.vehicle_positions":
 		if e.ComplexityRoot.Agency.VehiclePositions == nil {
 			break
@@ -5423,6 +5438,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Operator.ShortName(childComplexity), true
+	case "Operator.stops":
+		if e.ComplexityRoot.Operator.Stops == nil {
+			break
+		}
+
+		args, err := ec.field_Operator_stops_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Operator.Stops(childComplexity, args["limit"].(*int), args["where"].(*model.StopFilter)), true
 	case "Operator.tags":
 		if e.ComplexityRoot.Operator.Tags == nil {
 			break
@@ -9652,6 +9678,13 @@ type Operator {
   "Agencies for this operator from active feed versions"
   agencies: [Agency!]
 
+  """
+  Stops served by this operator's routes, together with the stations those stops belong to.
+
+  Stations are included because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. Filter with ` + "`" + `where: {location_type: 1}` + "`" + ` for stations alone, or ` + "`" + `where: {location_type: 0}` + "`" + ` for platforms alone.
+  """
+  stops(limit: Int, where: StopFilter): [Stop!]!
+
   "Feeds associated with this operator"
   feeds(limit: Int, where: FeedFilter): [Feed!]
 }
@@ -9720,6 +9753,13 @@ type Agency {
 
   "Routes associated with this agency"
   routes(limit: Int, where: RouteFilter): [Route!]!
+
+  """
+  Stops served by this agency's routes, together with the stations those stops belong to.
+
+  Stations are included because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. Filter with ` + "`" + `where: {location_type: 1}` + "`" + ` for stations alone, or ` + "`" + `where: {location_type: 0}` + "`" + ` for platforms alone.
+  """
+  stops(limit: Int, where: StopFilter): [Stop!]!
 
   "Census geographies intersecting this agency's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
@@ -12371,6 +12411,8 @@ func (ec *executionContext) childFields_Agency(ctx context.Context, field graphq
 		return ec.fieldContext_Agency_places(ctx, field)
 	case "routes":
 		return ec.fieldContext_Agency_routes(ctx, field)
+	case "stops":
+		return ec.fieldContext_Agency_stops(ctx, field)
 	case "census_geographies":
 		return ec.fieldContext_Agency_census_geographies(ctx, field)
 	case "alerts":
@@ -13839,6 +13881,8 @@ func (ec *executionContext) childFields_Operator(ctx context.Context, field grap
 		return ec.fieldContext_Operator_search_rank(ctx, field)
 	case "agencies":
 		return ec.fieldContext_Operator_agencies(ctx, field)
+	case "stops":
+		return ec.fieldContext_Operator_stops(ctx, field)
 	case "feeds":
 		return ec.fieldContext_Operator_feeds(ctx, field)
 	}
@@ -14981,6 +15025,28 @@ func (ec *executionContext) field_Agency_routes_args(ctx context.Context, rawArg
 	return args, nil
 }
 
+func (ec *executionContext) field_Agency_stops_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.StopFilter, error) {
+			return ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Agency_vehicle_positions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -15865,6 +15931,28 @@ func (ec *executionContext) field_Operator_feeds_args(ctx context.Context, rawAr
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.FeedFilter, error) {
 			return ec.unmarshalOFeedFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Operator_stops_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.StopFilter, error) {
+			return ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -17694,6 +17782,50 @@ func (ec *executionContext) fieldContext_Agency_routes(ctx context.Context, fiel
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Agency_routes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Agency_stops(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agency_stops(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Agency().Stops(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.StopFilter))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
+			return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Agency_stops(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Agency",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Agency_stops_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -32326,6 +32458,50 @@ func (ec *executionContext) fieldContext_Operator_agencies(_ context.Context, fi
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_Agency(ctx, field)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Operator_stops(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Operator_stops(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Operator().Stops(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.StopFilter))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
+			return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Operator_stops(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Operator",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Operator_stops_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -47002,6 +47178,42 @@ func (ec *executionContext) _Agency(ctx context.Context, sel ast.SelectionSet, o
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stops":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agency_stops(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "census_geographies":
 			field := field
 
@@ -53591,6 +53803,42 @@ func (ec *executionContext) _Operator(ctx context.Context, sel ast.SelectionSet,
 					}
 				}()
 				res = ec._Operator_agencies(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stops":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Operator_stops(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 

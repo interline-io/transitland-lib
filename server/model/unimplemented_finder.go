@@ -320,6 +320,9 @@ func (UnimplementedFinder) StopObservationsByStopIDs(context.Context, *int, *Sto
 func (UnimplementedFinder) StopPlacesByStopID(_ context.Context, keys []StopPlaceParam) ([]*StopPlace, []error) {
 	return notImplBatch[*StopPlace](keys)
 }
+func (UnimplementedFinder) StopsByAgencyIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) StopsByFeedVersionIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {
 	return nil, notImplErr()
 }
@@ -333,6 +336,9 @@ func (UnimplementedFinder) StopsByLevelIDs(context.Context, *int, *StopFilter, [
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) StopsByLocationGroupIDs(context.Context, *int, []int) ([][]*Stop, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) StopsByOperatorOnestopIDs(context.Context, *int, *StopFilter, []string) ([][]*Stop, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) StopsByParentStopIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {

@@ -127,12 +127,14 @@ type StopTime struct {
 }
 
 type Stop struct {
-	FeedOnestopID   string
-	FeedVersionSHA1 string
-	OnestopID       *string
-	SearchRank      *string
-	WithinFeatures  tt.Strings
-	WithRouteID     tt.Int
+	FeedOnestopID         string
+	FeedVersionSHA1       string
+	OnestopID             *string
+	SearchRank            *string
+	WithinFeatures        tt.Strings
+	WithRouteID           tt.Int
+	WithAgencyID          tt.Int
+	WithOperatorOnestopID tt.String
 	gtfs.Stop
 }
 

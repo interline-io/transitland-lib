@@ -20,6 +20,10 @@ func (r *operatorResolver) Agencies(ctx context.Context, obj *model.Operator) ([
 	return LoaderFor(ctx).AgenciesByOnestopIDs.Load(ctx, agencyLoaderParam{OnestopID: &obj.OnestopID.Val})()
 }
 
+func (r *operatorResolver) Stops(ctx context.Context, obj *model.Operator, limit *int, where *model.StopFilter) ([]*model.Stop, error) {
+	return LoaderFor(ctx).StopsByOperatorOnestopIDs.Load(ctx, stopLoaderParam{OperatorOnestopID: obj.OnestopID.Val, Limit: resolverCheckLimit(limit), Where: where})()
+}
+
 func (r *operatorResolver) AssociatedFeeds(ctx context.Context, obj *model.Operator) (interface{}, error) {
 	a, err := json.Marshal(obj.AssociatedFeeds)
 	return json.RawMessage(a), err

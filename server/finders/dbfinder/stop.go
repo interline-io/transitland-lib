@@ -86,6 +86,81 @@ func (f *Finder) StopsByRouteIDs(ctx context.Context, limit *int, where *model.S
 	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithRouteID.Int() }), err
 }
 
+// StopsByAgencyIDs returns the stops each agency's routes serve, plus the
+// stations those stops belong to.
+func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
+	var ents []*model.Stop
+	qso := stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where).
+		JoinClause(agencyStopSelect(sq.Expr("tlrs.agency_id = out.id")).
+			Prefix("JOIN (").
+			Suffix(") agency_stops on agency_stops.stop_id = gtfs_stops.id"))
+	q := sq.StatementBuilder.
+		Select("t.*", "out.id as with_agency_id").
+		From("gtfs_agencies out").
+		JoinClause(qso.Prefix("JOIN LATERAL (").Suffix(") t on true")).
+		Where(In("out.id", keys))
+	err := dbutil.Select(ctx, f.db, q, &ents)
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithAgencyID.Int() }), err
+}
+
+// StopsByOperatorOnestopIDs returns the stops each operator's routes serve
+// across its active feed versions, plus the stations those stops belong to.
+func (f *Finder) StopsByOperatorOnestopIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []string) ([][]*model.Stop, error) {
+	var ents []*model.Stop
+	useActive := &UseActive{
+		active:       true,
+		materialized: model.ForContext(ctx).UseMaterialized,
+	}
+	qso := stopSelect(limit, nil, nil, useActive, f.PermFilter(ctx), where).
+		JoinClause(agencyStopSelect(sq.Expr(operatorAgencyIDs)).
+			Prefix("JOIN (").
+			Suffix(") operator_stops on operator_stops.stop_id = gtfs_stops.id"))
+	// The operator Onestop IDs are their own outer relation rather than a join
+	// against current_operators_in_feed: one Onestop ID can resolve through
+	// several feeds, and each must contribute to a single per-operator limit.
+	outer := sq.StatementBuilder.
+		Select("coif.resolved_onestop_id as onestop_id").
+		Distinct().
+		From("current_operators_in_feed coif").
+		Where(In("coif.resolved_onestop_id", keys))
+	q := sq.StatementBuilder.
+		Select("t.*", "out.onestop_id as with_operator_onestop_id").
+		FromSelect(outer, "out").
+		JoinClause(qso.Prefix("JOIN LATERAL (").Suffix(") t on true"))
+	err := dbutil.Select(ctx, f.db, q, &ents)
+	return arrangeGroup(keys, ents, func(ent *model.Stop) string { return ent.WithOperatorOnestopID.Val }), err
+}
+
+// Active agencies resolving to the operator Onestop ID in the enclosing lateral.
+const operatorAgencyIDs = `tlrs.agency_id in (
+	select agency.id
+	from gtfs_agencies agency
+	join current_operators_in_feed op_coif on op_coif.resolved_gtfs_agency_id = agency.agency_id
+	join feed_states op_fs on op_fs.feed_id = op_coif.feed_id and op_fs.materialized_feed_version_id = agency.feed_version_id
+	where op_coif.resolved_onestop_id = out.onestop_id
+)`
+
+// agencyStopSelect returns (agency_id, stop_id) pairs for the stops an agency's
+// routes serve, plus the stations those stops belong to.
+//
+// The station half is the point: tl_route_stops holds only the platforms named
+// in stop_times, so filtering it by location_type 1 matches nothing. cond is
+// repeated inside both halves rather than applied to the union, so that a
+// correlated lateral reference narrows the underlying scans.
+func agencyStopSelect(cond sq.Sqlizer) sq.SelectBuilder {
+	served := sq.StatementBuilder.
+		Select("tlrs.agency_id", "tlrs.stop_id").
+		From("tl_route_stops tlrs").
+		Where(cond)
+	stations := sq.StatementBuilder.
+		Select("tlrs.agency_id", "served.parent_station as stop_id").
+		From("tl_route_stops tlrs").
+		Join("gtfs_stops served on served.id = tlrs.stop_id").
+		Where("served.parent_station is not null").
+		Where(cond)
+	return served.Suffix("UNION ?", stations)
+}
+
 func (f *Finder) StopsByParentStopIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
 	var ents []*model.Stop
 	err := dbutil.Select(ctx,
