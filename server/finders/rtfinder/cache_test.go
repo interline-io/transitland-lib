@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -205,9 +206,11 @@ func TestStoreCache_RemembersFailedReads(t *testing.T) {
 	assert.EqualValues(t, 1, store.gets.Load(), "a failing store should be read once, not once per lookup")
 }
 
-// A read cut short because the caller went away says nothing about the topic,
-// so it must not be remembered as an absence — otherwise one canceled request
-// blinds every later one for a minute.
+// A caller going away must not blind every later one for a minute. It no longer
+// does so by abandoning the read: the read is shared, so it is detached from
+// whichever caller led it and finishes regardless. The later caller is answered
+// from what that read actually learned rather than from someone's cancellation,
+// which is why one store read is enough here.
 func TestStoreCache_DoesNotRememberAbandonedReads(t *testing.T) {
 	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
 	c := newStoreCache(store)
@@ -224,5 +227,30 @@ func TestStoreCache_DoesNotRememberAbandonedReads(t *testing.T) {
 	if _, ok := c.GetSource(context.Background(), topic); ok {
 		t.Fatal("the topic is genuinely absent")
 	}
-	assert.EqualValues(t, 2, store.gets.Load(), "an abandoned read must not be remembered as absence")
+	assert.EqualValues(t, 1, store.gets.Load(), "the shared read outlives the caller that started it")
+}
+
+// The case that mattered in production: a GraphQL request resolves every route
+// in parallel and each one asks for the same topic. Before these were collapsed
+// onto one read, a 148-route feed took 148 store reads and logged 148 lines for
+// a single absent topic.
+func TestStoreCache_CollapsesConcurrentReadsOfOneTopic(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	const topic = "rtconcurrent"
+	const callers = 148
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, ok := c.GetSource(context.Background(), topic); ok {
+				t.Error("the topic is absent")
+			}
+		}()
+	}
+	wg.Wait()
+	assert.EqualValues(t, 1, store.gets.Load(), "concurrent callers must share one store read")
 }

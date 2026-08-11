@@ -149,6 +149,12 @@ func (f *lookupCache) GetFeedVersionRTFeeds(id int) ([]string, bool) {
 	if a, ok := f.fvidSourceCache.Get(id); ok {
 		return a, ok
 	}
+	// Only feeds that actually publish a realtime URL. The operator join reaches
+	// every feed the operator has, static ones included, and a topic is keyed on
+	// whichever feed owns the URL that was fetched — so without this every
+	// lookup also probes feeds that can never hold RT data. Filtering on the URL
+	// rather than on spec is deliberate: a gtfs feed can carry realtime URLs of
+	// its own. Empty strings count as absent; feeds publish those.
 	q := `
 	select 
 		distinct on(cf.onestop_id)
@@ -158,6 +164,11 @@ func (f *lookupCache) GetFeedVersionRTFeeds(id int) ([]string, bool) {
 	join current_operators_in_feed coif2 on coif2.resolved_onestop_id = coif.resolved_onestop_id 
 	join current_feeds cf on coif2.feed_id = cf.id
 	where fv.id = $1 
+	and (
+		coalesce(cf.urls ->> 'realtime_alerts', '') <> ''
+		or coalesce(cf.urls ->> 'realtime_trip_updates', '') <> ''
+		or coalesce(cf.urls ->> 'realtime_vehicle_positions', '') <> ''
+	)
 	order by cf.onestop_id
 	`
 	var eid []string

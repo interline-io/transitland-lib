@@ -7,6 +7,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -18,6 +19,8 @@ const (
 	missingTTL = 1 * time.Minute
 	// reconnectDelay paces re-subscription attempts.
 	reconnectDelay = 1 * time.Second
+	// storeReadTimeout bounds a shared read, which no caller can cancel.
+	storeReadTimeout = 5 * time.Second
 	// updatesChannel carries topic pointers to the notify-then-read listeners.
 	updatesChannel = "rtfetch:updates"
 )
@@ -43,6 +46,11 @@ type storeCache struct {
 	// missing records topics the store had nothing for, so a caller looping
 	// over dozens of associated feeds does not re-read each one every time.
 	missing map[string]time.Time
+	// loads collapses concurrent readers of the same topic onto one store read.
+	// The maps above only help a caller that arrives after one has finished;
+	// within a single request every route resolves at once, so without this they
+	// all miss together.
+	loads singleflight.Group
 }
 
 func newStoreCache(store kvcache.Store) *storeCache {
@@ -99,41 +107,62 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 		return nil, false
 	}
 	c.lock.Unlock()
-	// Cold read from the shared store without holding the lock.
-	s, err := c.loadFromStore(ctx, topic)
-	if s == nil {
-		// A caller that has gone away taught us nothing about the topic, so
-		// its cancellation must not be remembered as an absence.
-		if ctx.Err() != nil {
-			log.For(ctx).Trace().Str("topic", topic).Msg("rtcache: topic read abandoned by caller")
-			return nil, false
+	// Cold read from the shared store, once per topic however many callers
+	// arrive together, with everything that follows from it done inside that one
+	// call. A GraphQL request resolves every route in parallel and each asks for
+	// the same handful of topics, so a 148-route feed used to take 148 store
+	// reads and log 148 lines for a single topic.
+	ch := c.loads.DoChan(topic, func() (any, error) {
+		// Detached from whichever caller happened to lead: the read is shared,
+		// so one of them going away must not abort it for the rest. Values are
+		// kept so the log still carries a request id; only cancellation goes.
+		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), storeReadTimeout)
+		defer cancel()
+		s, err := c.loadFromStore(rctx, topic)
+		if s == nil {
+			// A read cut short taught us nothing about the topic, so it must not
+			// be remembered as an absence.
+			if rctx.Err() != nil {
+				log.For(rctx).Trace().Str("topic", topic).Msg("rtcache: topic read abandoned")
+				return nil, err
+			}
+			c.lock.Lock()
+			c.missing[topic] = time.Now()
+			c.lock.Unlock()
+			// Both outcomes are remembered so a caller looping over every
+			// associated feed does not re-read each one, but they are logged
+			// apart: absent is a quiet feed, failed is the store not answering.
+			if err != nil {
+				log.For(rctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic read failed, not retried until this expires")
+			} else {
+				log.For(rctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic absent from store, not retried until this expires")
+			}
+			return nil, err
 		}
+		// Only store reads are logged, and only the one that happened: the
+		// local and remembered paths are map hits, and the callers that shared
+		// this read are not each an event.
+		log.For(rctx).Trace().Str("topic", topic).Msg("rtcache: topic read")
 		c.lock.Lock()
-		c.missing[topic] = time.Now()
-		c.lock.Unlock()
-		// Both outcomes are remembered so a caller looping over every
-		// associated feed does not re-read each one, but they are logged
-		// apart: absent is a quiet feed, failed is the store not answering.
-		if err != nil {
-			log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic read failed, not retried until this expires")
-		} else {
-			log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic absent from store, not retried until this expires")
+		// Double-check: a concurrent update may have inserted it meanwhile.
+		if existing, ok := c.sources[topic]; ok {
+			c.lock.Unlock()
+			return existing, nil
 		}
-		return nil, false
-	}
-	// Only store reads are logged. The local and remembered paths are map
-	// hits, and a caller looping over every associated feed for every stop
-	// time makes logging them thousands of lines a request.
-	log.For(ctx).Trace().Str("topic", topic).Msg("rtcache: topic read")
-	c.lock.Lock()
-	// Double-check: a concurrent update may have inserted it meanwhile.
-	if existing, ok := c.sources[topic]; ok {
+		c.sources[topic] = s
 		c.lock.Unlock()
-		return existing, true
+		return s, nil
+	})
+	select {
+	case <-ctx.Done():
+		// This caller has gone away; the read carries on for whoever else is
+		// waiting on it.
+		log.For(ctx).Trace().Str("topic", topic).Msg("rtcache: topic read abandoned by caller")
+		return nil, false
+	case res := <-ch:
+		s, _ := res.Val.(*Source)
+		return s, s != nil
 	}
-	c.sources[topic] = s
-	c.lock.Unlock()
-	return s, true
 }
 
 func (c *storeCache) Close() error {
