@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -147,15 +148,20 @@ func TestStoreCache_IgnoresUnwatchedTopics(t *testing.T) {
 }
 
 // countingStore counts reads so a test can assert what a sequence of lookups
-// costs in round trips.
+// costs in round trips, and can hold each read open so a test can decide who
+// is in flight when.
 type countingStore struct {
 	*kvcache.MemoryStore
-	gets atomic.Int64
-	fail atomic.Bool
+	gets  atomic.Int64
+	fail  atomic.Bool
+	delay time.Duration
 }
 
 func (s *countingStore) Get(ctx context.Context, key string) ([]byte, bool, error) {
 	s.gets.Add(1)
+	if s.delay > 0 {
+		time.Sleep(s.delay)
+	}
 	if s.fail.Load() {
 		return nil, false, errors.New("store unavailable")
 	}
@@ -205,10 +211,11 @@ func TestStoreCache_RemembersFailedReads(t *testing.T) {
 	assert.EqualValues(t, 1, store.gets.Load(), "a failing store should be read once, not once per lookup")
 }
 
-// A read cut short because the caller went away says nothing about the topic,
-// so it must not be remembered as an absence — otherwise one canceled request
-// blinds every later one for a minute.
-func TestStoreCache_DoesNotRememberAbandonedReads(t *testing.T) {
+// A caller going away must not blind every later one for a minute. The read is
+// shared, so it is detached from whichever caller led it and finishes anyway,
+// and the later caller is answered from what that read learned rather than from
+// someone else's cancellation — which is why one store read is enough here.
+func TestStoreCache_SharedReadOutlivesItsCaller(t *testing.T) {
 	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
 	c := newStoreCache(store)
 	defer c.Close()
@@ -220,9 +227,34 @@ func TestStoreCache_DoesNotRememberAbandonedReads(t *testing.T) {
 		t.Fatal("an abandoned read must not resolve")
 	}
 
-	// A later live lookup still has to reach the store.
 	if _, ok := c.GetSource(context.Background(), topic); ok {
 		t.Fatal("the topic is genuinely absent")
 	}
-	assert.EqualValues(t, 2, store.gets.Load(), "an abandoned read must not be remembered as absence")
+	assert.EqualValues(t, 1, store.gets.Load(), "the abandoned read still recorded what it learned")
+}
+
+// A request resolves many entities in parallel and each one asks for the same
+// topic, so without collapsing they all miss together and each reaches the
+// store. The store is held open for the duration so every caller is provably
+// in flight before the leader finishes, which is what makes the exact count
+// assertable rather than a timing bet.
+func TestStoreCache_CollapsesConcurrentReadsOfOneTopic(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore(), delay: 50 * time.Millisecond}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	const topic = "rtconcurrent"
+	const callers = 148
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, ok := c.GetSource(context.Background(), topic); ok {
+				t.Error("the topic is absent")
+			}
+		}()
+	}
+	wg.Wait()
+	assert.EqualValues(t, 1, store.gets.Load(), "concurrent callers must share one store read")
 }

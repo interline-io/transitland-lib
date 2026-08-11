@@ -292,6 +292,35 @@ func TestCache_SetMissing(t *testing.T) {
 	assert.True(t, it.Missing)
 }
 
+func TestCache_Has(t *testing.T) {
+	// Has answers from the local tier alone, so a consumer fanning a
+	// notification stream out to its own keys can ask what it holds without
+	// the load Get would trigger.
+	ctx := context.Background()
+	clock := newTestClock()
+	store := &recordingStore{Store: kvcache.NewMemoryStore()}
+	c := kvcache.NewCache[string, string](store, "test")
+	c.Clock = clock.Now
+	c.Expires = time.Minute
+	c.NegativeTTL = time.Minute
+
+	assert.False(t, c.Has("absent"), "an unknown key is not held")
+	assert.Equal(t, 0, store.getCount(), "Has must not consult storage")
+
+	assert.NoError(t, c.Set(ctx, "here", "value"))
+	assert.True(t, c.Has("here"))
+
+	// A tombstone is held too: the key is one this process was asked for.
+	assert.NoError(t, c.SetMissing(ctx, "ghost"))
+	assert.True(t, c.Has("ghost"))
+
+	// Both lapse with their TTL rather than lingering as phantom keys.
+	clock.Advance(2 * time.Minute)
+	assert.False(t, c.Has("here"))
+	assert.False(t, c.Has("ghost"))
+	assert.Equal(t, 0, store.getCount(), "Has must not consult storage")
+}
+
 func TestCache_NegativeMissNotTombstoned(t *testing.T) {
 	// A bare storage miss is not authoritative absence: even with
 	// NegativeTTL set, it must not install a tombstone that could mask a
