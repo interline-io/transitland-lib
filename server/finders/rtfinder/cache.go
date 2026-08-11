@@ -94,6 +94,13 @@ func (c *storeCache) AddData(ctx context.Context, topic string, data []byte) err
 }
 
 func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool) {
+	// A caller that has already gone away is shed rather than started. A read is
+	// detached from its caller by design, so beginning one here would spend a
+	// store round trip on a result nobody waits for — and a client disconnecting
+	// mid-request leaves a resolver still looping over dozens of topics.
+	if ctx.Err() != nil {
+		return nil, false
+	}
 	return c.sources.Get(ctx, topic)
 }
 

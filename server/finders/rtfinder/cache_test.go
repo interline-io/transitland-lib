@@ -211,11 +211,14 @@ func TestStoreCache_RemembersFailedReads(t *testing.T) {
 	assert.EqualValues(t, 1, store.gets.Load(), "a failing store should be read once, not once per lookup")
 }
 
-// A caller going away must not blind every later one for a minute. The read is
-// shared, so it is detached from whichever caller led it and finishes anyway,
-// and the later caller is answered from what that read learned rather than from
-// someone else's cancellation — which is why one store read is enough here.
-func TestStoreCache_SharedReadOutlivesItsCaller(t *testing.T) {
+// A caller that has already gone away is shed: it must neither resolve nor
+// spend a store read nobody is waiting for, and its cancellation must not be
+// remembered as an absence that blinds every later caller for a minute.
+//
+// The other half — a read whose caller leaves while it is already in flight
+// finishes anyway and serves the callers still waiting — belongs to the shared
+// cache, and kvcache's TestCache_SingleflightLeaderCancel covers it.
+func TestStoreCache_ShedsCanceledCallers(t *testing.T) {
 	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
 	c := newStoreCache(store)
 	defer c.Close()
@@ -226,11 +229,12 @@ func TestStoreCache_SharedReadOutlivesItsCaller(t *testing.T) {
 	if _, ok := c.GetSource(canceled, topic); ok {
 		t.Fatal("an abandoned read must not resolve")
 	}
+	assert.EqualValues(t, 0, store.gets.Load(), "a canceled caller must not reach the store")
 
 	if _, ok := c.GetSource(context.Background(), topic); ok {
 		t.Fatal("the topic is genuinely absent")
 	}
-	assert.EqualValues(t, 1, store.gets.Load(), "the abandoned read still recorded what it learned")
+	assert.EqualValues(t, 1, store.gets.Load(), "a cancellation must not be remembered as an absence")
 }
 
 // A request resolves many entities in parallel and each one asks for the same
