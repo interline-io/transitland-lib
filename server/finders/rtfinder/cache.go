@@ -188,20 +188,12 @@ func (c *storeCache) handleUpdate(topic string) {
 	if !c.watching(topic) {
 		return
 	}
-	// Read directly rather than through the cache's own Refresh, which would
-	// install a record of absence when the read fails. An update this process
-	// could not fetch is not evidence the topic went away, and replacing a good
-	// snapshot with an absence would blank the feed for missingTTL over what
-	// may be a one-second hiccup. Bounded by the cache's context so Close is
-	// not held up by a store that has stopped answering.
-	rctx, cancel := context.WithTimeout(c.ctx, storeReadTimeout)
-	defer cancel()
-	s, err := c.readTopic(rctx, topic)
-	if err != nil || s == nil {
-		return
-	}
-	if err := c.sources.Set(rctx, topic, s); err == nil {
-		log.For(rctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
+	// Reload rather than Refresh: an update this process could not fetch is a
+	// failure to observe a change, not evidence the topic went away, and must
+	// not replace a good snapshot with a record of absence — that would blank
+	// the feed for missingTTL over what may be a one-second hiccup.
+	if _, err := c.sources.Reload(c.ctx, topic); err == nil {
+		log.For(c.ctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
 	}
 }
 

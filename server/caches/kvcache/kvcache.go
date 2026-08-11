@@ -150,6 +150,37 @@ func (c *Cache[K, V]) Refresh(ctx context.Context, key K) (V, error) {
 	return it.Value, nil
 }
 
+// Reload re-runs the refresh function for key and installs the value it
+// returns. Unlike Refresh, a key that turns out absent or unreadable leaves
+// whatever is held in place: reloading is for a key already known to have
+// changed, so a failure is a failure to observe that change rather than
+// evidence the key is gone.
+//
+// The call is bounded by RefreshTimeout and by the caller's own context, since
+// unlike a flight leader's refresh its result is nobody else's.
+func (c *Cache[K, V]) Reload(ctx context.Context, key K) (V, error) {
+	var zero V
+	if c.refreshFn == nil {
+		return zero, errors.New("kvcache: no refresh function")
+	}
+	rctx, cancel := context.WithTimeout(ctx, c.RefreshTimeout)
+	defer cancel()
+	value, err := c.refreshFn(rctx, key)
+	if err != nil {
+		return zero, err
+	}
+	n := c.now()
+	it := Item[V]{
+		Value:     value,
+		RecheckAt: n.Add(c.Recheck),
+		ExpiresAt: n.Add(c.Expires),
+	}
+	c.setLocal(key, it)
+	// The storage write gets its own budget, not whatever the refresh left.
+	_ = c.setStore(context.WithoutCancel(rctx), key, it, c.Expires)
+	return value, nil
+}
+
 // GetRecheckKeys reconciles the local tier against the shared tier in a
 // single multi-get — adopting entries refreshed by other processes and
 // pruning expired ones — and returns the keys still due for refresh.

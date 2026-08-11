@@ -329,6 +329,46 @@ func TestCache_Has(t *testing.T) {
 	assert.EqualValues(t, 0, refreshes.Load(), "Has must not invoke the refresh function")
 }
 
+func TestCache_ReloadKeepsHeldValueOnFailure(t *testing.T) {
+	// Reload is for a key already known to have changed, so a refresh that
+	// cannot say what it changed to must leave the held value alone — where
+	// Refresh, told the key is absent, replaces it with a tombstone.
+	ctx := context.Background()
+	var fail atomic.Bool
+	c := kvcache.NewRefreshCache[string, string](nil, "test", func(_ context.Context, _ string) (string, error) {
+		if fail.Load() {
+			return "", kvcache.ErrNotFound
+		}
+		return "v1", nil
+	})
+	c.NegativeTTL = time.Minute
+
+	v, err := c.Reload(ctx, "k")
+	assert.NoError(t, err)
+	assert.Equal(t, "v1", v)
+	assert.True(t, c.Has("k"))
+
+	fail.Store(true)
+	_, err = c.Reload(ctx, "k")
+	assert.ErrorIs(t, err, kvcache.ErrNotFound)
+	got, ok := c.Get(ctx, "k")
+	assert.True(t, ok, "a failed reload must not discard the held value")
+	assert.Equal(t, "v1", got)
+
+	// Refresh is the other half of the contract: told the key is absent, it
+	// installs the tombstone Reload declined to.
+	_, err = c.Refresh(ctx, "k")
+	assert.NoError(t, err)
+	_, ok = c.Get(ctx, "k")
+	assert.False(t, ok, "Refresh replaces a held value with an absence")
+}
+
+func TestCache_ReloadWithoutRefreshFunc(t *testing.T) {
+	c := kvcache.NewCache[string, string](nil, "test")
+	_, err := c.Reload(context.Background(), "k")
+	assert.Error(t, err)
+}
+
 func TestCache_NegativeMissNotTombstoned(t *testing.T) {
 	// A bare storage miss is not authoritative absence: even with
 	// NegativeTTL set, it must not install a tombstone that could mask a
