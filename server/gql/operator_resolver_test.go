@@ -16,7 +16,7 @@ func TestOperatorResolver(t *testing.T) {
 			name:         "feeds",
 			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {feeds{onestop_id}}}`,
 			selector:     "operators.0.feeds.#.onestop_id",
-			selectExpect: []string{"BA"},
+			selectExpect: []string{"BA", "BA~rt"},
 		},
 		{
 			name:         "feeds incl rt",
@@ -181,6 +181,9 @@ func TestOperatorResolver_License(t *testing.T) {
 	  }	  
 	`
 	selector := `operators.#.onestop_id`
+	// The filter matches an operator through any of its feeds, so BART appears
+	// under both "no" and "exclude_no": its static feed BA is restrictive and
+	// its realtime feed BA~rt carries no license at all.
 	testcases := []testcase{
 		// license: share_alike_optional
 		{
@@ -204,8 +207,8 @@ func TestOperatorResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:           selector,
-			selectExpectUnique: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
-			selectExpectCount:  5,
+			selectExpectUnique: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
+			selectExpectCount:  6,
 		},
 		// license: create_derived_product
 		{
@@ -229,8 +232,8 @@ func TestOperatorResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:           selector,
-			selectExpectUnique: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
-			selectExpectCount:  5,
+			selectExpectUnique: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
+			selectExpectCount:  6,
 		},
 		// license: commercial_use_allowed
 		{
@@ -254,8 +257,8 @@ func TestOperatorResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:           selector,
-			selectExpectUnique: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
-			selectExpectCount:  5,
+			selectExpectUnique: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
+			selectExpectCount:  6,
 		},
 		// license: redistribution_allowed
 		{
@@ -279,8 +282,8 @@ func TestOperatorResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:           selector,
-			selectExpectUnique: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
-			selectExpectCount:  5,
+			selectExpectUnique: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
+			selectExpectCount:  6,
 		},
 		// license: use_without_attribution
 		{
@@ -304,8 +307,8 @@ func TestOperatorResolver_License(t *testing.T) {
 			query:              q,
 			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:           selector,
-			selectExpectUnique: []string{"o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
-			selectExpectCount:  5,
+			selectExpectUnique: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata", "o-9qs-demotransitauthority", "o-unknown-c~tran"},
+			selectExpectCount:  6,
 		},
 	}
 	c, _ := newTestClient(t)

@@ -17,7 +17,7 @@ func TestAgencyRT_Alerts(t *testing.T) {
 			query: rtTestStopQuery,
 			vars:  rtTestStopQueryVars(),
 			rtfiles: []testconfig.RTJsonFile{
-				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
+				{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1031527WKDY"
@@ -43,7 +43,7 @@ func TestAgencyRT_Alerts(t *testing.T) {
 			name:    "stop alerts active",
 			query:   rtTestStopQuery,
 			vars:    activeVars,
-			rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"}},
+			rtfiles: []testconfig.RTJsonFile{{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"}},
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1031527WKDY"
 				sts := gjson.Get(jj, "stops.0.stop_times").Array()

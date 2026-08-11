@@ -58,6 +58,12 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 	var alerts []*pb.Alert
 	vehiclePositions := make([]VehiclePositionEntity, 0, len(rtmsg.Entity))
 	for _, ent := range rtmsg.Entity {
+		// Unmarshaling never produces a nil entity, but this also runs on
+		// messages built in memory, and a nil here would take the process down
+		// rather than fail one topic.
+		if ent == nil {
+			continue
+		}
 		if v := ent.TripUpdate; v != nil {
 			if v.Timestamp == nil && hasDefaultTimestamp {
 				v.Timestamp = &defaultTimestamp

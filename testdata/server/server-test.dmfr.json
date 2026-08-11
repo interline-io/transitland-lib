@@ -74,7 +74,21 @@
       }, 
       "urls": {
         "static_current": "file://testdata/server/gtfs/bart.zip"
-      }
+      },
+      "operators": [
+        {
+          "name": "Bay Area Rapid Transit",
+          "onestop_id": "o-9q9-bayarearapidtransit",
+          "associated_feeds": [
+            {
+              "feed_onestop_id": "BA"
+            },
+            {
+              "feed_onestop_id": "BA~rt"
+            }
+          ]
+        }
+      ]
     },
     {
       "spec": "gtfs",

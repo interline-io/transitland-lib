@@ -2,6 +2,7 @@ package rtfinder
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -19,7 +20,8 @@ const (
 	missingTTL = 1 * time.Minute
 	// reconnectDelay paces re-subscription attempts.
 	reconnectDelay = 1 * time.Second
-	// storeReadTimeout bounds a shared read, which no caller can cancel.
+	// storeReadTimeout is the overall budget for a shared load, which no caller
+	// can cancel. The store read inside it is bounded separately, in loadFromStore.
 	storeReadTimeout = 5 * time.Second
 	// updatesChannel carries topic pointers to the notify-then-read listeners.
 	updatesChannel = "rtfetch:updates"
@@ -48,8 +50,7 @@ type storeCache struct {
 	missing map[string]time.Time
 	// loads collapses concurrent readers of the same topic onto one store read.
 	// The maps above only help a caller that arrives after one has finished;
-	// within a single request every route resolves at once, so without this they
-	// all miss together.
+	// callers within a single request arrive together and would all miss.
 	loads singleflight.Group
 }
 
@@ -107,12 +108,19 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 		return nil, false
 	}
 	c.lock.Unlock()
-	// Cold read from the shared store, once per topic however many callers
-	// arrive together, with everything that follows from it done inside that one
-	// call. A GraphQL request resolves every route in parallel and each asks for
-	// the same handful of topics, so a 148-route feed used to take 148 store
-	// reads and log 148 lines for a single topic.
-	ch := c.loads.DoChan(topic, func() (any, error) {
+	// Cold read from the shared store. Callers that arrive together are
+	// collapsed onto one read, so a request resolving many entities against the
+	// same topic does not read it once per entity.
+	ch := c.loads.DoChan(topic, func() (res any, err error) {
+		// singleflight re-raises a panic from a shared load on a bare goroutine,
+		// where no request-level recovery can reach it. Contain it here so a bad
+		// payload fails one topic instead of the process.
+		defer func() {
+			if r := recover(); r != nil {
+				res, err = nil, fmt.Errorf("panic reading topic: %v", r)
+				log.For(ctx).Error().Err(err).Str("topic", topic).Msg("rtcache: recovered panic reading topic")
+			}
+		}()
 		// Detached from whichever caller happened to lead: the read is shared,
 		// so one of them going away must not abort it for the rest. Values are
 		// kept so the log still carries a request id; only cancellation goes.
