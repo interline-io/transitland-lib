@@ -369,6 +369,92 @@ func TestCache_ReloadWithoutRefreshFunc(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// A Set landing while a cold read is in flight saw the key later than the
+// flight read it, so the flight must not install its stale result over it —
+// and its waiters should be handed the fresher value.
+func TestCache_RefreshDoesNotClobberConcurrentSet(t *testing.T) {
+	ctx := context.Background()
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	c := kvcache.NewRefreshCache[string, string](nil, "test", func(ctx context.Context, key string) (string, error) {
+		close(entered)
+		<-release
+		return "stale", nil
+	})
+
+	var flightV string
+	var flightOk bool
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		flightV, flightOk = c.Get(ctx, "k")
+	}()
+	<-entered
+	assert.NoError(t, c.Set(ctx, "k", "fresh"))
+	close(release)
+	<-done
+
+	assert.True(t, flightOk)
+	assert.Equal(t, "fresh", flightV, "the flight's waiters get the mid-flight Set's value")
+	v, ok := c.Get(ctx, "k")
+	assert.True(t, ok)
+	assert.Equal(t, "fresh", v, "a mid-flight Set must not be overwritten by the flight's stale read")
+}
+
+// The absence a cold read observed is stale the moment a Set lands mid-flight:
+// told the key is absent, the flight must not tombstone the fresher value.
+func TestCache_RefreshAbsenceDoesNotClobberConcurrentSet(t *testing.T) {
+	ctx := context.Background()
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	c := kvcache.NewRefreshCache[string, string](nil, "test", func(ctx context.Context, key string) (string, error) {
+		close(entered)
+		<-release
+		return "", kvcache.ErrNotFound
+	})
+	c.NegativeTTL = time.Minute
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = c.Get(ctx, "k")
+	}()
+	<-entered
+	assert.NoError(t, c.Set(ctx, "k", "fresh"))
+	close(release)
+	<-done
+
+	v, ok := c.Get(ctx, "k")
+	assert.True(t, ok, "a mid-flight Set must not be masked by a tombstone")
+	assert.Equal(t, "fresh", v)
+}
+
+// Contains is the notification-fanout predicate: any local record counts,
+// including a tombstone or an expired entry awaiting the scan, because those
+// are exactly the keys whose next update matters.
+func TestCache_Contains(t *testing.T) {
+	ctx := context.Background()
+	clock := newTestClock()
+	c := kvcache.NewCache[string, string](nil, "test")
+	c.Clock = clock.Now
+	c.Expires = time.Minute
+	c.NegativeTTL = time.Minute
+
+	assert.False(t, c.Contains("absent"))
+	assert.NoError(t, c.Set(ctx, "here", "v"))
+	assert.True(t, c.Contains("here"))
+
+	assert.NoError(t, c.SetMissing(ctx, "ghost"))
+	assert.True(t, c.Contains("ghost"), "a tombstone is a record")
+	assert.False(t, c.Has("ghost"), "but not a held value")
+
+	clock.Advance(2 * time.Minute)
+	assert.False(t, c.Has("here"))
+	assert.True(t, c.Contains("here"), "an expired entry counts until pruned")
+	c.GetRecheckKeys(ctx)
+	assert.False(t, c.Contains("here"), "the scan prunes expired entries")
+}
+
 func TestCache_NegativeMissNotTombstoned(t *testing.T) {
 	// A bare storage miss is not authoritative absence: even with
 	// NegativeTTL set, it must not install a tombstone that could mask a

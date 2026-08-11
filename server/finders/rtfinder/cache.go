@@ -10,8 +10,11 @@ import (
 )
 
 const (
-	// lastTTL bounds how long a topic's last-seen payload survives in the store.
-	lastTTL = 5 * time.Minute
+	// lastTTL bounds how long a topic's last-seen payload survives in the store,
+	// and with it how long a held snapshot is served after the last successful
+	// fetch. Generous so a feed fetched on any sane cadence never lapses between
+	// fetches; it only decides when a dead feed's last data finally disappears.
+	lastTTL = 24 * time.Hour
 	// missingTTL is how long a topic the store could not answer for is
 	// remembered as absent. Roughly a feed's publish cadence: checking more
 	// often cannot find anything new.
@@ -52,11 +55,11 @@ func newStoreCache(store kvcache.Store) *storeCache {
 		cancel: cancel,
 	}
 	c.sources = kvcache.NewRefreshCache[string, *Source](nil, "rtsource", c.readTopic)
-	// A decoded Source is only as good as the payload behind it, which the
-	// store drops after lastTTL. Recheck is left at its default because it
-	// cannot come due: scan drops an entry as expired before it tests it, and
-	// nothing refreshes in the background — updates arrive by publication.
+	// A snapshot and the payload behind it live lastTTL. Recheck is pinned to
+	// the same bound so it can never come due first: nothing refreshes in the
+	// background — updates arrive by publication.
 	c.sources.Expires = lastTTL
+	c.sources.Recheck = lastTTL
 	c.sources.NegativeTTL = missingTTL
 	c.sources.RefreshTimeout = storeReadTimeout
 	// Expiry alone stops an entry being served but does not release the decoded
@@ -197,10 +200,13 @@ func (c *storeCache) handleUpdate(topic string) {
 	}
 }
 
-// watching reports whether this process holds a snapshot for topic, which is
-// true only of topics a caller has asked for and the store had data for.
+// watching reports whether this process has any local record of topic: a held
+// snapshot, a record of absence, or an expired entry not yet pruned. A
+// tombstoned topic is one a caller recently wanted, so its announcements
+// matter most — adopting one revives the topic immediately instead of leaving
+// it blank until the tombstone lapses.
 func (c *storeCache) watching(topic string) bool {
-	return c.sources.Has(topic)
+	return c.sources.Contains(topic)
 }
 
 func (c *storeCache) decode(ctx context.Context, topic string, data []byte) (*Source, error) {

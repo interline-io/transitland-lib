@@ -211,6 +211,29 @@ func TestStoreCache_RemembersFailedReads(t *testing.T) {
 	assert.EqualValues(t, 1, store.gets.Load(), "a failing store should be read once, not once per lookup")
 }
 
+// The first payload for a topic this process remembered as absent must be
+// adopted when announced: the record of absence marks a topic a caller wanted,
+// not one to stay blind to until the record lapses.
+func TestStoreCache_UpdateRevivesTombstonedTopic(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	ctx := context.Background()
+	const topic = "rtrevive"
+	if _, ok := c.GetSource(ctx, topic); ok {
+		t.Fatal("the topic starts absent")
+	}
+
+	// The first fetch lands in the store and its announcement arrives.
+	require.NoError(t, store.Set(ctx, lastKey(topic), mkRTData(4321), lastTTL))
+	c.handleUpdate(topic)
+
+	s, ok := c.GetSource(ctx, topic)
+	require.True(t, ok, "an announced first payload must clear the record of absence")
+	assert.EqualValues(t, uint64(4321), s.GetTimestamp())
+}
+
 // A caller that has already gone away is shed: it must neither resolve nor
 // spend a store read nobody is waiting for, and its cancellation must not be
 // remembered as an absence that blinds every later caller for a minute.
