@@ -17,7 +17,7 @@ func TestRouteRT_Alerts(t *testing.T) {
 			query: rtTestStopQuery,
 			vars:  rtTestStopQueryVars(),
 			rtfiles: []testconfig.RTJsonFile{
-				{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
+				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1031527WKDY"
@@ -44,7 +44,7 @@ func TestRouteRT_Alerts(t *testing.T) {
 			query: rtTestStopQuery,
 			vars:  activeVars,
 			rtfiles: []testconfig.RTJsonFile{
-				{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
+				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1031527WKDY"

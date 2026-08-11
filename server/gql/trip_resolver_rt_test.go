@@ -18,7 +18,7 @@ func TestTripRT_Alerts(t *testing.T) {
 			query: rtTestStopQuery,
 			vars:  rtTestStopQueryVars(),
 			rtfiles: []testconfig.RTJsonFile{
-				{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
+				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1031527WKDY"
@@ -44,7 +44,7 @@ func TestTripRT_Alerts(t *testing.T) {
 			query: rtTestStopQuery,
 			vars:  activeVars,
 			rtfiles: []testconfig.RTJsonFile{
-				{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
+				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1031527WKDY"
@@ -146,7 +146,7 @@ func TestTripRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
 		name:    "schedule_relationship alone",
 		query:   query,
 		vars:    hw{"trip_id": "1131530WKDY"},
-		rtfiles: []testconfig.RTJsonFile{{Feed: "BA~rt", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
 		cb: func(t *testing.T, jj string) {
 			var scheduled int
 			for _, st := range gjson.Get(jj, "trips.0.stop_times").Array() {

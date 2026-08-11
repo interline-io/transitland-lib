@@ -14,7 +14,7 @@ import (
 // testdata/server/rt/BA-vehicle-positions.json for the vehicles it contains.
 func baVehiclePositions() []testconfig.RTJsonFile {
 	return []testconfig.RTJsonFile{
-		{Feed: "BA~rt", Ftype: "realtime_vehicle_positions", Fname: "BA-vehicle-positions.json"},
+		{Feed: "BA", Ftype: "realtime_vehicle_positions", Fname: "BA-vehicle-positions.json"},
 	}
 }
 
@@ -142,7 +142,7 @@ func TestVehiclePositionResolver_Fields(t *testing.T) {
 			}
 			vp := vps[0]
 			assert.Equal(t, "1001", vp.Get("id").String())
-			assert.Equal(t, "BA~rt", vp.Get("rt_feed_onestop_id").String())
+			assert.Equal(t, "BA", vp.Get("rt_feed_onestop_id").String())
 			assert.Equal(t, "1001", vp.Get("vehicle.id").String())
 			assert.Equal(t, "Antioch Train", vp.Get("vehicle.label").String())
 			assert.Equal(t, "BART1001", vp.Get("vehicle.license_plate").String())
@@ -421,7 +421,7 @@ func TestVehiclePositions_SharedFeed(t *testing.T) {
 		agency := vehiclePositionAgency(t, ctx, cfg, "o-9q9-bayarearapidtransit")
 		if _, err := cfg.Adapter.DBX().ExecContext(ctx, `
 			insert into current_operators_in_feed(feed_id, resolved_onestop_id, resolved_name)
-			select id, 'o-9q9-someoneelse', 'Someone Else' from current_feeds where onestop_id = 'BA~rt'`); err != nil {
+			select id, 'o-9q9-someoneelse', 'Someone Else' from current_feeds where onestop_id = 'BA'`); err != nil {
 			t.Fatal(err)
 		}
 		// 1001 names route 01 and 1002 names route 05; 1005 names route 99,

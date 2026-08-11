@@ -78,9 +78,6 @@ func ConfigTxRollback(t testing.TB, opts Options, cb func(model.Config)) {
 	})
 }
 
-// RTJsonFile registers a realtime fixture under one feed's topic. Feed is the
-// onestop id of the feed publishing the realtime URL, which is what the fetcher
-// keys topics on and what lookups resolve to — for BART that is BA~rt, not BA.
 type RTJsonFile struct {
 	Feed  string
 	Ftype string
@@ -89,9 +86,9 @@ type RTJsonFile struct {
 
 func DefaultRTJson() []RTJsonFile {
 	return []RTJsonFile{
-		{"BA~rt", "realtime_trip_updates", "BA.json"},
-		{"BA~rt", "realtime_alerts", "BA-alerts.json"},
-		{"CT~rt", "realtime_trip_updates", "CT.json"},
+		{"BA", "realtime_trip_updates", "BA.json"},
+		{"BA", "realtime_alerts", "BA-alerts.json"},
+		{"CT", "realtime_trip_updates", "CT.json"},
 	}
 }
 

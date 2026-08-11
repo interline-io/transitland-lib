@@ -148,8 +148,8 @@ func (f *lookupCache) GetRouteTripIDs(ctx context.Context, id int) set.Set[strin
 	return ret
 }
 
-// GetFeedVersionRTFeeds returns the onestop ids of the realtime feeds a feed
-// version's data can come from. These are what realtime topics are keyed on.
+// GetFeedVersionRTFeeds returns the onestop ids of the feeds a feed version's
+// realtime data can come from. These are what realtime topics are keyed on.
 func (f *lookupCache) GetFeedVersionRTFeeds(ctx context.Context, id int) ([]string, bool) {
 	if a, ok := f.fvidSourceCache.Get(id); ok {
 		return a, true
@@ -158,13 +158,6 @@ func (f *lookupCache) GetFeedVersionRTFeeds(ctx context.Context, id int) ([]stri
 		if a, ok := f.fvidSourceCache.Get(id); ok {
 			return a, nil
 		}
-		// Only feeds that actually publish a realtime URL. The operator join
-		// reaches every feed the operator has, static ones included, and a topic
-		// is keyed on whichever feed owns the URL that was fetched.
-		//
-		// Filtering on the URL rather than on spec is deliberate: a gtfs feed can
-		// carry realtime URLs of its own. Empty strings count as absent; feeds
-		// publish those.
 		q := `
 		select
 			distinct on(cf.onestop_id)
@@ -174,20 +167,15 @@ func (f *lookupCache) GetFeedVersionRTFeeds(ctx context.Context, id int) ([]stri
 		join current_operators_in_feed coif2 on coif2.resolved_onestop_id = coif.resolved_onestop_id
 		join current_feeds cf on coif2.feed_id = cf.id
 		where fv.id = $1
-		and (
-			coalesce(cf.urls ->> 'realtime_alerts', '') <> ''
-			or coalesce(cf.urls ->> 'realtime_trip_updates', '') <> ''
-			or coalesce(cf.urls ->> 'realtime_vehicle_positions', '') <> ''
-		)
 		order by cf.onestop_id
 		`
 		var eid []string
 		if err := sqlx.Select(f.db, &eid, q, id); err != nil {
 			return nil, err
 		}
-		// Only a result is cached. An empty list is a legitimate answer here, so
-		// caching a failed query would serve one as fact for the life of the
-		// process with nothing downstream able to tell the two apart.
+		// Only a result is cached. A failed query cached as an empty list would
+		// be served as fact for the life of the process, with nothing downstream
+		// able to tell it from a feed version that has no realtime feeds.
 		f.fvidSourceCache.Set(id, eid)
 		return eid, nil
 	})
