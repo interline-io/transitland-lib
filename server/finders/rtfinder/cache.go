@@ -53,12 +53,16 @@ func newStoreCache(store kvcache.Store) *storeCache {
 	}
 	c.sources = kvcache.NewRefreshCache[string, *Source](nil, "rtsource", c.readTopic)
 	// A decoded Source is only as good as the payload behind it, which the
-	// store drops after lastTTL. Nothing rechecks in the background — updates
-	// arrive by publication — so Recheck never has to come due.
+	// store drops after lastTTL. Recheck is left at its default because it
+	// cannot come due: scan drops an entry as expired before it tests it, and
+	// nothing refreshes in the background — updates arrive by publication.
 	c.sources.Expires = lastTTL
-	c.sources.Recheck = lastTTL
 	c.sources.NegativeTTL = missingTTL
 	c.sources.RefreshTimeout = storeReadTimeout
+	// Expiry alone stops an entry being served but does not release the decoded
+	// message behind it, which for a large feed is megabytes. Scanning prunes
+	// them; with nothing ever due, that is all this does.
+	c.sources.Start(missingTTL)
 	if ps, ok := store.(kvcache.PubSubStore); ok {
 		c.pubsub = ps
 		c.wg.Add(1)
@@ -86,19 +90,20 @@ func (c *storeCache) AddData(ctx context.Context, topic string, data []byte) err
 	}
 	// No shared distribution: decode straight into the local tier, replacing
 	// any record of absence.
-	s, err := c.decode(ctx, topic, data)
+	s, err := c.decode(rctx, topic, data)
 	if err != nil {
 		return err
 	}
-	return c.sources.Set(ctx, topic, s)
+	return c.sources.Set(rctx, topic, s)
 }
 
 func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool) {
-	// A caller that has already gone away is shed rather than started. A read is
-	// detached from its caller by design, so beginning one here would spend a
-	// store round trip on a result nobody waits for — and a client disconnecting
-	// mid-request leaves a resolver still looping over dozens of topics.
-	if ctx.Err() != nil {
+	// What is already held costs a map lookup and is served whatever state the
+	// caller is in. Only a load is shed: it is detached from its caller by
+	// design, so starting one for a caller that has gone away spends a store
+	// round trip nobody waits for, and a client disconnecting mid-request
+	// leaves a resolver still looping over dozens of topics.
+	if !c.sources.Has(topic) && ctx.Err() != nil {
 		return nil, false
 	}
 	return c.sources.Get(ctx, topic)
@@ -107,19 +112,18 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 func (c *storeCache) Close() error {
 	c.cancel()
 	c.wg.Wait()
+	c.sources.Stop()
 	return nil
 }
 
 // readTopic reads and decodes a topic's last payload. It is the cache's
-// refresh function, so concurrent callers for one topic share a single call
-// and its result is stored for them.
-//
-// Every failure reports kvcache.ErrNotFound, which records the topic as absent
-// for NegativeTTL. A caller loops over every feed associated with a feed
-// version, so a store that cannot answer must not be asked again for each of
-// them; the cases are logged apart, since absent is a quiet feed and failed is
-// the store not answering.
+// refresh function, and reports every failure as kvcache.ErrNotFound so the
+// topic is remembered as absent for NegativeTTL.
 func (c *storeCache) readTopic(ctx context.Context, topic string) (*Source, error) {
+	// A resolver sweeps every feed associated with a feed version, so a store
+	// that cannot answer must not be asked once per feed — an unreadable topic
+	// is remembered exactly like an empty one. They are logged apart because
+	// absent is a quiet feed and failed is the store not answering.
 	data, ok, err := c.store.Get(ctx, lastKey(topic))
 	if err != nil {
 		log.For(ctx).Error().Err(err).Str("topic", topic).Dur("retry_after", missingTTL).Msg("rtcache: topic read failed, not retried until this expires")
@@ -170,24 +174,39 @@ func (c *storeCache) drain(sub kvcache.Subscription) {
 			if !ok {
 				return
 			}
-			topic := string(msg)
-			// Every RT fetch in the fleet announces on this one channel, so a
-			// process must take only what it serves. Without this each process
-			// reads and decodes every feed in the system on every fetch.
-			if !c.watching(topic) {
-				continue
-			}
-			if s, err := c.sources.Refresh(c.ctx, topic); err == nil && s != nil {
-				log.For(c.ctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
-			}
+			c.handleUpdate(string(msg))
 		}
 	}
 }
 
-// watching reports whether this process holds an entry for topic, which is
-// true only of topics a caller has asked for. A topic found absent counts:
-// somebody wants it, so an announcement that it now has data is worth taking
-// rather than waiting out the rest of missingTTL.
+// handleUpdate re-reads an announced topic, replacing this process's snapshot
+// of it.
+func (c *storeCache) handleUpdate(topic string) {
+	// Every RT fetch in the fleet announces on this one channel, so a process
+	// must take only what it serves. Without this each process reads and
+	// decodes every feed in the system on every fetch.
+	if !c.watching(topic) {
+		return
+	}
+	// Read directly rather than through the cache's own Refresh, which would
+	// install a record of absence when the read fails. An update this process
+	// could not fetch is not evidence the topic went away, and replacing a good
+	// snapshot with an absence would blank the feed for missingTTL over what
+	// may be a one-second hiccup. Bounded by the cache's context so Close is
+	// not held up by a store that has stopped answering.
+	rctx, cancel := context.WithTimeout(c.ctx, storeReadTimeout)
+	defer cancel()
+	s, err := c.readTopic(rctx, topic)
+	if err != nil || s == nil {
+		return
+	}
+	if err := c.sources.Set(rctx, topic, s); err == nil {
+		log.For(rctx).Trace().Str("topic", topic).Msg("rtcache: processed update")
+	}
+}
+
+// watching reports whether this process holds a snapshot for topic, which is
+// true only of topics a caller has asked for and the store had data for.
 func (c *storeCache) watching(topic string) bool {
 	return c.sources.Has(topic)
 }

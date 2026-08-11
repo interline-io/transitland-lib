@@ -299,26 +299,34 @@ func TestCache_Has(t *testing.T) {
 	ctx := context.Background()
 	clock := newTestClock()
 	store := &recordingStore{Store: kvcache.NewMemoryStore()}
-	c := kvcache.NewCache[string, string](store, "test")
+	var refreshes atomic.Int64
+	c := kvcache.NewRefreshCache[string, string](store, "test", func(_ context.Context, _ string) (string, error) {
+		refreshes.Add(1)
+		return "refreshed", nil
+	})
 	c.Clock = clock.Now
 	c.Expires = time.Minute
 	c.NegativeTTL = time.Minute
 
 	assert.False(t, c.Has("absent"), "an unknown key is not held")
-	assert.Equal(t, 0, store.getCount(), "Has must not consult storage")
 
 	assert.NoError(t, c.Set(ctx, "here", "value"))
 	assert.True(t, c.Has("here"))
 
-	// A tombstone is held too: the key is one this process was asked for.
+	// A tombstone is not a held value: Get reports a miss for it, and so must
+	// Has, or a consumer keying work off Has does that work for keys it has
+	// only ever failed to find.
 	assert.NoError(t, c.SetMissing(ctx, "ghost"))
-	assert.True(t, c.Has("ghost"))
+	_, ok := c.Get(ctx, "ghost")
+	assert.False(t, ok)
+	assert.False(t, c.Has("ghost"))
 
-	// Both lapse with their TTL rather than lingering as phantom keys.
+	// A held value lapses with its TTL rather than lingering as a phantom key.
 	clock.Advance(2 * time.Minute)
 	assert.False(t, c.Has("here"))
-	assert.False(t, c.Has("ghost"))
+
 	assert.Equal(t, 0, store.getCount(), "Has must not consult storage")
+	assert.EqualValues(t, 0, refreshes.Load(), "Has must not invoke the refresh function")
 }
 
 func TestCache_NegativeMissNotTombstoned(t *testing.T) {

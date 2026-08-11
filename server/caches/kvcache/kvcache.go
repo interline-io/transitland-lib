@@ -157,15 +157,14 @@ func (c *Cache[K, V]) GetRecheckKeys(ctx context.Context) []K {
 	return c.scan(ctx)
 }
 
-// Has reports whether key has a live local entry, counting negative
-// tombstones. It consults neither the shared tier nor the refresh
-// function, so a caller can ask what this process already holds without
-// causing the load that Get would.
+// Has reports whether the local tier holds a live value for key: true
+// exactly when Get would return one without loading. Tombstoned keys are
+// not held. It consults neither the shared tier nor the refresh function.
 func (c *Cache[K, V]) Has(key K) bool {
 	c.lock.RLock()
 	it, ok := c.items[key]
 	c.lock.RUnlock()
-	return ok && it.ExpiresAt.After(c.now())
+	return ok && !it.Missing && it.ExpiresAt.After(c.now())
 }
 
 // LocalKeys returns a snapshot of locally known keys.
