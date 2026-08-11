@@ -639,13 +639,6 @@ type Operator {
   "Agencies for this operator from active feed versions"
   agencies: [Agency!]
 
-  """
-  Stops served by this operator's routes, together with the stations those stops belong to.
-
-  Stations are included because they are never served directly: only platforms appear in `stop_times`. Filter with `where: {location_type: 1}` for stations alone, or `where: {location_type: 0}` for platforms alone.
-  """
-  stops(limit: Int, where: StopFilter): [Stop!]!
-
   "Feeds associated with this operator"
   feeds(limit: Int, where: FeedFilter): [Feed!]
 }

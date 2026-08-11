@@ -338,9 +338,6 @@ func (UnimplementedFinder) StopsByLevelIDs(context.Context, *int, *StopFilter, [
 func (UnimplementedFinder) StopsByLocationGroupIDs(context.Context, *int, []int) ([][]*Stop, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) StopsByOperatorOnestopIDs(context.Context, *int, *StopFilter, []string) ([][]*Stop, error) {
-	return nil, notImplErr()
-}
 func (UnimplementedFinder) StopsByParentStopIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {
 	return nil, notImplErr()
 }

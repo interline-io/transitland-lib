@@ -71,6 +71,16 @@ func TestAgencyResolver_Stops(t *testing.T) {
 			selectExpect: []string{"70011"},
 		},
 		{
+			// Operators reach stops through their agencies; there is no
+			// Operator.stops, just as there is no Operator.routes.
+			name:  "reached through an operator's agencies",
+			query: `query { operators(where:{onestop_id:"o-dqcj-wmata"}) { agencies { stations: stops(limit:1000, where:{location_type:1}) { stop_id } platforms: stops(limit:100, where:{location_type:0}) { stop_id } } } }`,
+			sel: []testcaseSelector{
+				{selector: "operators.0.agencies.0.stations.#.stop_id", expectCount: 98},
+				{selector: "operators.0.agencies.0.platforms.#.stop_id", expectCount: 100},
+			},
+		},
+		{
 			// Two agencies in one request must not share a limit.
 			name:  "batched agencies keep separate limits",
 			query: `query { agencies(where:{adm0_iso:"US"}) { onestop_id stops(limit:3) { stop_id } } }`,

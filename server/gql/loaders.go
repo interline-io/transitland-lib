@@ -102,7 +102,6 @@ type Loaders struct {
 	StopsByFeedVersionStopIDs                                     *dataloader.Loader[model.FVEntityID, *model.Stop]
 	StopsByIDs                                                    *dataloader.Loader[int, *model.Stop]
 	StopsByLevelIDs                                               *dataloader.Loader[stopLoaderParam, []*model.Stop]
-	StopsByOperatorOnestopIDs                                     *dataloader.Loader[stopLoaderParam, []*model.Stop]
 	StopsByParentStopIDs                                          *dataloader.Loader[stopLoaderParam, []*model.Stop]
 	StopsByRouteIDs                                               *dataloader.Loader[stopLoaderParam, []*model.Stop]
 	StopTimesByStopIDs                                            *dataloader.Loader[stopTimeLoaderParam, []*model.StopTime]
@@ -437,11 +436,6 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		StopsByLevelIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopsByLevelIDs,
 			func(p stopLoaderParam) (int, *model.StopFilter, *int) {
 				return p.LevelID, p.Where, p.Limit
-			},
-		),
-		StopsByOperatorOnestopIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopsByOperatorOnestopIDs,
-			func(p stopLoaderParam) (string, *model.StopFilter, *int) {
-				return p.OperatorOnestopID, p.Where, p.Limit
 			},
 		),
 		StopsByParentStopIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopsByParentStopIDs,

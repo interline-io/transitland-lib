@@ -34,8 +34,8 @@ type PlaceGeometrySelect struct {
 //////////
 
 type Feed struct {
-	WithOperatorOnestopID tt.String
 	SearchRank            *string
+	WithOperatorOnestopID tt.String
 	dmfr.Feed
 }
 
@@ -127,14 +127,13 @@ type StopTime struct {
 }
 
 type Stop struct {
-	FeedOnestopID         string
-	FeedVersionSHA1       string
-	OnestopID             *string
-	SearchRank            *string
-	WithinFeatures        tt.Strings
-	WithRouteID           tt.Int
-	WithAgencyID          tt.Int
-	WithOperatorOnestopID tt.String
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	OnestopID       *string
+	SearchRank      *string
+	WithinFeatures  tt.Strings
+	WithRouteID     tt.Int
+	WithAgencyID    tt.Int
 	gtfs.Stop
 }
 

@@ -101,14 +101,13 @@ type tripLoaderParam struct {
 }
 
 type stopLoaderParam struct {
-	FeedVersionID     int
-	ParentStopID      int
-	AgencyID          int
-	OperatorOnestopID string
-	LevelID           int
-	Limit             *int
-	Where             *model.StopFilter
-	RouteID           int
+	FeedVersionID int
+	ParentStopID  int
+	AgencyID      int
+	LevelID       int
+	Limit         *int
+	Where         *model.StopFilter
+	RouteID       int
 }
 
 type levelLoaderParam struct {
