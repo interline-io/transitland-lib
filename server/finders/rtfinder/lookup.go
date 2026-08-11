@@ -2,6 +2,7 @@ package rtfinder
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/server/caches/tzcache"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/sync/singleflight"
 )
 
 type lookupCache struct {
@@ -23,7 +25,10 @@ type lookupCache struct {
 	gtfsStopIdCache        *simpleCache[int, string]
 	routeIdCache           *simpleCache[skey, int]
 	tzCache                *tzcache.Cache[int]
-	rtLookupLock           sync.Mutex
+	// lookups collapses concurrent misses of the same key onto one query. Each
+	// cache is already safe on its own; this is about the queries between them,
+	// which a whole request's worth of resolvers would otherwise all run.
+	lookups singleflight.Group
 }
 
 func newLookupCache(db sqlx.Ext) *lookupCache {
@@ -143,54 +148,59 @@ func (f *lookupCache) GetRouteTripIDs(ctx context.Context, id int) set.Set[strin
 	return ret
 }
 
-func (f *lookupCache) GetFeedVersionRTFeeds(id int) ([]string, bool) {
-	f.rtLookupLock.Lock()
-	defer f.rtLookupLock.Unlock()
+// GetFeedVersionRTFeeds returns the onestop ids of the realtime feeds a feed
+// version's data can come from. These are what realtime topics are keyed on.
+func (f *lookupCache) GetFeedVersionRTFeeds(ctx context.Context, id int) ([]string, bool) {
 	if a, ok := f.fvidSourceCache.Get(id); ok {
-		return a, ok
+		return a, true
 	}
-	// Only feeds that actually publish a realtime URL. The operator join reaches
-	// every feed the operator has, static ones included, and a topic is keyed on
-	// whichever feed owns the URL that was fetched — so without this every
-	// lookup also probes feeds that can never hold RT data. Filtering on the URL
-	// rather than on spec is deliberate: a gtfs feed can carry realtime URLs of
-	// its own. Empty strings count as absent; feeds publish those.
-	q := `
-	select 
-		distinct on(cf.onestop_id)
-		cf.onestop_id 
-	from feed_versions fv 
-	join current_operators_in_feed coif on coif.feed_id = fv.feed_id 
-	join current_operators_in_feed coif2 on coif2.resolved_onestop_id = coif.resolved_onestop_id 
-	join current_feeds cf on coif2.feed_id = cf.id
-	where fv.id = $1 
-	and (
-		coalesce(cf.urls ->> 'realtime_alerts', '') <> ''
-		or coalesce(cf.urls ->> 'realtime_trip_updates', '') <> ''
-		or coalesce(cf.urls ->> 'realtime_vehicle_positions', '') <> ''
-	)
-	order by cf.onestop_id
-	`
-	var eid []string
-	err := sqlx.Select(
-		f.db,
-		&eid,
-		q,
-		id,
-	)
-	f.fvidSourceCache.Set(id, eid) // set before return
+	v, err, _ := f.lookups.Do("rtfeeds:"+strconv.Itoa(id), func() (any, error) {
+		if a, ok := f.fvidSourceCache.Get(id); ok {
+			return a, nil
+		}
+		// Only feeds that actually publish a realtime URL. The operator join
+		// reaches every feed the operator has, static ones included, and a topic
+		// is keyed on whichever feed owns the URL that was fetched.
+		//
+		// Filtering on the URL rather than on spec is deliberate: a gtfs feed can
+		// carry realtime URLs of its own. Empty strings count as absent; feeds
+		// publish those.
+		q := `
+		select
+			distinct on(cf.onestop_id)
+			cf.onestop_id
+		from feed_versions fv
+		join current_operators_in_feed coif on coif.feed_id = fv.feed_id
+		join current_operators_in_feed coif2 on coif2.resolved_onestop_id = coif.resolved_onestop_id
+		join current_feeds cf on coif2.feed_id = cf.id
+		where fv.id = $1
+		and (
+			coalesce(cf.urls ->> 'realtime_alerts', '') <> ''
+			or coalesce(cf.urls ->> 'realtime_trip_updates', '') <> ''
+			or coalesce(cf.urls ->> 'realtime_vehicle_positions', '') <> ''
+		)
+		order by cf.onestop_id
+		`
+		var eid []string
+		if err := sqlx.Select(f.db, &eid, q, id); err != nil {
+			return nil, err
+		}
+		// Only a result is cached. An empty list is a legitimate answer here, so
+		// caching a failed query would serve one as fact for the life of the
+		// process with nothing downstream able to tell the two apart.
+		f.fvidSourceCache.Set(id, eid)
+		return eid, nil
+	})
 	if err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", id).Msg("rtfinder: rt feed lookup failed")
 		return nil, false
 	}
+	eid, _ := v.([]string)
 	return eid, true
 }
 
 // StopTimezone looks up the timezone for a stop
 func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*time.Location, bool) {
-	// Need to lock while looking up or setting.
-	f.rtLookupLock.Lock()
-	defer f.rtLookupLock.Unlock()
-
 	// If a timezone is provided, save it and return immediately
 	if known != "" {
 		log.TraceCheck(func() {
@@ -216,29 +226,42 @@ func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*
 		})
 		return nil, false
 	}
-	// Otherwise lookup the timezone
-	q := `
-		select COALESCE(nullif(s.stop_timezone, ''), nullif(p.stop_timezone, ''), a.agency_timezone)
-		from gtfs_stops s
-		left join gtfs_stops p on p.id = s.parent_station
-		left join lateral (
-			select gtfs_agencies.agency_timezone
-			from gtfs_agencies
-			where gtfs_agencies.feed_version_id = s.feed_version_id
-			limit 1
-		) a on true
-		where s.id = $1
-		limit 1`
-	tz := ""
-	if err := sqlx.Get(f.db, &tz, q, id); err != nil {
+	// Otherwise lookup the timezone. This runs once per stop time, so a stop
+	// every caller in a request shares is looked up once rather than by each.
+	v, err, _ := f.lookups.Do("stoptz:"+strconv.Itoa(id), func() (any, error) {
+		if loc, ok := f.tzCache.Get(id); ok {
+			return loc, nil
+		}
+		q := `
+			select COALESCE(nullif(s.stop_timezone, ''), nullif(p.stop_timezone, ''), a.agency_timezone)
+			from gtfs_stops s
+			left join gtfs_stops p on p.id = s.parent_station
+			left join lateral (
+				select gtfs_agencies.agency_timezone
+				from gtfs_agencies
+				where gtfs_agencies.feed_version_id = s.feed_version_id
+				limit 1
+			) a on true
+			where s.id = $1
+			limit 1`
+		tz := ""
+		if err := sqlx.Get(f.db, &tz, q, id); err != nil {
+			return nil, err
+		}
+		loc, _ := f.tzCache.Add(id, tz)
+		return loc, nil
+	})
+	if err != nil {
 		log.For(ctx).Error().Err(err).Int("stop_id", id).Str("known", known).Msg("tz: lookup failed")
 		return nil, false
 	}
-	loc, ok := f.tzCache.Add(id, tz)
+	// A name the zone database does not know is cached as unusable, and comes
+	// back here as a nil location.
+	loc, _ := v.(*time.Location)
 	log.TraceCheck(func() {
 		log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Str("loc", loc.String()).Msg("tz: lookup successful")
 	})
-	return loc, ok
+	return loc, loc != nil
 }
 
 // FeedVersionTimezone looks up the timezone for a feed version using the first agency's timezone
