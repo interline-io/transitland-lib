@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestStoreCache_Redis(t *testing.T) {
 
 // TestStoreCache_PubSubUpdate exercises the notify-then-read distribution
 // path: a published notification must refresh an already-cached Source that
-// a plain GetSource (a local map hit) would not.
+// a plain GetSource, served from what is already held, would not.
 func TestStoreCache_PubSubUpdate(t *testing.T) {
 	if a, ok := testutil.CheckTestRedisClient(); !ok {
 		t.Skip(a)
@@ -147,15 +148,20 @@ func TestStoreCache_IgnoresUnwatchedTopics(t *testing.T) {
 }
 
 // countingStore counts reads so a test can assert what a sequence of lookups
-// costs in round trips.
+// costs in round trips, and can hold each read open so a test can decide who
+// is in flight when.
 type countingStore struct {
 	*kvcache.MemoryStore
-	gets atomic.Int64
-	fail atomic.Bool
+	gets  atomic.Int64
+	fail  atomic.Bool
+	delay time.Duration
 }
 
 func (s *countingStore) Get(ctx context.Context, key string) ([]byte, bool, error) {
 	s.gets.Add(1)
+	if s.delay > 0 {
+		time.Sleep(s.delay)
+	}
 	if s.fail.Load() {
 		return nil, false, errors.New("store unavailable")
 	}
@@ -180,7 +186,7 @@ func TestStoreCache_RemembersMissingTopics(t *testing.T) {
 	assert.EqualValues(t, 1, store.gets.Load(), "an absent topic should be read once, not once per lookup")
 
 	// A topic that arrives is served straight away rather than waiting out the
-	// TTL: the local snapshot is consulted before the record of absence.
+	// TTL: the payload replaces the record of absence.
 	require.NoError(t, c.AddData(ctx, topic, mkRTData(1234)))
 	s, ok := c.GetSource(ctx, topic)
 	require.True(t, ok)
@@ -205,10 +211,37 @@ func TestStoreCache_RemembersFailedReads(t *testing.T) {
 	assert.EqualValues(t, 1, store.gets.Load(), "a failing store should be read once, not once per lookup")
 }
 
-// A read cut short because the caller went away says nothing about the topic,
-// so it must not be remembered as an absence — otherwise one canceled request
-// blinds every later one for a minute.
-func TestStoreCache_DoesNotRememberAbandonedReads(t *testing.T) {
+// The first payload for a topic this process remembered as absent must be
+// adopted when announced: the record of absence marks a topic a caller wanted,
+// not one to stay blind to until the record lapses.
+func TestStoreCache_UpdateRevivesTombstonedTopic(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	ctx := context.Background()
+	const topic = "rtrevive"
+	if _, ok := c.GetSource(ctx, topic); ok {
+		t.Fatal("the topic starts absent")
+	}
+
+	// The first fetch lands in the store and its announcement arrives.
+	require.NoError(t, store.Set(ctx, lastKey(topic), mkRTData(4321), lastTTL))
+	c.handleUpdate(topic)
+
+	s, ok := c.GetSource(ctx, topic)
+	require.True(t, ok, "an announced first payload must clear the record of absence")
+	assert.EqualValues(t, uint64(4321), s.GetTimestamp())
+}
+
+// A caller that has already gone away is shed: it must neither resolve nor
+// spend a store read nobody is waiting for, and its cancellation must not be
+// remembered as an absence that blinds every later caller for a minute.
+//
+// The other half — a read whose caller leaves while it is already in flight
+// finishes anyway and serves the callers still waiting — belongs to the shared
+// cache, and kvcache's TestCache_SingleflightLeaderCancel covers it.
+func TestStoreCache_ShedsCanceledCallers(t *testing.T) {
 	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
 	c := newStoreCache(store)
 	defer c.Close()
@@ -219,10 +252,111 @@ func TestStoreCache_DoesNotRememberAbandonedReads(t *testing.T) {
 	if _, ok := c.GetSource(canceled, topic); ok {
 		t.Fatal("an abandoned read must not resolve")
 	}
+	assert.EqualValues(t, 0, store.gets.Load(), "a canceled caller must not reach the store")
 
-	// A later live lookup still has to reach the store.
 	if _, ok := c.GetSource(context.Background(), topic); ok {
 		t.Fatal("the topic is genuinely absent")
 	}
-	assert.EqualValues(t, 2, store.gets.Load(), "an abandoned read must not be remembered as absence")
+	assert.EqualValues(t, 1, store.gets.Load(), "a cancellation must not be remembered as an absence")
+}
+
+// A request resolves many entities in parallel and each one asks for the same
+// topic, so without collapsing they all miss together and each reaches the
+// store.
+//
+// The store holds each read open for far longer than it takes every caller to
+// arrive, so in practice they all join one flight. It is not a guarantee: a
+// caller descheduled between the local check and the flight, for the whole
+// 50ms, would start a second read.
+func TestStoreCache_CollapsesConcurrentReadsOfOneTopic(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore(), delay: 50 * time.Millisecond}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	const topic = "rtconcurrent"
+	// The size of the feed whose resolvers first made this cost visible.
+	const callers = 148
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, ok := c.GetSource(context.Background(), topic); ok {
+				t.Error("the topic is absent")
+			}
+		}()
+	}
+	wg.Wait()
+	assert.EqualValues(t, 1, store.gets.Load(), "concurrent callers must share one store read")
+}
+
+// An update this process could not fetch says nothing about whether the topic
+// still has data, so it must leave the snapshot alone. Replacing it with a
+// record of absence would blank the feed for missingTTL over what may be a
+// one-second store hiccup.
+func TestStoreCache_FailedUpdateKeepsSnapshot(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	ctx := context.Background()
+	const topic = "rtkeep"
+	require.NoError(t, c.AddData(ctx, topic, mkRTData(1000)))
+	s, ok := c.GetSource(ctx, topic)
+	require.True(t, ok)
+	require.EqualValues(t, uint64(1000), s.GetTimestamp())
+
+	// The store stops answering and an announcement arrives for the topic.
+	store.fail.Store(true)
+	c.handleUpdate(topic)
+
+	s, ok = c.GetSource(ctx, topic)
+	require.True(t, ok, "a failed update must not blank a live topic")
+	assert.EqualValues(t, uint64(1000), s.GetTimestamp())
+}
+
+// A decoded Source is only as good as the payload behind it, which the store
+// drops after lastTTL. Past that the snapshot stops being served from memory
+// and the store is asked again, so a feed that goes quiet goes quiet here too
+// instead of being pinned for the life of the process.
+func TestStoreCache_SnapshotDoesNotOutliveItsTTL(t *testing.T) {
+	store := &countingStore{MemoryStore: kvcache.NewMemoryStore()}
+	c := newStoreCache(store)
+	defer c.Close()
+
+	clock := newCacheClock()
+	c.sources.Clock = clock.Now
+
+	ctx := context.Background()
+	const topic = "rtexpiring"
+	require.NoError(t, c.AddData(ctx, topic, mkRTData(1000)))
+	_, ok := c.GetSource(ctx, topic)
+	require.True(t, ok)
+	require.EqualValues(t, 0, store.gets.Load(), "a fresh snapshot is served without a read")
+
+	clock.Advance(lastTTL + time.Minute)
+	_, _ = c.GetSource(ctx, topic)
+	assert.EqualValues(t, 1, store.gets.Load(), "an expired snapshot must be re-read, not served")
+}
+
+// cacheClock is a settable clock for driving cache TTL transitions.
+type cacheClock struct {
+	lock sync.Mutex
+	t    time.Time
+}
+
+func newCacheClock() *cacheClock {
+	return &cacheClock{t: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+}
+
+func (c *cacheClock) Now() time.Time {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.t
+}
+
+func (c *cacheClock) Advance(d time.Duration) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.t = c.t.Add(d)
 }
