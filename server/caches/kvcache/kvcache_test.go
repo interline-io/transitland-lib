@@ -313,6 +313,11 @@ func TestCache_Has(t *testing.T) {
 	assert.NoError(t, c.Set(ctx, "here", "value"))
 	assert.True(t, c.Has("here"))
 
+	// Peek is Has returning the held value itself.
+	pv, pok := c.Peek("here")
+	assert.True(t, pok)
+	assert.Equal(t, "value", pv)
+
 	// A tombstone is not a held value: Get reports a miss for it, and so must
 	// Has, or a consumer keying work off Has does that work for keys it has
 	// only ever failed to find.
@@ -427,6 +432,43 @@ func TestCache_RefreshAbsenceDoesNotClobberConcurrentSet(t *testing.T) {
 	v, ok := c.Get(ctx, "k")
 	assert.True(t, ok, "a mid-flight Set must not be masked by a tombstone")
 	assert.Equal(t, "fresh", v)
+}
+
+// Reload shares the flights' install discipline: its read is stale the moment
+// a Set lands mid-reload, and must not overwrite it — locally or in the store.
+func TestCache_ReloadDoesNotClobberConcurrentSet(t *testing.T) {
+	ctx := context.Background()
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	store := kvcache.NewMemoryStore()
+	c := kvcache.NewRefreshCache[string, string](store, "test", func(ctx context.Context, key string) (string, error) {
+		close(entered)
+		<-release
+		return "stale", nil
+	})
+
+	var reloadV string
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		reloadV, _ = c.Reload(ctx, "k")
+	}()
+	<-entered
+	assert.NoError(t, c.Set(ctx, "k", "fresh"))
+	close(release)
+	<-done
+
+	assert.Equal(t, "fresh", reloadV, "the reload's caller gets the value actually held")
+	v, ok := c.Get(ctx, "k")
+	assert.True(t, ok)
+	assert.Equal(t, "fresh", v, "a mid-reload Set must not be overwritten by the reload's stale read")
+
+	// The refused install must not reach the shared tier either, where it
+	// would poison sibling processes.
+	c2 := kvcache.NewCache[string, string](store, "test")
+	v2, ok2 := c2.Get(ctx, "k")
+	assert.True(t, ok2)
+	assert.Equal(t, "fresh", v2)
 }
 
 // Contains is the notification-fanout predicate: any local record counts,

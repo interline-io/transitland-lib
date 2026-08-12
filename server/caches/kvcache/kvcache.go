@@ -154,13 +154,16 @@ func (c *Cache[K, V]) Refresh(ctx context.Context, key K) (V, error) {
 // evidence the key is gone.
 //
 // The call is bounded by RefreshTimeout and by the caller's own context, since
-// unlike a flight leader's refresh its result is nobody else's. Concurrent
-// Reloads of one key are not serialized: the last to finish wins.
+// unlike a flight leader's refresh its result is nobody else's. Installs go
+// through installLocal: whatever landed mid-reload — a Set, a flight, or
+// another Reload — saw the key later than this reload read it and is kept,
+// and the returned value is the one actually held.
 func (c *Cache[K, V]) Reload(ctx context.Context, key K) (V, error) {
 	var zero V
 	if c.refreshFn == nil {
 		return zero, errors.New("kvcache: no refresh function")
 	}
+	prev, hadPrev := c.localState(key)
 	rctx, cancel := context.WithTimeout(ctx, c.RefreshTimeout)
 	defer cancel()
 	value, err := c.refreshFn(rctx, key)
@@ -168,15 +171,16 @@ func (c *Cache[K, V]) Reload(ctx context.Context, key K) (V, error) {
 		return zero, err
 	}
 	n := c.now()
-	it := Item[V]{
+	it, installed := c.installLocal(key, prev, hadPrev, Item[V]{
 		Value:     value,
 		RecheckAt: n.Add(c.Recheck),
 		ExpiresAt: n.Add(c.Expires),
+	})
+	if installed {
+		// The storage write gets its own budget, not whatever the refresh left.
+		_ = c.setStore(context.WithoutCancel(rctx), key, it, c.Expires)
 	}
-	c.setLocal(key, it)
-	// The storage write gets its own budget, not whatever the refresh left.
-	_ = c.setStore(context.WithoutCancel(rctx), key, it, c.Expires)
-	return value, nil
+	return it.Value, nil
 }
 
 // GetRecheckKeys reconciles the local tier against the shared tier in a
@@ -186,12 +190,22 @@ func (c *Cache[K, V]) GetRecheckKeys(ctx context.Context) []K {
 	return c.scan(ctx)
 }
 
+// Peek returns the live local value for key: exactly what Get would return
+// without loading. Tombstoned keys are not held. It consults neither the
+// shared tier nor the refresh function.
+func (c *Cache[K, V]) Peek(key K) (V, bool) {
+	if it, ok := c.localState(key); ok && !it.Missing && it.ExpiresAt.After(c.now()) {
+		return it.Value, true
+	}
+	var zero V
+	return zero, false
+}
+
 // Has reports whether the local tier holds a live value for key: true
-// exactly when Get would return one without loading. Tombstoned keys are
-// not held. It consults neither the shared tier nor the refresh function.
+// exactly when Peek would return one.
 func (c *Cache[K, V]) Has(key K) bool {
-	it, ok := c.localState(key)
-	return ok && !it.Missing && it.ExpiresAt.After(c.now())
+	_, ok := c.Peek(key)
+	return ok
 }
 
 // Contains reports whether the local tier has any record of key — a live

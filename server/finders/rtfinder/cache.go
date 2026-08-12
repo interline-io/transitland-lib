@@ -106,7 +106,10 @@ func (c *storeCache) GetSource(ctx context.Context, topic string) (*Source, bool
 	// design, so starting one for a caller that has gone away spends a store
 	// round trip nobody waits for, and a client disconnecting mid-request
 	// leaves a resolver still looping over dozens of topics.
-	if !c.sources.Has(topic) && ctx.Err() != nil {
+	if s, ok := c.sources.Peek(topic); ok {
+		return s, true
+	}
+	if ctx.Err() != nil {
 		return nil, false
 	}
 	return c.sources.Get(ctx, topic)

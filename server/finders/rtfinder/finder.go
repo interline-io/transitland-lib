@@ -76,7 +76,7 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
 		if a == nil || !ok {
-			return foundAlerts
+			continue
 		}
 		for _, alert := range a.alerts {
 			if alert == nil {
