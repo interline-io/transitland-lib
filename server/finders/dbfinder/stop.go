@@ -86,37 +86,41 @@ func (f *Finder) StopsByRouteIDs(ctx context.Context, limit *int, where *model.S
 	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithRouteID.Int() }), err
 }
 
-// StopsByAgencyIDs returns the stops each agency's routes serve, plus the
-// stations those stops belong to.
+// StopsByAgencyIDs returns the stops each agency's routes serve: the served
+// platforms by default, or with location_type 1 the stations they belong to.
 func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.AgencyStopFilter, keys []int) ([][]*model.Stop, error) {
-	// The union exists to include stations: tl_route_stops holds only the
-	// platforms named in stop_times, so a location_type filter for stations
-	// matches nothing without it.
+	// tl_route_stops holds only the platforms named in stop_times, so stations
+	// are reached by walking up from a served platform; location_type selects
+	// which end of that walk to return, and only that end is built.
 	//
-	// Served-by filters narrow the union, against the served platform, so they
-	// select the matching stations as well. The remaining options describe the
-	// returned stop and are applied by stopSelect.
-	routeStops := agencyRouteStopSelect(where)
-	served := routeStops.Column("tlrs.stop_id")
-	// A served boarding area's parent is a platform that no route stops at, so
-	// the parent is taken only from a platform.
-	stations := routeStops.
-		Column("served.parent_station as stop_id").
-		Join("gtfs_stops served on served.id = tlrs.stop_id").
-		Where("served.location_type = 0").
-		Where("served.parent_station is not null")
-	var stopWhere *model.StopFilter
+	// Served-by filters narrow the served platforms, so they select the
+	// matching stations as well. The remaining options describe the returned
+	// stop and are applied by stopSelect.
+	locationType := 0
+	if where != nil && where.LocationType != nil {
+		locationType = *where.LocationType
+	}
+	agencyStops := agencyRouteStopSelect(where).Distinct()
+	if locationType == 1 {
+		// A served boarding area's parent is a platform that no route stops at,
+		// so the parent is taken only from a platform.
+		agencyStops = agencyStops.
+			Column("served.parent_station as stop_id").
+			Join("gtfs_stops served on served.id = tlrs.stop_id").
+			Where("served.location_type = 0").
+			Where("served.parent_station is not null")
+	} else {
+		agencyStops = agencyStops.Column("tlrs.stop_id")
+	}
+	stopWhere := &model.StopFilter{LocationType: &locationType}
 	if where != nil {
-		stopWhere = &model.StopFilter{
-			StopID:       where.StopID,
-			StopCode:     where.StopCode,
-			LocationType: where.LocationType,
-			Search:       where.Search,
-			Location:     where.Location,
-		}
+		stopWhere.StopID = where.StopID
+		stopWhere.StopCode = where.StopCode
+		stopWhere.Search = where.Search
+		stopWhere.Location = where.Location
 	}
 	qso := stopSelect(limit, after, nil, nil, f.PermFilter(ctx), stopWhere).
-		JoinClause(served.Suffix("UNION ?", stations).
+		JoinClause(agencyStops.
 			Prefix("JOIN (").
 			Suffix(") agency_stops on agency_stops.stop_id = gtfs_stops.id")).
 		// Always true, but hands the planner the (feed_version_id, id) index.

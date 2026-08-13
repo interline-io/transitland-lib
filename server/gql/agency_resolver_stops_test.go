@@ -15,11 +15,12 @@ func TestAgencyResolver_Stops(t *testing.T) {
 	wmata := hw{"osid": "o-dqcj-wmata", "limit": 1000}
 	testcases := []testcase{
 		{
-			name:              "served platforms and their stations",
-			query:             q,
-			vars:              wmata,
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 223,
+			name:               "default returns the served platforms",
+			query:              q,
+			vars:               wmata,
+			selector:           "agencies.0.stops.#.location_type",
+			selectExpectUnique: []string{"0"},
+			selectExpectCount:  125,
 		},
 		{
 			name:              "location_type 1 returns stations",
@@ -29,9 +30,16 @@ func TestAgencyResolver_Stops(t *testing.T) {
 			selectExpectCount: 98,
 		},
 		{
-			name:              "location_type 0 returns platforms",
+			name:              "explicit location_type 0 matches the default",
 			query:             q,
 			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 0}},
+			selector:          "agencies.0.stops.#.stop_id",
+			selectExpectCount: 125,
+		},
+		{
+			name:              "location_type null is treated as 0",
+			query:             q,
+			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": nil}},
 			selector:          "agencies.0.stops.#.stop_id",
 			selectExpectCount: 125,
 		},

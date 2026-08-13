@@ -89,7 +89,7 @@ type AgencyStopFilter struct {
 	StopID *string `json:"stop_id,omitempty"`
 	// Search for stops with this GTFS stop_code
 	StopCode *string `json:"stop_code,omitempty"`
-	// Search for stops with this GTFS location_type
+	// Search for stops with this GTFS location_type; defaults to 0 (platforms), and null is treated as 0
 	LocationType *int `json:"location_type,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`

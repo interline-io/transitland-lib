@@ -9736,9 +9736,9 @@ type Agency {
   routes(limit: Int, where: RouteFilter): [Route!]!
 
   """
-  Stops served by this agency's routes, together with the stations those stops belong to.
+  Stops served by this agency's routes: the served platforms by default, or with ` + "`" + `where: {location_type: 1}` + "`" + ` the stations those platforms belong to.
 
-  Stations are included because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. An unfiltered result mixes the two and ` + "`" + `limit` + "`" + ` will not divide them evenly, so ask for one at a time — ` + "`" + `where: {location_type: 1}` + "`" + ` for stations, ` + "`" + `where: {location_type: 0}` + "`" + ` for platforms. Use ` + "`" + `after` + "`" + ` with the last stop's ` + "`" + `id` + "`" + ` to page through large results.
+  Stations are reached this way because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. Use ` + "`" + `after` + "`" + ` with the last stop's ` + "`" + `id` + "`" + ` to page through large results.
   """
   stops(limit: Int, after: Int, where: AgencyStopFilter): [Stop!]!
 
@@ -11876,8 +11876,8 @@ input AgencyStopFilter {
   stop_id: String
   "Search for stops with this GTFS stop_code"
   stop_code: String
-  "Search for stops with this GTFS location_type"
-  location_type: Int
+  "Search for stops with this GTFS location_type; defaults to 0 (platforms), and null is treated as 0"
+  location_type: Int = 0
   "Full text search"
   search: String
   "Search for stops served by the agency's routes with any of the specified GTFS route_types"
@@ -43912,6 +43912,10 @@ func (ec *executionContext) unmarshalInputAgencyStopFilter(ctx context.Context, 
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
+	}
+
+	if _, present := asMap["location_type"]; !present {
+		asMap["location_type"] = 0
 	}
 
 	fieldsInOrder := [...]string{"stop_id", "stop_code", "location_type", "search", "served_by_route_types", "served_by_route_onestop_ids", "location"}
