@@ -103,11 +103,24 @@ type tripLoaderParam struct {
 type stopLoaderParam struct {
 	FeedVersionID int
 	ParentStopID  int
-	AgencyID      int
 	LevelID       int
 	Limit         *int
 	Where         *model.StopFilter
 	RouteID       int
+}
+
+type agencyStopLoaderParam struct {
+	AgencyID int
+	Limit    *int
+	After    *model.Cursor
+	Where    *model.AgencyStopFilter
+}
+
+// agencyStopGroup carries the batch-grouped query options of
+// agencyStopLoaderParam, everything except the agency key and limit.
+type agencyStopGroup struct {
+	After *model.Cursor
+	Where *model.AgencyStopFilter
 }
 
 type levelLoaderParam struct {

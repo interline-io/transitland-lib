@@ -97,7 +97,7 @@ type ComplexityRoot struct {
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
 		Routes            func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SearchRank        func(childComplexity int) int
-		Stops             func(childComplexity int, limit *int, where *model.StopFilter) int
+		Stops             func(childComplexity int, limit *int, after *int, where *model.AgencyStopFilter) int
 		VehiclePositions  func(childComplexity int, limit *int, where *model.VehiclePositionFilter) int
 	}
 
@@ -1367,7 +1367,7 @@ type AgencyResolver interface {
 	Operator(ctx context.Context, obj *model.Agency) (*model.Operator, error)
 	Places(ctx context.Context, obj *model.Agency, limit *int, where *model.AgencyPlaceFilter) ([]*model.AgencyPlace, error)
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
-	Stops(ctx context.Context, obj *model.Agency, limit *int, where *model.StopFilter) ([]*model.Stop, error)
+	Stops(ctx context.Context, obj *model.Agency, limit *int, after *int, where *model.AgencyStopFilter) ([]*model.Stop, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
 	VehiclePositions(ctx context.Context, obj *model.Agency, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
@@ -1814,7 +1814,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Agency.Stops(childComplexity, args["limit"].(*int), args["where"].(*model.StopFilter)), true
+		return e.ComplexityRoot.Agency.Stops(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.AgencyStopFilter)), true
 	case "Agency.vehicle_positions":
 		if e.ComplexityRoot.Agency.VehiclePositions == nil {
 			break
@@ -7987,6 +7987,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAgencyFilter,
 		ec.unmarshalInputAgencyLocationFilter,
 		ec.unmarshalInputAgencyPlaceFilter,
+		ec.unmarshalInputAgencyStopFilter,
 		ec.unmarshalInputBookingRuleFilter,
 		ec.unmarshalInputBoundingBox,
 		ec.unmarshalInputCalendarDateFilter,
@@ -9737,11 +9738,9 @@ type Agency {
   """
   Stops served by this agency's routes, together with the stations those stops belong to.
 
-  Stations are included because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. An unfiltered result mixes the two and ` + "`" + `limit` + "`" + ` will not divide them evenly, so ask for one at a time — ` + "`" + `where: {location_type: 1}` + "`" + ` for stations, ` + "`" + `where: {location_type: 0}` + "`" + ` for platforms.
-
-  Filters naming who serves a stop — ` + "`" + `served_by_route_types` + "`" + `, ` + "`" + `served_by_onestop_ids` + "`" + `, ` + "`" + `agency_ids` + "`" + ` — apply to the served platform, so they select the matching stations as well: ` + "`" + `where: {location_type: 1, served_by_route_types: [1]}` + "`" + ` returns the agency's rail stations. ` + "`" + `serviced` + "`" + ` instead describes the returned stop, so ` + "`" + `serviced: false` + "`" + ` returns the stations and ` + "`" + `serviced: true` + "`" + ` the platforms.
+  Stations are included because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. An unfiltered result mixes the two and ` + "`" + `limit` + "`" + ` will not divide them evenly, so ask for one at a time — ` + "`" + `where: {location_type: 1}` + "`" + ` for stations, ` + "`" + `where: {location_type: 0}` + "`" + ` for platforms. Use ` + "`" + `after` + "`" + ` with the last stop's ` + "`" + `id` + "`" + ` to page through large results.
   """
-  stops(limit: Int, where: StopFilter): [Stop!]!
+  stops(limit: Int, after: Int, where: AgencyStopFilter): [Stop!]!
 
   "Census geographies intersecting this agency's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
@@ -11847,7 +11846,7 @@ input StopFilter {
   stop_code: String
   "Search for stops with this GTFS location_type"
   location_type: Int
-  "If true, restrict to stops served by at least one trip; false or null returns all stops"
+  "If true, restrict to stops served by at least one trip; if false, to stops served by none"
   serviced: Boolean
   "Full text search"
   search: String
@@ -11869,6 +11868,24 @@ input StopFilter {
   within: Polygon @deprecated(reason: "Use ` + "`" + `location.polygon` + "`" + ` instead")
   "Search for stops within specified radius of a point"
   near: PointRadius @deprecated(reason: "Use ` + "`" + `location.near` + "`" + ` instead")
+}
+
+"""Search options for stops reached through ` + "`" + `Agency.stops` + "`" + `, scoped to the parent agency: served-by filters match against the agency's own routes, and filters on a served platform select its parent station as well (no feed or feed version options apply, since the parent agency determines them)"""
+input AgencyStopFilter {
+  "Search for stops with this GTFS stop_id"
+  stop_id: String
+  "Search for stops with this GTFS stop_code"
+  stop_code: String
+  "Search for stops with this GTFS location_type"
+  location_type: Int
+  "Full text search"
+  search: String
+  "Search for stops served by the agency's routes with any of the specified GTFS route_types"
+  served_by_route_types: [Int!]
+  "Search for stops served by the agency's routes with any of these Onestop IDs"
+  served_by_route_onestop_ids: [String!]
+  "Geographic search options"
+  location: StopLocationFilter
 }
 
 """Search options for stop times, optionally on a given date"""
@@ -15016,14 +15033,22 @@ func (ec *executionContext) field_Agency_stops_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.StopFilter, error) {
-			return ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopFilter(ctx, v)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["where"] = arg1
+	args["after"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.AgencyStopFilter, error) {
+			return ec.unmarshalOAgencyStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyStopFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg2
 	return args, nil
 }
 
@@ -17756,7 +17781,7 @@ func (ec *executionContext) _Agency_stops(ctx context.Context, field graphql.Col
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Agency().Stops(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.StopFilter))
+			return ec.Resolvers.Agency().Stops(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.AgencyStopFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
@@ -43878,6 +43903,78 @@ func (ec *executionContext) unmarshalInputAgencyPlaceFilter(ctx context.Context,
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputAgencyStopFilter(ctx context.Context, obj any) (model.AgencyStopFilter, error) {
+	var it model.AgencyStopFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"stop_id", "stop_code", "location_type", "search", "served_by_route_types", "served_by_route_onestop_ids", "location"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "stop_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StopID = data
+		case "stop_code":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_code"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StopCode = data
+		case "location_type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("location_type"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LocationType = data
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
+		case "served_by_route_types":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("served_by_route_types"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServedByRouteTypes = data
+		case "served_by_route_onestop_ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("served_by_route_onestop_ids"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServedByRouteOnestopIds = data
+		case "location":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("location"))
+			data, err := ec.unmarshalOStopLocationFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopLocationFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Location = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputBookingRuleFilter(ctx context.Context, obj any) (model.BookingRuleFilter, error) {
 	var it model.BookingRuleFilter
 	if obj == nil {
@@ -61534,6 +61631,14 @@ func (ec *executionContext) unmarshalOAgencyPlaceFilter2ᚖgithubᚗcomᚋinterl
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputAgencyPlaceFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOAgencyStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyStopFilter(ctx context.Context, v any) (*model.AgencyStopFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputAgencyStopFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

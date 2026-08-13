@@ -28,7 +28,7 @@ func TestPermFilter_Negative(t *testing.T) {
 			// The permission join sits inside the lateral, below the agency
 			// membership subquery, so it is worth checking it is still reached.
 			const wmataAgency = 5
-			got, err := cfg.Finder.StopsByAgencyIDs(ctx, nil, nil, []int{wmataAgency})
+			got, err := cfg.Finder.StopsByAgencyIDs(ctx, nil, nil, nil, []int{wmataAgency})
 			assert.NoError(t, err)
 			if assert.Len(t, got, 1) {
 				assert.Empty(t, got[0], "expected no stops for agency %d", wmataAgency)

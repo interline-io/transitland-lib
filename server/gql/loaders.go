@@ -97,7 +97,7 @@ type Loaders struct {
 	StopExternalReferencesByStopIDs                               *dataloader.Loader[int, *model.StopExternalReference]
 	StopObservationsByStopIDs                                     *dataloader.Loader[stopObservationLoaderParam, []*model.StopObservation]
 	StopPlacesByStopID                                            *dataloader.Loader[model.StopPlaceParam, *model.StopPlace]
-	StopsByAgencyIDs                                              *dataloader.Loader[stopLoaderParam, []*model.Stop]
+	StopsByAgencyIDs                                              *dataloader.Loader[agencyStopLoaderParam, []*model.Stop]
 	StopsByFeedVersionIDs                                         *dataloader.Loader[stopLoaderParam, []*model.Stop]
 	StopsByFeedVersionStopIDs                                     *dataloader.Loader[model.FVEntityID, *model.Stop]
 	StopsByIDs                                                    *dataloader.Loader[int, *model.Stop]
@@ -421,9 +421,12 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		StopPlacesByStopID: withWaitAndCapacity(waitTime, batchSize, dbf.StopPlacesByStopID),
-		StopsByAgencyIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopsByAgencyIDs,
-			func(p stopLoaderParam) (int, *model.StopFilter, *int) {
-				return p.AgencyID, p.Where, p.Limit
+		StopsByAgencyIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			func(ctx context.Context, limit *int, group agencyStopGroup, keys []int) ([][]*model.Stop, error) {
+				return dbf.StopsByAgencyIDs(ctx, limit, group.After, group.Where, keys)
+			},
+			func(p agencyStopLoaderParam) (int, agencyStopGroup, *int) {
+				return p.AgencyID, agencyStopGroup{After: p.After, Where: p.Where}, p.Limit
 			},
 		),
 		StopsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopsByFeedVersionIDs,

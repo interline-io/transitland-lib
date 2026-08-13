@@ -19,8 +19,8 @@ func (r *agencyResolver) Routes(ctx context.Context, obj *model.Agency, limit *i
 	return LoaderFor(ctx).RoutesByAgencyIDs.Load(ctx, routeLoaderParam{AgencyID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
-func (r *agencyResolver) Stops(ctx context.Context, obj *model.Agency, limit *int, where *model.StopFilter) ([]*model.Stop, error) {
-	return LoaderFor(ctx).StopsByAgencyIDs.Load(ctx, stopLoaderParam{AgencyID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
+func (r *agencyResolver) Stops(ctx context.Context, obj *model.Agency, limit *int, after *int, where *model.AgencyStopFilter) ([]*model.Stop, error) {
+	return LoaderFor(ctx).StopsByAgencyIDs.Load(ctx, agencyStopLoaderParam{AgencyID: obj.ID, Limit: resolverCheckLimit(limit), After: checkCursor(after), Where: where})()
 }
 
 func (r *agencyResolver) FeedVersion(ctx context.Context, obj *model.Agency) (*model.FeedVersion, error) {
