@@ -91,20 +91,23 @@ func (f *Finder) StopsByRouteIDs(ctx context.Context, limit *int, where *model.S
 func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
 	// The stations half of the union is the point: tl_route_stops holds only the
 	// platforms named in stop_times, so a location_type filter for stations
-	// matches nothing without it. The agency condition sits inside both halves
-	// rather than on the union so the lateral's correlated reference narrows the
-	// index scans on tl_route_stops.
-	served := sq.StatementBuilder.
-		Select("tlrs.agency_id", "tlrs.stop_id").
-		From("tl_route_stops tlrs").
-		Where("tlrs.agency_id = out.id")
-	stations := sq.StatementBuilder.
-		Select("tlrs.agency_id", "served.parent_station as stop_id").
-		From("tl_route_stops tlrs").
+	// matches nothing without it. Both halves repeat the agency condition rather
+	// than filter the union's output, so the correlated lateral reference narrows
+	// each index scan.
+	//
+	// Filters naming who serves a stop go to that union, against the served
+	// platform. stopSelect would apply them to the returned row and drop every
+	// station, which has no tl_route_stops row of its own.
+	routeStops := agencyRouteStopSelect(where)
+	served := routeStops.Column("tlrs.stop_id")
+	// A served boarding area's parent is a platform that no route stops at, so
+	// the parent is taken only from a platform.
+	stations := routeStops.
+		Column("served.parent_station as stop_id").
 		Join("gtfs_stops served on served.id = tlrs.stop_id").
-		Where("served.parent_station is not null").
-		Where("tlrs.agency_id = out.id")
-	qso := stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where).
+		Where("served.location_type = 0").
+		Where("served.parent_station is not null")
+	qso := stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), stopFilterWithoutService(where)).
 		JoinClause(served.Suffix("UNION ?", stations).
 			Prefix("JOIN (").
 			Suffix(") agency_stops on agency_stops.stop_id = gtfs_stops.id"))
@@ -116,6 +119,91 @@ func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, where *model.
 	var ents []*model.Stop
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithAgencyID.Int() }), err
+}
+
+// agencyRouteStopSelect selects the route_stops rows of the agency `out.id`,
+// narrowed by the StopFilter options naming who serves a stop. It carries no
+// output column; callers add the one they need.
+func agencyRouteStopSelect(where *model.StopFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.
+		Select().
+		From("tl_route_stops tlrs").
+		Where("tlrs.agency_id = out.id")
+	if where == nil {
+		return q
+	}
+
+	// Served by agency ID
+	if len(where.AgencyIds) > 0 {
+		q = q.Where(In("tlrs.agency_id", where.AgencyIds))
+	}
+
+	// Served by route type
+	routeTypes := where.ServedByRouteTypes
+	if where.ServedByRouteType != nil {
+		routeTypes = append(append([]int{}, routeTypes...), *where.ServedByRouteType)
+	}
+	if len(routeTypes) > 0 {
+		q = q.JoinClause(
+			"join gtfs_routes tlrs_rt on tlrs_rt.id = tlrs.route_id and tlrs_rt.route_type = ANY(?)",
+			routeTypes,
+		)
+	}
+
+	// Served by route or operator Onestop ID
+	if len(where.ServedByOnestopIds) > 0 {
+		var agencies []string
+		var routes []string
+		for _, osid := range where.ServedByOnestopIds {
+			if len(osid) == 0 {
+				continue
+			} else if osid[0] == 'o' {
+				agencies = append(agencies, osid)
+			} else if osid[0] == 'r' {
+				routes = append(routes, osid)
+			}
+		}
+		// The route carries the feed version, which the served branch of the union
+		// has no other handle on: a route and the stops it serves share one.
+		q = q.Join("gtfs_routes tlrs_routes on tlrs_routes.id = tlrs.route_id")
+		if len(routes) > 0 {
+			q = q.Join("feed_version_route_onestop_ids on feed_version_route_onestop_ids.entity_id = tlrs_routes.route_id and feed_version_route_onestop_ids.feed_version_id = tlrs_routes.feed_version_id")
+		}
+		if len(agencies) > 0 {
+			q = q.
+				Join("gtfs_agencies tlrs_agencies on tlrs_agencies.id = tlrs.agency_id").
+				Join("feed_versions tlrs_fv on tlrs_fv.id = tlrs_routes.feed_version_id").
+				Join("current_operators_in_feed coif on coif.resolved_gtfs_agency_id = tlrs_agencies.agency_id and coif.feed_id = tlrs_fv.feed_id")
+		}
+		if len(routes) > 0 && len(agencies) > 0 {
+			q = q.Where(sq.Or{
+				In("feed_version_route_onestop_ids.onestop_id", routes),
+				In("coif.resolved_onestop_id", agencies),
+			})
+		} else if len(routes) > 0 {
+			q = q.Where(In("feed_version_route_onestop_ids.onestop_id", routes))
+		} else if len(agencies) > 0 {
+			q = q.Where(In("coif.resolved_onestop_id", agencies))
+		}
+	}
+	return q
+}
+
+// stopFilterWithoutService copies a StopFilter with the options naming who
+// serves a stop removed, leaving those that describe the stop itself.
+//
+// `serviced` stays: it asks whether the returned row is served, which is how it
+// selects stations out of an agency's stops.
+func stopFilterWithoutService(where *model.StopFilter) *model.StopFilter {
+	if where == nil {
+		return nil
+	}
+	rest := *where
+	rest.AgencyIds = nil
+	rest.ServedByRouteType = nil
+	rest.ServedByRouteTypes = nil
+	rest.ServedByOnestopIds = nil
+	return &rest
 }
 
 func (f *Finder) StopsByParentStopIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {

@@ -24,6 +24,17 @@ func TestPermFilter_Negative(t *testing.T) {
 		segmentIDs := []int{1418704, 1418711}
 		routeIDsWithSegments := []int{34, 39}
 
+		t.Run("StopsByAgencyIDs", func(t *testing.T) {
+			// The permission join sits inside the lateral, below the agency
+			// membership subquery, so it is worth checking it is still reached.
+			const wmataAgency = 5
+			got, err := cfg.Finder.StopsByAgencyIDs(ctx, nil, nil, []int{wmataAgency})
+			assert.NoError(t, err)
+			if assert.Len(t, got, 1) {
+				assert.Empty(t, got[0], "expected no stops for agency %d", wmataAgency)
+			}
+		})
+
 		t.Run("SegmentsByFeedVersionIDs", func(t *testing.T) {
 			got, err := cfg.Finder.SegmentsByFeedVersionIDs(ctx, nil, nil, []int{haFv})
 			assert.NoError(t, err)

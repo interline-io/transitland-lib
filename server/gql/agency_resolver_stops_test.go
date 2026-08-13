@@ -71,6 +71,58 @@ func TestAgencyResolver_Stops(t *testing.T) {
 			selectExpect: []string{"70011"},
 		},
 		{
+			// Service filters apply to the served platform, so they select
+			// stations too. Applied to the returned row they would match no
+			// station at all, since a station is never served directly.
+			name:               "served_by_route_types selects the stations of those routes",
+			query:              q,
+			vars:               hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1, "served_by_route_types": []int{3}}},
+			selector:           "agencies.0.stops.#.location_type",
+			selectExpectUnique: []string{"1"},
+			selectExpectCount:  10,
+		},
+		{
+			name:              "served_by_route_types narrows to the subway stations",
+			query:             q,
+			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1, "served_by_route_types": []int{1}}},
+			selector:          "agencies.0.stops.#.stop_id",
+			selectExpectCount: 98,
+		},
+		{
+			name:              "served_by_onestop_ids selects stations",
+			query:             q,
+			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1, "served_by_onestop_ids": []string{"o-dqcj-wmata"}}},
+			selector:          "agencies.0.stops.#.stop_id",
+			selectExpectCount: 98,
+		},
+		{
+			// serviced picks which end of the platform-to-station walk to keep.
+			name:               "serviced false returns the stations",
+			query:              q,
+			vars:               hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"serviced": false}},
+			selector:           "agencies.0.stops.#.location_type",
+			selectExpectUnique: []string{"1"},
+			selectExpectCount:  98,
+		},
+		{
+			name:               "serviced true returns the platforms",
+			query:              q,
+			vars:               hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"serviced": true}},
+			selector:           "agencies.0.stops.#.location_type",
+			selectExpectUnique: []string{"0"},
+			selectExpectCount:  125,
+		},
+		{
+			// The relation walks platform to station and never back down: HART
+			// serves 2,349 platforms and has no stations, so nothing is added.
+			name:               "unserved siblings are not pulled in",
+			query:              q,
+			vars:               hw{"osid": "o-dhv-hillsborougharearegionaltransit", "limit": 3000},
+			selector:           "agencies.0.stops.#.location_type",
+			selectExpectUnique: []string{"0"},
+			selectExpectCount:  2349,
+		},
+		{
 			// Operators reach stops through their agencies; there is no
 			// Operator.stops, just as there is no Operator.routes.
 			name:  "reached through an operator's agencies",

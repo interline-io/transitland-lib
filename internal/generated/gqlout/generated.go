@@ -9737,7 +9737,9 @@ type Agency {
   """
   Stops served by this agency's routes, together with the stations those stops belong to.
 
-  Stations are included because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. Filter with ` + "`" + `where: {location_type: 1}` + "`" + ` for stations alone, or ` + "`" + `where: {location_type: 0}` + "`" + ` for platforms alone.
+  Stations are included because they are never served directly: only platforms appear in ` + "`" + `stop_times` + "`" + `. An unfiltered result mixes the two and ` + "`" + `limit` + "`" + ` will not divide them evenly, so ask for one at a time — ` + "`" + `where: {location_type: 1}` + "`" + ` for stations, ` + "`" + `where: {location_type: 0}` + "`" + ` for platforms.
+
+  Filters naming who serves a stop — ` + "`" + `served_by_route_types` + "`" + `, ` + "`" + `served_by_onestop_ids` + "`" + `, ` + "`" + `agency_ids` + "`" + ` — apply to the served platform, so they select the matching stations as well: ` + "`" + `where: {location_type: 1, served_by_route_types: [1]}` + "`" + ` returns the agency's rail stations. ` + "`" + `serviced` + "`" + ` instead describes the returned stop, so ` + "`" + `serviced: false` + "`" + ` returns the stations and ` + "`" + `serviced: true` + "`" + ` the platforms.
   """
   stops(limit: Int, where: StopFilter): [Stop!]!
 

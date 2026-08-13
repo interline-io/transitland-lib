@@ -34,8 +34,8 @@ type PlaceGeometrySelect struct {
 //////////
 
 type Feed struct {
-	SearchRank            *string
 	WithOperatorOnestopID tt.String
+	SearchRank            *string
 	dmfr.Feed
 }
 
