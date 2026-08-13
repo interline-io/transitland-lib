@@ -100,17 +100,16 @@ func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, after *model.
 	if where != nil && where.LocationType != nil {
 		locationType = *where.LocationType
 	}
-	agencyStops := agencyRouteStopSelect(where).Distinct()
+	agencyStops := agencyRouteStopSelect(where)
 	if locationType == 1 {
 		// A served boarding area's parent is a platform that no route stops at,
 		// so the parent is taken only from a platform.
 		agencyStops = agencyStops.
-			Column("served.parent_station as stop_id").
 			Join("gtfs_stops served on served.id = tlrs.stop_id").
 			Where("served.location_type = 0").
-			Where("served.parent_station is not null")
+			Where("served.parent_station = gtfs_stops.id")
 	} else {
-		agencyStops = agencyStops.Column("tlrs.stop_id")
+		agencyStops = agencyStops.Where("tlrs.stop_id = gtfs_stops.id")
 	}
 	stopWhere := &model.StopFilter{LocationType: &locationType}
 	if where != nil {
@@ -120,10 +119,9 @@ func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, after *model.
 		stopWhere.Location = where.Location
 	}
 	qso := stopSelect(limit, after, nil, nil, f.PermFilter(ctx), stopWhere).
-		JoinClause(agencyStops.
-			Prefix("JOIN (").
-			Suffix(") agency_stops on agency_stops.stop_id = gtfs_stops.id")).
-		// Always true, but hands the planner the (feed_version_id, id) index.
+		Where(sq.Expr("EXISTS (?)", agencyStops)).
+		// Always true, but gives the lateral scan the (feed_version_id, id)
+		// access path that the EXISTS membership test alone cannot.
 		Where("gtfs_stops.feed_version_id = out.feed_version_id")
 	q := sq.StatementBuilder.
 		Select("t.*", "out.id as with_agency_id").
@@ -135,11 +133,12 @@ func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, after *model.
 	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithAgencyID.Int() }), err
 }
 
-// agencyRouteStopSelect selects the tl_route_stops rows of the agency `out.id`,
-// narrowed by the served-by filter options.
+// agencyRouteStopSelect selects from the tl_route_stops rows of the agency
+// `out.id`, narrowed by the served-by filter options, for use as an EXISTS
+// membership test.
 func agencyRouteStopSelect(where *model.AgencyStopFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.
-		Select().
+		Select("1").
 		From("tl_route_stops tlrs").
 		Where("tlrs.agency_id = out.id")
 	if where == nil {
@@ -150,7 +149,7 @@ func agencyRouteStopSelect(where *model.AgencyStopFilter) sq.SelectBuilder {
 		q = q.Join("gtfs_routes tlrs_routes on tlrs_routes.id = tlrs.route_id")
 	}
 	if len(where.ServedByRouteTypes) > 0 {
-		q = q.Where("tlrs_routes.route_type = ANY(?)", where.ServedByRouteTypes)
+		q = q.Where(In("tlrs_routes.route_type", where.ServedByRouteTypes))
 	}
 	if len(where.ServedByRouteOnestopIds) > 0 {
 		// feed_version_route_onestop_ids is keyed by the route's GTFS id, which
