@@ -709,9 +709,7 @@ type Agency {
   routes(limit: Int, where: RouteFilter): [Route!]!
 
   """
-  Stops served by this agency's routes: the served platforms by default, or with `where: {location_type: 1}` the stations those platforms belong to.
-
-  Stations are reached this way because they are never served directly: only platforms appear in `stop_times`. Use `after` with the last stop's `id` to page through large results.
+  Stops served by this agency's routes: the served platforms by default, or with `where: {location_type: 1}` the stations associated with those platforms.
   """
   stops(limit: Int, after: Int, where: AgencyStopFilter): [Stop!]!
 
