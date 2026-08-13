@@ -320,6 +320,9 @@ func (UnimplementedFinder) StopObservationsByStopIDs(context.Context, *int, *Sto
 func (UnimplementedFinder) StopPlacesByStopID(_ context.Context, keys []StopPlaceParam) ([]*StopPlace, []error) {
 	return notImplBatch[*StopPlace](keys)
 }
+func (UnimplementedFinder) StopsByAgencyIDs(context.Context, *int, *Cursor, *AgencyStopFilter, []int) ([][]*Stop, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) StopsByFeedVersionIDs(context.Context, *int, *StopFilter, []int) ([][]*Stop, error) {
 	return nil, notImplErr()
 }

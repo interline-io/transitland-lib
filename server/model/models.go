@@ -133,6 +133,7 @@ type Stop struct {
 	SearchRank      *string
 	WithinFeatures  tt.Strings
 	WithRouteID     tt.Int
+	WithAgencyID    tt.Int
 	gtfs.Stop
 }
 

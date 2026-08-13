@@ -86,6 +86,81 @@ func (f *Finder) StopsByRouteIDs(ctx context.Context, limit *int, where *model.S
 	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithRouteID.Int() }), err
 }
 
+// StopsByAgencyIDs returns the stops each agency's routes serve: the served
+// platforms by default, or with location_type 1 the stations they belong to.
+func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.AgencyStopFilter, keys []int) ([][]*model.Stop, error) {
+	// tl_route_stops holds only the platforms named in stop_times, so stations
+	// are reached by walking up from a served platform; location_type selects
+	// which end of that walk to return, and only that end is built.
+	//
+	// Served-by filters narrow the served platforms, so they select the
+	// matching stations as well. The remaining options describe the returned
+	// stop and are applied by stopSelect.
+	locationType := 0
+	if where != nil && where.LocationType != nil {
+		locationType = *where.LocationType
+	}
+	agencyStops := agencyRouteStopSelect(where)
+	if locationType == 1 {
+		// A served boarding area's parent is a platform that no route stops at,
+		// so the parent is taken only from a platform.
+		agencyStops = agencyStops.
+			Join("gtfs_stops served on served.id = tlrs.stop_id").
+			Where("served.location_type = 0").
+			Where("served.parent_station = gtfs_stops.id")
+	} else {
+		agencyStops = agencyStops.Where("tlrs.stop_id = gtfs_stops.id")
+	}
+	stopWhere := &model.StopFilter{LocationType: &locationType}
+	if where != nil {
+		stopWhere.StopID = where.StopID
+		stopWhere.StopCode = where.StopCode
+		stopWhere.Search = where.Search
+		stopWhere.Location = where.Location
+	}
+	qso := stopSelect(limit, after, nil, nil, f.PermFilter(ctx), stopWhere).
+		Where(sq.Expr("EXISTS (?)", agencyStops)).
+		// Always true, but gives the lateral scan the (feed_version_id, id)
+		// access path that the EXISTS membership test alone cannot.
+		Where("gtfs_stops.feed_version_id = out.feed_version_id")
+	q := sq.StatementBuilder.
+		Select("t.*", "out.id as with_agency_id").
+		From("gtfs_agencies out").
+		JoinClause(qso.Prefix("JOIN LATERAL (").Suffix(") t on true")).
+		Where(In("out.id", keys))
+	var ents []*model.Stop
+	err := dbutil.Select(ctx, f.db, q, &ents)
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithAgencyID.Int() }), err
+}
+
+// agencyRouteStopSelect selects from the tl_route_stops rows of the agency
+// `out.id`, narrowed by the served-by filter options, for use as an EXISTS
+// membership test.
+func agencyRouteStopSelect(where *model.AgencyStopFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.
+		Select("1").
+		From("tl_route_stops tlrs").
+		Where("tlrs.agency_id = out.id")
+	if where == nil {
+		return q
+	}
+	// Both narrowings read the agency's own routes.
+	if len(where.ServedByRouteTypes) > 0 || len(where.ServedByRouteOnestopIds) > 0 {
+		q = q.Join("gtfs_routes tlrs_routes on tlrs_routes.id = tlrs.route_id")
+	}
+	if len(where.ServedByRouteTypes) > 0 {
+		q = q.Where(In("tlrs_routes.route_type", where.ServedByRouteTypes))
+	}
+	if len(where.ServedByRouteOnestopIds) > 0 {
+		// feed_version_route_onestop_ids is keyed by the route's GTFS id, which
+		// only the gtfs_routes row carries.
+		q = q.
+			Join("feed_version_route_onestop_ids tlrs_osid on tlrs_osid.entity_id = tlrs_routes.route_id and tlrs_osid.feed_version_id = tlrs.feed_version_id").
+			Where(In("tlrs_osid.onestop_id", where.ServedByRouteOnestopIds))
+	}
+	return q
+}
+
 func (f *Finder) StopsByParentStopIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
 	var ents []*model.Stop
 	err := dbutil.Select(ctx,

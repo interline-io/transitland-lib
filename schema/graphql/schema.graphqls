@@ -708,6 +708,11 @@ type Agency {
   "Routes associated with this agency"
   routes(limit: Int, where: RouteFilter): [Route!]!
 
+  """
+  Stops served by this agency's routes: the served platforms by default, or with `where: {location_type: 1}` the stations associated with those platforms.
+  """
+  stops(limit: Int, after: Int, where: AgencyStopFilter): [Stop!]!
+
   "Census geographies intersecting this agency's stop locations; use with a `radius` filter and the `intersection_area` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
@@ -2812,7 +2817,7 @@ input StopFilter {
   stop_code: String
   "Search for stops with this GTFS location_type"
   location_type: Int
-  "If true, restrict to stops served by at least one trip; false or null returns all stops"
+  "If true, restrict to stops served by at least one trip; if false, to stops served by none"
   serviced: Boolean
   "Full text search"
   search: String
@@ -2825,7 +2830,7 @@ input StopFilter {
   "Search for stops served by routes with any of the specified GTFS route_types"
   served_by_route_types: [Int!]
   "Search for stops served by these agencies (database integer IDs)"
-  agency_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer querying via `Agency.routes` chained to stops")
+  agency_ids: [Int!] @deprecated(reason: "Internal database IDs are unstable; prefer `Agency.stops`")
   "Geographic search options"
   location: StopLocationFilter
   "Search for stops within this bounding box"
@@ -2834,6 +2839,24 @@ input StopFilter {
   within: Polygon @deprecated(reason: "Use `location.polygon` instead")
   "Search for stops within specified radius of a point"
   near: PointRadius @deprecated(reason: "Use `location.near` instead")
+}
+
+"""Search options for stops reached through `Agency.stops`, scoped to the parent agency: the served-by filters match against the agency's own routes and apply to the served platform, so with `location_type: 1` they select the platforms' stations; the remaining options describe the returned stop (no feed or feed version options apply, since the parent agency determines them)"""
+input AgencyStopFilter {
+  "Search for stops with this GTFS stop_id"
+  stop_id: String
+  "Search for stops with this GTFS stop_code"
+  stop_code: String
+  "Search for stops with this GTFS location_type; defaults to 0 (platforms), and null is treated as 0. Only 0 and 1 can match: the relation contains served platforms and their stations, nothing else"
+  location_type: Int = 0
+  "Full text search"
+  search: String
+  "Search for stops served by the agency's routes with any of the specified GTFS route_types"
+  served_by_route_types: [Int!]
+  "Search for stops served by the agency's routes with any of these Onestop IDs"
+  served_by_route_onestop_ids: [String!]
+  "Geographic search options"
+  location: StopLocationFilter
 }
 
 """Search options for stop times, optionally on a given date"""

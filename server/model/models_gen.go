@@ -83,6 +83,24 @@ type AgencyPlaceFilter struct {
 	MinRank *float64 `json:"min_rank,omitempty"`
 }
 
+// Search options for stops reached through `Agency.stops`, scoped to the parent agency: the served-by filters match against the agency's own routes and apply to the served platform, so with `location_type: 1` they select the platforms' stations; the remaining options describe the returned stop (no feed or feed version options apply, since the parent agency determines them)
+type AgencyStopFilter struct {
+	// Search for stops with this GTFS stop_id
+	StopID *string `json:"stop_id,omitempty"`
+	// Search for stops with this GTFS stop_code
+	StopCode *string `json:"stop_code,omitempty"`
+	// Search for stops with this GTFS location_type; defaults to 0 (platforms), and null is treated as 0. Only 0 and 1 can match: the relation contains served platforms and their stations, nothing else
+	LocationType *int `json:"location_type,omitempty"`
+	// Full text search
+	Search *string `json:"search,omitempty"`
+	// Search for stops served by the agency's routes with any of the specified GTFS route_types
+	ServedByRouteTypes []int `json:"served_by_route_types,omitempty"`
+	// Search for stops served by the agency's routes with any of these Onestop IDs
+	ServedByRouteOnestopIds []string `json:"served_by_route_onestop_ids,omitempty"`
+	// Geographic search options
+	Location *StopLocationFilter `json:"location,omitempty"`
+}
+
 // [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
 type Alert struct {
 	// Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange
@@ -1311,7 +1329,7 @@ type StopFilter struct {
 	StopCode *string `json:"stop_code,omitempty"`
 	// Search for stops with this GTFS location_type
 	LocationType *int `json:"location_type,omitempty"`
-	// If true, restrict to stops served by at least one trip; false or null returns all stops
+	// If true, restrict to stops served by at least one trip; if false, to stops served by none
 	Serviced *bool `json:"serviced,omitempty"`
 	// Full text search
 	Search *string `json:"search,omitempty"`
