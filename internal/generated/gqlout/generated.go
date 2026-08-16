@@ -484,11 +484,12 @@ type ComplexityRoot struct {
 	}
 
 	Frequency struct {
-		EndTime     func(childComplexity int) int
-		ExactTimes  func(childComplexity int) int
-		HeadwaySecs func(childComplexity int) int
-		ID          func(childComplexity int) int
-		StartTime   func(childComplexity int) int
+		EndTime                func(childComplexity int) int
+		ExactTimes             func(childComplexity int) int
+		HeadwaySecs            func(childComplexity int) int
+		ID                     func(childComplexity int) int
+		StartTime              func(childComplexity int) int
+		TripFirstDepartureTime func(childComplexity int) int
 	}
 
 	GbfsAlertTime struct {
@@ -3696,6 +3697,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Frequency.StartTime(childComplexity), true
+	case "Frequency.trip_first_departure_time":
+		if e.ComplexityRoot.Frequency.TripFirstDepartureTime == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Frequency.TripFirstDepartureTime(childComplexity), true
 
 	case "GbfsAlertTime.end":
 		if e.ComplexityRoot.GbfsAlertTime.End == nil {
@@ -10235,6 +10242,11 @@ type Frequency {
   
   "GTFS ` + "`" + `frequencies.exact_times` + "`" + ` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]"
   exact_times: Int
+
+  """
+  Departure time of this trip's first stop, the anchor for expanding this frequency into departures. The nth departure reaches a stop at ` + "`" + `start_time + n * headway_secs + (stop_time.departure_time - trip_first_departure_time)` + "`" + `, so a caller holding only part of a trip's stop times can still place them. Null when the trip has no stop times.
+  """
+  trip_first_departure_time: Seconds
 }
 
 """
@@ -13196,6 +13208,8 @@ func (ec *executionContext) childFields_Frequency(ctx context.Context, field gra
 		return ec.fieldContext_Frequency_headway_secs(ctx, field)
 	case "exact_times":
 		return ec.fieldContext_Frequency_exact_times(ctx, field)
+	case "trip_first_departure_time":
+		return ec.fieldContext_Frequency_trip_first_departure_time(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Frequency", field.Name)
 }
@@ -25392,6 +25406,29 @@ func (ec *executionContext) _Frequency_exact_times(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_Frequency_exact_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Frequency", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Frequency_trip_first_departure_time(ctx context.Context, field graphql.CollectedField, obj *model.Frequency) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Frequency_trip_first_departure_time(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TripFirstDepartureTime, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Seconds) graphql.Marshaler {
+			return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Frequency_trip_first_departure_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Frequency", field, false, false, errors.New("field of type Seconds does not have child fields"))
 }
 
 func (ec *executionContext) _GbfsAlertTime_start(ctx context.Context, field graphql.CollectedField, obj *model.GbfsAlertTime) (ret graphql.Marshaler) {
@@ -51403,6 +51440,8 @@ func (ec *executionContext) _Frequency(ctx context.Context, sel ast.SelectionSet
 			}
 		case "exact_times":
 			out.Values[i] = ec._Frequency_exact_times(ctx, field, obj)
+		case "trip_first_departure_time":
+			out.Values[i] = ec._Frequency_trip_first_departure_time(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

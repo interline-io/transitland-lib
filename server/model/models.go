@@ -138,6 +138,7 @@ type Stop struct {
 }
 
 type Frequency struct {
+	TripFirstDepartureTime tt.Seconds `db:"trip_first_departure_time"`
 	gtfs.Frequency
 }
 

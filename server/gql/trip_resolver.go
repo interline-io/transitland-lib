@@ -39,7 +39,7 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 	sts, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
-		Limit:         resolverCheckLimit(limit),
+		Limit:         resolverCheckLimitMax(limit, RESOLVER_STOP_TIME_MAXLIMIT),
 		Where:         where,
 	})()
 	if wantsRTStopTimeUpdate(ctx) {
@@ -56,7 +56,7 @@ func (r *tripResolver) FlexStopTimes(ctx context.Context, obj *model.Trip, limit
 	return LoaderFor(ctx).FlexStopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
-		Limit:         resolverCheckLimit(limit),
+		Limit:         resolverCheckLimitMax(limit, RESOLVER_STOP_TIME_MAXLIMIT),
 		Where:         where,
 	})()
 }
