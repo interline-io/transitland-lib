@@ -178,7 +178,67 @@ func TestTripResolver(t *testing.T) {
 		},
 
 		// TODO: check where feed_version_sha1, feed_onestop_id but only check count
-		// TODO: frequencies
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+func TestTripResolver_Frequencies(t *testing.T) {
+	// CITY1 runs five headway bands; its first stop departs at 06:00:00.
+	const q = `query($trip_id:String!) {trips(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", trip_id:$trip_id}) {frequencies{start_time end_time headway_secs trip{trip_id stop_times(limit:1){departure_time}}}}}`
+	vars := hw{"trip_id": "CITY1"}
+	testcases := []testcase{
+		{
+			name:         "start_time",
+			query:        q,
+			vars:         vars,
+			selector:     "trips.0.frequencies.#.start_time",
+			selectExpect: []string{"06:00:00", "08:00:00", "10:00:00", "16:00:00", "19:00:00"},
+		},
+		{
+			name:         "end_time",
+			query:        q,
+			vars:         vars,
+			selector:     "trips.0.frequencies.#.end_time",
+			selectExpect: []string{"07:59:59", "09:59:59", "15:59:59", "18:59:59", "22:00:00"},
+		},
+		{
+			name:         "headway_secs",
+			query:        q,
+			vars:         vars,
+			selector:     "trips.0.frequencies.#.headway_secs",
+			selectExpect: []string{"1800", "600", "1800", "600", "1800"},
+		},
+		{
+			name:         "trip back reference",
+			query:        q,
+			vars:         vars,
+			selector:     "trips.0.frequencies.#.trip.trip_id",
+			selectExpect: []string{"CITY1", "CITY1", "CITY1", "CITY1", "CITY1"},
+		},
+		{
+			// The anchor a caller expands from. It comes from the trip rather
+			// than the band, so every band reports the same first departure.
+			name:         "first departure through the trip",
+			query:        q,
+			vars:         vars,
+			selector:     "trips.0.frequencies.#.trip.stop_times.0.departure_time",
+			selectExpect: []string{"06:00:00", "06:00:00", "06:00:00", "06:00:00", "06:00:00"},
+		},
+		{
+			name:         "trip with one frequency",
+			query:        q,
+			vars:         hw{"trip_id": "STBA"},
+			selector:     "trips.0.frequencies.#.headway_secs",
+			selectExpect: []string{"1800"},
+		},
+		{
+			name:         "trip with no frequencies",
+			query:        q,
+			vars:         hw{"trip_id": "AB1"},
+			selector:     "trips.0.frequencies.#.headway_secs",
+			selectExpect: []string{},
+		},
 	}
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)

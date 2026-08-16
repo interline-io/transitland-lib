@@ -44,6 +44,7 @@ type ResolverRoot interface {
 	FeedVersion() FeedVersionResolver
 	FeedVersionGtfsImport() FeedVersionGtfsImportResolver
 	FlexStopTime() FlexStopTimeResolver
+	Frequency() FrequencyResolver
 	Group() GroupResolver
 	Level() LevelResolver
 	Location() LocationResolver
@@ -489,6 +490,7 @@ type ComplexityRoot struct {
 		HeadwaySecs func(childComplexity int) int
 		ID          func(childComplexity int) int
 		StartTime   func(childComplexity int) int
+		Trip        func(childComplexity int) int
 	}
 
 	GbfsAlertTime struct {
@@ -1462,6 +1464,9 @@ type FlexStopTimeResolver interface {
 	Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error)
 
 	ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error)
+}
+type FrequencyResolver interface {
+	Trip(ctx context.Context, obj *model.Frequency) (*model.Trip, error)
 }
 type GroupResolver interface {
 	Tenant(ctx context.Context, obj *model.Group) (*model.Tenant, error)
@@ -3696,6 +3701,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Frequency.StartTime(childComplexity), true
+	case "Frequency.trip":
+		if e.ComplexityRoot.Frequency.Trip == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Frequency.Trip(childComplexity), true
 
 	case "GbfsAlertTime.end":
 		if e.ComplexityRoot.GbfsAlertTime.End == nil {
@@ -10235,6 +10246,9 @@ type Frequency {
   
   "GTFS ` + "`" + `frequencies.exact_times` + "`" + ` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]"
   exact_times: Int
+
+  "Trip this headway applies to. Expanding a frequency measures from the trip's first departure, which this reaches even when a filtered ` + "`" + `Trip.stop_times` + "`" + ` selection omits the first stop."
+  trip: Trip!
 }
 
 """
@@ -13196,6 +13210,8 @@ func (ec *executionContext) childFields_Frequency(ctx context.Context, field gra
 		return ec.fieldContext_Frequency_headway_secs(ctx, field)
 	case "exact_times":
 		return ec.fieldContext_Frequency_exact_times(ctx, field)
+	case "trip":
+		return ec.fieldContext_Frequency_trip(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Frequency", field.Name)
 }
@@ -25392,6 +25408,38 @@ func (ec *executionContext) _Frequency_exact_times(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_Frequency_exact_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Frequency", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Frequency_trip(ctx context.Context, field graphql.CollectedField, obj *model.Frequency) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Frequency_trip(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Frequency().Trip(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Trip) graphql.Marshaler {
+			return ec.marshalNTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Frequency_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Frequency",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Trip(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _GbfsAlertTime_start(ctx context.Context, field graphql.CollectedField, obj *model.GbfsAlertTime) (ret graphql.Marshaler) {
@@ -51384,25 +51432,61 @@ func (ec *executionContext) _Frequency(ctx context.Context, sel ast.SelectionSet
 		case "id":
 			out.Values[i] = ec._Frequency_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "start_time":
 			out.Values[i] = ec._Frequency_start_time(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "end_time":
 			out.Values[i] = ec._Frequency_end_time(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "headway_secs":
 			out.Values[i] = ec._Frequency_headway_secs(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "exact_times":
 			out.Values[i] = ec._Frequency_exact_times(ctx, field, obj)
+		case "trip":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Frequency_trip(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
