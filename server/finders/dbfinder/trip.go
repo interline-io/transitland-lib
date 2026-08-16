@@ -58,30 +58,35 @@ func (f *Finder) TripsByFeedVersionTripIDs(ctx context.Context, keys []model.FVE
 	}), nil
 }
 
-// frequencySelect returns each trip's frequencies along with the trip's first
-// departure time, the anchor a caller needs to place a generated departure.
+// frequencySelect returns each trip's frequencies with the trip's first
+// departure time, the anchor for placing a generated departure.
 //
-// Journey pattern deduplication moves a derived trip's stop times onto its base
-// trip, so the anchor is the base trip's earliest departure shifted by this
-// trip's offset. Trips left undeduplicated have no journey pattern and fall
-// back to their own stop times.
+// Frequencies are selected first so the anchor is only computed for trips that
+// have them; driving from gtfs_trips costs an aggregate per trip queried.
+// Deduplicated trips keep their stop times on a base trip, so the anchor reads
+// from there and adds this trip's offset.
 func frequencySelect(limit *int, keys []int) sq.SelectBuilder {
 	freqs := quickSelect("gtfs_frequencies", limit, nil, nil).
-		Where("gtfs_frequencies.trip_id = out.id")
+		Where("gtfs_frequencies.trip_id = o.id")
+	perTrip := sq.StatementBuilder.
+		Select("f.*").
+		From("gtfs_trips o").
+		JoinClause(freqs.Prefix("join lateral (").Suffix(") f on true")).
+		Where(In("o.id", keys))
 	return sq.StatementBuilder.
 		Select(
 			"t.*",
 			"anchor.first_departure_time + out.journey_pattern_offset as trip_first_departure_time",
 		).
-		From("gtfs_trips out").
-		JoinClause(freqs.Prefix("join lateral (").Suffix(") t on true")).
-		LeftJoin("gtfs_trips base_trip on base_trip.trip_id::text = out.journey_pattern_id and base_trip.feed_version_id = out.feed_version_id").
+		FromSelect(perTrip, "t").
+		Join("gtfs_trips out on out.id = t.trip_id").
 		JoinClause(`join lateral (
 			select min(sts.departure_time) first_departure_time
 			from gtfs_stop_times sts
-			where sts.trip_id = coalesce(base_trip.id, out.id) and sts.feed_version_id = out.feed_version_id
-			) anchor on true`).
-		Where(In("out.id", keys))
+			where sts.feed_version_id = out.feed_version_id and sts.trip_id = coalesce(
+				(select bt.id from gtfs_trips bt where bt.trip_id::text = out.journey_pattern_id and bt.feed_version_id = out.feed_version_id),
+				out.id)
+			) anchor on true`)
 }
 
 func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Frequency, error) {

@@ -1210,7 +1210,9 @@ type Frequency {
   exact_times: Int
 
   """
-  Departure time of this trip's first stop, the anchor for expanding this frequency into departures. The nth departure reaches a stop at `start_time + n * headway_secs + (stop_time.departure_time - trip_first_departure_time)`, so a caller holding only part of a trip's stop times can still place them. Null when the trip has no stop times.
+  Departure time of this trip's first stop, the anchor for expanding this frequency into departures: the nth departure reaches a stop at `start_time + n * headway_secs + (departure_time - trip_first_departure_time)`.
+
+  It is measured over the whole trip, so a caller that requested only some of the trip's stop times can still place them. Null if the trip has no stop times.
   """
   trip_first_departure_time: Seconds
 }

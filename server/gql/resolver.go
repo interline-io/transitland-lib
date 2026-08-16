@@ -27,9 +27,8 @@ const (
 	// one: paramGroupQuery falls back to RESOLVER_DEFAULT_LIMIT when a group's
 	// limit is nil, which would cut a long route's patterns to 100.
 	RESOLVER_PATTERN_MAXLIMIT = 100_000
-	// Trip.stop_times returns a whole trip at once, and the limit also keys the
-	// loader's request grouping, so the API-wide maximum would silently collapse
-	// distinct requested limits into one.
+	// Trip.stop_times returns a whole trip, and the limit also keys the loader's
+	// request grouping, so the API-wide maximum is the wrong ceiling here.
 	RESOLVER_STOP_TIME_MAXLIMIT = 100_000
 )
 
