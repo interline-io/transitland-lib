@@ -72,7 +72,7 @@ func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []in
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.TripID.Int() }), err
 }
 
 // Replaces a date outside the feed version's service window with the same

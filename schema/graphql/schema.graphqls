@@ -1208,6 +1208,9 @@ type Frequency {
   
   "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]"
   exact_times: Int
+
+  "Trip this headway applies to. Expanding a frequency measures from the trip's first departure, which this reaches even when a filtered `Trip.stop_times` selection omits the first stop."
+  trip: Trip!
 }
 
 """

@@ -90,3 +90,11 @@ func (r *tripResolver) Alerts(ctx context.Context, obj *model.Trip, active *bool
 	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForTrip(ctx, obj, resolverCheckLimit(limit), active)
 	return rtAlerts, nil
 }
+
+// FREQUENCY
+
+type frequencyResolver struct{ *Resolver }
+
+func (r *frequencyResolver) Trip(ctx context.Context, obj *model.Frequency) (*model.Trip, error) {
+	return LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
+}

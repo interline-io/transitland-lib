@@ -218,6 +218,9 @@ func (r *Resolver) Trip() gqlout.TripResolver { return &tripResolver{r} }
 // StopTime .
 func (r *Resolver) StopTime() gqlout.StopTimeResolver { return &stopTimeResolver{r} }
 
+// Frequency .
+func (r *Resolver) Frequency() gqlout.FrequencyResolver { return &frequencyResolver{r} }
+
 // VehiclePosition .
 func (r *Resolver) VehiclePosition() gqlout.VehiclePositionResolver {
 	return &vehiclePositionResolver{r}
