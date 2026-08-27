@@ -34,10 +34,15 @@ func (cmd *DmfrFormatCommand) AddFlags(fl *pflag.FlagSet) {
 // Parse command line options.
 func (cmd *DmfrFormatCommand) Parse(args []string) error {
 	fl := tlcli.NewNArgs(args)
-	cmd.Filename = fl.Arg(0)
-	if cmd.Filename == "" {
+	if fl.NArg() == 0 {
 		return errors.New("must specify filename")
 	}
+	// Extra arguments were previously ignored, reporting success for files that
+	// were never touched.
+	if fl.NArg() > 1 {
+		return errors.New("only one filename allowed")
+	}
+	cmd.Filename = fl.Arg(0)
 	return nil
 }
 
