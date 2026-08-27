@@ -58,7 +58,11 @@ func (cmd *DmfrLintCommand) Run(ctx context.Context) error {
 		}
 		rr, err := dmfr.ReadRawRegistry(bytes.NewBuffer(rawJson))
 		if err != nil {
+			// A file that will not parse is a lint failure, not a crash. Without
+			// this the nil registry reaches rr.Write below and panics.
 			log.For(ctx).Error().Err(err).Str("filename", filename).Msg("could not load DMFR")
+			fileErrors = append(fileErrors, filename)
+			continue
 		}
 		var buf bytes.Buffer
 		if err := rr.Write(&buf); err != nil {
@@ -82,7 +86,7 @@ func (cmd *DmfrLintCommand) Run(ctx context.Context) error {
 		}
 	}
 	if len(fileErrors) > 0 {
-		return fmt.Errorf("incorrectly formatted files: %s", strings.Join(fileErrors, ", "))
+		return fmt.Errorf("lint failed for files: %s", strings.Join(fileErrors, ", "))
 
 	}
 	return nil
