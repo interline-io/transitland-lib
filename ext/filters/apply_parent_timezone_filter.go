@@ -12,7 +12,7 @@ type ApplyParentTimezoneFilter struct {
 	parentStopTimezones   map[string]string
 }
 
-func (e *ApplyParentTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *ApplyParentTimezoneFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	// Remember filter happens before UpdateKeys or final ID available
 	switch v := ent.(type) {
 	case *gtfs.Agency:

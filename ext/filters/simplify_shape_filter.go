@@ -10,7 +10,7 @@ type SimplifyShapeFilter struct {
 	SimplifyValue float64
 }
 
-func (e *SimplifyShapeFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *SimplifyShapeFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	v, ok := ent.(*service.ShapeLine)
 	if !ok {
 		return nil

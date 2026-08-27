@@ -30,7 +30,7 @@ type FlexStopLocationTypeCheck struct {
 	flexStops     map[string]bool // stops used in flex services
 }
 
-func (e *FlexStopLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (e *FlexStopLocationTypeCheck) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	if e.locationTypes == nil {
 		e.locationTypes = map[string]int{}
 	}
