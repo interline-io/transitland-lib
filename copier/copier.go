@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -773,7 +775,11 @@ func (copier *Copier) copyCalendars() error {
 	{
 		batchCals := make([]*gtfs.Calendar, 0, len(calDates))
 		cdCount := 0
-		for serviceId, cds := range calDates {
+		// Sorted: these calendars have no source order to preserve, and writers
+		// that assign ids in arrival order would otherwise number them
+		// differently on every run.
+		for _, serviceId := range slices.Sorted(maps.Keys(calDates)) {
+			cds := calDates[serviceId]
 			cal := gtfs.Calendar{}
 			cal.ServiceID.Set(serviceId)
 			// Set generated
