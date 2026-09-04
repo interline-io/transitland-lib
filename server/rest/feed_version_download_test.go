@@ -295,6 +295,24 @@ func TestFeedVersionDownloadQuota(t *testing.T) {
 			})
 		}
 	})
+	t.Run("each download records a unique event id", func(t *testing.T) {
+		// The event id is the delivery's idempotency key: without it a retried
+		// batch lands as a second usage record indistinguishable from a real
+		// second download.
+		mp := &fakeMeterProvider{}
+		get(mp, endpoints[0].path)
+		get(mp, endpoints[0].path)
+		assert.Equal(t, 2, mp.eventCount(feedVersionDownloadMeter), "download events")
+		ids := map[string]bool{}
+		for _, event := range mp.events {
+			if event.Name != feedVersionDownloadMeter {
+				continue
+			}
+			assert.NotEmpty(t, event.EventID, "event id")
+			ids[event.EventID] = true
+		}
+		assert.Len(t, ids, 2, "distinct event ids")
+	})
 	t.Run("not found is not checked", func(t *testing.T) {
 		// The quota is checked only once a download is actually going to be
 		// served, so a miss cannot consume it.

@@ -156,6 +156,23 @@ func checkDownloadQuota(ctx context.Context, dims meters.Dimensions) bool {
 	return allowed
 }
 
+// recordDownload records one served feed version download against the quota
+// that admitted it.
+//
+// The event carries a unique id, which is the delivery's idempotency key: the
+// meter transport retries a failed batch, and without one a retry lands as a
+// second indistinguishable usage record that cannot afterwards be told apart
+// from a real second download.
+func recordDownload(ctx context.Context, dims meters.Dimensions) {
+	apiMeter := meters.ForContext(ctx)
+	if apiMeter == nil {
+		return
+	}
+	if err := apiMeter.Meter(ctx, meters.NewMeterEvent(feedVersionDownloadMeter, 1.0, dims)); err != nil {
+		log.For(ctx).Error().Err(err).Msg("feed version download metering failed")
+	}
+}
+
 // Query redirects user to download the given fv from S3 public URL
 // assuming that redistribution is allowed for the feed.
 func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.ResponseWriter, r *http.Request) {
@@ -214,14 +231,7 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
 	}
-	// Send request to metering
-	if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-		apiMeter.Meter(ctx, meters.MeterEvent{
-			Name:       feedVersionDownloadMeter,
-			Value:      1.0,
-			Dimensions: dims,
-		})
-	}
+	recordDownload(ctx, dims)
 }
 
 const feedVersionFileQuery = `
@@ -301,14 +311,7 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
 	}
-	// Send request to metering
-	if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-		apiMeter.Meter(ctx, meters.MeterEvent{
-			Name:       feedVersionDownloadMeter,
-			Value:      1.0,
-			Dimensions: dims,
-		})
-	}
+	recordDownload(ctx, dims)
 }
 
 func serveFromStorage(w http.ResponseWriter, r *http.Request, storage string, fvsha1 string, downloadKey string) error {
