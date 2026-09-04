@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -121,6 +122,57 @@ func feedDownloadRtHelper(graphqlHandler http.Handler, w http.ResponseWriter, r 
 	w.Write(data)
 }
 
+// feedVersionDownloadMeter is the meter for feed version zip downloads: the
+// quota checked before serving, and the usage recorded after.
+const feedVersionDownloadMeter = "feed-version-downloads"
+
+// downloadDimensions describes one feed version download for metering.
+//
+// The same dimensions gate the quota and record the usage. A limit applies
+// only when its own dimensions are a subset of these, so checking with fewer
+// dimensions than are recorded would silently skip dimension-scoped limits.
+func downloadDimensions(fid string, fvsha1 string, isLatest bool) meters.Dimensions {
+	return meters.Dimensions{
+		{Key: "fv_sha1", Value: fvsha1},
+		{Key: "feed_onestop_id", Value: fid},
+		{Key: "is_latest_feed_version", Value: strconv.FormatBool(isLatest)},
+	}
+}
+
+// checkDownloadQuota reports whether this download is within the caller's
+// quota. It allows the download when no meter is configured, which is the
+// case outside a metered deployment and in tests.
+func checkDownloadQuota(ctx context.Context, dims meters.Dimensions) bool {
+	// The context holds a full Meterer; ForContext narrows it to the
+	// recording half, so reading a quota needs the reader back.
+	meterReader, ok := meters.ForContext(ctx).(meters.MeterReader)
+	if !ok {
+		return true
+	}
+	allowed, err := meterReader.Check(ctx, feedVersionDownloadMeter, 1.0, dims)
+	if err != nil {
+		log.For(ctx).Error().Err(err).Msg("feed version download quota check failed")
+	}
+	return allowed
+}
+
+// recordDownload records one served feed version download against the quota
+// that admitted it.
+//
+// The event carries a unique id, which is the delivery's idempotency key: the
+// meter transport retries a failed batch, and without one a retry lands as a
+// second indistinguishable usage record that cannot afterwards be told apart
+// from a real second download.
+func recordDownload(ctx context.Context, dims meters.Dimensions) {
+	apiMeter := meters.ForContext(ctx)
+	if apiMeter == nil {
+		return
+	}
+	if err := apiMeter.Meter(ctx, meters.NewMeterEvent(feedVersionDownloadMeter, 1.0, dims)); err != nil {
+		log.For(ctx).Error().Err(err).Msg("feed version download metering failed")
+	}
+}
+
 // Query redirects user to download the given fv from S3 public URL
 // assuming that redistribution is allowed for the feed.
 func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.ResponseWriter, r *http.Request) {
@@ -166,6 +218,12 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 		return
 	}
 
+	dims := downloadDimensions(fid, fvsha1, true)
+	if !checkDownloadQuota(ctx, dims) {
+		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+
 	downloadKey := fmt.Sprintf("%s-%s.zip", fid, fvsha1)
 	cfg := model.ForContext(ctx)
 	if err := serveFromStorage(w, r, cfg.Storage, fvsha1, downloadKey); err != nil {
@@ -173,19 +231,7 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
 	}
-	// Send request to metering
-	if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-		apiMeter.Meter(ctx, meters.MeterEvent{
-			Name:  "feed-version-downloads",
-			Value: 1.0,
-			Dimensions: []meters.Dimension{
-				{Key: "fv_sha1", Value: fvsha1},
-				{Key: "feed_onestop_id", Value: fid},
-				{Key: "is_latest_feed_version", Value: "true"},
-			},
-		})
-	}
-
+	recordDownload(ctx, dims)
 }
 
 const feedVersionFileQuery = `
@@ -252,6 +298,12 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 		return
 	}
 
+	dims := downloadDimensions(fid, fvsha1, false)
+	if !checkDownloadQuota(ctx, dims) {
+		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+
 	downloadKey := fmt.Sprintf("%s-%s.zip", fid, fvsha1)
 	cfg := model.ForContext(ctx)
 	if err := serveFromStorage(w, r, cfg.Storage, fvsha1, downloadKey); err != nil {
@@ -259,18 +311,7 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
 	}
-	// Send request to metering
-	if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-		apiMeter.Meter(ctx, meters.MeterEvent{
-			Name:  "feed-version-downloads",
-			Value: 1.0,
-			Dimensions: []meters.Dimension{
-				{Key: "fv_sha1", Value: fvsha1},
-				{Key: "feed_onestop_id", Value: fid},
-				{Key: "is_latest_feed_version", Value: "false"},
-			},
-		})
-	}
+	recordDownload(ctx, dims)
 }
 
 func serveFromStorage(w http.ResponseWriter, r *http.Request, storage string, fvsha1 string, downloadKey string) error {
