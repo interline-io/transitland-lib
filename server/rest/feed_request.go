@@ -249,6 +249,11 @@ func (r FeedDownloadLatestFeedVersionRequest) RequestInfo() RequestInfo {
 							Description: toPtr("Not found - feed not found"),
 						},
 					}),
+					oa.WithStatus(429, &oa.ResponseRef{
+						Value: &oa.Response{
+							Description: toPtr("Too many requests - feed version download quota exceeded"),
+						},
+					}),
 				),
 				Parameters: oa.Parameters{
 					&pref{Value: &param{

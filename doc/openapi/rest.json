@@ -3297,6 +3297,9 @@
           },
           "404": {
             "description": "Not found - feed not found"
+          },
+          "429": {
+            "description": "Too many requests - feed version download quota exceeded"
           }
         },
         "summary": "Download feed version",
@@ -4408,6 +4411,9 @@
           },
           "404": {
             "description": "Not found - feed not found"
+          },
+          "429": {
+            "description": "Too many requests - feed version download quota exceeded"
           }
         },
         "summary": "Download latest feed version",

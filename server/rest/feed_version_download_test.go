@@ -1,16 +1,19 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/meters"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -221,6 +224,88 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 	})
 }
 
+func TestFeedVersionDownloadQuota(t *testing.T) {
+	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+		Storage: testdata.Path("server", "tmp"),
+	})
+
+	// Both download endpoints, and the is_latest_feed_version value each one
+	// is expected to check and record.
+	endpoints := []struct {
+		name     string
+		path     string
+		isLatest string
+	}{
+		{"historical", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", "false"},
+		{"latest", "/feeds/CT/download_latest_feed_version", "true"},
+	}
+
+	// The admin user clears both download roles, and leaving the "rest" meter
+	// allowed means only the download quota can reject the request.
+	get := func(mp *fakeMeterProvider, path string) *httptest.ResponseRecorder {
+		req, _ := http.NewRequest("GET", path, nil)
+		rr := httptest.NewRecorder()
+		metered := meters.WithMeter(mp, "rest", 1.0, nil)(restSrv)
+		usercheck.AdminDefaultMiddleware("test")(metered).ServeHTTP(rr, req)
+		return rr
+	}
+
+	t.Run("within quota", func(t *testing.T) {
+		for _, tc := range endpoints {
+			t.Run(tc.name, func(t *testing.T) {
+				mp := &fakeMeterProvider{}
+				rr := get(mp, tc.path)
+				assert.Equal(t, 200, rr.Result().StatusCode, "status code")
+				assert.Equal(t, 59324, rr.Body.Len(), "body length")
+				assert.Equal(t, 1, mp.eventCount(feedVersionDownloadMeter), "download events")
+			})
+		}
+	})
+	t.Run("over quota", func(t *testing.T) {
+		for _, tc := range endpoints {
+			t.Run(tc.name, func(t *testing.T) {
+				mp := &fakeMeterProvider{allow: map[string]bool{feedVersionDownloadMeter: false}}
+				rr := get(mp, tc.path)
+				assert.Equal(t, 429, rr.Result().StatusCode, "status code")
+				assert.Equal(t, "application/json", rr.Header().Get("Content-Type"), "content-type")
+				// The zip must not be served alongside the error, and the quota
+				// the download was rejected for must not be consumed.
+				assert.JSONEq(t, `{"error":"too many requests"}`, rr.Body.String(), "body")
+				assert.Equal(t, 0, mp.eventCount(feedVersionDownloadMeter), "download events")
+			})
+		}
+	})
+	t.Run("checked dimensions match the recorded event", func(t *testing.T) {
+		// The quota is dimension-scoped, and a limit matches only when its own
+		// dimensions are contained in the checked ones.
+		for _, tc := range endpoints {
+			t.Run(tc.name, func(t *testing.T) {
+				mp := &fakeMeterProvider{}
+				get(mp, tc.path)
+				checked, ok := mp.lastCheck(feedVersionDownloadMeter)
+				if !assert.True(t, ok, "download quota was checked") {
+					return
+				}
+				assert.Equal(t, 1.0, checked.value, "checked value")
+				assert.Equal(t, tc.isLatest, dimValue(checked.dims, "is_latest_feed_version"), "is_latest_feed_version")
+				assert.Equal(t, "CT", dimValue(checked.dims, "feed_onestop_id"), "feed_onestop_id")
+				assert.NotEmpty(t, dimValue(checked.dims, "fv_sha1"), "fv_sha1")
+				assert.Equal(t, 1, mp.eventCount(feedVersionDownloadMeter), "download events")
+				assert.Equal(t, checked.dims, mp.lastEvent(feedVersionDownloadMeter).Dimensions, "checked and metered dimensions")
+			})
+		}
+	})
+	t.Run("not found is not checked", func(t *testing.T) {
+		// The quota is checked only once a download is actually going to be
+		// served, so a miss cannot consume it.
+		mp := &fakeMeterProvider{}
+		rr := get(mp, "/feed_versions/asdxyz/download")
+		assert.Equal(t, 404, rr.Result().StatusCode, "status code")
+		_, ok := mp.lastCheck(feedVersionDownloadMeter)
+		assert.False(t, ok, "download quota was not checked")
+	})
+}
+
 func TestFeedDownloadRtLatestRequest(t *testing.T) {
 	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
@@ -426,4 +511,90 @@ func TestFeedDownloadRtVehiclePositions(t *testing.T) {
 		assert.Greater(t, featureCount, 0, "should have at least one feature")
 	})
 
+}
+
+var _ meters.MeterProvider = (*fakeMeterProvider)(nil)
+
+// fakeMeterProvider answers Check from a per-meter allow map, defaulting to
+// allowed, and records every check and event so a test can assert what the
+// handler asked about.
+type fakeMeterProvider struct {
+	allow  map[string]bool
+	checks []fakeMeterCheck
+	events []meters.MeterEvent
+}
+
+type fakeMeterCheck struct {
+	name  string
+	value float64
+	dims  meters.Dimensions
+}
+
+func (p *fakeMeterProvider) NewMeter(meters.MeterUser) meters.Meterer {
+	return &fakeMeter{provider: p}
+}
+
+func (p *fakeMeterProvider) Close() error { return nil }
+
+func (p *fakeMeterProvider) Flush() error { return nil }
+
+func (p *fakeMeterProvider) lastCheck(meterName string) (fakeMeterCheck, bool) {
+	for i := len(p.checks) - 1; i >= 0; i-- {
+		if p.checks[i].name == meterName {
+			return p.checks[i], true
+		}
+	}
+	return fakeMeterCheck{}, false
+}
+
+func (p *fakeMeterProvider) lastEvent(meterName string) meters.MeterEvent {
+	for i := len(p.events) - 1; i >= 0; i-- {
+		if p.events[i].Name == meterName {
+			return p.events[i]
+		}
+	}
+	return meters.MeterEvent{}
+}
+
+func (p *fakeMeterProvider) eventCount(meterName string) int {
+	count := 0
+	for _, event := range p.events {
+		if event.Name == meterName {
+			count++
+		}
+	}
+	return count
+}
+
+type fakeMeter struct {
+	provider *fakeMeterProvider
+}
+
+func (m *fakeMeter) Meter(_ context.Context, event meters.MeterEvent) error {
+	m.provider.events = append(m.provider.events, event)
+	return nil
+}
+
+func (m *fakeMeter) ApplyDimension(_ string, _ string) {}
+
+func (m *fakeMeter) GetValue(_ context.Context, _ string, _ time.Time, _ time.Time, _ meters.Dimensions) (float64, bool) {
+	return 0, false
+}
+
+func (m *fakeMeter) Check(_ context.Context, meterName string, value float64, dims meters.Dimensions) (bool, error) {
+	m.provider.checks = append(m.provider.checks, fakeMeterCheck{name: meterName, value: value, dims: dims})
+	if allow, ok := m.provider.allow[meterName]; ok {
+		return allow, nil
+	}
+	return true, nil
+}
+
+// dimValue returns the value of one dimension, or "" if it is not present.
+func dimValue(dims meters.Dimensions, key string) string {
+	for _, dim := range dims {
+		if dim.Key == key {
+			return dim.Value
+		}
+	}
+	return ""
 }
