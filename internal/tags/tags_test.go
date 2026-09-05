@@ -17,8 +17,8 @@ type testEntity struct {
 // Renamed reads an old name that is no longer written, and Collides declares an
 // alias that is another field's actual name.
 type aliasEntity struct {
-	Renamed  string `csv:"new_name" alias:"old_name"`
-	Collides string `csv:"collides" alias:"new_name"`
+	Renamed  string `csv:"new_name,alias=old_name,required" enum:"1,2"`
+	Collides string `csv:"collides,alias=new_name"`
 }
 
 func TestCache_GetStructTagMap_Alias(t *testing.T) {
@@ -28,15 +28,26 @@ func TestCache_GetStructTagMap_Alias(t *testing.T) {
 	if !ok {
 		t.Fatalf("did not get field for tag 'new_name'")
 	}
-	if renamed.Alias {
+	if renamed.IsAlias() {
 		t.Errorf("expected 'new_name' to be a field, not an alias")
 	}
 	old, ok := stg["old_name"]
 	if !ok {
 		t.Fatalf("did not get field for alias 'old_name'")
 	}
-	if !old.Alias {
+	if !old.IsAlias() {
 		t.Errorf("expected 'old_name' to be marked as an alias")
+	}
+	if old.Name != "old_name" || old.AliasOf != "new_name" {
+		t.Errorf("got alias entry Name=%q AliasOf=%q, expected 'old_name' and 'new_name'", old.Name, old.AliasOf)
+	}
+	// Validation tags stay on the field's own entry, so a value is checked once,
+	// under the name the file actually uses.
+	if old.Required {
+		t.Errorf("expected the alias entry not to carry the field's required tag")
+	}
+	if len(old.EnumValues) > 0 {
+		t.Errorf("expected the alias entry not to carry the field's enum values, got %v", old.EnumValues)
 	}
 	// An alias must never displace a field that owns the name. Compare by index
 	// rather than pointer: the alias entry is a copy.

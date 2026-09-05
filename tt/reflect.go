@@ -67,6 +67,12 @@ func ReflectCheckErrors(ent any) []error {
 	entValue := reflect.ValueOf(ent).Elem()
 	fmap := mapperCache.GetStructTagMap(ent)
 	for fieldName, fieldInfo := range fmap {
+		// An alias is another name for a field that is checked under its own
+		// name; checking it again would report the same value twice, once under
+		// a name the file may not even contain.
+		if fieldInfo.IsAlias() {
+			continue
+		}
 		// Get field
 		field := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
 		fieldAddr := field.Addr().Interface()
