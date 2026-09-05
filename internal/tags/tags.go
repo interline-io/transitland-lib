@@ -73,6 +73,7 @@ func ToSnakeCase(str string) string {
 // FieldInfo contains the parsed tag values for a single attribute.
 type FieldInfo struct {
 	Name           string
+	Alias          bool
 	Required       bool
 	Target         string
 	Index          []int
@@ -120,6 +121,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			)
 		}
 		m = FieldMap{}
+		aliases := map[string]*FieldInfo{}
 		fields := c.Mapper.TypeMap(reflect.TypeOf(ent))
 		for i, fi := range fields.Index {
 			_ = i
@@ -212,7 +214,23 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 					mfi.SortOrder = optParse
 				}
 			}
+			if optVal := fi.Field.Tag.Get("alias"); optVal != "" {
+				aliases[optVal] = &mfi
+			}
 			m[fi.Name] = &mfi
+		}
+		// Register aliases after every field is mapped, so a field's own name is
+		// never displaced by another field's alias. Aliases are read-only: they
+		// resolve an incoming column name to a field, and GetHeader skips them so
+		// the field is written under its canonical name exactly once.
+		for aliasName, fi := range aliases {
+			if _, exists := m[aliasName]; exists {
+				continue
+			}
+			aliasFi := *fi
+			aliasFi.Alias = true
+			aliasFi.SortOrder = 0
+			m[aliasName] = &aliasFi
 		}
 		c.typemap[t] = m
 	}
@@ -226,6 +244,9 @@ func (c *Cache) GetSortColumns(ent interface{}) []*FieldInfo {
 	fmap := c.GetStructTagMap(ent)
 	var cols []*FieldInfo
 	for _, fi := range fmap {
+		if fi.Alias {
+			continue
+		}
 		if fi.SortOrder > 0 {
 			cols = append(cols, fi)
 		}
@@ -240,6 +261,9 @@ func (c *Cache) GetHeader(ent interface{}) ([]string, error) {
 	fmap := c.GetStructTagMap(ent)
 	stms := []*FieldInfo{}
 	for _, stm := range fmap {
+		if stm.Alias {
+			continue
+		}
 		stms = append(stms, stm)
 	}
 	sort.Slice(stms, func(i, j int) bool {

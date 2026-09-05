@@ -11,7 +11,8 @@ import (
 //
 // Note: ReverseSignpostedAs needs an explicit csv tag. The GTFS field is
 // "reversed_signposted_as", which is not what the column name derivation
-// produces from the Go field name.
+// produces from the Go field name. The alias reads the derived name that
+// earlier versions of this library wrote.
 type Pathway struct {
 	PathwayID           tt.String `csv:",required" standardized_sort:"1"`
 	FromStopID          tt.String `csv:",required" target:"stops.txt"`
@@ -24,7 +25,7 @@ type Pathway struct {
 	MaxSlope            tt.Float
 	StairCount          tt.Int
 	SignpostedAs        tt.String
-	ReverseSignpostedAs tt.String `csv:"reversed_signposted_as"`
+	ReverseSignpostedAs tt.String `csv:"reversed_signposted_as" alias:"reverse_signposted_as"`
 	tt.BaseEntity
 }
 

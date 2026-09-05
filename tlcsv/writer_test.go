@@ -148,3 +148,32 @@ func TestWriterPathwayReversedSignpostedAs(t *testing.T) {
 	}
 	assert.True(t, found, "expected to read back a pathway")
 }
+
+// Feeds exported by earlier versions of this library carry the derived column
+// name; the csv alias keeps that signage text from being dropped on read.
+func TestReaderPathwayReverseSignpostedAsAlias(t *testing.T) {
+	tmpdir, err := os.MkdirTemp("", "gtfs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpdir)
+	legacy := "pathway_id,from_stop_id,to_stop_id,pathway_mode,is_bidirectional,signposted_as,reverse_signposted_as\n" +
+		"pathway1,stop1,stop2,1,1,To Platform 1,To Exit\n"
+	if err := os.WriteFile(filepath.Join(tmpdir, "pathways.txt"), []byte(legacy), 0644); err != nil {
+		t.Fatal(err)
+	}
+	reader, err := NewReader(tmpdir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for ent := range reader.Pathways() {
+		assert.Equal(t, "To Platform 1", ent.SignpostedAs.Val)
+		assert.Equal(t, "To Exit", ent.ReverseSignpostedAs.Val)
+		// The alias resolves to the field, so it is not kept as an extra column.
+		_, extraOk := ent.GetExtra("reverse_signposted_as")
+		assert.False(t, extraOk, "expected the alias to load as a field, not an extra column")
+		found = true
+	}
+	assert.True(t, found, "expected to read back a pathway")
+}
