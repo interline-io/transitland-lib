@@ -116,6 +116,14 @@ func loadRowReflect(ent interface{}, row Row) []error {
 	} else {
 		// Get the struct tag map
 		fmap := MapperCache.GetStructTagMap(ent)
+		// A file can carry both a field's own name and an alias for it, e.g. a
+		// feed written midway through a rename. The field's own column wins; the
+		// alias column is kept as an extra instead of overwriting it, so nothing
+		// depends on which column comes first.
+		headerNames := make(map[string]bool, len(row.Header))
+		for _, h := range row.Header {
+			headerNames[h] = true
+		}
 		// For each struct tag, set the field value
 		entValue := reflect.ValueOf(ent).Elem()
 		for i := 0; i < len(row.Header); i++ {
@@ -125,6 +133,9 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				strv = row.Row[i]
 			}
 			fieldInfo, ok := fmap[fieldName]
+			if ok && fieldInfo.IsAlias() && headerNames[fieldInfo.AliasOf] {
+				ok = false
+			}
 			// Add to extra fields if there's no struct tag
 			if !ok {
 				if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 {

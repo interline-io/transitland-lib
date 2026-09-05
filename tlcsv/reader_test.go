@@ -5,14 +5,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/causes"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/tt"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReader_TripsWithStopTimes(t *testing.T) {
@@ -462,4 +465,72 @@ func TestValidateStructure_Partial(t *testing.T) {
 			}
 		}
 	})
+}
+
+// writePathways writes a one-row pathways.txt with the given header into a temp
+// directory and returns a reader for it.
+func readPathwaysWithHeader(t *testing.T, header string, row string) []gtfs.Pathway {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pathways.txt"), []byte(header+"\n"+row+"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	reader, err := NewReader(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []gtfs.Pathway
+	for ent := range reader.Pathways() {
+		out = append(out, ent)
+	}
+	return out
+}
+
+// Feeds exported by earlier versions of this library carry the derived column
+// name; the csv alias keeps that signage text from being dropped on read.
+func TestReader_PathwayReverseSignpostedAsAlias(t *testing.T) {
+	pathways := readPathwaysWithHeader(t,
+		"pathway_id,from_stop_id,to_stop_id,pathway_mode,is_bidirectional,signposted_as,reverse_signposted_as",
+		"pathway1,stop1,stop2,1,1,To Platform 1,To Exit")
+	if len(pathways) != 1 {
+		t.Fatalf("got %d pathways, expected 1", len(pathways))
+	}
+	assert.Equal(t, "To Platform 1", pathways[0].SignpostedAs.Val)
+	assert.Equal(t, "To Exit", pathways[0].ReverseSignpostedAs.Val)
+	// The alias resolves to the field, so it is not kept as an extra column.
+	_, extraOk := pathways[0].GetExtra("reverse_signposted_as")
+	assert.False(t, extraOk, "expected the alias to load as a field, not an extra column")
+}
+
+// A file written midway through the rename can carry both spellings. The field's
+// own column wins regardless of column order, and the alias column is kept as an
+// extra rather than silently overwriting it.
+func TestReader_PathwayBothSignpostedSpellings(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		header string
+		row    string
+	}{
+		{
+			name:   "spec column first",
+			header: "pathway_id,from_stop_id,to_stop_id,pathway_mode,is_bidirectional,reversed_signposted_as,reverse_signposted_as",
+			row:    "pathway1,stop1,stop2,1,1,SPEC,LEGACY",
+		},
+		{
+			name:   "alias column first",
+			header: "pathway_id,from_stop_id,to_stop_id,pathway_mode,is_bidirectional,reverse_signposted_as,reversed_signposted_as",
+			row:    "pathway1,stop1,stop2,1,1,LEGACY,SPEC",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			pathways := readPathwaysWithHeader(t, tc.header, tc.row)
+			if len(pathways) != 1 {
+				t.Fatalf("got %d pathways, expected 1", len(pathways))
+			}
+			assert.Equal(t, "SPEC", pathways[0].ReverseSignpostedAs.Val)
+			extra, extraOk := pathways[0].GetExtra("reverse_signposted_as")
+			assert.True(t, extraOk, "expected the alias column to survive as an extra")
+			assert.Equal(t, "LEGACY", extra)
+		})
+	}
 }
