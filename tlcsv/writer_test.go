@@ -2,11 +2,14 @@ package tlcsv
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -85,4 +88,63 @@ func TestWriterExtraColumn(t *testing.T) {
 	if !found {
 		t.Error("expected to get a stop with extra columns")
 	}
+}
+
+// The GTFS field is "reversed_signposted_as"; a previous refactor derived the column
+// name from the Go field name and silently wrote (and read) "reverse_signposted_as",
+// which spec-compliant consumers ignore. See gtfs/pathway.go.
+func TestWriterPathwayReversedSignpostedAs(t *testing.T) {
+	tmpdir, err := os.MkdirTemp("", "gtfs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpdir)
+	writer, err := NewWriter(tmpdir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Open(); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Create(); err != nil {
+		t.Fatal(err)
+	}
+	testEnt := gtfs.Pathway{
+		PathwayID:           tt.NewString("pathway1"),
+		FromStopID:          tt.NewString("stop1"),
+		ToStopID:            tt.NewString("stop2"),
+		PathwayMode:         tt.NewInt(1),
+		IsBidirectional:     tt.NewInt(1),
+		SignpostedAs:        tt.NewString("To Platform 1"),
+		ReverseSignpostedAs: tt.NewString("To Exit"),
+	}
+	if _, err := writer.AddEntity(&testEnt); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Written header must use the spec field name.
+	data, err := os.ReadFile(filepath.Join(tmpdir, "pathways.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	header, _, _ := strings.Cut(string(data), "\n")
+	cols := strings.Split(strings.TrimSpace(header), ",")
+	assert.Contains(t, cols, "reversed_signposted_as")
+	assert.NotContains(t, cols, "reverse_signposted_as")
+
+	// And a feed using the spec field name must round trip.
+	reader, err := NewReader(tmpdir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for ent := range reader.Pathways() {
+		assert.Equal(t, "To Platform 1", ent.SignpostedAs.Val)
+		assert.Equal(t, "To Exit", ent.ReverseSignpostedAs.Val)
+		found = true
+	}
+	assert.True(t, found, "expected to read back a pathway")
 }
