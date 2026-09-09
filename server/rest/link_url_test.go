@@ -31,7 +31,7 @@ func testHandlerWithLinkURL(t testing.TB, fn func(context.Context, string) strin
 	t.Helper()
 	cfg := testconfig.Config(t, testconfig.Options{Storage: testdata.Path("server", "tmp")})
 	cfg.LinkURL = fn
-	graphqlHandler, err := gql.NewServer()
+	graphqlHandler, err := gql.NewDefaultServer()
 	require.NoError(t, err)
 	restHandler, err := NewServer(graphqlHandler)
 	require.NoError(t, err)

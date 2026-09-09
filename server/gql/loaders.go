@@ -501,7 +501,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 	return loaders
 }
 
-func loaderMiddleware(next http.Handler) http.Handler {
+// LoaderMiddleware installs the per-request dataloaders the resolvers read from.
+// A caller composing its own server must wrap the gqlgen handler in this.
+func LoaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This is per request scoped loaders/cache
 		ctx := r.Context()

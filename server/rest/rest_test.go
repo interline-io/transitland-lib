@@ -45,7 +45,7 @@ type testCase struct {
 
 func testHandlersWithOptions(t testing.TB, opts testconfig.Options) (http.Handler, http.Handler, model.Config) {
 	cfg := testconfig.Config(t, opts)
-	graphqlHandler, err := gql.NewServer()
+	graphqlHandler, err := gql.NewDefaultServer()
 	if err != nil {
 		t.Fatal(err)
 	}

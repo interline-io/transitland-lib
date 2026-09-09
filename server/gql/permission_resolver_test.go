@@ -45,7 +45,7 @@ func fgaTestOpts(t testing.TB) testconfig.Options {
 
 // newPermTestClientFromConfig creates a GraphQL test client from an existing config.
 func newPermTestClientFromConfig(cfg model.Config, user string, roles ...string) *client.Client {
-	srv, _ := NewServer()
+	srv, _ := NewDefaultServer()
 	handler := model.AddConfigAndPerms(cfg, srv)
 	handler = usercheck.NewUserDefaultMiddleware(func() authn.User {
 		return authn.NewCtxUser(user, user, user+"@example.com").WithRoles(roles...)
@@ -557,7 +557,7 @@ func TestPermissionResolver_Filtering(t *testing.T) {
 }
 
 func TestPermissionResolver_NilPermissionManager(t *testing.T) {
-	srv, _ := NewServer()
+	srv, _ := NewDefaultServer()
 	cfg := testconfig.Config(t, testconfig.Options{})
 	handler := model.AddConfigAndPerms(cfg, srv)
 	handler = usercheck.NewUserDefaultMiddleware(func() authn.User {

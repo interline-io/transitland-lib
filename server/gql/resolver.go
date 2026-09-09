@@ -6,7 +6,6 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/internal/generated/gqlout"
-	"github.com/interline-io/transitland-lib/server/meters"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
 )
@@ -67,13 +66,6 @@ func checkCursor(after *int) *model.Cursor {
 		cursor = &c
 	}
 	return cursor
-}
-
-func addMetric(ctx context.Context, resolverName string) context.Context {
-	if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-		apiMeter.ApplyDimension("resolver", resolverName)
-	}
-	return ctx
 }
 
 func checkGeo(maxRadius float64, near *model.PointRadius, bbox *model.BoundingBox) error {

@@ -24,7 +24,7 @@ const DefaultMaxUploadSize int64 = 32 << 20 // 32 MiB
 // upload cap (that is MaxUploadSize); keep it modest.
 const maxMultipartMemory int64 = 32 << 20 // 32 MiB
 
-// serverConfig holds NewServer settings populated by ServerOptions before the
+// serverConfig holds NewDefaultServer settings populated by ServerOptions before the
 // gqlgen server is constructed.
 type serverConfig struct {
 	maxUploadSize      int64
@@ -59,7 +59,20 @@ func WithMaxMultipartMemory(n int64) ServerOption {
 	}
 }
 
-func NewServer(opts ...ServerOption) (http.Handler, error) {
+// NewExecutableSchema returns the generated schema bound to the resolvers, for a
+// caller building its own gqlgen server.
+func NewExecutableSchema() graphql.ExecutableSchema {
+	return gqlout.NewExecutableSchema(gqlout.Config{Resolvers: &Resolver{}})
+}
+
+// NewDefaultServer builds a gqlgen server over the schema with the transports,
+// caches and extensions it is normally served with, wrapped in LoaderMiddleware.
+//
+// This is the default composition, used by tests, the demo command and the wasm
+// bridge. A deployment that needs to decide for itself which transports and
+// extensions to expose — introspection and websockets in particular — builds its
+// own from NewExecutableSchema and LoaderMiddleware instead.
+func NewDefaultServer(opts ...ServerOption) (http.Handler, error) {
 	cfg := serverConfig{
 		maxUploadSize:      DefaultMaxUploadSize,
 		maxMultipartMemory: maxMultipartMemory,
@@ -70,14 +83,12 @@ func NewServer(opts ...ServerOption) (http.Handler, error) {
 		}
 	}
 
-	c := gqlout.Config{Resolvers: &Resolver{}}
-
 	// Equivalent to handler.NewDefaultServer, but with a configurable multipart
 	// upload cap. (gqlgen's default MultipartForm rejects bodies over 32 MiB,
 	// and because it matches the first transport that supports a request, the
 	// cap cannot be raised by adding a second MultipartForm after the fact — so
 	// the server has to be built explicitly here.)
-	srv := handler.New(gqlout.NewExecutableSchema(c))
+	srv := handler.New(NewExecutableSchema())
 	srv.AddTransport(transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
 	})
@@ -101,6 +112,6 @@ func NewServer(opts ...ServerOption) (http.Handler, error) {
 		}
 	}
 
-	graphqlServer := loaderMiddleware(srv)
+	graphqlServer := LoaderMiddleware(srv)
 	return graphqlServer, nil
 }

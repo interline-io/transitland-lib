@@ -88,7 +88,6 @@ func (r *vehiclePositionResolver) Stop(ctx context.Context, obj *model.VehiclePo
 }
 
 func (r *queryResolver) VehiclePositions(ctx context.Context, limit *int, where model.VehiclePositionFilter) ([]*model.VehiclePosition, error) {
-	ctx = addMetric(ctx, "vehiclePositions")
 	if err := checkVehiclePositionGeo(ctx, &where); err != nil {
 		return nil, err
 	}

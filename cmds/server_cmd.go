@@ -251,7 +251,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	meterProvider := localmeter.NewLocalMeterProvider()
 
 	// GraphQL API
-	graphqlServer, err := gql.NewServer()
+	graphqlServer, err := gql.NewDefaultServer()
 	if err != nil {
 		return err
 	} else {

@@ -18,7 +18,7 @@ func TestTripRequest(t *testing.T) {
 		WhenUtc: "2018-06-01T00:00:00Z",
 		RTJsons: testconfig.DefaultRTJson(),
 	})
-	graphqlHandler, err := gql.NewServer()
+	graphqlHandler, err := gql.NewDefaultServer()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -482,7 +482,7 @@ func TestAgencyResolver_Authz(t *testing.T) {
 		FGAModelTuples: fgaTestTuples,
 	})
 
-	srv, err := NewServer()
+	srv, err := NewDefaultServer()
 	if err != nil {
 		t.Fatal(err)
 	}
