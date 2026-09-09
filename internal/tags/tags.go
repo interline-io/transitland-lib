@@ -73,6 +73,7 @@ func ToSnakeCase(str string) string {
 // FieldInfo contains the parsed tag values for a single attribute.
 type FieldInfo struct {
 	Name           string
+	AliasOf        string
 	Required       bool
 	Target         string
 	Index          []int
@@ -83,6 +84,12 @@ type FieldInfo struct {
 	EnumValues     []int64
 	SortOrder      int
 	Kind           SortKind
+}
+
+// IsAlias reports whether this entry is an additional name for another field
+// rather than the field's own name.
+func (fi *FieldInfo) IsAlias() bool {
+	return fi.AliasOf != ""
 }
 
 // FieldMap contains all the parsed tags for a struct.
@@ -120,6 +127,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			)
 		}
 		m = FieldMap{}
+		aliases := map[string]*FieldInfo{}
 		fields := c.Mapper.TypeMap(reflect.TypeOf(ent))
 		for i, fi := range fields.Index {
 			_ = i
@@ -212,7 +220,37 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 					mfi.SortOrder = optParse
 				}
 			}
+			// The alias is read from this mapper's own tag options, so an alias
+			// declared for one tag namespace stays invisible to the others.
+			if optVal := fi.Options["alias"]; optVal != "" {
+				if prev, exists := aliases[optVal]; exists {
+					log.For(ctx).Error().Msgf(
+						"error constructing field map for type %T: fields '%s' and '%s' both declare the alias '%s'; ignoring the one on '%s'",
+						ent, prev.Name, fi.Name, optVal, prev.Name,
+					)
+				}
+				aliases[optVal] = &mfi
+			}
 			m[fi.Name] = &mfi
+		}
+		// Register aliases after every field is mapped, so a field's own name is
+		// never displaced by another field's alias. An alias entry carries only
+		// what is needed to locate the field: validation tags stay on the field's
+		// own entry, so a value is checked once, under the name the file uses.
+		for aliasName, fi := range aliases {
+			if _, exists := m[aliasName]; exists {
+				log.For(ctx).Error().Msgf(
+					"error constructing field map for type %T: alias '%s' is already the name of a field; ignoring it",
+					ent, aliasName,
+				)
+				continue
+			}
+			m[aliasName] = &FieldInfo{
+				Name:    aliasName,
+				AliasOf: fi.Name,
+				Index:   fi.Index,
+				Kind:    fi.Kind,
+			}
 		}
 		c.typemap[t] = m
 	}
@@ -240,12 +278,15 @@ func (c *Cache) GetHeader(ent interface{}) ([]string, error) {
 	fmap := c.GetStructTagMap(ent)
 	stms := []*FieldInfo{}
 	for _, stm := range fmap {
+		if stm.IsAlias() {
+			continue
+		}
 		stms = append(stms, stm)
 	}
 	sort.Slice(stms, func(i, j int) bool {
 		for pos := 0; ; pos++ {
 			if pos >= len(stms[i].Index) {
-				return true
+				return pos < len(stms[j].Index)
 			}
 			if pos >= len(stms[j].Index) {
 				return false

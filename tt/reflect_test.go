@@ -162,3 +162,33 @@ func firstError(v []error) error {
 	}
 	return nil
 }
+
+// An alias is an additional name for a field on the load path. It must not make
+// the field look like a second field here: the value is checked once, and a
+// reference is remapped once, under the name the field is written as.
+func TestReflect_AliasIsNotASecondField(t *testing.T) {
+	t.Run("value is checked once", func(t *testing.T) {
+		ent := struct {
+			Value Timezone `csv:"tz,alias=legacy_tz"`
+		}{Value: NewTimezone("Not/AZone")}
+		errs := ReflectCheckErrors(&ent)
+		assert.Len(t, errs, 1, "expected one error, got %v", errs)
+	})
+	t.Run("tag-based check runs once", func(t *testing.T) {
+		ent := struct {
+			Value Int `csv:"mode,alias=legacy_mode" enum:"1,2,3"`
+		}{Value: NewInt(9)}
+		errs := ReflectCheckErrors(&ent)
+		assert.Len(t, errs, 1, "expected one error, got %v", errs)
+	})
+	t.Run("reference is remapped once", func(t *testing.T) {
+		ent := struct {
+			Ref String `csv:"ref,alias=old_ref" target:"stops.txt"`
+		}{Ref: NewString("src1")}
+		emap := NewEntityMap()
+		emap.Set("stops.txt", "src1", "db1")
+		errs := ReflectUpdateKeys(emap, &ent)
+		assert.Empty(t, errs, "expected no errors, got %v", errs)
+		assert.Equal(t, "db1", ent.Ref.Val)
+	})
+}

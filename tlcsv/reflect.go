@@ -125,6 +125,15 @@ func loadRowReflect(ent interface{}, row Row) []error {
 				strv = row.Row[i]
 			}
 			fieldInfo, ok := fmap[fieldName]
+			if ok && fieldInfo.IsAlias() {
+				// A file can carry both a field's own name and an alias for it,
+				// e.g. a feed written midway through a rename. The field's own
+				// column wins; the alias column falls through to extras instead
+				// of overwriting it, so nothing depends on column order.
+				if _, hasOwn := row.Hindex[fieldInfo.AliasOf]; hasOwn {
+					ok = false
+				}
+			}
 			// Add to extra fields if there's no struct tag
 			if !ok {
 				if extEnt, ok2 := ent.(tt.EntityWithExtra); ok2 {
