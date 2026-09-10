@@ -354,9 +354,8 @@ func makeHandlerFunc(graphqlHandler http.Handler, f func(http.Handler, http.Resp
 	}
 }
 
-// apiHandlerPtr constrains PT to *T where the pointer is an apiHandler. Request
-// params are unmarshaled into the value, so it has to be addressable; stating
-// that in the constraint means the compiler enforces it.
+// apiHandlerPtr constrains PT to *T where the pointer is an apiHandler, so a
+// handler can only be built over a request type that actually serves one.
 type apiHandlerPtr[T any] interface {
 	*T
 	apiHandler

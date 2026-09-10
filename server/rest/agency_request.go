@@ -106,7 +106,7 @@ func (r AgencyRequest) RequestInfo() RequestInfo {
 func (r AgencyRequest) ResponseKey() string { return "agencies" }
 
 // Query returns a GraphQL query string and variables.
-func (r *AgencyRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r AgencyRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	if r.AgencyKey == "" {
 		// pass
 	} else if fsid, eid, ok := strings.Cut(r.AgencyKey, ":"); ok {

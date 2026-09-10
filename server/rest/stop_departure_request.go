@@ -117,7 +117,7 @@ func (r StopDepartureRequest) ResponseKey() string { return "stops" }
 func (r StopDepartureRequest) IncludeNext() bool { return false }
 
 // Query returns a GraphQL query string and variables.
-func (r *StopDepartureRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r StopDepartureRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	if r.StopKey == "" {
 		// TODO: add a way to reject request as invalid
 	} else if fsid, eid, ok := strings.Cut(r.StopKey, ":"); ok {

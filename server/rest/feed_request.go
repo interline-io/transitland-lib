@@ -109,7 +109,7 @@ func (r FeedRequest) ResponseKey() string {
 }
 
 // Query returns a GraphQL query string and variables.
-func (r *FeedRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r FeedRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	if r.FeedKey == "" {
 		// pass
 	} else if v, err := strconv.Atoi(r.FeedKey); err == nil {
@@ -157,7 +157,7 @@ func (r *FeedRequest) Query(ctx context.Context) (string, map[string]interface{}
 }
 
 // ProcessGeoJSON .
-func (r *FeedRequest) ProcessGeoJSON(ctx context.Context, response map[string]interface{}) error {
+func (r FeedRequest) ProcessGeoJSON(ctx context.Context, response map[string]interface{}) error {
 	// This is not ideal. Use gjson?
 	entities, ok := response[r.ResponseKey()].([]interface{})
 	if ok {
@@ -270,7 +270,7 @@ func (r FeedDownloadLatestFeedVersionRequest) RequestInfo() RequestInfo {
 }
 
 // Query returns a GraphQL query string and variables.
-func (r *FeedDownloadLatestFeedVersionRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r FeedDownloadLatestFeedVersionRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	return "", nil
 }
 
@@ -339,6 +339,6 @@ func (r FeedDownloadRtRequest) RequestInfo() RequestInfo {
 }
 
 // Query returns a GraphQL query string and variables.
-func (r *FeedDownloadRtRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r FeedDownloadRtRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	return "", nil
 }

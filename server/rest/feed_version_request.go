@@ -101,7 +101,7 @@ func (r FeedVersionRequest) RequestInfo() RequestInfo {
 }
 
 // Query returns a GraphQL query string and variables.
-func (r *FeedVersionRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r FeedVersionRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	// Handle feed key
 	if r.FeedKey == "" {
 		// pass
@@ -244,6 +244,6 @@ func (r FeedVersionDownloadRequest) RequestInfo() RequestInfo {
 }
 
 // Query returns a GraphQL query string and variables.
-func (r *FeedVersionDownloadRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r FeedVersionDownloadRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	return "", nil
 }

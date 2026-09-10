@@ -28,7 +28,6 @@ func TestFeedVersionExportRequest(t *testing.T) {
 	_, restSrv, cfg := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
-	restSrv = gatedRest(restSrv)
 
 	// Get integer IDs for some feed versions
 	ctx := context.Background()
@@ -50,14 +49,8 @@ func TestFeedVersionExportRequest(t *testing.T) {
 
 	// Common middleware setups
 	asAdmin := usercheck.AdminDefaultMiddleware("test")(restSrv)
-	asUserWithoutRole := usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "", "").WithRoles("some_other_role")
-	})(restSrv)
-	asUserWithDownloadRole := usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_historic")
-	})(restSrv)
-	asUserWithExportRole := usercheck.NewUserDefaultMiddleware(func() authn.User {
-		return authn.NewCtxUser("testuser", "", "").WithRoles("tl_export_feed_versions")
+	asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
+		return authn.NewCtxUser("testuser", "", "")
 	})(restSrv)
 
 	t.Run("basic export single feed version", func(t *testing.T) {
@@ -344,40 +337,13 @@ func TestFeedVersionExportRequest(t *testing.T) {
 		}
 	})
 
-	t.Run("not authorized as anon", func(t *testing.T) {
+	t.Run("ok as user", func(t *testing.T) {
 		reqBody := FeedVersionExportRequest{
 			FeedVersionKeys: []string{caltrainFv},
 		}
-		rr := makeExportRequest(t, reqBody, restSrv)
+		rr := makeExportRequest(t, reqBody, asUser)
 
-		assert.Equal(t, 401, rr.Result().StatusCode, "should be unauthorized")
-	})
-
-	t.Run("not authorized as user, missing role", func(t *testing.T) {
-		reqBody := FeedVersionExportRequest{
-			FeedVersionKeys: []string{caltrainFv},
-		}
-		rr := makeExportRequest(t, reqBody, asUserWithoutRole)
-
-		assert.Equal(t, 401, rr.Result().StatusCode, "should be unauthorized without export role")
-	})
-
-	t.Run("not authorized as user, only download role", func(t *testing.T) {
-		reqBody := FeedVersionExportRequest{
-			FeedVersionKeys: []string{caltrainFv},
-		}
-		rr := makeExportRequest(t, reqBody, asUserWithDownloadRole)
-
-		assert.Equal(t, 401, rr.Result().StatusCode, "should be unauthorized with only download role")
-	})
-
-	t.Run("authorized as user with export role", func(t *testing.T) {
-		reqBody := FeedVersionExportRequest{
-			FeedVersionKeys: []string{caltrainFv},
-		}
-		rr := makeExportRequest(t, reqBody, asUserWithExportRole)
-
-		assert.Equal(t, 200, rr.Result().StatusCode, "should be authorized with export role")
+		assert.Equal(t, 200, rr.Result().StatusCode, "any authenticated user; roles are the deployment's concern")
 	})
 
 	t.Run("bad request - empty feed_version_keys", func(t *testing.T) {
