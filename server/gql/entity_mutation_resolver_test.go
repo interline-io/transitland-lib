@@ -147,7 +147,7 @@ func TestStopUpdate_GraphQLBumpsUpdatedAt(t *testing.T) {
 	// (the one called by Station Editor) actually persists an
 	// advancing updated_at, observable via a follow-up GraphQL query.
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
-		srv, _ := NewServer()
+		srv := NewDefaultHandler()
 		srv = model.AddConfigAndPerms(cfg, srv)
 		srv = usercheck.AdminDefaultMiddleware("test")(srv)
 		c := client.New(srv)

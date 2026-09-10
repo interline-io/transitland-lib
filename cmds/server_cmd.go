@@ -251,10 +251,8 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	meterProvider := localmeter.NewLocalMeterProvider()
 
 	// GraphQL API
-	graphqlServer, err := gql.NewServer()
-	if err != nil {
-		return err
-	} else {
+	graphqlServer := gql.NewDefaultHandler()
+	{
 		r := chi.NewRouter()
 		r.Use(meters.WithMeter(meterProvider, "graphql", 1.0, nil))
 		r.Mount("/", graphqlServer)

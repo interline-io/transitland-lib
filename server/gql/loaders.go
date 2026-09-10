@@ -501,7 +501,12 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 	return loaders
 }
 
-func loaderMiddleware(next http.Handler) http.Handler {
+// LoaderMiddleware installs the per-request dataloaders the resolvers read from.
+//
+// It must run inside the middleware that puts model.Config on the context: it
+// reads the Finder from there, and installs nothing when the config is absent,
+// which leaves the first resolver to reach for a loader panicking.
+func LoaderMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This is per request scoped loaders/cache
 		ctx := r.Context()

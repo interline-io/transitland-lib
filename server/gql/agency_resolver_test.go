@@ -482,10 +482,7 @@ func TestAgencyResolver_Authz(t *testing.T) {
 		FGAModelTuples: fgaTestTuples,
 	})
 
-	srv, err := NewServer()
-	if err != nil {
-		t.Fatal(err)
-	}
+	srv := NewDefaultHandler()
 
 	// Add config and perms middleware
 	srv = model.AddConfigAndPerms(cfg, srv)
