@@ -59,10 +59,19 @@ func feedDownloadRtHelper(graphqlHandler http.Handler, w http.ResponseWriter, r 
 	}
 
 	// This endpoint serves realtime messages rather than a feed version file, so
-	// only the license answer is used; an RT-only feed has no feed versions.
+	// the feed version is not required; an RT-only feed has no feed versions.
+	//
+	// The feed itself is required. The RT message store is a cache keyed by feed,
+	// with no permission check of its own, so this lookup is the only thing that
+	// establishes the caller may see this feed at all — and a feed they cannot see
+	// resolves with an empty license, which reads as redistributable.
 	d, err := LookupLatestFeedVersionDownload(ctx, graphqlHandler, key)
 	if err != nil {
 		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
+		return
+	}
+	if d.FeedOnestopID == "" {
+		util.WriteJsonError(w, "not found", http.StatusNotFound)
 		return
 	}
 	found := false
@@ -177,9 +186,13 @@ func recordDownload(ctx context.Context, dims meters.Dimensions) {
 // FeedVersionDownload identifies one feed version file and says whether its
 // feed's license permits redistributing it.
 //
-// An empty FeedVersionSHA1 means the key matched no feed version. Redistribution
-// is reported rather than enforced: the status code for a feed that forbids it
-// is the caller's to choose.
+// A caller must have both parts before serving: an empty FeedVersionSHA1 means
+// the key matched no feed version, and an empty FeedOnestopID means its feed was
+// not visible. Those are filtered separately, so a feed version granted
+// explicitly can resolve while its feed does not.
+//
+// Redistribution is reported rather than enforced: the status code for a feed
+// that forbids it is the caller's to choose.
 type FeedVersionDownload struct {
 	FeedOnestopID         string
 	FeedVersionSHA1       string
@@ -270,7 +283,7 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	if d.FeedVersionSHA1 == "" {
+	if d.FeedVersionSHA1 == "" || d.FeedOnestopID == "" {
 		util.WriteJsonError(w, "not found", http.StatusNotFound)
 		return
 	}
@@ -299,7 +312,7 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	if d.FeedVersionSHA1 == "" {
+	if d.FeedVersionSHA1 == "" || d.FeedOnestopID == "" {
 		util.WriteJsonError(w, "not found", http.StatusNotFound)
 		return
 	}
