@@ -12,18 +12,30 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
-// devMaxUpload is what NewDefaultHandler allows, deliberately far above gqlgen's
-// 32 MiB default: its callers are tests, the demo command and the wasm bridge
-const devMaxUpload int64 = 512 << 20 // 512 MiB
+// devMaxUpload allows uploads far larger than a deployment should accept, and
+// devMaxMemory buffers them whole in memory rather than spilling to a temp file.
+// Both are deliberate: this is what makes NewDefaultHandler unsuitable to serve,
+// and the wasm bridge has no filesystem to spill to anyway.
+//
+// devMaxMemory must stay strictly above devMaxUpload — gqlgen buffers only when
+// ContentLength is less than MaxMemory, so an upload of exactly devMaxUpload
+// would otherwise take the temp-file path.
+const (
+	devMaxUpload int64 = 512 << 20 // 512 MiB
+	devMaxMemory int64 = devMaxUpload + 1
+)
 
-// NewExecutableSchema returns the generated schema bound to the resolvers, for a
-// caller building its own gqlgen server.
+// NewExecutableSchema returns the generated schema bound to the resolvers.
 func NewExecutableSchema() graphql.ExecutableSchema {
 	return gqlout.NewExecutableSchema(gqlout.Config{Resolvers: &Resolver{}})
 }
 
 // NewDefaultHandler builds a gqlgen handler over the schema, wrapped in
-// LoaderMiddleware, for tests, the demo command and the wasm bridge.
+// LoaderMiddleware.
+//
+// It is deliberately not fit to serve: introspection is always on and uploads
+// are accepted whole into memory with no meaningful cap. Anything serving real
+// traffic builds its own from NewExecutableSchema and LoaderMiddleware.
 func NewDefaultHandler() http.Handler {
 	srv := handler.New(NewExecutableSchema())
 	srv.AddTransport(transport.Options{})
@@ -31,7 +43,7 @@ func NewDefaultHandler() http.Handler {
 	srv.AddTransport(transport.POST{})
 	srv.AddTransport(transport.MultipartForm{
 		MaxUploadSize: devMaxUpload,
-		MaxMemory:     devMaxUpload,
+		MaxMemory:     devMaxMemory,
 	})
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
 	srv.Use(extension.Introspection{})
