@@ -34,38 +34,39 @@ query($feed_onestop_id: String, $ids: [Int!]) {
   }
 `
 
+const feedVersionFileQuery = `
+query($feed_version_sha1: String, $ids: [Int!]) {
+	feed_versions(limit:1, ids: $ids, where:{sha1:$feed_version_sha1}) {
+	  sha1
+	  feed {
+		onestop_id
+		license {
+			redistribution_allowed
+		}
+	  }
+	}
+  }
+`
+
 func feedDownloadRtHelper(graphqlHandler http.Handler, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	key := chi.URLParam(r, "feed_key")
 	rtType := fmt.Sprintf("realtime_%s", chi.URLParam(r, "rt_type"))
 	format := chi.URLParam(r, "format")
-	gvars := hw{}
 	if key == "" {
 		util.WriteJsonError(w, "not found", http.StatusNotFound)
 		return
-	} else if v, err := strconv.Atoi(key); err == nil {
-		gvars["ids"] = []int{v}
-	} else {
-		gvars["feed_onestop_id"] = key
 	}
 
-	// Check if we're allowed to redistribute feed and look up latest feed version
-	feedResponse, err := makeGraphQLRequest(ctx, graphqlHandler, latestFeedVersionQuery, gvars)
+	// This endpoint serves realtime messages rather than a feed version file, so
+	// only the license answer is used; an RT-only feed has no feed versions.
+	d, err := LookupLatestFeedVersionDownload(ctx, graphqlHandler, key)
 	if err != nil {
 		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
 		return
 	}
-
 	found := false
-	allowed := false
-	jj, err := json.Marshal(feedResponse)
-	if err != nil {
-		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
-		return
-	}
-	if gjson.Get(string(jj), "feeds.0.license.redistribution_allowed").String() != "no" {
-		allowed = true
-	}
+	allowed := d.RedistributionAllowed
 
 	// Check if we have data
 	rtf := model.ForContext(ctx).RTFinder
@@ -131,11 +132,11 @@ const feedVersionDownloadMeter = "feed-version-downloads"
 // The same dimensions gate the quota and record the usage. A limit applies
 // only when its own dimensions are a subset of these, so checking with fewer
 // dimensions than are recorded would silently skip dimension-scoped limits.
-func downloadDimensions(fid string, fvsha1 string, isLatest bool) meters.Dimensions {
+func downloadDimensions(d FeedVersionDownload) meters.Dimensions {
 	return meters.Dimensions{
-		{Key: "fv_sha1", Value: fvsha1},
-		{Key: "feed_onestop_id", Value: fid},
-		{Key: "is_latest_feed_version", Value: strconv.FormatBool(isLatest)},
+		{Key: "fv_sha1", Value: d.FeedVersionSHA1},
+		{Key: "feed_onestop_id", Value: d.FeedOnestopID},
+		{Key: "is_latest_feed_version", Value: strconv.FormatBool(d.IsLatestFeedVersion)},
 	}
 }
 
@@ -173,60 +174,117 @@ func recordDownload(ctx context.Context, dims meters.Dimensions) {
 	}
 }
 
+// FeedVersionDownload identifies one feed version file and says whether its
+// feed's license permits redistributing it.
+//
+// An empty FeedVersionSHA1 means the key matched no feed version. Redistribution
+// is reported rather than enforced: the status code for a feed that forbids it
+// is the caller's to choose.
+type FeedVersionDownload struct {
+	FeedOnestopID         string
+	FeedVersionSHA1       string
+	RedistributionAllowed bool
+	// IsLatestFeedVersion records that this was resolved as a feed's current
+	// version rather than requested by key. Download quotas are scoped on it.
+	IsLatestFeedVersion bool
+}
+
+// LookupFeedVersionDownload resolves an integer id or a sha1 to the feed version
+// file it names.
+func LookupFeedVersionDownload(ctx context.Context, graphqlHandler http.Handler, key string) (FeedVersionDownload, error) {
+	var d FeedVersionDownload
+	vars, ok := downloadVars(key, "feed_version_sha1")
+	if !ok {
+		return d, nil
+	}
+	body, err := downloadLookup(ctx, graphqlHandler, feedVersionFileQuery, vars)
+	if err != nil {
+		return d, err
+	}
+	d.FeedVersionSHA1 = gjson.Get(body, "feed_versions.0.sha1").String()
+	d.FeedOnestopID = gjson.Get(body, "feed_versions.0.feed.onestop_id").String()
+	d.RedistributionAllowed = gjson.Get(body, "feed_versions.0.feed.license.redistribution_allowed").String() != "no"
+	return d, nil
+}
+
+// LookupLatestFeedVersionDownload resolves an integer id or a feed Onestop ID to
+// that feed's current version.
+//
+// A feed with no versions is not an error: RT-only feeds have none, and the
+// redistribution answer is still meaningful for them.
+func LookupLatestFeedVersionDownload(ctx context.Context, graphqlHandler http.Handler, feedKey string) (FeedVersionDownload, error) {
+	d := FeedVersionDownload{IsLatestFeedVersion: true}
+	vars, ok := downloadVars(feedKey, "feed_onestop_id")
+	if !ok {
+		return d, nil
+	}
+	body, err := downloadLookup(ctx, graphqlHandler, latestFeedVersionQuery, vars)
+	if err != nil {
+		return d, err
+	}
+	d.FeedVersionSHA1 = gjson.Get(body, "feeds.0.feed_versions.0.sha1").String()
+	d.FeedOnestopID = gjson.Get(body, "feeds.0.onestop_id").String()
+	d.RedistributionAllowed = gjson.Get(body, "feeds.0.license.redistribution_allowed").String() != "no"
+	return d, nil
+}
+
+// ServeFeedVersion writes the feed version file, redirecting to a signed URL
+// when the store supports one.
+func ServeFeedVersion(w http.ResponseWriter, r *http.Request, storage string, d FeedVersionDownload) error {
+	downloadKey := fmt.Sprintf("%s-%s.zip", d.FeedOnestopID, d.FeedVersionSHA1)
+	return serveFromStorage(w, r, storage, d.FeedVersionSHA1, downloadKey)
+}
+
+// downloadVars builds the query variables for a key that is either an integer
+// id or the string identifier named by nameVar. An empty key matches nothing.
+func downloadVars(key string, nameVar string) (hw, bool) {
+	if key == "" {
+		return nil, false
+	}
+	if v, err := strconv.Atoi(key); err == nil {
+		return hw{"ids": []int{v}}, true
+	}
+	return hw{nameVar: key}, true
+}
+
+// downloadLookup runs one lookup query and returns the response as JSON for
+// gjson to read.
+func downloadLookup(ctx context.Context, graphqlHandler http.Handler, query string, vars hw) (string, error) {
+	response, err := makeGraphQLRequest(ctx, graphqlHandler, query, vars)
+	if err != nil {
+		return "", err
+	}
+	body, err := json.Marshal(response)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
 // Query redirects user to download the given fv from S3 public URL
 // assuming that redistribution is allowed for the feed.
 func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	key := chi.URLParam(r, "feed_key")
-	gvars := hw{}
-	if key == "" {
-		util.WriteJsonError(w, "not found", http.StatusNotFound)
-		return
-	} else if v, err := strconv.Atoi(key); err == nil {
-		gvars["ids"] = []int{v}
-	} else {
-		gvars["feed_onestop_id"] = key
-	}
-
-	// Check if we're allowed to redistribute feed and look up latest feed version
-	feedResponse, err := makeGraphQLRequest(ctx, graphqlHandler, latestFeedVersionQuery, gvars)
+	d, err := LookupLatestFeedVersionDownload(ctx, graphqlHandler, chi.URLParam(r, "feed_key"))
 	if err != nil {
 		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	found := false
-	allowed := false
-	json, err := json.Marshal(feedResponse)
-	if err != nil {
-		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
-		return
-	}
-	if gjson.Get(string(json), "feeds.0.feed_versions.0.sha1").Exists() {
-		found = true
-	}
-	if gjson.Get(string(json), "feeds.0.license.redistribution_allowed").String() != "no" {
-		allowed = true
-	}
-	fid := gjson.Get(string(json), "feeds.0.onestop_id").String()
-	fvsha1 := gjson.Get(string(json), "feeds.0.feed_versions.0.sha1").String()
-	if !found {
+	if d.FeedVersionSHA1 == "" {
 		util.WriteJsonError(w, "not found", http.StatusNotFound)
 		return
 	}
-	if !allowed {
+	if !d.RedistributionAllowed {
 		util.WriteJsonError(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
 
-	dims := downloadDimensions(fid, fvsha1, true)
+	dims := downloadDimensions(d)
 	if !checkDownloadQuota(ctx, dims) {
 		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
 		return
 	}
-
-	downloadKey := fmt.Sprintf("%s-%s.zip", fid, fvsha1)
-	cfg := model.ForContext(ctx)
-	if err := serveFromStorage(w, r, cfg.Storage, fvsha1, downloadKey); err != nil {
+	if err := ServeFeedVersion(w, r, model.ForContext(ctx).Storage, d); err != nil {
 		// Do not meter
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
@@ -234,79 +292,28 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 	recordDownload(ctx, dims)
 }
 
-const feedVersionFileQuery = `
-query($feed_version_sha1: String, $ids: [Int!]) {
-	feed_versions(limit:1, ids: $ids, where:{sha1:$feed_version_sha1}) {
-	  sha1
-	  feed {
-		onestop_id
-		license {
-			redistribution_allowed
-		}
-	  }
-	}
-  }
-`
-
-// Query redirects user to download the given fv from S3 public URL
-// assuming that redistribution is allowed for the feed.
 func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	gvars := hw{}
-	key := chi.URLParam(r, "feed_version_key")
-	if key == "" {
-		util.WriteJsonError(w, "not found", http.StatusNotFound)
-		return
-	} else if v, err := strconv.Atoi(key); err == nil {
-		gvars["ids"] = []int{v}
-	} else {
-		gvars["feed_version_sha1"] = key
-	}
-	// Check if we're allowed to redistribute feed
-	checkfv, err := makeGraphQLRequest(ctx, graphqlHandler, feedVersionFileQuery, gvars)
+	d, err := LookupFeedVersionDownload(ctx, graphqlHandler, chi.URLParam(r, "feed_version_key"))
 	if err != nil {
 		util.WriteJsonError(w, "server error", http.StatusInternalServerError)
 		return
 	}
-	// todo: use gjson
-	found := false
-	allowed := false
-	fid := ""
-	fvsha1 := ""
-	if v, ok := checkfv["feed_versions"].([]interface{}); len(v) > 0 && ok {
-		if v2, ok := v[0].(hw); ok {
-			fvsha1 = v2["sha1"].(string)
-			if fvsha1 != "" {
-				found = true
-			}
-			if v3, ok := v2["feed"].(hw); ok {
-				fid = v3["onestop_id"].(string)
-				if v4, ok := v3["license"].(hw); ok {
-					if v4["redistribution_allowed"] != "no" {
-						allowed = true
-					}
-				}
-			}
-		}
-	}
-	if !found {
+	if d.FeedVersionSHA1 == "" {
 		util.WriteJsonError(w, "not found", http.StatusNotFound)
 		return
 	}
-	if !allowed {
+	if !d.RedistributionAllowed {
 		util.WriteJsonError(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
 
-	dims := downloadDimensions(fid, fvsha1, false)
+	dims := downloadDimensions(d)
 	if !checkDownloadQuota(ctx, dims) {
 		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
 		return
 	}
-
-	downloadKey := fmt.Sprintf("%s-%s.zip", fid, fvsha1)
-	cfg := model.ForContext(ctx)
-	if err := serveFromStorage(w, r, cfg.Storage, fvsha1, downloadKey); err != nil {
+	if err := ServeFeedVersion(w, r, model.ForContext(ctx).Storage, d); err != nil {
 		// Do not meter
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
