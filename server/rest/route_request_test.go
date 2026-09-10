@@ -21,98 +21,98 @@ func TestRouteRequest(t *testing.T) {
 	testcases := []testCase{
 		{
 			name:         "none",
-			h:            RouteRequest{WithCursor: WithCursor{Limit: 1000}},
+			h:            &RouteRequest{WithCursor: WithCursor{Limit: 1000}},
 			selector:     "routes.#.route_id",
 			expectSelect: routeIds,
 		},
 		{
 			name:         "search",
-			h:            RouteRequest{Search: "bullet"},
+			h:            &RouteRequest{Search: "bullet"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"Bu-130"},
 		},
 		{
 			name:         "feed_onestop_id",
-			h:            RouteRequest{FeedOnestopID: "CT"},
+			h:            &RouteRequest{FeedOnestopID: "CT"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
 		},
 		{
 
 			name:         "route_type:2",
-			h:            RouteRequest{RouteType: "2"},
+			h:            &RouteRequest{RouteType: "2"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130"},
 		},
 		{
 			name:         "route_type:1",
-			h:            RouteRequest{RouteType: "1"},
+			h:            &RouteRequest{RouteType: "1"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"01", "03", "05", "07", "11", "19", "RED", "BLUE", "GREEN", "YELLOW", "ORANGE", "SILVER"},
 		},
 		{
 			name:         "route_types:1,4",
-			h:            RouteRequest{RouteTypes: "1,4"},
+			h:            &RouteRequest{RouteTypes: "1,4"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"01", "03", "05", "07", "11", "19", "PWT", "RED", "BLUE", "GREEN", "YELLOW", "ORANGE", "SILVER"},
 		},
 		{
 			name:         "feed_onestop_id,route_id",
-			h:            RouteRequest{FeedOnestopID: "BA", RouteID: "19"},
+			h:            &RouteRequest{FeedOnestopID: "BA", RouteID: "19"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"19"},
 		},
 		{
 			name:         "feed_version_sha1",
-			h:            RouteRequest{FeedVersionSHA1: fv},
+			h:            &RouteRequest{FeedVersionSHA1: fv},
 			selector:     "routes.#.feed_version.sha1",
 			expectSelect: []string{fv, fv, fv, fv, fv, fv},
 		},
 		{
 			name:         "operator_onestop_id",
-			h:            RouteRequest{OperatorOnestopID: "o-9q9-bayarearapidtransit"},
+			h:            &RouteRequest{OperatorOnestopID: "o-9q9-bayarearapidtransit"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"01", "03", "05", "07", "11", "19"},
 		},
 		{
 			name:         "serves_stop_onestop_id",
-			h:            RouteRequest{ServesStopOnestopID: "s-9q8yyufxmv-sanfranciscocaltrain"},
+			h:            &RouteRequest{ServesStopOnestopID: "s-9q8yyufxmv-sanfranciscocaltrain"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"Bu-130", "Gi-130", "Li-130", "Lo-130", "Sp-130"},
 		},
 		{
 			name:         "serves_stop_onestop_id:none",
-			h:            RouteRequest{ServesStopOnestopID: "s-invalid-stop"},
+			h:            &RouteRequest{ServesStopOnestopID: "s-invalid-stop"},
 			selector:     "routes.#.route_id",
 			expectLength: 0,
 		},
 		{
 			name:         "lat,lon,radius 100m",
-			h:            RouteRequest{Lon: -122.407974, Lat: 37.784471, Radius: 100},
+			h:            &RouteRequest{Lon: -122.407974, Lat: 37.784471, Radius: 100},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"01", "05", "07", "11"},
 		},
 		{
 			name:         "lat,lon,radius 2000m",
-			h:            RouteRequest{Lon: -122.407974, Lat: 37.784471, Radius: 2000},
+			h:            &RouteRequest{Lon: -122.407974, Lat: 37.784471, Radius: 2000},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "01", "05", "07", "11"},
 		},
 		{
 			name:         "bbox",
-			h:            RouteRequest{Bbox: &restBbox{model.BoundingBox{MinLon: -122.2698781543005, MinLat: 37.80700393130445, MaxLon: -122.2677640139239, MaxLat: 37.8088734037938}}},
+			h:            &RouteRequest{Bbox: &restBbox{model.BoundingBox{MinLon: -122.2698781543005, MinLat: 37.80700393130445, MaxLon: -122.2677640139239, MaxLat: 37.8088734037938}}},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"01", "03", "07"},
 		},
 		{
 			name:         "feed:route_id",
-			h:            RouteRequest{RouteKey: "BA:01"},
+			h:            &RouteRequest{RouteKey: "BA:01"},
 			selector:     "routes.#.route_id",
 			expectSelect: []string{"01"},
 		},
 		{
 			name: "include_alerts:true",
-			h:    RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
+			h:    &RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
 			f: func(t *testing.T, jj string) {
 				a := gjson.Get(jj, "routes.0.alerts").Array()
 				assert.Equal(t, 2, len(a), "alert count")
@@ -120,7 +120,7 @@ func TestRouteRequest(t *testing.T) {
 		},
 		{
 			name: "include_alerts:false",
-			h:    RouteRequest{RouteKey: "BA:05", IncludeAlerts: false},
+			h:    &RouteRequest{RouteKey: "BA:05", IncludeAlerts: false},
 			f: func(t *testing.T, jj string) {
 				a := gjson.Get(jj, "routes.0.alerts").Array()
 				assert.Equal(t, 0, len(a), "alert count")
@@ -139,7 +139,7 @@ func TestRouteRequest_Format(t *testing.T) {
 		{
 			name:   "route geojson",
 			format: "geojson",
-			h:      RouteRequest{FeedOnestopID: "CT", Format: "geojson", WithCursor: WithCursor{Limit: 5}},
+			h:      &RouteRequest{FeedOnestopID: "CT", Format: "geojson", WithCursor: WithCursor{Limit: 5}},
 			f: func(t *testing.T, jj string) {
 				a := gjson.Get(jj, "features").Array()
 				assert.Equal(t, 5, len(a))
@@ -152,7 +152,7 @@ func TestRouteRequest_Format(t *testing.T) {
 		{
 			name:   "route geojsonl",
 			format: "geojsonl",
-			h:      RouteRequest{FeedOnestopID: "CT", Format: "geojsonl", WithCursor: WithCursor{Limit: 5}},
+			h:      &RouteRequest{FeedOnestopID: "CT", Format: "geojsonl", WithCursor: WithCursor{Limit: 5}},
 			f: func(t *testing.T, jj string) {
 				split := strings.Split(jj, "\n")
 				assert.Equal(t, 5, len(split))
@@ -182,34 +182,34 @@ func TestRouteRequest_Pagination(t *testing.T) {
 	testcases := []testCase{
 		{
 			name:         "limit:1",
-			h:            RouteRequest{WithCursor: WithCursor{Limit: 1}},
+			h:            &RouteRequest{WithCursor: WithCursor{Limit: 1}},
 			selector:     "routes.#.route_id",
 			expectSelect: nil,
 			expectLength: 1,
 		},
 		{
 			name:         "limit:100",
-			h:            RouteRequest{WithCursor: WithCursor{Limit: 100}},
+			h:            &RouteRequest{WithCursor: WithCursor{Limit: 100}},
 			selector:     "routes.#.route_id",
 			expectSelect: nil,
 			expectLength: 70,
 		},
 		{
 			name:         "pagination exists",
-			h:            RouteRequest{},
+			h:            &RouteRequest{},
 			selector:     "meta.after",
 			expectSelect: nil,
 			expectLength: 1,
 		}, // just check presence
 		{
 			name:         "pagination limit 10",
-			h:            RouteRequest{WithCursor: WithCursor{Limit: 10}},
+			h:            &RouteRequest{WithCursor: WithCursor{Limit: 10}},
 			selector:     "routes.#.route_id",
 			expectSelect: allIds[:10],
 		},
 		{
 			name:         "pagination after 10",
-			h:            RouteRequest{WithCursor: WithCursor{Limit: 10, After: allEnts[10].ID}},
+			h:            &RouteRequest{WithCursor: WithCursor{Limit: 10, After: allEnts[10].ID}},
 			selector:     "routes.#.route_id",
 			expectSelect: allIds[11:21],
 		},
@@ -225,47 +225,47 @@ func TestRouteRequest_License(t *testing.T) {
 	testcases := []testCase{
 		{
 			name: "license:share_alike_optional yes",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "yes"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "yes"}}, selector: "routes.#.route_id",
 			expectLength: 52,
 		},
 		{
 			name: "license:share_alike_optional no",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "routes.#.route_id",
 			expectLength: 6,
 		},
 		{
 			name: "license:share_alike_optional exclude_no",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "routes.#.route_id",
 			expectLength: 64,
 		},
 		{
 			name: "license:commercial_use_allowed yes",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "yes"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "yes"}}, selector: "routes.#.route_id",
 			expectLength: 52,
 		},
 		{
 			name: "license:commercial_use_allowed no",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "routes.#.route_id",
 			expectLength: 6,
 		},
 		{
 			name: "license:commercial_use_allowed exclude_no",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "routes.#.route_id",
 			expectLength: 64,
 		},
 		{
 			name: "license:create_derived_product yes",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "yes"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "yes"}}, selector: "routes.#.route_id",
 			expectLength: 52,
 		},
 		{
 			name: "license:create_derived_product no",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "routes.#.route_id",
 			expectLength: 6,
 		},
 		{
 			name: "license:create_derived_product exclude_no",
-			h:    RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "routes.#.route_id",
+			h:    &RouteRequest{WithCursor: WithCursor{Limit: 10_000}, LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "routes.#.route_id",
 			expectLength: 64,
 		},
 	}

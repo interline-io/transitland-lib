@@ -108,7 +108,7 @@ func (r TripRequest) ResponseKey() string {
 }
 
 // Query returns a GraphQL query string and variables.
-func (r TripRequest) Query(ctx context.Context) (string, map[string]interface{}) {
+func (r *TripRequest) Query(ctx context.Context) (string, map[string]interface{}) {
 	// ID or RouteID should be considered mandatory.
 	if r.RouteKey == "" {
 		// pass
@@ -162,7 +162,7 @@ func (r TripRequest) Query(ctx context.Context) (string, map[string]interface{})
 }
 
 // ProcessGeoJSON .
-func (r TripRequest) ProcessGeoJSON(ctx context.Context, response map[string]interface{}) error {
+func (r *TripRequest) ProcessGeoJSON(ctx context.Context, response map[string]interface{}) error {
 	entities, ok := response[r.ResponseKey()].([]interface{})
 	if ok {
 		for _, feature := range entities {

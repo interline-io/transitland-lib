@@ -121,7 +121,7 @@ func (r StopRequest) RequestInfo() RequestInfo {
 func (r StopRequest) ResponseKey() string { return "stops" }
 
 // Query returns a GraphQL query string and variables.
-func (r StopRequest) Query(ctx context.Context) (string, map[string]any) {
+func (r *StopRequest) Query(ctx context.Context) (string, map[string]any) {
 	if r.StopKey == "" {
 		// pass
 	} else if fsid, eid, ok := strings.Cut(r.StopKey, ":"); ok {

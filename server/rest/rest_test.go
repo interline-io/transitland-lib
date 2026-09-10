@@ -9,8 +9,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
+	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/gql"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
@@ -206,4 +208,23 @@ func TestSingleEntityNotFound(t *testing.T) {
 			}
 		})
 	}
+}
+
+// gatedRest puts the roles a deployment is expected to require in front of the
+// three privileged endpoints, delegating to srv for the response.
+//
+// NewServer applies no authorization of its own, so the authorization
+// assertions in the download and export tests cover this composition rather
+// than the default mounting. The gate wraps srv rather than a freshly mounted
+// handler so the request still passes through srv's config middleware.
+func gatedRest(srv http.Handler) http.Handler {
+	r := chi.NewRouter()
+	r.With(usercheck.RoleRequired("tl_download_fv_current")).
+		Handle("/feeds/{feed_key}/download_latest_feed_version", srv)
+	r.With(usercheck.RoleRequired("tl_download_fv_historic")).
+		Handle("/feed_versions/{feed_version_key}/download", srv)
+	r.With(usercheck.RoleRequired("tl_export_feed_versions")).
+		Method("POST", "/feed_versions/export", srv)
+	r.Mount("/", srv)
+	return r
 }

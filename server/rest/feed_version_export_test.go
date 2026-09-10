@@ -28,6 +28,7 @@ func TestFeedVersionExportRequest(t *testing.T) {
 	_, restSrv, cfg := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
+	restSrv = gatedRest(restSrv)
 
 	// Get integer IDs for some feed versions
 	ctx := context.Background()

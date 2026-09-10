@@ -39,6 +39,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 	gqlSrv, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
+	restSrv = gatedRest(restSrv)
 
 	t.Run("ok", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
@@ -143,6 +144,7 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 	gqlSrv, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 	})
+	restSrv = gatedRest(restSrv)
 
 	t.Run("ok", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)

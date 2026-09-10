@@ -121,19 +121,19 @@ func TestFeedRequest(t *testing.T) {
 		// spatial
 		{
 			name:         "lat,lon,radius 100m",
-			h:            FeedRequest{Lon: -122.407974, Lat: 37.784471, Radius: 100},
+			h:            &FeedRequest{Lon: -122.407974, Lat: 37.784471, Radius: 100},
 			selector:     "feeds.#.onestop_id",
 			expectSelect: []string{"BA"},
 		},
 		{
 			name:         "lat,lon,radius 2000m",
-			h:            FeedRequest{Lon: -122.407974, Lat: 37.784471, Radius: 2000},
+			h:            &FeedRequest{Lon: -122.407974, Lat: 37.784471, Radius: 2000},
 			selector:     "feeds.#.onestop_id",
 			expectSelect: []string{"CT", "BA"},
 		},
 		{
 			name:         "bbox",
-			h:            FeedRequest{Bbox: &restBbox{model.BoundingBox{MinLon: -122.2698781543005, MinLat: 37.80700393130445, MaxLon: -122.2677640139239, MaxLat: 37.8088734037938}}},
+			h:            &FeedRequest{Bbox: &restBbox{model.BoundingBox{MinLon: -122.2698781543005, MinLat: 37.80700393130445, MaxLon: -122.2677640139239, MaxLat: 37.8088734037938}}},
 			selector:     "feeds.#.onestop_id",
 			expectSelect: []string{"BA"},
 		},
@@ -150,7 +150,7 @@ func TestFeedRequest_Format(t *testing.T) {
 		{
 			name:   "feed geojson",
 			format: "geojson",
-			h:      FeedRequest{WithCursor: WithCursor{Limit: 5}},
+			h:      &FeedRequest{WithCursor: WithCursor{Limit: 5}},
 			f: func(t *testing.T, jj string) {
 				a := gjson.Get(jj, "features").Array()
 				assert.Equal(t, 5, len(a))
@@ -163,7 +163,7 @@ func TestFeedRequest_Format(t *testing.T) {
 		{
 			name:   "feed geojsonl",
 			format: "geojsonl",
-			h:      FeedRequest{WithCursor: WithCursor{Limit: 5}},
+			h:      &FeedRequest{WithCursor: WithCursor{Limit: 5}},
 			f: func(t *testing.T, jj string) {
 				split := strings.Split(jj, "\n")
 				assert.Equal(t, 5, len(split))
@@ -184,47 +184,47 @@ func TestFeedRequest_License(t *testing.T) {
 	testcases := []testCase{
 		{
 			name: "license:share_alike_optional yes",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "yes"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "yes"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"HA", "WMATA"},
 		},
 		{
 			name: "license:share_alike_optional no",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "no"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"BA"},
 		},
 		{
 			name: "license:share_alike_optional exclude_no",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseShareAlikeOptional: "exclude_no"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name: "license:commercial_use_allowed yes",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "yes"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "yes"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"HA", "WMATA"},
 		},
 		{
 			name: "license:commercial_use_allowed no",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "no"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"BA"},
 		},
 		{
 			name: "license:commercial_use_allowed exclude_no",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseCommercialUseAllowed: "exclude_no"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 		{
 			name: "license:create_derived_product yes",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "yes"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "yes"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"HA", "WMATA"},
 		},
 		{
 			name: "license:create_derived_product no",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "no"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"BA"},
 		},
 		{
 			name: "license:create_derived_product exclude_no",
-			h:    FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "feeds.#.onestop_id",
+			h:    &FeedRequest{LicenseFilter: LicenseFilter{LicenseCreateDerivedProduct: "exclude_no"}}, selector: "feeds.#.onestop_id",
 			expectSelect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
 		},
 	}
