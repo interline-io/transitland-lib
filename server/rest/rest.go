@@ -114,6 +114,9 @@ func NewOperatorEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
 
 // NewFeedVersionDownloadLatestHandler redirects to the latest feed version file
 // for a feed, when its license allows redistribution. Reads {feed_key}.
+//
+// Authorizes nobody. Mount it behind tl_download_fv_current, the role the
+// generated document advertises for this endpoint.
 func NewFeedVersionDownloadLatestHandler(graphqlHandler http.Handler) http.HandlerFunc {
 	return makeHandlerFunc(graphqlHandler, feedVersionDownloadLatestHandler)
 }
@@ -126,11 +129,19 @@ func NewFeedDownloadRtHandler(graphqlHandler http.Handler) http.HandlerFunc {
 
 // NewFeedVersionDownloadHandler serves one feed version file, when its license
 // allows redistribution and the caller is within quota. Reads {feed_version_key}.
+//
+// Authorizes nobody. Mount it behind tl_download_fv_historic, the role the
+// generated document advertises for this endpoint.
 func NewFeedVersionDownloadHandler(graphqlHandler http.Handler) http.HandlerFunc {
 	return makeHandlerFunc(graphqlHandler, feedVersionDownloadHandler)
 }
 
-// NewFeedVersionExportHandler builds a filtered feed version export. POST only.
+// NewFeedVersionExportHandler builds a filtered feed version export from a JSON
+// request body.
+//
+// Authorizes nobody, and accepts any method. Mount it for POST only and behind
+// tl_export_feed_versions, the role the generated document advertises for this
+// endpoint.
 func NewFeedVersionExportHandler(graphqlHandler http.Handler) http.HandlerFunc {
 	return makeHandlerFunc(graphqlHandler, feedVersionExportHandler)
 }
