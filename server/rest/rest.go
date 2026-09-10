@@ -14,8 +14,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/util"
-	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
-	"github.com/interline-io/transitland-lib/server/meters"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/rs/zerolog"
 )
@@ -29,59 +27,133 @@ var MAXLIMIT = 1_000
 // MAXRADIUS is the maximum point search radius
 const MAXRADIUS = 100 * 1000.0
 
-// mountPrefix returns the mount's absolute public base URL: restPrefix (the
-// mount's parent) plus the mount segment, recovered by cutting the route-owned
-// tail off urlPath. routeMarker is the matched route's literal head ("" for a
-// route at "/"), and must come from the route pattern — chi.URLParam values
-// stay percent-encoded while urlPath is decoded.
-func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
-	p := strings.TrimRight(urlPath, "/")
-	mount := p
-	if routeMarker != "" {
-		// First occurrence, not last: urlPath is decoded, so a path parameter can
-		// carry a second literal marker and re-anchor the mount inside it.
-		i := strings.Index(p, routeMarker)
-		if i < 0 {
-			// Only reachable if something upstream rewrote the path. Fall back to
-			// the bare prefix rather than splice the request path into a URL.
-			return restPrefix
-		}
-		mount = p[:i]
-	}
-	// A protocol-relative mount would redirect off-site from a relative Location.
-	// A non-empty restPrefix already fixes the authority, so only guard here.
-	if restPrefix == "" && isProtocolRelative(mount) {
-		return ""
-	}
-	return restPrefix + mount
+// Handler constructors, one per endpoint. Each binds the request type that
+// serves it, so a caller mounting these chooses paths and middleware without
+// also having to know which request type belongs to which route.
+//
+// Index handlers answer with an empty array when nothing matches; entity
+// handlers answer 404. The comment on each names the chi URL parameters it
+// reads: makeHandler copies them by name into the request struct, so a mount
+// that spells one differently silently drops that filter.
+
+// NewFeedIndexHandler serves the feed index. Reads {format}.
+func NewFeedIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[FeedRequest](graphqlHandler)
 }
 
-// isProtocolRelative reports whether s reads as //host/... rather than a path.
-// Backslashes count: browsers treat \ as / when parsing a special scheme.
-func isProtocolRelative(s string) bool {
-	isSlash := func(c byte) bool { return c == '/' || c == '\\' }
-	return len(s) > 1 && isSlash(s[0]) && isSlash(s[1])
+// NewFeedEntityHandler serves one feed. Reads {feed_key}, {format}.
+func NewFeedEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeEntityHandler[FeedKeyRequest](graphqlHandler)
 }
 
-// NewServer .
+// NewFeedVersionIndexHandler serves the feed version index. Reads {feed_key}, {format}.
+func NewFeedVersionIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[FeedVersionRequest](graphqlHandler)
+}
+
+// NewFeedVersionEntityHandler serves one feed version. Reads {feed_version_key}, {format}.
+func NewFeedVersionEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeEntityHandler[FeedVersionKeyRequest](graphqlHandler)
+}
+
+// NewAgencyIndexHandler serves the agency index. Reads {format}.
+func NewAgencyIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[AgencyRequest](graphqlHandler)
+}
+
+// NewAgencyEntityHandler serves one agency. Reads {agency_key}, {format}.
+func NewAgencyEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeEntityHandler[AgencyKeyRequest](graphqlHandler)
+}
+
+// NewRouteIndexHandler serves the route index. Reads {agency_key}, {format}.
+func NewRouteIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[RouteRequest](graphqlHandler)
+}
+
+// NewRouteEntityHandler serves one route. Reads {route_key}, {format}.
+func NewRouteEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeEntityHandler[RouteKeyRequest](graphqlHandler)
+}
+
+// NewTripIndexHandler serves the trip index. Reads {route_key}, {format}.
+func NewTripIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[TripRequest](graphqlHandler)
+}
+
+// NewTripEntityHandler serves one trip. Reads {route_key}, {id}, {format} — the
+// trip parameter is {id}, not {trip_key}.
+func NewTripEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeEntityHandler[TripEntityRequest](graphqlHandler)
+}
+
+// NewStopIndexHandler serves the stop index. Reads {format}.
+func NewStopIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[StopRequest](graphqlHandler)
+}
+
+// NewStopEntityHandler serves one stop. Reads {stop_key}, {format}.
+func NewStopEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeEntityHandler[StopEntityRequest](graphqlHandler)
+}
+
+// NewStopDepartureHandler serves departures for one stop. Reads {stop_key}.
+func NewStopDepartureHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[StopDepartureRequest](graphqlHandler)
+}
+
+// NewOperatorIndexHandler serves the operator index. Reads {format}.
+func NewOperatorIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[OperatorRequest](graphqlHandler)
+}
+
+// NewOperatorEntityHandler serves one operator. Reads {operator_key}, {format}.
+func NewOperatorEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeEntityHandler[OperatorKeyRequest](graphqlHandler)
+}
+
+// NewFeedVersionDownloadLatestHandler redirects to the latest feed version file
+// for a feed, when its license allows redistribution. Reads {feed_key}.
+//
+// Authorizes nobody. Mount it behind tl_download_fv_current, the role the
+// generated document advertises for this endpoint.
+func NewFeedVersionDownloadLatestHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeHandlerFunc(graphqlHandler, feedVersionDownloadLatestHandler)
+}
+
+// NewFeedDownloadRtHandler serves the latest GTFS Realtime message for a feed.
+// Reads {feed_key}, {rt_type}, {format}.
+func NewFeedDownloadRtHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeHandlerFunc(graphqlHandler, feedDownloadRtHelper)
+}
+
+// NewFeedVersionDownloadHandler serves one feed version file, when its license
+// allows redistribution and the caller is within quota. Reads {feed_version_key}.
+//
+// Authorizes nobody. Mount it behind tl_download_fv_historic, the role the
+// generated document advertises for this endpoint.
+func NewFeedVersionDownloadHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeHandlerFunc(graphqlHandler, feedVersionDownloadHandler)
+}
+
+// NewFeedVersionExportHandler builds a filtered feed version export from a JSON
+// request body.
+//
+// Authorizes nobody, and accepts any method. Mount it for POST only and behind
+// tl_export_feed_versions, the role the generated document advertises for this
+// endpoint.
+func NewFeedVersionExportHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeHandlerFunc(graphqlHandler, feedVersionExportHandler)
+}
+
+// NewServer mounts every REST endpoint on one router.
+//
+// This is the default mounting, for the library's own server command and its
+// tests. It applies no authorization: the download and export endpoints are
+// served to anyone who asks, so anything serving real traffic mounts the
+// handler constructors itself and gates them.
 func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	r := chi.NewRouter()
-
-	feedIndexHandler := makeIndexHandler(graphqlHandler, "feeds", func() apiHandler { return &FeedRequest{} })
-	feedEntityHandler := makeEntityHandler(graphqlHandler, "feeds", func() apiHandler { return &FeedRequest{} })
-	feedVersionIndexHandler := makeIndexHandler(graphqlHandler, "feedVersions", func() apiHandler { return &FeedVersionRequest{} })
-	feedVersionEntityHandler := makeEntityHandler(graphqlHandler, "feedVersions", func() apiHandler { return &FeedVersionRequest{} })
-	agencyIndexHandler := makeIndexHandler(graphqlHandler, "agencies", func() apiHandler { return &AgencyRequest{} })
-	agencyEntityHandler := makeEntityHandler(graphqlHandler, "agencies", func() apiHandler { return &AgencyRequest{} })
-	routeIndexHandler := makeIndexHandler(graphqlHandler, "routes", func() apiHandler { return &RouteRequest{} })
-	routeEntityHandler := makeEntityHandler(graphqlHandler, "routes", func() apiHandler { return &RouteRequest{} })
-	tripIndexHandler := makeIndexHandler(graphqlHandler, "trips", func() apiHandler { return &TripRequest{} })
-	tripEntityHandler := makeEntityHandler(graphqlHandler, "trips", func() apiHandler { return &TripRequest{} })
-	stopIndexHandler := makeIndexHandler(graphqlHandler, "stops", func() apiHandler { return &StopRequest{} })
-	stopEntityHandler := makeEntityHandler(graphqlHandler, "stops", func() apiHandler { return &StopRequest{} })
-	stopDepartureHandler := makeIndexHandler(graphqlHandler, "stopDepartures", func() apiHandler { return &StopDepartureRequest{} })
-	operatorIndexHandler := makeIndexHandler(graphqlHandler, "operators", func() apiHandler { return &OperatorRequest{} })
-	operatorEntityHandler := makeEntityHandler(graphqlHandler, "operators", func() apiHandler { return &OperatorRequest{} })
 
 	// Redirect root to OpenAPI documentation
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -92,50 +164,50 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	// OpenAPI Schema endpoint
 	r.Handle("/openapi.json", NewOpenAPIHandler())
 
-	r.HandleFunc("/feeds.{format}", feedIndexHandler)
-	r.HandleFunc("/feeds", feedIndexHandler)
-	r.HandleFunc("/feeds/{feed_key}.{format}", feedEntityHandler)
-	r.HandleFunc("/feeds/{feed_key}", feedEntityHandler)
-	r.Handle("/feeds/{feed_key}/download_latest_feed_version", usercheck.RoleRequired("tl_download_fv_current")(makeHandlerFunc(graphqlHandler, "feedVersionDownloadLatest", feedVersionDownloadLatestHandler)))
+	r.HandleFunc("/feeds.{format}", NewFeedIndexHandler(graphqlHandler))
+	r.HandleFunc("/feeds", NewFeedIndexHandler(graphqlHandler))
+	r.HandleFunc("/feeds/{feed_key}.{format}", NewFeedEntityHandler(graphqlHandler))
+	r.HandleFunc("/feeds/{feed_key}", NewFeedEntityHandler(graphqlHandler))
+	r.HandleFunc("/feeds/{feed_key}/download_latest_feed_version", NewFeedVersionDownloadLatestHandler(graphqlHandler))
 
-	r.Handle("/feeds/{feed_key}/download_latest_rt/{rt_type}.{format}", makeHandlerFunc(graphqlHandler, "feedDownloadRtHelper", feedDownloadRtHelper))
+	r.HandleFunc("/feeds/{feed_key}/download_latest_rt/{rt_type}.{format}", NewFeedDownloadRtHandler(graphqlHandler))
 
-	r.HandleFunc("/feed_versions.{format}", feedVersionIndexHandler)
-	r.HandleFunc("/feed_versions", feedVersionIndexHandler)
-	r.HandleFunc("/feed_versions/{feed_version_key}.{format}", feedVersionEntityHandler)
-	r.HandleFunc("/feed_versions/{feed_version_key}", feedVersionEntityHandler)
-	r.HandleFunc("/feeds/{feed_key}/feed_versions", feedVersionIndexHandler)
-	r.Handle("/feed_versions/{feed_version_key}/download", usercheck.RoleRequired("tl_download_fv_historic")(makeHandlerFunc(graphqlHandler, "feedVersionDownload", feedVersionDownloadHandler)))
-	r.Method("POST", "/feed_versions/export", usercheck.RoleRequired("tl_export_feed_versions")(makeHandlerFunc(graphqlHandler, "feedVersionExport", feedVersionExportHandler)))
+	r.HandleFunc("/feed_versions.{format}", NewFeedVersionIndexHandler(graphqlHandler))
+	r.HandleFunc("/feed_versions", NewFeedVersionIndexHandler(graphqlHandler))
+	r.HandleFunc("/feed_versions/{feed_version_key}.{format}", NewFeedVersionEntityHandler(graphqlHandler))
+	r.HandleFunc("/feed_versions/{feed_version_key}", NewFeedVersionEntityHandler(graphqlHandler))
+	r.HandleFunc("/feeds/{feed_key}/feed_versions", NewFeedVersionIndexHandler(graphqlHandler))
+	r.HandleFunc("/feed_versions/{feed_version_key}/download", NewFeedVersionDownloadHandler(graphqlHandler))
+	r.Method("POST", "/feed_versions/export", NewFeedVersionExportHandler(graphqlHandler))
 
-	r.HandleFunc("/agencies.{format}", agencyIndexHandler)
-	r.HandleFunc("/agencies", agencyIndexHandler)
-	r.HandleFunc("/agencies/{agency_key}.{format}", agencyEntityHandler)
-	r.HandleFunc("/agencies/{agency_key}", agencyEntityHandler)
+	r.HandleFunc("/agencies.{format}", NewAgencyIndexHandler(graphqlHandler))
+	r.HandleFunc("/agencies", NewAgencyIndexHandler(graphqlHandler))
+	r.HandleFunc("/agencies/{agency_key}.{format}", NewAgencyEntityHandler(graphqlHandler))
+	r.HandleFunc("/agencies/{agency_key}", NewAgencyEntityHandler(graphqlHandler))
 
-	r.HandleFunc("/routes.{format}", routeIndexHandler)
-	r.HandleFunc("/routes", routeIndexHandler)
-	r.HandleFunc("/routes/{route_key}.{format}", routeEntityHandler)
-	r.HandleFunc("/routes/{route_key}", routeEntityHandler)
-	r.HandleFunc("/agencies/{agency_key}/routes.{format}", routeIndexHandler)
-	r.HandleFunc("/agencies/{agency_key}/routes", routeIndexHandler)
+	r.HandleFunc("/routes.{format}", NewRouteIndexHandler(graphqlHandler))
+	r.HandleFunc("/routes", NewRouteIndexHandler(graphqlHandler))
+	r.HandleFunc("/routes/{route_key}.{format}", NewRouteEntityHandler(graphqlHandler))
+	r.HandleFunc("/routes/{route_key}", NewRouteEntityHandler(graphqlHandler))
+	r.HandleFunc("/agencies/{agency_key}/routes.{format}", NewRouteIndexHandler(graphqlHandler))
+	r.HandleFunc("/agencies/{agency_key}/routes", NewRouteIndexHandler(graphqlHandler))
 
-	r.HandleFunc("/routes/{route_key}/trips.{format}", tripIndexHandler)
-	r.HandleFunc("/routes/{route_key}/trips", tripIndexHandler)
-	r.HandleFunc("/routes/{route_key}/trips/{id}", tripEntityHandler)
-	r.HandleFunc("/routes/{route_key}/trips/{id}.{format}", tripEntityHandler)
+	r.HandleFunc("/routes/{route_key}/trips.{format}", NewTripIndexHandler(graphqlHandler))
+	r.HandleFunc("/routes/{route_key}/trips", NewTripIndexHandler(graphqlHandler))
+	r.HandleFunc("/routes/{route_key}/trips/{id}", NewTripEntityHandler(graphqlHandler))
+	r.HandleFunc("/routes/{route_key}/trips/{id}.{format}", NewTripEntityHandler(graphqlHandler))
 
-	r.HandleFunc("/stops.{format}", stopIndexHandler)
-	r.HandleFunc("/stops", stopIndexHandler)
-	r.HandleFunc("/stops/{stop_key}.{format}", stopEntityHandler)
-	r.HandleFunc("/stops/{stop_key}", stopEntityHandler)
+	r.HandleFunc("/stops.{format}", NewStopIndexHandler(graphqlHandler))
+	r.HandleFunc("/stops", NewStopIndexHandler(graphqlHandler))
+	r.HandleFunc("/stops/{stop_key}.{format}", NewStopEntityHandler(graphqlHandler))
+	r.HandleFunc("/stops/{stop_key}", NewStopEntityHandler(graphqlHandler))
 
-	r.HandleFunc("/stops/{stop_key}/departures", stopDepartureHandler)
+	r.HandleFunc("/stops/{stop_key}/departures", NewStopDepartureHandler(graphqlHandler))
 
-	r.HandleFunc("/operators.{format}", operatorIndexHandler)
-	r.HandleFunc("/operators", operatorIndexHandler)
-	r.HandleFunc("/operators/{operator_key}.{format}", operatorEntityHandler)
-	r.HandleFunc("/operators/{operator_key}", operatorEntityHandler)
+	r.HandleFunc("/operators.{format}", NewOperatorIndexHandler(graphqlHandler))
+	r.HandleFunc("/operators", NewOperatorIndexHandler(graphqlHandler))
+	r.HandleFunc("/operators/{operator_key}.{format}", NewOperatorEntityHandler(graphqlHandler))
+	r.HandleFunc("/operators/{operator_key}", NewOperatorEntityHandler(graphqlHandler))
 
 	// OnestopID generic handler
 	r.Handle("/onestop_id/{onestop_id}", &OnestopIdEntityRedirectRequest{})
@@ -190,6 +262,40 @@ func (w WithCursor) CheckAfter() int {
 // A type that specifies a JSON response key.
 type hasResponseKey interface {
 	ResponseKey() string
+}
+
+// mountPrefix returns the mount's absolute public base URL: restPrefix (the
+// mount's parent) plus the mount segment, recovered by cutting the route-owned
+// tail off urlPath. routeMarker is the matched route's literal head ("" for a
+// route at "/"), and must come from the route pattern — chi.URLParam values
+// stay percent-encoded while urlPath is decoded.
+func mountPrefix(restPrefix string, urlPath string, routeMarker string) string {
+	p := strings.TrimRight(urlPath, "/")
+	mount := p
+	if routeMarker != "" {
+		// First occurrence, not last: urlPath is decoded, so a path parameter can
+		// carry a second literal marker and re-anchor the mount inside it.
+		i := strings.Index(p, routeMarker)
+		if i < 0 {
+			// Only reachable if something upstream rewrote the path. Fall back to
+			// the bare prefix rather than splice the request path into a URL.
+			return restPrefix
+		}
+		mount = p[:i]
+	}
+	// A protocol-relative mount would redirect off-site from a relative Location.
+	// A non-empty restPrefix already fixes the authority, so only guard here.
+	if restPrefix == "" && isProtocolRelative(mount) {
+		return ""
+	}
+	return restPrefix + mount
+}
+
+// isProtocolRelative reports whether s reads as //host/... rather than a path.
+// Backslashes count: browsers treat \ as / when parsing a special scheme.
+func isProtocolRelative(s string) bool {
+	isSlash := func(c byte) bool { return c == '/' || c == '\\' }
+	return len(s) > 1 && isSlash(s[0]) && isSlash(s[1])
 }
 
 // checkEmptyResponse returns true if the response is empty for the given format
@@ -253,31 +359,37 @@ func queryToMap(vars url.Values) map[string]string {
 	return m
 }
 
-func makeHandlerFunc(graphqlHandler http.Handler, handlerName string, f func(http.Handler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+func makeHandlerFunc(graphqlHandler http.Handler, f func(http.Handler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-			apiMeter.ApplyDimension("handler", handlerName)
-		}
-		f(graphqlHandler, w, r.WithContext(ctx))
+		f(graphqlHandler, w, r)
 	}
 }
 
+// apiHandlerPtr constrains PT to *T where the pointer is an apiHandler, so a
+// handler can only be built over a request type that actually serves one.
+type apiHandlerPtr[T any] interface {
+	*T
+	apiHandler
+}
+
 // makeIndexHandler creates a handler for list/index endpoints that returns empty arrays normally.
-func makeIndexHandler(graphqlHandler http.Handler, handlerName string, f func() apiHandler) http.HandlerFunc {
-	return makeHandler(graphqlHandler, handlerName, f, false)
+func makeIndexHandler[T any, PT apiHandlerPtr[T]](graphqlHandler http.Handler) http.HandlerFunc {
+	return makeHandler[T, PT](graphqlHandler, false)
 }
 
 // makeEntityHandler creates a handler for single-entity endpoints that returns 404 on empty results.
-func makeEntityHandler(graphqlHandler http.Handler, handlerName string, f func() apiHandler) http.HandlerFunc {
-	return makeHandler(graphqlHandler, handlerName, f, true)
+func makeEntityHandler[T any, PT apiHandlerPtr[T]](graphqlHandler http.Handler) http.HandlerFunc {
+	return makeHandler[T, PT](graphqlHandler, true)
 }
 
 // makeHandler wraps an apiHandler into an HandlerFunc and performs common checks.
-func makeHandler(graphqlHandler http.Handler, handlerName string, f func() apiHandler, notFoundOnEmpty bool) http.HandlerFunc {
+func makeHandler[T any, PT apiHandlerPtr[T]](graphqlHandler http.Handler, notFoundOnEmpty bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		handler := f()
+		var req T
+		// Bound to apiHandler so the optional-capability assertions below are
+		// legal: a type-parameter value cannot be type-asserted directly.
+		var handler apiHandler = PT(&req)
 		opts := queryToMap(r.URL.Query())
 
 		// Add endpoint info to context for logging
@@ -296,11 +408,6 @@ func makeHandler(graphqlHandler http.Handler, handlerName string, f func() apiHa
 				}
 				opts[k] = rctx.URLParam(k)
 			}
-		}
-
-		// Meters
-		if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-			apiMeter.ApplyDimension("handler", handlerName)
 		}
 
 		// Handle format

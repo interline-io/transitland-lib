@@ -63,42 +63,11 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
 		assert.Equal(t, 59324, rr.Body.Len(), "body length")
 	})
-	t.Run("not authorized as anon", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
-		rr := httptest.NewRecorder()
-		asAnon := restSrv
-		asAnon.ServeHTTP(rr, req)
-		if sc := rr.Result().StatusCode; sc != 401 {
-			t.Errorf("got status code %d, expected 401", sc)
-		}
-	})
-	t.Run("not authorized as user, missing role", func(t *testing.T) {
+	t.Run("ok as user", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
 		rr := httptest.NewRecorder()
 		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
-		})(restSrv)
-		asUser.ServeHTTP(rr, req)
-		if sc := rr.Result().StatusCode; sc != 401 {
-			t.Errorf("got status code %d, expected 401", sc)
-		}
-	})
-	t.Run("not authorized as user, only current download role", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
-		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_current")
-		})(restSrv)
-		asUser.ServeHTTP(rr, req)
-		if sc := rr.Result().StatusCode; sc != 401 {
-			t.Errorf("got status code %d, expected 401", sc)
-		}
-	})
-	t.Run("authorized as user", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/feed_versions/d2813c293bcfd7a97dde599527ae6c62c98e66c6/download", nil)
-		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_historic")
+			return authn.NewCtxUser("testuser", "", "")
 		})(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 200 {
@@ -121,7 +90,7 @@ func TestFeedVersionDownloadRequest(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feed_versions/dd7aca4a8e4c90908fd3603c097fabee75fea907/download", nil)
 		rr := httptest.NewRecorder()
 		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_historic")
+			return authn.NewCtxUser("testuser", "", "")
 		})(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 401 {
@@ -171,7 +140,7 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)
 		rr := httptest.NewRecorder()
 		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_current")
+			return authn.NewCtxUser("testuser", "", "")
 		})(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 200 {
@@ -181,31 +150,11 @@ func TestFeedDownloadLatestRequest(t *testing.T) {
 			t.Errorf("got %d bytes, expected 59324", sc)
 		}
 	})
-	t.Run("not authorized as anon", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)
-		rr := httptest.NewRecorder()
-		asAnon := restSrv
-		asAnon.ServeHTTP(rr, req)
-		if sc := rr.Result().StatusCode; sc != 401 {
-			t.Errorf("got status code %d, expected 401", sc)
-		}
-	})
-	t.Run("not authorized as user, missing role", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/feeds/CT/download_latest_feed_version", nil)
-		rr := httptest.NewRecorder()
-		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
-		})(restSrv)
-		asUser.ServeHTTP(rr, req)
-		if sc := rr.Result().StatusCode; sc != 401 {
-			t.Errorf("got status code %d, expected 401", sc)
-		}
-	})
 	t.Run("not authorized as user, not redistributable", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA/download_latest_feed_version", nil)
 		rr := httptest.NewRecorder()
 		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("download_latest_feed_version")
+			return authn.NewCtxUser("testuser", "", "")
 		})(restSrv)
 		asUser.ServeHTTP(rr, req)
 		if sc := rr.Result().StatusCode; sc != 401 {
@@ -240,8 +189,8 @@ func TestFeedVersionDownloadQuota(t *testing.T) {
 		{"latest", "/feeds/CT/download_latest_feed_version", "true"},
 	}
 
-	// The admin user clears both download roles, and leaving the "rest" meter
-	// allowed means only the download quota can reject the request.
+	// Leaving the "rest" meter allowed means only the download quota can reject
+	// the request.
 	get := func(mp *fakeMeterProvider, path string) *httptest.ResponseRecorder {
 		req, _ := http.NewRequest("GET", path, nil)
 		rr := httptest.NewRecorder()
@@ -336,7 +285,7 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/feeds/BA~rt/download_latest_rt/alerts.json", nil)
 		rr := httptest.NewRecorder()
 		asUser := usercheck.NewUserDefaultMiddleware(func() authn.User {
-			return authn.NewCtxUser("testuser", "", "").WithRoles("tl_download_fv_current")
+			return authn.NewCtxUser("testuser", "", "")
 		})(restSrv)
 		asUser.ServeHTTP(rr, req)
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
