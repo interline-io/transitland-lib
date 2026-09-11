@@ -274,7 +274,7 @@ func TestFeedVersionDownloadQuota(t *testing.T) {
 }
 
 func TestFeedDownloadRtLatestRequest(t *testing.T) {
-	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
+	gqlSrv, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
 		Storage: testdata.Path("server", "tmp"),
 		RTJsons: []testconfig.RTJsonFile{
 			{Feed: "BA~rt", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
@@ -295,6 +295,17 @@ func TestFeedDownloadRtLatestRequest(t *testing.T) {
 		rr := httptest.NewRecorder()
 		asAnon := restSrv
 		asAnon.ServeHTTP(rr, req)
+		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
+	})
+	// The realtime store is keyed by Onestop ID, so an integer feed key only
+	// finds a message once it has been resolved through the lookup.
+	t.Run("ok by integer id", func(t *testing.T) {
+		feedID := resolveID(t, gqlSrv,
+			`{"query":"{feeds(where:{onestop_id:\"BA~rt\"}){id}}"}`,
+			"data.feeds.0.id")
+		req, _ := http.NewRequest("GET", "/feeds/"+feedID+"/download_latest_rt/alerts.json", nil)
+		rr := httptest.NewRecorder()
+		restSrv.ServeHTTP(rr, req)
 		assert.Equal(t, 200, rr.Result().StatusCode, "status code")
 	})
 	t.Run("alerts ok json", func(t *testing.T) {

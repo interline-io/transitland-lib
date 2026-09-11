@@ -9,12 +9,9 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
-	"github.com/interline-io/transitland-lib/server/gql"
-	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // EG is the only feed with feed_states.public = false in the test fixtures, and
@@ -37,7 +34,7 @@ func TestFeedVersionDownloadPermissions(t *testing.T) {
 		{Subject: authz.NewEntityKey(authz.UserType, "granted-user"), Object: authz.NewEntityKey(authz.TenantType, "tl-tenant"), Relation: authz.MemberRelation},
 		{Subject: authz.NewEntityKey(authz.UserType, "granted-user"), Object: authz.NewEntityKey(authz.GroupType, "EG-group"), Relation: authz.ViewerRelation},
 	}
-	cfg := testconfig.Config(t, testconfig.Options{
+	_, restSrv, _ := testHandlersWithOptions(t, testconfig.Options{
 		FGAEndpoint:    testutil.FGAServer(t),
 		FGAModelFile:   testdata.Path("server/authz/tls.json"),
 		FGAModelTuples: tuples,
@@ -50,15 +47,10 @@ func TestFeedVersionDownloadPermissions(t *testing.T) {
 		},
 	})
 
-	graphqlHandler := gql.NewDefaultHandler()
-	restHandler, err := NewServer(graphqlHandler)
-	require.NoError(t, err)
-
 	get := func(user, path string) *httptest.ResponseRecorder {
-		h := model.AddConfigAndPerms(cfg, restHandler)
-		h = usercheck.NewUserDefaultMiddleware(func() authn.User {
+		h := usercheck.NewUserDefaultMiddleware(func() authn.User {
 			return authn.NewCtxUser(user, user, user+"@example.com")
-		})(h)
+		})(restSrv)
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
 		return rr
@@ -80,14 +72,15 @@ func TestFeedVersionDownloadPermissions(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, get("nobody-user", rtPath).Result().StatusCode)
 	})
 
-	t.Run("granted user resolves the private feed version", func(t *testing.T) {
-		// Storage may not hold EG's file, so this asserts only that the request
-		// got past the permission filter — anything but 404 proves that.
-		assert.NotEqual(t, http.StatusNotFound, get("granted-user", fvPath).Result().StatusCode,
-			"a granted user must not be told the private feed version does not exist")
+	t.Run("granted user downloads the private feed version", func(t *testing.T) {
+		assert.Equal(t, http.StatusOK, get("granted-user", fvPath).Result().StatusCode)
 	})
-	t.Run("granted user resolves the private feed", func(t *testing.T) {
-		assert.NotEqual(t, http.StatusNotFound, get("granted-user", latestPath).Result().StatusCode,
-			"a granted user must not be told the private feed does not exist")
+	t.Run("granted user downloads the private feed", func(t *testing.T) {
+		assert.Equal(t, http.StatusOK, get("granted-user", latestPath).Result().StatusCode)
+	})
+	t.Run("granted user reads the private feed realtime", func(t *testing.T) {
+		// Without this the denial above would pass even if the fixture stopped
+		// loading, since a missing message is a 404 whatever the permissions say.
+		assert.Equal(t, http.StatusOK, get("granted-user", rtPath).Result().StatusCode)
 	})
 }

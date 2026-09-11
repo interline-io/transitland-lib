@@ -79,7 +79,7 @@ func feedDownloadRtHelper(graphqlHandler http.Handler, w http.ResponseWriter, r 
 
 	// Check if we have data
 	rtf := model.ForContext(ctx).RTFinder
-	rtMsg, ok := rtf.GetMessage(ctx, key, rtType)
+	rtMsg, ok := rtf.GetMessage(ctx, d.FeedOnestopID, rtType)
 	if ok && rtMsg != nil {
 		found = true
 	}
@@ -186,13 +186,9 @@ func recordDownload(ctx context.Context, dims meters.Dimensions) {
 // FeedVersionDownload identifies one feed version file and says whether its
 // feed's license permits redistributing it.
 //
-// A caller must have both parts before serving: an empty FeedVersionSHA1 means
-// the key matched no feed version, and an empty FeedOnestopID means its feed was
-// not visible. Those are filtered separately, so a feed version granted
-// explicitly can resolve while its feed does not.
-//
-// Redistribution is reported rather than enforced: the status code for a feed
-// that forbids it is the caller's to choose.
+// Zero values mean the lookup matched nothing: either the key names no feed
+// version, or the caller may not see it. Redistribution is reported, not
+// enforced.
 type FeedVersionDownload struct {
 	FeedOnestopID         string
 	FeedVersionSHA1       string
@@ -243,9 +239,12 @@ func LookupLatestFeedVersionDownload(ctx context.Context, graphqlHandler http.Ha
 
 // ServeFeedVersion writes the feed version file, redirecting to a signed URL
 // when the store supports one.
-func ServeFeedVersion(w http.ResponseWriter, r *http.Request, storage string, d FeedVersionDownload) error {
+//
+// It writes an error response itself before returning a non-nil error, so a
+// caller should log the error rather than answer again.
+func ServeFeedVersion(ctx context.Context, w http.ResponseWriter, storage string, d FeedVersionDownload) error {
 	downloadKey := fmt.Sprintf("%s-%s.zip", d.FeedOnestopID, d.FeedVersionSHA1)
-	return serveFromStorage(w, r, storage, d.FeedVersionSHA1, downloadKey)
+	return serveFromStorage(ctx, w, storage, d.FeedVersionSHA1, downloadKey)
 }
 
 // downloadVars builds the query variables for a key that is either an integer
@@ -297,7 +296,7 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
 		return
 	}
-	if err := ServeFeedVersion(w, r, model.ForContext(ctx).Storage, d); err != nil {
+	if err := ServeFeedVersion(ctx, w, model.ForContext(ctx).Storage, d); err != nil {
 		// Do not meter
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
@@ -326,7 +325,7 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
 		return
 	}
-	if err := ServeFeedVersion(w, r, model.ForContext(ctx).Storage, d); err != nil {
+	if err := ServeFeedVersion(ctx, w, model.ForContext(ctx).Storage, d); err != nil {
 		// Do not meter
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
@@ -334,8 +333,7 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 	recordDownload(ctx, dims)
 }
 
-func serveFromStorage(w http.ResponseWriter, r *http.Request, storage string, fvsha1 string, downloadKey string) error {
-	ctx := r.Context()
+func serveFromStorage(ctx context.Context, w http.ResponseWriter, storage string, fvsha1 string, downloadKey string) error {
 	store, err := request.GetStore(storage)
 	if err != nil {
 		util.WriteJsonError(w, "failed access file", http.StatusInternalServerError)
@@ -356,6 +354,7 @@ func serveFromStorage(w http.ResponseWriter, r *http.Request, storage string, fv
 			util.WriteJsonError(w, "failed access file", http.StatusInternalServerError)
 			return fmt.Errorf("failed to access file; not authorized: %w", err)
 		}
+		defer rdr.Close()
 		if _, err := io.Copy(w, rdr); err != nil {
 			util.WriteJsonError(w, "failed access file", http.StatusInternalServerError)
 			return fmt.Errorf("failed to access file; failed to copy to client: %w", err)
