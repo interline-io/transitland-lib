@@ -318,20 +318,6 @@ func feedVersionExportHandler(graphqlHandler http.Handler, w http.ResponseWriter
 		return
 	}
 
-	// Log export metrics
-	// if apiMeter := meters.ForContext(ctx); apiMeter != nil {
-	// 	for _, fvid := range req.Feed {
-	// 		apiMeter.Meter(ctx, meters.MeterEvent{
-	// 			Name:  "feed-version-exports",
-	// 			Value: 1.0,
-	// 			Dimensions: []meters.Dimension{
-	// 				{Key: "fvid", Value: fmt.Sprintf("%d", fvid)},
-	// 				{Key: "format", Value: req.Format},
-	// 				{Key: "entity_count", Value: fmt.Sprintf("%d", sumEntityCounts(result))},
-	// 			},
-	// 		})
-	// 	}
-	// }
 
 	log.For(ctx).Info().
 		Int("feed_versions", len(req.FeedVersionIDs)).

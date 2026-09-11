@@ -13,7 +13,6 @@ import (
 	"github.com/interline-io/transitland-lib/internal/util"
 	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/rt"
-	"github.com/interline-io/transitland-lib/server/meters"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/tidwall/gjson"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -132,57 +131,6 @@ func feedDownloadRtHelper(graphqlHandler http.Handler, w http.ResponseWriter, r 
 	w.Write(data)
 }
 
-// feedVersionDownloadMeter is the meter for feed version zip downloads: the
-// quota checked before serving, and the usage recorded after.
-const feedVersionDownloadMeter = "feed-version-downloads"
-
-// downloadDimensions describes one feed version download for metering.
-//
-// The same dimensions gate the quota and record the usage. A limit applies
-// only when its own dimensions are a subset of these, so checking with fewer
-// dimensions than are recorded would silently skip dimension-scoped limits.
-func downloadDimensions(d FeedVersionDownload) meters.Dimensions {
-	return meters.Dimensions{
-		{Key: "fv_sha1", Value: d.FeedVersionSHA1},
-		{Key: "feed_onestop_id", Value: d.FeedOnestopID},
-		{Key: "is_latest_feed_version", Value: strconv.FormatBool(d.IsLatestFeedVersion)},
-	}
-}
-
-// checkDownloadQuota reports whether this download is within the caller's
-// quota. It allows the download when no meter is configured, which is the
-// case outside a metered deployment and in tests.
-func checkDownloadQuota(ctx context.Context, dims meters.Dimensions) bool {
-	// The context holds a full Meterer; ForContext narrows it to the
-	// recording half, so reading a quota needs the reader back.
-	meterReader, ok := meters.ForContext(ctx).(meters.MeterReader)
-	if !ok {
-		return true
-	}
-	allowed, err := meterReader.Check(ctx, feedVersionDownloadMeter, 1.0, dims)
-	if err != nil {
-		log.For(ctx).Error().Err(err).Msg("feed version download quota check failed")
-	}
-	return allowed
-}
-
-// recordDownload records one served feed version download against the quota
-// that admitted it.
-//
-// The event carries a unique id, which is the delivery's idempotency key: the
-// meter transport retries a failed batch, and without one a retry lands as a
-// second indistinguishable usage record that cannot afterwards be told apart
-// from a real second download.
-func recordDownload(ctx context.Context, dims meters.Dimensions) {
-	apiMeter := meters.ForContext(ctx)
-	if apiMeter == nil {
-		return
-	}
-	if err := apiMeter.Meter(ctx, meters.NewMeterEvent(feedVersionDownloadMeter, 1.0, dims)); err != nil {
-		log.For(ctx).Error().Err(err).Msg("feed version download metering failed")
-	}
-}
-
 // FeedVersionDownload identifies one feed version file and says whether its
 // feed's license permits redistributing it.
 //
@@ -291,17 +239,10 @@ func feedVersionDownloadLatestHandler(graphqlHandler http.Handler, w http.Respon
 		return
 	}
 
-	dims := downloadDimensions(d)
-	if !checkDownloadQuota(ctx, dims) {
-		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
-		return
-	}
 	if err := ServeFeedVersion(ctx, w, model.ForContext(ctx).Storage, d); err != nil {
-		// Do not meter
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
 	}
-	recordDownload(ctx, dims)
 }
 
 func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWriter, r *http.Request) {
@@ -320,17 +261,10 @@ func feedVersionDownloadHandler(graphqlHandler http.Handler, w http.ResponseWrit
 		return
 	}
 
-	dims := downloadDimensions(d)
-	if !checkDownloadQuota(ctx, dims) {
-		util.WriteJsonError(w, "too many requests", http.StatusTooManyRequests)
-		return
-	}
 	if err := ServeFeedVersion(ctx, w, model.ForContext(ctx).Storage, d); err != nil {
-		// Do not meter
 		log.For(ctx).Error().Err(err).Msg("feed version download failed")
 		return
 	}
-	recordDownload(ctx, dims)
 }
 
 func serveFromStorage(ctx context.Context, w http.ResponseWriter, storage string, fvsha1 string, downloadKey string) error {

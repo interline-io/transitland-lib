@@ -21,8 +21,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/dbutil"
-	"github.com/interline-io/transitland-lib/server/meters"
-	localmeter "github.com/interline-io/transitland-lib/server/meters/local"
 	"github.com/interline-io/transitland-lib/tldb"
 
 	"github.com/interline-io/transitland-lib/server/finders/actions"
@@ -247,28 +245,16 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	root.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	root.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 
-	// Metering and metrics
-	meterProvider := localmeter.NewLocalMeterProvider()
-
 	// GraphQL API
 	graphqlServer := gql.NewDefaultHandler()
-	{
-		r := chi.NewRouter()
-		r.Use(meters.WithMeter(meterProvider, "graphql", 1.0, nil))
-		r.Mount("/", graphqlServer)
-		root.Mount("/query", r)
-	}
+	root.Mount("/query", graphqlServer)
 
 	// REST API
 	restServer, err := rest.NewServer(graphqlServer)
 	if err != nil {
 		return err
-	} else {
-		r := chi.NewRouter()
-		r.Use(meters.WithMeter(meterProvider, "rest", 1.0, nil))
-		r.Mount("/", restServer)
-		root.Mount("/rest", r)
 	}
+	root.Mount("/rest", restServer)
 
 	// GraphQL Playground
 	root.Handle("/", playground.Handler("GraphQL playground", "/query"))
