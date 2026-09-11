@@ -653,3 +653,10 @@ func toPtr[T any, P *T](v T) P {
 	vcopy := v
 	return &vcopy
 }
+
+// WriteJsonError writes an error response in the shape every endpoint in this
+// package uses. Exported so a caller composing its own handlers over the
+// exported request helpers answers failures the same way.
+func WriteJsonError(w http.ResponseWriter, msg string, statusCode int) {
+	util.WriteJsonError(w, msg, statusCode)
+}
