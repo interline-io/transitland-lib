@@ -12,7 +12,7 @@ type ApplyDefaultAgencyFilter struct {
 	agencyCount     int
 }
 
-func (e *ApplyDefaultAgencyFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *ApplyDefaultAgencyFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		if e.defaultAgencyId == "" {

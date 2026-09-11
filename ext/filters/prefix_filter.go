@@ -65,7 +65,7 @@ func (filter *PrefixFilter) UnprefixFile(fn string) {
 	filter.setPrefixFile(fn, false)
 }
 
-func (filter *PrefixFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (filter *PrefixFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	ok := filter.prefixFileDefault
 	if prefixFile, prefixFileOk := filter.prefixFiles[ent.Filename()]; prefixFileOk {
 		ok = prefixFile

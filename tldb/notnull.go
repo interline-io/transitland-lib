@@ -11,7 +11,7 @@ import (
 type NotNullFilter struct{}
 
 // Validate .
-func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *NotNullFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		// Used in textsearch
