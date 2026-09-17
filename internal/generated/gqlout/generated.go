@@ -12189,6 +12189,8 @@ input PlaceFilter {
   adm1_name: String
   "Search for place associations by city name (provided by Natural Earth)"
   city_name: String
+  "Full text search on the place's own name at the requested level: the city at a city level, the state or province at ADM0_ADM1, and the country at ADM0. Results are ordered by the number of agencies associated with the place, highest first"
+  search: String
 }
 
 """Search options for calendar dates"""
@@ -45594,7 +45596,7 @@ func (ec *executionContext) unmarshalInputPlaceFilter(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"min_rank", "adm0_name", "adm1_name", "city_name"}
+	fieldsInOrder := [...]string{"min_rank", "adm0_name", "adm1_name", "city_name", "search"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45629,6 +45631,13 @@ func (ec *executionContext) unmarshalInputPlaceFilter(ctx context.Context, obj a
 				return it, err
 			}
 			it.CityName = data
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
 		}
 	}
 	return it, nil

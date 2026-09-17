@@ -257,10 +257,11 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 // normal frame — Alaska measures 358.9 degrees — and its true width once shifted
 // into [0,360), where the same polygon is 57.5. Everything else measures the same
 // in both frames and the tie goes to the normal one, so longitudes stay within
-// [-180,180] unless the place genuinely crosses the line.
+// [-180,180] unless the place genuinely crosses the line. The tie allows for
+// rounding: Portland, Maine measures 1e-14 degrees narrower once shifted.
 const placeBboxSQL = `case
 	when ST_XMax(ST_Extent(ne_geom.g)) - ST_XMin(ST_Extent(ne_geom.g))
-		<= ST_XMax(ST_Extent(ST_ShiftLongitude(ne_geom.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(ne_geom.g)))
+		<= ST_XMax(ST_Extent(ST_ShiftLongitude(ne_geom.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(ne_geom.g))) + 1e-9
 	then ST_SetSRID(ST_Extent(ne_geom.g)::geometry, 4326)
 	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(ne_geom.g))::geometry, 4326)
 end as bbox`
@@ -269,10 +270,21 @@ end as bbox`
 // than the rows the query joined.
 const placeBboxCountrySQL = `(select case
 	when ST_XMax(ST_Extent(w.g)) - ST_XMin(ST_Extent(w.g))
-		<= ST_XMax(ST_Extent(ST_ShiftLongitude(w.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(w.g)))
+		<= ST_XMax(ST_Extent(ST_ShiftLongitude(w.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(w.g))) + 1e-9
 	then ST_SetSRID(ST_Extent(w.g)::geometry, 4326)
 	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(w.g))::geometry, 4326)
 end from (select whole.geometry::geometry as g from ne_10m_admin_1_states_provinces whole where whole.admin = tlap.adm0name) w) as bbox`
+
+// The Natural Earth populated place for a city-level association row.
+const placeCityJoinSQL = `left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and (
+	(ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name)
+	or exists (
+		select 1 from ne_10m_admin_1_states_provinces ne_place_admin
+		where ne_place_admin.name = tlap.adm1name
+		and ne_place_admin.admin = tlap.adm0name
+		and ST_Intersects(ne_place.geometry, ne_place_admin.geometry)
+	)
+)`
 
 // placeBboxSelect adds the bounding box column to a place query.
 //
@@ -304,8 +316,15 @@ func placeBboxSelect(q sq.SelectBuilder, level *model.PlaceAggregationLevel) sq.
 		// same name in more than one region, or in more than one country — widens
 		// the box to cover them, the way its count already covers them. The buffer
 		// is aliased through a lateral so the frame comparison names it once.
+		//
+		// The city is found inside the region polygon the association names, as the
+		// association builder found that region. Natural Earth's populated places
+		// carry region and country names of their own that often differ — Paris is
+		// in "Île-de-France" there, the "Paris" département here — so matching those
+		// names misses such cities. The name match stays for a point that lies
+		// outside every polygon, where the builder took the populated place's names.
 		q = q.
-			JoinClause("left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name").
+			JoinClause(placeCityJoinSQL).
 			JoinClause("left join lateral (select ST_Buffer(ne_place.geometry, ?)::geometry as g) ne_geom on true", placeCityRadius).
 			Column(placeBboxSQL)
 	case singleUnit:
@@ -370,6 +389,20 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		}
 		if where.CityName != nil {
 			q = q.Where(sq.Eq{"tlap.name": where.CityName})
+		}
+		// Matched on the name the level groups down to, so a city search is not
+		// answered with every city in a region or country whose name matched.
+		if where.Search != nil && len(*where.Search) > 1 {
+			words := tsQueryWords(*where.Search)
+			switch {
+			case level == nil || *level == model.PlaceAggregationLevelAdm0:
+				q = q.Where("to_tsvector('tl', tlap.adm0name) @@ to_tsquery('tl', ?)", words)
+			case *level == model.PlaceAggregationLevelAdm0Adm1:
+				q = q.Where("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?)", words)
+			default:
+				q = q.Where("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?)", words)
+			}
+			q = q.OrderBy("count(distinct tlap.agency_id) desc").OrderBy(groupKeys...)
 		}
 	}
 

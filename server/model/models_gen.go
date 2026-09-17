@@ -977,6 +977,8 @@ type PlaceFilter struct {
 	Adm1Name *string `json:"adm1_name,omitempty"`
 	// Search for place associations by city name (provided by Natural Earth)
 	CityName *string `json:"city_name,omitempty"`
+	// Full text search on the place's own name at the requested level: the city at a city level, the state or province at ADM0_ADM1, and the country at ADM0. Results are ordered by the number of agencies associated with the place, highest first
+	Search *string `json:"search,omitempty"`
 }
 
 // Search for entities within specified radius of a point

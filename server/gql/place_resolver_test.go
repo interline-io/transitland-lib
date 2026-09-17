@@ -94,6 +94,64 @@ func TestPlaceResolver(t *testing.T) {
 			selector:     "places.#.city_name",
 			selectExpect: []string{"Oakland"},
 		},
+		// search
+		{
+			name:         "ADM0_ADM1_CITY search",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "oak"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{"Oakland"},
+		},
+		{
+			// selectExpect ignores order, so the order is checked directly: most
+			// agencies first, ties by name.
+			name:  "ADM0_ADM1_CITY search ordered by agency count",
+			query: q,
+			vars:  hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san"}},
+			f: func(t *testing.T, jj string) {
+				var names []string
+				for _, v := range gjson.Get(jj, "places.#.city_name").Array() {
+					names = append(names, v.String())
+				}
+				assert.Equal(t, []string{"San Francisco", "San Mateo", "San Jose"}, names)
+			},
+		},
+		{
+			name:         "ADM0_ADM1_CITY search requires every word",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san fran"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{"San Francisco"},
+		},
+		{
+			// The city's own name only: its region matching is not enough.
+			name:         "ADM0_ADM1_CITY search does not match the region",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "california"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{},
+		},
+		{
+			name:         "ADM0_ADM1 search",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1", "where": hw{"search": "calif"}},
+			selector:     "places.#.adm1_name",
+			selectExpect: []string{"California"},
+		},
+		{
+			name:         "ADM0 search",
+			query:        q,
+			vars:         hw{"level": "ADM0", "where": hw{"search": "united"}},
+			selector:     "places.#.adm0_name",
+			selectExpect: []string{"United States of America"},
+		},
+		{
+			name:         "ADM0 search no match",
+			query:        q,
+			vars:         hw{"level": "ADM0", "where": hw{"search": "canada"}},
+			selector:     "places.#.adm0_name",
+			selectExpect: []string{},
+		},
 		// bbox
 		{
 			name:  "region bbox comes from the admin polygon",
