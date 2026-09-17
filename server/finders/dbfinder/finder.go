@@ -284,14 +284,19 @@ func In[T any](col string, val []T) sq.Sqlizer {
 	)
 }
 
-// tsQueryWords is a search string as a tsquery for the tl config: every word a
-// prefix match, all of them required.
-func tsQueryWords(s string) string {
+// tsQueryAllWords is a search string as a tsquery for the tl config: every word
+// a prefix match, all of them required.
+func tsQueryAllWords(s string) string {
 	return strings.Join(escapeWordsWithSuffix(strings.TrimSpace(s), ":*"), " & ")
 }
 
+// tsQueryAnyWord is the same, with any one word enough.
+func tsQueryAnyWord(s string) string {
+	return strings.Join(escapeWordsWithSuffix(strings.TrimSpace(s), ":*"), " | ")
+}
+
 func tsTableQuery(table string, s string) (rank sq.Sqlizer, wc sq.Sqlizer) {
-	wordstsq := tsQueryWords(s)
+	wordstsq := tsQueryAllWords(s)
 	rank = sq.Expr(
 		fmt.Sprintf(`ts_rank_cd("%s".textsearch,to_tsquery('tl',?)) as search_rank`, az09(table)),
 		wordstsq,

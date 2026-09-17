@@ -124,7 +124,28 @@ func TestPlaceResolver(t *testing.T) {
 			selectExpect: []string{"San Francisco"},
 		},
 		{
-			// The city's own name only: its region matching is not enough.
+			name:         "ADM0_ADM1_CITY search qualified by region",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "oakland california"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{"Oakland"},
+		},
+		{
+			name:         "ADM0_ADM1_CITY search qualified by abbreviated region",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san ca"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{"San Francisco", "San Jose", "San Mateo"},
+		},
+		{
+			name:         "ADM0_ADM1_CITY search qualified by the wrong region",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "oakland florida"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{},
+		},
+		{
+			// A region alone is not a city: some word has to match the city's name.
 			name:         "ADM0_ADM1_CITY search does not match the region",
 			query:        q,
 			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "california"}},
@@ -137,6 +158,13 @@ func TestPlaceResolver(t *testing.T) {
 			vars:         hw{"level": "ADM0_ADM1", "where": hw{"search": "calif"}},
 			selector:     "places.#.adm1_name",
 			selectExpect: []string{"California"},
+		},
+		{
+			name:         "ADM0_ADM1 search qualified by country",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1", "where": hw{"search": "virginia united states"}},
+			selector:     "places.#.adm1_name",
+			selectExpect: []string{"Virginia"},
 		},
 		{
 			name:         "ADM0 search",

@@ -390,17 +390,26 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		if where.CityName != nil {
 			q = q.Where(sq.Eq{"tlap.name": where.CityName})
 		}
-		// Matched on the name the level groups down to, so a city search is not
-		// answered with every city in a region or country whose name matched.
+		// Every word must match the place's own name or the names it sits within,
+		// and at least one must match its own name: "oakland california" finds
+		// Oakland, while "california" alone finds no city. Places whose own name
+		// matches every word come first.
 		if where.Search != nil && len(*where.Search) > 1 {
-			words := tsQueryWords(*where.Search)
+			all := tsQueryAllWords(*where.Search)
+			anyWord := tsQueryAnyWord(*where.Search)
 			switch {
 			case level == nil || *level == model.PlaceAggregationLevelAdm0:
-				q = q.Where("to_tsvector('tl', tlap.adm0name) @@ to_tsquery('tl', ?)", words)
+				q = q.Where("to_tsvector('tl', tlap.adm0name) @@ to_tsquery('tl', ?)", all)
 			case *level == model.PlaceAggregationLevelAdm0Adm1:
-				q = q.Where("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?)", words)
+				q = q.
+					Where("to_tsvector('tl', concat_ws(' ', tlap.adm1name, tlap.adm0name)) @@ to_tsquery('tl', ?)", all).
+					Where("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?)", anyWord).
+					OrderByClause("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?) desc", all)
 			default:
-				q = q.Where("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?)", words)
+				q = q.
+					Where("to_tsvector('tl', concat_ws(' ', tlap.name, tlap.adm1name, tlap.adm0name)) @@ to_tsquery('tl', ?)", all).
+					Where("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?)", anyWord).
+					OrderByClause("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?) desc", all)
 			}
 			q = q.OrderBy("count(distinct tlap.agency_id) desc").OrderBy(groupKeys...)
 		}
