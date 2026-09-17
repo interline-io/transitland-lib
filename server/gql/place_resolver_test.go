@@ -13,6 +13,15 @@ func bboxMinLon(jj string) float64 {
 	return gjson.Get(jj, "places.0.bbox.coordinates.0.0.0").Float()
 }
 
+// cityNames is the returned places' city names, in order.
+func cityNames(jj string) []string {
+	names := []string{}
+	for _, v := range gjson.Get(jj, "places.#.city_name").Array() {
+		names = append(names, v.String())
+	}
+	return names
+}
+
 // bboxWidth is that box's span in degrees of longitude.
 func bboxWidth(jj string) float64 {
 	return gjson.Get(jj, "places.0.bbox.coordinates.0.2.0").Float() - bboxMinLon(jj)
@@ -104,16 +113,21 @@ func TestPlaceResolver(t *testing.T) {
 		},
 		{
 			// selectExpect ignores order, so the order is checked directly: most
-			// agencies first, ties by name.
-			name:  "ADM0_ADM1_CITY search ordered by agency count",
+			// operators first, then by country, region and name.
+			name:  "ADM0_ADM1_CITY search ordered by operator count",
 			query: q,
 			vars:  hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san"}},
 			f: func(t *testing.T, jj string) {
-				var names []string
-				for _, v := range gjson.Get(jj, "places.#.city_name").Array() {
-					names = append(names, v.String())
-				}
-				assert.Equal(t, []string{"San Francisco", "San Mateo", "San Jose"}, names)
+				assert.Equal(t, []string{"San Francisco", "San Mateo", "San Jose"}, cityNames(jj))
+			},
+		},
+		{
+			// San Mateo's association with BART ranks under 0.1, leaving it one operator.
+			name:  "ADM0_ADM1_CITY search ordered by operator count at min_rank",
+			query: q,
+			vars:  hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san", "min_rank": 0.1}},
+			f: func(t *testing.T, jj string) {
+				assert.Equal(t, []string{"San Francisco", "San Jose", "San Mateo"}, cityNames(jj))
 			},
 		},
 		{
@@ -131,7 +145,7 @@ func TestPlaceResolver(t *testing.T) {
 			selectExpect: []string{"Oakland"},
 		},
 		{
-			name:         "ADM0_ADM1_CITY search qualified by abbreviated region",
+			name:         "ADM0_ADM1_CITY search qualified by a region prefix",
 			query:        q,
 			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san ca"}},
 			selector:     "places.#.city_name",
@@ -153,6 +167,36 @@ func TestPlaceResolver(t *testing.T) {
 			selectExpect: []string{},
 		},
 		{
+			name:         "ADM0_ADM1_CITY search with punctuation as written",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "Washington, D.C."}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{"Washington,  D.C."},
+		},
+		{
+			name:  "ADM1_CITY search",
+			query: q,
+			vars:  hw{"level": "ADM1_CITY", "where": hw{"search": "oak"}},
+			sel: []testcaseSelector{
+				{selector: "places.#.adm1_name", expect: []string{"California"}},
+				{selector: "places.#.city_name", expect: []string{"Oakland"}},
+			},
+		},
+		{
+			name:         "ADM0_CITY search",
+			query:        q,
+			vars:         hw{"level": "ADM0_CITY", "where": hw{"search": "oak"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{"Oakland"},
+		},
+		{
+			name:         "CITY search",
+			query:        q,
+			vars:         hw{"level": "CITY", "where": hw{"search": "oak"}},
+			selector:     "places.#.city_name",
+			selectExpect: []string{"Oakland"},
+		},
+		{
 			name:         "ADM0_ADM1 search",
 			query:        q,
 			vars:         hw{"level": "ADM0_ADM1", "where": hw{"search": "calif"}},
@@ -167,6 +211,20 @@ func TestPlaceResolver(t *testing.T) {
 			selectExpect: []string{"Virginia"},
 		},
 		{
+			name:         "ADM0_ADM1 search does not match the country",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1", "where": hw{"search": "united"}},
+			selector:     "places.#.adm1_name",
+			selectExpect: []string{},
+		},
+		{
+			name:         "ADM0_ADM1 search requires every word",
+			query:        q,
+			vars:         hw{"level": "ADM0_ADM1", "where": hw{"search": "virginia florida"}},
+			selector:     "places.#.adm1_name",
+			selectExpect: []string{},
+		},
+		{
 			name:         "ADM0 search",
 			query:        q,
 			vars:         hw{"level": "ADM0", "where": hw{"search": "united"}},
@@ -174,11 +232,24 @@ func TestPlaceResolver(t *testing.T) {
 			selectExpect: []string{"United States of America"},
 		},
 		{
-			name:         "ADM0 search no match",
+			name:         "search with no level",
 			query:        q,
-			vars:         hw{"level": "ADM0", "where": hw{"search": "canada"}},
+			vars:         hw{"where": hw{"search": "united"}},
 			selector:     "places.#.adm0_name",
-			selectExpect: []string{},
+			selectExpect: []string{"United States of America"},
+		},
+		{
+			name:   "ADM0 search no match is an empty list",
+			query:  q,
+			vars:   hw{"level": "ADM0", "where": hw{"search": "canada"}},
+			expect: `{"places":[]}`,
+		},
+		{
+			name:         "search without usable words is ignored",
+			query:        q,
+			vars:         hw{"level": "ADM0", "where": hw{"search": "a b"}},
+			selector:     "places.#.adm0_name",
+			selectExpect: []string{"United States of America"},
 		},
 		// bbox
 		{

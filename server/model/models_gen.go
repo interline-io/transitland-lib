@@ -977,7 +977,7 @@ type PlaceFilter struct {
 	Adm1Name *string `json:"adm1_name,omitempty"`
 	// Search for place associations by city name (provided by Natural Earth)
 	CityName *string `json:"city_name,omitempty"`
-	// Full text search on place names. At least one word must match the place's own name at the requested level (the city at a city level, the state or province at ADM0_ADM1, the country at ADM0), and the rest may match the region and country it sits within, so "oakland california" finds Oakland. Places whose own name matches every word come first, then those with the most associated agencies
+	// Full text search on place names, matching word prefixes. Every word must match the place's own name at the requested level (the city at a city level, the state or province at ADM0_ADM1, the country at ADM0) or the region and country it is in, and at least one must match its own name, so "oakland calif" finds Oakland. Places whose own name matches every word come first, then those with the most operators
 	Search *string `json:"search,omitempty"`
 }
 

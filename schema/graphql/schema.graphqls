@@ -141,7 +141,7 @@ type Query {
   trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
   
   "Aggregate operator counts by administrative place (City, State, Country)"
-  places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]
+  places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]!
   
   "Compute walking, transit, or driving directions; returns one or more itineraries"
   directions(where: DirectionRequest!): Directions!
@@ -3151,7 +3151,7 @@ input PlaceFilter {
   adm1_name: String
   "Search for place associations by city name (provided by Natural Earth)"
   city_name: String
-  "Full text search on place names. At least one word must match the place's own name at the requested level (the city at a city level, the state or province at ADM0_ADM1, the country at ADM0), and the rest may match the region and country it sits within, so \"oakland california\" finds Oakland. Places whose own name matches every word come first, then those with the most associated agencies"
+  "Full text search on place names, matching word prefixes. Every word must match the place's own name at the requested level (the city at a city level, the state or province at ADM0_ADM1, the country at ADM0) or the region and country it is in, and at least one must match its own name, so \"oakland calif\" finds Oakland. Places whose own name matches every word come first, then those with the most operators"
   search: String
 }
 

@@ -252,13 +252,11 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	return q
 }
 
-// Extent of the geometry aliased as ne_geom.g, in whichever longitude frame is
-// narrower. A shape crossing the antimeridian spans nearly the whole globe in the
-// normal frame — Alaska measures 358.9 degrees — and its true width once shifted
-// into [0,360), where the same polygon is 57.5. Everything else measures the same
-// in both frames and the tie goes to the normal one, so longitudes stay within
-// [-180,180] unless the place genuinely crosses the line. The tie allows for
-// rounding: Portland, Maine measures 1e-14 degrees narrower once shifted.
+// placeBboxSQL is the extent of ne_geom.g in whichever longitude frame is narrower.
+//
+// A shape crossing the antimeridian spans nearly 360 degrees in the normal frame
+// (Alaska: 358.9) but not once shifted into [0,360) (57.5). Other shapes measure the
+// same in both, and a tie within 1e-9 degrees of rounding keeps the normal frame.
 const placeBboxSQL = `case
 	when ST_XMax(ST_Extent(ne_geom.g)) - ST_XMin(ST_Extent(ne_geom.g))
 		<= ST_XMax(ST_Extent(ST_ShiftLongitude(ne_geom.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(ne_geom.g))) + 1e-9
@@ -266,8 +264,8 @@ const placeBboxSQL = `case
 	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(ne_geom.g))::geometry, 4326)
 end as bbox`
 
-// The same choice for a country, which aggregates every region it contains rather
-// than the rows the query joined.
+// placeBboxCountrySQL makes the same choice for a country, over every region it
+// contains rather than the rows the query joined.
 const placeBboxCountrySQL = `(select case
 	when ST_XMax(ST_Extent(w.g)) - ST_XMin(ST_Extent(w.g))
 		<= ST_XMax(ST_Extent(ST_ShiftLongitude(w.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(w.g))) + 1e-9
@@ -275,7 +273,11 @@ const placeBboxCountrySQL = `(select case
 	else ST_SetSRID(ST_Extent(ST_ShiftLongitude(w.g))::geometry, 4326)
 end from (select whole.geometry::geometry as g from ne_10m_admin_1_states_provinces whole where whole.admin = tlap.adm0name) w) as bbox`
 
-// The Natural Earth populated place for a city-level association row.
+// placeCityJoinSQL joins the Natural Earth populated place for a city association.
+//
+// The place builder names a city's region from the admin-1 polygon containing it,
+// which often differs from the populated place's own names (Paris is in
+// "Île-de-France" there), so the place matches within that polygon or by name.
 const placeCityJoinSQL = `left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and (
 	(ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name)
 	or exists (
@@ -285,6 +287,15 @@ const placeCityJoinSQL = `left join ne_10m_populated_places ne_place on ne_place
 		and ST_Intersects(ne_place.geometry, ne_place_admin.geometry)
 	)
 )`
+
+// placeOperatorJoinSQL joins the operators of each association's agency, as the
+// place operators resolver loads them, so places can be ordered by their count.
+const placeOperatorJoinSQL = `left join gtfs_agencies place_agency on place_agency.id = tlap.agency_id
+left join current_operators_in_feed place_coif on place_coif.feed_id = feed_states.feed_id and place_coif.resolved_gtfs_agency_id = place_agency.agency_id
+left join current_operators place_co on place_co.id = place_coif.operator_id`
+
+// placeOperatorCountSQL orders places by operator count, most first.
+const placeOperatorCountSQL = `count(distinct place_coif.resolved_onestop_id) filter (where place_co.deleted_at is null) desc`
 
 // placeBboxSelect adds the bounding box column to a place query.
 //
@@ -316,13 +327,6 @@ func placeBboxSelect(q sq.SelectBuilder, level *model.PlaceAggregationLevel) sq.
 		// same name in more than one region, or in more than one country — widens
 		// the box to cover them, the way its count already covers them. The buffer
 		// is aliased through a lateral so the frame comparison names it once.
-		//
-		// The city is found inside the region polygon the association names, as the
-		// association builder found that region. Natural Earth's populated places
-		// carry region and country names of their own that often differ — Paris is
-		// in "Île-de-France" there, the "Paris" département here — so matching those
-		// names misses such cities. The name match stays for a point that lies
-		// outside every polygon, where the builder took the populated place's names.
 		q = q.
 			JoinClause(placeCityJoinSQL).
 			JoinClause("left join lateral (select ST_Buffer(ne_place.geometry, ?)::geometry as g) ne_geom on true", placeCityRadius).
@@ -335,6 +339,31 @@ func placeBboxSelect(q sq.SelectBuilder, level *model.PlaceAggregationLevel) sq.
 	default:
 		// A country: every region it contains, not only those with operators.
 		q = q.Column(placeBboxCountrySQL)
+	}
+	return q
+}
+
+// placeSearchSelect filters a place query to those matching a text search.
+//
+// Every word must match the place's own name at the level or the region and
+// country it is in, and at least one must match its own name, so a region alone
+// finds none of its cities. Places whose own name matches every word sort first.
+func placeSearchSelect(q sq.SelectBuilder, level *model.PlaceAggregationLevel, search string) sq.SelectBuilder {
+	all := tsQueryAllWords(search)
+	anyWord := tsQueryAnyWord(search)
+	switch {
+	case level == nil || *level == model.PlaceAggregationLevelAdm0:
+		q = q.Where("to_tsvector('tl', tlap.adm0name) @@ to_tsquery('tl', ?)", all)
+	case *level == model.PlaceAggregationLevelAdm0Adm1:
+		q = q.
+			Where("to_tsvector('tl', concat_ws(' ', tlap.adm1name, tlap.adm0name)) @@ to_tsquery('tl', ?)", all).
+			Where("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?)", anyWord).
+			OrderByClause("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?) desc", all)
+	default:
+		q = q.
+			Where("to_tsvector('tl', concat_ws(' ', tlap.name, tlap.adm1name, tlap.adm0name)) @@ to_tsquery('tl', ?)", all).
+			Where("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?)", anyWord).
+			OrderByClause("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?) desc", all)
 	}
 	return q
 }
@@ -360,7 +389,7 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 			selKeys = []string{"tlap.adm0name as adm0_name", "tlap.name as city_name"}
 			groupKeys = []string{"tlap.adm0name", "tlap.name"}
 		case model.PlaceAggregationLevelAdm1City:
-			selKeys = []string{"tlap.adm1name as adm1_name"}
+			selKeys = []string{"tlap.adm1name as adm1_name", "tlap.name as city_name"}
 			groupKeys = []string{"tlap.adm1name", "tlap.name"}
 		case model.PlaceAggregationLevelCity:
 			selKeys = []string{"tlap.name as city_name"}
@@ -390,28 +419,15 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		if where.CityName != nil {
 			q = q.Where(sq.Eq{"tlap.name": where.CityName})
 		}
-		// Every word must match the place's own name or the names it sits within,
-		// and at least one must match its own name: "oakland california" finds
-		// Oakland, while "california" alone finds no city. Places whose own name
-		// matches every word come first.
-		if where.Search != nil && len(*where.Search) > 1 {
-			all := tsQueryAllWords(*where.Search)
-			anyWord := tsQueryAnyWord(*where.Search)
-			switch {
-			case level == nil || *level == model.PlaceAggregationLevelAdm0:
-				q = q.Where("to_tsvector('tl', tlap.adm0name) @@ to_tsquery('tl', ?)", all)
-			case *level == model.PlaceAggregationLevelAdm0Adm1:
-				q = q.
-					Where("to_tsvector('tl', concat_ws(' ', tlap.adm1name, tlap.adm0name)) @@ to_tsquery('tl', ?)", all).
-					Where("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?)", anyWord).
-					OrderByClause("to_tsvector('tl', tlap.adm1name) @@ to_tsquery('tl', ?) desc", all)
-			default:
-				q = q.
-					Where("to_tsvector('tl', concat_ws(' ', tlap.name, tlap.adm1name, tlap.adm0name)) @@ to_tsquery('tl', ?)", all).
-					Where("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?)", anyWord).
-					OrderByClause("to_tsvector('tl', tlap.name) @@ to_tsquery('tl', ?) desc", all)
-			}
-			q = q.OrderBy("count(distinct tlap.agency_id) desc").OrderBy(groupKeys...)
+		if where.MinRank != nil {
+			q = q.Where(sq.GtOrEq{"tlap.rank": where.MinRank})
+		}
+		// A search with no usable words is ignored, as one of a single character is.
+		if where.Search != nil && tsQueryAllWords(*where.Search) != "" {
+			q = placeSearchSelect(q, level, *where.Search).
+				JoinClause(placeOperatorJoinSQL).
+				OrderBy(placeOperatorCountSQL).
+				OrderBy(groupKeys...)
 		}
 	}
 

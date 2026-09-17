@@ -113,7 +113,7 @@ func TestPlaceCityJoin(t *testing.T) {
 		{
 			name: "region names agree", city: "Oakland", adm1: "California", adm0: "United States of America",
 			minLon: -122.732, maxLon: -121.824,
-			comment: "found by name, as before",
+			comment: "populated place names agree with the association",
 		},
 		{
 			name: "region name differs", city: "Paris", adm1: "Paris", adm0: "France",
@@ -128,7 +128,7 @@ func TestPlaceCityJoin(t *testing.T) {
 		{
 			name: "one of several cities with the name", city: "Portland", adm1: "Maine", adm0: "United States of America",
 			minLon: -70.742, maxLon: -69.749,
-			comment: "Portland, Maine alone, not widened to Oregon",
+			comment: "Maine's box alone, not widened to Oregon, and in the normal frame despite a 1e-14 rounding tie",
 		},
 	}
 	level := model.PlaceAggregationLevelAdm0Adm1City

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
@@ -177,15 +178,18 @@ func checkFloat(v *float64, min float64, max float64) float64 {
 	return *v
 }
 
-// unicode aware remove all non-alphanumeric characters
-// this is not for escaping sql; just for preparing to_tsquery
+// alphanumeric turns each character other than a letter or digit into a space,
+// splitting words on punctuation as the text search parser does. Combining marks
+// are dropped so a decomposed accent stays in its word. Not for escaping SQL.
 func alphanumeric(v string) string {
 	ret := []rune{}
 	for _, ch := range v {
-		if unicode.IsSpace(ch) {
-			ret = append(ret, ' ')
-		} else if unicode.IsDigit(ch) || unicode.IsLetter(ch) {
+		switch {
+		case unicode.IsDigit(ch) || unicode.IsLetter(ch):
 			ret = append(ret, ch)
+		case unicode.IsMark(ch):
+		default:
+			ret = append(ret, ' ')
 		}
 	}
 	return string(ret)
@@ -197,13 +201,13 @@ func az09(v string) string {
 	return reg.ReplaceAllString(v, "")
 }
 
+// escapeWordsWithSuffix splits v into to_tsquery words of at least two
+// characters, each with sfx appended.
 func escapeWordsWithSuffix(v string, sfx string) []string {
 	var ret []string
-	for _, s := range strings.Fields(v) {
-		aa := alphanumeric(s)
-		// Minimum length 2 characters
-		if len(aa) > 1 {
-			ret = append(ret, aa+sfx)
+	for _, s := range strings.Fields(alphanumeric(v)) {
+		if utf8.RuneCountInString(s) > 1 {
+			ret = append(ret, s+sfx)
 		}
 	}
 	return ret
@@ -284,15 +288,15 @@ func In[T any](col string, val []T) sq.Sqlizer {
 	)
 }
 
-// tsQueryAllWords is a search string as a tsquery for the tl config: every word
-// a prefix match, all of them required.
+// tsQueryAllWords returns a tl tsquery matching every word of s as a prefix, or
+// "" when s has no usable words.
 func tsQueryAllWords(s string) string {
-	return strings.Join(escapeWordsWithSuffix(strings.TrimSpace(s), ":*"), " & ")
+	return strings.Join(escapeWordsWithSuffix(s, ":*"), " & ")
 }
 
-// tsQueryAnyWord is the same, with any one word enough.
+// tsQueryAnyWord returns a tl tsquery matching any word of s as a prefix.
 func tsQueryAnyWord(s string) string {
-	return strings.Join(escapeWordsWithSuffix(strings.TrimSpace(s), ":*"), " | ")
+	return strings.Join(escapeWordsWithSuffix(s, ":*"), " | ")
 }
 
 func tsTableQuery(table string, s string) (rank sq.Sqlizer, wc sq.Sqlizer) {

@@ -86,17 +86,19 @@ func Test_alphanumeric(t *testing.T) {
 		{"ascii string", "abc", "abc"},
 		{"ascii alphanumeric", "abc123", "abc123"},
 		{"ascii space", "a b c", "a b c"},
-		{"emdash remove", "a—b", "ab"},
+		{"emdash to space", "a—b", "a b"},
 		{"double space ok", "a  b", "a  b"},
-		{"remove slash", "a/b", "ab"},
-		{"remove single quote", "a'b", "ab"},
-		{"remove dounle quote", "\"", ""},
-		{"remove :", "a:b", "ab"},
-		{"remove *", "a*b", "ab"},
-		{"remove &", "a&b", "ab"},
-		{"remove |", "a|b", "ab"},
+		{"slash to space", "a/b", "a b"},
+		{"single quote to space", "a'b", "a b"},
+		{"double quote to space", "\"", " "},
+		{": to space", "a:b", "a b"},
+		{"* to space", "a*b", "a b"},
+		{"& to space", "a&b", "a b"},
+		{"| to space", "a|b", "a b"},
+		{"hyphen to space", "Winston-Salem", "Winston Salem"},
 		{"tab to space", "\t", " "},
 		{"french", "Hôtel", "Hôtel"},
+		{"decomposed accent stays in its word", "Montréal", "Montreal"},
 		{"chinese", "火车", "火车"},
 		{"chinese with ascii", "abc 火车 123", "abc 火车 123"},
 		{"japanese", "列車", "列車"},
@@ -111,6 +113,26 @@ func Test_alphanumeric(t *testing.T) {
 			if ret != tc.expect {
 				t.Errorf("got '%s', expect '%s'", ret, tc.expect)
 			}
+		})
+	}
+}
+
+func Test_escapeWordsWithSuffix(t *testing.T) {
+	tcs := []struct {
+		name   string
+		value  string
+		expect []string
+	}{
+		{"words", "san fran", []string{"san:*", "fran:*"}},
+		{"punctuation splits words", "Winston-Salem", []string{"Winston:*", "Salem:*"}},
+		{"short pieces dropped", "coeur d'alene", []string{"coeur:*", "alene:*"}},
+		{"nothing usable", "a b !!", nil},
+		{"one accented letter is one character", "é", nil},
+		{"two accented letters", "éé", []string{"éé:*"}},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expect, escapeWordsWithSuffix(tc.value, ":*"))
 		})
 	}
 }
