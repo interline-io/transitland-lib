@@ -9179,7 +9179,7 @@ type Query {
   trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
   
   "Aggregate operator counts by administrative place (City, State, Country)"
-  places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]
+  places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]!
   
   "Compute walking, transit, or driving directions; returns one or more itineraries"
   directions(where: DirectionRequest!): Directions!
@@ -12189,6 +12189,8 @@ input PlaceFilter {
   adm1_name: String
   "Search for place associations by city name (provided by Natural Earth)"
   city_name: String
+  "Full text search on place names, matching word prefixes. Every word must match the place's own name at the requested level (the city at a city level, the state or province at ADM0_ADM1, the country at ADM0) or the region and country it is in, and at least one must match its own name, so \"oakland calif\" finds Oakland. Punctuation separates words and one-character words are ignored; a search with no other words does not filter. Places whose own name matches every word come first, then those with the most operators, then by country, region, and city name"
+  search: String
 }
 
 """Search options for calendar dates"""
@@ -33739,10 +33741,10 @@ func (ec *executionContext) _Query_places(ctx context.Context, field graphql.Col
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Place) graphql.Marshaler {
-			return ec.marshalOPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlaceᚄ(ctx, selections, v)
+			return ec.marshalNPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlaceᚄ(ctx, selections, v)
 		},
 		true,
-		false,
+		true,
 	)
 }
 func (ec *executionContext) fieldContext_Query_places(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -45594,7 +45596,7 @@ func (ec *executionContext) unmarshalInputPlaceFilter(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"min_rank", "adm0_name", "adm1_name", "city_name"}
+	fieldsInOrder := [...]string{"min_rank", "adm0_name", "adm1_name", "city_name", "search"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45629,6 +45631,13 @@ func (ec *executionContext) unmarshalInputPlaceFilter(ctx context.Context, obj a
 				return it, err
 			}
 			it.CityName = data
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
 		}
 	}
 	return it, nil
@@ -54612,13 +54621,16 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		case "places":
 			field := field
 
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._Query_places(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -60826,6 +60838,22 @@ func (ec *executionContext) marshalNPermissionSubject2ᚖgithubᚗcomᚋinterlin
 	return ec._PermissionSubject(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlaceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Place) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlace(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlace(ctx context.Context, sel ast.SelectionSet, v *model.Place) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -63115,25 +63143,6 @@ func (ec *executionContext) marshalOPermissions2ᚖgithubᚗcomᚋinterlineᚑio
 		return graphql.Null
 	}
 	return ec._Permissions(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOPlace2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlaceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Place) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNPlace2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlace(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) unmarshalOPlaceAggregationLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPlaceAggregationLevel(ctx context.Context, v any) (*model.PlaceAggregationLevel, error) {

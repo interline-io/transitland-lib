@@ -29,7 +29,7 @@ func (f *Finder) OperatorsByCOIFs(ctx context.Context, ids []int) ([]*model.Oper
 	return arrangeBy(ids, ents, func(ent *model.Operator) int { return ent.ID }), nil
 }
 
-func (f *Finder) OperatorsByAgencyIDs(ctx context.Context, ids []int) ([]*model.Operator, []error) {
+func (f *Finder) OperatorsByAgencyIDs(ctx context.Context, ids []int) ([][]*model.Operator, []error) {
 	var ents []*model.Operator
 	err := dbutil.Select(ctx,
 		f.db,
@@ -39,7 +39,7 @@ func (f *Finder) OperatorsByAgencyIDs(ctx context.Context, ids []int) ([]*model.
 	if err != nil {
 		return nil, logExtendErr(ctx, len(ids), err)
 	}
-	return arrangeBy(ids, ents, func(ent *model.Operator) int { return ent.AgencyID }), nil
+	return arrangeGroup(ids, ents, func(ent *model.Operator) int { return ent.AgencyID }), nil
 }
 
 // Param loaders

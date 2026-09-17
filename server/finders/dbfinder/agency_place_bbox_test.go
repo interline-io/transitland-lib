@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	sq "github.com/irees/squirrel"
 	"github.com/stretchr/testify/assert"
@@ -90,6 +91,72 @@ func TestPlaceBboxSQL(t *testing.T) {
 				assert.InDelta(t, tc.minLon, got[0].MinLon, 1e-2, tc.comment)
 				assert.InDelta(t, tc.maxLon, got[0].MaxLon, 1e-2, tc.comment)
 				assert.Less(t, got[0].MaxLon-got[0].MinLon, 180.0, "a usable extent is never wider than half the globe")
+			}
+		})
+	}
+}
+
+// Exercises the city join against a stand-in association row, named the way the
+// agency place builder names a city: its region and country from the polygon the
+// populated place falls in.
+func TestPlaceCityJoin(t *testing.T) {
+	dbx := testutil.MustOpenTestDB(t)
+	tcs := []struct {
+		name    string
+		city    string
+		adm1    string
+		adm0    string
+		minLon  float64
+		maxLon  float64
+		comment string
+	}{
+		{
+			name: "region names agree", city: "Oakland", adm1: "California", adm0: "United States of America",
+			minLon: -122.732, maxLon: -121.824,
+			comment: "populated place names agree with the association",
+		},
+		{
+			name: "region name differs", city: "Paris", adm1: "Paris", adm0: "France",
+			minLon: 1.808, maxLon: 2.898,
+			comment: "Natural Earth places Paris in Île-de-France, not the Paris département",
+		},
+		{
+			name: "country name differs", city: "Prague", adm1: "Prague", adm0: "Czech Republic",
+			minLon: 13.864, maxLon: 14.982,
+			comment: "Natural Earth's populated places call the country Czechia",
+		},
+		{
+			name: "one of several cities with the name", city: "Portland", adm1: "Maine", adm0: "United States of America",
+			minLon: -70.742, maxLon: -69.749,
+			comment: "Maine's box alone, not widened to Oregon, and in the normal frame despite a 1e-14 rounding tie",
+		},
+	}
+	level := model.PlaceAggregationLevelAdm0Adm1City
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			tlap := sq.StatementBuilder.
+				Select().
+				Column("?::text as name", tc.city).
+				Column("?::text as adm1name", tc.adm1).
+				Column("?::text as adm0name", tc.adm0)
+			inner := placeBboxSelect(
+				sq.StatementBuilder.Select("tlap.name").FromSelect(tlap, "tlap").GroupBy("tlap.name"),
+				&level,
+			)
+			q := sq.StatementBuilder.
+				Select("ST_XMin(t.bbox) as min_lon", "ST_XMax(t.bbox) as max_lon").
+				FromSelect(inner, "t")
+
+			var got []struct {
+				MinLon *float64 `db:"min_lon"`
+				MaxLon *float64 `db:"max_lon"`
+			}
+			if err := dbutil.Select(context.Background(), dbx, q, &got); err != nil {
+				t.Fatal(err)
+			}
+			if assert.Len(t, got, 1) && assert.NotNil(t, got[0].MinLon, "no bbox for %s", tc.city) {
+				assert.InDelta(t, tc.minLon, *got[0].MinLon, 1e-2, tc.comment)
+				assert.InDelta(t, tc.maxLon, *got[0].MaxLon, 1e-2, tc.comment)
 			}
 		})
 	}

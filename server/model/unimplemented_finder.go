@@ -245,8 +245,8 @@ func (UnimplementedFinder) LocationsByFeedVersionIDs(context.Context, *int, *Loc
 func (UnimplementedFinder) LocationsByIDs(_ context.Context, ids []int) ([]*Location, []error) {
 	return notImplBatch[*Location](ids)
 }
-func (UnimplementedFinder) OperatorsByAgencyIDs(_ context.Context, ids []int) ([]*Operator, []error) {
-	return notImplBatch[*Operator](ids)
+func (UnimplementedFinder) OperatorsByAgencyIDs(_ context.Context, ids []int) ([][]*Operator, []error) {
+	return notImplBatch[[]*Operator](ids)
 }
 func (UnimplementedFinder) OperatorsByCOIFs(_ context.Context, ids []int) ([]*Operator, []error) {
 	return notImplBatch[*Operator](ids)

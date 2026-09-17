@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
@@ -15,6 +16,7 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
+	"golang.org/x/text/unicode/norm"
 )
 
 // These limits have high maximums just for query safety
@@ -177,15 +179,15 @@ func checkFloat(v *float64, min float64, max float64) float64 {
 	return *v
 }
 
-// unicode aware remove all non-alphanumeric characters
-// this is not for escaping sql; just for preparing to_tsquery
+// alphanumeric turns each character other than a letter, digit or combining mark
+// into a space, so punctuation separates words. Not for escaping SQL.
 func alphanumeric(v string) string {
 	ret := []rune{}
 	for _, ch := range v {
-		if unicode.IsSpace(ch) {
-			ret = append(ret, ' ')
-		} else if unicode.IsDigit(ch) || unicode.IsLetter(ch) {
+		if unicode.IsLetter(ch) || unicode.IsDigit(ch) || unicode.IsMark(ch) {
 			ret = append(ret, ch)
+		} else {
+			ret = append(ret, ' ')
 		}
 	}
 	return string(ret)
@@ -197,13 +199,14 @@ func az09(v string) string {
 	return reg.ReplaceAllString(v, "")
 }
 
+// escapeWordsWithSuffix splits v into to_tsquery words of at least two
+// characters, each with sfx appended. Accents are composed first, as stored names
+// are, so a decomposed one can't split a word in the text search parser.
 func escapeWordsWithSuffix(v string, sfx string) []string {
 	var ret []string
-	for _, s := range strings.Fields(v) {
-		aa := alphanumeric(s)
-		// Minimum length 2 characters
-		if len(aa) > 1 {
-			ret = append(ret, aa+sfx)
+	for _, s := range strings.Fields(alphanumeric(norm.NFC.String(v))) {
+		if utf8.RuneCountInString(s) > 1 {
+			ret = append(ret, s+sfx)
 		}
 	}
 	return ret
@@ -284,10 +287,19 @@ func In[T any](col string, val []T) sq.Sqlizer {
 	)
 }
 
+// tsQueryAllWords returns a tl tsquery matching every word of s as a prefix, or
+// "" when s has no usable words.
+func tsQueryAllWords(s string) string {
+	return strings.Join(escapeWordsWithSuffix(s, ":*"), " & ")
+}
+
+// tsQueryAnyWord returns a tl tsquery matching any word of s as a prefix.
+func tsQueryAnyWord(s string) string {
+	return strings.Join(escapeWordsWithSuffix(s, ":*"), " | ")
+}
+
 func tsTableQuery(table string, s string) (rank sq.Sqlizer, wc sq.Sqlizer) {
-	s = strings.TrimSpace(s)
-	words := append([]string{}, escapeWordsWithSuffix(s, ":*")...)
-	wordstsq := strings.Join(words, " & ")
+	wordstsq := tsQueryAllWords(s)
 	rank = sq.Expr(
 		fmt.Sprintf(`ts_rank_cd("%s".textsearch,to_tsquery('tl',?)) as search_rank`, az09(table)),
 		wordstsq,
