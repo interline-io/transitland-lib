@@ -98,7 +98,8 @@ func Test_alphanumeric(t *testing.T) {
 		{"hyphen to space", "Winston-Salem", "Winston Salem"},
 		{"tab to space", "\t", " "},
 		{"french", "Hôtel", "Hôtel"},
-		{"decomposed accent stays in its word", "Montréal", "Montreal"},
+		{"combining mark kept", "Montre\u0301al", "Montre\u0301al"},
+		{"devanagari vowel signs kept", "दिल्ली", "दिल्ली"},
 		{"chinese", "火车", "火车"},
 		{"chinese with ascii", "abc 火车 123", "abc 火车 123"},
 		{"japanese", "列車", "列車"},
@@ -129,6 +130,7 @@ func Test_escapeWordsWithSuffix(t *testing.T) {
 		{"nothing usable", "a b !!", nil},
 		{"one accented letter is one character", "é", nil},
 		{"two accented letters", "éé", []string{"éé:*"}},
+		{"decomposed accent composed", "Montre\u0301al", []string{"Montr\u00e9al:*"}},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {

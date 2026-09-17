@@ -72,7 +72,7 @@ type Loaders struct {
 	StopsByLocationGroupIDs                                       *dataloader.Loader[stopsByLocationGroupLoaderParam, []*model.Stop]
 	LocationsByFeedVersionIDs                                     *dataloader.Loader[locationLoaderParam, []*model.Location]
 	LocationsByIDs                                                *dataloader.Loader[int, *model.Location]
-	OperatorsByAgencyIDs                                          *dataloader.Loader[int, *model.Operator]
+	OperatorsByAgencyIDs                                          *dataloader.Loader[int, []*model.Operator]
 	OperatorsByCOIFs                                              *dataloader.Loader[int, *model.Operator]
 	OperatorsByFeedIDs                                            *dataloader.Loader[operatorLoaderParam, []*model.Operator]
 	PathwaysByFromStopIDs                                         *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]

@@ -85,6 +85,24 @@ func TestPlaceSearchSelect(t *testing.T) {
 			expect: []string{"Newburgh, New York", "New York, New York"},
 		},
 		{
+			name: "vowel signs in a Thai name", level: city, search: "กรุงเทพ",
+			rows:   []row{{"กรุงเทพมหานคร", "กรุงเทพมหานคร", "Thailand", 1}},
+			expect: []string{"กรุงเทพมหานคร, กรุงเทพมหานคร"},
+		},
+		{
+			name: "vowel signs in a Devanagari name", level: city, search: "दिल्ली",
+			rows:   []row{{"दिल्ली", "दिल्ली", "India", 1}},
+			expect: []string{"दिल्ली, दिल्ली"},
+		},
+		{
+			name: "own-name region matches on every word first", level: adm0Adm1, search: "new south",
+			rows: []row{
+				{"", "Southland", "New Zealand", 2},
+				{"", "New South Wales", "Australia", 1},
+			},
+			expect: []string{"New South Wales", "Southland"},
+		},
+		{
 			name: "region search needs its own name", level: adm0Adm1, search: "georgia",
 			rows: []row{
 				{"", "Georgia", "United States of America", 1},
@@ -139,8 +157,6 @@ func TestPlaceSearchSelect(t *testing.T) {
 }
 
 // Search orders places by the operators their count reports, not by agencies.
-// With Caltrain's agency resolved to BART's operator, San Francisco and San Mateo
-// each have two agencies but one operator, tying with San Jose.
 func TestPlaceSelectSearchOperatorOrder(t *testing.T) {
 	ctx := context.Background()
 	tx, err := testutil.MustOpenTestDB(t).BeginTxx(ctx, nil)
@@ -148,24 +164,38 @@ func TestPlaceSelectSearchOperatorOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	merge := sq.StatementBuilder.
-		Update("current_operators_in_feed").
-		Set("resolved_onestop_id", "o-9q9-bayarearapidtransit").
-		Where(sq.Eq{"resolved_onestop_id": "o-9q9-caltrain"})
-	if err := dbutil.Update(ctx, tx, merge); err != nil {
-		t.Fatal(err)
+	update := func(q sq.UpdateBuilder) {
+		if err := dbutil.Update(ctx, tx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	searchSan := func() []string {
+		level := model.PlaceAggregationLevelAdm0Adm1City
+		search := "san"
+		q := placeSelect(nil, nil, nil, &level, nil, &model.PlaceFilter{Search: &search}, model.PlaceGeometrySelect{})
+		var got []*model.Place
+		if err := dbutil.Select(ctx, tx, q, &got); err != nil {
+			t.Fatal(err)
+		}
+		names := []string{}
+		for _, p := range got {
+			names = append(names, *p.CityName)
+		}
+		return names
 	}
 
-	level := model.PlaceAggregationLevelAdm0Adm1City
-	search := "san"
-	q := placeSelect(nil, nil, nil, &level, nil, &model.PlaceFilter{Search: &search}, model.PlaceGeometrySelect{})
-	var got []*model.Place
-	if err := dbutil.Select(ctx, tx, q, &got); err != nil {
-		t.Fatal(err)
-	}
-	names := []string{}
-	for _, p := range got {
-		names = append(names, *p.CityName)
-	}
-	assert.Equal(t, []string{"San Francisco", "San Jose", "San Mateo"}, names)
+	// With Caltrain's agency resolved to BART's operator, San Francisco and San Mateo
+	// each have two agencies but one operator, tying with San Jose.
+	update(sq.StatementBuilder.
+		Update("current_operators_in_feed").
+		Set("resolved_onestop_id", "o-9q9-bayarearapidtransit").
+		Where(sq.Eq{"resolved_onestop_id": "o-9q9-caltrain"}))
+	assert.Equal(t, []string{"San Francisco", "San Jose", "San Mateo"}, searchSan())
+
+	// With Caltrain's operator also deleted, San Jose has none.
+	update(sq.StatementBuilder.
+		Update("current_operators").
+		Set("deleted_at", sq.Expr("now()")).
+		Where(sq.Eq{"onestop_id": "o-9q9-caltrain"}))
+	assert.Equal(t, []string{"San Francisco", "San Mateo", "San Jose"}, searchSan())
 }

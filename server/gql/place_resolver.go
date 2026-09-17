@@ -11,23 +11,16 @@ type placeResolver struct{ *Resolver }
 
 func (r *placeResolver) Operators(ctx context.Context, obj *model.Place) ([]*model.Operator, error) {
 	var ret []*model.Operator
-	var thunks []dataloader.Thunk[*model.Operator]
+	var thunks []dataloader.Thunk[[]*model.Operator]
 	for _, oid := range obj.AgencyIDs.Val {
-		// fmt.Println("creating thunk for operator:", oid)
-		t := LoaderFor(ctx).OperatorsByAgencyIDs.Load(ctx, int(oid))
-		thunks = append(thunks, t)
+		thunks = append(thunks, LoaderFor(ctx).OperatorsByAgencyIDs.Load(ctx, int(oid)))
 	}
-	for i := 0; i < len(obj.AgencyIDs.Val); i++ {
-		// oid := obj.AgencyIDs.Val[i]
-		o, err := thunks[i]()
+	for _, thunk := range thunks {
+		ops, err := thunk()
 		if err != nil {
 			return nil, err
 		}
-		if o != nil {
-			// oj, _ := json.Marshal(o)
-			// fmt.Println("got operator for:", oid, "json:", string(oj))
-			ret = append(ret, o)
-		}
+		ret = append(ret, ops...)
 	}
 	// By OnestopID
 	byOsid := map[string]bool{}

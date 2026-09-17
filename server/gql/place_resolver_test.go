@@ -112,9 +112,9 @@ func TestPlaceResolver(t *testing.T) {
 			selectExpect: []string{"Oakland"},
 		},
 		{
-			// selectExpect ignores order, so the order is checked directly: most
-			// operators first, then by country, region and name.
-			name:  "ADM0_ADM1_CITY search ordered by operator count",
+			// selectExpect ignores order, so the order is checked directly: highest
+			// count first, then by country, region and name.
+			name:  "ADM0_ADM1_CITY search ordered by count",
 			query: q,
 			vars:  hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san"}},
 			f: func(t *testing.T, jj string) {
@@ -123,7 +123,7 @@ func TestPlaceResolver(t *testing.T) {
 		},
 		{
 			// San Mateo's association with BART ranks under 0.1, leaving it one operator.
-			name:  "ADM0_ADM1_CITY search ordered by operator count at min_rank",
+			name:  "ADM0_ADM1_CITY search ordered by count at min_rank",
 			query: q,
 			vars:  hw{"level": "ADM0_ADM1_CITY", "where": hw{"search": "san", "min_rank": 0.1}},
 			f: func(t *testing.T, jj string) {

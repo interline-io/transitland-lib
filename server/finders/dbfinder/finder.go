@@ -16,6 +16,7 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
+	"golang.org/x/text/unicode/norm"
 )
 
 // These limits have high maximums just for query safety
@@ -178,17 +179,14 @@ func checkFloat(v *float64, min float64, max float64) float64 {
 	return *v
 }
 
-// alphanumeric turns each character other than a letter or digit into a space,
-// splitting words on punctuation as the text search parser does. Combining marks
-// are dropped so a decomposed accent stays in its word. Not for escaping SQL.
+// alphanumeric turns each character other than a letter, digit or combining mark
+// into a space, so punctuation separates words. Not for escaping SQL.
 func alphanumeric(v string) string {
 	ret := []rune{}
 	for _, ch := range v {
-		switch {
-		case unicode.IsDigit(ch) || unicode.IsLetter(ch):
+		if unicode.IsLetter(ch) || unicode.IsDigit(ch) || unicode.IsMark(ch) {
 			ret = append(ret, ch)
-		case unicode.IsMark(ch):
-		default:
+		} else {
 			ret = append(ret, ' ')
 		}
 	}
@@ -202,10 +200,11 @@ func az09(v string) string {
 }
 
 // escapeWordsWithSuffix splits v into to_tsquery words of at least two
-// characters, each with sfx appended.
+// characters, each with sfx appended. Accents are composed first, as stored names
+// are, so a decomposed one can't split a word in the text search parser.
 func escapeWordsWithSuffix(v string, sfx string) []string {
 	var ret []string
-	for _, s := range strings.Fields(alphanumeric(v)) {
+	for _, s := range strings.Fields(alphanumeric(norm.NFC.String(v))) {
 		if utf8.RuneCountInString(s) > 1 {
 			ret = append(ret, s+sfx)
 		}

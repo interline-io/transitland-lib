@@ -2,8 +2,10 @@
 --
 -- Not in the migration: it rewrites every agency, route and stop row, which a fresh database
 -- doesn't need. Run once after migrating, outside a transaction block so each feed version
--- commits on its own; safe to re-run. Until it finishes, a search with a non-ASCII word misses
--- rows written before the migration.
+-- commits on its own; safe to re-run. Pause imports, activations and unimports while it runs:
+-- an activation can copy old vectors into the materialized tables, and a deactivation or
+-- unimport can deadlock with it. Until it finishes, rows written before the migration can't
+-- be found by their words with non-ASCII letters.
 
 -- Registry tables, one statement each. Assigning a column to itself recomputes the
 -- generated textsearch column that depends on it.

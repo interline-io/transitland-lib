@@ -255,8 +255,8 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 // placeBboxSQL is the extent of ne_geom.g in whichever longitude frame is narrower.
 //
 // A shape crossing the antimeridian spans nearly 360 degrees in the normal frame
-// (Alaska: 358.9) but not once shifted into [0,360) (57.5). Other shapes measure the
-// same in both, and a tie within 1e-9 degrees of rounding keeps the normal frame.
+// (Alaska: 358.9) but not once shifted into [0,360) (57.5). A tie within 1e-9
+// degrees of rounding keeps the normal frame.
 const placeBboxSQL = `case
 	when ST_XMax(ST_Extent(ne_geom.g)) - ST_XMin(ST_Extent(ne_geom.g))
 		<= ST_XMax(ST_Extent(ST_ShiftLongitude(ne_geom.g))) - ST_XMin(ST_Extent(ST_ShiftLongitude(ne_geom.g))) + 1e-9
@@ -275,9 +275,9 @@ end from (select whole.geometry::geometry as g from ne_10m_admin_1_states_provin
 
 // placeCityJoinSQL joins the Natural Earth populated place for a city association.
 //
-// The place builder names a city's region from the admin-1 polygon containing it,
-// which often differs from the populated place's own names (Paris is in
-// "Île-de-France" there), so the place matches within that polygon or by name.
+// The place builder names a city's region and country from the admin-1 polygon
+// containing it, which often differ from the populated place's own names (Paris is
+// in "Île-de-France" there), so the place matches within that polygon or by name.
 const placeCityJoinSQL = `left join ne_10m_populated_places ne_place on ne_place.name = tlap.name and (
 	(ne_place.adm1name = tlap.adm1name and ne_place.adm0name = tlap.adm0name)
 	or exists (
@@ -422,7 +422,7 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 		if where.MinRank != nil {
 			q = q.Where(sq.GtOrEq{"tlap.rank": where.MinRank})
 		}
-		// A search with no usable words is ignored, as one of a single character is.
+		// A search with no usable words is ignored.
 		if where.Search != nil && tsQueryAllWords(*where.Search) != "" {
 			q = placeSearchSelect(q, level, *where.Search).
 				JoinClause(placeOperatorJoinSQL).

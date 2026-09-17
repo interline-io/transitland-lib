@@ -55,6 +55,7 @@ require (
 	github.com/twpayne/go-shapefile v0.0.7
 	github.com/vektah/gqlparser/v2 v2.5.33
 	golang.org/x/sync v0.21.0
+	golang.org/x/text v0.37.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/dnaeon/go-vcr.v2 v2.3.0
 )
@@ -170,7 +171,6 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/term v0.44.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect

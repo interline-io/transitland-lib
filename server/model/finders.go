@@ -99,7 +99,7 @@ type EntityLoader interface {
 	LocationGroupsByStopIDs(context.Context, *int, []int) ([][]*LocationGroup, error)
 	LocationsByFeedVersionIDs(context.Context, *int, *LocationFilter, []int) ([][]*Location, error)
 	LocationsByIDs(context.Context, []int) ([]*Location, []error)
-	OperatorsByAgencyIDs(context.Context, []int) ([]*Operator, []error)
+	OperatorsByAgencyIDs(context.Context, []int) ([][]*Operator, []error)
 	OperatorsByCOIFs(context.Context, []int) ([]*Operator, []error)
 	OperatorsByFeedIDs(context.Context, *int, *OperatorFilter, []int) ([][]*Operator, error)
 	PathwaysByFromStopIDs(context.Context, *int, *PathwayFilter, []int) ([][]*Pathway, error)
