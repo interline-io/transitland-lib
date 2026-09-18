@@ -35,6 +35,11 @@ func CheckWarnings(ent any) []error {
 	if a, ok := ent.(EntityWithWarnings); ok {
 		errs = append(errs, a.Warnings()...)
 	}
+	// An entity with its own Errors() opts out of reflect based field checks;
+	// its warnings are its own to report too.
+	if _, ok := ent.(EntityWithErrors); !ok {
+		errs = append(errs, ReflectCheckWarnings(ent)...)
+	}
 	return errs
 }
 
@@ -85,7 +90,11 @@ func ReflectCheckErrors(ent any) []error {
 			if fieldInfo.Required && !fieldCheck.IsPresent() {
 				errs = append(errs, causes.NewRequiredFieldError(fieldName))
 			}
-			if err := fieldCheck.Check(); err != nil {
+			// A warn field reports a malformed value through
+			// ReflectCheckWarnings instead. Absence is still an error above:
+			// the tag downgrades how a bad value is judged, not whether a
+			// required field has to be there.
+			if err := fieldCheck.Check(); err != nil && !fieldInfo.Warn {
 				errs = append(errs, TrySetField(err, fieldName))
 			}
 		} else if fieldInfo.Required {
@@ -134,6 +143,40 @@ func ReflectCheckErrors(ent any) []error {
 					errs = append(errs, checkErr)
 				}
 			}
+		}
+	}
+	return errs
+}
+
+// ReflectCheckWarnings returns field validation failures that the "warn" tag
+// option downgrades from errors.
+//
+// A field is tagged this way when a value the library cannot recognize is not
+// a reason to drop the entity: agency_lang is advisory, and the registries
+// these values are checked against gain entries over time, so a feed can be
+// correct while the library is merely out of date.
+func ReflectCheckWarnings(ent any) []error {
+	var errs []error
+	fmap := mapperCache.GetStructTagMap(ent)
+	var entValue reflect.Value
+	for fieldName, fieldInfo := range fmap {
+		if !fieldInfo.Warn || fieldInfo.IsAlias() {
+			continue
+		}
+		if !entValue.IsValid() {
+			entValue = reflect.ValueOf(ent).Elem()
+		}
+		field := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
+		fieldAddr := field.Addr().Interface()
+		if fieldAddr == nil {
+			continue
+		}
+		fieldCheck, ok := fieldAddr.(CanReflectCheck)
+		if !ok {
+			continue
+		}
+		if err := fieldCheck.Check(); err != nil {
+			errs = append(errs, TrySetField(err, fieldName))
 		}
 	}
 	return errs

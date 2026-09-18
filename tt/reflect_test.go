@@ -192,3 +192,43 @@ func TestReflect_AliasIsNotASecondField(t *testing.T) {
 		assert.Equal(t, "db1", ent.Ref.Val)
 	})
 }
+
+func TestReflectCheckWarnings(t *testing.T) {
+	t.Run("bad value is a warning, not an error", func(t *testing.T) {
+		ent := struct {
+			Value Language `csv:",warn"`
+		}{Value: NewLanguage("xyz")}
+		assert.Nil(t, firstError(ReflectCheckErrors(&ent)))
+		assert.IsType(t, &causes.InvalidFieldError{}, firstError(ReflectCheckWarnings(&ent)))
+	})
+	t.Run("good value warns about nothing", func(t *testing.T) {
+		ent := struct {
+			Value Language `csv:",warn"`
+		}{Value: NewLanguage("cnr")}
+		assert.Nil(t, firstError(ReflectCheckErrors(&ent)))
+		assert.Nil(t, firstError(ReflectCheckWarnings(&ent)))
+	})
+	t.Run("untagged field keeps reporting an error", func(t *testing.T) {
+		ent := struct {
+			Value Language
+		}{Value: NewLanguage("xyz")}
+		assert.IsType(t, &causes.InvalidFieldError{}, firstError(ReflectCheckErrors(&ent)))
+		assert.Nil(t, firstError(ReflectCheckWarnings(&ent)))
+	})
+	// The tag downgrades how a bad value is judged, not whether a required
+	// field has to be present at all.
+	t.Run("required and warn still errors when absent", func(t *testing.T) {
+		ent := struct {
+			Value Language `csv:",required,warn"`
+		}{}
+		assert.IsType(t, &causes.RequiredFieldError{}, firstError(ReflectCheckErrors(&ent)))
+		assert.Nil(t, firstError(ReflectCheckWarnings(&ent)))
+	})
+	t.Run("required and warn warns when malformed", func(t *testing.T) {
+		ent := struct {
+			Value Language `csv:",required,warn"`
+		}{Value: NewLanguage("xyz")}
+		assert.Nil(t, firstError(ReflectCheckErrors(&ent)))
+		assert.IsType(t, &causes.InvalidFieldError{}, firstError(ReflectCheckWarnings(&ent)))
+	})
+}

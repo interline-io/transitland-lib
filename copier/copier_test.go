@@ -342,3 +342,42 @@ func TestCopier_CreateMissingShapes_FlexTrips(t *testing.T) {
 	// Verify generated shapes count
 	assert.Equal(t, 1, cpResult.GeneratedCount["shapes.txt"], "should have generated exactly 1 shape")
 }
+
+// An unrecognized agency_lang must not take the agency, and with it every
+// route referencing that agency, out of the feed.
+func TestCopier_UnknownLanguageIsAWarning(t *testing.T) {
+	reader := direct.NewReader()
+	reader.AgencyList = append(reader.AgencyList, gtfs.Agency{
+		AgencyID:       tt.NewString("test"),
+		AgencyName:     tt.NewString("ok"),
+		AgencyURL:      tt.NewUrl("http://example.com"),
+		AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+		AgencyLang:     tt.NewLanguage("xyz"),
+	})
+	reader.RouteList = append(reader.RouteList, gtfs.Route{
+		RouteID:        tt.NewString("route1"),
+		RouteShortName: tt.NewString("1"),
+		RouteType:      tt.NewInt(3),
+		AgencyID:       tt.NewKey("test"),
+	})
+
+	writer := direct.NewWriter()
+	result, err := CopyWithOptions(context.Background(), reader, writer, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 0, result.SkipEntityErrorCount["agency.txt"])
+	assert.Equal(t, 0, result.SkipEntityReferenceCount["routes.txt"])
+	assert.Equal(t, 1, result.EntityCount["agency.txt"])
+	assert.Equal(t, 1, result.EntityCount["routes.txt"])
+	assert.NotEmpty(t, result.Warnings, "expected a warning for the unknown language")
+
+	wreader, _ := writer.NewReader()
+	var langs []string
+	for ent := range wreader.Agencies() {
+		langs = append(langs, ent.AgencyLang.Val)
+	}
+	// The value is reported, not silently rewritten.
+	assert.Equal(t, []string{"xyz"}, langs)
+}

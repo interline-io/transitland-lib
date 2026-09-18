@@ -11,11 +11,11 @@ import (
 type FeedInfo struct {
 	FeedPublisherName tt.String   `csv:",required" standardized_sort:"1"`
 	FeedPublisherURL  tt.Url      `csv:",required"`
-	FeedLang          tt.Language `csv:",required"`
+	FeedLang          tt.Language `csv:",required,warn"`
 	FeedVersion       tt.String   `db:"feed_version_name"`
 	FeedStartDate     tt.Date
 	FeedEndDate       tt.Date
-	DefaultLang       tt.Language
+	DefaultLang       tt.Language `csv:",warn"`
 	FeedContactEmail  tt.Email
 	FeedContactURL    tt.Url
 	tt.BaseEntity

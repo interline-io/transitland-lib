@@ -29,9 +29,10 @@ func TestFeedInfo_Errors(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name           string
-		entity         *FeedInfo
-		expectedErrors []ExpectError
+		name             string
+		entity           *FeedInfo
+		expectedErrors   []ExpectError
+		expectedWarnings []ExpectError
 	}{
 		{
 			name:           "Valid feed_info",
@@ -71,7 +72,7 @@ func TestFeedInfo_Errors(t *testing.T) {
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:feed_lang"),
+			expectedWarnings: PE("InvalidFieldError:feed_lang"),
 		},
 		{
 			name: "feed_end_date before feed_start_date",
@@ -88,7 +89,7 @@ func TestFeedInfo_Errors(t *testing.T) {
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.DefaultLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:default_lang"),
+			expectedWarnings: PE("InvalidFieldError:default_lang"),
 		},
 		{
 			name: "Invalid feed_contact_email",
@@ -110,6 +111,7 @@ func TestFeedInfo_Errors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := tt.CheckErrors(tc.entity)
 			testutil.CheckErrors(tc.expectedErrors, errs, t)
+			testutil.CheckErrors(tc.expectedWarnings, tt.CheckWarnings(tc.entity), t)
 		})
 	}
 }

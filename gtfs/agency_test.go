@@ -26,9 +26,10 @@ func TestAgency_Errors(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		agency         *Agency
-		expectedErrors []ExpectError
+		name             string
+		agency           *Agency
+		expectedErrors   []ExpectError
+		expectedWarnings []ExpectError
 	}{
 		{
 			name:           "Valid agency",
@@ -54,7 +55,7 @@ func TestAgency_Errors(t *testing.T) {
 			agency: newAgency(func(a *Agency) {
 				a.AgencyLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:agency_lang"),
+			expectedWarnings: PE("InvalidFieldError:agency_lang"),
 		},
 		{
 			name: "Invalid cemv_support",
@@ -69,6 +70,7 @@ func TestAgency_Errors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := tt.CheckErrors(tc.agency)
 			CheckErrors(tc.expectedErrors, errs, t)
+			CheckErrors(tc.expectedWarnings, tt.CheckWarnings(tc.agency), t)
 		})
 	}
 }
