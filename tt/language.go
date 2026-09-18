@@ -35,6 +35,12 @@ func IsValidLanguage(value string) bool {
 	if strings.ContainsRune(value, '_') {
 		return false
 	}
+	// "root" is CLDR's name for the undetermined locale, and x/text accepts it
+	// as an alias for "und". BCP 47 reserves four-letter primary subtags, so it
+	// is not something a feed can name a language with.
+	if strings.EqualFold(value, "root") {
+		return false
+	}
 	_, err := language.Parse(value)
 	return err == nil
 }

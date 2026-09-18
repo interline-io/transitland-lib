@@ -115,6 +115,9 @@ func Test_IsValidLang(t *testing.T) {
 		// spec tells a multilingual dataset to put in feed_lang, and "cnr"
 		// (Montenegrin) has no two-letter code.
 		{"three letter", args{"cnr"}, true},
+		// Asas, an ISO 639-3 language. This case previously asserted false,
+		// which encoded the bug rather than the spec.
+		{"iso 639-3", args{"asd"}, true},
 		{"multiple languages", args{"mul"}, true},
 		{"undetermined", args{"und"}, true},
 		{"no linguistic content", args{"zxx"}, true},
@@ -122,6 +125,8 @@ func Test_IsValidLang(t *testing.T) {
 		{"unknown subtag", args{"xx"}, false},
 		{"not a tag", args{"english"}, false},
 		{"underscore separator", args{"en_US"}, false},
+		{"cldr root alias", args{"root"}, false},
+		{"cldr root alias mixed case", args{"Root"}, false},
 		{"trailing space", args{"en "}, false},
 		{"invalid", args{"Not/Timezone"}, false},
 	}
