@@ -9,7 +9,7 @@ type Translation struct {
 	// "TableNameValue" because TableName is a required interface method
 	TableNameValue tt.String   `db:"table_name" csv:"table_name,required" standardized_sort:"1"`
 	FieldName      tt.String   `csv:",required" standardized_sort:"2"`
-	Language       tt.Language `csv:",required" standardized_sort:"3"`
+	Language       tt.Language `csv:",required,warn" standardized_sort:"3"`
 	Translation    tt.String   `csv:",required"`
 	RecordID       tt.String   `standardized_sort:"4"`
 	RecordSubID    tt.String   `standardized_sort:"5"`

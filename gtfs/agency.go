@@ -8,7 +8,7 @@ type Agency struct {
 	AgencyName     tt.String   `csv:",required"`
 	AgencyURL      tt.Url      `csv:",required"`
 	AgencyTimezone tt.Timezone `csv:",required"`
-	AgencyLang     tt.Language
+	AgencyLang     tt.Language `csv:",warn"`
 	AgencyPhone    tt.String
 	AgencyFareURL  tt.Url
 	AgencyEmail    tt.Email
