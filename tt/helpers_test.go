@@ -108,10 +108,27 @@ func Test_IsValidLang(t *testing.T) {
 		args args
 		want bool
 	}{
-		{"en", args{"en"}, true},
+		{"two letter", args{"en"}, true},
+		{"region", args{"en-US"}, true},
+		{"script and region", args{"sr-Cyrl-ME"}, true},
+		// Three-letter primary subtags are valid BCP 47. "mul" is what the
+		// spec tells a multilingual dataset to put in feed_lang, and "cnr"
+		// (Montenegrin) has no two-letter code.
+		{"three letter", args{"cnr"}, true},
+		// Asas, an ISO 639-3 language. This case previously asserted false,
+		// which encoded the bug rather than the spec.
+		{"iso 639-3", args{"asd"}, true},
+		{"multiple languages", args{"mul"}, true},
+		{"undetermined", args{"und"}, true},
+		{"no linguistic content", args{"zxx"}, true},
 		{"empty", args{""}, false},
-		{"asd", args{"asd"}, false},
-		// {"invalid", args{"Not/Timezone"}, false},
+		{"unknown subtag", args{"xx"}, false},
+		{"not a tag", args{"english"}, false},
+		{"underscore separator", args{"en_US"}, false},
+		{"cldr root alias", args{"root"}, false},
+		{"cldr root alias mixed case", args{"Root"}, false},
+		{"trailing space", args{"en "}, false},
+		{"invalid", args{"Not/Timezone"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
