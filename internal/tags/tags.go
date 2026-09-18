@@ -75,6 +75,7 @@ type FieldInfo struct {
 	Name           string
 	AliasOf        string
 	Required       bool
+	Warn           bool
 	Target         string
 	Index          []int
 	GreaterThan    *float64
@@ -149,6 +150,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			}
 
 			_, mfi.Required = fi.Options["required"]
+			_, mfi.Warn = fi.Options["warn"]
 			if optVal := fi.Field.Tag.Get("gt"); optVal != "" {
 				if optParse, err := strconv.ParseFloat(optVal, 64); err != nil {
 					logTag("gt", optVal, err)

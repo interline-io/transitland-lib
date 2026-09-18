@@ -23,9 +23,10 @@ func TestTranslation_Errors(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name           string
-		entity         *Translation
-		expectedErrors []ExpectError
+		name             string
+		entity           *Translation
+		expectedErrors   []ExpectError
+		expectedWarnings []ExpectError
 	}{
 		{
 			name:           "Valid translation",
@@ -63,7 +64,7 @@ func TestTranslation_Errors(t *testing.T) {
 			entity: newTranslation(func(t *Translation) {
 				t.Language = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:language"),
+			expectedWarnings: PE("InvalidFieldError:language"),
 		},
 		{
 			name: "record_id required when field_value empty",
@@ -126,6 +127,7 @@ func TestTranslation_Errors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := tt.CheckErrors(tc.entity)
 			testutil.CheckErrors(tc.expectedErrors, errs, t)
+			testutil.CheckErrors(tc.expectedWarnings, tt.CheckWarnings(tc.entity), t)
 		})
 	}
 }
