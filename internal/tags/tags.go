@@ -101,6 +101,7 @@ type Cache struct {
 	Mapper  *reflectx.Mapper
 	lock    sync.Mutex
 	typemap map[string]FieldMap
+	warnmap map[string][]*FieldInfo
 }
 
 // NewCache initializes a new cache.
@@ -108,12 +109,33 @@ func NewCache(mapper *reflectx.Mapper) *Cache {
 	return &Cache{
 		Mapper:  mapper,
 		typemap: map[string]FieldMap{},
+		warnmap: map[string][]*FieldInfo{},
 	}
 }
 
 // GetStructTagMap .
 func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.getStructTagMap(ent)
+}
+
+// GetWarnFields returns the fields tagged with the "warn" option, in no
+// particular order.
+//
+// It is collected when the type is first mapped because the warning pass runs
+// for every entity in a copy while almost no type has such a field: the answer
+// for those is an empty slice, not a walk over every field of every entity.
+func (c *Cache) GetWarnFields(ent interface{}) []*FieldInfo {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.getStructTagMap(ent)
+	return c.warnmap[reflect.TypeOf(ent).String()]
+}
+
+// getStructTagMap returns the field map for the entity's type, parsing the
+// type's tags on first use. The caller holds the lock.
+func (c *Cache) getStructTagMap(ent interface{}) FieldMap {
 	t := reflect.TypeOf(ent).String()
 	m, ok := c.typemap[t]
 	if !ok {
@@ -129,6 +151,7 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 		}
 		m = FieldMap{}
 		aliases := map[string]*FieldInfo{}
+		var warnFields []*FieldInfo
 		fields := c.Mapper.TypeMap(reflect.TypeOf(ent))
 		for i, fi := range fields.Index {
 			_ = i
@@ -234,6 +257,9 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 				aliases[optVal] = &mfi
 			}
 			m[fi.Name] = &mfi
+			if mfi.Warn {
+				warnFields = append(warnFields, &mfi)
+			}
 		}
 		// Register aliases after every field is mapped, so a field's own name is
 		// never displaced by another field's alias. An alias entry carries only
@@ -255,8 +281,8 @@ func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
 			}
 		}
 		c.typemap[t] = m
+		c.warnmap[t] = warnFields
 	}
-	c.lock.Unlock()
 	return m
 }
 

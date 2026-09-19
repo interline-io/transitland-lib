@@ -231,4 +231,63 @@ func TestReflectCheckWarnings(t *testing.T) {
 		assert.Nil(t, firstError(ReflectCheckErrors(&ent)))
 		assert.IsType(t, &causes.InvalidFieldError{}, firstError(ReflectCheckWarnings(&ent)))
 	})
+	// The tag covers every check on the field's value, not only the one the
+	// type makes of itself. Splitting them would report a malformed value as a
+	// warning and an out of range one as an error, on the same field.
+	t.Run("enum value is a warning", func(t *testing.T) {
+		ent := struct {
+			Value Int `csv:",warn" enum:"0,1,2"`
+		}{Value: NewInt(123)}
+		assert.Nil(t, firstError(ReflectCheckErrors(&ent)))
+		assert.IsType(t, &causes.InvalidFieldError{}, firstError(ReflectCheckWarnings(&ent)))
+	})
+	t.Run("range value is a warning", func(t *testing.T) {
+		ent := struct {
+			Value Float `csv:",warn" range:"0,10"`
+		}{Value: NewFloat(-123)}
+		assert.Nil(t, firstError(ReflectCheckErrors(&ent)))
+		assert.IsType(t, &causes.InvalidFieldError{}, firstError(ReflectCheckWarnings(&ent)))
+	})
+	// A field the tag cannot act on is a mistake in the struct, not a warning
+	// about the data, so it stays an error and it is not silently dropped.
+	t.Run("warn on an uncheckable type reports the mistake", func(t *testing.T) {
+		ent := struct {
+			Value string `csv:",warn"`
+		}{Value: "anything"}
+		assert.ErrorContains(t, firstError(ReflectCheckErrors(&ent)), "does not support reflect based error checks")
+	})
+}
+
+// Hand rolling Errors() opts an entity out of the reflect based error checks.
+// It does not opt the entity out of having its warn tagged fields checked at
+// all: CheckWarnings is the only place those are reported.
+type ownErrorsEntity struct {
+	Value Language `csv:",warn"`
+}
+
+func (ent *ownErrorsEntity) Errors() []error { return nil }
+
+func TestCheckWarnings(t *testing.T) {
+	t.Run("entity with its own Errors is still checked", func(t *testing.T) {
+		ent := &ownErrorsEntity{Value: NewLanguage("xyz")}
+		assert.Nil(t, firstError(CheckErrors(ent)))
+		assert.IsType(t, &causes.InvalidFieldError{}, firstError(CheckWarnings(ent)))
+	})
+	// CheckWarnings is exported and takes any; a caller that hands it
+	// something it cannot address gets no warnings rather than a panic.
+	t.Run("value is not a panic", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			assert.Nil(t, firstError(CheckWarnings(ownErrorsEntity{Value: NewLanguage("xyz")})))
+		})
+	})
+	t.Run("nil is not a panic", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			assert.Nil(t, firstError(CheckWarnings(nil)))
+		})
+	})
+	t.Run("typed nil is not a panic", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			assert.Nil(t, firstError(CheckWarnings((*ownErrorsEntity)(nil))))
+		})
+	})
 }

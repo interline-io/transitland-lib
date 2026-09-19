@@ -1,6 +1,7 @@
 package tags
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/jmoiron/sqlx/reflectx"
@@ -26,6 +27,7 @@ type aliasEntity struct {
 type warnEntity struct {
 	Advisory string `csv:"advisory,warn"`
 	Both     string `csv:"both,required,warn"`
+	Renamed  string `csv:"renamed,alias=old_name,warn"`
 	Plain    string `csv:"plain,required"`
 }
 
@@ -39,7 +41,11 @@ func TestCache_GetStructTagMap_Warn(t *testing.T) {
 	}{
 		{"advisory", true, false},
 		{"both", true, true},
+		{"renamed", true, false},
 		{"plain", false, true},
+		// Validation tags stay on the field's own entry, so a value is checked
+		// once, under the name the file actually uses.
+		{"old_name", false, false},
 	} {
 		fi, ok := stg[tc.field]
 		if !ok {
@@ -52,6 +58,32 @@ func TestCache_GetStructTagMap_Warn(t *testing.T) {
 			t.Errorf("got Required=%v for '%s', expected %v", fi.Required, tc.field, tc.required)
 		}
 	}
+}
+
+func TestCache_GetWarnFields(t *testing.T) {
+	c := NewCache(reflectx.NewMapperFunc("csv", ToSnakeCase))
+	var got []string
+	for _, fi := range c.GetWarnFields(&warnEntity{}) {
+		got = append(got, fi.Name)
+	}
+	// An alias is another name for a field that is checked under its own name;
+	// it must not make that field look like a second warn field here.
+	sort.Strings(got)
+	expect := []string{"advisory", "both", "renamed"}
+	if len(got) != len(expect) {
+		t.Fatalf("got warn fields %v, expected %v", got, expect)
+	}
+	for i := range got {
+		if got[i] != expect[i] {
+			t.Errorf("got %s at position %d, expected %s", got[i], i, expect[i])
+		}
+	}
+	// A type with no warn tagged field is the common case: the warning pass
+	// asks about every entity in a copy.
+	if warnFields := c.GetWarnFields(&testEntity{}); len(warnFields) > 0 {
+		t.Errorf("got warn fields %v for a type with none", warnFields)
+	}
+
 }
 
 func TestCache_GetStructTagMap_Alias(t *testing.T) {

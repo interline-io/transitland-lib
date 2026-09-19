@@ -35,11 +35,11 @@ func CheckWarnings(ent any) []error {
 	if a, ok := ent.(EntityWithWarnings); ok {
 		errs = append(errs, a.Warnings()...)
 	}
-	// An entity with its own Errors() opts out of reflect based field checks;
-	// its warnings are its own to report too.
-	if _, ok := ent.(EntityWithErrors); !ok {
-		errs = append(errs, ReflectCheckWarnings(ent)...)
-	}
+	// Unlike CheckErrors, this runs for every entity. Hand rolling Errors() as
+	// a fast path opts an entity out of the reflect based error checks; it does
+	// not opt the entity out of having its warn tagged fields checked at all,
+	// and this is the only place those are reported.
+	errs = append(errs, ReflectCheckWarnings(ent)...)
 	return errs
 }
 
@@ -81,67 +81,86 @@ func ReflectCheckErrors(ent any) []error {
 		// Get field
 		field := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
 		fieldAddr := field.Addr().Interface()
-		if fieldAddr == nil {
-			continue
+
+		// Check required. A tag the field's type cannot act on is a mistake in
+		// the struct rather than anything about the data, so it is reported
+		// here whichever pass the field's value checks belong to.
+		fieldCheck, canCheck := fieldAddr.(CanReflectCheck)
+		if !canCheck {
+			if fieldInfo.Required || fieldInfo.Warn {
+				errs = append(errs, fmt.Errorf("type %T does not support reflect based error checks", fieldAddr))
+			}
+		} else if fieldInfo.Required && !fieldCheck.IsPresent() {
+			errs = append(errs, causes.NewRequiredFieldError(fieldName))
 		}
 
-		// Check required and type based validation
-		if fieldCheck, ok := fieldAddr.(CanReflectCheck); ok {
-			if fieldInfo.Required && !fieldCheck.IsPresent() {
-				errs = append(errs, causes.NewRequiredFieldError(fieldName))
-			}
-			// A warn field reports a malformed value through
-			// ReflectCheckWarnings instead. Absence is still an error above:
-			// the tag downgrades how a bad value is judged, not whether a
-			// required field has to be there.
-			if err := fieldCheck.Check(); err != nil && !fieldInfo.Warn {
-				errs = append(errs, TrySetField(err, fieldName))
-			}
-		} else if fieldInfo.Required {
-			errs = append(errs, fmt.Errorf("type %T does not support reflect based error checks", fieldAddr))
+		// A warn field has its value reported by ReflectCheckWarnings instead.
+		// Absence is still an error above: the tag downgrades how a bad value
+		// is judged, not whether a required field has to be there.
+		if !fieldInfo.Warn {
+			errs = append(errs, reflectCheckValue(fieldName, fieldAddr, fieldInfo)...)
 		}
+	}
+	return errs
+}
 
-		// Check range min/max
-		if fieldInfo.GreaterOrEqual != nil || fieldInfo.LessOrEqual != nil || fieldInfo.GreaterThan != nil || fieldInfo.LessThan != nil {
-			if fieldCheck, ok := fieldAddr.(canReflectCheckFloat); !ok {
-				errs = append(errs, fmt.Errorf("could not convert %T to float for range check", fieldAddr))
-			} else if fieldCheck.IsPresent() {
-				checkVal := fieldCheck.Float()
-				if minVal, ok := checkFloat(fieldInfo.GreaterThan); ok && checkVal <= minVal {
-					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than or equal to %f", minVal))
-					errs = append(errs, checkErr)
-				}
-				if maxVal, ok := checkFloat(fieldInfo.LessThan); ok && checkVal >= maxVal {
-					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than or equal to %f", maxVal))
-					errs = append(errs, checkErr)
-				}
-				if minVal, ok := checkFloat(fieldInfo.GreaterOrEqual); ok && checkVal < minVal {
-					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", minVal))
-					errs = append(errs, checkErr)
-				}
-				if maxVal, ok := checkFloat(fieldInfo.LessOrEqual); ok && checkVal > maxVal {
-					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than %f", maxVal))
-					errs = append(errs, checkErr)
-				}
+// reflectCheckValue runs the checks on a field's value: a value its own type
+// rejects, the gt/gte/lt/lte/range bounds, and the enum values.
+//
+// They live together because the "warn" tag option moves all of them from
+// CheckErrors to CheckWarnings at once. Splitting them would report a
+// malformed value as a warning and an out of range one as an error, on the
+// same field.
+func reflectCheckValue(fieldName string, fieldAddr any, fieldInfo *tags.FieldInfo) []error {
+	var errs []error
+
+	// Check type based validation
+	if fieldCheck, ok := fieldAddr.(CanReflectCheck); ok {
+		if err := fieldCheck.Check(); err != nil {
+			errs = append(errs, TrySetField(err, fieldName))
+		}
+	}
+
+	// Check range min/max
+	if fieldInfo.GreaterOrEqual != nil || fieldInfo.LessOrEqual != nil || fieldInfo.GreaterThan != nil || fieldInfo.LessThan != nil {
+		if fieldCheck, ok := fieldAddr.(canReflectCheckFloat); !ok {
+			errs = append(errs, fmt.Errorf("could not convert %T to float for range check", fieldAddr))
+		} else if fieldCheck.IsPresent() {
+			checkVal := fieldCheck.Float()
+			if minVal, ok := checkFloat(fieldInfo.GreaterThan); ok && checkVal <= minVal {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than or equal to %f", minVal))
+				errs = append(errs, checkErr)
+			}
+			if maxVal, ok := checkFloat(fieldInfo.LessThan); ok && checkVal >= maxVal {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than or equal to %f", maxVal))
+				errs = append(errs, checkErr)
+			}
+			if minVal, ok := checkFloat(fieldInfo.GreaterOrEqual); ok && checkVal < minVal {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, less than %f", minVal))
+				errs = append(errs, checkErr)
+			}
+			if maxVal, ok := checkFloat(fieldInfo.LessOrEqual); ok && checkVal > maxVal {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("out of bounds, greater than %f", maxVal))
+				errs = append(errs, checkErr)
 			}
 		}
+	}
 
-		// Check enum values
-		if len(fieldInfo.EnumValues) > 0 {
-			if fieldCheck, ok := fieldAddr.(canReflectCheckInt); !ok {
-				errs = append(errs, fmt.Errorf("could not convert %T to int for enum check", fieldAddr))
-			} else if fieldCheck.IsPresent() {
-				checkVal := int64(fieldCheck.Int())
-				found := false
-				for _, enumValue := range fieldInfo.EnumValues {
-					if checkVal == enumValue {
-						found = true
-					}
+	// Check enum values
+	if len(fieldInfo.EnumValues) > 0 {
+		if fieldCheck, ok := fieldAddr.(canReflectCheckInt); !ok {
+			errs = append(errs, fmt.Errorf("could not convert %T to int for enum check", fieldAddr))
+		} else if fieldCheck.IsPresent() {
+			checkVal := int64(fieldCheck.Int())
+			found := false
+			for _, enumValue := range fieldInfo.EnumValues {
+				if checkVal == enumValue {
+					found = true
 				}
-				if !found {
-					checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("not in allowed values"))
-					errs = append(errs, checkErr)
-				}
+			}
+			if !found {
+				checkErr := causes.NewInvalidFieldError(fieldName, fieldCheck.String(), fmt.Errorf("not in allowed values"))
+				errs = append(errs, checkErr)
 			}
 		}
 	}
@@ -156,28 +175,24 @@ func ReflectCheckErrors(ent any) []error {
 // these values are checked against gain entries over time, so a feed can be
 // correct while the library is merely out of date.
 func ReflectCheckWarnings(ent any) []error {
+	// Nothing addressable to check. This is exported and takes any, so a
+	// caller that passes a value or a nil gets no warnings rather than a
+	// panic.
+	entValue := reflect.ValueOf(ent)
+	if entValue.Kind() != reflect.Pointer || entValue.IsNil() {
+		return nil
+	}
+	// This runs for every entity in a copy while almost no type has a warn
+	// tagged field, so the fields are looked up rather than searched for.
+	warnFields := mapperCache.GetWarnFields(ent)
+	if len(warnFields) == 0 {
+		return nil
+	}
 	var errs []error
-	fmap := mapperCache.GetStructTagMap(ent)
-	var entValue reflect.Value
-	for fieldName, fieldInfo := range fmap {
-		if !fieldInfo.Warn || fieldInfo.IsAlias() {
-			continue
-		}
-		if !entValue.IsValid() {
-			entValue = reflect.ValueOf(ent).Elem()
-		}
-		field := reflectx.FieldByIndexes(entValue, fieldInfo.Index)
-		fieldAddr := field.Addr().Interface()
-		if fieldAddr == nil {
-			continue
-		}
-		fieldCheck, ok := fieldAddr.(CanReflectCheck)
-		if !ok {
-			continue
-		}
-		if err := fieldCheck.Check(); err != nil {
-			errs = append(errs, TrySetField(err, fieldName))
-		}
+	entElem := entValue.Elem()
+	for _, fieldInfo := range warnFields {
+		field := reflectx.FieldByIndexes(entElem, fieldInfo.Index)
+		errs = append(errs, reflectCheckValue(fieldInfo.Name, field.Addr().Interface(), fieldInfo)...)
 	}
 	return errs
 }
