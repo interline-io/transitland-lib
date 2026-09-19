@@ -21,6 +21,39 @@ type aliasEntity struct {
 	Collides string `csv:"collides,alias=new_name"`
 }
 
+// warnEntity covers the "warn" option, which moves a field's value checks from
+// errors to warnings. It is independent of "required": a field can be both.
+type warnEntity struct {
+	Advisory string `csv:"advisory,warn"`
+	Both     string `csv:"both,required,warn"`
+	Plain    string `csv:"plain,required"`
+}
+
+func TestCache_GetStructTagMap_Warn(t *testing.T) {
+	c := NewCache(reflectx.NewMapperFunc("csv", ToSnakeCase))
+	stg := c.GetStructTagMap(&warnEntity{})
+	for _, tc := range []struct {
+		field    string
+		warn     bool
+		required bool
+	}{
+		{"advisory", true, false},
+		{"both", true, true},
+		{"plain", false, true},
+	} {
+		fi, ok := stg[tc.field]
+		if !ok {
+			t.Fatalf("did not get field for tag '%s'", tc.field)
+		}
+		if fi.Warn != tc.warn {
+			t.Errorf("got Warn=%v for '%s', expected %v", fi.Warn, tc.field, tc.warn)
+		}
+		if fi.Required != tc.required {
+			t.Errorf("got Required=%v for '%s', expected %v", fi.Required, tc.field, tc.required)
+		}
+	}
+}
+
 func TestCache_GetStructTagMap_Alias(t *testing.T) {
 	c := NewCache(reflectx.NewMapperFunc("csv", ToSnakeCase))
 	stg := c.GetStructTagMap(&aliasEntity{})

@@ -371,7 +371,14 @@ func TestCopier_UnknownLanguageIsAWarning(t *testing.T) {
 	assert.Equal(t, 0, result.SkipEntityReferenceCount["routes.txt"])
 	assert.Equal(t, 1, result.EntityCount["agency.txt"])
 	assert.Equal(t, 1, result.EntityCount["routes.txt"])
-	assert.NotEmpty(t, result.Warnings, "expected a warning for the unknown language")
+	// Assert on the warning itself. A bare check that something was warned
+	// about would keep passing if this warning stopped being reported and an
+	// unrelated one took its place.
+	var warned []string
+	for _, group := range result.Warnings {
+		warned = append(warned, fmt.Sprintf("%s:%s:%s", group.Filename, group.Field, group.ErrorType))
+	}
+	assert.Contains(t, warned, "agency.txt:agency_lang:InvalidFieldError")
 
 	wreader, _ := writer.NewReader()
 	var langs []string
