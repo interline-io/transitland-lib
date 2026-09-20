@@ -43,6 +43,16 @@ func TestOperatorResolver(t *testing.T) {
 			selectExpect: []string{"Bay Area Rapid Transit"},
 		},
 		{
+			// Each operator gets its own agency: the limit counts per operator, and a
+			// limit on the batch query would leave whichever operator came second empty.
+			name:  "agencies limit across operators",
+			query: `query{operators(where:{onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) {onestop_id agencies(limit:1){agency_name}}}`,
+			sel: []testcaseSelector{
+				{selector: `operators.#(onestop_id=="o-9q9-bayarearapidtransit").agencies.#.agency_name`, expect: []string{"Bay Area Rapid Transit"}},
+				{selector: `operators.#(onestop_id=="o-9q9-caltrain").agencies.#.agency_name`, expect: []string{"Caltrain"}},
+			},
+		},
+		{
 			name:         "agencies limit 0",
 			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {agencies(limit:0){agency_name}}}`,
 			selector:     "operators.0.agencies.#.agency_name",
