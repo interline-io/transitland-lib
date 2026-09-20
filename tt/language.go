@@ -44,15 +44,16 @@ func IsValidLanguage(value string) bool {
 	if strings.ContainsRune(value, '_') {
 		return false
 	}
-	// BCP 47 writes the primary subtag as 2*3ALPHA (ISO 639) or 5*8ALPHA
-	// (reserved for future use). A four-letter primary subtag is reserved, and
-	// a one-character one is a singleton, which introduces an extension or a
-	// private use tag rather than naming a language. That turns away "root"
-	// (CLDR's name for the undetermined locale, which x/text accepts as an
-	// alias for "und"), "x-anything", and the deprecated "i-" tags: none of
-	// them tells a consumer what language to expect.
+	// Every primary subtag that names a language is 2*3ALPHA, an ISO 639 code.
+	// BCP 47 also reserves 4ALPHA and 5*8ALPHA, but neither has any registry
+	// entry to match, so nothing of those lengths would survive Parse below in
+	// any case. What is left is rejected here because Parse would otherwise
+	// accept it: a one-character subtag is a singleton, which introduces an
+	// extension or a private use tag rather than naming a language, and the
+	// four-letter space is where CLDR puts "root", which x/text takes as an
+	// alias for "und". Neither tells a consumer what language to expect.
 	primary, _, _ := strings.Cut(value, "-")
-	if n := len(primary); n < 2 || n == 4 || n > 8 {
+	if n := len(primary); n != 2 && n != 3 {
 		return false
 	}
 	tag, err := language.Parse(value)
