@@ -846,6 +846,8 @@ type OperatorFilter struct {
 	Merged *bool `json:"merged,omitempty"`
 	// Search for operators with this Onestop ID
 	OnestopID *string `json:"onestop_id,omitempty"`
+	// Search for operators with these Onestop IDs
+	OnestopIds []string `json:"onestop_ids,omitempty"`
 	// Search for operators with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for operators with agencies having this GTFS agency_id

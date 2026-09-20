@@ -97,7 +97,11 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 		}
 
 		if where.OnestopID != nil {
-			q = q.Where(sq.Eq{"coif.resolved_onestop_id": where.OnestopID})
+			where.OnestopIds = append(where.OnestopIds, *where.OnestopID)
+		}
+
+		if len(where.OnestopIds) > 0 {
+			q = q.Where(In("coif.resolved_onestop_id", where.OnestopIds))
 		}
 
 		// Tags

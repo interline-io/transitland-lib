@@ -13,6 +13,42 @@ func TestOperatorResolver(t *testing.T) {
 			expect: `{"operators":[{"onestop_id":"o-9q9-bayarearapidtransit"}]}`,
 		},
 		{
+			name:         "onestop_ids",
+			query:        `query{operators(where:{onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			name:         "onestop_ids with onestop_id",
+			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain", onestop_ids:["o-9q9-bayarearapidtransit"]}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			name:         "onestop_ids no match",
+			query:        `query{operators(where:{onestop_ids:["o-does-not-exist"]}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
+			name:         "agencies",
+			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {agencies{agency_name}}}`,
+			selector:     "operators.0.agencies.#.agency_name",
+			selectExpect: []string{"Bay Area Rapid Transit"},
+		},
+		{
+			name:         "agencies limit",
+			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {agencies(limit:1){agency_name}}}`,
+			selector:     "operators.0.agencies.#.agency_name",
+			selectExpect: []string{"Bay Area Rapid Transit"},
+		},
+		{
+			name:         "agencies limit 0",
+			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {agencies(limit:0){agency_name}}}`,
+			selector:     "operators.0.agencies.#.agency_name",
+			selectExpect: []string{},
+		},
+		{
 			name:         "feeds",
 			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {feeds{onestop_id}}}`,
 			selector:     "operators.0.feeds.#.onestop_id",

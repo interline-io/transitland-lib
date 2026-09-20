@@ -88,7 +88,9 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 	var ents []*model.Agency
 	err := dbutil.Select(ctx,
 		f.db,
-		agencySelect(limit, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
+		// The limit counts per operator and the grouped loader applies it to each one's
+		// agencies; given to the query it would cap the whole batch of operators instead.
+		agencySelect(nil, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
