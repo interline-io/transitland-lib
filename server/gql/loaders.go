@@ -88,6 +88,7 @@ type Loaders struct {
 	RouteStopPatternsByRouteIDs                                   *dataloader.Loader[routeStopPatternLoaderParam, []*model.RouteStopPattern]
 	RouteStopsByRouteIDs                                          *dataloader.Loader[routeStopLoaderParam, []*model.RouteStop]
 	RouteStopsByStopIDs                                           *dataloader.Loader[routeStopLoaderParam, []*model.RouteStop]
+	RouteTypesByAgencyIDs                                         *dataloader.Loader[int, []int]
 	SegmentPatternsByRouteIDs                                     *dataloader.Loader[segmentPatternLoaderParam, []*model.SegmentPattern]
 	SegmentPatternsBySegmentIDs                                   *dataloader.Loader[segmentPatternLoaderParam, []*model.SegmentPattern]
 	SegmentsByFeedVersionIDs                                      *dataloader.Loader[segmentLoaderParam, []*model.Segment]
@@ -351,6 +352,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		RouteAttributesByRouteIDs: withWaitAndCapacity(waitTime, batchSize, dbf.RouteAttributesByRouteIDs),
+		RouteTypesByAgencyIDs:     withWaitAndCapacity(waitTime, batchSize, dbf.RouteTypesByAgencyIDs),
 		RouteGeometriesByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.RouteGeometriesByRouteIDs),
 			func(p routeGeometryLoaderParam) (int, bool, *int) {

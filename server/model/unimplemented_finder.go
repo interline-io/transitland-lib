@@ -266,6 +266,9 @@ func (UnimplementedFinder) PathwaysByToStopIDs(context.Context, *int, *PathwayFi
 func (UnimplementedFinder) RouteAttributesByRouteIDs(_ context.Context, ids []int) ([]*RouteAttribute, []error) {
 	return notImplBatch[*RouteAttribute](ids)
 }
+func (UnimplementedFinder) RouteTypesByAgencyIDs(_ context.Context, ids []int) ([][]int, []error) {
+	return notImplBatch[[]int](ids)
+}
 func (UnimplementedFinder) RouteGeometriesByRouteIDs(context.Context, *int, []int) ([][]*RouteGeometry, error) {
 	return nil, notImplErr()
 }

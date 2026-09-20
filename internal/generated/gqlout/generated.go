@@ -96,6 +96,7 @@ type ComplexityRoot struct {
 		OnestopID         func(childComplexity int) int
 		Operator          func(childComplexity int) int
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
+		RouteTypes        func(childComplexity int) int
 		Routes            func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SearchRank        func(childComplexity int) int
 		Stops             func(childComplexity int, limit *int, after *int, where *model.AgencyStopFilter) int
@@ -1369,6 +1370,7 @@ type AgencyResolver interface {
 	Operator(ctx context.Context, obj *model.Agency) (*model.Operator, error)
 	Places(ctx context.Context, obj *model.Agency, limit *int, where *model.AgencyPlaceFilter) ([]*model.AgencyPlace, error)
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
+	RouteTypes(ctx context.Context, obj *model.Agency) ([]int, error)
 	Stops(ctx context.Context, obj *model.Agency, limit *int, after *int, where *model.AgencyStopFilter) ([]*model.Stop, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
@@ -1792,6 +1794,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agency.Places(childComplexity, args["limit"].(*int), args["where"].(*model.AgencyPlaceFilter)), true
+	case "Agency.route_types":
+		if e.ComplexityRoot.Agency.RouteTypes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agency.RouteTypes(childComplexity), true
 	case "Agency.routes":
 		if e.ComplexityRoot.Agency.Routes == nil {
 			break
@@ -9746,6 +9754,9 @@ type Agency {
   "Routes associated with this agency"
   routes(limit: Int, where: RouteFilter): [Route!]!
 
+  "The distinct raw GTFS route types of this agency's routes, in ascending order"
+  route_types: [Int!]!
+
   """
   Stops served by this agency's routes: the served platforms by default, or with ` + "`" + `where: {location_type: 1}` + "`" + ` the stations associated with those platforms.
   """
@@ -12424,6 +12435,8 @@ func (ec *executionContext) childFields_Agency(ctx context.Context, field graphq
 		return ec.fieldContext_Agency_places(ctx, field)
 	case "routes":
 		return ec.fieldContext_Agency_routes(ctx, field)
+	case "route_types":
+		return ec.fieldContext_Agency_route_types(ctx, field)
 	case "stops":
 		return ec.fieldContext_Agency_stops(ctx, field)
 	case "census_geographies":
@@ -17785,6 +17798,29 @@ func (ec *executionContext) fieldContext_Agency_routes(ctx context.Context, fiel
 		return fc, err
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _Agency_route_types(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agency_route_types(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Agency().RouteTypes(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕintᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Agency_route_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agency", field, true, true, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _Agency_stops(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
@@ -47248,6 +47284,42 @@ func (ec *executionContext) _Agency(ctx context.Context, sel ast.SelectionSet, o
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "route_types":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agency_route_types(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "stops":
 			field := field
 
@@ -60528,6 +60600,36 @@ func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNInt2ᚕintᚄ(ctx context.Context, v any) ([]int, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNInt2int(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt2ᚕintᚄ(ctx context.Context, sel ast.SelectionSet, v []int) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNInt2int(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNItinerary2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐItinerary(ctx context.Context, sel ast.SelectionSet, v *model.Itinerary) graphql.Marshaler {
