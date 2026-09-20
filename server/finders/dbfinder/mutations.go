@@ -307,8 +307,14 @@ func createUpdateEnt[T hasTableName](
 		return 0, err
 	}
 
-	// Validate
-	if errs := tt.CheckErrors(baseEnt); len(errs) > 0 {
+	// Validate. The "warn" tag downgrades a bad value so that a feed copy keeps
+	// the entity rather than dropping it and everything referencing it. An edit
+	// has nothing to lose by refusing: nothing is dropped, and the person
+	// making it is there to be told. So the warn tagged fields are checked
+	// here too, and by the same standard as the rest.
+	errs := tt.CheckErrors(baseEnt)
+	errs = append(errs, tt.ReflectCheckWarnings(baseEnt)...)
+	if len(errs) > 0 {
 		return 0, errs[0]
 	}
 	// Save
