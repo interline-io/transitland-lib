@@ -708,6 +708,9 @@ type Agency {
   "Routes associated with this agency"
   routes(limit: Int, where: RouteFilter): [Route!]!
 
+  "The distinct raw GTFS route types of this agency's routes, in ascending order"
+  route_types: [Int!]!
+
   """
   Stops served by this agency's routes: the served platforms by default, or with `where: {location_type: 1}` the stations associated with those platforms.
   """

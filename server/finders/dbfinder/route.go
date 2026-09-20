@@ -42,6 +42,43 @@ func (f *Finder) RouteAttributesByRouteIDs(ctx context.Context, ids []int) ([]*m
 	return arrangeBy(ids, ents, func(ent *model.RouteAttribute) int { return ent.RouteID }), nil
 }
 
+// agencyRouteType is one distinct route type operated by an agency.
+type agencyRouteType struct {
+	AgencyID  int `db:"agency_id"`
+	RouteType int `db:"route_type"`
+}
+
+// RouteTypesByAgencyIDs returns the distinct route types of each agency's routes.
+//
+// The count of types is small and bounded, so this answers what paging an agency's
+// routes to collect their types cannot: an agency with thousands of routes still
+// costs one indexed pass.
+func (f *Finder) RouteTypesByAgencyIDs(ctx context.Context, ids []int) ([][]int, []error) {
+	var ents []agencyRouteType
+	q := sq.StatementBuilder.
+		Select("gtfs_routes.agency_id", "gtfs_routes.route_type").
+		Distinct().
+		From("gtfs_routes").
+		Join("feed_versions ON feed_versions.id = gtfs_routes.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		Where(In("gtfs_routes.agency_id", ids)).
+		OrderBy("gtfs_routes.agency_id", "gtfs_routes.route_type")
+	q = pfJoinCheckFv(q, f.PermFilter(ctx))
+	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
+		return nil, logExtendErr(ctx, len(ids), err)
+	}
+	grouped := arrangeGroup(ids, ents, func(ent agencyRouteType) int { return ent.AgencyID })
+	ret := make([][]int, len(grouped))
+	for i, ents := range grouped {
+		routeTypes := make([]int, 0, len(ents))
+		for _, ent := range ents {
+			routeTypes = append(routeTypes, ent.RouteType)
+		}
+		ret[i] = routeTypes
+	}
+	return ret, nil
+}
+
 func (f *Finder) RoutesByIDs(ctx context.Context, ids []int) ([]*model.Route, []error) {
 	ents, err := f.FindRoutes(ctx, nil, nil, ids, nil)
 	if err != nil {

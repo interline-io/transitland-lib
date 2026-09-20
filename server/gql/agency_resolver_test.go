@@ -50,6 +50,23 @@ func TestAgencyResolver(t *testing.T) {
 			selector:     "agencies.0.routes.#.route_id",
 			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
 		},
+		{
+			name:   "route_types",
+			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {route_types}}`,
+			vars:   vars,
+			expect: `{"agencies":[{"route_types":[2,3]}]}`,
+		},
+		{
+			name:   "route_types extended",
+			query:  `query{agencies(where:{feed_onestop_id:"HA"}) {route_types}}`,
+			expect: `{"agencies":[{"route_types":[0,3,4]}]}`,
+		},
+		{
+			name:         "route_types through operator",
+			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain"}) {agencies{route_types}}}`,
+			selector:     "operators.0.agencies.0.route_types",
+			selectExpect: []string{"2", "3"},
+		},
 		// places should test filters because it's not a root resolver
 		{
 			name:         "places",

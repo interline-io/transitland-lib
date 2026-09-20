@@ -948,6 +948,7 @@ CREATE UNIQUE INDEX tl_materialized_active_routes_id_idx ON tl_materialized_acti
 CREATE INDEX tl_materialized_active_routes_route_id_idx ON tl_materialized_active_routes(route_id);
 CREATE INDEX tl_materialized_active_routes_feed_version_id_idx ON tl_materialized_active_routes(feed_version_id);
 CREATE INDEX tl_materialized_active_routes_onestop_id_idx ON tl_materialized_active_routes(onestop_id);
+CREATE INDEX tl_materialized_active_routes_agency_id_idx ON tl_materialized_active_routes(agency_id);
 
 -- Materialized active stops table
 CREATE TABLE tl_materialized_active_stops (
