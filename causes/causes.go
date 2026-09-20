@@ -393,6 +393,26 @@ func (e *InvalidFieldError) Error() string {
 	return fmt.Sprintf("invalid value for field %s '%s'", e.Field, e.Value)
 }
 
+// UnknownLanguageSubtagError reports a language tag that names a language but
+// carries a region, script or variant subtag that is not in the registry.
+//
+// The language is still usable, so this says the value is probably a typo
+// rather than that it cannot be read: "en-EN" for "en-US" is the common one.
+// It is a type of its own rather than an InvalidFieldError because the two say
+// different things about a value and the report groups by type.
+type UnknownLanguageSubtagError struct {
+	bc
+	Subtag string
+}
+
+func NewUnknownLanguageSubtagError(field string, value string, subtag string) *UnknownLanguageSubtagError {
+	return &UnknownLanguageSubtagError{bc: bc{Field: field, Value: value}, Subtag: subtag}
+}
+
+func (e *UnknownLanguageSubtagError) Error() string {
+	return fmt.Sprintf("unrecognized subtag '%s' in value for field %s '%s'", e.Subtag, e.Field, e.Value)
+}
+
 ////////////////////////////
 // Reference level errors
 ////////////////////////////

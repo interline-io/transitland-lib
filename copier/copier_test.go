@@ -388,3 +388,55 @@ func TestCopier_UnknownLanguageIsAWarning(t *testing.T) {
 	// The value is reported, not silently rewritten.
 	assert.Equal(t, []string{"xyz"}, langs)
 }
+
+// The two things that can be wrong with a language tag are different findings,
+// so they are different types: "xyz" names no language at all, while "en-EN"
+// names English and misspells the region. The report groups by error type, so
+// sharing one type would merge them into a single count and a single message.
+func TestCopier_UnknownLanguageSubtagIsAWarning(t *testing.T) {
+	reader := direct.NewReader()
+	for _, tc := range []struct{ id, lang string }{
+		{"names-no-language", "xyz"},
+		{"unknown-region", "en-EN"},
+	} {
+		reader.AgencyList = append(reader.AgencyList, gtfs.Agency{
+			AgencyID:       tt.NewString(tc.id),
+			AgencyName:     tt.NewString("ok"),
+			AgencyURL:      tt.NewUrl("http://example.com"),
+			AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+			AgencyLang:     tt.NewLanguage(tc.lang),
+		})
+	}
+	reader.RouteList = append(reader.RouteList, gtfs.Route{
+		RouteID:        tt.NewString("route1"),
+		RouteShortName: tt.NewString("1"),
+		RouteType:      tt.NewInt(3),
+		AgencyID:       tt.NewKey("unknown-region"),
+	})
+
+	writer := direct.NewWriter()
+	result, err := CopyWithOptions(context.Background(), reader, writer, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 0, result.SkipEntityErrorCount["agency.txt"])
+	assert.Equal(t, 0, result.SkipEntityReferenceCount["routes.txt"])
+	assert.Equal(t, 2, result.EntityCount["agency.txt"])
+	assert.Equal(t, 1, result.EntityCount["routes.txt"])
+
+	var warned []string
+	for _, group := range result.Warnings {
+		warned = append(warned, fmt.Sprintf("%s:%s:%s", group.Filename, group.Field, group.ErrorType))
+	}
+	assert.Contains(t, warned, "agency.txt:agency_lang:InvalidFieldError")
+	assert.Contains(t, warned, "agency.txt:agency_lang:UnknownLanguageSubtagError")
+
+	wreader, _ := writer.NewReader()
+	var langs []string
+	for ent := range wreader.Agencies() {
+		langs = append(langs, ent.AgencyLang.Val)
+	}
+	// Both values are reported, neither is rewritten and neither is dropped.
+	assert.ElementsMatch(t, []string{"xyz", "en-EN"}, langs)
+}
