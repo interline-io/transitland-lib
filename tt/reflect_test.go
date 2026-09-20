@@ -256,6 +256,24 @@ func TestReflectCheckWarnings(t *testing.T) {
 		}{Value: "anything"}
 		assert.ErrorContains(t, firstError(ReflectCheckErrors(&ent)), "does not support reflect based error checks")
 	})
+	// The same goes for a range or enum tag the field's type cannot convert
+	// for. Letting "warn" carry those into the warning pass would file a
+	// developer's mistake in the feed's report, once per entity, under a
+	// nameless error type.
+	t.Run("range tag on an unsuitable type is an error, not a warning", func(t *testing.T) {
+		ent := struct {
+			Value Language `csv:",warn" range:"0,10"`
+		}{Value: NewLanguage("en")}
+		assert.ErrorContains(t, firstError(ReflectCheckErrors(&ent)), "could not convert")
+		assert.Empty(t, ReflectCheckWarnings(&ent))
+	})
+	t.Run("enum tag on an unsuitable type is an error, not a warning", func(t *testing.T) {
+		ent := struct {
+			Value Language `csv:",warn" enum:"0,1"`
+		}{Value: NewLanguage("en")}
+		assert.ErrorContains(t, firstError(ReflectCheckErrors(&ent)), "could not convert")
+		assert.Empty(t, ReflectCheckWarnings(&ent))
+	})
 }
 
 // Hand rolling Errors() opts an entity out of the reflect based error checks.
@@ -267,27 +285,57 @@ type ownErrorsEntity struct {
 
 func (ent *ownErrorsEntity) Errors() []error { return nil }
 
+// Nor does it opt the field out of the checks that stay errors: whether a
+// required value is there at all, and whether the field's type can act on the
+// tag it was given.
+type ownErrorsRequiredEntity struct {
+	Value Language `csv:",required,warn"`
+}
+
+func (ent *ownErrorsRequiredEntity) Errors() []error { return nil }
+
+type ownErrorsBadTagEntity struct {
+	Value string `csv:",warn"`
+}
+
+func (ent *ownErrorsBadTagEntity) Errors() []error { return nil }
+
 func TestCheckWarnings(t *testing.T) {
 	t.Run("entity with its own Errors is still checked", func(t *testing.T) {
 		ent := &ownErrorsEntity{Value: NewLanguage("xyz")}
 		assert.Nil(t, firstError(CheckErrors(ent)))
 		assert.IsType(t, &causes.InvalidFieldError{}, firstError(CheckWarnings(ent)))
 	})
-	// CheckWarnings is exported and takes any; a caller that hands it
-	// something it cannot address gets no warnings rather than a panic.
+	t.Run("entity with its own Errors still reports an absent required value", func(t *testing.T) {
+		ent := &ownErrorsRequiredEntity{}
+		assert.IsType(t, &causes.RequiredFieldError{}, firstError(CheckErrors(ent)))
+		assert.Nil(t, firstError(CheckWarnings(ent)))
+	})
+	t.Run("entity with its own Errors still reports a tag its type cannot act on", func(t *testing.T) {
+		ent := &ownErrorsBadTagEntity{Value: "anything"}
+		assert.ErrorContains(t, firstError(CheckErrors(ent)), "does not support reflect based error checks")
+		assert.Nil(t, firstError(CheckWarnings(ent)))
+	})
+	// ReflectCheckWarnings is exported and takes any; a caller that hands it
+	// something it cannot address gets nothing back rather than a panic.
+	//
+	// CheckWarnings is tested through it rather than directly, because it is
+	// not nil safe and does not claim to be: every gtfs entity embeds
+	// tt.BaseEntity, so a typed nil panics in that entity's own LoadWarnings
+	// before it ever reaches here, exactly as it does today.
 	t.Run("value is not a panic", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			assert.Nil(t, firstError(CheckWarnings(ownErrorsEntity{Value: NewLanguage("xyz")})))
+			assert.Nil(t, firstError(ReflectCheckWarnings(ownErrorsEntity{Value: NewLanguage("xyz")})))
 		})
 	})
 	t.Run("nil is not a panic", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			assert.Nil(t, firstError(CheckWarnings(nil)))
+			assert.Nil(t, firstError(ReflectCheckWarnings(nil)))
 		})
 	})
 	t.Run("typed nil is not a panic", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			assert.Nil(t, firstError(CheckWarnings((*ownErrorsEntity)(nil))))
+			assert.Nil(t, firstError(ReflectCheckWarnings((*ownErrorsEntity)(nil))))
 		})
 	})
 }
