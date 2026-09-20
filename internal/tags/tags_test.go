@@ -2,6 +2,7 @@ package tags
 
 import (
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/jmoiron/sqlx/reflectx"
@@ -84,6 +85,40 @@ func TestCache_GetWarnFields(t *testing.T) {
 		t.Errorf("got warn fields %v for a type with none", warnFields)
 	}
 
+}
+
+// Readers take the type snapshot without a lock, so one running while another
+// goroutine parses a type and publishes a new snapshot has to see a complete
+// answer either way. Run this with -race.
+func TestCache_Concurrent(t *testing.T) {
+	c := NewCache(reflectx.NewMapperFunc("csv", ToSnakeCase))
+	cases := []struct {
+		ent       interface{}
+		warnCount int
+	}{
+		{&warnEntity{}, 3},
+		{&testEntity{}, 0},
+		{&aliasEntity{}, 0},
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 32; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			tc := cases[i%len(cases)]
+			for j := 0; j < 200; j++ {
+				if got := len(c.GetWarnFields(tc.ent)); got != tc.warnCount {
+					t.Errorf("got %d warn fields for %T, expected %d", got, tc.ent, tc.warnCount)
+					return
+				}
+				if got := len(c.GetStructTagMap(tc.ent)); got == 0 {
+					t.Errorf("got an empty field map for %T", tc.ent)
+					return
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
 }
 
 func TestCache_GetStructTagMap_Alias(t *testing.T) {

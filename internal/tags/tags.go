@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/interline-io/log"
@@ -96,48 +97,74 @@ func (fi *FieldInfo) IsAlias() bool {
 // FieldMap contains all the parsed tags for a struct.
 type FieldMap map[string]*FieldInfo
 
+// typeCache is an immutable snapshot of the types parsed so far, keyed by
+// reflect.Type rather than by its name so that a lookup hashes a pointer
+// rather than the string Type.String() builds.
+type typeCache struct {
+	typemap map[reflect.Type]FieldMap
+	warnmap map[reflect.Type][]*FieldInfo
+}
+
 // Cache caches the result of field/tag parsing for each type.
+//
+// The check passes ask this about every entity in a copy, which is the
+// highest volume call in the library, so readers take the current snapshot
+// with a single atomic load and never a lock: a mutex here, even a read
+// shared one, would put every entity of every file through one cache line.
+// Writers are serialized by lock and publish a copy. The set of types is
+// small, fixed by the entity structs, and filled in the first moments of a
+// copy, so copying it on a miss costs nothing that lasts.
 type Cache struct {
-	Mapper  *reflectx.Mapper
-	lock    sync.Mutex
-	typemap map[string]FieldMap
-	warnmap map[string][]*FieldInfo
+	Mapper *reflectx.Mapper
+	lock   sync.Mutex
+	cached atomic.Pointer[typeCache]
 }
 
 // NewCache initializes a new cache.
 func NewCache(mapper *reflectx.Mapper) *Cache {
-	return &Cache{
-		Mapper:  mapper,
-		typemap: map[string]FieldMap{},
-		warnmap: map[string][]*FieldInfo{},
-	}
+	c := &Cache{Mapper: mapper}
+	c.cached.Store(&typeCache{
+		typemap: map[reflect.Type]FieldMap{},
+		warnmap: map[reflect.Type][]*FieldInfo{},
+	})
+	return c
 }
 
 // GetStructTagMap .
 func (c *Cache) GetStructTagMap(ent interface{}) FieldMap {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return c.getStructTagMap(ent)
+	t := reflect.TypeOf(ent)
+	if m, ok := c.cached.Load().typemap[t]; ok {
+		return m
+	}
+	m, _ := c.buildTypeMap(t, ent)
+	return m
 }
 
 // GetWarnFields returns the fields tagged with the "warn" option, in no
 // particular order.
 //
-// It is collected when the type is first mapped because the warning pass runs
-// for every entity in a copy while almost no type has such a field: the answer
-// for those is an empty slice, not a walk over every field of every entity.
+// The answer is collected when the type is first mapped, because the warning
+// pass asks this of every entity in a copy while almost no type has such a
+// field. A hit costs one map lookup rather than a walk over the type's fields.
 func (c *Cache) GetWarnFields(ent interface{}) []*FieldInfo {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.getStructTagMap(ent)
-	return c.warnmap[reflect.TypeOf(ent).String()]
+	t := reflect.TypeOf(ent)
+	if warnFields, ok := c.cached.Load().warnmap[t]; ok {
+		return warnFields
+	}
+	_, warnFields := c.buildTypeMap(t, ent)
+	return warnFields
 }
 
-// getStructTagMap returns the field map for the entity's type, parsing the
-// type's tags on first use. The caller holds the lock.
-func (c *Cache) getStructTagMap(ent interface{}) FieldMap {
-	t := reflect.TypeOf(ent).String()
-	m, ok := c.typemap[t]
+// buildTypeMap returns the field map and the warn tagged fields for a type,
+// parsing the type's tags on first use and publishing a snapshot that
+// includes them. ent is needed only to name the type in a log message.
+func (c *Cache) buildTypeMap(t reflect.Type, ent interface{}) (FieldMap, []*FieldInfo) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	// Another goroutine may have parsed this type while this one waited.
+	cur := c.cached.Load()
+	m, ok := cur.typemap[t]
+	var warnFields []*FieldInfo
 	if !ok {
 		ctx := context.TODO()
 		logTag := func(key string, optVal string, err error) {
@@ -151,8 +178,7 @@ func (c *Cache) getStructTagMap(ent interface{}) FieldMap {
 		}
 		m = FieldMap{}
 		aliases := map[string]*FieldInfo{}
-		var warnFields []*FieldInfo
-		fields := c.Mapper.TypeMap(reflect.TypeOf(ent))
+		fields := c.Mapper.TypeMap(t)
 		for i, fi := range fields.Index {
 			_ = i
 			if fi.Name == "" {
@@ -280,10 +306,23 @@ func (c *Cache) getStructTagMap(ent interface{}) FieldMap {
 				Kind:    fi.Kind,
 			}
 		}
-		c.typemap[t] = m
-		c.warnmap[t] = warnFields
+		next := &typeCache{
+			typemap: make(map[reflect.Type]FieldMap, len(cur.typemap)+1),
+			warnmap: make(map[reflect.Type][]*FieldInfo, len(cur.warnmap)+1),
+		}
+		for k, v := range cur.typemap {
+			next.typemap[k] = v
+		}
+		for k, v := range cur.warnmap {
+			next.warnmap[k] = v
+		}
+		next.typemap[t] = m
+		next.warnmap[t] = warnFields
+		c.cached.Store(next)
+	} else {
+		warnFields = cur.warnmap[t]
 	}
-	return m
+	return m, warnFields
 }
 
 // GetSortColumns returns the entity's fields tagged with standardized_sort,
