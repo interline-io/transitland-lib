@@ -399,3 +399,45 @@ func TestCopier_UnrecognizedLanguageIsAWarning(t *testing.T) {
 	}
 	assert.Equal(t, []string{"agency.txt:agency_lang:InvalidLanguageError"}, got)
 }
+
+// The partition in checkEntity decides severity from the cause, so a cause that
+// does not ask for warning level has to keep dropping the entity. This pins the
+// default, which is what every cause but one relies on.
+func TestCopier_CauseWithoutLevelIsStillAnError(t *testing.T) {
+	reader := direct.NewReader()
+	reader.AgencyList = append(reader.AgencyList,
+		gtfs.Agency{
+			AgencyID:       tt.NewString("ok"),
+			AgencyName:     tt.NewString("ok"),
+			AgencyURL:      tt.NewUrl("http://example.com"),
+			AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+		},
+		// agency_name is required, and RequiredFieldError asks for no level.
+		gtfs.Agency{
+			AgencyID:       tt.NewString("missing-name"),
+			AgencyURL:      tt.NewUrl("http://example.com"),
+			AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+		},
+	)
+	writer := direct.NewWriter()
+	cpOpts := Options{}
+	cpOpts.AllowEntityErrors = false
+	result, err := CopyWithOptions(context.Background(), reader, writer, cpOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agencyIds := map[string]int{}
+	wreader, _ := writer.NewReader()
+	for ent := range wreader.Agencies() {
+		agencyIds[ent.AgencyID.Val] += 1
+	}
+	assert.Equal(t, 1, len(agencyIds), "expected the invalid agency to be skipped")
+	assert.Equal(t, 1, agencyIds["ok"])
+	assert.Equal(t, 1, result.SkipEntityErrorCount["agency.txt"])
+	var got []string
+	for _, eg := range result.Errors {
+		got = append(got, fmt.Sprintf("%s:%s:%s", eg.Filename, eg.Field, eg.ErrorType))
+	}
+	assert.Equal(t, []string{"agency.txt:agency_name:RequiredFieldError"}, got)
+}
