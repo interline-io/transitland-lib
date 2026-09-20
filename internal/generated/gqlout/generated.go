@@ -864,7 +864,7 @@ type ComplexityRoot struct {
 	}
 
 	Operator struct {
-		Agencies   func(childComplexity int) int
+		Agencies   func(childComplexity int, limit *int) int
 		Feeds      func(childComplexity int, limit *int, where *model.FeedFilter) int
 		File       func(childComplexity int) int
 		Generated  func(childComplexity int) int
@@ -1509,7 +1509,7 @@ type MutationResolver interface {
 	PathwayDelete(ctx context.Context, id int) (*model.EntityDeleteResult, error)
 }
 type OperatorResolver interface {
-	Agencies(ctx context.Context, obj *model.Operator) ([]*model.Agency, error)
+	Agencies(ctx context.Context, obj *model.Operator, limit *int) ([]*model.Agency, error)
 	Feeds(ctx context.Context, obj *model.Operator, limit *int, where *model.FeedFilter) ([]*model.Feed, error)
 }
 type PathwayResolver interface {
@@ -5401,7 +5401,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Operator.Agencies(childComplexity), true
+		args, err := ec.field_Operator_agencies_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Operator.Agencies(childComplexity, args["limit"].(*int)), true
 	case "Operator.feeds":
 		if e.ComplexityRoot.Operator.Feeds == nil {
 			break
@@ -9683,7 +9688,7 @@ type Operator {
   search_rank: String @deprecated(reason: "Internal use only")
 
   "Agencies for this operator from active feed versions"
-  agencies: [Agency!]
+  agencies(limit: Int): [Agency!]
 
   "Feeds associated with this operator"
   feeds(limit: Int, where: FeedFilter): [Feed!]
@@ -11529,6 +11534,8 @@ input OperatorFilter {
   merged: Boolean
   "Search for operators with this Onestop ID"
   onestop_id: String
+  "Search for operators with these Onestop IDs"
+  onestop_ids: [String!]
   "Search for operators with this feed Onestop ID"
   feed_onestop_id: String
   "Search for operators with agencies having this GTFS agency_id"
@@ -15948,6 +15955,20 @@ func (ec *executionContext) field_Mutation_validate_gtfs_args(ctx context.Contex
 		return nil, err
 	}
 	args["realtime_urls"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Operator_agencies_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -32506,7 +32527,8 @@ func (ec *executionContext) _Operator_agencies(ctx context.Context, field graphq
 			return ec.fieldContext_Operator_agencies(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Operator().Agencies(ctx, obj)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Operator().Agencies(ctx, obj, fc.Args["limit"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Agency) graphql.Marshaler {
@@ -32516,7 +32538,7 @@ func (ec *executionContext) _Operator_agencies(ctx context.Context, field graphq
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_Operator_agencies(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Operator_agencies(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Operator",
 		Field:      field,
@@ -32525,6 +32547,17 @@ func (ec *executionContext) fieldContext_Operator_agencies(_ context.Context, fi
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_Agency(ctx, field)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Operator_agencies_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -45353,7 +45386,7 @@ func (ec *executionContext) unmarshalInputOperatorFilter(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"merged", "onestop_id", "feed_onestop_id", "agency_id", "search", "tags", "city_name", "adm0_name", "adm1_name", "adm0_iso", "adm1_iso", "license", "bbox", "within", "near"}
+	fieldsInOrder := [...]string{"merged", "onestop_id", "onestop_ids", "feed_onestop_id", "agency_id", "search", "tags", "city_name", "adm0_name", "adm1_name", "adm0_iso", "adm1_iso", "license", "bbox", "within", "near"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45374,6 +45407,13 @@ func (ec *executionContext) unmarshalInputOperatorFilter(ctx context.Context, ob
 				return it, err
 			}
 			it.OnestopID = data
+		case "onestop_ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("onestop_ids"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OnestopIds = data
 		case "feed_onestop_id":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("feed_onestop_id"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

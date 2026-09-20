@@ -16,8 +16,8 @@ func (r *operatorResolver) Cursor(ctx context.Context, obj *model.Operator) (*mo
 	return &c, nil
 }
 
-func (r *operatorResolver) Agencies(ctx context.Context, obj *model.Operator) ([]*model.Agency, error) {
-	return LoaderFor(ctx).AgenciesByOnestopIDs.Load(ctx, agencyLoaderParam{OnestopID: &obj.OnestopID.Val})()
+func (r *operatorResolver) Agencies(ctx context.Context, obj *model.Operator, limit *int) ([]*model.Agency, error) {
+	return LoaderFor(ctx).AgenciesByOnestopIDs.Load(ctx, agencyLoaderParam{OnestopID: &obj.OnestopID.Val, Limit: resolverCheckLimit(limit)})()
 }
 
 func (r *operatorResolver) AssociatedFeeds(ctx context.Context, obj *model.Operator) (interface{}, error) {
