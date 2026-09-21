@@ -69,6 +69,12 @@ func TestRouteRequest(t *testing.T) {
 			expectSelect: []string{fv, fv, fv, fv, fv, fv},
 		},
 		{
+			name:         "feed_version_sha1 as sha1_dir",
+			h:            RouteRequest{FeedVersionSHA1: "9f0f389f9195114f964da269f35f753b3d8ca1c8"},
+			selector:     "routes.#.feed_version.sha1",
+			expectSelect: []string{fv, fv, fv, fv, fv, fv},
+		},
+		{
 			name:         "operator_onestop_id",
 			h:            RouteRequest{OperatorOnestopID: "o-9q9-bayarearapidtransit"},
 			selector:     "routes.#.route_id",

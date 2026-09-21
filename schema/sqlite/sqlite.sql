@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS "feed_versions" (
   foreign key(feed_id) references current_feeds(id)
 );
 CREATE INDEX idx_feed_versions_sha1 ON "feed_versions"("sha1");
+CREATE INDEX idx_feed_versions_sha1_dir ON "feed_versions"("sha1_dir");
 CREATE INDEX idx_feed_versions_earliest_calendar_date ON "feed_versions"(earliest_calendar_date);
 CREATE INDEX idx_feed_versions_latest_calendar_date ON "feed_versions"(latest_calendar_date);
 CREATE INDEX idx_feed_versions_feed_id ON "feed_versions"(feed_id);

@@ -420,9 +420,9 @@ type FeedVersion {
   sha1: String!
 
   """
-  SHA1 hash of the feed contents, ignoring how the archive was packaged.
+  SHA1 hash of the `.txt` files in the archive, ignoring how it was packaged.
 
-  Calculated over the sorted, concatenated contents of the `.txt` files in the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Null for feed versions created before this value was recorded. [example:c1026b895dbe7476c0a6dcc1b82c909bfa952c63]
+  Calculated over the sorted, concatenated contents of the lowercase `.txt` files at the top level of the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Note the limits of that definition: other GTFS files, `locations.geojson` among them, are not covered, and two feed versions differing only in those files share a `sha1_dir`. Null for feed versions created before this value was recorded. [example:c1026b895dbe7476c0a6dcc1b82c909bfa952c63]
   """
   sha1_dir: String
 
@@ -3213,9 +3213,9 @@ type FeedVersionFetchResult {
   feed_version: FeedVersion
   "Error message if the fetch failed"
   fetch_error: String
-  "True if the same zip file is already in the database (matched by `sha1`). A byte-identical zip also has identical contents, so this implies `found_dir_sha1`."
+  "True if the same zip file is already in the database (matched by `sha1`). A feed version recorded before `sha1_dir` was stored matches on this alone."
   found_sha1: Boolean!
-  "True if a zip with identical unpacked contents is already in the database (matched by `sha1_dir`). Set on its own when the feed was re-zipped without its contents changing."
+  "True if a zip with the same `.txt` contents is already in the database (matched by `sha1_dir`). Set on its own when the feed was re-zipped without those contents changing."
   found_dir_sha1: Boolean!
 }
 

@@ -287,7 +287,7 @@
         }
       },
       "sha1Param": {
-        "description": "Search for records in this feed version",
+        "description": "Search for records in this feed version; accepts the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
         "in": "query",
         "name": "feed_version_sha1",
         "schema": {
@@ -2589,7 +2589,7 @@
                             "x-order": 4
                           },
                           "sha1_dir": {
-                            "description": "SHA1 hash of the feed contents, ignoring how the archive was packaged.\n\nCalculated over the sorted, concatenated contents of the `.txt` files in the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Null for feed versions created before this value was recorded.",
+                            "description": "SHA1 hash of the `.txt` files in the archive, ignoring how it was packaged.\n\nCalculated over the sorted, concatenated contents of the lowercase `.txt` files at the top level of the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Note the limits of that definition: other GTFS files, `locations.geojson` among them, are not covered, and two feed versions differing only in those files share a `sha1_dir`. Null for feed versions created before this value was recorded.",
                             "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
                             "nullable": true,
                             "title": "sha1_dir",
@@ -2714,7 +2714,7 @@
               "schema": {
                 "properties": {
                   "feed_version_keys": {
-                    "description": "Array of feed version IDs or SHA1 hashes to export",
+                    "description": "Array of feed version IDs or SHA1 hashes to export; a hash may be the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
                     "items": {
                       "type": "string"
                     },
@@ -3208,7 +3208,7 @@
                             "x-order": 4
                           },
                           "sha1_dir": {
-                            "description": "SHA1 hash of the feed contents, ignoring how the archive was packaged.\n\nCalculated over the sorted, concatenated contents of the `.txt` files in the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Null for feed versions created before this value was recorded.",
+                            "description": "SHA1 hash of the `.txt` files in the archive, ignoring how it was packaged.\n\nCalculated over the sorted, concatenated contents of the lowercase `.txt` files at the top level of the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Note the limits of that definition: other GTFS files, `locations.geojson` among them, are not covered, and two feed versions differing only in those files share a `sha1_dir`. Null for feed versions created before this value was recorded.",
                             "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
                             "nullable": true,
                             "title": "sha1_dir",

@@ -546,7 +546,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 			q = q.Where(sq.Eq{"current_feeds.onestop_id": *where.FeedOnestopID})
 		}
 		if where.FeedVersionSha1 != nil {
-			q = q.Where("feed_versions.id = (select id from feed_versions where sha1 = ? limit 1)", *where.FeedVersionSha1)
+			q = q.Where("feed_versions.id = (select id from feed_versions where sha1 = ? or sha1_dir = ? limit 1)", *where.FeedVersionSha1, *where.FeedVersionSha1)
 		}
 		if where.StopID != nil {
 			q = q.Where(sq.Eq{"gtfs_stops.stop_id": *where.StopID})

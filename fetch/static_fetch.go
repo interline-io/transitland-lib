@@ -23,7 +23,8 @@ type StaticFetchResult struct {
 	// FoundSHA1 and FoundDirSHA1 say which checksum matched when Found is
 	// set. A byte-identical zip matches both; a feed that was re-zipped
 	// without changing its contents matches only FoundDirSHA1. Both are
-	// false when the feed version is new.
+	// false when the feed version is new, and at least one is set whenever
+	// Found is, so Found == FoundSHA1 || FoundDirSHA1 always holds.
 	FoundSHA1    bool
 	FoundDirSHA1 bool
 	Result
@@ -31,6 +32,10 @@ type StaticFetchResult struct {
 
 // setFound records an existing feed version, and which of its checksums the
 // candidate matched.
+//
+// The lookup matches on either column, so recompute which one fired. It only
+// considers sha1_dir when the candidate has one, so a match always means one
+// of these two comparisons holds.
 func (r *StaticFetchResult) setFound(existing *dmfr.FeedVersion, candidate *dmfr.FeedVersion) {
 	r.Found = true
 	r.FeedVersion = existing
