@@ -1,7 +1,9 @@
 package fetch
 
 import (
+	"archive/zip"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -531,4 +533,113 @@ func TestStaticStateFetch_HideURL(t *testing.T) {
 		assert.Equal(t, "", tlff.URL, "feed fetch url")
 		return nil
 	})
+}
+
+// A feed that is re-zipped without changing its contents keeps its directory
+// SHA1 but gets a new zip SHA1. The second fetch must recognize it as the feed
+// version we already have, and report which checksum matched.
+func TestStaticFetch_FoundDirSHA1(t *testing.T) {
+	origFile := testpath.RelPath("testdata/gtfs-examples/example.zip")
+	rezipped := rezip(t, origFile)
+
+	serveFile := origFile
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf, err := os.ReadFile(serveFile)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+
+	ctx := context.TODO()
+	testdb.TempSqlite(func(atx tldb.Adapter) error {
+		tmpdir, err := os.MkdirTemp("", "gtfs")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(tmpdir)
+
+		feed := testdb.CreateTestFeed(atx, ts.URL+"/test.zip")
+		fetchFeed := func() StaticFetchResult {
+			fr, err := StaticFetch(ctx, feedmanager.NewDBFeedManager(atx), StaticFetchOptions{Options: Options{
+				FeedID:                   feed.ID,
+				FeedURL:                  feed.URLs.StaticCurrent,
+				Storage:                  tmpdir,
+				AllowHTTPFetchUnfiltered: true,
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fr.FetchError != nil {
+				t.Fatal(fr.FetchError)
+			}
+			return fr
+		}
+
+		// First fetch creates the feed version.
+		first := fetchFeed()
+		assert.False(t, first.Found, "first fetch should create a new feed version")
+		assert.False(t, first.FoundSHA1)
+		assert.False(t, first.FoundDirSHA1)
+
+		// Second fetch of the re-zipped file matches only on sha1_dir.
+		serveFile = rezipped
+		second := fetchFeed()
+		assert.True(t, second.Found, "re-zipped feed should match the existing feed version")
+		assert.False(t, second.FoundSHA1, "zip checksum should differ after re-zipping")
+		assert.True(t, second.FoundDirSHA1, "directory checksum should be unchanged")
+		if assert.NotNil(t, second.FeedVersion) {
+			assert.Equal(t, first.FeedVersion.SHA1, second.FeedVersion.SHA1)
+		}
+
+		// Fetching the original file again matches on both.
+		serveFile = origFile
+		third := fetchFeed()
+		assert.True(t, third.Found)
+		assert.True(t, third.FoundSHA1)
+		assert.True(t, third.FoundDirSHA1)
+		return nil
+	})
+}
+
+// rezip writes a copy of a GTFS zip with the same entries stored uncompressed,
+// which changes the archive bytes but not the file contents.
+func rezip(t *testing.T, src string) string {
+	t.Helper()
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	dst := filepath.Join(t.TempDir(), "rezipped.zip")
+	outf, err := os.Create(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer outf.Close()
+	w := zip.NewWriter(outf)
+	for _, zf := range r.File {
+		if zf.FileInfo().IsDir() {
+			continue
+		}
+		out, err := w.CreateHeader(&zip.FileHeader{Name: zf.Name, Method: zip.Store})
+		if err != nil {
+			t.Fatal(err)
+		}
+		in, err := zf.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = io.Copy(out, in)
+		in.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return dst
 }

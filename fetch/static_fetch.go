@@ -20,7 +20,23 @@ import (
 type StaticFetchResult struct {
 	FeedVersion                *dmfr.FeedVersion
 	FeedVersionValidatorResult *validator.Result
+	// FoundSHA1 and FoundDirSHA1 say which checksum matched when Found is
+	// set. A byte-identical zip matches both; a feed that was re-zipped
+	// without changing its contents matches only FoundDirSHA1. Both are
+	// false when the feed version is new.
+	FoundSHA1    bool
+	FoundDirSHA1 bool
 	Result
+}
+
+// setFound records an existing feed version, and which of its checksums the
+// candidate matched.
+func (r *StaticFetchResult) setFound(existing *dmfr.FeedVersion, candidate *dmfr.FeedVersion) {
+	r.Found = true
+	r.FeedVersion = existing
+	r.FeedVersionID.SetInt(existing.ID)
+	r.FoundSHA1 = existing.SHA1 == candidate.SHA1
+	r.FoundDirSHA1 = existing.SHA1Dir.Valid && candidate.SHA1Dir.Valid && existing.SHA1Dir.Val == candidate.SHA1Dir.Val
 }
 
 type StaticFetchOptions struct {
@@ -121,9 +137,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 	if checkFv, err := fm.GetFeedVersionBySHA1(ctx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
 		return err
 	} else if checkFv != nil {
-		out.Found = true
-		out.FeedVersionID.SetInt(checkFv.ID)
-		out.FeedVersion = checkFv
+		out.setFound(checkFv, &fv)
 		return nil
 	}
 
@@ -186,9 +200,7 @@ func staticProcess(ctx context.Context, fm feedmanager.FeedManager, fn string, o
 	if checkFv, err := fm.GetFeedVersionBySHA1(ctx, fv.SHA1, fv.SHA1Dir.Val); err != nil {
 		return err
 	} else if checkFv != nil {
-		out.Found = true
-		out.FeedVersionID.SetInt(checkFv.ID)
-		out.FeedVersion = checkFv
+		out.setFound(checkFv, &fv)
 		return nil
 	}
 	if err := fm.WithTx(ctx, func(ctx context.Context, tx feedmanager.FeedManager) error {
