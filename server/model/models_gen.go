@@ -573,7 +573,7 @@ type FeedVersionFilter struct {
 	ImportStatus *ImportStatus `json:"import_status,omitempty"`
 	// Search for feed versions with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
-	// Search for feed versions with this SHA1 hash
+	// Search for feed versions with this SHA1 hash; matches either `sha1` (the zip file) or `sha1_dir` (the feed contents)
 	Sha1 *string `json:"sha1,omitempty"`
 	// Search for feed versions with this file identifier
 	File *string `json:"file,omitempty"`

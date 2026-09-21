@@ -376,6 +376,7 @@ type ComplexityRoot struct {
 		Permissions           func(childComplexity int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SHA1                  func(childComplexity int) int
+		SHA1Dir               func(childComplexity int) int
 		Segments              func(childComplexity int, limit *int) int
 		ServiceLevels         func(childComplexity int, limit *int, where *model.FeedVersionServiceLevelFilter) int
 		ServiceWindow         func(childComplexity int) int
@@ -1449,12 +1450,12 @@ type FeedVersionResolver interface {
 	Permissions(ctx context.Context, obj *model.FeedVersion) (*model.Permissions, error)
 }
 type FeedVersionGtfsImportResolver interface {
-	SkipEntityErrorCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
-	EntityCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
-	WarningCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
-	SkipEntityReferenceCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
-	SkipEntityFilterCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
-	SkipEntityMarkedCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
+	SkipEntityErrorCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
+	EntityCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
+	WarningCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
+	SkipEntityReferenceCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
+	SkipEntityFilterCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
+	SkipEntityMarkedCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
 }
 type FlexStopTimeResolver interface {
 	PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
@@ -3159,6 +3160,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.SHA1(childComplexity), true
+	case "FeedVersion.sha1_dir":
+		if e.ComplexityRoot.FeedVersion.SHA1Dir == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FeedVersion.SHA1Dir(childComplexity), true
 	case "FeedVersion.segments":
 		if e.ComplexityRoot.FeedVersion.Segments == nil {
 			break
@@ -9469,7 +9476,14 @@ type FeedVersion {
   
   "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]"
   sha1: String!
-  
+
+  """
+  SHA1 hash of the feed contents, ignoring how the archive was packaged.
+
+  Calculated over the sorted, concatenated contents of the ` + "`" + `.txt` + "`" + ` files in the archive, so it is stable across re-zipping, file reordering, and compression changes that alter ` + "`" + `sha1` + "`" + `. Null for feed versions created before this value was recorded. [example:c1026b895dbe7476c0a6dcc1b82c909bfa952c63]
+  """
+  sha1_dir: String
+
   "Time when the file was fetched from the URL [example:2021-07-09T05:11:00Z]"
   fetched_at: Time!
   
@@ -11589,7 +11603,7 @@ input FeedVersionFilter {
   import_status: ImportStatus
   "Search for feed versions with this feed Onestop ID"
   feed_onestop_id: String
-  "Search for feed versions with this SHA1 hash"
+  "Search for feed versions with this SHA1 hash; matches either ` + "`" + `sha1` + "`" + ` (the zip file) or ` + "`" + `sha1_dir` + "`" + ` (the feed contents)"
   sha1: String
   "Search for feed versions with this file identifier"
   file: String
@@ -12966,6 +12980,8 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_id(ctx, field)
 	case "sha1":
 		return ec.fieldContext_FeedVersion_sha1(ctx, field)
+	case "sha1_dir":
+		return ec.fieldContext_FeedVersion_sha1_dir(ctx, field)
 	case "fetched_at":
 		return ec.fieldContext_FeedVersion_fetched_at(ctx, field)
 	case "url":
@@ -22716,6 +22732,29 @@ func (ec *executionContext) _FeedVersion_sha1(ctx context.Context, field graphql
 	)
 }
 func (ec *executionContext) fieldContext_FeedVersion_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FeedVersion", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FeedVersion_sha1_dir(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_sha1_dir(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SHA1Dir, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_sha1_dir(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FeedVersion", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -49872,6 +49911,8 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "sha1_dir":
+			out.Values[i] = ec._FeedVersion_sha1_dir(ctx, field, obj)
 		case "fetched_at":
 			out.Values[i] = ec._FeedVersion_fetched_at(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

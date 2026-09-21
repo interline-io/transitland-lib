@@ -49,7 +49,7 @@ func (r FeedVersionRequest) RequestInfo() RequestInfo {
 					&pref{Value: &param{
 						Name:        "feed_version_key",
 						In:          "query",
-						Description: `Feed version lookup key; can be an integer ID or a SHA1 value`,
+						Description: `Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)`,
 						Schema:      newSRVal("string", "", nil),
 					}},
 					&pref{Value: &param{
@@ -61,7 +61,7 @@ func (r FeedVersionRequest) RequestInfo() RequestInfo {
 					&pref{Value: &param{
 						Name:        "sha1",
 						In:          "query",
-						Description: `Feed version SHA1`,
+						Description: `Feed version SHA1; matches either the zip file checksum (sha1) or the feed contents checksum (sha1_dir)`,
 						Schema:      newSRVal("string", "", nil),
 						Extensions:  newExt("", "sha1=e535eb2b3...", "sha1=dd7aca4a8e4c90908fd3603c097fabee75fea907"),
 					}},
@@ -180,7 +180,7 @@ func (r FeedVersionKeyRequest) RequestInfo() RequestInfo {
 						Name:        "feed_version_key",
 						In:          "path",
 						Required:    true,
-						Description: `Feed version lookup key; can be an integer ID or a SHA1 value`,
+						Description: `Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)`,
 						Schema:      newSRVal("string", "", nil),
 						Extensions:  newExt("", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "dd7aca4a8e4c90908fd3603c097fabee75fea907"),
 					}},
@@ -207,7 +207,7 @@ func (r FeedVersionDownloadRequest) RequestInfo() RequestInfo {
 						Name:        "feed_version_key",
 						In:          "path",
 						Required:    true,
-						Description: `Feed version lookup key; can be an integer ID or a SHA1 value`,
+						Description: `Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)`,
 						Schema:      newSRVal("string", "", nil),
 					}},
 				},

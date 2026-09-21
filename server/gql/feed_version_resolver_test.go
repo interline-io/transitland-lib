@@ -30,6 +30,12 @@ func TestFeedVersionResolver(t *testing.T) {
 			vars:   vars,
 			expect: `{"feed_versions":[{"description":null,"earliest_calendar_date":"2017-10-02","latest_calendar_date":"2019-10-06","name":null,"sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","url":"file://testdata/server/gtfs/caltrain.zip"}]}`,
 		},
+		{
+			name:   "sha1_dir",
+			query:  `query($feed_version_sha1: String!) {  feed_versions(where:{sha1:$feed_version_sha1}) {sha1 sha1_dir} }`,
+			vars:   vars,
+			expect: `{"feed_versions":[{"sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","sha1_dir":"d9b0478a85b85fc68f14136fd96c0551fc0bfc98"}]}`,
+		},
 		// children
 		{
 			name:   "feed",
@@ -123,6 +129,18 @@ func TestFeedVersionResolver(t *testing.T) {
 			query:        `query{feed_versions(where:{sha1:"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}) {sha1} }`,
 			selector:     "feed_versions.#.sha1",
 			selectExpect: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
+		},
+		{
+			name:         "where sha1 matches sha1_dir",
+			query:        `query{feed_versions(where:{sha1:"d9b0478a85b85fc68f14136fd96c0551fc0bfc98"}) {sha1} }`,
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
+		},
+		{
+			name:         "where sha1 no match",
+			query:        `query{feed_versions(where:{sha1:"0000000000000000000000000000000000000000"}) {sha1} }`,
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{},
 		},
 		{
 			name:         "where import_status success",

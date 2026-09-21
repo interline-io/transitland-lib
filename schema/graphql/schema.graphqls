@@ -418,7 +418,14 @@ type FeedVersion {
   
   "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]"
   sha1: String!
-  
+
+  """
+  SHA1 hash of the feed contents, ignoring how the archive was packaged.
+
+  Calculated over the sorted, concatenated contents of the `.txt` files in the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Null for feed versions created before this value was recorded. [example:c1026b895dbe7476c0a6dcc1b82c909bfa952c63]
+  """
+  sha1_dir: String
+
   "Time when the file was fetched from the URL [example:2021-07-09T05:11:00Z]"
   fetched_at: Time!
   
@@ -2538,7 +2545,7 @@ input FeedVersionFilter {
   import_status: ImportStatus
   "Search for feed versions with this feed Onestop ID"
   feed_onestop_id: String
-  "Search for feed versions with this SHA1 hash"
+  "Search for feed versions with this SHA1 hash; matches either `sha1` (the zip file) or `sha1_dir` (the feed contents)"
   sha1: String
   "Search for feed versions with this file identifier"
   file: String
