@@ -378,16 +378,17 @@ func TestCopier_UnrecognizedLanguageIsAWarning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Every agency is written, including the one that was reported.
-	agencyIds := map[string]int{}
+	// Every agency is written, and keeps the language it came in with. Reporting
+	// a value is not a reason to alter it.
+	agencyLangs := map[string]string{}
 	wreader, _ := writer.NewReader()
 	for ent := range wreader.Agencies() {
-		agencyIds[ent.AgencyID.Val] += 1
+		agencyLangs[ent.AgencyID.Val] = ent.AgencyLang.Val
 	}
-	assert.Equal(t, 3, len(agencyIds), "expected every agency to be written")
-	assert.Equal(t, 1, agencyIds["unrecognized"])
-	assert.Equal(t, 1, agencyIds["iso639-3"])
-	assert.Equal(t, 1, agencyIds["unknown-region"])
+	assert.Equal(t, 3, len(agencyLangs), "expected every agency to be written")
+	assert.Equal(t, "xyz", agencyLangs["unrecognized"])
+	assert.Equal(t, "hur", agencyLangs["iso639-3"])
+	assert.Equal(t, "en-EN", agencyLangs["unknown-region"])
 	assert.Equal(t, 0, result.SkipEntityErrorCount["agency.txt"], "expected no agency to be skipped")
 
 	// The one bad value is still reported, as a warning.
