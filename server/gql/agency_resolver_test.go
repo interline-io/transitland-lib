@@ -61,6 +61,20 @@ func TestAgencyResolver(t *testing.T) {
 			query:  `query{agencies(where:{feed_onestop_id:"HA"}) {route_types}}`,
 			expect: `{"agencies":[{"route_types":[0,3,4]}]}`,
 		},
+		// Every route type in the fixtures is already a basic one, so this says the
+		// field is wired and deduplicates; tt.TestBasicRouteType is what covers the
+		// fold itself, over codes no fixture carries.
+		{
+			name:   "route_types_basic",
+			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {route_types route_types_basic}}`,
+			vars:   vars,
+			expect: `{"agencies":[{"route_types":[2,3],"route_types_basic":[2,3]}]}`,
+		},
+		{
+			name:   "route_types_basic across a feed",
+			query:  `query{agencies(where:{feed_onestop_id:"HA"}) {route_types_basic}}`,
+			expect: `{"agencies":[{"route_types_basic":[0,3,4]}]}`,
+		},
 		{
 			name:         "route_types through operator",
 			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain"}) {agencies{route_types}}}`,

@@ -97,6 +97,7 @@ type ComplexityRoot struct {
 		Operator          func(childComplexity int) int
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
 		RouteTypes        func(childComplexity int) int
+		RouteTypesBasic   func(childComplexity int) int
 		Routes            func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SearchRank        func(childComplexity int) int
 		Stops             func(childComplexity int, limit *int, after *int, where *model.AgencyStopFilter) int
@@ -1003,6 +1004,7 @@ type ComplexityRoot struct {
 		RouteStops        func(childComplexity int, limit *int) int
 		RouteTextColor    func(childComplexity int) int
 		RouteType         func(childComplexity int) int
+		RouteTypeBasic    func(childComplexity int) int
 		RouteURL          func(childComplexity int) int
 		SearchRank        func(childComplexity int) int
 		SegmentPatterns   func(childComplexity int, limit *int, where *model.SegmentPatternFilter) int
@@ -1371,6 +1373,7 @@ type AgencyResolver interface {
 	Places(ctx context.Context, obj *model.Agency, limit *int, where *model.AgencyPlaceFilter) ([]*model.AgencyPlace, error)
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	RouteTypes(ctx context.Context, obj *model.Agency) ([]int, error)
+	RouteTypesBasic(ctx context.Context, obj *model.Agency) ([]int, error)
 	Stops(ctx context.Context, obj *model.Agency, limit *int, after *int, where *model.AgencyStopFilter) ([]*model.Stop, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
@@ -1540,6 +1543,8 @@ type QueryResolver interface {
 	Users(ctx context.Context, limit *int, where *model.UserFilter) ([]*model.User, error)
 }
 type RouteResolver interface {
+	RouteTypeBasic(ctx context.Context, obj *model.Route) (int, error)
+
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
 	Agency(ctx context.Context, obj *model.Route) (*model.Agency, error)
 
@@ -1800,6 +1805,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agency.RouteTypes(childComplexity), true
+	case "Agency.route_types_basic":
+		if e.ComplexityRoot.Agency.RouteTypesBasic == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agency.RouteTypesBasic(childComplexity), true
 	case "Agency.routes":
 		if e.ComplexityRoot.Agency.Routes == nil {
 			break
@@ -6152,6 +6163,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Route.RouteType(childComplexity), true
+	case "Route.route_type_basic":
+		if e.ComplexityRoot.Route.RouteTypeBasic == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Route.RouteTypeBasic(childComplexity), true
 	case "Route.route_url":
 		if e.ComplexityRoot.Route.RouteURL == nil {
 			break
@@ -9762,6 +9779,9 @@ type Agency {
   "The distinct raw GTFS route types of this agency's routes, in ascending order"
   route_types: [Int!]!
 
+  "The same, folded through the GTFS extended route type hierarchy onto the basic types they stand for, deduplicated and in ascending order"
+  route_types_basic: [Int!]!
+
   """
   Stops served by this agency's routes: the served platforms by default, or with ` + "`" + `where: {location_type: 1}` + "`" + ` the stations associated with those platforms.
   """
@@ -9800,6 +9820,9 @@ type Route {
   
   "GTFS ` + "`" + `routes.route_type` + "`" + `; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported"
   route_type: Int!
+
+  "` + "`" + `route_type` + "`" + ` folded through the GTFS extended route type hierarchy onto the basic type it stands for, so 702 reads as 3 and 401 as 1; a code outside the hierarchy is returned unchanged"
+  route_type_basic: Int!
   
   "GTFS ` + "`" + `routes.route_color` + "`" + `; color that corresponds to a route, as a six-digit hexadecimal number (e.g. ` + "`" + `FF0000` + "`" + `)"
   route_color: Color
@@ -12444,6 +12467,8 @@ func (ec *executionContext) childFields_Agency(ctx context.Context, field graphq
 		return ec.fieldContext_Agency_routes(ctx, field)
 	case "route_types":
 		return ec.fieldContext_Agency_route_types(ctx, field)
+	case "route_types_basic":
+		return ec.fieldContext_Agency_route_types_basic(ctx, field)
 	case "stops":
 		return ec.fieldContext_Agency_stops(ctx, field)
 	case "census_geographies":
@@ -14094,6 +14119,8 @@ func (ec *executionContext) childFields_Route(ctx context.Context, field graphql
 		return ec.fieldContext_Route_route_long_name(ctx, field)
 	case "route_type":
 		return ec.fieldContext_Route_route_type(ctx, field)
+	case "route_type_basic":
+		return ec.fieldContext_Route_route_type_basic(ctx, field)
 	case "route_color":
 		return ec.fieldContext_Route_route_color(ctx, field)
 	case "route_text_color":
@@ -17841,6 +17868,29 @@ func (ec *executionContext) _Agency_route_types(ctx context.Context, field graph
 	)
 }
 func (ec *executionContext) fieldContext_Agency_route_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agency", field, true, true, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Agency_route_types_basic(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agency_route_types_basic(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Agency().RouteTypesBasic(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕintᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Agency_route_types_basic(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Agency", field, true, true, errors.New("field of type Int does not have child fields"))
 }
 
@@ -34737,6 +34787,29 @@ func (ec *executionContext) fieldContext_Route_route_type(_ context.Context, fie
 	return graphql.NewScalarFieldContext("Route", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _Route_route_type_basic(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_route_type_basic(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Route().RouteTypeBasic(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Route_route_type_basic(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Route", field, true, true, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _Route_route_color(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -47360,6 +47433,42 @@ func (ec *executionContext) _Agency(ctx context.Context, sel ast.SelectionSet, o
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "route_types_basic":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agency_route_types_basic(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "stops":
 			field := field
 
@@ -55169,6 +55278,42 @@ func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "route_type_basic":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Route_route_type_basic(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "route_color":
 			out.Values[i] = ec._Route_route_color(ctx, field, obj)
 		case "route_text_color":

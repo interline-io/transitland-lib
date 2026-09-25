@@ -711,6 +711,9 @@ type Agency {
   "The distinct raw GTFS route types of this agency's routes, in ascending order"
   route_types: [Int!]!
 
+  "The same, folded through the GTFS extended route type hierarchy onto the basic types they stand for, deduplicated and in ascending order"
+  route_types_basic: [Int!]!
+
   """
   Stops served by this agency's routes: the served platforms by default, or with `where: {location_type: 1}` the stations associated with those platforms.
   """
@@ -749,6 +752,9 @@ type Route {
   
   "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported"
   route_type: Int!
+
+  "`route_type` folded through the GTFS extended route type hierarchy onto the basic type it stands for, so 702 reads as 3 and 401 as 1; a code outside the hierarchy is returned unchanged"
+  route_type_basic: Int!
   
   "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)"
   route_color: Color
