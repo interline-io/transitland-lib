@@ -532,3 +532,83 @@ func TestStaticStateFetch_HideURL(t *testing.T) {
 		return nil
 	})
 }
+
+// A feed that is re-zipped without changing its .txt files keeps its directory
+// SHA1 but gets a new zip SHA1. The second fetch must recognize it as the feed
+// version we already have, create nothing, and report which checksum matched.
+func TestStaticFetch_FoundDirSHA1(t *testing.T) {
+	// Same contents, different archive bytes.
+	const origPath = "/original.zip"
+	const rezippedPath = "/rezipped.zip"
+	files := map[string]string{
+		origPath:     testpath.RelPath("testdata/gtfs-examples/example.zip"),
+		rezippedPath: testutil.ZipDirToTemp(t, testpath.RelPath("testdata/gtfs-examples/example")),
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fn, ok := files[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		buf, err := os.ReadFile(fn)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		w.Write(buf)
+	}))
+	defer ts.Close()
+
+	ctx := context.TODO()
+	testdb.TempSqlite(func(atx tldb.Adapter) error {
+		tmpdir := t.TempDir()
+		feed := testdb.CreateTestFeed(atx, ts.URL+origPath)
+		fetchPath := func(path string) StaticFetchResult {
+			fr, err := StaticFetch(ctx, feedmanager.NewDBFeedManager(atx), StaticFetchOptions{Options: Options{
+				FeedID:                   feed.ID,
+				FeedURL:                  ts.URL + path,
+				Storage:                  tmpdir,
+				AllowHTTPFetchUnfiltered: true,
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fr.FetchError != nil {
+				t.Fatal(fr.FetchError)
+			}
+			return fr
+		}
+		countFvs := func() int {
+			count := 0
+			if err := atx.Get(ctx, &count, "select count(*) from feed_versions"); err != nil {
+				t.Fatal(err)
+			}
+			return count
+		}
+
+		// First fetch creates the feed version.
+		first := fetchPath(origPath)
+		assert.False(t, first.Found, "first fetch should create a new feed version")
+		assert.False(t, first.FoundSHA1)
+		assert.False(t, first.FoundDirSHA1)
+		assert.Equal(t, 1, countFvs())
+
+		// The re-zipped file has a different zip checksum, so it matches only
+		// on sha1_dir, and must not create a second feed version.
+		second := fetchPath(rezippedPath)
+		assert.True(t, second.Found, "re-zipped feed should match the existing feed version")
+		assert.False(t, second.FoundSHA1, "zip checksum should differ after re-zipping")
+		assert.True(t, second.FoundDirSHA1, "directory checksum should be unchanged")
+		assert.Equal(t, first.FeedVersionID, second.FeedVersionID)
+		assert.Equal(t, 1, countFvs(), "re-zipped feed should not create a second feed version")
+
+		// Fetching the original file again matches on both.
+		third := fetchPath(origPath)
+		assert.True(t, third.Found)
+		assert.True(t, third.FoundSHA1)
+		assert.True(t, third.FoundDirSHA1)
+		assert.Equal(t, first.FeedVersionID, third.FeedVersionID)
+		assert.Equal(t, 1, countFvs())
+		return nil
+	})
+}

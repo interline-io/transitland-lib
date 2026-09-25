@@ -263,7 +263,7 @@ var ParameterComponents = oa.ParametersMap{
 		Value: &param{
 			Name:        "feed_version_sha1",
 			In:          "query",
-			Description: `Search for records in this feed version`,
+			Description: `Search for records in this feed version; accepts the zip file checksum (sha1) or the feed contents checksum (sha1_dir)`,
 			Schema:      newSRVal("string", "", nil),
 		},
 	},

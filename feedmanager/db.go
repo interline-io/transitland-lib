@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/validator"
+	sq "github.com/irees/squirrel"
 )
 
 // DBFeedManager implements FeedManager over a tldb.Adapter — Postgres in
@@ -86,8 +87,19 @@ func (m *DBFeedManager) GetFeed(ctx context.Context, feedID int) (*dmfr.Feed, er
 }
 
 func (m *DBFeedManager) GetFeedVersionBySHA1(ctx context.Context, sha1, sha1dir string) (*dmfr.FeedVersion, error) {
+	// An empty sha1dir means the directory checksum could not be calculated, not
+	// that we are looking for a feed version without one. Matching it would pair
+	// the candidate with any row whose sha1_dir is the empty string.
+	match := sq.Or{sq.Eq{"sha1": sha1}}
+	if sha1dir != "" {
+		match = append(match, sq.Eq{"sha1_dir": sha1dir})
+	}
+	q, args, err := m.adapter.Sqrl().Select("*").From("feed_versions").Where(match).Limit(1).ToSql()
+	if err != nil {
+		return nil, err
+	}
 	fv := dmfr.FeedVersion{}
-	err := m.adapter.Get(ctx, &fv, "SELECT * FROM feed_versions WHERE sha1 = ? OR sha1_dir = ? LIMIT 1", sha1, sha1dir)
+	err = m.adapter.Get(ctx, &fv, q, args...)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

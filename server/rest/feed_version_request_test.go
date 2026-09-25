@@ -8,6 +8,7 @@ import (
 
 func TestFeedVersionRequest(t *testing.T) {
 	fv := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
+	fvDir := "d9b0478a85b85fc68f14136fd96c0551fc0bfc98"
 	testcases := []testCase{
 		{
 			name:         "basic",
@@ -27,6 +28,27 @@ func TestFeedVersionRequest(t *testing.T) {
 		{
 			name:         "sha1",
 			h:            FeedVersionRequest{FeedVersionKey: fv},
+			format:       "",
+			selector:     "feed_versions.#.sha1",
+			expectSelect: []string{fv},
+		},
+		{
+			name:         "sha1_dir in response",
+			h:            FeedVersionRequest{FeedVersionKey: fv},
+			format:       "",
+			selector:     "feed_versions.#.sha1_dir",
+			expectSelect: []string{fvDir},
+		},
+		{
+			name:         "feed_version_key as sha1_dir",
+			h:            FeedVersionRequest{FeedVersionKey: fvDir},
+			format:       "",
+			selector:     "feed_versions.#.sha1",
+			expectSelect: []string{fv},
+		},
+		{
+			name:         "sha1 param as sha1_dir",
+			h:            FeedVersionRequest{Sha1: fvDir},
 			format:       "",
 			selector:     "feed_versions.#.sha1",
 			expectSelect: []string{fv},

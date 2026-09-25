@@ -287,7 +287,7 @@
         }
       },
       "sha1Param": {
-        "description": "Search for records in this feed version",
+        "description": "Search for records in this feed version; accepts the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
         "in": "query",
         "name": "feed_version_sha1",
         "schema": {
@@ -2171,7 +2171,7 @@
       "get": {
         "parameters": [
           {
-            "description": "Feed version lookup key; can be an integer ID or a SHA1 value",
+            "description": "Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)",
             "in": "query",
             "name": "feed_version_key",
             "schema": {
@@ -2187,7 +2187,7 @@
             }
           },
           {
-            "description": "Feed version SHA1",
+            "description": "Feed version SHA1; matches either the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
             "in": "query",
             "name": "sha1",
             "schema": {
@@ -2310,7 +2310,7 @@
                             "format": "date",
                             "title": "earliest_calendar_date",
                             "type": "string",
-                            "x-order": 10
+                            "x-order": 12
                           },
                           "feed": {
                             "description": "Feed associated with this feed version",
@@ -2320,13 +2320,13 @@
                                 "nullable": true,
                                 "title": "name",
                                 "type": "string",
-                                "x-order": 19
+                                "x-order": 21
                               },
                               "onestop_id": {
                                 "description": "Onestop ID for this feed.\nFormat: `f-geohash-name`.\nExample: `f-9q9-bart`.",
                                 "title": "onestop_id",
                                 "type": "string",
-                                "x-order": 17
+                                "x-order": 19
                               },
                               "spec": {
                                 "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
@@ -2340,13 +2340,13 @@
                                 "title": "spec",
                                 "type": "object",
                                 "x-graphql-type": "FeedSpecTypes",
-                                "x-order": 21
+                                "x-order": 23
                               }
                             },
                             "title": "feed",
                             "type": "object",
                             "x-graphql-type": "Feed",
-                            "x-order": 22
+                            "x-order": 24
                           },
                           "feed_infos": {
                             "description": "Records from this feed version's `feed_info.txt`",
@@ -2357,7 +2357,7 @@
                                   "nullable": true,
                                   "title": "default_lang",
                                   "type": "string",
-                                  "x-order": 59
+                                  "x-order": 61
                                 },
                                 "feed_contact_email": {
                                   "description": "GTFS `feed_info.feed_contact_email`",
@@ -2365,14 +2365,14 @@
                                   "nullable": true,
                                   "title": "feed_contact_email",
                                   "type": "string",
-                                  "x-order": 61
+                                  "x-order": 63
                                 },
                                 "feed_contact_url": {
                                   "description": "GTFS `feed_info.feed_contact_url`",
                                   "nullable": true,
                                   "title": "feed_contact_url",
                                   "type": "string",
-                                  "x-order": 63
+                                  "x-order": 65
                                 },
                                 "feed_end_date": {
                                   "description": "GTFS `feed_info.feed_end_date`",
@@ -2381,25 +2381,25 @@
                                   "nullable": true,
                                   "title": "feed_end_date",
                                   "type": "string",
-                                  "x-order": 65
+                                  "x-order": 67
                                 },
                                 "feed_lang": {
                                   "description": "GTFS `feed_info.feed_lang`",
                                   "title": "feed_lang",
                                   "type": "string",
-                                  "x-order": 67
+                                  "x-order": 69
                                 },
                                 "feed_publisher_name": {
                                   "description": "GTFS `feed_info.feed_publisher_name`",
                                   "title": "feed_publisher_name",
                                   "type": "string",
-                                  "x-order": 69
+                                  "x-order": 71
                                 },
                                 "feed_publisher_url": {
                                   "description": "GTFS `feed_info.feed_publisher_url`",
                                   "title": "feed_publisher_url",
                                   "type": "string",
-                                  "x-order": 73
+                                  "x-order": 75
                                 },
                                 "feed_start_date": {
                                   "description": "GTFS `feed_info.feed_start_date`",
@@ -2408,17 +2408,17 @@
                                   "nullable": true,
                                   "title": "feed_start_date",
                                   "type": "string",
-                                  "x-order": 71
+                                  "x-order": 73
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedInfo",
-                              "x-order": 74
+                              "x-order": 76
                             },
                             "title": "feed_infos",
                             "type": "array",
                             "x-graphql-type": "FeedInfo",
-                            "x-order": 74
+                            "x-order": 76
                           },
                           "feed_version_gtfs_import": {
                             "description": "Database import status",
@@ -2428,56 +2428,56 @@
                                 "description": "Error log accumulated during import; empty on success",
                                 "title": "exception_log",
                                 "type": "string",
-                                "x-order": 81
+                                "x-order": 83
                               },
                               "in_progress": {
                                 "description": "True if the import is currently running",
                                 "title": "in_progress",
                                 "type": "boolean",
-                                "x-order": 77
+                                "x-order": 79
                               },
                               "interpolated_stop_time_count": {
                                 "description": "Number of stop_times whose arrival/departure times were filled in by interpolation during import",
                                 "nullable": true,
                                 "title": "interpolated_stop_time_count",
                                 "type": "integer",
-                                "x-order": 91
+                                "x-order": 93
                               },
                               "skip_entity_error_count": {
                                 "description": "Counts of entities skipped due to errors, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_error_count",
-                                "x-order": 85
+                                "x-order": 87
                               },
                               "skip_entity_filter_count": {
                                 "description": "Counts of entities skipped due to import filters, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_filter_count",
-                                "x-order": 87
+                                "x-order": 89
                               },
                               "skip_entity_marked_count": {
                                 "description": "Counts of entities skipped by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
-                                "x-order": 89
+                                "x-order": 91
                               },
                               "success": {
                                 "description": "True if the import completed successfully",
                                 "title": "success",
                                 "type": "boolean",
-                                "x-order": 79
+                                "x-order": 81
                               },
                               "warning_count": {
                                 "description": "Counts of warnings raised during import, keyed by file name",
                                 "nullable": true,
                                 "title": "warning_count",
-                                "x-order": 83
+                                "x-order": 85
                               }
                             },
                             "title": "feed_version_gtfs_import",
                             "type": "object",
                             "x-graphql-type": "FeedVersionGtfsImport",
-                            "x-order": 92
+                            "x-order": 94
                           },
                           "fetched_at": {
                             "description": "Time when the file was fetched from the URL",
@@ -2485,7 +2485,7 @@
                             "format": "datetime",
                             "title": "fetched_at",
                             "type": "string",
-                            "x-order": 6
+                            "x-order": 8
                           },
                           "files": {
                             "description": "Metadata for each file in the GTFS archive",
@@ -2495,53 +2495,53 @@
                                   "description": "True if the file is parseable as CSV",
                                   "title": "csv_like",
                                   "type": "boolean",
-                                  "x-order": 33
+                                  "x-order": 35
                                 },
                                 "header": {
                                   "description": "Comma-joined column header row of the file (CSV files only)",
                                   "title": "header",
                                   "type": "string",
-                                  "x-order": 31
+                                  "x-order": 33
                                 },
                                 "name": {
                                   "description": "GTFS file name (e.g. `stops.txt`)",
                                   "title": "name",
                                   "type": "string",
-                                  "x-order": 25
+                                  "x-order": 27
                                 },
                                 "rows": {
                                   "description": "Number of data rows in the file (CSV files only)",
                                   "title": "rows",
                                   "type": "integer",
-                                  "x-order": 27
+                                  "x-order": 29
                                 },
                                 "sha1": {
                                   "description": "SHA1 hash of the file",
                                   "title": "sha1",
                                   "type": "string",
-                                  "x-order": 29
+                                  "x-order": 31
                                 },
                                 "size": {
                                   "description": "File size, in bytes",
                                   "title": "size",
                                   "type": "integer",
-                                  "x-order": 35
+                                  "x-order": 37
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedVersionFileInfo",
-                              "x-order": 36
+                              "x-order": 38
                             },
                             "title": "files",
                             "type": "array",
                             "x-graphql-type": "FeedVersionFileInfo",
-                            "x-order": 36
+                            "x-order": 38
                           },
                           "geometry": {
                             "description": "Convex hull of all stop coordinates in this feed version",
                             "nullable": true,
                             "title": "geometry",
-                            "x-order": 14
+                            "x-order": 16
                           },
                           "id": {
                             "description": "Internal integer ID",
@@ -2555,7 +2555,7 @@
                             "format": "date",
                             "title": "latest_calendar_date",
                             "type": "string",
-                            "x-order": 12
+                            "x-order": 14
                           },
                           "service_levels": {
                             "description": "Service levels (in seconds per day) for this feed version",
@@ -2567,25 +2567,25 @@
                                   "format": "date",
                                   "title": "end_date",
                                   "type": "string",
-                                  "x-order": 41
+                                  "x-order": 43
                                 },
                                 "friday": {
                                   "description": "Seconds of service scheduled on Friday",
                                   "title": "friday",
                                   "type": "integer",
-                                  "x-order": 51
+                                  "x-order": 53
                                 },
                                 "monday": {
                                   "description": "Seconds of service scheduled on Monday",
                                   "title": "monday",
                                   "type": "integer",
-                                  "x-order": 43
+                                  "x-order": 45
                                 },
                                 "saturday": {
                                   "description": "Seconds of service scheduled on Saturday",
                                   "title": "saturday",
                                   "type": "integer",
-                                  "x-order": 53
+                                  "x-order": 55
                                 },
                                 "start_date": {
                                   "description": "Start date of this week",
@@ -2593,41 +2593,41 @@
                                   "format": "date",
                                   "title": "start_date",
                                   "type": "string",
-                                  "x-order": 39
+                                  "x-order": 41
                                 },
                                 "sunday": {
                                   "description": "Seconds of service scheduled on Sunday",
                                   "title": "sunday",
                                   "type": "integer",
-                                  "x-order": 55
+                                  "x-order": 57
                                 },
                                 "thursday": {
                                   "description": "Seconds of service scheduled on Thursday",
                                   "title": "thursday",
                                   "type": "integer",
-                                  "x-order": 49
+                                  "x-order": 51
                                 },
                                 "tuesday": {
                                   "description": "Seconds of service scheduled on Tuesday",
                                   "title": "tuesday",
                                   "type": "integer",
-                                  "x-order": 45
+                                  "x-order": 47
                                 },
                                 "wednesday": {
                                   "description": "Seconds of service scheduled on Wednesday",
                                   "title": "wednesday",
                                   "type": "integer",
-                                  "x-order": 47
+                                  "x-order": 49
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedVersionServiceLevel",
-                              "x-order": 56
+                              "x-order": 58
                             },
                             "title": "service_levels",
                             "type": "array",
                             "x-graphql-type": "FeedVersionServiceLevel",
-                            "x-order": 56
+                            "x-order": 58
                           },
                           "sha1": {
                             "description": "SHA1 hash of the zip file",
@@ -2636,21 +2636,29 @@
                             "type": "string",
                             "x-order": 4
                           },
+                          "sha1_dir": {
+                            "description": "SHA1 hash of the `.txt` files in the archive, ignoring how it was packaged.\n\nCalculated over the sorted, concatenated contents of the lowercase `.txt` files at the top level of the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Note the limits of that definition: other GTFS files, `locations.geojson` among them, are not covered, and two feed versions differing only in those files share a `sha1_dir`. Null for feed versions created before this value was recorded.",
+                            "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
+                            "nullable": true,
+                            "title": "sha1_dir",
+                            "type": "string",
+                            "x-order": 6
+                          },
                           "url": {
                             "description": "URL used to fetch the file",
                             "title": "url",
                             "type": "string",
-                            "x-order": 8
+                            "x-order": 10
                           }
                         },
                         "type": "object",
                         "x-graphql-type": "FeedVersion",
-                        "x-order": 93
+                        "x-order": 95
                       },
                       "title": "feed_versions",
                       "type": "array",
                       "x-graphql-type": "FeedVersion",
-                      "x-order": 93
+                      "x-order": 95
                     }
                   },
                   "title": "data"
@@ -2754,7 +2762,7 @@
               "schema": {
                 "properties": {
                   "feed_version_keys": {
-                    "description": "Array of feed version IDs or SHA1 hashes to export",
+                    "description": "Array of feed version IDs or SHA1 hashes to export; a hash may be the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
                     "items": {
                       "type": "string"
                     },
@@ -2872,7 +2880,7 @@
       "get": {
         "parameters": [
           {
-            "description": "Feed version lookup key; can be an integer ID or a SHA1 value",
+            "description": "Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)",
             "in": "path",
             "name": "feed_version_key",
             "required": true,
@@ -2921,7 +2929,7 @@
                             "format": "date",
                             "title": "earliest_calendar_date",
                             "type": "string",
-                            "x-order": 10
+                            "x-order": 12
                           },
                           "feed": {
                             "description": "Feed associated with this feed version",
@@ -2931,13 +2939,13 @@
                                 "nullable": true,
                                 "title": "name",
                                 "type": "string",
-                                "x-order": 19
+                                "x-order": 21
                               },
                               "onestop_id": {
                                 "description": "Onestop ID for this feed.\nFormat: `f-geohash-name`.\nExample: `f-9q9-bart`.",
                                 "title": "onestop_id",
                                 "type": "string",
-                                "x-order": 17
+                                "x-order": 19
                               },
                               "spec": {
                                 "description": "Type of feed: `GTFS`, `GTFS_RT`, `GBFS`, or `MDS`",
@@ -2951,13 +2959,13 @@
                                 "title": "spec",
                                 "type": "object",
                                 "x-graphql-type": "FeedSpecTypes",
-                                "x-order": 21
+                                "x-order": 23
                               }
                             },
                             "title": "feed",
                             "type": "object",
                             "x-graphql-type": "Feed",
-                            "x-order": 22
+                            "x-order": 24
                           },
                           "feed_infos": {
                             "description": "Records from this feed version's `feed_info.txt`",
@@ -2968,7 +2976,7 @@
                                   "nullable": true,
                                   "title": "default_lang",
                                   "type": "string",
-                                  "x-order": 59
+                                  "x-order": 61
                                 },
                                 "feed_contact_email": {
                                   "description": "GTFS `feed_info.feed_contact_email`",
@@ -2976,14 +2984,14 @@
                                   "nullable": true,
                                   "title": "feed_contact_email",
                                   "type": "string",
-                                  "x-order": 61
+                                  "x-order": 63
                                 },
                                 "feed_contact_url": {
                                   "description": "GTFS `feed_info.feed_contact_url`",
                                   "nullable": true,
                                   "title": "feed_contact_url",
                                   "type": "string",
-                                  "x-order": 63
+                                  "x-order": 65
                                 },
                                 "feed_end_date": {
                                   "description": "GTFS `feed_info.feed_end_date`",
@@ -2992,25 +3000,25 @@
                                   "nullable": true,
                                   "title": "feed_end_date",
                                   "type": "string",
-                                  "x-order": 65
+                                  "x-order": 67
                                 },
                                 "feed_lang": {
                                   "description": "GTFS `feed_info.feed_lang`",
                                   "title": "feed_lang",
                                   "type": "string",
-                                  "x-order": 67
+                                  "x-order": 69
                                 },
                                 "feed_publisher_name": {
                                   "description": "GTFS `feed_info.feed_publisher_name`",
                                   "title": "feed_publisher_name",
                                   "type": "string",
-                                  "x-order": 69
+                                  "x-order": 71
                                 },
                                 "feed_publisher_url": {
                                   "description": "GTFS `feed_info.feed_publisher_url`",
                                   "title": "feed_publisher_url",
                                   "type": "string",
-                                  "x-order": 73
+                                  "x-order": 75
                                 },
                                 "feed_start_date": {
                                   "description": "GTFS `feed_info.feed_start_date`",
@@ -3019,17 +3027,17 @@
                                   "nullable": true,
                                   "title": "feed_start_date",
                                   "type": "string",
-                                  "x-order": 71
+                                  "x-order": 73
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedInfo",
-                              "x-order": 74
+                              "x-order": 76
                             },
                             "title": "feed_infos",
                             "type": "array",
                             "x-graphql-type": "FeedInfo",
-                            "x-order": 74
+                            "x-order": 76
                           },
                           "feed_version_gtfs_import": {
                             "description": "Database import status",
@@ -3039,56 +3047,56 @@
                                 "description": "Error log accumulated during import; empty on success",
                                 "title": "exception_log",
                                 "type": "string",
-                                "x-order": 81
+                                "x-order": 83
                               },
                               "in_progress": {
                                 "description": "True if the import is currently running",
                                 "title": "in_progress",
                                 "type": "boolean",
-                                "x-order": 77
+                                "x-order": 79
                               },
                               "interpolated_stop_time_count": {
                                 "description": "Number of stop_times whose arrival/departure times were filled in by interpolation during import",
                                 "nullable": true,
                                 "title": "interpolated_stop_time_count",
                                 "type": "integer",
-                                "x-order": 91
+                                "x-order": 93
                               },
                               "skip_entity_error_count": {
                                 "description": "Counts of entities skipped due to errors, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_error_count",
-                                "x-order": 85
+                                "x-order": 87
                               },
                               "skip_entity_filter_count": {
                                 "description": "Counts of entities skipped due to import filters, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_filter_count",
-                                "x-order": 87
+                                "x-order": 89
                               },
                               "skip_entity_marked_count": {
                                 "description": "Counts of entities skipped by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
-                                "x-order": 89
+                                "x-order": 91
                               },
                               "success": {
                                 "description": "True if the import completed successfully",
                                 "title": "success",
                                 "type": "boolean",
-                                "x-order": 79
+                                "x-order": 81
                               },
                               "warning_count": {
                                 "description": "Counts of warnings raised during import, keyed by file name",
                                 "nullable": true,
                                 "title": "warning_count",
-                                "x-order": 83
+                                "x-order": 85
                               }
                             },
                             "title": "feed_version_gtfs_import",
                             "type": "object",
                             "x-graphql-type": "FeedVersionGtfsImport",
-                            "x-order": 92
+                            "x-order": 94
                           },
                           "fetched_at": {
                             "description": "Time when the file was fetched from the URL",
@@ -3096,7 +3104,7 @@
                             "format": "datetime",
                             "title": "fetched_at",
                             "type": "string",
-                            "x-order": 6
+                            "x-order": 8
                           },
                           "files": {
                             "description": "Metadata for each file in the GTFS archive",
@@ -3106,53 +3114,53 @@
                                   "description": "True if the file is parseable as CSV",
                                   "title": "csv_like",
                                   "type": "boolean",
-                                  "x-order": 33
+                                  "x-order": 35
                                 },
                                 "header": {
                                   "description": "Comma-joined column header row of the file (CSV files only)",
                                   "title": "header",
                                   "type": "string",
-                                  "x-order": 31
+                                  "x-order": 33
                                 },
                                 "name": {
                                   "description": "GTFS file name (e.g. `stops.txt`)",
                                   "title": "name",
                                   "type": "string",
-                                  "x-order": 25
+                                  "x-order": 27
                                 },
                                 "rows": {
                                   "description": "Number of data rows in the file (CSV files only)",
                                   "title": "rows",
                                   "type": "integer",
-                                  "x-order": 27
+                                  "x-order": 29
                                 },
                                 "sha1": {
                                   "description": "SHA1 hash of the file",
                                   "title": "sha1",
                                   "type": "string",
-                                  "x-order": 29
+                                  "x-order": 31
                                 },
                                 "size": {
                                   "description": "File size, in bytes",
                                   "title": "size",
                                   "type": "integer",
-                                  "x-order": 35
+                                  "x-order": 37
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedVersionFileInfo",
-                              "x-order": 36
+                              "x-order": 38
                             },
                             "title": "files",
                             "type": "array",
                             "x-graphql-type": "FeedVersionFileInfo",
-                            "x-order": 36
+                            "x-order": 38
                           },
                           "geometry": {
                             "description": "Convex hull of all stop coordinates in this feed version",
                             "nullable": true,
                             "title": "geometry",
-                            "x-order": 14
+                            "x-order": 16
                           },
                           "id": {
                             "description": "Internal integer ID",
@@ -3166,7 +3174,7 @@
                             "format": "date",
                             "title": "latest_calendar_date",
                             "type": "string",
-                            "x-order": 12
+                            "x-order": 14
                           },
                           "service_levels": {
                             "description": "Service levels (in seconds per day) for this feed version",
@@ -3178,25 +3186,25 @@
                                   "format": "date",
                                   "title": "end_date",
                                   "type": "string",
-                                  "x-order": 41
+                                  "x-order": 43
                                 },
                                 "friday": {
                                   "description": "Seconds of service scheduled on Friday",
                                   "title": "friday",
                                   "type": "integer",
-                                  "x-order": 51
+                                  "x-order": 53
                                 },
                                 "monday": {
                                   "description": "Seconds of service scheduled on Monday",
                                   "title": "monday",
                                   "type": "integer",
-                                  "x-order": 43
+                                  "x-order": 45
                                 },
                                 "saturday": {
                                   "description": "Seconds of service scheduled on Saturday",
                                   "title": "saturday",
                                   "type": "integer",
-                                  "x-order": 53
+                                  "x-order": 55
                                 },
                                 "start_date": {
                                   "description": "Start date of this week",
@@ -3204,41 +3212,41 @@
                                   "format": "date",
                                   "title": "start_date",
                                   "type": "string",
-                                  "x-order": 39
+                                  "x-order": 41
                                 },
                                 "sunday": {
                                   "description": "Seconds of service scheduled on Sunday",
                                   "title": "sunday",
                                   "type": "integer",
-                                  "x-order": 55
+                                  "x-order": 57
                                 },
                                 "thursday": {
                                   "description": "Seconds of service scheduled on Thursday",
                                   "title": "thursday",
                                   "type": "integer",
-                                  "x-order": 49
+                                  "x-order": 51
                                 },
                                 "tuesday": {
                                   "description": "Seconds of service scheduled on Tuesday",
                                   "title": "tuesday",
                                   "type": "integer",
-                                  "x-order": 45
+                                  "x-order": 47
                                 },
                                 "wednesday": {
                                   "description": "Seconds of service scheduled on Wednesday",
                                   "title": "wednesday",
                                   "type": "integer",
-                                  "x-order": 47
+                                  "x-order": 49
                                 }
                               },
                               "type": "object",
                               "x-graphql-type": "FeedVersionServiceLevel",
-                              "x-order": 56
+                              "x-order": 58
                             },
                             "title": "service_levels",
                             "type": "array",
                             "x-graphql-type": "FeedVersionServiceLevel",
-                            "x-order": 56
+                            "x-order": 58
                           },
                           "sha1": {
                             "description": "SHA1 hash of the zip file",
@@ -3247,21 +3255,29 @@
                             "type": "string",
                             "x-order": 4
                           },
+                          "sha1_dir": {
+                            "description": "SHA1 hash of the `.txt` files in the archive, ignoring how it was packaged.\n\nCalculated over the sorted, concatenated contents of the lowercase `.txt` files at the top level of the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Note the limits of that definition: other GTFS files, `locations.geojson` among them, are not covered, and two feed versions differing only in those files share a `sha1_dir`. Null for feed versions created before this value was recorded.",
+                            "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
+                            "nullable": true,
+                            "title": "sha1_dir",
+                            "type": "string",
+                            "x-order": 6
+                          },
                           "url": {
                             "description": "URL used to fetch the file",
                             "title": "url",
                             "type": "string",
-                            "x-order": 8
+                            "x-order": 10
                           }
                         },
                         "type": "object",
                         "x-graphql-type": "FeedVersion",
-                        "x-order": 93
+                        "x-order": 95
                       },
                       "title": "feed_versions",
                       "type": "array",
                       "x-graphql-type": "FeedVersion",
-                      "x-order": 93
+                      "x-order": 95
                     }
                   },
                   "title": "data"
@@ -3319,7 +3335,7 @@
         "description": "Download this feed version GTFS zip for this feed, if redistribution is allowed by the source feed's license. Available only using Transitland professional or enterprise plan API keys.",
         "parameters": [
           {
-            "description": "Feed version lookup key; can be an integer ID or a SHA1 value",
+            "description": "Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)",
             "in": "path",
             "name": "feed_version_key",
             "required": true,

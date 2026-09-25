@@ -80,7 +80,7 @@ func (r FeedVersionExportOpenAPIRequest) RequestInfo() RequestInfo {
 											"feed_version_keys": &oa.SchemaRef{
 												Value: &oa.Schema{
 													Type:        &oa.Types{"array"},
-													Description: "Array of feed version IDs or SHA1 hashes to export",
+													Description: "Array of feed version IDs or SHA1 hashes to export; a hash may be the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
 													Items: &oa.SchemaRef{
 														Value: &oa.Schema{
 															Type: &oa.Types{"string"},

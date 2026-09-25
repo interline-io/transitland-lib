@@ -559,9 +559,9 @@ type FeedVersionFetchResult struct {
 	FeedVersion *FeedVersion `json:"feed_version,omitempty"`
 	// Error message if the fetch failed
 	FetchError *string `json:"fetch_error,omitempty"`
-	// True if the same zip file is already in the database (matched by SHA1)
+	// True if the same zip file is already in the database (matched by `sha1`). A feed version recorded before `sha1_dir` was stored matches on this alone.
 	FoundSha1 bool `json:"found_sha1"`
-	// True if a zip with identical unpacked contents is already in the database (matched by directory SHA1)
+	// True if a zip with the same `.txt` contents is already in the database (matched by `sha1_dir`). Set on its own when the feed was re-zipped without those contents changing.
 	FoundDirSha1 bool `json:"found_dir_sha1"`
 }
 
@@ -573,7 +573,7 @@ type FeedVersionFilter struct {
 	ImportStatus *ImportStatus `json:"import_status,omitempty"`
 	// Search for feed versions with this feed Onestop ID
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
-	// Search for feed versions with this SHA1 hash
+	// Search for feed versions with this SHA1 hash; matches either `sha1` (the zip file) or `sha1_dir` (the feed contents)
 	Sha1 *string `json:"sha1,omitempty"`
 	// Search for feed versions with this file identifier
 	File *string `json:"file,omitempty"`

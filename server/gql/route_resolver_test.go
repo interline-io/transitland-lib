@@ -140,6 +140,12 @@ func TestRouteResolver(t *testing.T) {
 			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
 		},
 		{
+			name:         "where feed_version_sha1 matches sha1_dir",
+			query:        `query {routes(where:{feed_version_sha1:"d9b0478a85b85fc68f14136fd96c0551fc0bfc98"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
+		},
+		{
 			name:         "where feed_onestop_id",
 			query:        `query {routes(where:{feed_onestop_id:"CT"}) {route_id} }`,
 			selector:     "routes.#.route_id",

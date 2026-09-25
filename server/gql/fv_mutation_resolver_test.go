@@ -36,11 +36,11 @@ func TestFeedVersionFetchResolver(t *testing.T) {
 			// Run all requests as admin
 			c := client.New(srv)
 			resp := make(map[string]interface{})
-			err := c.Post(`mutation($url:String!) {feed_version_fetch(feed_onestop_id:"BA",url:$url){found_sha1 feed_version{sha1}}}`, &resp, client.Var("url", ts200.URL))
+			err := c.Post(`mutation($url:String!) {feed_version_fetch(feed_onestop_id:"BA",url:$url){found_sha1 found_dir_sha1 feed_version{sha1 sha1_dir}}}`, &resp, client.Var("url", ts200.URL))
 			if err != nil {
 				t.Error(err)
 			}
-			assert.JSONEq(t, `{"feed_version_fetch":{"found_sha1":true,"feed_version":{"sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0"}}}`, toJson(resp))
+			assert.JSONEq(t, `{"feed_version_fetch":{"found_sha1":true,"found_dir_sha1":true,"feed_version":{"sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0","sha1_dir":"9f0f389f9195114f964da269f35f753b3d8ca1c8"}}}`, toJson(resp))
 		})
 	})
 }
