@@ -169,10 +169,18 @@ var routeTypes = []RouteType{
 
 var routeTypesMap map[int]RouteType
 
+// routeTypeParents is the extended-to-parent edge of the GTFS hierarchy. Built
+// once: GetBasicRouteType walks it per call, and a resolver asks it per route.
+var routeTypeParents map[int]int
+
 func init() {
 	routeTypesMap = map[int]RouteType{}
+	routeTypeParents = map[int]int{}
 	for _, rt := range routeTypes {
 		routeTypesMap[rt.Code] = rt
+		if rt.Code > 12 {
+			routeTypeParents[rt.Code] = rt.Parent
+		}
 	}
 }
 
@@ -184,20 +192,28 @@ func GetRouteType(code int) (RouteType, bool) {
 
 // GetBasicRouteType returns the closest approximate basic route_type for an extended route_type.
 func GetBasicRouteType(code int) (RouteType, bool) {
-	parents := map[int]int{}
-	for _, i := range routeTypes {
-		if i.Code > 12 {
-			parents[i.Code] = i.Parent
-		}
-	}
 	for {
-		code2, ok := parents[code]
+		code2, ok := routeTypeParents[code]
 		if !ok || code == code2 {
 			break
 		}
 		code = code2
 	}
 	return GetRouteType(code)
+}
+
+// BasicRouteType returns the basic route_type an extended one is a kind of: 702
+// is a bus, 401 a metro, 1701 a cable tram.
+//
+// A code the table does not know is returned unchanged, so a caller grouping by
+// basic type sees it as whatever it is rather than as tram, which is what a zero
+// would read as. The API, the tile exporter and anything else deriving a mode
+// should all come through here rather than keep a copy of the hierarchy.
+func BasicRouteType(code int) int {
+	if rt, ok := GetBasicRouteType(code); ok {
+		return rt.Code
+	}
+	return code
 }
 
 func getRouteChildren(code int) []RouteType {

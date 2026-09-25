@@ -108,3 +108,50 @@ func Test_getRouteChildren(t *testing.T) {
 		}
 	}
 }
+
+func TestBasicRouteType(t *testing.T) {
+	tests := []struct {
+		name   string
+		code   int
+		expect int
+	}{
+		{"tram stands for itself", 0, 0},
+		{"metro stands for itself", 1, 1},
+		{"rail stands for itself", 2, 2},
+		{"bus stands for itself", 3, 3},
+		{"ferry stands for itself", 4, 4},
+		{"cable tram stands for itself", 5, 5},
+		{"aerial lift stands for itself", 6, 6},
+		{"funicular stands for itself", 7, 7},
+		{"trolleybus stands for itself", 11, 11},
+		{"monorail stands for itself", 12, 12},
+		// The codes a real network actually publishes: Norway's feeds are almost
+		// entirely extended types.
+		{"railway service is rail", 100, 2},
+		{"long distance trains are rail", 101, 2},
+		{"metro service is metro", 401, 1},
+		{"monorail is monorail, not metro", 405, 12},
+		{"local bus is bus", 702, 3},
+		{"night bus is bus", 705, 3},
+		{"school bus is bus", 712, 3},
+		{"trolleybus is trolleybus, not bus", 800, 11},
+		{"tram service is tram", 902, 0},
+		{"water transport is ferry", 1000, 4},
+		{"national car ferry is ferry", 1008, 4},
+		{"telecabin is aerial lift", 1300, 6},
+		{"funicular service is funicular", 1400, 7},
+		{"taxi resolves through miscellaneous to bus", 1500, 3},
+		{"cable car is cable tram, not bus", 1701, 5},
+		// A code outside the hierarchy stands for itself rather than reading as
+		// tram, which is what a zero would mean.
+		{"an unknown code is left alone", 9999, 9999},
+		{"an unassigned basic code is left alone", 8, 8},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := BasicRouteType(tc.code); got != tc.expect {
+				t.Errorf("BasicRouteType(%d) = %d, expected %d", tc.code, got, tc.expect)
+			}
+		})
+	}
+}
