@@ -9779,7 +9779,7 @@ type Agency {
   "The distinct raw GTFS route types of this agency's routes, in ascending order"
   route_types: [Int!]!
 
-  "The same, folded through the GTFS extended route type hierarchy onto the basic types they stand for, deduplicated and in ascending order"
+  "The distinct basic GTFS route types of this agency's routes, in ascending order: each extended route type is replaced by the basic type it is a kind of, so an agency running both 700 and 702 reports 3 once"
   route_types_basic: [Int!]!
 
   """
@@ -9821,7 +9821,7 @@ type Route {
   "GTFS ` + "`" + `routes.route_type` + "`" + `; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported"
   route_type: Int!
 
-  "` + "`" + `route_type` + "`" + ` folded through the GTFS extended route type hierarchy onto the basic type it stands for, so 702 reads as 3 and 401 as 1; a code outside the hierarchy is returned unchanged"
+  "The basic GTFS route type this route's ` + "`" + `route_type` + "`" + ` is a kind of: an extended type is replaced by the basic type it belongs to, so 702 (local bus service) becomes 3 (bus) and 401 (metro service) becomes 1 (subway/metro). A ` + "`" + `route_type` + "`" + ` that is already basic, or that is not a known extended type, is returned unchanged"
   route_type_basic: Int!
   
   "GTFS ` + "`" + `routes.route_color` + "`" + `; color that corresponds to a route, as a six-digit hexadecimal number (e.g. ` + "`" + `FF0000` + "`" + `)"
