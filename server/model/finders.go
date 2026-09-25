@@ -175,7 +175,6 @@ type RTFinder interface {
 	// lookup cache methods
 	StopTimezone(context.Context, int, string) (*time.Location, bool)
 	FeedVersionTimezone(context.Context, int) (*time.Location, bool)
-	GetGtfsTripID(context.Context, int) (string, bool)
 	GetMessage(context.Context, string, string) (*pb.FeedMessage, bool)
 }
 
