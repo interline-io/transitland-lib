@@ -1,6 +1,6 @@
 module github.com/interline-io/transitland-lib
 
-go 1.26.3
+go 1.26.8
 
 require (
 	code.dny.dev/ssrf v0.2.0
