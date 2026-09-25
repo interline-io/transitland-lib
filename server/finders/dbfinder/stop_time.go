@@ -269,18 +269,15 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		serviceDate = where.ServiceDate.Val
 	}
 
-	// The stop_times at the requested entities, with their base trips, running on the service date.
+	// The stop_times at the requested entities, with their base trips.
 	//
-	// Materialized to pin the join order: Postgres treats the entity and feed version filters as
-	// independent, expects a few rows where a busy stop has thousands, and otherwise picks a
-	// cross join with active_services or a scan of every trip running that day.
+	// Materialized and filtered only by the entity ids, so every plan starts from them. Postgres
+	// treats those ids and feed_version_id as independent filters; given feed_version_id or the
+	// service check here, it starts from the whole feed version instead. The ids are global keys.
 	atEntity := sq.StatementBuilder.
-		Select("base_trip.trip_id AS base_trip_gtfs_id", "sts.*").
+		Select("base_trip.trip_id AS base_trip_gtfs_id", "base_trip.service_id AS base_trip_service_id", "sts.*").
 		From("gtfs_stop_times sts").
-		Join("gtfs_trips base_trip ON base_trip.id = sts.trip_id AND base_trip.feed_version_id = sts.feed_version_id").
-		Where(sq.Eq{"sts.feed_version_id": fvid}).
-		// A pattern's trips share a service_id, so checking the base trip covers them all.
-		Where("base_trip.service_id = ANY(ARRAY(SELECT id FROM active_services))")
+		Join("gtfs_trips base_trip ON base_trip.id = sts.trip_id")
 	if len(entityIDs) > 0 {
 		switch entityType {
 		case stopTimeEntityStop:
@@ -348,6 +345,8 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 					0
 				) AS departure_time_freq
 			) sts_freq on true`).
+		// A pattern's trips share a service_id, so checking the base trip covers them all.
+		Where("sts.base_trip_service_id = ANY(ARRAY(SELECT id FROM active_services))").
 		OrderBy("sts_freq.departure_time_freq", "sts.trip_id")
 
 	if where != nil {

@@ -2,6 +2,7 @@ package rtfinder
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
@@ -10,10 +11,12 @@ import (
 	"github.com/interline-io/transitland-lib/server/caches/tzcache"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/sync/singleflight"
 )
 
 type lookupCache struct {
 	db                     tldb.Ext
+	inflight               singleflight.Group // concurrent misses for a key share one query
 	fvidSourceCache        *simpleCache[int, []string]
 	fvidFeedCache          *simpleCache[int, string]
 	fvidAgencyCountCache   *simpleCache[int, int]
@@ -147,15 +150,18 @@ func (f *lookupCache) GetFeedVersionRTFeeds(ctx context.Context, id int) ([]stri
 	where fv.id = $1 
 	order by cf.onestop_id
 	`
-	var eid []string
-	if err := sqlx.SelectContext(ctx, f.db, &eid, q, id); err != nil {
-		// Not cached, since a cancelled request would otherwise leave the feed
-		// version without realtime until restart; logged only if not cancelled.
-		if ctx.Err() == nil {
-			log.For(ctx).Error().Err(err).Int("feed_version_id", id).Msg("rtfinder: rt feeds lookup failed")
-		}
+	// Shared by concurrent callers, so not cancelled by any one of them.
+	v, err, _ := f.inflight.Do("rtfeeds:"+strconv.Itoa(id), func() (any, error) {
+		var eid []string
+		err := sqlx.SelectContext(context.WithoutCancel(ctx), f.db, &eid, q, id)
+		return eid, err
+	})
+	if err != nil {
+		// Not cached, so a transient failure is retried.
+		log.For(ctx).Error().Err(err).Int("feed_version_id", id).Msg("rtfinder: rt feeds lookup failed")
 		return nil, false
 	}
+	eid := v.([]string)
 	f.fvidSourceCache.Set(id, eid)
 	return eid, true
 }
@@ -178,7 +184,7 @@ func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*
 		return loc, ok
 	} else {
 		log.TraceCheck(func() {
-			log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Str("loc", loc.String()).Msg("tz: timezone not in cache")
+			log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Msg("tz: timezone not in cache")
 		})
 	}
 	if id == 0 {
@@ -200,14 +206,17 @@ func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*
 		) a on true
 		where s.id = $1
 		limit 1`
-	tz := ""
-	if err := sqlx.GetContext(ctx, f.db, &tz, q, id); err != nil {
-		if ctx.Err() == nil {
-			log.For(ctx).Error().Err(err).Int("stop_id", id).Str("known", known).Msg("tz: lookup failed")
-		}
+	// Shared by concurrent callers, so not cancelled by any one of them.
+	v, err, _ := f.inflight.Do("stoptz:"+strconv.Itoa(id), func() (any, error) {
+		tz := ""
+		err := sqlx.GetContext(context.WithoutCancel(ctx), f.db, &tz, q, id)
+		return tz, err
+	})
+	if err != nil {
+		log.For(ctx).Error().Err(err).Int("stop_id", id).Str("known", known).Msg("tz: lookup failed")
 		return nil, false
 	}
-	loc, ok := f.tzCache.Add(id, tz)
+	loc, ok := f.tzCache.Add(id, v.(string))
 	log.TraceCheck(func() {
 		log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Str("loc", loc.String()).Msg("tz: lookup successful")
 	})
@@ -222,14 +231,17 @@ func (f *lookupCache) FeedVersionTimezone(ctx context.Context, fvid int) (*time.
 		return loc, ok
 	}
 	q := `SELECT agency_timezone FROM gtfs_agencies WHERE feed_version_id = $1 LIMIT 1`
-	tz := ""
-	if err := sqlx.GetContext(ctx, f.db, &tz, q, fvid); err != nil {
-		if ctx.Err() == nil {
-			log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("tz: feed version timezone lookup failed")
-		}
+	// Shared by concurrent callers, so not cancelled by any one of them.
+	v, err, _ := f.inflight.Do("fvtz:"+strconv.Itoa(fvid), func() (any, error) {
+		tz := ""
+		err := sqlx.GetContext(context.WithoutCancel(ctx), f.db, &tz, q, fvid)
+		return tz, err
+	})
+	if err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("tz: feed version timezone lookup failed")
 		return nil, false
 	}
-	loc, ok := f.tzCache.Add(cacheKey, tz)
+	loc, ok := f.tzCache.Add(cacheKey, v.(string))
 	return loc, ok
 }
 
