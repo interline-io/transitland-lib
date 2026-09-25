@@ -39,6 +39,7 @@ query ($limit: Int, $ids: [Int!], $after: Int, $where: RouteFilter, $include_geo
     route_sort_order
     route_text_color
     route_type
+    route_type_basic
     route_url
     continuous_pickup
     continuous_drop_off
