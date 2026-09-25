@@ -33,6 +33,7 @@ jobs:
       TL_TEST_SERVER_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test_server?sslmode=disable
       TL_REDIS_URL: redis://localhost
       TL_TEST_REDIS_URL: redis://localhost
+      TL_TEST_FGA_ENDPOINT: http://localhost:8080
     services:
       postgres:
         image: postgis/postgis:16-3.4-alpine
@@ -66,6 +67,12 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Install transitland CLI
         run: (cd cmd/transitland && go version && go install .)
+      # Not a service container: the image has no default command, and services
+      # can't pass it `run`. The tag matches what the deployments run.
+      - name: Start OpenFGA
+        run: |
+          docker run -d -p 8080:8080 openfga/openfga:v1.15.1 run
+          curl -sf --retry 10 --retry-all-errors --retry-delay 1 http://localhost:8080/healthz
       - name: Set up test database
         run: ./testdata/test_setup.sh
       - name: Run tests

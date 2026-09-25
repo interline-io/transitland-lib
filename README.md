@@ -133,6 +133,7 @@ For running tests locally, the following instructions should help get started:
    - Note that temporary files will be created in `testdata/server/tmp`; these are excluded in `.gitignore`
 3. Optional: Set `TL_TEST_REDIS_URL` to run some GBFS tests
 4. Optional: Set `TL_TEST_FGA_ENDPOINT` to a running [OpenFGA](https://github.com/openfga/openfga) server to run authorization tests
+   - e.g. `docker run -d -p 8080:8080 openfga/openfga:v1.15.1 run` and `TL_TEST_FGA_ENDPOINT=http://localhost:8080`
 5. Run all tests with `go test -v ./...`
 
 Test cases generally run within transactions; you do not need to regenerate the fixtures unless you are testing migrations or changes to data import functionality.
