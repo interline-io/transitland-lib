@@ -202,13 +202,13 @@ func GetBasicRouteType(code int) (RouteType, bool) {
 	return GetRouteType(code)
 }
 
-// BasicRouteType folds a route_type onto the basic type it stands for: 702 is a
-// bus, 401 a metro, 1701 a cable tram.
+// BasicRouteType returns the basic route_type an extended one is a kind of: 702
+// is a bus, 401 a metro, 1701 a cable tram.
 //
-// A code the table does not know stands for itself, so a caller bucketing by
+// A code the table does not know is returned unchanged, so a caller grouping by
 // basic type sees it as whatever it is rather than as tram, which is what a zero
-// would read as. This is the one fold the API, the tile exporter and anything
-// else deriving a mode should share.
+// would read as. The API, the tile exporter and anything else deriving a mode
+// should all come through here rather than keep a copy of the hierarchy.
 func BasicRouteType(code int) int {
 	if rt, ok := GetBasicRouteType(code); ok {
 		return rt.Code

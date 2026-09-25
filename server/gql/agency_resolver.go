@@ -25,11 +25,11 @@ func (r *agencyResolver) RouteTypes(ctx context.Context, obj *model.Agency) ([]i
 	return LoaderFor(ctx).RouteTypesByAgencyIDs.Load(ctx, obj.ID)()
 }
 
-// RouteTypesBasic is RouteTypes folded onto the basic types they stand for.
+// RouteTypesBasic is RouteTypes reduced to the basic types those are kinds of.
 //
-// Taken from the same load rather than asked of the database again: the fold is a
-// pure function of the answer that load already holds, so the two fields cost one
-// query between them.
+// Taken from the same load rather than asked of the database again: it is a pure
+// function of the answer that load already holds, so the two fields cost one query
+// between them.
 func (r *agencyResolver) RouteTypesBasic(ctx context.Context, obj *model.Agency) ([]int, error) {
 	routeTypes, err := LoaderFor(ctx).RouteTypesByAgencyIDs.Load(ctx, obj.ID)()
 	if err != nil {
