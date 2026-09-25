@@ -57,6 +57,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # The tag matches what the deployments run. No health check: the image has
+      # no shell for --health-cmd, and test setup runs long before the tests.
+      openfga:
+        image: openfga/openfga:v1.15.1
+        command: run
+        ports:
+          - 8080:8080
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -67,12 +74,6 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Install transitland CLI
         run: (cd cmd/transitland && go version && go install .)
-      # Not a service container: the image has no default command, and services
-      # can't pass it `run`. The tag matches what the deployments run.
-      - name: Start OpenFGA
-        run: |
-          docker run -d -p 8080:8080 openfga/openfga:v1.15.1 run
-          curl -sf --retry 10 --retry-all-errors --retry-delay 1 http://localhost:8080/healthz
       - name: Set up test database
         run: ./testdata/test_setup.sh
       - name: Run tests
