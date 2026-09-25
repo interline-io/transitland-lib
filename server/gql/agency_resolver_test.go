@@ -502,13 +502,8 @@ func TestAgencyResolver_StopsCursor(t *testing.T) {
 }
 
 func TestAgencyResolver_Authz(t *testing.T) {
-	ep, a, ok := testutil.CheckEnv("TL_TEST_FGA_ENDPOINT")
-	if !ok {
-		t.Skip(a)
-		return
-	}
 	cfg := testconfig.Config(t, testconfig.Options{
-		FGAEndpoint:    ep,
+		FGAEndpoint:    testutil.FGAServer(t),
 		FGAModelFile:   testdata.Path("server/authz/tls.json"),
 		FGAModelTuples: fgaTestTuples,
 	})
@@ -524,14 +519,14 @@ func TestAgencyResolver_Authz(t *testing.T) {
 			query:        `query { agencies {agency_id}}`,
 			user:         "ian",
 			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART", "", "573"},
+			selectExpect: []string{"caltrain-ca-us", "BART", "", "573", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "1"},
 		},
 		{
 			name:         "basic",
 			query:        `query { agencies {agency_id}}`,
 			user:         "public",
 			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART", ""},
+			selectExpect: []string{"caltrain-ca-us", "BART", "", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "1"},
 		},
 	}
 	for _, tc := range testcases {

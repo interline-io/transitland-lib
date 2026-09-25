@@ -33,6 +33,7 @@ jobs:
       TL_TEST_SERVER_DATABASE_URL: postgres://root:for_testing@localhost:5432/tlv2_test_server?sslmode=disable
       TL_REDIS_URL: redis://localhost
       TL_TEST_REDIS_URL: redis://localhost
+      TL_TEST_FGA_ENDPOINT: http://localhost:8080
     services:
       postgres:
         image: postgis/postgis:16-3.4-alpine
@@ -56,6 +57,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # The tag matches what the deployments run. No health check: the image has
+      # no shell for --health-cmd, and test setup runs long before the tests.
+      openfga:
+        image: openfga/openfga:v1.15.1
+        command: run
+        ports:
+          - 8080:8080
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
