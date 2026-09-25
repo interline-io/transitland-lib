@@ -393,6 +393,25 @@ func (e *InvalidFieldError) Error() string {
 	return fmt.Sprintf("invalid value for field %s '%s'", e.Field, e.Value)
 }
 
+// InvalidLanguageError reports a value that does not name a language.
+//
+// It is reported at warning level. A language that this library does not
+// recognize is advisory: it tells a consumer less than it should, but the
+// stop, agency or translation it sits on is still usable, and dropping that
+// entity would take everything referencing it along too.
+type InvalidLanguageError struct {
+	bc
+}
+
+// NewInvalidLanguageError returns a new InvalidLanguageError
+func NewInvalidLanguageError(field string, value string) *InvalidLanguageError {
+	return &InvalidLanguageError{bc: bc{Field: field, Value: value, errorLevel: 1}}
+}
+
+func (e *InvalidLanguageError) Error() string {
+	return fmt.Sprintf("invalid language for field %s '%s'", e.Field, e.Value)
+}
+
 ////////////////////////////
 // Reference level errors
 ////////////////////////////

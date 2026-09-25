@@ -63,7 +63,7 @@ func TestTranslation_Errors(t *testing.T) {
 			entity: newTranslation(func(t *Translation) {
 				t.Language = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:language"),
+			expectedErrors: PE("InvalidLanguageError:language"),
 		},
 		{
 			name: "record_id required when field_value empty",
