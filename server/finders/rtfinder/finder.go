@@ -391,7 +391,7 @@ func makeAlert(a *pb.Alert) *model.Alert {
 		}
 		if tr.End != nil {
 			v := int(*tr.End)
-			rttr.Start = &v
+			rttr.End = &v
 		}
 		r.ActivePeriod = append(r.ActivePeriod, &rttr)
 	}
