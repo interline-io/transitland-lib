@@ -77,8 +77,8 @@ func TestRouteRT_Alerts(t *testing.T) {
 
 }
 
-// An alert on a route at one stop is an alert about the route: Route.alerts
-// returns it wherever the stop is, and Stop.alerts only at that stop.
+// Route.alerts returns an alert on the route at one stop wherever the stop is,
+// and one on the route's mode; Stop.alerts only the alert at that stop.
 func TestRouteRT_AlertsAtStop(t *testing.T) {
 	rtfiles := []testconfig.RTJsonFile{
 		{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts-informed-entity.json"},
@@ -109,7 +109,24 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 			if !st.Exists() {
 				t.Fatal("expected to find trip '1031527WKDY'")
 			}
-			assert.ElementsMatch(t, []string{"Route 05 at Fruitvale", "Route 05 at 12th St"}, headers(st.Get("trip.route.alerts").Array()))
+			assert.ElementsMatch(t, []string{"Route 05 at Fruitvale", "Route 05 at 12th St", "All BART subway service"}, headers(st.Get("trip.route.alerts").Array()))
+		},
+	})
+	// A selector narrowed to a mode is about that mode's routes, not the agency:
+	// BART's subway alert reaches route 05, and neither mode alert reaches BART.
+	testRt(t, rtTestCase{
+		name:    "route type",
+		query:   rtTestStopQuery,
+		vars:    rtTestStopQueryVars(),
+		rtfiles: rtfiles,
+		cb: func(t *testing.T, jj string) {
+			st := gjson.Get(jj, `stops.0.stop_times.#(trip.trip_id=="1031527WKDY")`)
+			if !st.Exists() {
+				t.Fatal("expected to find trip '1031527WKDY'")
+			}
+			assert.Contains(t, headers(st.Get("trip.route.alerts").Array()), "All BART subway service")
+			assert.NotContains(t, headers(st.Get("trip.route.alerts").Array()), "All bus service")
+			assert.Empty(t, headers(st.Get("trip.route.agency.alerts").Array()))
 		},
 	})
 	testRt(t, rtTestCase{

@@ -67,6 +67,43 @@
           ]
         }
       }
+    },
+    {
+      "id": "mode-subway",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "BART",
+            "route_type": 1
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "All BART subway service",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mode-bus",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_type": 3
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "All bus service",
+              "language": "en"
+            }
+          ]
+        }
+      }
     }
   ]
 }

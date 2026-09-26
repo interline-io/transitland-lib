@@ -14,4 +14,4 @@ Synthetic RT data for a selection of trips from the CT test feed on 2018-05-30, 
 
 # BA-alerts-informed-entity.json
 
-Alerts on route "05" at stop "FTVL", on route "05" at stop "12TH", and on trip "1031527WKDY" with every entity selector field set
+Alerts on route "05" at stop "FTVL", on route "05" at stop "12TH", on trip "1031527WKDY" with every entity selector field set, on BART's subway routes by route_type, and on every bus route by route_type alone

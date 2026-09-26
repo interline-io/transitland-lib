@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // Cache looks up decoded RT data and stays current as feeds are refreshed.
@@ -128,7 +129,7 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 				if s == nil || s.Trip != nil {
 					continue
 				}
-				if s.GetRouteId() == t.RouteID.Val {
+				if s.GetRouteId() == t.RouteID.Val || f.matchesRouteType(s, t) {
 					found = true
 				}
 			}
@@ -138,6 +139,23 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 		}
 	}
 	return limitAlerts(foundAlerts, limit)
+}
+
+// matchesRouteType reports whether a selector naming no route or stop covers
+// this route by its mode: every route of that type, within the given agency
+// where there is one.
+func (f *Finder) matchesRouteType(s *pb.EntitySelector, t *model.Route) bool {
+	if s.RouteType == nil || s.GetRouteId() != "" || s.GetStopId() != "" {
+		return false
+	}
+	if tt.BasicRouteType(int(s.GetRouteType())) != tt.BasicRouteType(t.RouteType.Int()) {
+		return false
+	}
+	if s.GetAgencyId() == "" {
+		return true
+	}
+	agencyId, ok := f.lc.GetGtfsAgencyID(t.AgencyID.Int())
+	return ok && s.GetAgencyId() == agencyId
 }
 
 func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) (*pb.FeedMessage, bool) {
@@ -167,9 +185,9 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// trip, route, stop must be empty
+				// trip, route, route type, stop must be empty
 				// agency must match
-				if s == nil || s.Trip != nil || s.GetRouteId() != "" || s.GetStopId() != "" {
+				if s == nil || s.Trip != nil || s.GetRouteId() != "" || s.RouteType != nil || s.GetStopId() != "" {
 					continue
 				}
 				if s.GetAgencyId() == t.AgencyID.Val {
