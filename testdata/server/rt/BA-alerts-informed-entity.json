@@ -1,0 +1,72 @@
+{
+  "header": {
+    "gtfs_realtime_version": "1.0",
+    "incrementality": 0,
+    "timestamp": 1527719250
+  },
+  "entity": [
+    {
+      "id": "route-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_id": "05",
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Route 05 at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "route-at-12th",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_id": "05",
+            "stop_id": "12TH"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Route 05 at 12th St",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "trip",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "BART",
+            "route_id": "05",
+            "route_type": 1,
+            "direction_id": 1,
+            "trip": {
+              "trip_id": "1031527WKDY",
+              "start_date": "20180530"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Trip 1031527WKDY",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

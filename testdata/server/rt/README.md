@@ -11,3 +11,7 @@ Trip "1031645WKDY" is canceled
 # CT.json
 
 Synthetic RT data for a selection of trips from the CT test feed on 2018-05-30, with a delay of 30 seconds
+
+# BA-alerts-informed-entity.json
+
+Alerts on route "05" at stop "FTVL", on route "05" at stop "12TH", and on trip "1031527WKDY" with every entity selector field set

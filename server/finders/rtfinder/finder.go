@@ -122,9 +122,10 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// trip and stop must be empty
-				// route must match
-				if s == nil || s.Trip != nil || s.GetStopId() != "" {
+				// trip must be empty
+				// route must match; a stop narrows it to the route at that stop,
+				// which is still an alert about the route
+				if s == nil || s.Trip != nil {
 					continue
 				}
 				if s.GetRouteId() == t.RouteID.Val {
@@ -400,6 +401,29 @@ func makeAlert(a *pb.Alert) *model.Alert {
 	r.TtsHeaderText = newTranslation(a.TtsHeaderText)
 	r.TtsDescriptionText = newTranslation(a.TtsDescriptionText)
 	r.URL = newTranslation(a.Url)
+	for _, ie := range a.InformedEntity {
+		if ie != nil {
+			r.InformedEntity = append(r.InformedEntity, makeEntitySelector(ie))
+		}
+	}
+	return &r
+}
+
+func makeEntitySelector(ie *pb.EntitySelector) *model.RTEntitySelector {
+	r := model.RTEntitySelector{
+		AgencyID: pstr(ie.GetAgencyId()),
+		RouteID:  pstr(ie.GetRouteId()),
+		StopID:   pstr(ie.GetStopId()),
+	}
+	if ie.RouteType != nil {
+		r.RouteType = ptr(int(ie.GetRouteType()))
+	}
+	if ie.DirectionId != nil {
+		r.DirectionID = ptr(int(ie.GetDirectionId()))
+	}
+	if ie.Trip != nil {
+		r.Trip = makeTripDescriptor(ie.Trip)
+	}
 	return &r
 }
 
