@@ -296,6 +296,17 @@ fragment alert on Alert {
 		start
 		end
 	}
+	informed_entity {
+		agency_id
+		route_id
+		route_type
+		direction_id
+		stop_id
+		trip {
+			trip_id
+			start_date
+		}
+	}
 }
 
 query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean) {
