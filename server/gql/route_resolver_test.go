@@ -27,6 +27,12 @@ func TestRouteResolver(t *testing.T) {
 			expect: `{"routes":[{"cemv_support":null,"feed_onestop_id":"BA","feed_version_sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0","onestop_id":"r-9q9n-warmsprings~southfremont~richmond","route_color":"ff9933","route_desc":null,"route_id":"03","route_long_name":"Warm Springs/South Fremont - Richmond","route_short_name":null,"route_sort_order":null,"route_text_color":null,"route_type":1,"route_url":"http://www.bart.gov/schedules/bylineresults?route=3"}]}`,
 		},
 		{
+			name:   "route_type_basic",
+			query:  `query($route_id: String!) {  routes(where:{route_id:$route_id}) {route_type route_type_basic} }`,
+			vars:   vars,
+			expect: `{"routes":[{"route_type":1,"route_type_basic":1}]}`,
+		},
+		{
 			name:         "geometry",
 			query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {geometry} }`,
 			vars:         vars,

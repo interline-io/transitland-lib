@@ -718,6 +718,9 @@ type Agency {
   "The distinct raw GTFS route types of this agency's routes, in ascending order"
   route_types: [Int!]!
 
+  "The distinct basic GTFS route types of this agency's routes, in ascending order: each extended route type is replaced by the basic type it is a kind of, so an agency running both 700 and 702 reports 3 once"
+  route_types_basic: [Int!]!
+
   """
   Stops served by this agency's routes: the served platforms by default, or with `where: {location_type: 1}` the stations associated with those platforms.
   """
@@ -756,6 +759,9 @@ type Route {
   
   "GTFS `routes.route_type`; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported"
   route_type: Int!
+
+  "The basic GTFS route type this route's `route_type` is a kind of: an extended type is replaced by the basic type it belongs to, so 702 (express bus service) becomes 3 (bus) and 401 (metro service) becomes 1 (subway/metro). A `route_type` that is already basic, or that is not a known extended type, is returned unchanged"
+  route_type_basic: Int!
   
   "GTFS `routes.route_color`; color that corresponds to a route, as a six-digit hexadecimal number (e.g. `FF0000`)"
   route_color: Color
@@ -2317,6 +2323,8 @@ type Alert {
   url: [RTTranslation!]
   "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`"
   severity_level: String
+  "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector"
+  informed_entity: [RTEntitySelector!]
 }
 
 """A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange"""
@@ -2351,6 +2359,22 @@ type RTTripDescriptor {
   start_date: Date
   "GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
   schedule_relationship: String
+}
+
+"""What a GTFS-RT alert applies to, by GTFS ids within the alert's feed. Every field given must match. See https://gtfs.org/realtime/reference/#message-entityselector"""
+type RTEntitySelector {
+  "GTFS `agency_id`"
+  agency_id: String
+  "GTFS `route_id`"
+  route_id: String
+  "GTFS `route_type`"
+  route_type: Int
+  "GTFS direction_id (0 or 1); given together with `route_id`"
+  direction_id: Int
+  "The trip this applies to"
+  trip: RTTripDescriptor
+  "GTFS `stop_id`"
+  stop_id: String
 }
 
 """A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""

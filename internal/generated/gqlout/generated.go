@@ -97,6 +97,7 @@ type ComplexityRoot struct {
 		Operator          func(childComplexity int) int
 		Places            func(childComplexity int, limit *int, where *model.AgencyPlaceFilter) int
 		RouteTypes        func(childComplexity int) int
+		RouteTypesBasic   func(childComplexity int) int
 		Routes            func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SearchRank        func(childComplexity int) int
 		Stops             func(childComplexity int, limit *int, after *int, where *model.AgencyStopFilter) int
@@ -118,6 +119,7 @@ type ComplexityRoot struct {
 		DescriptionText    func(childComplexity int) int
 		Effect             func(childComplexity int) int
 		HeaderText         func(childComplexity int) int
+		InformedEntity     func(childComplexity int) int
 		SeverityLevel      func(childComplexity int) int
 		TtsDescriptionText func(childComplexity int) int
 		TtsHeaderText      func(childComplexity int) int
@@ -952,6 +954,15 @@ type ComplexityRoot struct {
 		VehiclePositions func(childComplexity int, limit *int, where model.VehiclePositionFilter) int
 	}
 
+	RTEntitySelector struct {
+		AgencyID    func(childComplexity int) int
+		DirectionID func(childComplexity int) int
+		RouteID     func(childComplexity int) int
+		RouteType   func(childComplexity int) int
+		StopID      func(childComplexity int) int
+		Trip        func(childComplexity int) int
+	}
+
 	RTTimeRange struct {
 		End   func(childComplexity int) int
 		Start func(childComplexity int) int
@@ -1004,6 +1015,7 @@ type ComplexityRoot struct {
 		RouteStops        func(childComplexity int, limit *int) int
 		RouteTextColor    func(childComplexity int) int
 		RouteType         func(childComplexity int) int
+		RouteTypeBasic    func(childComplexity int) int
 		RouteURL          func(childComplexity int) int
 		SearchRank        func(childComplexity int) int
 		SegmentPatterns   func(childComplexity int, limit *int, where *model.SegmentPatternFilter) int
@@ -1372,6 +1384,7 @@ type AgencyResolver interface {
 	Places(ctx context.Context, obj *model.Agency, limit *int, where *model.AgencyPlaceFilter) ([]*model.AgencyPlace, error)
 	Routes(ctx context.Context, obj *model.Agency, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	RouteTypes(ctx context.Context, obj *model.Agency) ([]int, error)
+	RouteTypesBasic(ctx context.Context, obj *model.Agency) ([]int, error)
 	Stops(ctx context.Context, obj *model.Agency, limit *int, after *int, where *model.AgencyStopFilter) ([]*model.Stop, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
@@ -1541,6 +1554,8 @@ type QueryResolver interface {
 	Users(ctx context.Context, limit *int, where *model.UserFilter) ([]*model.User, error)
 }
 type RouteResolver interface {
+	RouteTypeBasic(ctx context.Context, obj *model.Route) (int, error)
+
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
 	Agency(ctx context.Context, obj *model.Route) (*model.Agency, error)
 
@@ -1801,6 +1816,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agency.RouteTypes(childComplexity), true
+	case "Agency.route_types_basic":
+		if e.ComplexityRoot.Agency.RouteTypesBasic == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agency.RouteTypesBasic(childComplexity), true
 	case "Agency.routes":
 		if e.ComplexityRoot.Agency.Routes == nil {
 			break
@@ -1908,6 +1929,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Alert.HeaderText(childComplexity), true
+	case "Alert.informed_entity":
+		if e.ComplexityRoot.Alert.InformedEntity == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Alert.InformedEntity(childComplexity), true
 	case "Alert.severity_level":
 		if e.ComplexityRoot.Alert.SeverityLevel == nil {
 			break
@@ -5886,6 +5913,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Query.VehiclePositions(childComplexity, args["limit"].(*int), args["where"].(model.VehiclePositionFilter)), true
 
+	case "RTEntitySelector.agency_id":
+		if e.ComplexityRoot.RTEntitySelector.AgencyID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RTEntitySelector.AgencyID(childComplexity), true
+	case "RTEntitySelector.direction_id":
+		if e.ComplexityRoot.RTEntitySelector.DirectionID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RTEntitySelector.DirectionID(childComplexity), true
+	case "RTEntitySelector.route_id":
+		if e.ComplexityRoot.RTEntitySelector.RouteID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RTEntitySelector.RouteID(childComplexity), true
+	case "RTEntitySelector.route_type":
+		if e.ComplexityRoot.RTEntitySelector.RouteType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RTEntitySelector.RouteType(childComplexity), true
+	case "RTEntitySelector.stop_id":
+		if e.ComplexityRoot.RTEntitySelector.StopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RTEntitySelector.StopID(childComplexity), true
+	case "RTEntitySelector.trip":
+		if e.ComplexityRoot.RTEntitySelector.Trip == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RTEntitySelector.Trip(childComplexity), true
+
 	case "RTTimeRange.end":
 		if e.ComplexityRoot.RTTimeRange.End == nil {
 			break
@@ -6159,6 +6223,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Route.RouteType(childComplexity), true
+	case "Route.route_type_basic":
+		if e.ComplexityRoot.Route.RouteTypeBasic == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Route.RouteTypeBasic(childComplexity), true
 	case "Route.route_url":
 		if e.ComplexityRoot.Route.RouteURL == nil {
 			break
@@ -9776,6 +9846,9 @@ type Agency {
   "The distinct raw GTFS route types of this agency's routes, in ascending order"
   route_types: [Int!]!
 
+  "The distinct basic GTFS route types of this agency's routes, in ascending order: each extended route type is replaced by the basic type it is a kind of, so an agency running both 700 and 702 reports 3 once"
+  route_types_basic: [Int!]!
+
   """
   Stops served by this agency's routes: the served platforms by default, or with ` + "`" + `where: {location_type: 1}` + "`" + ` the stations associated with those platforms.
   """
@@ -9814,6 +9887,9 @@ type Route {
   
   "GTFS ` + "`" + `routes.route_type` + "`" + `; numeric code indicating the type of transportation [0=tram/light rail, 1=subway/metro, 2=rail, 3=bus, 4=ferry, 5=cable tram, 6=aerial lift, 7=funicular, 11=trolleybus, 12=monorail]; extended types also supported"
   route_type: Int!
+
+  "The basic GTFS route type this route's ` + "`" + `route_type` + "`" + ` is a kind of: an extended type is replaced by the basic type it belongs to, so 702 (express bus service) becomes 3 (bus) and 401 (metro service) becomes 1 (subway/metro). A ` + "`" + `route_type` + "`" + ` that is already basic, or that is not a known extended type, is returned unchanged"
+  route_type_basic: Int!
   
   "GTFS ` + "`" + `routes.route_color` + "`" + `; color that corresponds to a route, as a six-digit hexadecimal number (e.g. ` + "`" + `FF0000` + "`" + `)"
   route_color: Color
@@ -11375,6 +11451,8 @@ type Alert {
   url: [RTTranslation!]
   "Alert severity: ` + "`" + `UNKNOWN_SEVERITY` + "`" + `, ` + "`" + `INFO` + "`" + `, ` + "`" + `WARNING` + "`" + `, or ` + "`" + `SEVERE` + "`" + `"
   severity_level: String
+  "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector"
+  informed_entity: [RTEntitySelector!]
 }
 
 """A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange"""
@@ -11409,6 +11487,22 @@ type RTTripDescriptor {
   start_date: Date
   "GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
   schedule_relationship: String
+}
+
+"""What a GTFS-RT alert applies to, by GTFS ids within the alert's feed. Every field given must match. See https://gtfs.org/realtime/reference/#message-entityselector"""
+type RTEntitySelector {
+  "GTFS ` + "`" + `agency_id` + "`" + `"
+  agency_id: String
+  "GTFS ` + "`" + `route_id` + "`" + `"
+  route_id: String
+  "GTFS ` + "`" + `route_type` + "`" + `"
+  route_type: Int
+  "GTFS direction_id (0 or 1); given together with ` + "`" + `route_id` + "`" + `"
+  direction_id: Int
+  "The trip this applies to"
+  trip: RTTripDescriptor
+  "GTFS ` + "`" + `stop_id` + "`" + `"
+  stop_id: String
 }
 
 """A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""
@@ -12458,6 +12552,8 @@ func (ec *executionContext) childFields_Agency(ctx context.Context, field graphq
 		return ec.fieldContext_Agency_routes(ctx, field)
 	case "route_types":
 		return ec.fieldContext_Agency_route_types(ctx, field)
+	case "route_types_basic":
+		return ec.fieldContext_Agency_route_types_basic(ctx, field)
 	case "stops":
 		return ec.fieldContext_Agency_stops(ctx, field)
 	case "census_geographies":
@@ -12508,6 +12604,8 @@ func (ec *executionContext) childFields_Alert(ctx context.Context, field graphql
 		return ec.fieldContext_Alert_url(ctx, field)
 	case "severity_level":
 		return ec.fieldContext_Alert_severity_level(ctx, field)
+	case "informed_entity":
+		return ec.fieldContext_Alert_informed_entity(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Alert", field.Name)
 }
@@ -14046,6 +14144,24 @@ func (ec *executionContext) childFields_Place(ctx context.Context, field graphql
 	return nil, fmt.Errorf("no field named %q was found under type Place", field.Name)
 }
 
+func (ec *executionContext) childFields_RTEntitySelector(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "agency_id":
+		return ec.fieldContext_RTEntitySelector_agency_id(ctx, field)
+	case "route_id":
+		return ec.fieldContext_RTEntitySelector_route_id(ctx, field)
+	case "route_type":
+		return ec.fieldContext_RTEntitySelector_route_type(ctx, field)
+	case "direction_id":
+		return ec.fieldContext_RTEntitySelector_direction_id(ctx, field)
+	case "trip":
+		return ec.fieldContext_RTEntitySelector_trip(ctx, field)
+	case "stop_id":
+		return ec.fieldContext_RTEntitySelector_stop_id(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RTEntitySelector", field.Name)
+}
+
 func (ec *executionContext) childFields_RTTimeRange(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "start":
@@ -14110,6 +14226,8 @@ func (ec *executionContext) childFields_Route(ctx context.Context, field graphql
 		return ec.fieldContext_Route_route_long_name(ctx, field)
 	case "route_type":
 		return ec.fieldContext_Route_route_type(ctx, field)
+	case "route_type_basic":
+		return ec.fieldContext_Route_route_type_basic(ctx, field)
 	case "route_color":
 		return ec.fieldContext_Route_route_color(ctx, field)
 	case "route_text_color":
@@ -17860,6 +17978,29 @@ func (ec *executionContext) fieldContext_Agency_route_types(_ context.Context, f
 	return graphql.NewScalarFieldContext("Agency", field, true, true, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _Agency_route_types_basic(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agency_route_types_basic(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Agency().RouteTypesBasic(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕintᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Agency_route_types_basic(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agency", field, true, true, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _Agency_stops(ctx context.Context, field graphql.CollectedField, obj *model.Agency) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -18433,6 +18574,38 @@ func (ec *executionContext) _Alert_severity_level(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_Alert_severity_level(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Alert", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Alert_informed_entity(ctx context.Context, field graphql.CollectedField, obj *model.Alert) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Alert_informed_entity(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InformedEntity, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.RTEntitySelector) graphql.Marshaler {
+			return ec.marshalORTEntitySelector2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTEntitySelectorᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Alert_informed_entity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Alert",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RTEntitySelector(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _BookingRule_id(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
@@ -34339,6 +34512,153 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _RTEntitySelector_agency_id(ctx context.Context, field graphql.CollectedField, obj *model.RTEntitySelector) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RTEntitySelector_agency_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgencyID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RTEntitySelector_agency_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RTEntitySelector", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RTEntitySelector_route_id(ctx context.Context, field graphql.CollectedField, obj *model.RTEntitySelector) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RTEntitySelector_route_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RouteID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RTEntitySelector_route_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RTEntitySelector", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RTEntitySelector_route_type(ctx context.Context, field graphql.CollectedField, obj *model.RTEntitySelector) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RTEntitySelector_route_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RouteType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RTEntitySelector_route_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RTEntitySelector", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RTEntitySelector_direction_id(ctx context.Context, field graphql.CollectedField, obj *model.RTEntitySelector) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RTEntitySelector_direction_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DirectionID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RTEntitySelector_direction_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RTEntitySelector", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RTEntitySelector_trip(ctx context.Context, field graphql.CollectedField, obj *model.RTEntitySelector) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RTEntitySelector_trip(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Trip, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RTTripDescriptor) graphql.Marshaler {
+			return ec.marshalORTTripDescriptor2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTTripDescriptor(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RTEntitySelector_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RTEntitySelector",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RTTripDescriptor(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RTEntitySelector_stop_id(ctx context.Context, field graphql.CollectedField, obj *model.RTEntitySelector) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RTEntitySelector_stop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RTEntitySelector_stop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RTEntitySelector", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _RTTimeRange_start(ctx context.Context, field graphql.CollectedField, obj *model.RTTimeRange) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -34774,6 +35094,29 @@ func (ec *executionContext) _Route_route_type(ctx context.Context, field graphql
 }
 func (ec *executionContext) fieldContext_Route_route_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Route", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Route_route_type_basic(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_route_type_basic(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Route().RouteTypeBasic(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Route_route_type_basic(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Route", field, true, true, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _Route_route_color(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -47399,6 +47742,42 @@ func (ec *executionContext) _Agency(ctx context.Context, sel ast.SelectionSet, o
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "route_types_basic":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agency_route_types_basic(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "stops":
 			field := field
 
@@ -47638,6 +48017,8 @@ func (ec *executionContext) _Alert(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Alert_url(ctx, field, obj)
 		case "severity_level":
 			out.Values[i] = ec._Alert_severity_level(ctx, field, obj)
+		case "informed_entity":
+			out.Values[i] = ec._Alert_informed_entity(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -55013,6 +55394,52 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
+var rTEntitySelectorImplementors = []string{"RTEntitySelector"}
+
+func (ec *executionContext) _RTEntitySelector(ctx context.Context, sel ast.SelectionSet, obj *model.RTEntitySelector) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, rTEntitySelectorImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RTEntitySelector")
+		case "agency_id":
+			out.Values[i] = ec._RTEntitySelector_agency_id(ctx, field, obj)
+		case "route_id":
+			out.Values[i] = ec._RTEntitySelector_route_id(ctx, field, obj)
+		case "route_type":
+			out.Values[i] = ec._RTEntitySelector_route_type(ctx, field, obj)
+		case "direction_id":
+			out.Values[i] = ec._RTEntitySelector_direction_id(ctx, field, obj)
+		case "trip":
+			out.Values[i] = ec._RTEntitySelector_trip(ctx, field, obj)
+		case "stop_id":
+			out.Values[i] = ec._RTEntitySelector_stop_id(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var rTTimeRangeImplementors = []string{"RTTimeRange"}
 
 func (ec *executionContext) _RTTimeRange(ctx context.Context, sel ast.SelectionSet, obj *model.RTTimeRange) graphql.Marshaler {
@@ -55210,6 +55637,42 @@ func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "route_type_basic":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Route_route_type_basic(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "route_color":
 			out.Values[i] = ec._Route_route_color(ctx, field, obj)
 		case "route_text_color":
@@ -61057,6 +61520,16 @@ func (ec *executionContext) marshalNPoint2githubᚗcomᚋinterlineᚑioᚋtransi
 	return v
 }
 
+func (ec *executionContext) marshalNRTEntitySelector2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTEntitySelector(ctx context.Context, sel ast.SelectionSet, v *model.RTEntitySelector) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RTEntitySelector(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNRTTimeRange2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTTimeRange(ctx context.Context, sel ast.SelectionSet, v *model.RTTimeRange) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -63390,6 +63863,25 @@ func (ec *executionContext) marshalOPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋt
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) marshalORTEntitySelector2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTEntitySelectorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RTEntitySelector) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRTEntitySelector2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTEntitySelector(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalORTTimeRange2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRTTimeRangeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RTTimeRange) graphql.Marshaler {

@@ -42,6 +42,8 @@ query ($limit: Int, $ids: [Int!], $after: Int, $include_alerts: Boolean!, $inclu
     agency_email
     cemv_support
     geometry
+    route_types
+    route_types_basic
     operator {
       onestop_id
       name

@@ -85,6 +85,7 @@ query ($limit: Int, $after: Int, $ids: [Int!], $include_alerts: Boolean!, $inclu
         route_short_name
         route_long_name
         route_type
+        route_type_basic
         alerts @include(if: $include_alerts) {
           ...alert
         }

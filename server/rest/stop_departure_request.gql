@@ -33,6 +33,7 @@ fragment route on Route {
   route_desc
   route_text_color
   route_type
+  route_type_basic
   route_url
   continuous_drop_off
   continuous_pickup

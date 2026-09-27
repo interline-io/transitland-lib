@@ -16,6 +16,12 @@ func (r *routeResolver) Cursor(ctx context.Context, obj *model.Route) (*model.Cu
 	return &c, nil
 }
 
+// RouteTypeBasic returns the basic GTFS route type this route's raw one is a kind
+// of, so a caller grouping by mode does not have to carry the hierarchy itself.
+func (r *routeResolver) RouteTypeBasic(ctx context.Context, obj *model.Route) (int, error) {
+	return tt.BasicRouteType(obj.RouteType.Int()), nil
+}
+
 func (r *routeResolver) Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error) {
 	if obj.Geometry.Valid {
 		return &obj.Geometry, nil

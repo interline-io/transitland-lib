@@ -2,8 +2,10 @@ package gql
 
 import (
 	"context"
+	"slices"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // AGENCY
@@ -21,6 +23,27 @@ func (r *agencyResolver) Routes(ctx context.Context, obj *model.Agency, limit *i
 
 func (r *agencyResolver) RouteTypes(ctx context.Context, obj *model.Agency) ([]int, error) {
 	return LoaderFor(ctx).RouteTypesByAgencyIDs.Load(ctx, obj.ID)()
+}
+
+// RouteTypesBasic is RouteTypes reduced to the basic types those are kinds of.
+//
+// Taken from the same load rather than asked of the database again: it is a pure
+// function of the answer that load already holds, so the two fields cost one query
+// between them.
+func (r *agencyResolver) RouteTypesBasic(ctx context.Context, obj *model.Agency) ([]int, error) {
+	routeTypes, err := LoaderFor(ctx).RouteTypesByAgencyIDs.Load(ctx, obj.ID)()
+	if err != nil {
+		return nil, err
+	}
+	// Empty rather than nil, so an agency running nothing answers [] and not null.
+	basic := []int{}
+	for _, rt := range routeTypes {
+		if b := tt.BasicRouteType(rt); !slices.Contains(basic, b) {
+			basic = append(basic, b)
+		}
+	}
+	slices.Sort(basic)
+	return basic, nil
 }
 
 func (r *agencyResolver) Stops(ctx context.Context, obj *model.Agency, limit *int, after *int, where *model.AgencyStopFilter) ([]*model.Stop, error) {
