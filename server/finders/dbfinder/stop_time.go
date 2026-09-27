@@ -14,7 +14,7 @@ func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *mode
 	var ents []*model.StopTime
 	err := dbutil.Select(ctx,
 		f.db,
-		stopTimeSelect(keys, stopTimeEntityTrip, where),
+		stopTimeSelect(keys, stopTimeEntityTrip, where, limit),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.StopTime) model.FVPair {
@@ -105,7 +105,7 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 				q = stopDeparturesSelect(fvid, entityKeys, entityType, w)
 			} else {
 				// Otherwise get all stop_times for entity
-				q = stopTimeSelect(entityPairs, entityType, nil)
+				q = stopTimeSelect(entityPairs, entityType, nil, nil)
 			}
 			// Run query
 			if err := dbutil.Select(ctx, f.db, q, &sts); err != nil {
@@ -138,7 +138,7 @@ const (
 	stopTimeEntityLocationGroup
 )
 
-func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *model.TripStopTimeFilter) sq.SelectBuilder {
+func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *model.TripStopTimeFilter, limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_trips.journey_pattern_id",
 		"gtfs_trips.journey_pattern_offset",
@@ -167,37 +167,61 @@ func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *
 		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
 		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
 		Join("gtfs_trips t2 ON t2.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = t2.feed_version_id").
-		Join("gtfs_stop_times sts ON sts.trip_id = t2.id AND sts.feed_version_id = t2.feed_version_id").
 		OrderBy("sts.stop_sequence, sts.arrival_time")
 
+	// Predicates selecting stop times, kept together because a per-trip limit
+	// has to be applied after all of them rather than before.
+	var stsWhere []sq.Sqlizer
 	if where != nil {
 		if where.Start != nil {
-			q = q.Where(sq.GtOrEq{"sts.departure_time + gtfs_trips.journey_pattern_offset": where.Start.Int()})
+			stsWhere = append(stsWhere, sq.GtOrEq{"sts.departure_time + gtfs_trips.journey_pattern_offset": where.Start.Int()})
 		}
 		if where.End != nil {
-			q = q.Where(sq.LtOrEq{"sts.arrival_time + gtfs_trips.journey_pattern_offset": where.End.Int()})
+			stsWhere = append(stsWhere, sq.LtOrEq{"sts.arrival_time + gtfs_trips.journey_pattern_offset": where.End.Int()})
 		}
 		// Without this a route crossing a small query area returns every stop
 		// on the route.
 		if len(where.StopIds) > 0 {
-			q = q.Where(In("sts.stop_id", where.StopIds))
+			stsWhere = append(stsWhere, In("sts.stop_id", where.StopIds))
 		}
 	}
 	if len(pairs) > 0 {
 		eids, fvids := pairKeys(pairs)
-		q = q.Where(In("sts.feed_version_id", fvids))
+		stsWhere = append(stsWhere, In("sts.feed_version_id", fvids))
 		switch entityType {
 		case stopTimeEntityTrip:
 			q = q.Where(In("gtfs_trips.id", eids), In("gtfs_trips.feed_version_id", fvids))
 		case stopTimeEntityStop:
-			q = q.Where(In("sts.stop_id", eids))
+			stsWhere = append(stsWhere, In("sts.stop_id", eids))
 		case stopTimeEntityLocation:
-			q = q.Where(In("sts.location_id", eids))
+			stsWhere = append(stsWhere, In("sts.location_id", eids))
 		case stopTimeEntityLocationGroup:
-			q = q.Where(In("sts.location_group_id", eids))
+			stsWhere = append(stsWhere, In("sts.location_group_id", eids))
 		}
 	}
-	return q
+
+	if limit == nil {
+		q = q.Join("gtfs_stop_times sts ON sts.trip_id = t2.id AND sts.feed_version_id = t2.feed_version_id")
+		if len(stsWhere) > 0 {
+			q = q.Where(sq.And(stsWhere))
+		}
+		return q
+	}
+	// One trip at a time, so the limit bounds each trip rather than the batch,
+	// and the (feed_version_id, trip_id, stop_sequence) primary key lets
+	// Postgres stop early instead of reading every trip in full.
+	inner := sq.StatementBuilder.
+		Select("sts.*").
+		From("gtfs_stop_times sts").
+		Where("sts.trip_id = t2.id and sts.feed_version_id = t2.feed_version_id").
+		// stop_sequence alone is a total order here, and matches the primary
+		// key, so the limit can be taken in index order.
+		OrderBy("sts.stop_sequence").
+		Limit(uint64(*limit))
+	if len(stsWhere) > 0 {
+		inner = inner.Where(sq.And(stsWhere))
+	}
+	return q.JoinClause(inner.Prefix("join lateral (").Suffix(") sts on true"))
 }
 
 // activeServicesCTE returns a CTE that finds all active service IDs for a given date and feed version.
@@ -286,19 +310,22 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 			from gtfs_stop_times sts2 
 			where sts2.trip_id = base_trip.id and sts2.feed_version_id = base_trip.feed_version_id
 			) trip_stop_sequence on true`).
+		// A generated departure is anchored by freq_start, which is already an
+		// absolute time, so the journey pattern offset shifts scheduled times
+		// only. Adding it to both double-counted it for a derived trip.
 		JoinClause(`join lateral (
-			select 
+			select
 				sts.*,
-				sts.arrival_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
+				sts.arrival_time + coalesce(
+					freq.freq_start - trip_stop_sequence.first_departure_time,
+					gtfs_trips.journey_pattern_offset
 				) AS arrival_time_freq,
-				sts.departure_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
+				sts.departure_time + coalesce(
+					freq.freq_start - trip_stop_sequence.first_departure_time,
+					gtfs_trips.journey_pattern_offset
 				) AS departure_time_freq
 			from gtfs_stop_times sts
-			where sts.trip_id = base_trip.id and sts.feed_version_id = base_trip.feed_version_id		
+			where sts.trip_id = base_trip.id and sts.feed_version_id = base_trip.feed_version_id
 			) sts on true`).
 		Where(sq.Eq{"sts.feed_version_id": fvid}).
 		OrderBy("sts.departure_time_freq", "sts.trip_id") // base + offset
