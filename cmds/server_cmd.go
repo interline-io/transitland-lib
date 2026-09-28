@@ -155,7 +155,9 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	rtf := rtfinder.NewFinder(rtStore, db)
 	defer rtf.Close()
 	var rtFinder model.RTFinder = rtf
-	var gbfsFinder model.GbfsFinder = gbfsfinder.NewFinder(gbfsStore)
+	gbf := gbfsfinder.NewFinder(gbfsStore)
+	defer gbf.Close()
+	var gbfsFinder model.GbfsFinder = gbf
 
 	var actionFinder model.Actions = &actions.Actions{}
 

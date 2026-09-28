@@ -2,10 +2,13 @@ package gbfsfinder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/gbfs"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -13,50 +16,156 @@ import (
 	"github.com/twpayne/go-geom"
 )
 
+const (
+	// lastTTL bounds how long a system's last fetch survives in the store, and
+	// with it how long a held copy is served after the last successful fetch.
+	lastTTL = 24 * time.Hour
+	// missingTTL is how long a topic the store could not answer for is
+	// remembered as absent.
+	missingTTL = 1 * time.Minute
+	// reconnectDelay paces re-subscription attempts.
+	reconnectDelay = 1 * time.Second
+	// storeReadTimeout bounds one shared read and decode.
+	storeReadTimeout = 1 * time.Second
+	// writeTimeout bounds storing, indexing and announcing one fetch.
+	writeTimeout = 5 * time.Second
+	// updatesChannel carries topic pointers to the notify-then-read listeners.
+	updatesChannel = "gbfs:updates"
+)
+
+// Finder is a GbfsFinder over a kvcache.Store.
+//
+// It is structured like the realtime cache: each fetch is stored whole under
+// its own key, decoded systems are held in a local-only cache whose refresh
+// function reads that payload, and with pub/sub, fetches by other processes
+// arrive by notify-then-read.
 type Finder struct {
-	cache            *kvcache.Cache[string, gbfs.GbfsFeed]
-	hashes           kvcache.HashStore // nil when the store has no hash index
-	ttlRecheck       time.Duration
-	ttlExpire        time.Duration
+	store            kvcache.Store
+	hashes           kvcache.HashStore   // nil when the store has no hash index
+	pubsub           kvcache.PubSubStore // nil when the store has no pub/sub
+	feeds            *kvcache.Cache[string, *gbfs.GbfsFeed]
 	bikeSearchKey    string
 	stationSearchKey string
+	ctx              context.Context
+	cancel           context.CancelFunc
+	wg               sync.WaitGroup
 }
 
-// NewFinder returns a GbfsFinder backed by store. When store supports the
-// HashStore capability it holds the cross-process bounding-box index;
-// otherwise geosearch falls back to locally known topics.
+// NewFinder returns a GbfsFinder backed by store. Close it to stop following
+// other processes' fetches.
+//
+// A HashStore holds the cross-process bounding-box index; without one,
+// geosearch falls back to locally known topics. A PubSubStore carries fetches
+// made by other processes into this one.
 func NewFinder(store kvcache.Store) *Finder {
+	ctx, cancel := context.WithCancel(context.Background())
 	f := &Finder{
-		ttlRecheck:       5 * time.Minute,
-		ttlExpire:        24 * time.Hour,
-		cache:            kvcache.NewCache[string, gbfs.GbfsFeed](store, "gbfs"),
-		bikeSearchKey:    "gbfs:bike-bbox",
-		stationSearchKey: "gbfs:station-bbox",
+		store: store,
+		// Not the per-language hashes an earlier keying wrote: nothing prunes a
+		// hash field, so those are left unread rather than returned twice.
+		bikeSearchKey:    "gbfs:feed-bike-bbox",
+		stationSearchKey: "gbfs:feed-station-bbox",
+		ctx:              ctx,
+		cancel:           cancel,
 	}
+	f.feeds = kvcache.NewRefreshCache[string, *gbfs.GbfsFeed](nil, "gbfsfeed", f.readTopic)
+	// A held system and the payload behind it both live lastTTL. Recheck is
+	// pinned to the same bound so it never comes due first: nothing refreshes
+	// in the background, updates arrive by announcement.
+	f.feeds.Expires = lastTTL
+	f.feeds.Recheck = lastTTL
+	f.feeds.NegativeTTL = missingTTL
+	f.feeds.RefreshTimeout = storeReadTimeout
+	// Expiry stops an entry being served but does not release it, and a large
+	// system is megabytes. Scanning prunes them; with nothing ever due, that is
+	// all this does.
+	f.feeds.Start(missingTTL)
 	if hs, ok := store.(kvcache.HashStore); ok {
 		f.hashes = hs
+	}
+	if ps, ok := store.(kvcache.PubSubStore); ok {
+		f.pubsub = ps
+		f.wg.Add(1)
+		go func() {
+			defer f.wg.Done()
+			f.subscribe()
+		}()
 	}
 	return f
 }
 
-func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) error {
-	// Save basic data
-	if err := c.cache.SetTTL(ctx, topic, sf, c.ttlRecheck, c.ttlExpire); err != nil {
-		return err
-	}
-	if c.hashes == nil {
-		return nil
-	}
-	// Index bike and dock bounding boxes for cross-process geosearch.
-	bikeBox := bboxString(sf.Bikes, func(e *gbfs.FreeBikeStatus) (float64, float64) { return e.Lon.Val, e.Lat.Val })
-	if err := c.hashes.HSet(ctx, c.bikeSearchKey, topic, bikeBox); err != nil {
-		return err
-	}
-	stationBox := bboxString(sf.StationInformation, func(e *gbfs.StationInformation) (float64, float64) { return e.Lon.Val, e.Lat.Val })
-	if err := c.hashes.HSet(ctx, c.stationSearchKey, topic, stationBox); err != nil {
-		return err
-	}
+// Close stops following other processes' fetches.
+func (c *Finder) Close() error {
+	c.cancel()
+	c.wg.Wait()
+	c.feeds.Stop()
 	return nil
+}
+
+// AddData stores a fetched system under topic, indexes it, and announces it to
+// other finders. The caller's cancellation does not apply: a cancelled job
+// still completes the write.
+func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) error {
+	// Data stored but never announced is not seen by other processes until the
+	// next fetch, so this outlives the job that fetched it.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), writeTimeout)
+	defer cancel()
+	data, err := json.Marshal(sf)
+	if err != nil {
+		return err
+	}
+	if err := c.store.Set(ctx, lastKey(topic), data, lastTTL); err != nil {
+		return err
+	}
+	if c.hashes != nil {
+		// Index bike and dock bounding boxes for cross-process geosearch.
+		bikeBox := bboxString(sf.Bikes, func(e *gbfs.FreeBikeStatus) (float64, float64) { return e.Lon.Val, e.Lat.Val })
+		if err := c.hashes.HSet(ctx, c.bikeSearchKey, topic, bikeBox); err != nil {
+			return err
+		}
+		stationBox := bboxString(sf.StationInformation, func(e *gbfs.StationInformation) (float64, float64) { return e.Lon.Val, e.Lat.Val })
+		if err := c.hashes.HSet(ctx, c.stationSearchKey, topic, stationBox); err != nil {
+			return err
+		}
+	}
+	if c.pubsub != nil {
+		// Last, so a failed announcement costs other processes freshness but
+		// leaves the data stored and indexed. Every listener, this process
+		// included, re-reads the payload if it holds the topic.
+		return c.pubsub.Publish(ctx, updatesChannel, []byte(topic))
+	}
+	// No shared distribution: decode straight into the local tier, replacing
+	// any record of absence. Decoded from the payload so this process holds
+	// what any other reader would.
+	held, err := decode(data)
+	if err != nil {
+		return err
+	}
+	return c.feeds.Set(ctx, topic, held)
+}
+
+// GetFeed returns the system stored under topic.
+func (c *Finder) GetFeed(ctx context.Context, topic string) (*model.GbfsFeed, bool) {
+	sf, ok := c.getFeed(ctx, topic)
+	if !ok {
+		return nil, false
+	}
+	return &model.GbfsFeed{GbfsFeed: sf}, true
+}
+
+// getFeed returns a topic's held system, loading it on first use. Held
+// systems are shared between readers and must not be modified.
+func (c *Finder) getFeed(ctx context.Context, topic string) (*gbfs.GbfsFeed, bool) {
+	// What is already held is served whatever state the caller is in. Only a
+	// load is shed: it is detached from its caller by design, so starting one
+	// for a caller that has gone away spends a store read nobody waits for.
+	if sf, ok := c.feeds.Peek(topic); ok {
+		return sf, true
+	}
+	if ctx.Err() != nil {
+		return nil, false
+	}
+	return c.feeds.Get(ctx, topic)
 }
 
 func (c *Finder) FindBikes(ctx context.Context, limit *int, where *model.GbfsBikeRequest) ([]*model.GbfsFreeBikeStatus, error) {
@@ -72,7 +181,7 @@ func (c *Finder) FindBikes(ctx context.Context, limit *int, where *model.GbfsBik
 	}
 	var ret []*model.GbfsFreeBikeStatus
 	for _, topicKey := range topicKeys {
-		sf, ok := c.cache.Get(ctx, topicKey)
+		sf, ok := c.getFeed(ctx, topicKey)
 		if !ok {
 			continue
 		}
@@ -82,7 +191,7 @@ func (c *Finder) FindBikes(ctx context.Context, limit *int, where *model.GbfsBik
 			}
 			b := model.GbfsFreeBikeStatus{
 				FreeBikeStatus: ent,
-				Feed:           &model.GbfsFeed{GbfsFeed: &sf},
+				Feed:           &model.GbfsFeed{GbfsFeed: sf},
 			}
 			ret = append(ret, &b)
 		}
@@ -109,7 +218,7 @@ func (c *Finder) FindDocks(ctx context.Context, limit *int, where *model.GbfsDoc
 	}
 	var ret []*model.GbfsStationInformation
 	for _, topicKey := range topicKeys {
-		sf, ok := c.cache.Get(ctx, topicKey)
+		sf, ok := c.getFeed(ctx, topicKey)
 		if !ok {
 			continue
 		}
@@ -119,7 +228,7 @@ func (c *Finder) FindDocks(ctx context.Context, limit *int, where *model.GbfsDoc
 			}
 			b := model.GbfsStationInformation{
 				StationInformation: ent,
-				Feed:               &model.GbfsFeed{GbfsFeed: &sf},
+				Feed:               &model.GbfsFeed{GbfsFeed: sf},
 			}
 			ret = append(ret, &b)
 		}
@@ -148,7 +257,7 @@ func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius
 		}
 	} else {
 		// No shared bbox index: fall back to locally known topics.
-		for _, k := range c.cache.LocalKeys() {
+		for _, k := range c.feeds.LocalKeys() {
 			topicKeys[k] = true
 		}
 	}
@@ -157,6 +266,94 @@ func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius
 		ret = append(ret, k)
 	}
 	return ret, nil
+}
+
+// readTopic reads and decodes a topic's last payload. It is the cache's
+// refresh function, and reports every failure as kvcache.ErrNotFound so the
+// topic is remembered as absent for missingTTL.
+func (c *Finder) readTopic(ctx context.Context, topic string) (*gbfs.GbfsFeed, error) {
+	// Absent is a feed that has not fetched; failed is the store not answering.
+	// Both are remembered, so a store that cannot answer is not asked on every
+	// query, but they are logged apart.
+	data, ok, err := c.store.Get(ctx, lastKey(topic))
+	if err != nil {
+		log.For(ctx).Error().Err(err).Str("topic", topic).Dur("retry_after", missingTTL).Msg("gbfsfinder: topic read failed, not retried until this expires")
+		return nil, kvcache.ErrNotFound
+	}
+	if !ok || len(data) == 0 {
+		log.For(ctx).Trace().Str("topic", topic).Dur("retry_after", missingTTL).Msg("gbfsfinder: topic absent from store, not retried until this expires")
+		return nil, kvcache.ErrNotFound
+	}
+	sf, err := decode(data)
+	if err != nil {
+		log.For(ctx).Error().Err(err).Str("topic", topic).Dur("retry_after", missingTTL).Msg("gbfsfinder: topic decode failed, not retried until this expires")
+		return nil, kvcache.ErrNotFound
+	}
+	return sf, nil
+}
+
+// subscribe re-reads each announced topic this process holds, until Close.
+//
+// Announcements are not replayed. One missed while the subscription is down —
+// including across a reconnect the Redis client makes on its own, which this
+// never sees — leaves that topic as it was until its next fetch.
+func (c *Finder) subscribe() {
+	for c.ctx.Err() == nil {
+		sub, err := c.pubsub.Subscribe(c.ctx, updatesChannel)
+		if err != nil {
+			log.For(c.ctx).Error().Err(err).Msg("gbfsfinder: error subscribing to updates")
+		} else {
+			c.drain(sub)
+			_ = sub.Close()
+		}
+		select {
+		case <-c.ctx.Done():
+			return
+		case <-time.After(reconnectDelay):
+		}
+	}
+}
+
+func (c *Finder) drain(sub kvcache.Subscription) {
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case msg, ok := <-sub.Messages():
+			if !ok {
+				return
+			}
+			c.handleUpdate(string(msg))
+		}
+	}
+}
+
+// handleUpdate re-reads an announced topic, replacing this process's copy.
+func (c *Finder) handleUpdate(topic string) {
+	// Every fetch in the fleet is announced here, so a process takes only the
+	// topics it holds; the rest load on first read. A writer holds nothing it
+	// has not read, so its own announcements pass through.
+	if !c.feeds.Contains(topic) {
+		return
+	}
+	// Reload rather than Refresh: an update this process could not read is a
+	// failure to observe a change, not evidence the system went away, and must
+	// not replace a good copy with a record of absence.
+	if _, err := c.feeds.Reload(c.ctx, topic); err == nil {
+		log.For(c.ctx).Trace().Str("topic", topic).Msg("gbfsfinder: processed update")
+	}
+}
+
+func decode(data []byte) (*gbfs.GbfsFeed, error) {
+	var sf gbfs.GbfsFeed
+	if err := json.Unmarshal(data, &sf); err != nil {
+		return nil, err
+	}
+	return &sf, nil
+}
+
+func lastKey(topic string) string {
+	return "gbfs:last:" + topic
 }
 
 // bboxString returns the "minX,minY,maxX,maxY" bounding box of ents, whose
