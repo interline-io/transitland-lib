@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"testing"
@@ -19,15 +20,14 @@ func setupGbfs(ctx context.Context, gbf model.GbfsFinder) error {
 	opts := gbfs.Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
 	opts.AllowHTTPFetchUnfiltered = true
-	feeds, _, err := gbfs.Fetch(ctx, nil, opts)
+	feed, _, err := gbfs.Fetch(ctx, nil, opts)
 	if err != nil {
 		return err
 	}
-	for _, feed := range feeds {
-		key := fmt.Sprintf("%s:%s", sourceFeedId, feed.SystemInformation.Language.Val)
-		gbf.AddData(ctx, key, feed)
+	if feed == nil {
+		return errors.New("no gbfs system fetched")
 	}
-	return nil
+	return gbf.AddData(ctx, sourceFeedId, *feed)
 }
 
 func TestGbfsBikeResolver(t *testing.T) {

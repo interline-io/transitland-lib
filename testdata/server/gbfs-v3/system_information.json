@@ -1,0 +1,16 @@
+{
+  "last_updated": "2023-07-17T13:34:13+02:00",
+  "ttl": 300,
+  "version": "3.0",
+  "data": {
+    "system_id": "example_cityname",
+    "languages": ["en", "fr"],
+    "name": [
+      {"text": "Example Bike Rental", "language": "en"},
+      {"text": "Location de vélos", "language": "fr"}
+    ],
+    "opening_hours": "Apr 1-Nov 3 00:00-24:00",
+    "feed_contact_email": "datafeed@example.com",
+    "timezone": "America/Chicago"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "last_updated": "2023-07-17T13:34:13+02:00",
+  "ttl": 0,
+  "version": "3.0",
+  "data": {
+    "stations": [
+      {
+        "station_id": "station1",
+        "name": [
+          {"text": "Main Street", "language": "en"},
+          {"text": "Rue principale", "language": "fr"}
+        ],
+        "lat": 45.5,
+        "lon": -73.6,
+        "parking_hoop": true,
+        "capacity": 10
+      }
+    ]
+  }
+}

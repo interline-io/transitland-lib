@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/interline-io/transitland-lib/internal/gbfs"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 type GbfsAlertTime struct {
@@ -213,6 +214,18 @@ type GbfsRentalApp struct {
 type GbfsStationInformation struct {
 	Feed *GbfsFeed
 	*gbfs.StationInformation
+}
+
+// ParkingHoop is GBFS's boolean parking_hoop as the Int the schema has always
+// exposed: 1 when hoops are present, 0 when not.
+func (g *GbfsStationInformation) ParkingHoop() tt.Int {
+	if g.StationInformation == nil || !g.StationInformation.ParkingHoop.Valid {
+		return tt.Int{}
+	}
+	if g.StationInformation.ParkingHoop.Val {
+		return tt.NewInt(1)
+	}
+	return tt.NewInt(0)
 }
 
 func (g *GbfsStationInformation) Region() *GbfsSystemRegion {

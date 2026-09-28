@@ -1,0 +1,19 @@
+{
+  "last_updated": "2023-07-17T13:34:13+02:00",
+  "ttl": 0,
+  "version": "3.0",
+  "data": {
+    "stations": [
+      {
+        "station_id": "station1",
+        "is_installed": true,
+        "is_renting": true,
+        "is_returning": true,
+        "last_reported": "2023-07-17T13:34:13+02:00",
+        "num_docks_available": 3,
+        "num_vehicles_available": 6,
+        "num_vehicles_disabled": 1
+      }
+    ]
+  }
+}

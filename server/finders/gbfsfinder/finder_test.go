@@ -2,6 +2,7 @@ package gbfsfinder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"testing"
@@ -62,13 +63,12 @@ func testSetupGbfs(gbf model.GbfsFinder) error {
 	opts := gbfs.Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
 	opts.AllowHTTPFetchUnfiltered = true
-	feeds, _, err := gbfs.Fetch(context.Background(), nil, opts)
+	feed, _, err := gbfs.Fetch(context.Background(), nil, opts)
 	if err != nil {
 		return err
 	}
-	for _, feed := range feeds {
-		key := fmt.Sprintf("%s:%s", sourceFeedId, feed.SystemInformation.Language.Val)
-		gbf.AddData(context.Background(), key, feed)
+	if feed == nil {
+		return errors.New("no gbfs system fetched")
 	}
-	return nil
+	return gbf.AddData(context.Background(), sourceFeedId, *feed)
 }
