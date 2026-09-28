@@ -186,10 +186,10 @@ func feedVersionSelect(ctx context.Context, limit *int, after *model.Cursor, ids
 
 	if where != nil {
 		if where.Sha1 != nil {
-			q = q.Where(sq.Or{
-				sq.Eq{"feed_versions.sha1": *where.Sha1},
-				sq.Eq{"feed_versions.sha1_dir": *where.Sha1},
-			})
+			q = q.Where(sq.Eq{"feed_versions.sha1": *where.Sha1})
+		}
+		if where.Sha1Dir != nil {
+			q = q.Where(sq.Eq{"feed_versions.sha1_dir": *where.Sha1Dir})
 		}
 		if where.File != nil {
 			q = q.Where(sq.Eq{"feed_versions.file": where.File})

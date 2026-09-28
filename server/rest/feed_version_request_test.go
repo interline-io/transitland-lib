@@ -40,8 +40,8 @@ func TestFeedVersionRequest(t *testing.T) {
 			expectSelect: []string{fvDir},
 		},
 		{
-			name:         "sha1 param as sha1_dir",
-			h:            FeedVersionRequest{Sha1: fvDir},
+			name:         "sha1_dir",
+			h:            FeedVersionRequest{Sha1Dir: fvDir},
 			format:       "",
 			selector:     "feed_versions.#.sha1",
 			expectSelect: []string{fv},

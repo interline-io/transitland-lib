@@ -2201,6 +2201,14 @@
             ]
           },
           {
+            "description": "Feed version feed contents SHA1 (sha1_dir)",
+            "in": "query",
+            "name": "sha1_dir",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Feed OnestopID",
             "in": "query",
             "name": "feed_onestop_id",

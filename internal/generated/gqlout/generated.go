@@ -11692,8 +11692,10 @@ input FeedVersionFilter {
   import_status: ImportStatus
   "Search for feed versions with this feed Onestop ID"
   feed_onestop_id: String
-  "Search for feed versions with this SHA1 hash; matches either ` + "`" + `sha1` + "`" + ` or ` + "`" + `sha1_dir` + "`" + `"
+  "Search for feed versions with this SHA1 hash"
   sha1: String
+  "Search for feed versions with this feed contents SHA1 hash (` + "`" + `sha1_dir` + "`" + `)"
+  sha1_dir: String
   "Search for feed versions with this file identifier"
   file: String
   "Search for feed versions with the specified feed integer IDs"
@@ -45251,7 +45253,7 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "file", "feed_ids", "covers", "bbox", "within", "near", "license"}
+	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "sha1_dir", "file", "feed_ids", "covers", "bbox", "within", "near", "license"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45286,6 +45288,13 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 				return it, err
 			}
 			it.Sha1 = data
+		case "sha1_dir":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha1_dir"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Sha1Dir = data
 		case "file":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

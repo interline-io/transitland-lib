@@ -131,10 +131,16 @@ func TestFeedVersionResolver(t *testing.T) {
 			selectExpect: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
 		},
 		{
-			name:         "where sha1 matches sha1_dir",
-			query:        `query{feed_versions(where:{sha1:"d9b0478a85b85fc68f14136fd96c0551fc0bfc98"}) {sha1} }`,
+			name:         "where sha1_dir",
+			query:        `query{feed_versions(where:{sha1_dir:"d9b0478a85b85fc68f14136fd96c0551fc0bfc98"}) {sha1} }`,
 			selector:     "feed_versions.#.sha1",
 			selectExpect: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
+		},
+		{
+			name:         "where sha1 does not match sha1_dir",
+			query:        `query{feed_versions(where:{sha1:"d9b0478a85b85fc68f14136fd96c0551fc0bfc98"}) {sha1} }`,
+			selector:     "feed_versions.#.sha1",
+			selectExpect: []string{},
 		},
 		{
 			name:         "where import_status success",

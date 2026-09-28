@@ -2564,8 +2564,10 @@ input FeedVersionFilter {
   import_status: ImportStatus
   "Search for feed versions with this feed Onestop ID"
   feed_onestop_id: String
-  "Search for feed versions with this SHA1 hash; matches either `sha1` or `sha1_dir`"
+  "Search for feed versions with this SHA1 hash"
   sha1: String
+  "Search for feed versions with this feed contents SHA1 hash (`sha1_dir`)"
+  sha1_dir: String
   "Search for feed versions with this file identifier"
   file: String
   "Search for feed versions with the specified feed integer IDs"
