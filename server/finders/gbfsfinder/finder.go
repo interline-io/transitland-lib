@@ -25,20 +25,11 @@ const (
 	missingTTL = 1 * time.Minute
 	// reconnectDelay paces re-subscription attempts.
 	reconnectDelay = 1 * time.Second
-	// storeReadTimeout bounds one shared read and decode.
-	storeReadTimeout = 1 * time.Second
-	// writeTimeout bounds storing, indexing and announcing one fetch.
-	writeTimeout = 5 * time.Second
 	// updatesChannel carries topic pointers to the notify-then-read listeners.
 	updatesChannel = "gbfs:updates"
 )
 
 // Finder is a GbfsFinder over a kvcache.Store.
-//
-// It is structured like the realtime cache: each fetch is stored whole under
-// its own key, decoded systems are held in a local-only cache whose refresh
-// function reads that payload, and with pub/sub, fetches by other processes
-// arrive by notify-then-read.
 type Finder struct {
 	store            kvcache.Store
 	hashes           kvcache.HashStore   // nil when the store has no hash index
@@ -60,11 +51,9 @@ type Finder struct {
 func NewFinder(store kvcache.Store) *Finder {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := &Finder{
-		store: store,
-		// Not the per-language hashes an earlier keying wrote: nothing prunes a
-		// hash field, so those are left unread rather than returned twice.
-		bikeSearchKey:    "gbfs:feed-bike-bbox",
-		stationSearchKey: "gbfs:feed-station-bbox",
+		store:            store,
+		bikeSearchKey:    "gbfs:bike-bbox",
+		stationSearchKey: "gbfs:station-bbox",
 		ctx:              ctx,
 		cancel:           cancel,
 	}
@@ -75,7 +64,6 @@ func NewFinder(store kvcache.Store) *Finder {
 	f.feeds.Expires = lastTTL
 	f.feeds.Recheck = lastTTL
 	f.feeds.NegativeTTL = missingTTL
-	f.feeds.RefreshTimeout = storeReadTimeout
 	// Expiry stops an entry being served but does not release it, and a large
 	// system is megabytes. Scanning prunes them; with nothing ever due, that is
 	// all this does.
@@ -103,13 +91,10 @@ func (c *Finder) Close() error {
 }
 
 // AddData stores a fetched system under topic, indexes it, and announces it to
-// other finders. The caller's cancellation does not apply: a cancelled job
-// still completes the write.
+// other finders. A cancelled caller does not interrupt it: data stored but never
+// announced is not seen by other processes until the next fetch.
 func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) error {
-	// Data stored but never announced is not seen by other processes until the
-	// next fetch, so this outlives the job that fetched it.
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), writeTimeout)
-	defer cancel()
+	ctx = context.WithoutCancel(ctx)
 	data, err := json.Marshal(sf)
 	if err != nil {
 		return err
@@ -144,28 +129,20 @@ func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) er
 	return c.feeds.Set(ctx, topic, held)
 }
 
-// GetFeed returns the system stored under topic.
+// GetFeed returns the system stored under topic, loading it on first use. The
+// system is shared with other readers and must not be modified.
 func (c *Finder) GetFeed(ctx context.Context, topic string) (*model.GbfsFeed, bool) {
-	sf, ok := c.getFeed(ctx, topic)
+	// What is already held is served whatever state the caller is in. Only a
+	// load is shed: it is detached from its caller by design, so starting one
+	// for a caller that has gone away spends a store read nobody waits for.
+	sf, ok := c.feeds.Peek(topic)
+	if !ok && ctx.Err() == nil {
+		sf, ok = c.feeds.Get(ctx, topic)
+	}
 	if !ok {
 		return nil, false
 	}
 	return &model.GbfsFeed{GbfsFeed: sf}, true
-}
-
-// getFeed returns a topic's held system, loading it on first use. Held
-// systems are shared between readers and must not be modified.
-func (c *Finder) getFeed(ctx context.Context, topic string) (*gbfs.GbfsFeed, bool) {
-	// What is already held is served whatever state the caller is in. Only a
-	// load is shed: it is detached from its caller by design, so starting one
-	// for a caller that has gone away spends a store read nobody waits for.
-	if sf, ok := c.feeds.Peek(topic); ok {
-		return sf, true
-	}
-	if ctx.Err() != nil {
-		return nil, false
-	}
-	return c.feeds.Get(ctx, topic)
 }
 
 func (c *Finder) FindBikes(ctx context.Context, limit *int, where *model.GbfsBikeRequest) ([]*model.GbfsFreeBikeStatus, error) {
@@ -181,17 +158,17 @@ func (c *Finder) FindBikes(ctx context.Context, limit *int, where *model.GbfsBik
 	}
 	var ret []*model.GbfsFreeBikeStatus
 	for _, topicKey := range topicKeys {
-		sf, ok := c.getFeed(ctx, topicKey)
+		feed, ok := c.GetFeed(ctx, topicKey)
 		if !ok {
 			continue
 		}
-		for _, ent := range sf.Bikes {
+		for _, ent := range feed.Bikes {
 			if d := tlxy.DistanceHaversine(ptxy, tlxy.Point{Lon: ent.Lon.Val, Lat: ent.Lat.Val}); d > pt.Radius {
 				continue
 			}
 			b := model.GbfsFreeBikeStatus{
 				FreeBikeStatus: ent,
-				Feed:           &model.GbfsFeed{GbfsFeed: sf},
+				Feed:           feed,
 			}
 			ret = append(ret, &b)
 		}
@@ -218,17 +195,17 @@ func (c *Finder) FindDocks(ctx context.Context, limit *int, where *model.GbfsDoc
 	}
 	var ret []*model.GbfsStationInformation
 	for _, topicKey := range topicKeys {
-		sf, ok := c.getFeed(ctx, topicKey)
+		feed, ok := c.GetFeed(ctx, topicKey)
 		if !ok {
 			continue
 		}
-		for _, ent := range sf.StationInformation {
+		for _, ent := range feed.GbfsFeed.StationInformation {
 			if d := tlxy.DistanceHaversine(ptxy, tlxy.Point{Lon: ent.Lon.Val, Lat: ent.Lat.Val}); d > pt.Radius {
 				continue
 			}
 			b := model.GbfsStationInformation{
 				StationInformation: ent,
-				Feed:               &model.GbfsFeed{GbfsFeed: sf},
+				Feed:               feed,
 			}
 			ret = append(ret, &b)
 		}
@@ -272,9 +249,8 @@ func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius
 // refresh function, and reports every failure as kvcache.ErrNotFound so the
 // topic is remembered as absent for missingTTL.
 func (c *Finder) readTopic(ctx context.Context, topic string) (*gbfs.GbfsFeed, error) {
-	// Absent is a feed that has not fetched; failed is the store not answering.
-	// Both are remembered, so a store that cannot answer is not asked on every
-	// query, but they are logged apart.
+	// Logged apart: absent is a feed that has not fetched, failed is the store
+	// not answering.
 	data, ok, err := c.store.Get(ctx, lastKey(topic))
 	if err != nil {
 		log.For(ctx).Error().Err(err).Str("topic", topic).Dur("retry_after", missingTTL).Msg("gbfsfinder: topic read failed, not retried until this expires")

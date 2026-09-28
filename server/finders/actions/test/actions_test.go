@@ -4,7 +4,6 @@ package test
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,7 +19,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
-	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 	"github.com/stretchr/testify/assert"
 	"github.com/twpayne/go-geom"
@@ -49,6 +47,8 @@ func TestGbfsFetch(t *testing.T) {
 		if err := actions.GbfsFetch(ctx, "test-gbfs", ts.URL+"/gbfs.json"); err != nil {
 			t.Fatal(err)
 		}
+		_, ok := cfg.GbfsFinder.GetFeed(ctx, "test-gbfs")
+		assert.True(t, ok, "stored under the feed's onestop id")
 
 		// Test
 		bikes, err := cfg.GbfsFinder.FindBikes(
@@ -70,71 +70,6 @@ func TestGbfsFetch(t *testing.T) {
 			bikeids = append(bikeids, ent.BikeID.Val)
 		}
 		assert.ElementsMatch(t, []string{"2e09a0ed99c8ad32cca516661618645e"}, bikeids)
-	})
-}
-
-// A multilingual feed publishes the same stations once per language. One
-// system is stored, so each dock comes back once rather than once per language,
-// and it is the same language on every fetch.
-func TestGbfsFetch_OneSystemPerFeed(t *testing.T) {
-	files := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
-	defer files.Close()
-	// Discovery listing the same files a second time as French, with a French
-	// system_information so the language kept can be told apart.
-	var discovery *httptest.Server
-	discovery = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/fr/system_information.json" {
-			json.NewEncoder(w).Encode(gbfs.SystemInformationFile{Data: &gbfs.SystemInformation{
-				SystemID: tt.NewString("fgb"),
-				Language: tt.NewString("fr"),
-				Name:     tt.NewString("Vélos de la baie"),
-			}})
-			return
-		}
-		resp, err := http.Get(files.URL + "/gbfs.json")
-		if err != nil {
-			w.WriteHeader(http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-		var sf gbfs.SystemFile
-		if err := json.NewDecoder(resp.Body).Decode(&sf); err != nil {
-			w.WriteHeader(http.StatusBadGateway)
-			return
-		}
-		fr := &gbfs.SystemFeeds{}
-		for _, f := range sf.Data["en"].Feeds {
-			url := f.URL
-			if f.Name.Val == "system_information" {
-				url = tt.NewString(discovery.URL + "/fr/system_information.json")
-			}
-			fr.Feeds = append(fr.Feeds, &gbfs.SystemFeed{Name: f.Name, URL: url})
-		}
-		sf.Data["fr"] = fr
-		json.NewEncoder(w).Encode(sf)
-	}))
-	defer discovery.Close()
-
-	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
-		ctx := model.WithConfig(context.Background(), cfg)
-		// Languages come back in map order, so one fetch could pick either.
-		for range 5 {
-			if err := actions.GbfsFetch(ctx, "test-gbfs", discovery.URL+"/gbfs.json"); err != nil {
-				t.Fatal(err)
-			}
-			feed, ok := cfg.GbfsFinder.GetFeed(ctx, "test-gbfs")
-			if assert.True(t, ok, "stored under the feed's onestop id") {
-				assert.Equal(t, "en", feed.GbfsFeed.SystemInformation.Language.Val)
-			}
-		}
-
-		docks, err := cfg.GbfsFinder.FindDocks(ctx, nil, &model.GbfsDockRequest{
-			Near: &model.PointRadius{Lon: -122.396185, Lat: 37.793412, Radius: 500},
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.Len(t, docks, 10)
 	})
 }
 

@@ -184,7 +184,8 @@ type GbfsFinder interface {
 	AddData(context.Context, string, gbfs.GbfsFeed) error
 	FindBikes(context.Context, *int, *GbfsBikeRequest) ([]*GbfsFreeBikeStatus, error)
 	FindDocks(context.Context, *int, *GbfsDockRequest) ([]*GbfsStationInformation, error)
-	// GetFeed returns the current system a feed publishes, by onestop id.
+	// GetFeed returns the current system a feed publishes, by onestop id. It is
+	// shared with other readers and must not be modified.
 	GetFeed(context.Context, string) (*GbfsFeed, bool)
 }
 

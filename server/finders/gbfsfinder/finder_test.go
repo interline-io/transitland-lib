@@ -2,6 +2,7 @@ package gbfsfinder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"testing"
@@ -19,7 +20,20 @@ import (
 
 func TestGbfsFinder(t *testing.T) {
 	gbf := NewFinder(kvcache.NewMemoryStore())
-	testSetupGbfs(gbf)
+	defer gbf.Close()
+	if err := testSetupGbfs(gbf); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("GetFeed", func(t *testing.T) {
+		feed, ok := gbf.GetFeed(context.Background(), "gbfs-test")
+		if assert.True(t, ok) {
+			assert.NotEmpty(t, feed.GbfsFeed.StationInformation)
+			assert.NotEmpty(t, feed.Bikes)
+		}
+		_, ok = gbf.GetFeed(context.Background(), "gbfs-other")
+		assert.False(t, ok)
+	})
 
 	tcs := []struct {
 		p           tlxy.Point
@@ -57,23 +71,6 @@ func TestGbfsFinder(t *testing.T) {
 
 }
 
-func TestGbfsFinder_GetFeed(t *testing.T) {
-	ctx := context.Background()
-	gbf := NewFinder(kvcache.NewMemoryStore())
-	defer gbf.Close()
-	if err := testSetupGbfs(gbf); err != nil {
-		t.Fatal(err)
-	}
-
-	feed, ok := gbf.GetFeed(ctx, "gbfs-test")
-	assert.True(t, ok)
-	assert.NotEmpty(t, feed.GbfsFeed.StationInformation)
-	assert.NotEmpty(t, feed.Bikes)
-
-	_, ok = gbf.GetFeed(ctx, "gbfs-other")
-	assert.False(t, ok)
-}
-
 // A process that did not run a fetch has to see it anyway. Without the
 // announcement a second finder serves its first read until the 24 hour expiry.
 func TestGbfsFinder_FollowsOtherProcesses(t *testing.T) {
@@ -105,12 +102,7 @@ func TestGbfsFinder_FollowsOtherProcesses(t *testing.T) {
 		}, 5*time.Second, 100*time.Millisecond, "the reader should adopt %q", name)
 	}
 
-	if err := writer.AddData(ctx, topic, named("first")); err != nil {
-		t.Fatal(err)
-	}
-	feed, ok := reader.GetFeed(ctx, topic)
-	assert.True(t, ok)
-	assert.Equal(t, "first", feed.GbfsFeed.SystemInformation.Name.Val)
+	converges("first")
 	converges("second")
 
 	// Every fetch in the fleet is announced, and a finder re-reads only what it
@@ -155,23 +147,12 @@ func (idleSubscription) Messages() <-chan []byte { return nil }
 
 func (idleSubscription) Close() error { return nil }
 
-// The announcement goes last. A finder re-reading on it has to find the new
-// data, and a failed one should cost other processes their freshness, not the
-// data or its index.
-func TestGbfsFinder_AnnouncesLast(t *testing.T) {
-	store := &orderStore{MemoryStore: kvcache.NewMemoryStore()}
-	gbf := NewFinder(store)
-	defer gbf.Close()
-	if err := gbf.AddData(context.Background(), "gbfs-test", gbfs.GbfsFeed{}); err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, []string{"set", "hset", "hset", "publish"}, store.ops)
-}
-
-// With pub/sub a write goes to the store only. A process that fetches but
-// never reads — a fetch worker — holds nothing, so announcements of its own
-// writes pass it by, and it reads a system back from the store when asked.
-func TestGbfsFinder_WriterHoldsNothing(t *testing.T) {
+// With pub/sub a write goes to the store only, and is announced last: a
+// finder re-reading on the announcement has to find it, and a failed one
+// should cost other processes their freshness, not the data or its index. A
+// process that fetches but never reads holds nothing, so announcements of its
+// own writes pass it by, and it reads a system back from the store when asked.
+func TestGbfsFinder_AddData(t *testing.T) {
 	ctx := context.Background()
 	store := &orderStore{MemoryStore: kvcache.NewMemoryStore()}
 	gbf := NewFinder(store)
@@ -180,6 +161,7 @@ func TestGbfsFinder_WriterHoldsNothing(t *testing.T) {
 	if err := gbf.AddData(ctx, "gbfs-test", sf); err != nil {
 		t.Fatal(err)
 	}
+	assert.Equal(t, []string{"set", "hset", "hset", "publish"}, store.ops)
 	assert.False(t, gbf.feeds.Contains("gbfs-test"))
 
 	feed, ok := gbf.GetFeed(ctx, "gbfs-test")
@@ -196,14 +178,12 @@ func testSetupGbfs(gbf model.GbfsFinder) error {
 	opts := gbfs.Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
 	opts.AllowHTTPFetchUnfiltered = true
-	feeds, _, err := gbfs.Fetch(context.Background(), nil, opts)
+	feed, _, err := gbfs.Fetch(context.Background(), nil, opts)
 	if err != nil {
 		return err
 	}
-	for _, feed := range feeds {
-		if err := gbf.AddData(context.Background(), sourceFeedId, feed); err != nil {
-			return err
-		}
+	if feed == nil {
+		return errors.New("no gbfs system fetched")
 	}
-	return nil
+	return gbf.AddData(context.Background(), sourceFeedId, *feed)
 }

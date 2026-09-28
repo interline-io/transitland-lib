@@ -1,13 +1,11 @@
 package actions
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"time"
 
 	"github.com/interline-io/log"
@@ -157,7 +155,7 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 	if feedUrl != "" {
 		opts.FeedURL = feedUrl
 	}
-	feeds, result, err := gbfs.Fetch(
+	feed, result, err := gbfs.Fetch(
 		ctx,
 		cfg.Adapter,
 		opts,
@@ -169,26 +167,10 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 		return result.FetchError
 	}
 
-	// Store one system per feed, under its onestop id: a multilingual feed
-	// repeats every station and vehicle per language. Discovery lists languages
-	// as a map, so sort for a stable pick: the alphabetically first language
-	// that fetched.
-	slices.SortFunc(feeds, func(a, b gbfs.GbfsFeed) int {
-		return cmp.Compare(gbfsLanguage(a), gbfsLanguage(b))
-	})
-	for _, feed := range feeds {
-		if feed.SystemInformation != nil {
-			return cfg.GbfsFinder.AddData(ctx, feedId, feed)
-		}
+	if feed == nil {
+		return nil
 	}
-	return nil
-}
-
-func gbfsLanguage(feed gbfs.GbfsFeed) string {
-	if feed.SystemInformation == nil {
-		return ""
-	}
-	return feed.SystemInformation.Language.Val
+	return cfg.GbfsFinder.AddData(ctx, feedId, *feed)
 }
 
 func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {
