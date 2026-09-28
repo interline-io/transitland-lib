@@ -496,8 +496,19 @@ func (copier *Copier) checkEntity(ent tt.Entity) (string, error) {
 		}
 	}
 
-	// Get all errors and warnings, including those added above or by data loader
-	errs = append(errs, tt.CheckErrors(ent)...)
+	// Get all errors and warnings, including those added above or by data loader.
+	// A cause can ask to be reported at warning level, which keeps the entity
+	// instead of dropping it and everything that references it. Severity is the
+	// cause's decision, because only the cause knows whether the value it
+	// describes leaves the entity usable. A cause that says nothing is an
+	// error, so this defaults to the previous behavior.
+	for _, err := range tt.CheckErrors(ent) {
+		if c, ok := err.(interface{ ErrorLevel() int }); ok && c.ErrorLevel() > 0 {
+			warns = append(warns, err)
+		} else {
+			errs = append(errs, err)
+		}
+	}
 	warns = append(warns, tt.CheckWarnings(ent)...)
 
 	// Log and set line context

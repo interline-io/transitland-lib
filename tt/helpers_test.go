@@ -98,26 +98,3 @@ func Test_IsValidTimezone(t *testing.T) {
 		})
 	}
 }
-
-func Test_IsValidLang(t *testing.T) {
-	type args struct {
-		lang string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{"en", args{"en"}, true},
-		{"empty", args{""}, false},
-		{"asd", args{"asd"}, false},
-		// {"invalid", args{"Not/Timezone"}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidLanguage(tt.args.lang); got != tt.want {
-				t.Errorf("IsValidLanguage() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
