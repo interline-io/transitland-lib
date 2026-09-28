@@ -73,8 +73,8 @@ func TestGbfsFetch(t *testing.T) {
 	}
 }
 
-// A 1.x/2.x feed lists its files once per language. They are fetched as one
-// system, with each language's text, and the first language's everything else.
+// A 1.x/2.x feed's per-language file sets merge into one system: text from
+// every language, everything else from the first.
 func TestFetch_Languages(t *testing.T) {
 	en := httptest.NewServer(NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer en.Close()
@@ -83,35 +83,49 @@ func TestFetch_Languages(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// French text for the system and one station, and a station English lacks.
-	// Its realtime files must not be fetched, and its missing regions file must
-	// not cost the rest.
+	// French and Dutch text as a 1.x/2.x file publishes it: plain strings. The
+	// French system_information claims English, as Citi Bike's does. Neither
+	// language's realtime files may be fetched, and a French file that fails
+	// first in its list must not cost the rest.
 	mux := http.NewServeMux()
-	fr := httptest.NewServer(mux)
-	defer fr.Close()
-	serve := func(path string, v any) {
-		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-			if v == nil {
-				t.Errorf("fetched %s", path)
+	other := httptest.NewServer(mux)
+	defer other.Close()
+	files := func(lang string, served map[string]any) *SystemFeeds {
+		ret := &SystemFeeds{}
+		for _, name := range []string{fileSystemRegions, fileSystemInformation, fileStationInformation, fileStationStatus} {
+			path := "/" + lang + "/" + name + ".json"
+			ret.Feeds = append(ret.Feeds, &SystemFeed{Name: tt.NewString(name), URL: tt.NewString(other.URL + path)})
+			if name == fileStationStatus {
+				mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+					t.Errorf("fetched %s", path)
+				})
+			} else if v, ok := served[name]; ok {
+				mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+					json.NewEncoder(w).Encode(v)
+				})
 			}
-			json.NewEncoder(w).Encode(v)
-		})
+		}
+		return ret
 	}
-	si := SystemInformationFile{Data: &SystemInformation{Name: LocalizedString{{Text: "Vélos de la Baie"}}}}
-	st := StationInformationFile{}
-	st.Data.Stations = []*StationInformation{
-		{StationID: tt.NewString("68c89d1f-407a-4550-a2b7-ecf0ad7ee422"), Name: LocalizedString{{Text: "Rue San Carlos"}}},
-		{StationID: tt.NewString("fr-only"), Name: LocalizedString{{Text: "Nulle part"}}},
-	}
-	serve("/system_information.json", si)
-	serve("/station_information.json", st)
-	serve("/station_status.json", nil)
-	frFeeds := &SystemFeeds{}
-	for _, name := range []string{"system_information", "station_information", "station_status", "system_regions"} {
-		frFeeds.Feeds = append(frFeeds.Feeds, &SystemFeed{Name: tt.NewString(name), URL: tt.NewString(fr.URL + "/" + name + ".json")})
-	}
+	fr := files("fr", map[string]any{
+		fileSystemInformation: map[string]any{"data": map[string]any{"language": "en", "name": "Vélos de la Baie"}},
+		fileStationInformation: map[string]any{"data": map[string]any{"stations": []map[string]any{
+			{"station_id": "68c89d1f-407a-4550-a2b7-ecf0ad7ee422", "name": "Rue San Carlos"},
+			{"station_id": "fr-only", "name": "Nulle part"},
+		}}},
+	})
+	nl := files("nl", map[string]any{
+		fileSystemInformation: map[string]any{"data": map[string]any{"name": "Fietsen van de Baai"}},
+	})
+
+	// Listed in reverse: a small Go map iterates as a rotation of the order its
+	// keys went in, so reversed keys never come out sorted by accident.
 	discovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(SystemFile{Data: map[string]*SystemFeeds{"fr": frFeeds, "en": listed.Data["en"]}})
+		body := map[string][]byte{}
+		for lang, sf := range map[string]*SystemFeeds{"nl": nl, "fr": fr, "en": listed.Data["en"]} {
+			body[lang], _ = json.Marshal(sf)
+		}
+		fmt.Fprintf(w, `{"data":{"nl":%s,"fr":%s,"en":%s}}`, body["nl"], body["fr"], body["en"])
 	}))
 	defer discovery.Close()
 
@@ -125,17 +139,97 @@ func TestFetch_Languages(t *testing.T) {
 	if !assert.NotNil(t, feed) {
 		return
 	}
-	assert.Equal(t, []string{"en", "fr"}, feed.SystemInformation.Languages.Val)
+	assert.Equal(t, []string{"en", "fr", "nl"}, feed.SystemInformation.Languages.Val)
 	assert.Equal(t, "en", feed.SystemInformation.Language.Val)
-	assert.Equal(t, LocalizedString{{Text: "Bay Wheels", Language: "en"}, {Text: "Vélos de la Baie", Language: "fr"}}, feed.SystemInformation.Name)
+	assert.Equal(t, LocalizedString{
+		{Text: "Bay Wheels", Language: "en"},
+		{Text: "Vélos de la Baie", Language: "fr"},
+		{Text: "Fietsen van de Baai", Language: "nl"},
+	}, feed.SystemInformation.Name)
 	stations := map[string]LocalizedString{}
 	for _, s := range feed.StationInformation {
 		stations[s.StationID.Val] = s.Name
 	}
 	assert.NotContains(t, stations, "fr-only")
-	assert.Equal(t, "fr", stations["68c89d1f-407a-4550-a2b7-ecf0ad7ee422"][1].Language)
-	assert.Equal(t, "Rue San Carlos", stations["68c89d1f-407a-4550-a2b7-ecf0ad7ee422"][1].Text)
+	assert.Equal(t, LocalizedText{Text: "Rue San Carlos", Language: "fr"}, stations["68c89d1f-407a-4550-a2b7-ecf0ad7ee422"][1])
 	assert.NotEmpty(t, feed.StationStatus)
+}
+
+// A language whose system_information fails is passed over. One whose other
+// files fail keeps the system it did fetch, and a later language supplies the
+// entities it could not.
+func TestFetch_LanguageFallback(t *testing.T) {
+	en := httptest.NewServer(NewTestGbfsServer("en", testdata.Path("server/gbfs")))
+	defer en.Close()
+	listed := SystemFile{}
+	if _, err := fetchUnmarshal(en.URL+"/gbfs.json", &listed, request.WithAllowHTTPUnfiltered); err != nil {
+		t.Fatal(err)
+	}
+	enURL := func(name string) string {
+		for _, f := range listed.Data["en"].Feeds {
+			if f.Name.Val == name {
+				return f.URL.Val
+			}
+		}
+		return ""
+	}
+	mux := http.NewServeMux()
+	other := httptest.NewServer(mux)
+	defer other.Close()
+	mux.HandleFunc("/ca/system_information.json", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"name": "Bicis de la Badia"}})
+	})
+	feeds := func(urls map[string]string) *SystemFeeds {
+		ret := &SystemFeeds{}
+		for name, url := range urls {
+			ret.Feeds = append(ret.Feeds, &SystemFeed{Name: tt.NewString(name), URL: tt.NewString(url)})
+		}
+		return ret
+	}
+	fetch := func(t *testing.T, data map[string]*SystemFeeds) *GbfsFeed {
+		t.Helper()
+		discovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			json.NewEncoder(w).Encode(SystemFile{Data: data})
+		}))
+		defer discovery.Close()
+		opts := Options{}
+		opts.FeedURL = discovery.URL
+		opts.AllowHTTPFetchUnfiltered = true
+		feed, _, err := Fetch(context.Background(), nil, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if feed == nil {
+			t.Fatal("no system")
+		}
+		return feed
+	}
+
+	t.Run("first language has no system_information", func(t *testing.T) {
+		feed := fetch(t, map[string]*SystemFeeds{
+			"ca": feeds(map[string]string{fileSystemInformation: other.URL + "/missing.json"}),
+			"en": listed.Data["en"],
+		})
+		assert.Equal(t, []string{"en"}, feed.SystemInformation.Languages.Val)
+		assert.NotEmpty(t, feed.StationInformation)
+		assert.NotEmpty(t, feed.StationStatus)
+	})
+
+	t.Run("first language has no stations", func(t *testing.T) {
+		feed := fetch(t, map[string]*SystemFeeds{
+			"ca": feeds(map[string]string{
+				fileSystemInformation:  other.URL + "/ca/system_information.json",
+				fileStationInformation: other.URL + "/missing.json",
+				fileStationStatus:      enURL(fileStationStatus),
+			}),
+			"en": listed.Data["en"],
+		})
+		assert.Equal(t, []string{"ca", "en"}, feed.SystemInformation.Languages.Val)
+		if assert.NotEmpty(t, feed.StationInformation) {
+			assert.Equal(t, "en", feed.StationInformation[0].Name[0].Language)
+		}
+		assert.NotEmpty(t, feed.StationStatus)
+	})
 }
 
 // A 3.x feed is read as it is published: localized text, RFC3339 times and the
@@ -158,6 +252,8 @@ func TestFetch_V3(t *testing.T) {
 	if assert.Len(t, feed.StationInformation, 1) {
 		assert.Equal(t, "Main Street", feed.StationInformation[0].Name.Default())
 		assert.True(t, feed.StationInformation[0].ParkingHoop.Val)
+		// A plain string where 3.x wants localized text takes the first language.
+		assert.Equal(t, LocalizedString{{Text: "MS", Language: "en"}}, feed.StationInformation[0].ShortName)
 	}
 	if assert.Len(t, feed.StationStatus, 1) {
 		s := feed.StationStatus[0]

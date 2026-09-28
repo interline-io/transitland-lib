@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http/httptest"
 	"testing"
@@ -12,22 +11,30 @@ import (
 	"github.com/interline-io/transitland-lib/testdata"
 )
 
-func setupGbfs(ctx context.Context, gbf model.GbfsFinder) error {
-	// Setup
-	sourceFeedId := "gbfs-test"
-	ts := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
-	defer ts.Close()
-	opts := gbfs.Options{}
-	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
-	opts.AllowHTTPFetchUnfiltered = true
-	feed, _, err := gbfs.Fetch(ctx, nil, opts)
-	if err != nil {
-		return err
+// setupGbfs stores the 2.x test system as gbfs-test and the 3.x one as
+// gbfs-v3-test.
+func setupGbfs(t *testing.T, ctx context.Context, gbf model.GbfsFinder) {
+	t.Helper()
+	for feedId, fixture := range map[string]*gbfs.TestGbfsServer{
+		"gbfs-test":    gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")),
+		"gbfs-v3-test": gbfs.NewTestGbfsServer("", testdata.Path("server/gbfs-v3")),
+	} {
+		ts := httptest.NewServer(fixture)
+		opts := gbfs.Options{}
+		opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
+		opts.AllowHTTPFetchUnfiltered = true
+		feed, _, err := gbfs.Fetch(ctx, nil, opts)
+		ts.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if feed == nil {
+			t.Fatalf("no gbfs system fetched for %s", feedId)
+		}
+		if err := gbf.AddData(ctx, feedId, *feed); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if feed == nil {
-		return errors.New("no gbfs system fetched")
-	}
-	return gbf.AddData(ctx, sourceFeedId, *feed)
 }
 
 func TestGbfsBikeResolver(t *testing.T) {
@@ -58,6 +65,29 @@ func TestGbfsBikeResolver(t *testing.T) {
 			selectExpect: []string{"Bay Wheels"},
 		},
 		{
+			name: "3.x vehicle_status",
+			query: `{
+				bikes(where: {near:{lon: -73.61, lat: 45.51, radius:100}}) {
+				  bike_id
+				  last_reported
+				  available_until
+				}
+			}`,
+			selector:     "bikes.#.bike_id",
+			selectExpect: []string{"973a5c94"},
+		},
+		{
+			name: "3.x times as POSIX seconds",
+			query: `{
+				bikes(where: {near:{lon: -73.61, lat: 45.51, radius:100}}) {
+				  last_reported
+				  available_until
+				}
+			}`,
+			selector:     "bikes.#.available_until",
+			selectExpect: []string{"1689609600"},
+		},
+		{
 			name: "limit 5",
 			query: `{
 				bikes(limit:5, where: {near:{lon: -122.396445, lat:37.793250, radius:1000}}) {
@@ -79,7 +109,7 @@ func TestGbfsBikeResolver(t *testing.T) {
 		},
 	}
 	c, cfg := newTestClient(t)
-	setupGbfs(context.Background(), cfg.GbfsFinder)
+	setupGbfs(t, context.Background(), cfg.GbfsFinder)
 	queryTestcases(t, c, testcases)
 }
 
@@ -185,6 +215,101 @@ func TestGbfsStationResolver(t *testing.T) {
 			selectExpect: []string{"11"},
 		},
 		{
+			name: "status last_reported",
+			query: `{
+				docks(where: {near: {lon: -121.908666, lat: 37.336289, radius: 100}}) {
+				  status {
+					last_reported
+				  }
+				}
+			  }
+			`,
+			selector:     "docks.0.status.last_reported",
+			selectExpect: []string{"1663292828"},
+		},
+		{
+			name: "3.x name in the default language",
+			query: `{
+				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
+				  name
+				  short_name
+				}
+			  }
+			`,
+			selector:     "docks.#.name",
+			selectExpect: []string{"Main Street"},
+		},
+		{
+			name: "3.x parking_hoop as Int",
+			query: `{
+				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
+				  parking_hoop
+				}
+			  }
+			`,
+			selector:     "docks.#.parking_hoop",
+			selectExpect: []string{"1"},
+		},
+		{
+			name: "3.x status",
+			query: `{
+				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
+				  status {
+					num_bikes_available
+					num_bikes_disabled
+					last_reported
+				  }
+				}
+			  }
+			`,
+			selector:     "docks.0.status.last_reported",
+			selectExpect: []string{"1689593653"},
+		},
+		{
+			name: "3.x status counts",
+			query: `{
+				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
+				  status {
+					num_bikes_available
+				  }
+				}
+			  }
+			`,
+			selector:     "docks.0.status.num_bikes_available",
+			selectExpect: []string{"6"},
+		},
+		{
+			name: "3.x system in the default language",
+			query: `{
+				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
+				  feed {
+					system_information {
+					  name
+					  language
+					}
+				  }
+				}
+			  }
+			`,
+			selector:     "docks.0.feed.system_information.name",
+			selectExpect: []string{"Example Bike Rental"},
+		},
+		{
+			name: "3.x system language",
+			query: `{
+				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
+				  feed {
+					system_information {
+					  language
+					}
+				  }
+				}
+			  }
+			`,
+			selector:     "docks.0.feed.system_information.language",
+			selectExpect: []string{"en"},
+		},
+		{
 			name: "limit 5",
 			query: `{
 				docks(limit: 5, where: {near: {lon: -121.908666, lat: 37.336289, radius: 1000}}) {
@@ -208,6 +333,6 @@ func TestGbfsStationResolver(t *testing.T) {
 		},
 	}
 	c, cfg := newTestClient(t)
-	setupGbfs(context.Background(), cfg.GbfsFinder)
+	setupGbfs(t, context.Background(), cfg.GbfsFinder)
 	queryTestcases(t, c, testcases)
 }

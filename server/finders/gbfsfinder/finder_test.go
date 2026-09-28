@@ -17,7 +17,9 @@ import (
 
 func TestGbfsFinder(t *testing.T) {
 	gbf := NewFinder(kvcache.NewMemoryStore())
-	testSetupGbfs(gbf)
+	if err := testSetupGbfs(gbf); err != nil {
+		t.Fatal(err)
+	}
 
 	tcs := []struct {
 		p           tlxy.Point

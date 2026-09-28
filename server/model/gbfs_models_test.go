@@ -25,3 +25,20 @@ func TestGbfsStationInformation_ParkingHoop(t *testing.T) {
 		})
 	}
 }
+
+// A station's status carries its feed, which is what resolves the vehicle types
+// its availability names.
+func TestGbfsStationInformation_Status(t *testing.T) {
+	feed := &GbfsFeed{GbfsFeed: &gbfs.GbfsFeed{
+		StationStatus: []*gbfs.StationStatus{{
+			StationID:             tt.NewString("s1"),
+			VehicleDocksAvailable: []*gbfs.VehicleDockAvailable{{VehicleTypeIDs: tt.NewStrings([]string{"bike"})}},
+		}},
+		VehicleTypes: []*gbfs.VehicleType{{VehicleTypeID: tt.NewString("bike")}},
+	}}
+	s := GbfsStationInformation{Feed: feed, StationInformation: &gbfs.StationInformation{StationID: tt.NewString("s1")}}
+	docks := s.Status().VehicleDocksAvailable()
+	if assert.Len(t, docks, 1) {
+		assert.Len(t, docks[0].VehicleTypes(), 1)
+	}
+}

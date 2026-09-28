@@ -15,10 +15,8 @@ type LocalizedText struct {
 // system's default language first.
 type LocalizedString []LocalizedText
 
-// UnmarshalJSON accepts a 3.x array of localized strings or a 1.x/2.x string.
-//
-// Anything else is kept as its JSON text, as tt.String did, rather than failing
-// the whole file.
+// UnmarshalJSON accepts a 3.x localized array or a 1.x/2.x string. Anything
+// else is kept as its JSON text rather than failing the whole file.
 func (l *LocalizedString) UnmarshalJSON(b []byte) error {
 	var s string
 	var v []LocalizedText
@@ -60,34 +58,42 @@ func (l *LocalizedString) UnmarshalGQL(v any) error {
 	return nil
 }
 
-// textsByID returns f's localized fields, keyed by the entity they belong to.
-func textsByID(f *GbfsFeed) map[string][]*LocalizedString {
-	ret := map[string][]*LocalizedString{}
+// eachText calls fn with each of f's entities that has localized fields: its
+// key, which names the same entity in another language, and those fields.
+func eachText(f *GbfsFeed, fn func(key string, fields []*LocalizedString)) {
 	if e := f.SystemInformation; e != nil {
-		ret["system"] = []*LocalizedString{&e.Name, &e.ShortName, &e.Operator, &e.TermsURL, &e.PrivacyURL}
+		fn("system", []*LocalizedString{&e.Name, &e.ShortName, &e.Operator, &e.TermsURL, &e.PrivacyURL})
 	}
 	for _, e := range f.StationInformation {
-		ret["station:"+e.StationID.Val] = []*LocalizedString{&e.Name, &e.ShortName}
+		if e != nil {
+			fn("station:"+e.StationID.Val, []*LocalizedString{&e.Name, &e.ShortName})
+		}
 	}
 	for _, e := range f.VehicleTypes {
-		ret["vehicle_type:"+e.VehicleTypeID.Val] = []*LocalizedString{&e.Name, &e.Make, &e.Model}
+		if e != nil {
+			fn("vehicle_type:"+e.VehicleTypeID.Val, []*LocalizedString{&e.Name, &e.Make, &e.Model})
+		}
 	}
 	for _, e := range f.Regions {
-		ret["region:"+e.RegionID.Val] = []*LocalizedString{&e.Name}
+		if e != nil {
+			fn("region:"+e.RegionID.Val, []*LocalizedString{&e.Name})
+		}
 	}
 	for _, e := range f.Plans {
-		ret["plan:"+e.PlanID.Val] = []*LocalizedString{&e.Name, &e.Description}
+		if e != nil {
+			fn("plan:"+e.PlanID.Val, []*LocalizedString{&e.Name, &e.Description})
+		}
 	}
 	for _, e := range f.Alerts {
-		ret["alert:"+e.AlertID.Val] = []*LocalizedString{&e.URL, &e.Summary, &e.Description}
+		if e != nil {
+			fn("alert:"+e.AlertID.Val, []*LocalizedString{&e.URL, &e.Summary, &e.Description})
+		}
 	}
-	return ret
 }
 
-// setLanguage tags f's untagged text, which is all of a 1.x/2.x file set's,
-// with lang.
+// setLanguage tags f's untagged text with lang.
 func setLanguage(f *GbfsFeed, lang string) {
-	for _, fields := range textsByID(f) {
+	eachText(f, func(_ string, fields []*LocalizedString) {
 		for _, l := range fields {
 			for i := range *l {
 				if (*l)[i].Language == "" {
@@ -95,20 +101,19 @@ func setLanguage(f *GbfsFeed, lang string) {
 				}
 			}
 		}
-	}
+	})
 }
 
-// addTranslations appends o's text to the entity with the same id in f. The
-// first language decides which entities a system has.
+// addTranslations appends o's text to the matching entities in f. Entities f
+// lacks are dropped.
 func addTranslations(f *GbfsFeed, o *GbfsFeed) {
-	dst := textsByID(f)
-	for k, src := range textsByID(o) {
-		d, ok := dst[k]
-		if !ok {
-			continue
+	src := map[string][]*LocalizedString{}
+	eachText(o, func(key string, fields []*LocalizedString) {
+		src[key] = fields
+	})
+	eachText(f, func(key string, fields []*LocalizedString) {
+		for i, l := range src[key] {
+			*fields[i] = append(*fields[i], *l...)
 		}
-		for i := range src {
-			*d[i] = append(*d[i], *src[i]...)
-		}
-	}
+	})
 }

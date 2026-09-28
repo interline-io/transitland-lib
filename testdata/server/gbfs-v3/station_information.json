@@ -10,6 +10,7 @@
           {"text": "Main Street", "language": "en"},
           {"text": "Rue principale", "language": "fr"}
         ],
+        "short_name": "MS",
         "lat": 45.5,
         "lon": -73.6,
         "parking_hoop": true,

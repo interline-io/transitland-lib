@@ -8,8 +8,8 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// Timestamp is a time in POSIX seconds. 1.x/2.x publish it as a number, and
-// 3.x and Datetime fields as RFC3339.
+// Timestamp is a time in POSIX seconds, read from a number or an RFC3339
+// string (3.x times and 2.3 Datetime fields).
 type Timestamp struct {
 	tt.Int
 }

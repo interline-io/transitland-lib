@@ -216,8 +216,8 @@ type GbfsStationInformation struct {
 	*gbfs.StationInformation
 }
 
-// ParkingHoop is GBFS's boolean parking_hoop as the Int the schema has always
-// exposed: 1 when hoops are present, 0 when not.
+// ParkingHoop returns parking_hoop as the schema's Int: 1 if hoops are
+// present, 0 if not.
 func (g *GbfsStationInformation) ParkingHoop() tt.Int {
 	if g.StationInformation == nil || !g.StationInformation.ParkingHoop.Valid {
 		return tt.Int{}
@@ -252,7 +252,7 @@ func (g *GbfsStationInformation) Status() *GbfsStationStatus {
 			continue
 		}
 		if s.StationID.Val == g.StationID.Val {
-			return &GbfsStationStatus{StationStatus: s}
+			return &GbfsStationStatus{StationStatus: s, Feed: g.Feed}
 		}
 	}
 	return nil

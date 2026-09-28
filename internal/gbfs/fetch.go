@@ -34,7 +34,6 @@ const (
 )
 
 type Options struct {
-	Language string
 	fetch.Options
 }
 
@@ -43,11 +42,12 @@ type Result struct {
 }
 
 // Fetch fetches one system from a GBFS discovery file, upconverted to the 3.x
-// shape. It returns nil if no system_information fetched.
+// shape. It returns nil if no system_information could be fetched.
 //
 // A 1.x/2.x discovery file lists the system's files once per language. The
-// first language in sorted order supplies the system, and each later one only
-// its translations of the text.
+// first language in sorted order whose system_information fetches supplies the
+// system. Each later one adds its text, and any list of entities the first
+// could not fetch.
 func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Result, error) {
 	result := Result{}
 	if opts.FetchedAt.IsZero() {
@@ -97,11 +97,15 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Resu
 			// another language than the one it is listed under.
 			setLanguage(&f, lang)
 			languages = append(languages, lang)
+		} else if l := f.SystemInformation.Languages.Val; len(l) > 0 {
+			// 3.x text is tagged, but a producer may still publish a string.
+			setLanguage(&f, l[0])
 		}
 		if feed == nil {
 			feed = &f
 		} else {
 			addTranslations(feed, &f)
+			fillMissing(feed, &f)
 		}
 	}
 	if feed != nil {
@@ -142,8 +146,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Resu
 	return feed, result, nil
 }
 
-// textFileNames are the files that hold translatable text, the only ones
-// fetched for a system's later languages.
+// textFileNames are the files that hold translatable text.
 var textFileNames = map[string]bool{
 	fileSystemInformation:  true,
 	fileStationInformation: true,
@@ -151,6 +154,27 @@ var textFileNames = map[string]bool{
 	fileSystemRegions:      true,
 	fileSystemPricingPlans: true,
 	fileSystemAlerts:       true,
+}
+
+// fillMissing takes from o each list of entities f has none of, as when f's
+// own file failed. Only text files are fetched for o, so realtime data is not
+// filled.
+func fillMissing(f *GbfsFeed, o *GbfsFeed) {
+	if f.StationInformation == nil {
+		f.StationInformation = o.StationInformation
+	}
+	if f.VehicleTypes == nil {
+		f.VehicleTypes = o.VehicleTypes
+	}
+	if f.Regions == nil {
+		f.Regions = o.Regions
+	}
+	if f.Plans == nil {
+		f.Plans = o.Plans
+	}
+	if f.Alerts == nil {
+		f.Alerts = o.Alerts
+	}
 }
 
 // textFiles returns the files in sf that hold translatable text.
@@ -165,7 +189,7 @@ func textFiles(sf *SystemFeeds) *SystemFeeds {
 }
 
 // fetchAll fetches and decodes the files it recognizes in sf. A file that
-// fails is logged and left out.
+// fails partway is logged, and keeps whatever decoded before the error.
 func fetchAll(ctx context.Context, sf SystemFeeds, reqOpts ...request.RequestOption) GbfsFeed {
 	ret := GbfsFeed{}
 	for _, v := range sf.Feeds {

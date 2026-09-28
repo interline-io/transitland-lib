@@ -26,12 +26,15 @@ type Finder struct {
 // HashStore capability it holds the cross-process bounding-box index;
 // otherwise geosearch falls back to locally known topics.
 func NewFinder(store kvcache.Store) *Finder {
+	// Named for the stored format, one 3.x-shaped system per feed, so a process
+	// on the earlier per-language format and this one never read each other's
+	// entries.
 	f := &Finder{
 		ttlRecheck:       5 * time.Minute,
 		ttlExpire:        24 * time.Hour,
-		cache:            kvcache.NewCache[string, gbfs.GbfsFeed](store, "gbfs"),
-		bikeSearchKey:    "gbfs:bike-bbox",
-		stationSearchKey: "gbfs:station-bbox",
+		cache:            kvcache.NewCache[string, gbfs.GbfsFeed](store, "gbfs-feed"),
+		bikeSearchKey:    "gbfs-feed:bike-bbox",
+		stationSearchKey: "gbfs-feed:station-bbox",
 	}
 	if hs, ok := store.(kvcache.HashStore); ok {
 		f.hashes = hs
