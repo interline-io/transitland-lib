@@ -186,9 +186,6 @@ func feedVersionSelect(ctx context.Context, limit *int, after *model.Cursor, ids
 
 	if where != nil {
 		if where.Sha1 != nil {
-			// Match either the zip checksum or the feed contents checksum.
-			// Re-zipping the same GTFS changes sha1 but not sha1_dir, so
-			// callers holding either value can find the feed version.
 			q = q.Where(sq.Or{
 				sq.Eq{"feed_versions.sha1": *where.Sha1},
 				sq.Eq{"feed_versions.sha1_dir": *where.Sha1},

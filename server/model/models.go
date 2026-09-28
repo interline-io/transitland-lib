@@ -78,10 +78,6 @@ type FeedFetch struct {
 	dmfr.FeedFetch
 }
 
-// FeedVersion deliberately adds no fields of its own. In particular SHA1Dir
-// must not be redeclared here: a field of the same name shadows the embedded
-// one, so anything written to dmfr.FeedVersion becomes invisible to the
-// resolvers.
 type FeedVersion struct {
 	dmfr.FeedVersion
 }

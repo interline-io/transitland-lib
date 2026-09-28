@@ -68,8 +68,7 @@ func StaticFetch(ctx context.Context, feedId string, feedSrc io.Reader, feedUrl 
 	if err != nil {
 		return nil, err
 	}
-	mr.FoundSha1 = fr.FoundSHA1
-	mr.FoundDirSha1 = fr.FoundDirSHA1
+	mr.FoundSha1 = fr.Found
 	if fr.FetchError != nil {
 		a := fr.FetchError.Error()
 		mr.FetchError = &a

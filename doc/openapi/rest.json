@@ -287,7 +287,7 @@
         }
       },
       "sha1Param": {
-        "description": "Search for records in this feed version; accepts the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
+        "description": "Search for records in this feed version",
         "in": "query",
         "name": "feed_version_sha1",
         "schema": {
@@ -2171,7 +2171,7 @@
       "get": {
         "parameters": [
           {
-            "description": "Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)",
+            "description": "Feed version lookup key; can be an integer ID or a SHA1 value",
             "in": "query",
             "name": "feed_version_key",
             "schema": {
@@ -2187,7 +2187,7 @@
             }
           },
           {
-            "description": "Feed version SHA1; matches either the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
+            "description": "Feed version SHA1",
             "in": "query",
             "name": "sha1",
             "schema": {
@@ -2637,7 +2637,7 @@
                             "x-order": 4
                           },
                           "sha1_dir": {
-                            "description": "SHA1 hash of the `.txt` files in the archive, ignoring how it was packaged.\n\nCalculated over the sorted, concatenated contents of the lowercase `.txt` files at the top level of the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Note the limits of that definition: other GTFS files, `locations.geojson` among them, are not covered, and two feed versions differing only in those files share a `sha1_dir`. Null for feed versions created before this value was recorded.",
+                            "description": "SHA1 hash of the feed contents, stable across re-zipping",
                             "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
                             "nullable": true,
                             "title": "sha1_dir",
@@ -2762,7 +2762,7 @@
               "schema": {
                 "properties": {
                   "feed_version_keys": {
-                    "description": "Array of feed version IDs or SHA1 hashes to export; a hash may be the zip file checksum (sha1) or the feed contents checksum (sha1_dir)",
+                    "description": "Array of feed version IDs or SHA1 hashes to export",
                     "items": {
                       "type": "string"
                     },
@@ -2880,7 +2880,7 @@
       "get": {
         "parameters": [
           {
-            "description": "Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)",
+            "description": "Feed version lookup key; can be an integer ID or a SHA1 value",
             "in": "path",
             "name": "feed_version_key",
             "required": true,
@@ -3256,7 +3256,7 @@
                             "x-order": 4
                           },
                           "sha1_dir": {
-                            "description": "SHA1 hash of the `.txt` files in the archive, ignoring how it was packaged.\n\nCalculated over the sorted, concatenated contents of the lowercase `.txt` files at the top level of the archive, so it is stable across re-zipping, file reordering, and compression changes that alter `sha1`. Note the limits of that definition: other GTFS files, `locations.geojson` among them, are not covered, and two feed versions differing only in those files share a `sha1_dir`. Null for feed versions created before this value was recorded.",
+                            "description": "SHA1 hash of the feed contents, stable across re-zipping",
                             "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
                             "nullable": true,
                             "title": "sha1_dir",
@@ -3335,7 +3335,7 @@
         "description": "Download this feed version GTFS zip for this feed, if redistribution is allowed by the source feed's license. Available only using Transitland professional or enterprise plan API keys.",
         "parameters": [
           {
-            "description": "Feed version lookup key; can be an integer ID, a zip SHA1, or a feed contents SHA1 (sha1_dir)",
+            "description": "Feed version lookup key; can be an integer ID or a SHA1 value",
             "in": "path",
             "name": "feed_version_key",
             "required": true,
