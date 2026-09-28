@@ -1,7 +1,9 @@
 package gbfs
 
 import (
+	"bytes"
 	"encoding/json"
+	"slices"
 
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -38,6 +40,8 @@ type SystemFeed struct {
 
 type SystemFile struct {
 	Data map[string]*SystemFeeds `json:"data,omitempty"`
+	// Keys are Data's keys, in the order the discovery file lists them.
+	Keys []string `json:"-"`
 }
 
 // UnmarshalJSON accepts both the GBFS 1.x/2.x shape, where `data` is a map
@@ -67,6 +71,7 @@ func (s *SystemFile) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		s.Data = map[string]*SystemFeeds{"": &sf}
+		s.Keys = []string{""}
 		return nil
 	}
 	var langMap map[string]*SystemFeeds
@@ -74,7 +79,32 @@ func (s *SystemFile) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	s.Data = langMap
+	s.Keys = objectKeys(raw.Data)
 	return nil
+}
+
+// objectKeys returns the keys of a JSON object in the order it lists them,
+// each once.
+func objectKeys(b []byte) []string {
+	var ret []string
+	dec := json.NewDecoder(bytes.NewReader(b))
+	if _, err := dec.Token(); err != nil {
+		return nil
+	}
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			break
+		}
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			break
+		}
+		if key, ok := tok.(string); ok && !slices.Contains(ret, key) {
+			ret = append(ret, key)
+		}
+	}
+	return ret
 }
 
 type SystemInformationFile struct {

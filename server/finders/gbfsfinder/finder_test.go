@@ -74,3 +74,9 @@ func testSetupGbfs(gbf model.GbfsFinder) error {
 	}
 	return gbf.AddData(context.Background(), sourceFeedId, *feed)
 }
+
+func TestBboxString(t *testing.T) {
+	ents := []tlxy.Point{{Lon: -122.4, Lat: 37.7}, {}, {Lon: -122.3, Lat: 37.8}}
+	got := bboxString(ents, func(e tlxy.Point) (float64, float64) { return e.Lon, e.Lat })
+	assert.Equal(t, "-122.40000,37.70000,-122.30000,37.80000", got)
+}

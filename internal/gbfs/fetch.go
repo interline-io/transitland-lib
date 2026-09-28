@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"maps"
 	"slices"
 	"time"
 
@@ -41,13 +40,14 @@ type Result struct {
 	fetch.Result
 }
 
-// Fetch fetches one system from a GBFS discovery file, upconverted to the 3.x
-// shape. It returns nil if no system_information could be fetched.
+// Fetch fetches one system from a GBFS discovery file. It returns nil if no
+// system_information could be fetched.
 //
-// A 1.x/2.x discovery file lists the system's files once per language. The
-// first language in sorted order whose system_information fetches supplies the
-// system. Each later one adds its text, and any list of entities the first
-// could not fetch.
+// Text fields hold each language the system publishes, as in 3.x; counts and
+// ids keep their 1.x/2.x names. A 1.x/2.x discovery file lists the system's
+// files once per language. The first language it lists whose
+// system_information fetches supplies the system, and each later one adds its
+// text and any list of translatable entities the first could not fetch.
 func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Result, error) {
 	result := Result{}
 	if opts.FetchedAt.IsZero() {
@@ -69,7 +69,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Resu
 
 	// Fetch system file
 	systemFile := SystemFile{}
-	fr, err := fetchUnmarshal(opts.FeedURL, &systemFile, reqOpts...)
+	fr, err := fetchUnmarshal(ctx, opts.FeedURL, &systemFile, reqOpts...)
 	result.ResponseCode = fr.ResponseCode
 	result.ResponseSHA1 = fr.ResponseSHA1
 	result.ResponseSize = fr.ResponseSize
@@ -80,13 +80,13 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Resu
 	// Fetch additional data. A 3.x system is listed under the one key "".
 	var feed *GbfsFeed
 	var languages []string
-	for _, lang := range slices.Sorted(maps.Keys(systemFile.Data)) {
+	for _, lang := range systemFile.Keys {
 		sf := systemFile.Data[lang]
 		if sf == nil {
 			continue
 		}
 		if feed != nil {
-			sf = textFiles(sf)
+			sf = textFeeds(sf)
 		}
 		f := fetchAll(ctx, *sf, reqOpts...)
 		if f.SystemInformation == nil {
@@ -139,7 +139,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Resu
 			tlfetch.Success = false
 			tlfetch.FetchError.Set(result.FetchError.Error())
 		}
-		if _, err := atx.Insert(context.TODO(), &tlfetch); err != nil {
+		if _, err := atx.Insert(ctx, &tlfetch); err != nil {
 			return nil, result, err
 		}
 	}
@@ -147,42 +147,19 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Resu
 	return feed, result, nil
 }
 
-// textFileNames are the files that hold translatable text.
-var textFileNames = map[string]bool{
-	fileSystemInformation:  true,
-	fileStationInformation: true,
-	fileVehicleTypes:       true,
-	fileSystemRegions:      true,
-	fileSystemPricingPlans: true,
-	fileSystemAlerts:       true,
-}
-
-// fillMissing takes from o each list of entities f has none of, as when f's
-// own file failed. Only text files are fetched for o, so realtime data is not
-// filled.
+// fillMissing takes from o each list of translatable entities that f has none
+// of.
 func fillMissing(f *GbfsFeed, o *GbfsFeed) {
-	if f.StationInformation == nil {
-		f.StationInformation = o.StationInformation
-	}
-	if f.VehicleTypes == nil {
-		f.VehicleTypes = o.VehicleTypes
-	}
-	if f.Regions == nil {
-		f.Regions = o.Regions
-	}
-	if f.Plans == nil {
-		f.Plans = o.Plans
-	}
-	if f.Alerts == nil {
-		f.Alerts = o.Alerts
+	for _, t := range textFiles {
+		t.fill(f, o)
 	}
 }
 
-// textFiles returns the files in sf that hold translatable text.
-func textFiles(sf *SystemFeeds) *SystemFeeds {
+// textFeeds returns the files in sf that hold translatable text.
+func textFeeds(sf *SystemFeeds) *SystemFeeds {
 	ret := SystemFeeds{}
 	for _, v := range sf.Feeds {
-		if textFileNames[v.Name.Val] {
+		if slices.ContainsFunc(textFiles, func(t textFile) bool { return t.name == v.Name.Val }) {
 			ret.Feeds = append(ret.Feeds, v)
 		}
 	}
@@ -198,71 +175,71 @@ func fetchAll(ctx context.Context, sf SystemFeeds, reqOpts ...request.RequestOpt
 		switch v.Name.Val {
 		case fileSystemInformation:
 			e := SystemInformationFile{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			ret.SystemInformation = e.Data
 		case fileStationInformation:
 			e := StationInformationFile{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			ret.StationInformation = e.Data.Stations
 		case fileStationStatus:
 			e := StationStatusFile{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			ret.StationStatus = e.statuses()
 		case fileFreeBikeStatus:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.Bikes = e.Data.Bikes
 			}
 		case fileVehicleStatus:
 			e := VehicleStatusFile{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			ret.Bikes = e.vehicles()
 		case fileSystemHours:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.RentalHours = e.Data.RentalHours
 			}
 		case fileSystemCalendar:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.Calendars = e.Data.Calendars
 			}
 		case fileSystemRegions:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.Regions = e.Data.Regions
 			}
 		case fileSystemAlerts:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.Alerts = e.Data.Alerts
 			}
 		case fileVehicleTypes:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.VehicleTypes = e.Data.VehicleTypes
 			}
 		case fileSystemPricingPlans:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.Plans = e.Data.Plans
 			}
 		case fileGeofencingZones:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.GeofencingZones = e.Data.GeofencingZones
 			}
 		case fileGbfsVersions:
 			e := GbfsFeedData{}
-			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
+			_, err = fetchUnmarshal(ctx, v.URL.Val, &e, reqOpts...)
 			if e.Data != nil {
 				ret.Versions = e.Data.Versions
 			}
@@ -274,8 +251,7 @@ func fetchAll(ctx context.Context, sf SystemFeeds, reqOpts ...request.RequestOpt
 	return ret
 }
 
-func fetchUnmarshal(url string, ent any, reqOpts ...request.RequestOption) (request.FetchResponse, error) {
-	ctx := context.TODO()
+func fetchUnmarshal(ctx context.Context, url string, ent any, reqOpts ...request.RequestOption) (request.FetchResponse, error) {
 	var out bytes.Buffer
 	fr, err := request.AuthenticatedRequest(ctx, &out, url, reqOpts...)
 	if err != nil {

@@ -37,6 +37,14 @@ func TestSystemFileUnmarshalJSON(t *testing.T) {
 			assert.Equal(t, "system_information", sf.Data[""].Feeds[0].Name.Val)
 		}
 	})
+	t.Run("gbfs 2.x keys keep their order", func(t *testing.T) {
+		body := []byte(`{"data":{"fr":{"feeds":[]},"en":{"feeds":[]},"fr":{"feeds":[]}}}`)
+		var sf SystemFile
+		if err := json.Unmarshal(body, &sf); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, []string{"fr", "en"}, sf.Keys)
+	})
 	t.Run("empty data object", func(t *testing.T) {
 		var sf SystemFile
 		if err := json.Unmarshal([]byte(`{"data":{}}`), &sf); err != nil {
@@ -79,7 +87,7 @@ func fetchSystem(t *testing.T, url string) *GbfsFeed {
 func listedFeeds(t *testing.T, url string, lang string) *SystemFeeds {
 	t.Helper()
 	listed := SystemFile{}
-	if _, err := fetchUnmarshal(url, &listed, request.WithAllowHTTPUnfiltered); err != nil {
+	if _, err := fetchUnmarshal(context.Background(), url, &listed, request.WithAllowHTTPUnfiltered); err != nil {
 		t.Fatal(err)
 	}
 	return listed.Data[lang]
@@ -99,7 +107,7 @@ func TestFetch_Languages(t *testing.T) {
 	defer en.Close()
 	listed := listedFeeds(t, en.URL+"/gbfs.json", "en")
 
-	// French and Dutch text as a 1.x/2.x file publishes it: plain strings. The
+	// French and German text as a 1.x/2.x file publishes it: plain strings. The
 	// French system_information claims English, as Citi Bike's does. Neither
 	// language's realtime files may be fetched, and a French file that fails
 	// first in its list must not cost the rest.
@@ -130,28 +138,28 @@ func TestFetch_Languages(t *testing.T) {
 			{"station_id": "fr-only", "name": "Nulle part"},
 		}}},
 	})
-	nl := files("nl", map[string]any{
-		fileSystemInformation: map[string]any{"data": map[string]any{"name": "Fietsen van de Baai"}},
+	de := files("de", map[string]any{
+		fileSystemInformation: map[string]any{"data": map[string]any{"name": "Fahrräder der Bucht"}},
 	})
 
-	// Listed in reverse: a small Go map iterates as a rotation of the order its
-	// keys went in, so reversed keys never come out sorted by accident.
+	// The producer lists English first. In sorted order German would be, and
+	// its station_status would be fetched.
 	js := func(v any) []byte {
 		b, _ := json.Marshal(v)
 		return b
 	}
 	discovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"data":{"nl":%s,"fr":%s,"en":%s}}`, js(nl), js(fr), js(listed))
+		fmt.Fprintf(w, `{"data":{"en":%s,"de":%s,"fr":%s}}`, js(listed), js(de), js(fr))
 	}))
 	defer discovery.Close()
 
 	feed := fetchSystem(t, discovery.URL)
-	assert.Equal(t, []string{"en", "fr", "nl"}, feed.SystemInformation.Languages.Val)
+	assert.Equal(t, []string{"en", "de", "fr"}, feed.SystemInformation.Languages.Val)
 	assert.Equal(t, "en", feed.SystemInformation.Language.Val)
 	assert.Equal(t, LocalizedString{
 		{Text: "Bay Wheels", Language: "en"},
+		{Text: "Fahrräder der Bucht", Language: "de"},
 		{Text: "Vélos de la Baie", Language: "fr"},
-		{Text: "Fietsen van de Baai", Language: "nl"},
 	}, feed.SystemInformation.Name)
 	stations := map[string]LocalizedString{}
 	for _, s := range feed.StationInformation {

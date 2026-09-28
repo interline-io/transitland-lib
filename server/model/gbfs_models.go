@@ -376,13 +376,13 @@ type GbfsVehicleDockAvailable struct {
 }
 
 func (g *GbfsVehicleDockAvailable) VehicleTypes() []*GbfsVehicleType {
-	if g.VehicleDockAvailable == nil {
+	if g.Feed == nil || g.VehicleDockAvailable == nil {
 		return nil
 	}
 	var ret []*GbfsVehicleType
 	for _, s := range g.VehicleDockAvailable.VehicleTypeIDs.Val {
 		for _, t := range g.Feed.VehicleTypes {
-			if s == t.VehicleTypeID.Val {
+			if t != nil && s == t.VehicleTypeID.Val {
 				ret = append(ret, &GbfsVehicleType{VehicleType: t, Feed: g.Feed})
 			}
 		}
@@ -400,7 +400,7 @@ func (g *GbfsVehicleType) DefaultPricingPlan() *GbfsSystemPricingPlan {
 		return nil
 	}
 	for _, s := range g.Feed.Plans {
-		if s.PlanID.Val == g.DefaultPricingPlanID.Val {
+		if s != nil && s.PlanID.Val == g.DefaultPricingPlanID.Val {
 			return &GbfsSystemPricingPlan{SystemPricingPlan: s}
 		}
 	}
@@ -408,13 +408,13 @@ func (g *GbfsVehicleType) DefaultPricingPlan() *GbfsSystemPricingPlan {
 }
 
 func (g *GbfsVehicleType) PricingPlans() []*GbfsSystemPricingPlan {
-	if g.VehicleType == nil {
+	if g.Feed == nil || g.VehicleType == nil {
 		return nil
 	}
 	var ret []*GbfsSystemPricingPlan
 	for _, t := range g.PricingPlanIDs.Val {
 		for _, s := range g.Feed.Plans {
-			if t == s.PlanID.Val {
+			if s != nil && t == s.PlanID.Val {
 				ret = append(ret, &GbfsSystemPricingPlan{SystemPricingPlan: s})
 			}
 		}
@@ -446,10 +446,9 @@ func (g *GbfsVehicleTypeAvailable) VehicleType() *GbfsVehicleType {
 		return nil
 	}
 	for _, s := range g.Feed.VehicleTypes {
-		if s.VehicleTypeID.Val == g.VehicleTypeID.Val {
+		if s != nil && s.VehicleTypeID.Val == g.VehicleTypeID.Val {
 			return &GbfsVehicleType{VehicleType: s, Feed: g.Feed}
 		}
-
 	}
 	return nil
 }

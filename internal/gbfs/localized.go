@@ -62,36 +62,80 @@ func (l *LocalizedString) UnmarshalGQL(v any) error {
 	return nil
 }
 
+// A textFile is a file that holds translatable text.
+type textFile struct {
+	name string
+	// each is eachText for this file's entities.
+	each func(f *GbfsFeed, fn func(key string, fields []*LocalizedString))
+	// fill takes o's entities from this file if f has none.
+	fill func(f *GbfsFeed, o *GbfsFeed)
+}
+
+// entityText returns a textFile for a file that holds a list of entities, each
+// read by text as its id and localized fields.
+func entityText[T any](name string, list func(*GbfsFeed) *[]*T, text func(*T) (string, []*LocalizedString)) textFile {
+	return textFile{
+		name: name,
+		each: func(f *GbfsFeed, fn func(string, []*LocalizedString)) {
+			for _, e := range *list(f) {
+				if e != nil {
+					id, fields := text(e)
+					fn(name+":"+id, fields)
+				}
+			}
+		},
+		fill: func(f *GbfsFeed, o *GbfsFeed) {
+			if *list(f) == nil {
+				*list(f) = *list(o)
+			}
+		},
+	}
+}
+
+// textFiles are the files that hold translatable text.
+var textFiles = []textFile{
+	{
+		name: fileSystemInformation,
+		each: func(f *GbfsFeed, fn func(string, []*LocalizedString)) {
+			if e := f.SystemInformation; e != nil {
+				fn(fileSystemInformation, []*LocalizedString{&e.Name, &e.ShortName, &e.Operator, &e.TermsURL, &e.PrivacyURL})
+			}
+		},
+		// The system comes from the language whose system_information fetched.
+		fill: func(*GbfsFeed, *GbfsFeed) {},
+	},
+	entityText(fileStationInformation,
+		func(f *GbfsFeed) *[]*StationInformation { return &f.StationInformation },
+		func(e *StationInformation) (string, []*LocalizedString) {
+			return e.StationID.Val, []*LocalizedString{&e.Name, &e.ShortName}
+		}),
+	entityText(fileVehicleTypes,
+		func(f *GbfsFeed) *[]*VehicleType { return &f.VehicleTypes },
+		func(e *VehicleType) (string, []*LocalizedString) {
+			return e.VehicleTypeID.Val, []*LocalizedString{&e.Name, &e.Make, &e.Model}
+		}),
+	entityText(fileSystemRegions,
+		func(f *GbfsFeed) *[]*SystemRegion { return &f.Regions },
+		func(e *SystemRegion) (string, []*LocalizedString) {
+			return e.RegionID.Val, []*LocalizedString{&e.Name}
+		}),
+	entityText(fileSystemPricingPlans,
+		func(f *GbfsFeed) *[]*SystemPricingPlan { return &f.Plans },
+		func(e *SystemPricingPlan) (string, []*LocalizedString) {
+			return e.PlanID.Val, []*LocalizedString{&e.Name, &e.Description}
+		}),
+	entityText(fileSystemAlerts,
+		func(f *GbfsFeed) *[]*SystemAlert { return &f.Alerts },
+		func(e *SystemAlert) (string, []*LocalizedString) {
+			return e.AlertID.Val, []*LocalizedString{&e.URL, &e.Summary, &e.Description}
+		}),
+}
+
 // eachText calls fn with each of f's entities that has localized fields: its
 // key, which names the same entity in another language, and those fields.
 func eachText(f *GbfsFeed, fn func(key string, fields []*LocalizedString)) {
-	if e := f.SystemInformation; e != nil {
-		fn("system", []*LocalizedString{&e.Name, &e.ShortName, &e.Operator, &e.TermsURL, &e.PrivacyURL})
-	}
-	for _, e := range f.StationInformation {
-		if e != nil {
-			fn("station:"+e.StationID.Val, []*LocalizedString{&e.Name, &e.ShortName})
-		}
-	}
-	for _, e := range f.VehicleTypes {
-		if e != nil {
-			fn("vehicle_type:"+e.VehicleTypeID.Val, []*LocalizedString{&e.Name, &e.Make, &e.Model})
-		}
-	}
-	for _, e := range f.Regions {
-		if e != nil {
-			fn("region:"+e.RegionID.Val, []*LocalizedString{&e.Name})
-		}
-	}
-	for _, e := range f.Plans {
-		if e != nil {
-			fn("plan:"+e.PlanID.Val, []*LocalizedString{&e.Name, &e.Description})
-		}
-	}
-	for _, e := range f.Alerts {
-		if e != nil {
-			fn("alert:"+e.AlertID.Val, []*LocalizedString{&e.URL, &e.Summary, &e.Description})
-		}
+	for _, t := range textFiles {
+		t.each(f, fn)
 	}
 }
 

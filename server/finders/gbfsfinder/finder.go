@@ -163,11 +163,15 @@ func (c *Finder) geosearch(ctx context.Context, key string, pt model.PointRadius
 }
 
 // bboxString returns the "minX,minY,maxX,maxY" bounding box of ents, whose
-// lon/lat are read by coord.
+// lon/lat are read by coord. Points at (0,0) are left out.
 func bboxString[T any](ents []T, coord func(T) (lon float64, lat float64)) string {
 	bbox := geom.NewBounds(geom.XY)
 	for _, ent := range ents {
 		lon, lat := coord(ent)
+		// A 3.x vehicle docked at a station need not have a position.
+		if lon == 0 && lat == 0 {
+			continue
+		}
 		bbox.Extend(geom.NewPoint(geom.XY).MustSetCoords(geom.Coord{lon, lat}))
 	}
 	return fmt.Sprintf("%0.5f,%0.5f,%0.5f,%0.5f", bbox.Min(0), bbox.Min(1), bbox.Max(0), bbox.Max(1))

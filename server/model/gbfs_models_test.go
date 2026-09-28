@@ -42,3 +42,28 @@ func TestGbfsStationInformation_Status(t *testing.T) {
 		assert.Len(t, docks[0].VehicleTypes(), 1)
 	}
 }
+
+// A null entry in a feed's vehicle types or plans is skipped, not dereferenced.
+func TestGbfsStationStatus_NullEntries(t *testing.T) {
+	feed := &GbfsFeed{GbfsFeed: &gbfs.GbfsFeed{
+		StationStatus: []*gbfs.StationStatus{{
+			StationID:             tt.NewString("s1"),
+			VehicleTypesAvailable: []*gbfs.VehicleTypeAvailable{{VehicleTypeID: tt.NewString("bike")}},
+			VehicleDocksAvailable: []*gbfs.VehicleDockAvailable{{VehicleTypeIDs: tt.NewStrings([]string{"bike"})}},
+		}},
+		VehicleTypes: []*gbfs.VehicleType{nil, {
+			VehicleTypeID:        tt.NewString("bike"),
+			DefaultPricingPlanID: tt.NewString("p1"),
+			PricingPlanIDs:       tt.NewStrings([]string{"p1"}),
+		}},
+		Plans: []*gbfs.SystemPricingPlan{nil, {PlanID: tt.NewString("p1")}},
+	}}
+	s := GbfsStationInformation{Feed: feed, StationInformation: &gbfs.StationInformation{StationID: tt.NewString("s1")}}
+	st := s.Status()
+	vt := st.VehicleTypesAvailable()[0].VehicleType()
+	if assert.NotNil(t, vt) {
+		assert.NotNil(t, vt.DefaultPricingPlan())
+		assert.Len(t, vt.PricingPlans(), 1)
+	}
+	assert.Len(t, st.VehicleDocksAvailable()[0].VehicleTypes(), 1)
+}
