@@ -115,6 +115,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Resu
 		}
 		if len(si.Languages.Val) > 0 {
 			si.Language = tt.NewString(si.Languages.Val[0])
+			putFirst(feed, si.Language.Val)
 		}
 	}
 
@@ -206,7 +207,7 @@ func fetchAll(ctx context.Context, sf SystemFeeds, reqOpts ...request.RequestOpt
 		case fileStationStatus:
 			e := StationStatusFile{}
 			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
-			ret.StationStatus = e.Data.Stations
+			ret.StationStatus = e.statuses()
 		case fileFreeBikeStatus:
 			e := GbfsFeedData{}
 			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
@@ -216,7 +217,7 @@ func fetchAll(ctx context.Context, sf SystemFeeds, reqOpts ...request.RequestOpt
 		case fileVehicleStatus:
 			e := VehicleStatusFile{}
 			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)
-			ret.Bikes = e.Data.Vehicles
+			ret.Bikes = e.vehicles()
 		case fileSystemHours:
 			e := GbfsFeedData{}
 			_, err = fetchUnmarshal(v.URL.Val, &e, reqOpts...)

@@ -58,19 +58,38 @@ func TestSystemFileUnmarshalJSON(t *testing.T) {
 	})
 }
 
-func TestGbfsFetch(t *testing.T) {
-	ts := httptest.NewServer(NewTestGbfsServer("en", testdata.Path("server/gbfs")))
-	defer ts.Close()
+// fetchSystem fetches the system a discovery file lists, failing t if there is
+// none.
+func fetchSystem(t *testing.T, url string) *GbfsFeed {
+	t.Helper()
 	opts := Options{}
-	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
+	opts.FeedURL = url
 	opts.AllowHTTPFetchUnfiltered = true
 	feed, _, err := Fetch(context.Background(), nil, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if assert.NotNil(t, feed) {
-		assert.Equal(t, "Bay Wheels", feed.SystemInformation.Name.Default())
+	if feed == nil {
+		t.Fatal("no system")
 	}
+	return feed
+}
+
+// listedFeeds returns the files a 1.x/2.x discovery file lists for lang.
+func listedFeeds(t *testing.T, url string, lang string) *SystemFeeds {
+	t.Helper()
+	listed := SystemFile{}
+	if _, err := fetchUnmarshal(url, &listed, request.WithAllowHTTPUnfiltered); err != nil {
+		t.Fatal(err)
+	}
+	return listed.Data[lang]
+}
+
+func TestGbfsFetch(t *testing.T) {
+	ts := httptest.NewServer(NewTestGbfsServer("en", testdata.Path("server/gbfs")))
+	defer ts.Close()
+	feed := fetchSystem(t, ts.URL+"/gbfs.json")
+	assert.Equal(t, "Bay Wheels", feed.SystemInformation.Name.Default())
 }
 
 // A 1.x/2.x feed's per-language file sets merge into one system: text from
@@ -78,10 +97,7 @@ func TestGbfsFetch(t *testing.T) {
 func TestFetch_Languages(t *testing.T) {
 	en := httptest.NewServer(NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer en.Close()
-	listed := SystemFile{}
-	if _, err := fetchUnmarshal(en.URL+"/gbfs.json", &listed, request.WithAllowHTTPUnfiltered); err != nil {
-		t.Fatal(err)
-	}
+	listed := listedFeeds(t, en.URL+"/gbfs.json", "en")
 
 	// French and Dutch text as a 1.x/2.x file publishes it: plain strings. The
 	// French system_information claims English, as Citi Bike's does. Neither
@@ -120,25 +136,16 @@ func TestFetch_Languages(t *testing.T) {
 
 	// Listed in reverse: a small Go map iterates as a rotation of the order its
 	// keys went in, so reversed keys never come out sorted by accident.
+	js := func(v any) []byte {
+		b, _ := json.Marshal(v)
+		return b
+	}
 	discovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body := map[string][]byte{}
-		for lang, sf := range map[string]*SystemFeeds{"nl": nl, "fr": fr, "en": listed.Data["en"]} {
-			body[lang], _ = json.Marshal(sf)
-		}
-		fmt.Fprintf(w, `{"data":{"nl":%s,"fr":%s,"en":%s}}`, body["nl"], body["fr"], body["en"])
+		fmt.Fprintf(w, `{"data":{"nl":%s,"fr":%s,"en":%s}}`, js(nl), js(fr), js(listed))
 	}))
 	defer discovery.Close()
 
-	opts := Options{}
-	opts.FeedURL = discovery.URL
-	opts.AllowHTTPFetchUnfiltered = true
-	feed, _, err := Fetch(context.Background(), nil, opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !assert.NotNil(t, feed) {
-		return
-	}
+	feed := fetchSystem(t, discovery.URL)
 	assert.Equal(t, []string{"en", "fr", "nl"}, feed.SystemInformation.Languages.Val)
 	assert.Equal(t, "en", feed.SystemInformation.Language.Val)
 	assert.Equal(t, LocalizedString{
@@ -161,18 +168,7 @@ func TestFetch_Languages(t *testing.T) {
 func TestFetch_LanguageFallback(t *testing.T) {
 	en := httptest.NewServer(NewTestGbfsServer("en", testdata.Path("server/gbfs")))
 	defer en.Close()
-	listed := SystemFile{}
-	if _, err := fetchUnmarshal(en.URL+"/gbfs.json", &listed, request.WithAllowHTTPUnfiltered); err != nil {
-		t.Fatal(err)
-	}
-	enURL := func(name string) string {
-		for _, f := range listed.Data["en"].Feeds {
-			if f.Name.Val == name {
-				return f.URL.Val
-			}
-		}
-		return ""
-	}
+	listed := listedFeeds(t, en.URL+"/gbfs.json", "en")
 	mux := http.NewServeMux()
 	other := httptest.NewServer(mux)
 	defer other.Close()
@@ -192,23 +188,13 @@ func TestFetch_LanguageFallback(t *testing.T) {
 			json.NewEncoder(w).Encode(SystemFile{Data: data})
 		}))
 		defer discovery.Close()
-		opts := Options{}
-		opts.FeedURL = discovery.URL
-		opts.AllowHTTPFetchUnfiltered = true
-		feed, _, err := Fetch(context.Background(), nil, opts)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if feed == nil {
-			t.Fatal("no system")
-		}
-		return feed
+		return fetchSystem(t, discovery.URL)
 	}
 
 	t.Run("first language has no system_information", func(t *testing.T) {
 		feed := fetch(t, map[string]*SystemFeeds{
 			"ca": feeds(map[string]string{fileSystemInformation: other.URL + "/missing.json"}),
-			"en": listed.Data["en"],
+			"en": listed,
 		})
 		assert.Equal(t, []string{"en"}, feed.SystemInformation.Languages.Val)
 		assert.NotEmpty(t, feed.StationInformation)
@@ -220,9 +206,9 @@ func TestFetch_LanguageFallback(t *testing.T) {
 			"ca": feeds(map[string]string{
 				fileSystemInformation:  other.URL + "/ca/system_information.json",
 				fileStationInformation: other.URL + "/missing.json",
-				fileStationStatus:      enURL(fileStationStatus),
+				fileStationStatus:      en.URL + "/station_status.json",
 			}),
-			"en": listed.Data["en"],
+			"en": listed,
 		})
 		assert.Equal(t, []string{"ca", "en"}, feed.SystemInformation.Languages.Val)
 		if assert.NotEmpty(t, feed.StationInformation) {
@@ -237,16 +223,7 @@ func TestFetch_LanguageFallback(t *testing.T) {
 func TestFetch_V3(t *testing.T) {
 	ts := httptest.NewServer(NewTestGbfsServer("", testdata.Path("server/gbfs-v3")))
 	defer ts.Close()
-	opts := Options{}
-	opts.FeedURL = ts.URL + "/gbfs.json"
-	opts.AllowHTTPFetchUnfiltered = true
-	feed, _, err := Fetch(context.Background(), nil, opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !assert.NotNil(t, feed) {
-		return
-	}
+	feed := fetchSystem(t, ts.URL+"/gbfs.json")
 	assert.Equal(t, "en", feed.SystemInformation.Language.Val)
 	assert.Equal(t, LocalizedString{{Text: "Example Bike Rental", Language: "en"}, {Text: "Location de vélos", Language: "fr"}}, feed.SystemInformation.Name)
 	if assert.Len(t, feed.StationInformation, 1) {

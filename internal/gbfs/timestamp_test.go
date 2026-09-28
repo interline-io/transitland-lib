@@ -15,7 +15,7 @@ func TestTimestamp_UnmarshalJSON(t *testing.T) {
 		valid  bool
 	}{
 		{"posix", `1689593653`, 1689593653, true},
-		{"posix float", `1689593653.5`, 1689593653, true},
+		{"fractional seconds", `1689593653.5`, 0, false},
 		{"posix exponent", `1.689593653e9`, 1689593653, true},
 		{"rfc3339 offset", `"2023-07-17T13:34:13+02:00"`, 1689593653, true},
 		{"rfc3339 fraction", `"2023-07-17T11:34:13.473623459Z"`, 1689593653, true},

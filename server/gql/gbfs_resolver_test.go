@@ -73,19 +73,11 @@ func TestGbfsBikeResolver(t *testing.T) {
 				  available_until
 				}
 			}`,
-			selector:     "bikes.#.bike_id",
-			selectExpect: []string{"973a5c94"},
-		},
-		{
-			name: "3.x times as POSIX seconds",
-			query: `{
-				bikes(where: {near:{lon: -73.61, lat: 45.51, radius:100}}) {
-				  last_reported
-				  available_until
-				}
-			}`,
-			selector:     "bikes.#.available_until",
-			selectExpect: []string{"1689609600"},
+			sel: []testcaseSelector{
+				{selector: "bikes.#.bike_id", expect: []string{"973a5c94"}},
+				{selector: "bikes.#.last_reported", expect: []string{"1689593653"}},
+				{selector: "bikes.#.available_until", expect: []string{"1689609600"}},
+			},
 		},
 		{
 			name: "limit 5",
@@ -211,77 +203,23 @@ func TestGbfsStationResolver(t *testing.T) {
 				}
 			  }
 			`,
-			selector:     "docks.0.status.num_bikes_available",
-			selectExpect: []string{"11"},
+			sel: []testcaseSelector{
+				{selector: "docks.0.status.num_bikes_available", expect: []string{"11"}},
+				{selector: "docks.0.status.last_reported", expect: []string{"1663292828"}},
+			},
 		},
 		{
-			name: "status last_reported",
-			query: `{
-				docks(where: {near: {lon: -121.908666, lat: 37.336289, radius: 100}}) {
-				  status {
-					last_reported
-				  }
-				}
-			  }
-			`,
-			selector:     "docks.0.status.last_reported",
-			selectExpect: []string{"1663292828"},
-		},
-		{
-			name: "3.x name in the default language",
+			name: "3.x station",
 			query: `{
 				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
 				  name
 				  short_name
-				}
-			  }
-			`,
-			selector:     "docks.#.name",
-			selectExpect: []string{"Main Street"},
-		},
-		{
-			name: "3.x parking_hoop as Int",
-			query: `{
-				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
 				  parking_hoop
-				}
-			  }
-			`,
-			selector:     "docks.#.parking_hoop",
-			selectExpect: []string{"1"},
-		},
-		{
-			name: "3.x status",
-			query: `{
-				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
 				  status {
 					num_bikes_available
 					num_bikes_disabled
 					last_reported
 				  }
-				}
-			  }
-			`,
-			selector:     "docks.0.status.last_reported",
-			selectExpect: []string{"1689593653"},
-		},
-		{
-			name: "3.x status counts",
-			query: `{
-				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
-				  status {
-					num_bikes_available
-				  }
-				}
-			  }
-			`,
-			selector:     "docks.0.status.num_bikes_available",
-			selectExpect: []string{"6"},
-		},
-		{
-			name: "3.x system in the default language",
-			query: `{
-				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
 				  feed {
 					system_information {
 					  name
@@ -291,23 +229,16 @@ func TestGbfsStationResolver(t *testing.T) {
 				}
 			  }
 			`,
-			selector:     "docks.0.feed.system_information.name",
-			selectExpect: []string{"Example Bike Rental"},
-		},
-		{
-			name: "3.x system language",
-			query: `{
-				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
-				  feed {
-					system_information {
-					  language
-					}
-				  }
-				}
-			  }
-			`,
-			selector:     "docks.0.feed.system_information.language",
-			selectExpect: []string{"en"},
+			sel: []testcaseSelector{
+				{selector: "docks.#.name", expect: []string{"Main Street"}},
+				{selector: "docks.#.short_name", expect: []string{"MS"}},
+				{selector: "docks.#.parking_hoop", expect: []string{"1"}},
+				{selector: "docks.0.status.num_bikes_available", expect: []string{"6"}},
+				{selector: "docks.0.status.num_bikes_disabled", expect: []string{"1"}},
+				{selector: "docks.0.status.last_reported", expect: []string{"1689593653"}},
+				{selector: "docks.0.feed.system_information.name", expect: []string{"Example Bike Rental"}},
+				{selector: "docks.0.feed.system_information.language", expect: []string{"en"}},
+			},
 		},
 		{
 			name: "limit 5",

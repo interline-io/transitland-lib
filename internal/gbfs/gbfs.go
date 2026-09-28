@@ -89,15 +89,63 @@ type StationInformationFile struct {
 
 type StationStatusFile struct {
 	Data struct {
-		Stations []*StationStatus
+		Stations []*stationStatusRow
 	}
+}
+
+// stationStatusRow is a station_status row as published, which in 3.x counts
+// num_vehicles_* where 1.x/2.x count num_bikes_*.
+type stationStatusRow struct {
+	StationStatus
+	NumVehiclesAvailable tt.Int `json:"num_vehicles_available"`
+	NumVehiclesDisabled  tt.Int `json:"num_vehicles_disabled"`
+}
+
+// statuses returns the file's stations, with 3.x counts in the 1.x/2.x fields.
+func (f *StationStatusFile) statuses() []*StationStatus {
+	var ret []*StationStatus
+	for _, row := range f.Data.Stations {
+		if row == nil {
+			continue
+		}
+		if !row.NumBikesAvailable.Valid {
+			row.NumBikesAvailable = row.NumVehiclesAvailable
+		}
+		if !row.NumBikesDisabled.Valid {
+			row.NumBikesDisabled = row.NumVehiclesDisabled
+		}
+		ret = append(ret, &row.StationStatus)
+	}
+	return ret
 }
 
 // VehicleStatusFile is a 3.x vehicle_status file, the 1.x/2.x free_bike_status.
 type VehicleStatusFile struct {
 	Data struct {
-		Vehicles []*FreeBikeStatus `json:"vehicles"`
+		Vehicles []*vehicleStatusRow `json:"vehicles"`
 	}
+}
+
+// vehicleStatusRow is a vehicle_status row as published, with vehicle_id where
+// 1.x/2.x has bike_id.
+type vehicleStatusRow struct {
+	FreeBikeStatus
+	VehicleID tt.String `json:"vehicle_id"`
+}
+
+// vehicles returns the file's vehicles, with the 3.x id in the 1.x/2.x field.
+func (f *VehicleStatusFile) vehicles() []*FreeBikeStatus {
+	var ret []*FreeBikeStatus
+	for _, row := range f.Data.Vehicles {
+		if row == nil {
+			continue
+		}
+		if !row.BikeID.Valid {
+			row.BikeID = row.VehicleID
+		}
+		ret = append(ret, &row.FreeBikeStatus)
+	}
+	return ret
 }
 
 ///////////////
@@ -185,26 +233,6 @@ type StationStatus struct {
 	VehicleDocksAvailable []*VehicleDockAvailable `json:"vehicle_docks_available,omitempty"`
 }
 
-// UnmarshalJSON also reads the 3.x num_vehicles_available and num_vehicles_disabled.
-func (e *StationStatus) UnmarshalJSON(b []byte) error {
-	type plain StationStatus
-	v := struct {
-		*plain
-		NumVehiclesAvailable tt.Int `json:"num_vehicles_available"`
-		NumVehiclesDisabled  tt.Int `json:"num_vehicles_disabled"`
-	}{plain: (*plain)(e)}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	if !e.NumBikesAvailable.Valid {
-		e.NumBikesAvailable = v.NumVehiclesAvailable
-	}
-	if !e.NumBikesDisabled.Valid {
-		e.NumBikesDisabled = v.NumVehiclesDisabled
-	}
-	return nil
-}
-
 type VehicleTypeAvailable struct {
 	VehicleTypeID     tt.String `json:"vehicle_type_id,omitempty"`
 	Count             tt.Int    `json:"count,omitempty"`
@@ -283,22 +311,6 @@ type FreeBikeStatus struct {
 	VehicleEquipment   tt.Strings  `json:"vehicle_equipment,omitempty"`
 	AvailableUntil     Timestamp   `json:"available_until,omitempty"`
 	RentalURIs         *RentalURIs `json:"rental_uris,omitempty"`
-}
-
-// UnmarshalJSON also reads the 3.x vehicle_id.
-func (e *FreeBikeStatus) UnmarshalJSON(b []byte) error {
-	type plain FreeBikeStatus
-	v := struct {
-		*plain
-		VehicleID tt.String `json:"vehicle_id"`
-	}{plain: (*plain)(e)}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	if !e.BikeID.Valid {
-		e.BikeID = v.VehicleID
-	}
-	return nil
 }
 
 type SystemHour struct {

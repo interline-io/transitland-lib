@@ -3,6 +3,8 @@ package gbfs
 import (
 	"encoding/json"
 	"io"
+
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // LocalizedText is a text field in one language.
@@ -23,9 +25,9 @@ func (l *LocalizedString) UnmarshalJSON(b []byte) error {
 	switch {
 	case string(b) == "null":
 		*l = nil
-	case json.Unmarshal(b, &s) == nil:
+	case b[0] == '"' && json.Unmarshal(b, &s) == nil:
 		*l = LocalizedString{{Text: s}}
-	case json.Unmarshal(b, &v) == nil:
+	case b[0] == '[' && json.Unmarshal(b, &v) == nil:
 		*l = v
 	default:
 		*l = LocalizedString{{Text: string(b)}}
@@ -43,18 +45,20 @@ func (l LocalizedString) Default() string {
 
 // MarshalGQL writes the text in the system's default language.
 func (l LocalizedString) MarshalGQL(w io.Writer) {
-	if len(l) == 0 {
-		w.Write([]byte("null"))
-		return
+	var s tt.String
+	if len(l) > 0 {
+		s = tt.NewString(l.Default())
 	}
-	b, _ := json.Marshal(l.Default())
-	w.Write(b)
+	s.MarshalGQL(w)
 }
 
 // UnmarshalGQL reads a string as untagged text.
 func (l *LocalizedString) UnmarshalGQL(v any) error {
-	s, _ := v.(string)
-	*l = LocalizedString{{Text: s}}
+	var s tt.String
+	if err := s.UnmarshalGQL(v); err != nil {
+		return err
+	}
+	*l = LocalizedString{{Text: s.Val}}
 	return nil
 }
 
@@ -114,6 +118,22 @@ func addTranslations(f *GbfsFeed, o *GbfsFeed) {
 	eachText(f, func(key string, fields []*LocalizedString) {
 		for i, l := range src[key] {
 			*fields[i] = append(*fields[i], *l...)
+		}
+	})
+}
+
+// putFirst moves each field's text in lang to the front, where Default reads
+// it.
+func putFirst(f *GbfsFeed, lang string) {
+	eachText(f, func(_ string, fields []*LocalizedString) {
+		for _, l := range fields {
+			for i, t := range *l {
+				if t.Language == lang {
+					copy((*l)[1:i+1], (*l)[:i])
+					(*l)[0] = t
+					break
+				}
+			}
 		}
 	})
 }

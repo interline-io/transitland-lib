@@ -104,3 +104,15 @@ func TestAddTranslations(t *testing.T) {
 	assert.Equal(t, LocalizedString{{Text: "Station", Language: "en"}, {Text: "Gare", Language: "fr"}}, f.StationInformation[0].Name)
 	assert.Len(t, f.StationInformation, 2)
 }
+
+// Default reads the first entry, so the system's language is moved there; a
+// field without text in that language keeps its order.
+func TestPutFirst(t *testing.T) {
+	f := &GbfsFeed{StationInformation: []*StationInformation{{
+		Name:      LocalizedString{{Text: "Main Street", Language: "en"}, {Text: "Rue principale", Language: "fr"}},
+		ShortName: LocalizedString{{Text: "MS", Language: "en"}},
+	}}}
+	putFirst(f, "fr")
+	assert.Equal(t, LocalizedString{{Text: "Rue principale", Language: "fr"}, {Text: "Main Street", Language: "en"}}, f.StationInformation[0].Name)
+	assert.Equal(t, LocalizedString{{Text: "MS", Language: "en"}}, f.StationInformation[0].ShortName)
+}

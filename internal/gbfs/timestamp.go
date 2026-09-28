@@ -1,9 +1,7 @@
 package gbfs
 
 import (
-	"encoding/json"
 	"io"
-	"time"
 
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -14,19 +12,17 @@ type Timestamp struct {
 	tt.Int
 }
 
-// UnmarshalJSON accepts POSIX seconds or an RFC3339 string. Anything else is
-// left unset rather than failing the whole file.
+// UnmarshalJSON leaves an unparseable value unset rather than failing the
+// whole file.
 func (r *Timestamp) UnmarshalJSON(b []byte) error {
-	var n json.Number
-	var s string
-	if json.Unmarshal(b, &n) == nil {
-		if v, err := n.Float64(); err == nil {
-			r.Int = tt.NewInt(int(v))
-		}
-	} else if json.Unmarshal(b, &s) == nil {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			r.Int = tt.NewInt(int(t.Unix()))
-		}
+	if r.Int.UnmarshalJSON(b) == nil {
+		return nil
+	}
+	var t tt.Time
+	if t.UnmarshalJSON(b) == nil && t.Valid {
+		r.Int = tt.NewInt(int(t.Val.Unix()))
+	} else {
+		r.Int = tt.Int{}
 	}
 	return nil
 }
