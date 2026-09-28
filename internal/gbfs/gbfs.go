@@ -1,7 +1,9 @@
 package gbfs
 
 import (
+	"bytes"
 	"encoding/json"
+	"slices"
 
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -38,6 +40,8 @@ type SystemFeed struct {
 
 type SystemFile struct {
 	Data map[string]*SystemFeeds `json:"data,omitempty"`
+	// Keys are Data's keys, in the order the discovery file lists them.
+	Keys []string `json:"-"`
 }
 
 // UnmarshalJSON accepts both the GBFS 1.x/2.x shape, where `data` is a map
@@ -67,6 +71,7 @@ func (s *SystemFile) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		s.Data = map[string]*SystemFeeds{"": &sf}
+		s.Keys = []string{""}
 		return nil
 	}
 	var langMap map[string]*SystemFeeds
@@ -74,7 +79,32 @@ func (s *SystemFile) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	s.Data = langMap
+	s.Keys = objectKeys(raw.Data)
 	return nil
+}
+
+// objectKeys returns the keys of a JSON object in the order it lists them,
+// each once.
+func objectKeys(b []byte) []string {
+	var ret []string
+	dec := json.NewDecoder(bytes.NewReader(b))
+	if _, err := dec.Token(); err != nil {
+		return nil
+	}
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			break
+		}
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
+			break
+		}
+		if key, ok := tok.(string); ok && !slices.Contains(ret, key) {
+			ret = append(ret, key)
+		}
+	}
+	return ret
 }
 
 type SystemInformationFile struct {
@@ -89,8 +119,63 @@ type StationInformationFile struct {
 
 type StationStatusFile struct {
 	Data struct {
-		Stations []*StationStatus
+		Stations []*stationStatusRow
 	}
+}
+
+// stationStatusRow is a station_status row as published, which in 3.x counts
+// num_vehicles_* where 1.x/2.x count num_bikes_*.
+type stationStatusRow struct {
+	StationStatus
+	NumVehiclesAvailable tt.Int `json:"num_vehicles_available"`
+	NumVehiclesDisabled  tt.Int `json:"num_vehicles_disabled"`
+}
+
+// statuses returns the file's stations, with 3.x counts in the 1.x/2.x fields.
+func (f *StationStatusFile) statuses() []*StationStatus {
+	var ret []*StationStatus
+	for _, row := range f.Data.Stations {
+		if row == nil {
+			continue
+		}
+		if !row.NumBikesAvailable.Valid {
+			row.NumBikesAvailable = row.NumVehiclesAvailable
+		}
+		if !row.NumBikesDisabled.Valid {
+			row.NumBikesDisabled = row.NumVehiclesDisabled
+		}
+		ret = append(ret, &row.StationStatus)
+	}
+	return ret
+}
+
+// VehicleStatusFile is a 3.x vehicle_status file, the 1.x/2.x free_bike_status.
+type VehicleStatusFile struct {
+	Data struct {
+		Vehicles []*vehicleStatusRow `json:"vehicles"`
+	}
+}
+
+// vehicleStatusRow is a vehicle_status row as published, with vehicle_id where
+// 1.x/2.x has bike_id.
+type vehicleStatusRow struct {
+	FreeBikeStatus
+	VehicleID tt.String `json:"vehicle_id"`
+}
+
+// vehicles returns the file's vehicles, with the 3.x id in the 1.x/2.x field.
+func (f *VehicleStatusFile) vehicles() []*FreeBikeStatus {
+	var ret []*FreeBikeStatus
+	for _, row := range f.Data.Vehicles {
+		if row == nil {
+			continue
+		}
+		if !row.BikeID.Valid {
+			row.BikeID = row.VehicleID
+		}
+		ret = append(ret, &row.FreeBikeStatus)
+	}
+	return ret
 }
 
 ///////////////
@@ -98,25 +183,26 @@ type StationStatusFile struct {
 // Main types
 
 type SystemInformation struct {
-	SystemID           tt.String   `json:"system_id,omitempty"`
-	Language           tt.String   `json:"language,omitempty"`
-	Name               tt.String   `json:"name,omitempty"`
-	ShortName          tt.String   `json:"short_name,omitempty"`
-	Operator           tt.String   `json:"operator,omitempty"`
-	URL                tt.String   `json:"url,omitempty"`
-	PurchaseURL        tt.String   `json:"purchase_url,omitempty"`
-	StartDate          tt.Date     `json:"start_date,omitempty"`
-	PhoneNumber        tt.String   `json:"phone_number,omitempty"`
-	Email              tt.String   `json:"email,omitempty"`
-	FeedContactEmail   tt.String   `json:"feed_contact_email,omitempty"`
-	Timezone           tt.String   `json:"timezone,omitempty"`
-	LicenseURL         tt.String   `json:"license_url,omitempty"`
-	TermsURL           tt.String   `json:"terms_url,omitempty"`
-	TermsLastUpdated   tt.Date     `json:"terms_last_updated,omitempty"`
-	PrivacyURL         tt.String   `json:"privacy_url,omitempty"`
-	PrivacyLastUpdated tt.Date     `json:"privacy_last_updated,omitempty"`
-	BrandAssets        *BrandAsset `json:"brand_assets,omitempty"`
-	RentalApps         *RentalApps `json:"rental_apps,omitempty"`
+	SystemID           tt.String       `json:"system_id,omitempty"`
+	Language           tt.String       `json:"language,omitempty"`
+	Languages          tt.Strings      `json:"languages,omitempty"`
+	Name               LocalizedString `json:"name,omitempty"`
+	ShortName          LocalizedString `json:"short_name,omitempty"`
+	Operator           LocalizedString `json:"operator,omitempty"`
+	URL                tt.String       `json:"url,omitempty"`
+	PurchaseURL        tt.String       `json:"purchase_url,omitempty"`
+	StartDate          tt.Date         `json:"start_date,omitempty"`
+	PhoneNumber        tt.String       `json:"phone_number,omitempty"`
+	Email              tt.String       `json:"email,omitempty"`
+	FeedContactEmail   tt.String       `json:"feed_contact_email,omitempty"`
+	Timezone           tt.String       `json:"timezone,omitempty"`
+	LicenseURL         tt.String       `json:"license_url,omitempty"`
+	TermsURL           LocalizedString `json:"terms_url,omitempty"`
+	TermsLastUpdated   tt.Date         `json:"terms_last_updated,omitempty"`
+	PrivacyURL         LocalizedString `json:"privacy_url,omitempty"`
+	PrivacyLastUpdated tt.Date         `json:"privacy_last_updated,omitempty"`
+	BrandAssets        *BrandAsset     `json:"brand_assets,omitempty"`
+	RentalApps         *RentalApps     `json:"rental_apps,omitempty"`
 }
 
 type RentalApps struct {
@@ -141,8 +227,8 @@ type BrandAsset struct {
 
 type StationInformation struct {
 	StationID         tt.String         `json:"station_id,omitempty"`
-	Name              tt.String         `json:"name,omitempty"`
-	ShortName         tt.String         `json:"short_name,omitempty"`
+	Name              LocalizedString   `json:"name,omitempty"`
+	ShortName         LocalizedString   `json:"short_name,omitempty"`
 	Lat               tt.Float          `json:"lat,omitempty"`
 	Lon               tt.Float          `json:"lon,omitempty"`
 	Address           tt.String         `json:"address,omitempty"`
@@ -153,7 +239,7 @@ type StationInformation struct {
 	IsVirtualStation  tt.Bool           `json:"is_virtual_station,omitempty"`
 	StationArea       tt.Geometry       `json:"station_area,omitempty"`
 	ParkingType       tt.String         `json:"parking_type,omitempty"`
-	ParkingHoop       tt.Int            `json:"parking_hoop,omitempty"`
+	ParkingHoop       tt.Bool           `json:"parking_hoop,omitempty"`
 	ContactPhone      tt.String         `json:"contact_phone,omitempty"`
 	Capacity          tt.Int            `json:"capacity,omitempty"`
 	VehicleCapacity   map[string]tt.Int `json:"vehicle_capacity,omitempty"`
@@ -172,7 +258,7 @@ type StationStatus struct {
 	IsReturning           tt.Bool                 `json:"is_returning,omitempty"`
 	IsRenting             tt.Bool                 `json:"is_renting,omitempty"`
 	IsInstalled           tt.Bool                 `json:"is_installed,omitempty"`
-	LastReported          tt.Int                  `json:"last_reported,omitempty"`
+	LastReported          Timestamp               `json:"last_reported,omitempty"`
 	VehicleTypesAvailable []*VehicleTypeAvailable `json:"vehicle_types_available,omitempty"`
 	VehicleDocksAvailable []*VehicleDockAvailable `json:"vehicle_docks_available,omitempty"`
 }
@@ -197,32 +283,32 @@ type SystemVersion struct {
 }
 
 type VehicleType struct {
-	VehicleTypeID        tt.String      `json:"vehicle_type_id,omitempty"`
-	FormFactor           tt.String      `json:"form_factor,omitempty"`
-	RiderCapacity        tt.Int         `json:"rider_capacity,omitempty"`
-	CargoVolumeCapacity  tt.Int         `json:"cargo_volume_capacity,omitempty"`
-	CargoLoadCapacity    tt.Int         `json:"cargo_load_capacity,omitempty"`
-	PropulsionType       tt.String      `json:"propulsion_type,omitempty"`
-	EcoLabel             tt.String      `json:"eco_label,omitempty"`
-	CountryCode          tt.String      `json:"country_code,omitempty"`
-	EcoSticker           tt.String      `json:"eco_sticker,omitempty"`
-	MaxRangeMeters       tt.Float       `json:"max_range_meters,omitempty"`
-	Name                 tt.String      `json:"name,omitempty"`
-	VehicleAccessories   tt.Strings     `json:"vehicle_accessories,omitempty"`
-	GCO2Km               tt.Int         `json:"g_CO2_km,omitempty"`
-	VehicleImage         tt.String      `json:"vehicle_image,omitempty"`
-	Make                 tt.String      `json:"make,omitempty"`
-	Model                tt.String      `json:"model,omitempty"`
-	Color                tt.String      `json:"color,omitempty"`
-	WheelCount           tt.Int         `json:"wheel_count,omitempty"`
-	MaxPermittedSpeed    tt.Int         `json:"max_permitted_speed,omitempty"`
-	RatedPower           tt.Int         `json:"rated_power,omitempty"`
-	DefaultReserveTime   tt.Int         `json:"default_reserve_time,omitempty"`
-	ReturnConstraint     tt.String      `json:"return_constraint,omitempty"`
-	DefaultPricingPlanID tt.String      `json:"default_pricing_plan_id,omitempty"`
-	PricingPlanIDs       tt.Strings     `json:"pricing_plan_ids,omitempty"`
-	VehicleAssets        *VehicleAssets `json:"vehicle_assets,omitempty"`
-	RentalURIs           *RentalURIs    `json:"rental_uris,omitempty"`
+	VehicleTypeID        tt.String       `json:"vehicle_type_id,omitempty"`
+	FormFactor           tt.String       `json:"form_factor,omitempty"`
+	RiderCapacity        tt.Int          `json:"rider_capacity,omitempty"`
+	CargoVolumeCapacity  tt.Int          `json:"cargo_volume_capacity,omitempty"`
+	CargoLoadCapacity    tt.Int          `json:"cargo_load_capacity,omitempty"`
+	PropulsionType       tt.String       `json:"propulsion_type,omitempty"`
+	EcoLabel             tt.String       `json:"eco_label,omitempty"`
+	CountryCode          tt.String       `json:"country_code,omitempty"`
+	EcoSticker           tt.String       `json:"eco_sticker,omitempty"`
+	MaxRangeMeters       tt.Float        `json:"max_range_meters,omitempty"`
+	Name                 LocalizedString `json:"name,omitempty"`
+	VehicleAccessories   tt.Strings      `json:"vehicle_accessories,omitempty"`
+	GCO2Km               tt.Int          `json:"g_CO2_km,omitempty"`
+	VehicleImage         tt.String       `json:"vehicle_image,omitempty"`
+	Make                 LocalizedString `json:"make,omitempty"`
+	Model                LocalizedString `json:"model,omitempty"`
+	Color                tt.String       `json:"color,omitempty"`
+	WheelCount           tt.Int          `json:"wheel_count,omitempty"`
+	MaxPermittedSpeed    tt.Int          `json:"max_permitted_speed,omitempty"`
+	RatedPower           tt.Int          `json:"rated_power,omitempty"`
+	DefaultReserveTime   tt.Int          `json:"default_reserve_time,omitempty"`
+	ReturnConstraint     tt.String       `json:"return_constraint,omitempty"`
+	DefaultPricingPlanID tt.String       `json:"default_pricing_plan_id,omitempty"`
+	PricingPlanIDs       tt.Strings      `json:"pricing_plan_ids,omitempty"`
+	VehicleAssets        *VehicleAssets  `json:"vehicle_assets,omitempty"`
+	RentalURIs           *RentalURIs     `json:"rental_uris,omitempty"`
 }
 
 type VehicleAssets struct {
@@ -246,14 +332,14 @@ type FreeBikeStatus struct {
 	IsReserved         tt.Bool     `json:"is_reserved,omitempty"`
 	IsDisabled         tt.Bool     `json:"is_disabled,omitempty"`
 	VehicleTypeID      tt.String   `json:"vehicle_type_id,omitempty"`
-	LastReported       tt.Int      `json:"last_reported,omitempty"`
+	LastReported       Timestamp   `json:"last_reported,omitempty"`
 	CurrentRangeMeters tt.Float    `json:"current_range_meters,omitempty"`
 	CurrentFuelPercent tt.Float    `json:"current_fuel_percent,omitempty"`
 	StationID          tt.String   `json:"station_id,omitempty"`
 	HomeStationID      tt.String   `json:"home_station_id,omitempty"`
 	PricingPlanID      tt.String   `json:"pricing_plan_id,omitempty"`
 	VehicleEquipment   tt.Strings  `json:"vehicle_equipment,omitempty"`
-	AvailableUntil     tt.Int      `json:"available_until,omitempty"`
+	AvailableUntil     Timestamp   `json:"available_until,omitempty"`
 	RentalURIs         *RentalURIs `json:"rental_uris,omitempty"`
 }
 
@@ -274,21 +360,21 @@ type SystemCalendar struct {
 }
 
 type SystemRegion struct {
-	RegionID tt.String `json:"region_id,omitempty"`
-	Name     tt.String `json:"name,omitempty"`
+	RegionID tt.String       `json:"region_id,omitempty"`
+	Name     LocalizedString `json:"name,omitempty"`
 }
 
 type SystemPricingPlan struct {
-	PlanID        tt.String    `json:"plan_id,omitempty"`
-	URL           tt.String    `json:"url,omitempty"`
-	Name          tt.String    `json:"name,omitempty"`
-	Currency      tt.String    `json:"currency,omitempty"`
-	Price         tt.Float     `json:"price,omitempty"`
-	IsTaxable     tt.Bool      `json:"is_taxable,omitempty"`
-	Description   tt.String    `json:"description,omitempty"`
-	SurgePricing  tt.Bool      `json:"surge_pricing,omitempty"`
-	PerKmPricing  []*PlanPrice `json:"per_km_pricing,omitempty"`
-	PerMinPricing []*PlanPrice `json:"per_min_pricing,omitempty"`
+	PlanID        tt.String       `json:"plan_id,omitempty"`
+	URL           tt.String       `json:"url,omitempty"`
+	Name          LocalizedString `json:"name,omitempty"`
+	Currency      tt.String       `json:"currency,omitempty"`
+	Price         tt.Float        `json:"price,omitempty"`
+	IsTaxable     tt.Bool         `json:"is_taxable,omitempty"`
+	Description   LocalizedString `json:"description,omitempty"`
+	SurgePricing  tt.Bool         `json:"surge_pricing,omitempty"`
+	PerKmPricing  []*PlanPrice    `json:"per_km_pricing,omitempty"`
+	PerMinPricing []*PlanPrice    `json:"per_min_pricing,omitempty"`
 }
 
 type PlanPrice struct {
@@ -299,20 +385,20 @@ type PlanPrice struct {
 }
 
 type SystemAlert struct {
-	AlertID     tt.String    `json:"alert_id,omitempty"`
-	Type        tt.String    `json:"type,omitempty"`
-	StationIDs  tt.Strings   `json:"station_ids,omitempty"`
-	RegionIDs   tt.Strings   `json:"region_ids,omitempty"`
-	URL         tt.String    `json:"url,omitempty"`
-	Summary     tt.String    `json:"summary,omitempty"`
-	Description tt.String    `json:"description,omitempty"`
-	LastUpdated tt.Int       `json:"last_updated,omitempty"`
-	Times       []*AlertTime `json:"times,omitempty"`
+	AlertID     tt.String       `json:"alert_id,omitempty"`
+	Type        tt.String       `json:"type,omitempty"`
+	StationIDs  tt.Strings      `json:"station_ids,omitempty"`
+	RegionIDs   tt.Strings      `json:"region_ids,omitempty"`
+	URL         LocalizedString `json:"url,omitempty"`
+	Summary     LocalizedString `json:"summary,omitempty"`
+	Description LocalizedString `json:"description,omitempty"`
+	LastUpdated Timestamp       `json:"last_updated,omitempty"`
+	Times       []*AlertTime    `json:"times,omitempty"`
 }
 
 type AlertTime struct {
-	Start tt.Int `json:"start,omitempty"`
-	End   tt.Int `json:"end,omitempty"`
+	Start Timestamp `json:"start,omitempty"`
+	End   Timestamp `json:"end,omitempty"`
 }
 
 type GeofenceZone struct {

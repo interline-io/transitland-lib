@@ -2,6 +2,7 @@ package gbfsfinder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http/httptest"
 	"testing"
@@ -11,12 +12,15 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGbfsFinder(t *testing.T) {
 	gbf := NewFinder(kvcache.NewMemoryStore())
-	testSetupGbfs(gbf)
+	if err := testSetupGbfs(gbf); err != nil {
+		t.Fatal(err)
+	}
 
 	tcs := []struct {
 		p           tlxy.Point
@@ -62,13 +66,42 @@ func testSetupGbfs(gbf model.GbfsFinder) error {
 	opts := gbfs.Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
 	opts.AllowHTTPFetchUnfiltered = true
-	feeds, _, err := gbfs.Fetch(context.Background(), nil, opts)
+	feed, _, err := gbfs.Fetch(context.Background(), nil, opts)
 	if err != nil {
 		return err
 	}
-	for _, feed := range feeds {
-		key := fmt.Sprintf("%s:%s", sourceFeedId, feed.SystemInformation.Language.Val)
-		gbf.AddData(context.Background(), key, feed)
+	if feed == nil {
+		return errors.New("no gbfs system fetched")
 	}
-	return nil
+	return gbf.AddData(context.Background(), sourceFeedId, *feed)
+}
+
+func TestBboxString(t *testing.T) {
+	ents := []tlxy.Point{{Lon: -122.4, Lat: 37.7}, {}, {Lon: -122.3, Lat: 37.8}}
+	got := bboxString(ents, func(e tlxy.Point) (float64, float64) { return e.Lon, e.Lat })
+	assert.Equal(t, "-122.40000,37.70000,-122.30000,37.80000", got)
+}
+
+// A null bike or station is stored without failing and never returned.
+func TestGbfsFinder_NullEntries(t *testing.T) {
+	ctx := context.Background()
+	gbf := NewFinder(kvcache.NewMemoryStore())
+	feed := gbfs.GbfsFeed{
+		Bikes:              []*gbfs.FreeBikeStatus{nil, {BikeID: tt.NewString("b1"), Lon: tt.NewFloat(-122.4), Lat: tt.NewFloat(37.7)}},
+		StationInformation: []*gbfs.StationInformation{nil, {StationID: tt.NewString("s1"), Lon: tt.NewFloat(-122.4), Lat: tt.NewFloat(37.7)}},
+	}
+	if err := gbf.AddData(ctx, "test", feed); err != nil {
+		t.Fatal(err)
+	}
+	near := &model.PointRadius{Lon: -122.4, Lat: 37.7, Radius: 100}
+	bikes, err := gbf.FindBikes(ctx, nil, &model.GbfsBikeRequest{Near: near})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, bikes, 1)
+	docks, err := gbf.FindDocks(ctx, nil, &model.GbfsDockRequest{Near: near})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, docks, 1)
 }

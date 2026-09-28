@@ -11,23 +11,30 @@ import (
 	"github.com/interline-io/transitland-lib/testdata"
 )
 
-func setupGbfs(ctx context.Context, gbf model.GbfsFinder) error {
-	// Setup
-	sourceFeedId := "gbfs-test"
-	ts := httptest.NewServer(gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")))
-	defer ts.Close()
-	opts := gbfs.Options{}
-	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
-	opts.AllowHTTPFetchUnfiltered = true
-	feeds, _, err := gbfs.Fetch(ctx, nil, opts)
-	if err != nil {
-		return err
+// setupGbfs stores the 2.x test system as gbfs-test and the 3.x one as
+// gbfs-v3-test.
+func setupGbfs(t *testing.T, ctx context.Context, gbf model.GbfsFinder) {
+	t.Helper()
+	for feedId, fixture := range map[string]*gbfs.TestGbfsServer{
+		"gbfs-test":    gbfs.NewTestGbfsServer("en", testdata.Path("server/gbfs")),
+		"gbfs-v3-test": gbfs.NewTestGbfsServer("", testdata.Path("server/gbfs-v3")),
+	} {
+		ts := httptest.NewServer(fixture)
+		opts := gbfs.Options{}
+		opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
+		opts.AllowHTTPFetchUnfiltered = true
+		feed, _, err := gbfs.Fetch(ctx, nil, opts)
+		ts.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if feed == nil {
+			t.Fatalf("no gbfs system fetched for %s", feedId)
+		}
+		if err := gbf.AddData(ctx, feedId, *feed); err != nil {
+			t.Fatal(err)
+		}
 	}
-	for _, feed := range feeds {
-		key := fmt.Sprintf("%s:%s", sourceFeedId, feed.SystemInformation.Language.Val)
-		gbf.AddData(ctx, key, feed)
-	}
-	return nil
 }
 
 func TestGbfsBikeResolver(t *testing.T) {
@@ -58,6 +65,21 @@ func TestGbfsBikeResolver(t *testing.T) {
 			selectExpect: []string{"Bay Wheels"},
 		},
 		{
+			name: "3.x vehicle_status",
+			query: `{
+				bikes(where: {near:{lon: -73.61, lat: 45.51, radius:100}}) {
+				  bike_id
+				  last_reported
+				  available_until
+				}
+			}`,
+			sel: []testcaseSelector{
+				{selector: "bikes.#.bike_id", expect: []string{"973a5c94"}},
+				{selector: "bikes.#.last_reported", expect: []string{"1689593653"}},
+				{selector: "bikes.#.available_until", expect: []string{"1689609600"}},
+			},
+		},
+		{
 			name: "limit 5",
 			query: `{
 				bikes(limit:5, where: {near:{lon: -122.396445, lat:37.793250, radius:1000}}) {
@@ -79,7 +101,7 @@ func TestGbfsBikeResolver(t *testing.T) {
 		},
 	}
 	c, cfg := newTestClient(t)
-	setupGbfs(context.Background(), cfg.GbfsFinder)
+	setupGbfs(t, context.Background(), cfg.GbfsFinder)
 	queryTestcases(t, c, testcases)
 }
 
@@ -181,8 +203,42 @@ func TestGbfsStationResolver(t *testing.T) {
 				}
 			  }
 			`,
-			selector:     "docks.0.status.num_bikes_available",
-			selectExpect: []string{"11"},
+			sel: []testcaseSelector{
+				{selector: "docks.0.status.num_bikes_available", expect: []string{"11"}},
+				{selector: "docks.0.status.last_reported", expect: []string{"1663292828"}},
+			},
+		},
+		{
+			name: "3.x station",
+			query: `{
+				docks(where: {near: {lon: -73.6, lat: 45.5, radius: 100}}) {
+				  name
+				  short_name
+				  parking_hoop
+				  status {
+					num_bikes_available
+					num_bikes_disabled
+					last_reported
+				  }
+				  feed {
+					system_information {
+					  name
+					  language
+					}
+				  }
+				}
+			  }
+			`,
+			sel: []testcaseSelector{
+				{selector: "docks.#.name", expect: []string{"Main Street"}},
+				{selector: "docks.#.short_name", expect: []string{"MS"}},
+				{selector: "docks.#.parking_hoop", expect: []string{"1"}},
+				{selector: "docks.0.status.num_bikes_available", expect: []string{"6"}},
+				{selector: "docks.0.status.num_bikes_disabled", expect: []string{"1"}},
+				{selector: "docks.0.status.last_reported", expect: []string{"1689593653"}},
+				{selector: "docks.0.feed.system_information.name", expect: []string{"Example Bike Rental"}},
+				{selector: "docks.0.feed.system_information.language", expect: []string{"en"}},
+			},
 		},
 		{
 			name: "limit 5",
@@ -208,6 +264,6 @@ func TestGbfsStationResolver(t *testing.T) {
 		},
 	}
 	c, cfg := newTestClient(t)
-	setupGbfs(context.Background(), cfg.GbfsFinder)
+	setupGbfs(t, context.Background(), cfg.GbfsFinder)
 	queryTestcases(t, c, testcases)
 }
