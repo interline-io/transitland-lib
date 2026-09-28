@@ -50,12 +50,23 @@ func (c *Finder) AddData(ctx context.Context, topic string, sf gbfs.GbfsFeed) er
 	if c.hashes == nil {
 		return nil
 	}
-	// Index bike and dock bounding boxes for cross-process geosearch.
-	bikeBox := bboxString(sf.Bikes, func(e *gbfs.FreeBikeStatus) (float64, float64) { return e.Lon.Val, e.Lat.Val })
+	// Index bike and dock bounding boxes for cross-process geosearch. A null
+	// entry reads as (0,0), which bboxString leaves out.
+	bikeBox := bboxString(sf.Bikes, func(e *gbfs.FreeBikeStatus) (float64, float64) {
+		if e == nil {
+			return 0, 0
+		}
+		return e.Lon.Val, e.Lat.Val
+	})
 	if err := c.hashes.HSet(ctx, c.bikeSearchKey, topic, bikeBox); err != nil {
 		return err
 	}
-	stationBox := bboxString(sf.StationInformation, func(e *gbfs.StationInformation) (float64, float64) { return e.Lon.Val, e.Lat.Val })
+	stationBox := bboxString(sf.StationInformation, func(e *gbfs.StationInformation) (float64, float64) {
+		if e == nil {
+			return 0, 0
+		}
+		return e.Lon.Val, e.Lat.Val
+	})
 	if err := c.hashes.HSet(ctx, c.stationSearchKey, topic, stationBox); err != nil {
 		return err
 	}
@@ -80,6 +91,9 @@ func (c *Finder) FindBikes(ctx context.Context, limit *int, where *model.GbfsBik
 			continue
 		}
 		for _, ent := range sf.Bikes {
+			if ent == nil {
+				continue
+			}
 			if d := tlxy.DistanceHaversine(ptxy, tlxy.Point{Lon: ent.Lon.Val, Lat: ent.Lat.Val}); d > pt.Radius {
 				continue
 			}
@@ -117,6 +131,9 @@ func (c *Finder) FindDocks(ctx context.Context, limit *int, where *model.GbfsDoc
 			continue
 		}
 		for _, ent := range sf.StationInformation {
+			if ent == nil {
+				continue
+			}
 			if d := tlxy.DistanceHaversine(ptxy, tlxy.Point{Lon: ent.Lon.Val, Lat: ent.Lat.Val}); d > pt.Radius {
 				continue
 			}
