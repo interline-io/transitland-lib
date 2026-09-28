@@ -190,6 +190,22 @@ func (c *Cache[K, V]) GetRecheckKeys(ctx context.Context) []K {
 	return c.scan(ctx)
 }
 
+// Sync adopts key's shared-tier envelope when it is newer than the local one,
+// the local one has expired, or key is not held. A key the shared tier lacks,
+// or holds expired, is left as it is.
+func (c *Cache[K, V]) Sync(ctx context.Context, key K) {
+	sIt, ok := c.getStore(ctx, key)
+	if !ok {
+		return
+	}
+	n := c.now()
+	c.lock.Lock()
+	if it, held := c.items[key]; !held || adoptShared(it, sIt, n) {
+		c.items[key] = sIt
+	}
+	c.lock.Unlock()
+}
+
 // Peek returns the live local value for key: exactly what Get would return
 // without loading. Tombstoned keys are not held. It consults neither the
 // shared tier nor the refresh function.
@@ -393,8 +409,7 @@ func (c *Cache[K, V]) scan(ctx context.Context) []K {
 		if data, ok := fetched[c.storeKey(k)]; ok {
 			sIt := Item[V]{}
 			if err := json.Unmarshal(data, &sIt); err == nil && sIt.ExpiresAt.After(n) {
-				// Adopt when fresher, or when the local copy is expired.
-				if sIt.RecheckAt.After(it.RecheckAt) || !it.ExpiresAt.After(n) {
+				if adoptShared(it, sIt, n) {
 					c.items[k] = sIt
 					it = sIt
 				}
@@ -410,6 +425,12 @@ func (c *Cache[K, V]) scan(ctx context.Context) []K {
 	}
 	c.lock.Unlock()
 	return due
+}
+
+// adoptShared reports whether a live shared envelope should replace the local
+// one: it is fresher, or the local copy has expired.
+func adoptShared[V any](local Item[V], shared Item[V], now time.Time) bool {
+	return shared.RecheckAt.After(local.RecheckAt) || !local.ExpiresAt.After(now)
 }
 
 func (c *Cache[K, V]) getStore(ctx context.Context, key K) (Item[V], bool) {
