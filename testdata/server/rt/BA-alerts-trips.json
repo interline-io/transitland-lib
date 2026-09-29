@@ -1,0 +1,112 @@
+{
+  "header": {
+    "gtfs_realtime_version": "1.0",
+    "incrementality": 0,
+    "timestamp": 1527719250
+  },
+  "entity": [
+    {
+      "id": "trip-id",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Trip 1031527WKDY",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "trip-route-id",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "route_id": "05"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Route 05 by trip descriptor",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "trip-at-stop",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_id": "05",
+            "stop_id": "FTVL",
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Trip 1031527WKDY at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "other-route-trip",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "2211533WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Trip 2211533WKDY",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "trip-with-mode",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_type": 1,
+            "trip": {
+              "trip_id": "2211533WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Subway trip 2211533WKDY",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -9946,7 +9946,7 @@ type Route {
   "Unique stop sequences operated on this route"
   patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
   
-  "GTFS-RT service alerts for this route; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
+  "GTFS-RT service alerts for this route, including those on its mode, at its stops, or on its trips; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle positions for this route, most recently reported first"

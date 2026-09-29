@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
+	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -109,6 +111,8 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 	foundAlerts := []*model.Alert{}
 	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
 	tnow := f.Clock.Now()
+	// Looked up only for a trip named by trip_id alone.
+	tripIds := sync.OnceValue(func() set.Set[string] { return f.lc.GetRouteTripIDs(ctx, t.ID) })
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
 		if a == nil || !ok {
@@ -123,13 +127,12 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// trip must be empty
-				// route must match; a stop narrows it to the route at that stop,
-				// which is still an alert about the route
-				if s == nil || s.Trip != nil {
+				// A stop or a trip narrows the route to the route at that stop or
+				// on that trip, which is still an alert about the route.
+				if s == nil {
 					continue
 				}
-				if s.GetRouteId() == t.RouteID.Val || f.matchesRouteType(s, t) {
+				if selectorNamesRoute(s, t.RouteID.Val, tripIds) || f.matchesRouteType(s, t) {
 					found = true
 				}
 			}
@@ -141,11 +144,29 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 	return limitAlerts(foundAlerts, limit)
 }
 
-// matchesRouteType reports whether a selector naming no route or stop covers
-// this route by its mode: every route of that type, within the given agency
-// where there is one.
+// selectorNamesRoute reports whether a selector names this route: by route_id,
+// alone or with a stop or trip, or through a trip of the route, by the trip's
+// own route_id or, failing that, its trip_id.
+func selectorNamesRoute(s *pb.EntitySelector, routeId string, tripIds func() set.Set[string]) bool {
+	if rid := s.GetRouteId(); rid != "" {
+		return rid == routeId
+	}
+	trip := s.GetTrip()
+	if trip == nil {
+		return false
+	}
+	if rid := trip.GetRouteId(); rid != "" {
+		return rid == routeId
+	}
+	tid := trip.GetTripId()
+	return tid != "" && tripIds().Contains(tid)
+}
+
+// matchesRouteType reports whether a selector naming no route, stop or trip
+// covers this route by its mode: every route of that type, within the given
+// agency where there is one.
 func (f *Finder) matchesRouteType(s *pb.EntitySelector, t *model.Route) bool {
-	if s.RouteType == nil || s.GetRouteId() != "" || s.GetStopId() != "" {
+	if s.RouteType == nil || s.GetRouteId() != "" || s.GetStopId() != "" || s.Trip != nil {
 		return false
 	}
 	if tt.BasicRouteType(int(s.GetRouteType())) != tt.BasicRouteType(t.RouteType.Int()) {
