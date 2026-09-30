@@ -2,14 +2,12 @@ package dbfinder
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
-	"golang.org/x/sync/errgroup"
 )
 
 func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *model.TripStopTimeFilter, keys []model.FVPair) ([][]*model.StopTime, error) {
@@ -77,80 +75,55 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 	for _, v := range keys {
 		pairGroups[v.FeedVersionID] = append(pairGroups[v.FeedVersionID], v)
 	}
-	// Feed versions are queried concurrently: a batch at a station served by
-	// many feeds would otherwise wait on each of them in turn. Bounded so one
-	// batch cannot take a large share of the connection pool.
-	var mu sync.Mutex
 	var ents []*model.StopTime
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(4)
 	for fvid, entityPairs := range pairGroups {
-		g.Go(func() error {
-			sts, err := f.feedVersionStopTimes(gctx, fvid, entityType, where, entityPairs)
-			if err != nil {
-				return err
-			}
-			mu.Lock()
-			ents = append(ents, sts...)
-			mu.Unlock()
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-	return ents, nil
-}
-
-// feedVersionStopTimes fetches stop_times for entities within a single feed version.
-func (f *Finder) feedVersionStopTimes(ctx context.Context, fvid int, entityType stopTimeEntityType, where *model.StopTimeFilter, entityPairs []model.FVPair) ([]*model.StopTime, error) {
-	fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
-	if err != nil {
-		return nil, err
-	}
-	// Copied: the expansion rewrites the filter in place, and feed versions run
-	// concurrently, each resolving it against its own service window.
-	fvWhere := where
-	if where != nil {
-		w := *where
-		fvWhere = &w
-	}
-	// Run separate queries for each possible service day
-	var ents []*model.StopTime
-	for _, w := range stopTimeFilterExpand(fvWhere, fvsw) {
-		var serviceDate *tt.Date
-		if w != nil && w.ServiceDate != nil {
-			serviceDate = w.ServiceDate
-		}
-		var sts []*model.StopTime
-		var q sq.SelectBuilder
-		if serviceDate != nil {
-			// Get stop_times on a specified day
-			var entityKeys []int
-			for _, k := range entityPairs {
-				entityKeys = append(entityKeys, k.EntityID)
-			}
-			q = stopDeparturesSelect(fvid, entityKeys, entityType, w)
-		} else {
-			// Otherwise get all stop_times for entity
-			q = stopTimeSelect(entityPairs, entityType, nil)
-		}
-		// Run query
-		if err := dbutil.Select(ctx, f.db, q, &sts); err != nil {
+		fvsw, err := f.FindFeedVersionServiceWindow(ctx, fvid)
+		if err != nil {
 			return nil, err
 		}
-		// Set service date based on StopTimeFilter, and adjust calendar date if needed
-		if serviceDate != nil {
-			for _, ent := range sts {
-				ent.ServiceDate.Set(serviceDate.Val)
-				if ent.ArrivalTime.Val > 24*60*60 {
-					ent.Date.Set(serviceDate.Val.AddDate(0, 0, 1))
-				} else {
-					ent.Date.Set(serviceDate.Val)
+		// Copied: the expansion rewrites the filter's date in place, and each
+		// feed version resolves it against its own service window.
+		fvWhere := where
+		if where != nil {
+			w := *where
+			fvWhere = &w
+		}
+		// Run separate queries for each possible service day
+		for _, w := range stopTimeFilterExpand(fvWhere, fvsw) {
+			var serviceDate *tt.Date
+			if w != nil && w.ServiceDate != nil {
+				serviceDate = w.ServiceDate
+			}
+			var sts []*model.StopTime
+			var q sq.SelectBuilder
+			if serviceDate != nil {
+				// Get stop_times on a specified day
+				var entityKeys []int
+				for _, k := range entityPairs {
+					entityKeys = append(entityKeys, k.EntityID)
+				}
+				q = stopDeparturesSelect(fvid, entityKeys, entityType, w)
+			} else {
+				// Otherwise get all stop_times for entity
+				q = stopTimeSelect(entityPairs, entityType, nil)
+			}
+			// Run query
+			if err := dbutil.Select(ctx, f.db, q, &sts); err != nil {
+				return nil, err
+			}
+			// Set service date based on StopTimeFilter, and adjust calendar date if needed
+			if serviceDate != nil {
+				for _, ent := range sts {
+					ent.ServiceDate.Set(serviceDate.Val)
+					if ent.ArrivalTime.Val > 24*60*60 {
+						ent.Date.Set(serviceDate.Val.AddDate(0, 0, 1))
+					} else {
+						ent.Date.Set(serviceDate.Val)
+					}
 				}
 			}
+			ents = append(ents, sts...)
 		}
-		ents = append(ents, sts...)
 	}
 	return ents, nil
 }
@@ -271,9 +244,9 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 
 	// The stop_times at the requested entities, with their base trips.
 	//
-	// Materialized and filtered only by the entity ids, so every plan starts from them. Postgres
-	// treats those ids and feed_version_id as independent filters; given feed_version_id or the
-	// service check here, it starts from the whole feed version instead. The ids are global keys.
+	// Materialized and filtered only by the entity ids, which are global keys, so every plan
+	// starts from them. Postgres treats those ids and feed_version_id as independent filters;
+	// given feed_version_id or the service check here, it starts from the whole feed version.
 	atEntity := sq.StatementBuilder.
 		Select("base_trip.trip_id AS base_trip_gtfs_id", "base_trip.service_id AS base_trip_service_id", "sts.*").
 		From("gtfs_stop_times sts").
