@@ -71,7 +71,7 @@ func TestFeedInfo_Errors(t *testing.T) {
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.FeedLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:feed_lang"),
+			expectedErrors: PE("InvalidLanguageError:feed_lang"),
 		},
 		{
 			name: "feed_end_date before feed_start_date",
@@ -88,7 +88,7 @@ func TestFeedInfo_Errors(t *testing.T) {
 			entity: newFeedInfo(func(f *FeedInfo) {
 				f.DefaultLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:default_lang"),
+			expectedErrors: PE("InvalidLanguageError:default_lang"),
 		},
 		{
 			name: "Invalid feed_contact_email",

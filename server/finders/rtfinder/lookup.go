@@ -24,6 +24,7 @@ type lookupCache struct {
 	agencyRouteIdCache     *simpleCache[int, set.Set[string]]
 	routeTripIdCache       *simpleCache[int, set.Set[string]]
 	gtfsStopIdCache        *simpleCache[int, string]
+	gtfsAgencyIdCache      *simpleCache[int, string]
 	routeIdCache           *simpleCache[skey, int]
 	tzCache                *tzcache.Cache[int]
 }
@@ -39,6 +40,7 @@ func newLookupCache(db tldb.Ext) *lookupCache {
 		agencyRouteIdCache:     newSimpleCache[int, set.Set[string]](),
 		routeTripIdCache:       newSimpleCache[int, set.Set[string]](),
 		gtfsStopIdCache:        newSimpleCache[int, string](),
+		gtfsAgencyIdCache:      newSimpleCache[int, string](),
 		routeIdCache:           newSimpleCache[skey, int](),
 	}
 }
@@ -62,6 +64,18 @@ func (f *lookupCache) GetGtfsStopID(id int) (string, bool) {
 	eid := ""
 	err := sqlx.Get(f.db, &eid, q, id)
 	f.gtfsStopIdCache.Set(id, eid)
+	return eid, err == nil
+}
+
+// GetGtfsAgencyID returns the GTFS agency_id of an agency by database id.
+func (f *lookupCache) GetGtfsAgencyID(id int) (string, bool) {
+	if a, ok := f.gtfsAgencyIdCache.Get(id); ok {
+		return a, ok
+	}
+	q := `select agency_id from gtfs_agencies where id = $1 limit 1`
+	eid := ""
+	err := sqlx.Get(f.db, &eid, q, id)
+	f.gtfsAgencyIdCache.Set(id, eid)
 	return eid, err == nil
 }
 

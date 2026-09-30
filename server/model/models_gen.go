@@ -121,6 +121,8 @@ type Alert struct {
 	URL []*RTTranslation `json:"url,omitempty"`
 	// Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`
 	SeverityLevel *string `json:"severity_level,omitempty"`
+	// Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector
+	InformedEntity []*RTEntitySelector `json:"informed_entity,omitempty"`
 }
 
 // Search options for GTFS Flex booking rules
@@ -997,6 +999,22 @@ type PointRadius struct {
 //
 // **Authorization**: Most queries are available to all callers. A few (e.g. user-specific data) require authentication or specific roles.
 type Query struct {
+}
+
+// What a GTFS-RT alert applies to, by GTFS ids within the alert's feed. Every field given must match. See https://gtfs.org/realtime/reference/#message-entityselector
+type RTEntitySelector struct {
+	// GTFS `agency_id`
+	AgencyID *string `json:"agency_id,omitempty"`
+	// GTFS `route_id`
+	RouteID *string `json:"route_id,omitempty"`
+	// GTFS `route_type`
+	RouteType *int `json:"route_type,omitempty"`
+	// GTFS direction_id (0 or 1); given together with `route_id`
+	DirectionID *int `json:"direction_id,omitempty"`
+	// The trip this applies to
+	Trip *RTTripDescriptor `json:"trip,omitempty"`
+	// GTFS `stop_id`
+	StopID *string `json:"stop_id,omitempty"`
 }
 
 // A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange

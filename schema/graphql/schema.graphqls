@@ -2316,6 +2316,8 @@ type Alert {
   url: [RTTranslation!]
   "Alert severity: `UNKNOWN_SEVERITY`, `INFO`, `WARNING`, or `SEVERE`"
   severity_level: String
+  "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector"
+  informed_entity: [RTEntitySelector!]
 }
 
 """A time range expressed as Unix epoch seconds; used for GTFS-RT alert active periods. See https://gtfs.org/reference/realtime/v2/#message-timerange"""
@@ -2350,6 +2352,22 @@ type RTTripDescriptor {
   start_date: Date
   "GTFS-RT schedule_relationship value as a string. See https://gtfs.org/realtime/reference/#enum-schedulerelationship-1"
   schedule_relationship: String
+}
+
+"""What a GTFS-RT alert applies to, by GTFS ids within the alert's feed. Every field given must match. See https://gtfs.org/realtime/reference/#message-entityselector"""
+type RTEntitySelector {
+  "GTFS `agency_id`"
+  agency_id: String
+  "GTFS `route_id`"
+  route_id: String
+  "GTFS `route_type`"
+  route_type: Int
+  "GTFS direction_id (0 or 1); given together with `route_id`"
+  direction_id: Int
+  "The trip this applies to"
+  trip: RTTripDescriptor
+  "GTFS `stop_id`"
+  stop_id: String
 }
 
 """A single translation of a string in a GTFS-RT message (e.g. an alert header or description). See https://gtfs.org/reference/realtime/v2/#message-translatedstring"""

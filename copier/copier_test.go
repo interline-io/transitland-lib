@@ -342,3 +342,103 @@ func TestCopier_CreateMissingShapes_FlexTrips(t *testing.T) {
 	// Verify generated shapes count
 	assert.Equal(t, 1, cpResult.GeneratedCount["shapes.txt"], "should have generated exactly 1 shape")
 }
+
+// An unrecognized language must not cost the feed its agency.txt. Before, a
+// value this library did not know was an entity level error, and with the
+// default AllowEntityErrors=false the copier skipped the agency and then every
+// route, trip and stop_time that referenced it.
+func TestCopier_UnrecognizedLanguageIsAWarning(t *testing.T) {
+	newAgency := func(id string, lang string) gtfs.Agency {
+		return gtfs.Agency{
+			AgencyID:       tt.NewString(id),
+			AgencyName:     tt.NewString("ok"),
+			AgencyURL:      tt.NewUrl("http://example.com"),
+			AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+			AgencyLang:     tt.NewLanguage(lang),
+		}
+	}
+	reader := direct.NewReader()
+	reader.AgencyList = append(reader.AgencyList,
+		// Names no language, so it is reported.
+		newAgency("unrecognized", "xyz"),
+		// Halkomelem. A three letter code with no two letter equivalent, which
+		// this library used to reject outright.
+		newAgency("iso639-3", "hur"),
+		// A region this library does not recognize still leaves the language
+		// readable, so nothing is reported.
+		newAgency("unknown-region", "en-EN"),
+	)
+	writer := direct.NewWriter()
+
+	// The strict setting, as used by the importer and by "transitland copy".
+	cpOpts := Options{}
+	cpOpts.AllowEntityErrors = false
+	result, err := CopyWithOptions(context.Background(), reader, writer, cpOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Every agency is written, and keeps the language it came in with. Reporting
+	// a value is not a reason to alter it.
+	agencyLangs := map[string]string{}
+	wreader, _ := writer.NewReader()
+	for ent := range wreader.Agencies() {
+		agencyLangs[ent.AgencyID.Val] = ent.AgencyLang.Val
+	}
+	assert.Equal(t, 3, len(agencyLangs), "expected every agency to be written")
+	assert.Equal(t, "xyz", agencyLangs["unrecognized"])
+	assert.Equal(t, "hur", agencyLangs["iso639-3"])
+	assert.Equal(t, "en-EN", agencyLangs["unknown-region"])
+	assert.Equal(t, 0, result.SkipEntityErrorCount["agency.txt"], "expected no agency to be skipped")
+
+	// The one bad value is still reported, as a warning.
+	assert.Empty(t, result.Errors, "expected no errors")
+	var got []string
+	for _, eg := range result.Warnings {
+		got = append(got, fmt.Sprintf("%s:%s:%s", eg.Filename, eg.Field, eg.ErrorType))
+		assert.Equal(t, 1, eg.Count, "expected only the one unrecognized value to be reported")
+	}
+	assert.Equal(t, []string{"agency.txt:agency_lang:InvalidLanguageError"}, got)
+}
+
+// The partition in checkEntity decides severity from the cause, so a cause that
+// does not ask for warning level has to keep dropping the entity. This pins the
+// default, which is what every cause but one relies on.
+func TestCopier_CauseWithoutLevelIsStillAnError(t *testing.T) {
+	reader := direct.NewReader()
+	reader.AgencyList = append(reader.AgencyList,
+		gtfs.Agency{
+			AgencyID:       tt.NewString("ok"),
+			AgencyName:     tt.NewString("ok"),
+			AgencyURL:      tt.NewUrl("http://example.com"),
+			AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+		},
+		// agency_name is required, and RequiredFieldError asks for no level.
+		gtfs.Agency{
+			AgencyID:       tt.NewString("missing-name"),
+			AgencyURL:      tt.NewUrl("http://example.com"),
+			AgencyTimezone: tt.NewTimezone("America/Los_Angeles"),
+		},
+	)
+	writer := direct.NewWriter()
+	cpOpts := Options{}
+	cpOpts.AllowEntityErrors = false
+	result, err := CopyWithOptions(context.Background(), reader, writer, cpOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agencyIds := map[string]int{}
+	wreader, _ := writer.NewReader()
+	for ent := range wreader.Agencies() {
+		agencyIds[ent.AgencyID.Val] += 1
+	}
+	assert.Equal(t, 1, len(agencyIds), "expected the invalid agency to be skipped")
+	assert.Equal(t, 1, agencyIds["ok"])
+	assert.Equal(t, 1, result.SkipEntityErrorCount["agency.txt"])
+	var got []string
+	for _, eg := range result.Errors {
+		got = append(got, fmt.Sprintf("%s:%s:%s", eg.Filename, eg.Field, eg.ErrorType))
+	}
+	assert.Equal(t, []string{"agency.txt:agency_name:RequiredFieldError"}, got)
+}
