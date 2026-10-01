@@ -8,11 +8,16 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
+	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 // countingDB counts the trip lookups run through it, and fails them while fail
@@ -41,6 +46,43 @@ func testBartFeedVersion(t *testing.T, db tldb.Ext) int {
 		t.Fatal(err)
 	}
 	return fvid
+}
+
+// testRoutes returns a feed version's routes by GTFS route_id.
+func testRoutes(t *testing.T, db tldb.Ext, fvid int) map[string]*model.Route {
+	var routes []*model.Route
+	q := `select id, feed_version_id, route_id, agency_id, route_type from gtfs_routes where feed_version_id = $1`
+	if err := sqlx.Select(db, &routes, q, fvid); err != nil {
+		t.Fatal(err)
+	}
+	ret := map[string]*model.Route{}
+	for _, r := range routes {
+		ret[r.RouteID.Val] = r
+	}
+	return ret
+}
+
+// testReadRT reads an RT fixture from testdata/server/rt.
+func testReadRT(t *testing.T, fname string) *pb.FeedMessage {
+	msg, err := rt.ReadFile(testdata.Path("server", "rt", fname))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return msg
+}
+
+// testFinder returns a Finder over db holding msg as BART's ftype feed.
+func testFinder(t *testing.T, db tldb.Ext, ftype string, msg *pb.FeedMessage) *Finder {
+	f := NewFinder(kvcache.NewMemoryStore(), db)
+	t.Cleanup(func() { f.Close() })
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.AddData(context.Background(), getTopicKey("BA", ftype), data); err != nil {
+		t.Fatal(err)
+	}
+	return f
 }
 
 func TestLookupCache_GetTripRouteIDs(t *testing.T) {
@@ -88,6 +130,13 @@ func TestLookupCache_GetTripRouteIDs(t *testing.T) {
 	assert.Nil(t, lc.GetTripRouteIDs(ctx, newSource(), fvid))
 	assert.EqualValues(t, 2, db.tripQueries.Load(), "nothing unrouted")
 
+	// A caller that has gone away is served what is held, but starts no lookup.
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	assert.Equal(t, expect, lc.GetTripRouteIDs(canceled, src, fvid))
+	assert.Nil(t, lc.GetTripRouteIDs(canceled, newSource("1031527WKDY"), fvid))
+	assert.EqualValues(t, 2, db.tripQueries.Load(), "canceled")
+
 	// A failed lookup is not cached.
 	src = newSource("1031527WKDY")
 	db.fail.Store(true)
@@ -95,4 +144,27 @@ func TestLookupCache_GetTripRouteIDs(t *testing.T) {
 	db.fail.Store(false)
 	assert.Equal(t, expect, lc.GetTripRouteIDs(ctx, src, fvid))
 	assert.EqualValues(t, 4, db.tripQueries.Load(), "retry after failure")
+}
+
+func TestLookupCache_GetGtfsAgencyID(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	db := testutil.MustOpenTestDB(t)
+	id := 0
+	q := `select id from gtfs_agencies where feed_version_id = $1 and agency_id = $2`
+	if err := sqlx.Get(db, &id, q, testBartFeedVersion(t, db), "BART"); err != nil {
+		t.Fatal(err)
+	}
+	lc := newLookupCache(db)
+	ctx := context.Background()
+	aid, ok := lc.GetGtfsAgencyID(ctx, id)
+	assert.True(t, ok)
+	assert.Equal(t, "BART", aid)
+	// A failed lookup is not cached, where its empty agency_id would match any
+	// agency.
+	for range 2 {
+		_, ok := lc.GetGtfsAgencyID(ctx, -1)
+		assert.False(t, ok)
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/interline-io/log"
@@ -110,8 +111,8 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 		if a == nil || !ok {
 			continue
 		}
-		// Looked up only for a trip named by trip_id alone.
-		tripRoutes := func() map[string]string { return f.lc.GetTripRouteIDs(ctx, a, t.FeedVersionID) }
+		// Looked up at most once per call, and only for a trip named by trip_id alone.
+		tripRoutes := sync.OnceValue(func() map[string]string { return f.lc.GetTripRouteIDs(ctx, a, t.FeedVersionID) })
 		for _, alert := range a.alerts {
 			if !checkAlertActivePeriod(tnow, active, alert) {
 				continue
@@ -123,7 +124,7 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 			for _, s := range alert.GetInformedEntity() {
 				// The agency is checked first so that another agency's trip never
 				// costs a trip lookup.
-				if s == nil || !f.agencyMatches(s, t) {
+				if s == nil || !f.agencyMatches(ctx, s, t) {
 					continue
 				}
 				// A stop or a trip narrows the route to the route at that stop or
@@ -143,12 +144,12 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 
 // agencyMatches reports whether a selector's agency_id, if it gives one, is the
 // route's agency.
-func (f *Finder) agencyMatches(s *pb.EntitySelector, t *model.Route) bool {
+func (f *Finder) agencyMatches(ctx context.Context, s *pb.EntitySelector, t *model.Route) bool {
 	aid := s.GetAgencyId()
 	if aid == "" {
 		return true
 	}
-	agencyId, ok := f.lc.GetGtfsAgencyID(t.AgencyID.Int())
+	agencyId, ok := f.lc.GetGtfsAgencyID(ctx, t.AgencyID.Int())
 	// A single-agency feed may omit agency_id, leaving nothing to compare.
 	return ok && (agencyId == "" || agencyId == aid)
 }

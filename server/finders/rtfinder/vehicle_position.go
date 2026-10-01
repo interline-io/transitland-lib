@@ -76,9 +76,16 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 	if routeId == "" {
 		return nil
 	}
-	match := func(_ string, src *Source, v *pb.VehiclePosition) vpMatch {
-		tripRoutes := func() map[string]string { return f.lc.GetTripRouteIDs(ctx, src, r.FeedVersionID) }
-		if !tripOnRoute(v.GetTrip(), routeId, tripRoutes) {
+	// Looked up at most once per topic, and only for a vehicle naming a trip by
+	// trip_id alone.
+	tripRoutes := map[string]func() map[string]string{}
+	match := func(topic string, src *Source, v *pb.VehiclePosition) vpMatch {
+		lookup, ok := tripRoutes[topic]
+		if !ok {
+			lookup = sync.OnceValue(func() map[string]string { return f.lc.GetTripRouteIDs(ctx, src, r.FeedVersionID) })
+			tripRoutes[topic] = lookup
+		}
+		if !tripOnRoute(v.GetTrip(), routeId, lookup) {
 			return vpNoMatch
 		}
 		return vpMatchByEntityID

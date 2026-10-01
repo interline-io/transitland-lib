@@ -5,13 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
-	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
-	"github.com/interline-io/transitland-lib/testdata"
-	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
@@ -118,49 +114,57 @@ func TestFindAlertsForRoute_TripLookup(t *testing.T) {
 		t.Skip(a)
 	}
 	raw := testutil.MustOpenTestDB(t)
-	fvid := testBartFeedVersion(t, raw)
-	var routes []*model.Route
-	q := `select id, feed_version_id, route_id, agency_id, route_type from gtfs_routes where feed_version_id = $1`
-	if err := sqlx.Select(raw, &routes, q, fvid); err != nil {
-		t.Fatal(err)
-	}
-	db := &countingDB{Ext: raw}
-	f := NewFinder(kvcache.NewMemoryStore(), db)
-	defer f.Close()
+	routes := testRoutes(t, raw, testBartFeedVersion(t, raw))
+	msg := testReadRT(t, "BA-alerts-trips.json")
 	ctx := context.Background()
-	msg, err := rt.ReadFile(testdata.Path("server", "rt", "BA-alerts-trips.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, err := proto.Marshal(msg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := f.AddData(ctx, getTopicKey("BA", "realtime_alerts"), data); err != nil {
-		t.Fatal(err)
-	}
-	headers := map[string][]string{}
-	var lock sync.Mutex
-	run := func() {
-		var wg sync.WaitGroup
-		for _, r := range routes {
-			for range 10 {
-				wg.Go(func() {
-					for _, a := range f.FindAlertsForRoute(ctx, r, nil, nil) {
-						lock.Lock()
-						headers[r.RouteID.Val] = append(headers[r.RouteID.Val], a.HeaderText[0].Text)
-						lock.Unlock()
-					}
-				})
-			}
+	headers := func(alerts []*model.Alert) []string {
+		var ret []string
+		for _, a := range alerts {
+			ret = append(ret, a.HeaderText[0].Text)
 		}
-		wg.Wait()
+		return ret
 	}
-	run()
-	assert.EqualValues(t, 1, db.tripQueries.Load(), "cold")
-	run()
-	assert.EqualValues(t, 1, db.tripQueries.Load(), "warm")
-	assert.Contains(t, headers["05"], "Trip 1031527WKDY")
-	assert.Contains(t, headers["03"], "Trip 2211533WKDY")
-	assert.NotContains(t, headers["05"], "Trip 2211533WKDY")
+	t.Run("concurrent routes", func(t *testing.T) {
+		db := &countingDB{Ext: raw}
+		f := testFinder(t, db, "realtime_alerts", msg)
+		found := map[string][]string{}
+		var lock sync.Mutex
+		run := func() {
+			var wg sync.WaitGroup
+			for rid, r := range routes {
+				for range 10 {
+					wg.Go(func() {
+						h := headers(f.FindAlertsForRoute(ctx, r, nil, nil))
+						lock.Lock()
+						found[rid] = append(found[rid], h...)
+						lock.Unlock()
+					})
+				}
+			}
+			wg.Wait()
+		}
+		run()
+		assert.EqualValues(t, 1, db.tripQueries.Load(), "cold")
+		run()
+		assert.EqualValues(t, 1, db.tripQueries.Load(), "warm")
+		assert.Contains(t, found["05"], "Trip 1031527WKDY")
+		assert.Contains(t, found["03"], "Trip 2211533WKDY")
+		assert.NotContains(t, found["05"], "Trip 2211533WKDY")
+	})
+	t.Run("failing lookup", func(t *testing.T) {
+		// Route 05's call reaches three trips named by trip_id alone, which
+		// share one lookup per call; a canceled call starts none.
+		db := &countingDB{Ext: raw}
+		db.fail.Store(true)
+		f := testFinder(t, db, "realtime_alerts", msg)
+		assert.NotContains(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil)), "Trip 1031527WKDY")
+		assert.EqualValues(t, 1, db.tripQueries.Load(), "failing")
+		canceled, cancel := context.WithCancel(ctx)
+		cancel()
+		f.FindAlertsForRoute(canceled, routes["05"], nil, nil)
+		assert.EqualValues(t, 1, db.tripQueries.Load(), "canceled")
+		db.fail.Store(false)
+		assert.Contains(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil)), "Trip 1031527WKDY")
+		assert.EqualValues(t, 2, db.tripQueries.Load(), "recovered")
+	})
 }

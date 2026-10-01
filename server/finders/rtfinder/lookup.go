@@ -76,13 +76,14 @@ func (f *lookupCache) GetGtfsStopID(id int) (string, bool) {
 }
 
 // GetGtfsAgencyID returns the GTFS agency_id of an agency by database id.
-func (f *lookupCache) GetGtfsAgencyID(id int) (string, bool) {
+func (f *lookupCache) GetGtfsAgencyID(ctx context.Context, id int) (string, bool) {
 	if a, ok := f.gtfsAgencyIdCache.Get(id); ok {
 		return a, ok
 	}
 	q := `select agency_id from gtfs_agencies where id = $1 limit 1`
 	eid := ""
 	if err := sqlx.Get(f.db, &eid, q, id); err != nil {
+		log.For(ctx).Error().Err(err).Int("agency_id", id).Msg("rtfinder: agency id lookup failed")
 		return "", false
 	}
 	f.gtfsAgencyIdCache.Set(id, eid)
@@ -153,6 +154,14 @@ func (f *lookupCache) GetTripRouteIDs(ctx context.Context, src *Source, fvid int
 		})
 		src.tripRoutes.RefreshTimeout = lookupTimeout
 	})
+	// As with GetSource, a held result is served whatever state the caller is
+	// in, and only a load is shed for a caller that has gone away.
+	if ret, ok := src.tripRoutes.Peek(fvid); ok {
+		return ret
+	}
+	if ctx.Err() != nil {
+		return nil
+	}
 	// A failed lookup is not cached: its trips match no route until a later
 	// call succeeds.
 	ret, _ := src.tripRoutes.Get(ctx, fvid)
