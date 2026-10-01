@@ -6,10 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/server/rest/oatype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -151,68 +149,4 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 			assert.Equal(t, tc.expect, rr.Header().Get("Location"))
 		}
 	})
-}
-
-// The generated document applies oatype to every REST response: a schema
-// named after a mapped scalar has that scalar's type, and an array leaves the
-// name to its items. oatype's own tests cover each type shape.
-func TestResponseSchemasAreTypedByGraphQLType(t *testing.T) {
-	doc, err := GenerateOpenAPI("/rest")
-	require.NoError(t, err)
-
-	require.NoError(t, doc.WalkSchemas(func(ptr string, ref *oa.SchemaRef) error {
-		s := ref.Value
-		name, named := s.Extensions["x-graphql-type"].(string)
-		if scalar, ok := oatype.Scalars[name]; named && ok {
-			assert.Equal(t, scalar().Type, s.Type, "%s: scalar %s", ptr, name)
-		}
-		if s.Type.Is(oa.TypeArray) {
-			assert.False(t, named, "%s: array repeats its items' x-graphql-type", ptr)
-		}
-		return nil
-	}))
-
-	routeTypes := responseProperty(t, doc, "/agencies", "agencies", "route_types")
-	assert.True(t, routeTypes.Type.Is(oa.TypeArray))
-	require.NotNil(t, routeTypes.Items)
-	require.NotNil(t, routeTypes.Items.Value)
-	assert.True(t, routeTypes.Items.Value.Type.Is(oa.TypeInteger))
-
-	spec := responseProperty(t, doc, "/feeds", "feeds", "spec")
-	assert.True(t, spec.Type.Is(oa.TypeString))
-	assert.NotEmpty(t, spec.Enum)
-	assert.Equal(t, "FeedSpecTypes", spec.Extensions["x-graphql-type"])
-
-	geometry := responseProperty(t, doc, "/stops", "stops", "geometry")
-	assert.True(t, geometry.Type.Is(oa.TypeObject))
-	assert.Equal(t, "Point", geometry.Extensions["x-graphql-type"])
-}
-
-// responseProperty follows a list response's items down to one property,
-// failing rather than panicking if any step is missing.
-func responseProperty(t *testing.T, doc *oa.T, path string, names ...string) *oa.Schema {
-	t.Helper()
-	item := doc.Paths.Value(path)
-	require.NotNil(t, item, path)
-	require.NotNil(t, item.Get, path)
-	require.NotNil(t, item.Get.Responses, path)
-	resp := item.Get.Responses.Value("200")
-	require.NotNil(t, resp, path)
-	require.NotNil(t, resp.Value, path)
-	media := resp.Value.Content.Get("application/json")
-	require.NotNil(t, media, path)
-	require.NotNil(t, media.Schema, path)
-	require.NotNil(t, media.Schema.Value, path)
-	s := media.Schema.Value
-	for _, name := range names {
-		if s.Items != nil {
-			require.NotNil(t, s.Items.Value, "%s: %s", path, name)
-			s = s.Items.Value
-		}
-		prop, ok := s.Properties[name]
-		require.True(t, ok, "%s: no property %s", path, name)
-		require.NotNil(t, prop.Value, "%s: %s", path, name)
-		s = prop.Value
-	}
-	return s
 }

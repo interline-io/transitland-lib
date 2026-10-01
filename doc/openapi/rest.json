@@ -868,7 +868,8 @@
                                         "GTFS",
                                         "GTFS_RT",
                                         "GBFS",
-                                        "MDS"
+                                        "MDS",
+                                        null
                                       ],
                                       "nullable": true,
                                       "title": "spec",
@@ -1691,7 +1692,8 @@
                                         "GTFS",
                                         "GTFS_RT",
                                         "GBFS",
-                                        "MDS"
+                                        "MDS",
+                                        null
                                       ],
                                       "nullable": true,
                                       "title": "spec",
@@ -2256,7 +2258,8 @@
                                   "GTFS",
                                   "GTFS_RT",
                                   "GBFS",
-                                  "MDS"
+                                  "MDS",
+                                  null
                                 ],
                                 "nullable": true,
                                 "title": "spec",
@@ -2861,7 +2864,8 @@
                                   "GTFS",
                                   "GTFS_RT",
                                   "GBFS",
-                                  "MDS"
+                                  "MDS",
+                                  null
                                 ],
                                 "nullable": true,
                                 "title": "spec",
@@ -3705,7 +3709,8 @@
                               "GTFS",
                               "GTFS_RT",
                               "GBFS",
-                              "MDS"
+                              "MDS",
+                              null
                             ],
                             "nullable": true,
                             "title": "spec",
@@ -4179,7 +4184,8 @@
                               "GTFS",
                               "GTFS_RT",
                               "GBFS",
-                              "MDS"
+                              "MDS",
+                              null
                             ],
                             "nullable": true,
                             "title": "spec",
@@ -4935,7 +4941,8 @@
                                     "GTFS",
                                     "GTFS_RT",
                                     "GBFS",
-                                    "MDS"
+                                    "MDS",
+                                    null
                                   ],
                                   "nullable": true,
                                   "title": "spec",
@@ -5437,7 +5444,8 @@
                                     "GTFS",
                                     "GTFS_RT",
                                     "GBFS",
-                                    "MDS"
+                                    "MDS",
+                                    null
                                   ],
                                   "nullable": true,
                                   "title": "spec",
@@ -8683,7 +8691,8 @@
                               "NO_DATA",
                               "REPLACEMENT",
                               "DUPLICATED",
-                              "DELETED"
+                              "DELETED",
+                              null
                             ],
                             "nullable": true,
                             "title": "schedule_relationship",
@@ -10099,7 +10108,8 @@
                               "NO_DATA",
                               "REPLACEMENT",
                               "DUPLICATED",
-                              "DELETED"
+                              "DELETED",
+                              null
                             ],
                             "nullable": true,
                             "title": "schedule_relationship",
@@ -13022,7 +13032,8 @@
                                           "NO_DATA",
                                           "REPLACEMENT",
                                           "DUPLICATED",
-                                          "DELETED"
+                                          "DELETED",
+                                          null
                                         ],
                                         "nullable": true,
                                         "title": "schedule_relationship",
@@ -13889,7 +13900,8 @@
                                               "NO_DATA",
                                               "REPLACEMENT",
                                               "DUPLICATED",
-                                              "DELETED"
+                                              "DELETED",
+                                              null
                                             ],
                                             "nullable": true,
                                             "title": "schedule_relationship",
@@ -14349,7 +14361,8 @@
                                     "NO_DATA",
                                     "REPLACEMENT",
                                     "DUPLICATED",
-                                    "DELETED"
+                                    "DELETED",
+                                    null
                                   ],
                                   "nullable": true,
                                   "title": "schedule_relationship",
@@ -15216,7 +15229,8 @@
                                         "NO_DATA",
                                         "REPLACEMENT",
                                         "DUPLICATED",
-                                        "DELETED"
+                                        "DELETED",
+                                        null
                                       ],
                                       "nullable": true,
                                       "title": "schedule_relationship",
@@ -16040,7 +16054,8 @@
                                               "NO_DATA",
                                               "REPLACEMENT",
                                               "DUPLICATED",
-                                              "DELETED"
+                                              "DELETED",
+                                              null
                                             ],
                                             "nullable": true,
                                             "title": "schedule_relationship",
@@ -16907,7 +16922,8 @@
                                                   "NO_DATA",
                                                   "REPLACEMENT",
                                                   "DUPLICATED",
-                                                  "DELETED"
+                                                  "DELETED",
+                                                  null
                                                 ],
                                                 "nullable": true,
                                                 "title": "schedule_relationship",
