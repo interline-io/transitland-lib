@@ -134,7 +134,9 @@ type Options struct {
 	ErrorHandler ErrorHandler
 	// Entity selection strategy
 	Marker Marker
-	// Journey Pattern Key Function
+	// Journey Pattern Key Function. Trips sharing a key must share a service_id.
+	// Filters run after the key is set, so must not change the service_id of only
+	// some trips in a pattern.
 	JourneyPatternKey func(*gtfs.Trip) string
 	// Named extensions
 	ExtensionDefs []string

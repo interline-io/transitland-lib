@@ -418,6 +418,8 @@ type FeedVersion {
   
   "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]"
   sha1: String!
+  "SHA1 hash of the top-level .txt files, concatenated in filename order; stable across re-zipping, but other files such as locations.geojson are not included [example:c1026b895dbe7476c0a6dcc1b82c909bfa952c63]"
+  sha1_dir: String
   
   "Time when the file was fetched from the URL [example:2021-07-09T05:11:00Z]"
   fetched_at: Time!
@@ -825,7 +827,7 @@ type Route {
   "Unique stop sequences operated on this route"
   patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
   
-  "GTFS-RT service alerts for this route; pass `active: true` to return only currently active alerts"
+  "GTFS-RT service alerts for this route, including those on its mode, at its stops, or on its trips; pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle positions for this route, most recently reported first"
@@ -2564,6 +2566,8 @@ input FeedVersionFilter {
   feed_onestop_id: String
   "Search for feed versions with this SHA1 hash"
   sha1: String
+  "Search for feed versions with this SHA1 hash of the top-level .txt files (`sha1_dir`)"
+  sha1_dir: String
   "Search for feed versions with this file identifier"
   file: String
   "Search for feed versions with the specified feed integer IDs"

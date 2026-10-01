@@ -17,7 +17,7 @@ const vehiclePositionTopicKey = string(model.FeedSourceURLTypesRealtimeVehiclePo
 
 // vehiclePositionMatch decides whether a vehicle from a realtime feed belongs
 // to the entity being asked about.
-type vehiclePositionMatch func(topic string, v *pb.VehiclePosition) vpMatch
+type vehiclePositionMatch func(topic string, src *Source, v *pb.VehiclePosition) vpMatch
 
 // vpMatch is how strongly a vehicle was attributed, which is what resolves a
 // vehicle two agencies both claim to one of them.
@@ -48,7 +48,7 @@ func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Age
 		return ok && agencyCount == 1
 	})
 	exclusive := map[string]bool{}
-	match := func(topic string, v *pb.VehiclePosition) vpMatch {
+	match := func(topic string, _ *Source, v *pb.VehiclePosition) vpMatch {
 		if routeIds().Contains(v.GetTrip().GetRouteId()) {
 			return vpMatchByEntityID
 		}
@@ -76,15 +76,16 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 	if routeId == "" {
 		return nil
 	}
-	tripIds := sync.OnceValue(func() set.Set[string] { return f.lc.GetRouteTripIDs(ctx, r.ID) })
-	match := func(_ string, v *pb.VehiclePosition) vpMatch {
-		matched := false
-		if rid := v.GetTrip().GetRouteId(); rid != "" {
-			matched = rid == routeId
-		} else {
-			matched = tripIds().Contains(v.GetTrip().GetTripId())
+	// Looked up at most once per topic, and only for a vehicle naming a trip by
+	// trip_id alone.
+	tripRoutes := map[string]func() map[string]string{}
+	match := func(topic string, src *Source, v *pb.VehiclePosition) vpMatch {
+		lookup, ok := tripRoutes[topic]
+		if !ok {
+			lookup = sync.OnceValue(func() map[string]string { return f.lc.GetTripRouteIDs(ctx, src, r.FeedVersionID) })
+			tripRoutes[topic] = lookup
 		}
-		if !matched {
+		if !tripOnRoute(v.GetTrip(), routeId, lookup) {
 			return vpNoMatch
 		}
 		return vpMatchByEntityID
@@ -100,7 +101,7 @@ func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip, 
 	if tripId == "" {
 		return nil
 	}
-	match := func(_ string, v *pb.VehiclePosition) vpMatch {
+	match := func(_ string, _ *Source, v *pb.VehiclePosition) vpMatch {
 		if v.GetTrip().GetTripId() != tripId {
 			return vpNoMatch
 		}
@@ -127,7 +128,7 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *mode
 		bbox = ptr(tlxy.BoundingBox(*where.Bbox))
 	}
 	var ret []*model.VehiclePosition
-	topics, _ := f.lc.GetFeedVersionRTFeeds(fvid)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, fvid)
 	for _, topic := range topics {
 		src, ok := f.cache.GetSource(ctx, getTopicKey(topic, vehiclePositionTopicKey))
 		if !ok || src == nil {
@@ -137,7 +138,7 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *mode
 			if ent.Position == nil || !withinBbox(bbox, ent.Position) {
 				continue
 			}
-			m := match(topic, ent.Position)
+			m := match(topic, src, ent.Position)
 			if m == vpNoMatch {
 				continue
 			}

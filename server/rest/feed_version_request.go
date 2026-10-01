@@ -19,6 +19,7 @@ type FeedVersionRequest struct {
 	FeedID          int       `json:"feed_id,string"`
 	FeedOnestopID   string    `json:"feed_onestop_id"`
 	Sha1            string    `json:"sha1"`
+	Sha1Dir         string    `json:"sha1_dir"`
 	FetchedBefore   string    `json:"fetched_before"`
 	FetchedAfter    string    `json:"fetched_after"`
 	CoversStartDate string    `json:"covers_start_date"`
@@ -64,6 +65,12 @@ func (r FeedVersionRequest) RequestInfo() RequestInfo {
 						Description: `Feed version SHA1`,
 						Schema:      newSRVal("string", "", nil),
 						Extensions:  newExt("", "sha1=e535eb2b3...", "sha1=dd7aca4a8e4c90908fd3603c097fabee75fea907"),
+					}},
+					&pref{Value: &param{
+						Name:        "sha1_dir",
+						In:          "query",
+						Description: `Feed version SHA1 of the top-level .txt files (sha1_dir)`,
+						Schema:      newSRVal("string", "", nil),
 					}},
 					&pref{Value: &param{
 						Name:        "feed_onestop_id",
@@ -127,6 +134,9 @@ func (r FeedVersionRequest) Query(ctx context.Context) (string, map[string]inter
 	}
 	if r.Sha1 != "" {
 		where["sha1"] = r.Sha1
+	}
+	if r.Sha1Dir != "" {
+		where["sha1_dir"] = r.Sha1Dir
 	}
 	if r.Lat != 0.0 && r.Lon != 0.0 {
 		where["near"] = hw{"lat": r.Lat, "lon": r.Lon, "radius": r.Radius}

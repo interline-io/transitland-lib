@@ -378,6 +378,7 @@ type ComplexityRoot struct {
 		Permissions           func(childComplexity int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SHA1                  func(childComplexity int) int
+		SHA1Dir               func(childComplexity int) int
 		Segments              func(childComplexity int, limit *int) int
 		ServiceLevels         func(childComplexity int, limit *int, where *model.FeedVersionServiceLevelFilter) int
 		ServiceWindow         func(childComplexity int) int
@@ -3186,6 +3187,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.SHA1(childComplexity), true
+	case "FeedVersion.sha1_dir":
+		if e.ComplexityRoot.FeedVersion.SHA1Dir == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FeedVersion.SHA1Dir(childComplexity), true
 	case "FeedVersion.segments":
 		if e.ComplexityRoot.FeedVersion.Segments == nil {
 			break
@@ -9539,6 +9546,8 @@ type FeedVersion {
   
   "SHA1 hash of the zip file [example:ab5bdc8b6cedd06792d42186a9b542504c5eef9a]"
   sha1: String!
+  "SHA1 hash of the top-level .txt files, concatenated in filename order; stable across re-zipping, but other files such as locations.geojson are not included [example:c1026b895dbe7476c0a6dcc1b82c909bfa952c63]"
+  sha1_dir: String
   
   "Time when the file was fetched from the URL [example:2021-07-09T05:11:00Z]"
   fetched_at: Time!
@@ -9946,7 +9955,7 @@ type Route {
   "Unique stop sequences operated on this route"
   patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
   
-  "GTFS-RT service alerts for this route; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
+  "GTFS-RT service alerts for this route, including those on its mode, at its stops, or on its trips; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle positions for this route, most recently reported first"
@@ -11685,6 +11694,8 @@ input FeedVersionFilter {
   feed_onestop_id: String
   "Search for feed versions with this SHA1 hash"
   sha1: String
+  "Search for feed versions with this SHA1 hash of the top-level .txt files (` + "`" + `sha1_dir` + "`" + `)"
+  sha1_dir: String
   "Search for feed versions with this file identifier"
   file: String
   "Search for feed versions with the specified feed integer IDs"
@@ -13064,6 +13075,8 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_id(ctx, field)
 	case "sha1":
 		return ec.fieldContext_FeedVersion_sha1(ctx, field)
+	case "sha1_dir":
+		return ec.fieldContext_FeedVersion_sha1_dir(ctx, field)
 	case "fetched_at":
 		return ec.fieldContext_FeedVersion_fetched_at(ctx, field)
 	case "url":
@@ -22889,6 +22902,29 @@ func (ec *executionContext) _FeedVersion_sha1(ctx context.Context, field graphql
 	)
 }
 func (ec *executionContext) fieldContext_FeedVersion_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FeedVersion", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FeedVersion_sha1_dir(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_sha1_dir(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SHA1Dir, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_sha1_dir(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FeedVersion", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -45217,7 +45253,7 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "file", "feed_ids", "covers", "bbox", "within", "near", "license"}
+	fieldsInOrder := [...]string{"ids", "import_status", "feed_onestop_id", "sha1", "sha1_dir", "file", "feed_ids", "covers", "bbox", "within", "near", "license"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -45252,6 +45288,13 @@ func (ec *executionContext) unmarshalInputFeedVersionFilter(ctx context.Context,
 				return it, err
 			}
 			it.Sha1 = data
+		case "sha1_dir":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha1_dir"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Sha1Dir = data
 		case "file":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -50253,6 +50296,8 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "sha1_dir":
+			out.Values[i] = ec._FeedVersion_sha1_dir(ctx, field, obj)
 		case "fetched_at":
 			out.Values[i] = ec._FeedVersion_fetched_at(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/interline-io/log"
@@ -48,10 +49,6 @@ func (f *Finder) AddData(ctx context.Context, topic string, data []byte) error {
 	return f.cache.AddData(ctx, topic, data)
 }
 
-func (f *Finder) GetGtfsTripID(ctx context.Context, id int) (string, bool) {
-	return f.lc.GetGtfsTripID(id)
-}
-
 func (f *Finder) StopTimezone(ctx context.Context, id int, known string) (*time.Location, bool) {
 	return f.lc.StopTimezone(ctx, id, known)
 }
@@ -61,7 +58,7 @@ func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Locat
 }
 
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	for _, topic := range topics {
 		if a, ok := f.getTrip(ctx, topic, t.TripID.Val); ok {
 			return a
@@ -72,7 +69,7 @@ func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
 
 func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
@@ -107,13 +104,15 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 
 func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
 		if a == nil || !ok {
 			continue
 		}
+		// Looked up at most once per call, and only for a trip named by trip_id alone.
+		tripRoutes := sync.OnceValue(func() map[string]string { return f.lc.GetTripRouteIDs(ctx, a, t.FeedVersionID) })
 		for _, alert := range a.alerts {
 			if !checkAlertActivePeriod(tnow, active, alert) {
 				continue
@@ -123,14 +122,16 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// trip must be empty
-				// route must match; a stop narrows it to the route at that stop,
-				// which is still an alert about the route
-				if s == nil || s.Trip != nil {
+				// The agency is checked first so that another agency's trip never
+				// costs a trip lookup.
+				if s == nil || !f.agencyMatches(ctx, s, t) {
 					continue
 				}
-				if s.GetRouteId() == t.RouteID.Val || f.matchesRouteType(s, t) {
+				// A stop or a trip narrows the route to the route at that stop or
+				// on that trip, which is still an alert about the route.
+				if selectorNamesRoute(s, t.RouteID.Val, tripRoutes) || matchesRouteType(s, t.RouteType.Int()) {
 					found = true
+					break
 				}
 			}
 			if found {
@@ -141,21 +142,50 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 	return limitAlerts(foundAlerts, limit)
 }
 
-// matchesRouteType reports whether a selector naming no route or stop covers
-// this route by its mode: every route of that type, within the given agency
-// where there is one.
-func (f *Finder) matchesRouteType(s *pb.EntitySelector, t *model.Route) bool {
+// agencyMatches reports whether a selector's agency_id, if it gives one, is the
+// route's agency.
+func (f *Finder) agencyMatches(ctx context.Context, s *pb.EntitySelector, t *model.Route) bool {
+	aid := s.GetAgencyId()
+	if aid == "" {
+		return true
+	}
+	agencyId, ok := f.lc.GetGtfsAgencyID(ctx, t.AgencyID.Int())
+	// A single-agency feed may omit agency_id, leaving nothing to compare.
+	return ok && (agencyId == "" || agencyId == aid)
+}
+
+// selectorNamesRoute reports whether a selector names this route, directly or
+// through one of its trips.
+func selectorNamesRoute(s *pb.EntitySelector, routeId string, tripRoutes func() map[string]string) bool {
+	if rid := s.GetRouteId(); rid != "" {
+		return rid == routeId
+	}
+	return tripOnRoute(s.GetTrip(), routeId, tripRoutes)
+}
+
+// tripOnRoute reports whether a trip descriptor names a trip of this route, by
+// its route_id or, without one, its trip_id.
+func tripOnRoute(td *pb.TripDescriptor, routeId string, tripRoutes func() map[string]string) bool {
+	if rid := td.GetRouteId(); rid != "" {
+		return rid == routeId
+	}
+	if tid := td.GetTripId(); tid != "" {
+		rid, ok := tripRoutes()[tid]
+		return ok && rid == routeId
+	}
+	return false
+}
+
+// matchesRouteType reports whether a selector naming no route, stop or trip
+// covers every route of this type.
+func matchesRouteType(s *pb.EntitySelector, routeType int) bool {
 	if s.RouteType == nil || s.GetRouteId() != "" || s.GetStopId() != "" {
 		return false
 	}
-	if tt.BasicRouteType(int(s.GetRouteType())) != tt.BasicRouteType(t.RouteType.Int()) {
+	if td := s.GetTrip(); td.GetTripId() != "" || td.GetRouteId() != "" {
 		return false
 	}
-	if s.GetAgencyId() == "" {
-		return true
-	}
-	agencyId, ok := f.lc.GetGtfsAgencyID(t.AgencyID.Int())
-	return ok && s.GetAgencyId() == agencyId
+	return tt.BasicRouteType(int(s.GetRouteType())) == tt.BasicRouteType(routeType)
 }
 
 func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) (*pb.FeedMessage, bool) {
@@ -169,7 +199,7 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 
 func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
@@ -204,7 +234,7 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 
 func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
@@ -242,7 +272,7 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 	// Resolve the trip in each RT feed once. Both passes below ask every topic
 	// the same question, and a feed version can be associated with dozens of RT
 	// feeds, so answering twice is most of the work.
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	var rtTrips []*pb.TripUpdate
 	for _, topic := range topics {
 		if rtTrip, ok := f.getTrip(ctx, topic, t.TripID.Val); ok {
@@ -298,7 +328,7 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.TripUpdate {
 	sid := t.StopID
 	var ret []*pb.TripUpdate
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
 		if !ok {

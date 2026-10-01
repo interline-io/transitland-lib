@@ -298,6 +298,11 @@ func (c *Cache[K, V]) loadOrRefresh(ctx context.Context, key K) (Item[V], bool) 
 		// own per-op timeouts.
 		fctx := context.WithoutCancel(ctx)
 		prev, hadPrev := c.localState(key)
+		// A flight that ended between the caller's local miss and this one
+		// starting has already installed the key.
+		if hadPrev && prev.ExpiresAt.After(c.now()) {
+			return result{item: prev, ok: true}, nil
+		}
 		if it, ok := c.getStore(fctx, key); ok {
 			it, _ = c.installLocal(key, prev, hadPrev, it)
 			return result{item: it, ok: true}, nil

@@ -26,6 +26,21 @@ fragment alert on Alert {
     start
     end
   }
+  informed_entity {
+    agency_id
+    route_id
+    route_type
+    direction_id
+    stop_id
+    trip {
+      trip_id
+      route_id
+      direction_id
+      start_time
+      start_date
+      schedule_relationship
+    }
+  }
 }
 
 query ($limit: Int, $ids: [Int!], $after: Int, $include_route: Boolean!, $include_stop_times: Boolean!, $include_geometry: Boolean!, $include_alerts: Boolean!, $where: TripFilter) {
