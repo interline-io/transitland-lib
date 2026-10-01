@@ -6,102 +6,104 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
-// Scalars maps each GraphQL scalar to its JSON representation. A custom
-// scalar does not declare one, so every scalar in the GraphQL schema must be
-// listed here; TestScalarsMatchTheGraphQLSchema checks that.
+// Scalars maps each GraphQL scalar to a constructor for its JSON
+// representation. A custom scalar does not declare one, so every scalar in the
+// GraphQL schema must be listed here; TestScalarsMatchTheGraphQLSchema checks
+// that. Each call returns a new schema, so fields never share one.
 //
-// An entry with no Type is typeless: its values are not one JSON type.
-var Scalars = map[string]oa.Schema{
+// A schema with no Type is typeless: its values are not one JSON type.
+var Scalars = map[string]func() *oa.Schema{
 	// Built in
-	"Int":     {Type: &oa.Types{oa.TypeInteger}},
-	"Float":   {Type: &oa.Types{oa.TypeNumber}},
-	"String":  {Type: &oa.Types{oa.TypeString}},
-	"Boolean": {Type: &oa.Types{oa.TypeBoolean}},
-	"ID":      {Type: &oa.Types{oa.TypeInteger}, Format: "int64"},
+	"Int":     typed(oa.TypeInteger, ""),
+	"Float":   typed(oa.TypeNumber, ""),
+	"String":  typed(oa.TypeString, ""),
+	"Boolean": typed(oa.TypeBoolean, ""),
+	"ID":      typed(oa.TypeInteger, "int64"),
 
 	// Strings
-	"Time":     {Type: &oa.Types{oa.TypeString}, Format: "datetime", Example: "2019-11-15T00:45:55.409906"},
-	"Date":     {Type: &oa.Types{oa.TypeString}, Format: "date", Example: "2019-11-15"},
-	"Seconds":  {Type: &oa.Types{oa.TypeString}, Format: "hms", Example: "15:21:04"},
-	"Color":    {Type: &oa.Types{oa.TypeString}},
-	"Language": {Type: &oa.Types{oa.TypeString}},
-	"Url":      {Type: &oa.Types{oa.TypeString}},
-	"Email":    {Type: &oa.Types{oa.TypeString}, Format: "email"},
-	"Timezone": {Type: &oa.Types{oa.TypeString}},
+	"Time":     example(oa.TypeString, "datetime", "2019-11-15T00:45:55.409906"),
+	"Date":     example(oa.TypeString, "date", "2019-11-15"),
+	"Seconds":  example(oa.TypeString, "hms", "15:21:04"),
+	"Color":    typed(oa.TypeString, ""),
+	"Language": typed(oa.TypeString, ""),
+	"Url":      typed(oa.TypeString, ""),
+	"Email":    typed(oa.TypeString, "email"),
+	"Timezone": typed(oa.TypeString, ""),
 
 	// Other JSON values
-	"Bool":    {Type: &oa.Types{oa.TypeBoolean}},
-	"Strings": {Type: &oa.Types{oa.TypeArray}, Items: oa.NewSchemaRef("", &oa.Schema{Type: &oa.Types{oa.TypeString}})},
-	"Counts":  {Type: &oa.Types{oa.TypeObject}},
-	"Tags":    {Type: &oa.Types{oa.TypeObject}},
-	"Map":     {Type: &oa.Types{oa.TypeObject}},
+	"Bool": typed(oa.TypeBoolean, ""),
+	"Strings": func() *oa.Schema {
+		return &oa.Schema{Type: &oa.Types{oa.TypeArray}, Items: oa.NewSchemaRef("", typed(oa.TypeString, "")())}
+	},
+	"Counts": typed(oa.TypeObject, ""),
+	"Tags":   typed(oa.TypeObject, ""),
+	"Map":    typed(oa.TypeObject, ""),
 
 	// GeoJSON geometries
-	"Geometry":     {Type: &oa.Types{oa.TypeObject}},
-	"Point":        {Type: &oa.Types{oa.TypeObject}},
-	"LineString":   {Type: &oa.Types{oa.TypeObject}},
-	"Polygon":      {Type: &oa.Types{oa.TypeObject}},
-	"MultiPolygon": {Type: &oa.Types{oa.TypeObject}},
+	"Geometry":     typed(oa.TypeObject, ""),
+	"Point":        typed(oa.TypeObject, ""),
+	"LineString":   typed(oa.TypeObject, ""),
+	"Polygon":      typed(oa.TypeObject, ""),
+	"MultiPolygon": typed(oa.TypeObject, ""),
 
 	// Typeless
-	"Any":    {},
-	"Upload": {},
+	"Any":    func() *oa.Schema { return &oa.Schema{} },
+	"Upload": func() *oa.Schema { return &oa.Schema{} },
+}
+
+func typed(jsonType string, format string) func() *oa.Schema {
+	return func() *oa.Schema { return &oa.Schema{Type: &oa.Types{jsonType}, Format: format} }
+}
+
+func example(jsonType string, format string, value string) func() *oa.Schema {
+	return func() *oa.Schema { return &oa.Schema{Type: &oa.Types{jsonType}, Format: format, Example: value} }
 }
 
 // Schema returns the schema for a value of GraphQL type t: one array per list
 // level, each carrying its own nullability, around the schema for the named
-// type. props holds the selected fields of an object type.
+// type. It maps the type only; a field's selected properties and docstring
+// belong on Element of the result.
 //
 // x-graphql-type names the GraphQL type where it identifies something the JSON
-// type does not: objects, including object-valued scalars, and enums.
-func Schema(gs *ast.Schema, t *ast.Type, props oa.Schemas) *oa.Schema {
+// type does not: objects, including object-valued scalars, and enums. It is set
+// on the element only.
+func Schema(gs *ast.Schema, t *ast.Type) *oa.Schema {
 	if t.Elem != nil {
 		return &oa.Schema{
-			Type:     &oa.Types{oa.TypeArray},
-			Nullable: !t.NonNull,
-			Items:    oa.NewSchemaRef("", Schema(gs, t.Elem, props)),
+			Type:       &oa.Types{oa.TypeArray},
+			Nullable:   !t.NonNull,
+			Items:      oa.NewSchemaRef("", Schema(gs, t.Elem)),
+			Extensions: map[string]any{},
 		}
 	}
-	s := &oa.Schema{Nullable: !t.NonNull, Extensions: map[string]any{}}
 	name := t.NamedType
-	def := gs.Types[name]
+	var s *oa.Schema
+	isEnum := false
 	if scalar, ok := Scalars[name]; ok {
-		// Copied, so editing one field's schema cannot change the map.
-		if scalar.Type != nil {
-			s.Type = &oa.Types{}
-			*s.Type = append(*s.Type, *scalar.Type...)
-		}
-		s.Format = scalar.Format
-		s.Example = scalar.Example
-		if scalar.Items != nil {
-			items := *scalar.Items.Value
-			s.Items = oa.NewSchemaRef("", &items)
-		}
-		if s.Type.Is(oa.TypeObject) {
-			s.Extensions["x-graphql-type"] = name
-		}
-		return s
-	}
-	if def != nil && def.Kind == ast.Enum {
-		s.Type = &oa.Types{oa.TypeString}
+		s = scalar()
+	} else if def := gs.Types[name]; def.Kind == ast.Enum {
+		isEnum = true
+		s = &oa.Schema{Type: &oa.Types{oa.TypeString}}
 		for _, v := range def.EnumValues {
 			s.Enum = append(s.Enum, v.Name)
 		}
-		s.Extensions["x-graphql-type"] = name
-		return s
+	} else {
+		// Objects, interfaces, and unions. An unmapped scalar fails
+		// TestScalarsMatchTheGraphQLSchema rather than reaching here.
+		s = &oa.Schema{Type: &oa.Types{oa.TypeObject}}
 	}
-	// Objects, interfaces, and unions. An unmapped scalar fails
-	// TestScalarsMatchTheGraphQLSchema rather than reaching here.
-	s.Type = &oa.Types{oa.TypeObject}
-	s.Properties = props
-	s.Extensions["x-graphql-type"] = name
+	s.Nullable = !t.NonNull
+	s.Extensions = map[string]any{}
+	if isEnum || s.Type.Is(oa.TypeObject) {
+		s.Extensions["x-graphql-type"] = name
+	}
 	return s
 }
 
-// Element returns the schema of the innermost list element, or s itself if
-// s is not a list.
+// Element returns the schema of the innermost array element, or s itself if
+// s is not an array.
 func Element(s *oa.Schema) *oa.Schema {
-	for s.Items != nil && s.Items.Value != nil && s.Type.Is(oa.TypeArray) {
+	for s.Items != nil {
 		s = s.Items.Value
 	}
 	return s

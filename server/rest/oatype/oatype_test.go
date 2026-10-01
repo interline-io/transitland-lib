@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	oa "github.com/getkin/kin-openapi/openapi3"
-	"github.com/interline-io/transitland-lib/internal/generated/gqlout"
 	"github.com/interline-io/transitland-lib/server/gql"
 	"github.com/interline-io/transitland-lib/server/rest/oatype"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +43,6 @@ func TestSchema(t *testing.T) {
 	gs, err := gqlparser.LoadSchema(&ast.Source{Input: testSDL})
 	require.NoError(t, err)
 	query := gs.Types["Query"]
-	stopProps := oa.Schemas{"id": oa.NewSchemaRef("", oa.NewIntegerSchema())}
 
 	tcs := []struct {
 		field  string
@@ -58,8 +55,8 @@ func TestSchema(t *testing.T) {
 		{"mode", `{"type":"string","nullable":true,"enum":["BUS","RAIL"],"x-graphql-type":"Mode"}`},
 		{"modeList", `{"type":"array","nullable":true,"items":{"type":"string","enum":["BUS","RAIL"],"x-graphql-type":"Mode"}}`},
 		{"modeMatrix", `{"type":"array","nullable":true,"items":{"type":"array","nullable":true,"items":{"type":"string","enum":["BUS","RAIL"],"x-graphql-type":"Mode"}}}`},
-		{"stop", `{"type":"object","nullable":true,"properties":{"id":{"type":"integer"}},"x-graphql-type":"Stop"}`},
-		{"stopList", `{"type":"array","items":{"type":"object","nullable":true,"properties":{"id":{"type":"integer"}},"x-graphql-type":"Stop"}}`},
+		{"stop", `{"type":"object","nullable":true,"x-graphql-type":"Stop"}`},
+		{"stopList", `{"type":"array","items":{"type":"object","nullable":true,"x-graphql-type":"Stop"}}`},
 		{"point", `{"type":"object","nullable":true,"x-graphql-type":"Point"}`},
 		{"pointList", `{"type":"array","nullable":true,"items":{"type":"object","x-graphql-type":"Point"}}`},
 		{"any", `{"nullable":true}`},
@@ -70,11 +67,7 @@ func TestSchema(t *testing.T) {
 		t.Run(tc.field, func(t *testing.T) {
 			def := query.Fields.ForName(tc.field)
 			require.NotNil(t, def)
-			var props oa.Schemas
-			if def.Type.Name() == "Stop" {
-				props = stopProps
-			}
-			s := oatype.Schema(gs, def.Type, props)
+			s := oatype.Schema(gs, def.Type)
 			got, err := json.Marshal(s)
 			require.NoError(t, err)
 			assert.JSONEq(t, tc.expect, string(got))
@@ -83,22 +76,10 @@ func TestSchema(t *testing.T) {
 	}
 }
 
-// Editing one field's schema leaves the scalar map, and so every other field
-// of that scalar, unchanged.
-func TestSchemaCopiesScalars(t *testing.T) {
-	gs, err := gqlparser.LoadSchema(&ast.Source{Input: testSDL})
-	require.NoError(t, err)
-	def := gs.Types["Query"].Fields.ForName("date")
-	first := oatype.Schema(gs, def.Type, nil)
-	(*first.Type)[0] = "mutated"
-	second := oatype.Schema(gs, def.Type, nil)
-	assert.True(t, second.Type.Is(oa.TypeString))
-}
-
 // Every scalar the GraphQL schema declares has an entry, and every entry is
 // declared, so a new scalar cannot silently fall through to an object.
 func TestScalarsMatchTheGraphQLSchema(t *testing.T) {
-	gs := gqlout.NewExecutableSchema(gqlout.Config{Resolvers: &gql.Resolver{}}).Schema()
+	gs := gql.NewExecutableSchema().Schema()
 	for name, def := range gs.Types {
 		if def.Kind != ast.Scalar {
 			continue

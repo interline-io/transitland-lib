@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	oa "github.com/getkin/kin-openapi/openapi3"
-	"github.com/interline-io/transitland-lib/internal/generated/gqlout"
 	"github.com/interline-io/transitland-lib/server/gql"
 	"github.com/interline-io/transitland-lib/server/rest/oatype"
 	"github.com/vektah/gqlparser/v2"
@@ -179,8 +178,7 @@ func WithSecurity(security *oa.SecurityRequirements) SchemaOption {
 
 func queryToOAResponses(queryString string) (*oa.Responses, error) {
 	// Load schema
-	schema := gqlout.NewExecutableSchema(gqlout.Config{Resolvers: &gql.Resolver{}})
-	gs := schema.Schema()
+	gs := gql.NewExecutableSchema().Schema()
 
 	// Prepare document
 	query, err := gqlparser.LoadQuery(gs, queryString)
@@ -195,7 +193,7 @@ func queryToOAResponses(queryString string) (*oa.Responses, error) {
 	}}
 	for _, op := range query.Operations {
 		for selOrder, sel := range op.SelectionSet {
-			queryRecurse(gs, sel, responseObj.Value.Properties, 0, selOrder)
+			queryRecurse(gs, sel, responseObj.Value.Properties, selOrder)
 		}
 	}
 	desc := "ok"
@@ -293,11 +291,11 @@ func ParseDocstring(v string) ParsedDocstring {
 	return ret
 }
 
-func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, level int, order int) int {
+func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, order int) int {
 	if frag, ok := recurseValue.(*ast.FragmentSpread); ok {
 		for _, sel := range frag.Definition.SelectionSet {
 			// Ugly hack to put fragments at the end of the selection set
-			order = queryRecurse(gs, sel, parentSchema, level, order+1)
+			order = queryRecurse(gs, sel, parentSchema, order+1)
 		}
 		return order
 	}
@@ -315,38 +313,33 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 
 	props := oa.Schemas{}
 	for _, sel := range field.SelectionSet {
-		order = queryRecurse(gs, sel, props, level+1, order+1)
+		order = queryRecurse(gs, sel, props, order+1)
 	}
-	if len(props) == 0 {
-		props = nil
-	}
-	schema := oatype.Schema(gs, field.Definition.Type, props)
+	schema := oatype.Schema(gs, field.Definition.Type)
 	schema.Title = field.Name
 	order += 1
-	if schema.Extensions == nil {
-		schema.Extensions = map[string]any{}
-	}
 	schema.Extensions["x-order"] = order
 
-	// Docstring: text and links describe the field; enum values constrain its
-	// innermost element. An example is a single string, so it is applied only
-	// where the field is not a list.
+	// Text and links describe the field. Selected properties and docstring
+	// enum values and examples belong to the innermost element.
 	parsed := ParseDocstring(field.Definition.Description)
 	schema.Description = field.Definition.Description
 	if parsed.Text != "" {
 		schema.Description = parsed.Text
 	}
-	for _, doc := range parsed.ExternalDocs {
+	if n := len(parsed.ExternalDocs); n > 0 {
+		doc := parsed.ExternalDocs[n-1]
 		schema.ExternalDocs = &oa.ExternalDocs{URL: doc.URL, Description: doc.Text}
 	}
 	element := oatype.Element(schema)
+	if len(props) > 0 {
+		element.Properties = props
+	}
 	for _, e := range parsed.Enum {
 		element.Enum = append(element.Enum, e)
 	}
-	if field.Definition.Type.Elem == nil {
-		for _, example := range parsed.Examples {
-			schema.Example = example
-		}
+	if n := len(parsed.Examples); n > 0 {
+		element.Example = parsed.Examples[n-1]
 	}
 
 	parentSchema[schema.Title] = oa.NewSchemaRef("", schema)

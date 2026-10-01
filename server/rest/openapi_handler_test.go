@@ -160,39 +160,17 @@ func TestResponseSchemasAreTypedByGraphQLType(t *testing.T) {
 	doc, err := GenerateOpenAPI("/rest")
 	require.NoError(t, err)
 
-	var walk func(path string, ref *oa.SchemaRef)
-	walk = func(path string, ref *oa.SchemaRef) {
-		if ref == nil || ref.Value == nil {
-			return
-		}
+	require.NoError(t, doc.WalkSchemas(func(ptr string, ref *oa.SchemaRef) error {
 		s := ref.Value
 		name, named := s.Extensions["x-graphql-type"].(string)
 		if scalar, ok := oatype.Scalars[name]; named && ok {
-			assert.Equal(t, scalar.Type, s.Type, "%s: scalar %s", path, name)
+			assert.Equal(t, scalar().Type, s.Type, "%s: scalar %s", ptr, name)
 		}
 		if s.Type.Is(oa.TypeArray) {
-			assert.False(t, named, "%s: array repeats its items' x-graphql-type", path)
+			assert.False(t, named, "%s: array repeats its items' x-graphql-type", ptr)
 		}
-		walk(path+"[]", s.Items)
-		for prop, child := range s.Properties {
-			walk(path+"."+prop, child)
-		}
-	}
-	for path, item := range doc.Paths.Map() {
-		if item.Get == nil || item.Get.Responses == nil {
-			continue
-		}
-		for code, resp := range item.Get.Responses.Map() {
-			if resp == nil || resp.Value == nil {
-				continue
-			}
-			for _, media := range resp.Value.Content {
-				if media != nil {
-					walk(path+" "+code, media.Schema)
-				}
-			}
-		}
-	}
+		return nil
+	}))
 
 	routeTypes := responseProperty(t, doc, "/agencies", "agencies", "route_types")
 	assert.True(t, routeTypes.Type.Is(oa.TypeArray))
