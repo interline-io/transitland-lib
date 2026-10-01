@@ -577,6 +577,8 @@ type FeedVersionFilter struct {
 	FeedOnestopID *string `json:"feed_onestop_id,omitempty"`
 	// Search for feed versions with this SHA1 hash
 	Sha1 *string `json:"sha1,omitempty"`
+	// Search for feed versions with this SHA1 hash of the top-level .txt files (`sha1_dir`)
+	Sha1Dir *string `json:"sha1_dir,omitempty"`
 	// Search for feed versions with this file identifier
 	File *string `json:"file,omitempty"`
 	// Search for feed versions with the specified feed integer IDs

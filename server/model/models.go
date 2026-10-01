@@ -79,7 +79,6 @@ type FeedFetch struct {
 }
 
 type FeedVersion struct {
-	SHA1Dir tt.String `json:"sha1_dir"`
 	dmfr.FeedVersion
 }
 
