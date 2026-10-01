@@ -410,32 +410,16 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 	order += 1
 	schema.Extensions["x-order"] = order
 
-	// Type the field from its GraphQL kind, looked up by the element type of a
-	// list. Scalars take their JSON type from gqlScalarToOASchema, since a custom
-	// scalar does not declare one; enums are strings; objects stay objects.
-	// x-graphql-type names the GraphQL type wherever the JSON type alone does
-	// not: objects, enums, and scalars with no JSON type.
-	scalarType, isMappedScalar := gqlScalarToOASchema[gqlType]
-	kind := ast.Object
-	if def, ok := gs.Types[gqlType]; ok {
-		kind = def.Kind
-	}
-	switch {
-	case nestedArray:
-		schema.Type = oa.NewObjectSchema().Type
-	case isMappedScalar:
+	// Scalar types, looked up by the element type of a list.
+	if scalarType, ok := gqlScalarToOASchema[gqlType]; ok && !nestedArray {
 		schema.Type = scalarType.Type
 		schema.Format = scalarType.Format
 		schema.Example = scalarType.Example
-	case kind == ast.Enum:
-		schema.Type = oa.NewStringSchema().Type
-	case kind == ast.Scalar:
-		// An unmapped scalar: no JSON type is known, so none is claimed.
-	default:
+	} else {
 		schema.Type = oa.NewObjectSchema().Type
-	}
-	if gqlType != "" && (schema.Type == nil || !isMappedScalar || nestedArray) {
-		schema.Extensions["x-graphql-type"] = gqlType
+		if gqlType != "" {
+			schema.Extensions["x-graphql-type"] = gqlType
+		}
 	}
 
 	// Parse docstring

@@ -203,22 +203,6 @@ func TestScalarListItemsAreTyped(t *testing.T) {
 	assert.True(t, routeTypes.Items.Value.Type.Is("integer"))
 }
 
-// Fields are typed by their GraphQL kind: an enum is a string carrying its
-// values, and a scalar with no JSON type still names its GraphQL type.
-func TestFieldsAreTypedByKind(t *testing.T) {
-	doc, err := GenerateOpenAPI("/rest")
-	require.NoError(t, err)
-
-	spec := responseProperty(t, doc, "/feeds", "feeds", "spec")
-	assert.True(t, spec.Type.Is("string"), "enum spec is typed %v", spec.Type)
-	assert.NotEmpty(t, spec.Enum)
-	assert.Equal(t, "FeedSpecTypes", spec.Extensions["x-graphql-type"])
-
-	geometry := responseProperty(t, doc, "/stops", "stops", "geometry")
-	assert.Nil(t, geometry.Type)
-	assert.Equal(t, "Point", geometry.Extensions["x-graphql-type"])
-}
-
 // responseProperty follows a list response's items down to one property,
 // failing rather than panicking if any step is missing.
 func responseProperty(t *testing.T, doc *oa.T, path string, names ...string) *oa.Schema {
