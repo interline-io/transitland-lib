@@ -833,6 +833,7 @@
                             "description": "Convex hull of all stops served by this agency",
                             "nullable": true,
                             "title": "geometry",
+                            "x-graphql-type": "Polygon",
                             "x-order": 24
                           },
                           "id": {
@@ -884,7 +885,7 @@
                                       ],
                                       "nullable": true,
                                       "title": "spec",
-                                      "type": "object",
+                                      "type": "string",
                                       "x-graphql-type": "FeedSpecTypes",
                                       "x-order": 46
                                     }
@@ -1691,6 +1692,7 @@
                             "description": "Convex hull of all stops served by this agency",
                             "nullable": true,
                             "title": "geometry",
+                            "x-graphql-type": "Polygon",
                             "x-order": 24
                           },
                           "id": {
@@ -1742,7 +1744,7 @@
                                       ],
                                       "nullable": true,
                                       "title": "spec",
-                                      "type": "object",
+                                      "type": "string",
                                       "x-graphql-type": "FeedSpecTypes",
                                       "x-order": 46
                                     }
@@ -2330,7 +2332,7 @@
                                 ],
                                 "nullable": true,
                                 "title": "spec",
-                                "type": "object",
+                                "type": "string",
                                 "x-graphql-type": "FeedSpecTypes",
                                 "x-order": 21
                               }
@@ -2439,18 +2441,21 @@
                                 "description": "Counts of entities skipped due to errors, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_error_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 85
                               },
                               "skip_entity_filter_count": {
                                 "description": "Counts of entities skipped due to import filters, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_filter_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 87
                               },
                               "skip_entity_marked_count": {
                                 "description": "Counts of entities skipped by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 89
                               },
                               "success": {
@@ -2463,6 +2468,7 @@
                                 "description": "Counts of warnings raised during import, keyed by file name",
                                 "nullable": true,
                                 "title": "warning_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 83
                               }
                             },
@@ -2533,6 +2539,7 @@
                             "description": "Convex hull of all stop coordinates in this feed version",
                             "nullable": true,
                             "title": "geometry",
+                            "x-graphql-type": "Polygon",
                             "x-order": 14
                           },
                           "id": {
@@ -2941,7 +2948,7 @@
                                 ],
                                 "nullable": true,
                                 "title": "spec",
-                                "type": "object",
+                                "type": "string",
                                 "x-graphql-type": "FeedSpecTypes",
                                 "x-order": 21
                               }
@@ -3050,18 +3057,21 @@
                                 "description": "Counts of entities skipped due to errors, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_error_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 85
                               },
                               "skip_entity_filter_count": {
                                 "description": "Counts of entities skipped due to import filters, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_filter_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 87
                               },
                               "skip_entity_marked_count": {
                                 "description": "Counts of entities skipped by the marker filter, keyed by file name",
                                 "nullable": true,
                                 "title": "skip_entity_marked_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 89
                               },
                               "success": {
@@ -3074,6 +3084,7 @@
                                 "description": "Counts of warnings raised during import, keyed by file name",
                                 "nullable": true,
                                 "title": "warning_count",
+                                "x-graphql-type": "Any",
                                 "x-order": 83
                               }
                             },
@@ -3144,6 +3155,7 @@
                             "description": "Convex hull of all stop coordinates in this feed version",
                             "nullable": true,
                             "title": "geometry",
+                            "x-graphql-type": "Polygon",
                             "x-order": 14
                           },
                           "id": {
@@ -3598,6 +3610,7 @@
                                     "description": "Convex hull of all stop coordinates in this feed version",
                                     "nullable": true,
                                     "title": "geometry",
+                                    "x-graphql-type": "Polygon",
                                     "x-order": 70
                                   },
                                   "id": {
@@ -3792,7 +3805,7 @@
                             ],
                             "nullable": true,
                             "title": "spec",
-                            "type": "object",
+                            "type": "string",
                             "x-graphql-type": "FeedSpecTypes",
                             "x-order": 4
                           },
@@ -4076,6 +4089,7 @@
                                     "description": "Convex hull of all stop coordinates in this feed version",
                                     "nullable": true,
                                     "title": "geometry",
+                                    "x-graphql-type": "Polygon",
                                     "x-order": 70
                                   },
                                   "id": {
@@ -4270,7 +4284,7 @@
                             ],
                             "nullable": true,
                             "title": "spec",
-                            "type": "object",
+                            "type": "string",
                             "x-graphql-type": "FeedSpecTypes",
                             "x-order": 4
                           },
@@ -4939,6 +4953,7 @@
                                   "description": "Convex hull of all stops served by this agency",
                                   "nullable": true,
                                   "title": "geometry",
+                                  "x-graphql-type": "Polygon",
                                   "x-order": 31
                                 },
                                 "id": {
@@ -5047,7 +5062,7 @@
                                   ],
                                   "nullable": true,
                                   "title": "spec",
-                                  "type": "object",
+                                  "type": "string",
                                   "x-graphql-type": "FeedSpecTypes",
                                   "x-order": 21
                                 }
@@ -5462,6 +5477,7 @@
                                   "description": "Convex hull of all stops served by this agency",
                                   "nullable": true,
                                   "title": "geometry",
+                                  "x-graphql-type": "Polygon",
                                   "x-order": 31
                                 },
                                 "id": {
@@ -5570,7 +5586,7 @@
                                   ],
                                   "nullable": true,
                                   "title": "spec",
-                                  "type": "object",
+                                  "type": "string",
                                   "x-graphql-type": "FeedSpecTypes",
                                   "x-order": 21
                                 }
@@ -6457,6 +6473,7 @@
                             "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`",
                             "nullable": true,
                             "title": "geometry",
+                            "x-graphql-type": "Geometry",
                             "x-order": 32
                           },
                           "id": {
@@ -6734,6 +6751,7 @@
                                     "geometry": {
                                       "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
+                                      "x-graphql-type": "Point",
                                       "x-order": 156
                                     },
                                     "id": {
@@ -7440,6 +7458,7 @@
                             "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`",
                             "nullable": true,
                             "title": "geometry",
+                            "x-graphql-type": "Geometry",
                             "x-order": 32
                           },
                           "id": {
@@ -7717,6 +7736,7 @@
                                     "geometry": {
                                       "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
+                                      "x-graphql-type": "Point",
                                       "x-order": 156
                                     },
                                     "id": {
@@ -8949,7 +8969,7 @@
                             ],
                             "nullable": true,
                             "title": "schedule_relationship",
-                            "type": "object",
+                            "type": "string",
                             "x-graphql-type": "ScheduleRelationship",
                             "x-order": 20
                           },
@@ -8966,6 +8986,7 @@
                               "geometry": {
                                 "description": "Path geometry for this shape as a LineString",
                                 "title": "geometry",
+                                "x-graphql-type": "LineString",
                                 "x-order": 39
                               },
                               "shape_id": {
@@ -9246,6 +9267,7 @@
                                     "geometry": {
                                       "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
+                                      "x-graphql-type": "Point",
                                       "x-order": 261
                                     },
                                     "id": {
@@ -10424,7 +10446,7 @@
                             ],
                             "nullable": true,
                             "title": "schedule_relationship",
-                            "type": "object",
+                            "type": "string",
                             "x-graphql-type": "ScheduleRelationship",
                             "x-order": 20
                           },
@@ -10441,6 +10463,7 @@
                               "geometry": {
                                 "description": "Path geometry for this shape as a LineString",
                                 "title": "geometry",
+                                "x-graphql-type": "LineString",
                                 "x-order": 39
                               },
                               "shape_id": {
@@ -10721,6 +10744,7 @@
                                     "geometry": {
                                       "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
+                                      "x-graphql-type": "Point",
                                       "x-order": 261
                                     },
                                     "id": {
@@ -11331,6 +11355,7 @@
                           "geometry": {
                             "description": "Geographic location of this stop as a GeoJSON Point",
                             "title": "geometry",
+                            "x-graphql-type": "Point",
                             "x-order": 30
                           },
                           "id": {
@@ -11599,6 +11624,7 @@
                               "geometry": {
                                 "description": "Geographic location of this stop as a GeoJSON Point",
                                 "title": "geometry",
+                                "x-graphql-type": "Point",
                                 "x-order": 71
                               },
                               "id": {
@@ -12124,6 +12150,7 @@
                           "geometry": {
                             "description": "Geographic location of this stop as a GeoJSON Point",
                             "title": "geometry",
+                            "x-graphql-type": "Point",
                             "x-order": 30
                           },
                           "id": {
@@ -12392,6 +12419,7 @@
                               "geometry": {
                                 "description": "Geographic location of this stop as a GeoJSON Point",
                                 "title": "geometry",
+                                "x-graphql-type": "Point",
                                 "x-order": 71
                               },
                               "id": {
@@ -13440,7 +13468,7 @@
                                         ],
                                         "nullable": true,
                                         "title": "schedule_relationship",
-                                        "type": "object",
+                                        "type": "string",
                                         "x-graphql-type": "ScheduleRelationship",
                                         "x-order": 404
                                       },
@@ -14351,7 +14379,7 @@
                                             ],
                                             "nullable": true,
                                             "title": "schedule_relationship",
-                                            "type": "object",
+                                            "type": "string",
                                             "x-graphql-type": "ScheduleRelationship",
                                             "x-order": 472
                                           },
@@ -14368,6 +14396,7 @@
                                               "geometry": {
                                                 "description": "Path geometry for this shape as a LineString",
                                                 "title": "geometry",
+                                                "x-graphql-type": "LineString",
                                                 "x-order": 613
                                               },
                                               "id": {
@@ -14449,6 +14478,7 @@
                                 "geometry": {
                                   "description": "Geographic location of this stop as a GeoJSON Point",
                                   "title": "geometry",
+                                  "x-graphql-type": "Point",
                                   "x-order": 364
                                 },
                                 "id": {
@@ -14811,7 +14841,7 @@
                                   ],
                                   "nullable": true,
                                   "title": "schedule_relationship",
-                                  "type": "object",
+                                  "type": "string",
                                   "x-graphql-type": "ScheduleRelationship",
                                   "x-order": 73
                                 },
@@ -15722,7 +15752,7 @@
                                       ],
                                       "nullable": true,
                                       "title": "schedule_relationship",
-                                      "type": "object",
+                                      "type": "string",
                                       "x-graphql-type": "ScheduleRelationship",
                                       "x-order": 141
                                     },
@@ -15739,6 +15769,7 @@
                                         "geometry": {
                                           "description": "Path geometry for this shape as a LineString",
                                           "title": "geometry",
+                                          "x-graphql-type": "LineString",
                                           "x-order": 282
                                         },
                                         "id": {
@@ -15871,6 +15902,7 @@
                           "geometry": {
                             "description": "Geographic location of this stop as a GeoJSON Point",
                             "title": "geometry",
+                            "x-graphql-type": "Point",
                             "x-order": 19
                           },
                           "id": {
@@ -16572,7 +16604,7 @@
                                             ],
                                             "nullable": true,
                                             "title": "schedule_relationship",
-                                            "type": "object",
+                                            "type": "string",
                                             "x-graphql-type": "ScheduleRelationship",
                                             "x-order": 813
                                           },
@@ -17483,7 +17515,7 @@
                                                 ],
                                                 "nullable": true,
                                                 "title": "schedule_relationship",
-                                                "type": "object",
+                                                "type": "string",
                                                 "x-graphql-type": "ScheduleRelationship",
                                                 "x-order": 881
                                               },
@@ -17500,6 +17532,7 @@
                                                   "geometry": {
                                                     "description": "Path geometry for this shape as a LineString",
                                                     "title": "geometry",
+                                                    "x-graphql-type": "LineString",
                                                     "x-order": 1022
                                                   },
                                                   "id": {
@@ -17581,6 +17614,7 @@
                                     "geometry": {
                                       "description": "Geographic location of this stop as a GeoJSON Point",
                                       "title": "geometry",
+                                      "x-graphql-type": "Point",
                                       "x-order": 773
                                     },
                                     "id": {
@@ -17696,6 +17730,7 @@
                               "geometry": {
                                 "description": "Geographic location of this stop as a GeoJSON Point",
                                 "title": "geometry",
+                                "x-graphql-type": "Point",
                                 "x-order": 741
                               },
                               "id": {
