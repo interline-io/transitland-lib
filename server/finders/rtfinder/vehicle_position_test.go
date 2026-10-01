@@ -2,9 +2,11 @@ package rtfinder
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
@@ -126,5 +128,63 @@ func TestSourceProcessMessage_VehicleTimestamp(t *testing.T) {
 
 	t.Run("entity id is carried", func(t *testing.T) {
 		assert.Equal(t, "ent-1", process(t, newMsg(0)).GetVehiclePositions()[0].ID)
+	})
+}
+
+// Route.vehicle_positions across every route of a feed version resolves the
+// vehicles naming a trip without a route in one query, however many routes ask.
+func TestFindVehiclePositionsForRoute_TripLookup(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	raw := testutil.MustOpenTestDB(t)
+	routes := testRoutes(t, raw, testBartFeedVersion(t, raw))
+	ctx := context.Background()
+	t.Run("concurrent routes", func(t *testing.T) {
+		db := &countingDB{Ext: raw}
+		f := testFinder(t, db, vehiclePositionTopicKey, testReadRT(t, "BA-vehicle-positions.json"))
+		found := map[string][]string{}
+		var lock sync.Mutex
+		run := func() {
+			var wg sync.WaitGroup
+			for rid, r := range routes {
+				for range 10 {
+					wg.Go(func() {
+						var ids []string
+						for _, v := range f.FindVehiclePositionsForRoute(ctx, r, nil, nil) {
+							ids = append(ids, v.ID)
+						}
+						lock.Lock()
+						found[rid] = append(found[rid], ids...)
+						lock.Unlock()
+					})
+				}
+			}
+			wg.Wait()
+		}
+		run()
+		assert.EqualValues(t, 1, db.tripQueries.Load(), "cold")
+		run()
+		assert.EqualValues(t, 1, db.tripQueries.Load(), "warm")
+		// Vehicle 1003 names only its trip.
+		for rid, ids := range found {
+			if rid == "07" {
+				assert.Contains(t, ids, "1003")
+			} else {
+				assert.NotContains(t, ids, "1003", "route %s", rid)
+			}
+		}
+	})
+	t.Run("failing lookup", func(t *testing.T) {
+		// Three vehicles naming only a trip share one lookup per call.
+		msg := &pb.FeedMessage{Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}}
+		for _, tid := range []string{"T1", "T2", "T3"} {
+			msg.Entity = append(msg.Entity, &pb.FeedEntity{Id: proto.String(tid), Vehicle: &pb.VehiclePosition{Trip: testTrip(tid, "")}})
+		}
+		db := &countingDB{Ext: raw}
+		db.fail.Store(true)
+		f := testFinder(t, db, vehiclePositionTopicKey, msg)
+		assert.Empty(t, f.FindVehiclePositionsForRoute(ctx, routes["05"], nil, nil))
+		assert.EqualValues(t, 1, db.tripQueries.Load())
 	})
 }

@@ -114,9 +114,17 @@ func TestRouteRequest(t *testing.T) {
 			name: "include_alerts:true",
 			h:    RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
 			f: func(t *testing.T, jj string) {
+				// The route's own two, and the two on one of its trips.
 				a := gjson.Get(jj, "routes.0.alerts").Array()
-				assert.Equal(t, 2, len(a), "alert count")
+				assert.Equal(t, 4, len(a), "alert count")
 			},
+		},
+		{
+			// An alert on one of the route's trips says so in its informed entities.
+			name:         "include_alerts:informed_entity",
+			h:            RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
+			selector:     "routes.0.alerts.#.informed_entity.0.trip.trip_id",
+			expectSelect: []string{"1031527WKDY", "1031527WKDY"},
 		},
 		{
 			name: "include_alerts:false",

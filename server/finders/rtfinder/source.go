@@ -2,9 +2,12 @@ package rtfinder
 
 import (
 	"context"
+	"sync"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -14,6 +17,13 @@ type Source struct {
 	entityByTrip     map[string]*pb.TripUpdate
 	alerts           []*pb.Alert
 	vehiclePositions []VehiclePositionEntity
+	// unroutedTripIds are the trip_ids this message names without a route_id,
+	// which only the static trip can place on a route.
+	unroutedTripIds []string
+	// tripRoutes holds unroutedTripIds resolved to route_ids, by feed version id,
+	// for as long as this message is current.
+	tripRoutesOnce sync.Once
+	tripRoutes     *kvcache.Cache[int, map[string]string]
 }
 
 // VehiclePositionEntity pairs a vehicle position with the id of the FeedEntity
@@ -57,6 +67,12 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 	a := map[string]*pb.TripUpdate{}
 	var alerts []*pb.Alert
 	vehiclePositions := make([]VehiclePositionEntity, 0, len(rtmsg.Entity))
+	unrouted := set.New[string]()
+	addUnrouted := func(td *pb.TripDescriptor) {
+		if td.GetRouteId() == "" && td.GetTripId() != "" {
+			unrouted.Add(td.GetTripId())
+		}
+	}
 	for _, ent := range rtmsg.Entity {
 		if v := ent.TripUpdate; v != nil {
 			if v.Timestamp == nil && hasDefaultTimestamp {
@@ -67,18 +83,25 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 		}
 		if v := ent.Alert; v != nil {
 			alerts = append(alerts, v)
+			for _, s := range v.GetInformedEntity() {
+				if s.GetRouteId() == "" {
+					addUnrouted(s.GetTrip())
+				}
+			}
 		}
 		if v := ent.Vehicle; v != nil {
 			// Not defaulted from the header, unlike a trip update: the header
 			// is newer than every reading in it, so a vehicle reporting no time
 			// would outrank every vehicle that reported a real one.
 			vehiclePositions = append(vehiclePositions, VehiclePositionEntity{ID: ent.GetId(), Position: v})
+			addUnrouted(v.GetTrip())
 		}
 	}
 	log.For(ctx).Trace().Str("feed_id", f.feed).Int("trip_updates", len(a)).Int("alerts", len(alerts)).Int("vehicle_positions", len(vehiclePositions)).Msg("rtsource: processed data")
 	f.entityByTrip = a
 	f.alerts = alerts
 	f.vehiclePositions = vehiclePositions
+	f.unroutedTripIds = unrouted.ToSlice()
 	return nil
 }
 
