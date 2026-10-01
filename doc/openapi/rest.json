@@ -972,25 +972,21 @@
                           "route_types": {
                             "description": "The distinct raw GTFS route types of this agency's routes, in ascending order",
                             "items": {
-                              "type": "object",
-                              "x-graphql-type": "Int",
+                              "type": "integer",
                               "x-order": 26
                             },
                             "title": "route_types",
                             "type": "array",
-                            "x-graphql-type": "Int",
                             "x-order": 26
                           },
                           "route_types_basic": {
                             "description": "The distinct basic GTFS route types of this agency's routes, in ascending order: each extended route type is replaced by the basic type it is a kind of, so an agency running both 700 and 702 reports 3 once",
                             "items": {
-                              "type": "object",
-                              "x-graphql-type": "Int",
+                              "type": "integer",
                               "x-order": 28
                             },
                             "title": "route_types_basic",
                             "type": "array",
-                            "x-graphql-type": "Int",
                             "x-order": 28
                           },
                           "routes": {
@@ -1834,25 +1830,21 @@
                           "route_types": {
                             "description": "The distinct raw GTFS route types of this agency's routes, in ascending order",
                             "items": {
-                              "type": "object",
-                              "x-graphql-type": "Int",
+                              "type": "integer",
                               "x-order": 26
                             },
                             "title": "route_types",
                             "type": "array",
-                            "x-graphql-type": "Int",
                             "x-order": 26
                           },
                           "route_types_basic": {
                             "description": "The distinct basic GTFS route types of this agency's routes, in ascending order: each extended route type is replaced by the basic type it is a kind of, so an agency running both 700 and 702 reports 3 once",
                             "items": {
-                              "type": "object",
-                              "x-graphql-type": "Int",
+                              "type": "integer",
                               "x-order": 28
                             },
                             "title": "route_types_basic",
                             "type": "array",
-                            "x-graphql-type": "Int",
                             "x-order": 28
                           },
                           "routes": {
@@ -3705,14 +3697,12 @@
                           "languages": {
                             "description": "Language(s) included in this feed (BCP 47 tags)",
                             "items": {
-                              "type": "object",
-                              "x-graphql-type": "String",
+                              "type": "string",
                               "x-order": 10
                             },
                             "nullable": true,
                             "title": "languages",
                             "type": "array",
-                            "x-graphql-type": "String",
                             "x-order": 10
                           },
                           "license": {
@@ -3856,25 +3846,21 @@
                               "static_historic": {
                                 "description": "URLs for static feeds that represent past service that is no longer in effect",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "String",
+                                  "type": "string",
                                   "x-order": 17
                                 },
                                 "title": "static_historic",
                                 "type": "array",
-                                "x-graphql-type": "String",
                                 "x-order": 17
                               },
                               "static_planned": {
                                 "description": "URLs for static feeds representing planned future service (typically schedule changes due to take effect)",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "String",
+                                  "type": "string",
                                   "x-order": 19
                                 },
                                 "title": "static_planned",
                                 "type": "array",
-                                "x-graphql-type": "String",
                                 "x-order": 19
                               }
                             },
@@ -4189,14 +4175,12 @@
                           "languages": {
                             "description": "Language(s) included in this feed (BCP 47 tags)",
                             "items": {
-                              "type": "object",
-                              "x-graphql-type": "String",
+                              "type": "string",
                               "x-order": 10
                             },
                             "nullable": true,
                             "title": "languages",
                             "type": "array",
-                            "x-graphql-type": "String",
                             "x-order": 10
                           },
                           "license": {
@@ -4340,25 +4324,21 @@
                               "static_historic": {
                                 "description": "URLs for static feeds that represent past service that is no longer in effect",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "String",
+                                  "type": "string",
                                   "x-order": 17
                                 },
                                 "title": "static_historic",
                                 "type": "array",
-                                "x-graphql-type": "String",
                                 "x-order": 17
                               },
                               "static_planned": {
                                 "description": "URLs for static feeds representing planned future service (typically schedule changes due to take effect)",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "String",
+                                  "type": "string",
                                   "x-order": 19
                                 },
                                 "title": "static_planned",
                                 "type": "array",
-                                "x-graphql-type": "String",
                                 "x-order": 19
                               }
                             },
@@ -5006,25 +4986,21 @@
                                 "route_types": {
                                   "description": "The distinct raw GTFS route types of this agency's routes, in ascending order",
                                   "items": {
-                                    "type": "object",
-                                    "x-graphql-type": "Int",
+                                    "type": "integer",
                                     "x-order": 33
                                   },
                                   "title": "route_types",
                                   "type": "array",
-                                  "x-graphql-type": "Int",
                                   "x-order": 33
                                 },
                                 "route_types_basic": {
                                   "description": "The distinct basic GTFS route types of this agency's routes, in ascending order: each extended route type is replaced by the basic type it is a kind of, so an agency running both 700 and 702 reports 3 once",
                                   "items": {
-                                    "type": "object",
-                                    "x-graphql-type": "Int",
+                                    "type": "integer",
                                     "x-order": 35
                                   },
                                   "title": "route_types_basic",
                                   "type": "array",
-                                  "x-graphql-type": "Int",
                                   "x-order": 35
                                 }
                               },
@@ -5533,25 +5509,21 @@
                                 "route_types": {
                                   "description": "The distinct raw GTFS route types of this agency's routes, in ascending order",
                                   "items": {
-                                    "type": "object",
-                                    "x-graphql-type": "Int",
+                                    "type": "integer",
                                     "x-order": 33
                                   },
                                   "title": "route_types",
                                   "type": "array",
-                                  "x-graphql-type": "Int",
                                   "x-order": 33
                                 },
                                 "route_types_basic": {
                                   "description": "The distinct basic GTFS route types of this agency's routes, in ascending order: each extended route type is replaced by the basic type it is a kind of, so an agency running both 700 and 702 reports 3 once",
                                   "items": {
-                                    "type": "object",
-                                    "x-graphql-type": "Int",
+                                    "type": "integer",
                                     "x-order": 35
                                   },
                                   "title": "route_types_basic",
                                   "type": "array",
-                                  "x-graphql-type": "Int",
                                   "x-order": 35
                                 }
                               },
@@ -8265,13 +8237,13 @@
                               "added_dates": {
                                 "description": "Service-added dates derived from `calendar_dates.txt` records with exception_type=1",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "Date",
+                                  "example": "2019-11-15",
+                                  "format": "date",
+                                  "type": "string",
                                   "x-order": 65
                                 },
                                 "title": "added_dates",
                                 "type": "array",
-                                "x-graphql-type": "Date",
                                 "x-order": 65
                               },
                               "end_date": {
@@ -8297,13 +8269,13 @@
                               "removed_dates": {
                                 "description": "Service-removed dates derived from `calendar_dates.txt` records with exception_type=2",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "Date",
+                                  "example": "2019-11-15",
+                                  "format": "date",
+                                  "type": "string",
                                   "x-order": 67
                                 },
                                 "title": "removed_dates",
                                 "type": "array",
-                                "x-graphql-type": "Date",
                                 "x-order": 67
                               },
                               "saturday": {
@@ -9740,13 +9712,13 @@
                               "added_dates": {
                                 "description": "Service-added dates derived from `calendar_dates.txt` records with exception_type=1",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "Date",
+                                  "example": "2019-11-15",
+                                  "format": "date",
+                                  "type": "string",
                                   "x-order": 65
                                 },
                                 "title": "added_dates",
                                 "type": "array",
-                                "x-graphql-type": "Date",
                                 "x-order": 65
                               },
                               "end_date": {
@@ -9772,13 +9744,13 @@
                               "removed_dates": {
                                 "description": "Service-removed dates derived from `calendar_dates.txt` records with exception_type=2",
                                 "items": {
-                                  "type": "object",
-                                  "x-graphql-type": "Date",
+                                  "example": "2019-11-15",
+                                  "format": "date",
+                                  "type": "string",
                                   "x-order": 67
                                 },
                                 "title": "removed_dates",
                                 "type": "array",
-                                "x-graphql-type": "Date",
                                 "x-order": 67
                               },
                               "saturday": {

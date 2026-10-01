@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
@@ -149,4 +150,49 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 			assert.Equal(t, tc.expect, rr.Header().Get("Location"))
 		}
 	})
+}
+
+// A list of scalars documents its items as that scalar. A list type's
+// NamedType is empty, so looking the scalar up by it typed every [Int!] and
+// [String!] item as an object.
+func TestScalarListItemsAreTyped(t *testing.T) {
+	doc, err := GenerateOpenAPI("/rest")
+	require.NoError(t, err)
+
+	var walk func(path string, ref *oa.SchemaRef)
+	walk = func(path string, ref *oa.SchemaRef) {
+		if ref == nil || ref.Value == nil {
+			return
+		}
+		s := ref.Value
+		if s.Items != nil && s.Items.Value != nil {
+			items := s.Items.Value
+			if gqlType, ok := items.Extensions["x-graphql-type"].(string); ok {
+				_, scalar := gqlScalarToOASchema[gqlType]
+				assert.False(t, scalar, "%s: items of scalar type %s are documented as %v", path, gqlType, items.Type)
+			}
+			walk(path+"[]", s.Items)
+		}
+		for name, prop := range s.Properties {
+			walk(path+"."+name, prop)
+		}
+	}
+	for path, item := range doc.Paths.Map() {
+		if item.Get == nil {
+			continue
+		}
+		for code, resp := range item.Get.Responses.Map() {
+			if resp.Value == nil {
+				continue
+			}
+			for _, media := range resp.Value.Content {
+				walk(path+" "+code, media.Schema)
+			}
+		}
+	}
+
+	agencies := doc.Paths.Value("/agencies").Get.Responses.Value("200").Value.Content.Get("application/json").Schema.Value.Properties["agencies"].Value.Items.Value
+	routeTypes := agencies.Properties["route_types"].Value
+	assert.True(t, routeTypes.Type.Is("array"))
+	assert.True(t, routeTypes.Items.Value.Type.Is("integer"))
 }

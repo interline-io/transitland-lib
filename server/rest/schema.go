@@ -369,7 +369,6 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 		Extensions: map[string]any{},
 	}
 	gqlType := ""
-	namedType := ""
 	isArray := false
 	if field, ok := recurseValue.(*ast.Field); ok {
 		if field.Comment != nil {
@@ -383,7 +382,6 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 		schema.Title = field.Name
 		schema.Description = field.Definition.Description
 		schema.Nullable = !field.Definition.Type.NonNull
-		namedType = field.Definition.Type.NamedType
 		gqlType = field.Definition.Type.NamedType
 		if field.Definition.Type.Elem != nil {
 			gqlType = field.Definition.Type.Elem.Name()
@@ -413,8 +411,10 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 	order += 1
 	schema.Extensions["x-order"] = order
 
-	// Scalar types
-	if scalarType, ok := gqlScalarToOASchema[namedType]; ok {
+	// Scalar types. Looked up by gqlType, which names the element of a list
+	// type: a list's NamedType is empty, so [Int!] would otherwise fall through
+	// to an object.
+	if scalarType, ok := gqlScalarToOASchema[gqlType]; ok {
 		schema.Type = scalarType.Type
 		schema.Format = scalarType.Format
 		schema.Example = scalarType.Example
@@ -444,6 +444,8 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 		innerSchema := &oa.Schema{
 			Properties: schema.Properties,
 			Type:       schema.Type,
+			Format:     schema.Format,
+			Example:    schema.Example,
 			Extensions: schema.Extensions,
 		}
 		outerSchema := &oa.Schema{
