@@ -127,7 +127,7 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *mode
 		bbox = ptr(tlxy.BoundingBox(*where.Bbox))
 	}
 	var ret []*model.VehiclePosition
-	topics, _ := f.lc.GetFeedVersionRTFeeds(fvid)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, fvid)
 	for _, topic := range topics {
 		src, ok := f.cache.GetSource(ctx, getTopicKey(topic, vehiclePositionTopicKey))
 		if !ok || src == nil {

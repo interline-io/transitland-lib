@@ -7,41 +7,52 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/set"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/caches/tzcache"
+	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/jmoiron/sqlx"
 )
 
+// lookupTimeout bounds one read-through lookup query, including the wait for
+// a pooled connection, so a hung query cannot hold up every caller of its key.
+const lookupTimeout = 5 * time.Second
+
 type lookupCache struct {
-	db                     sqlx.Ext
-	fvidSourceCache        *simpleCache[int, []string]
+	db                     tldb.Ext
+	rtFeedsCache           *kvcache.Cache[int, []string] // by feed version id
+	stopTzCache            *kvcache.Cache[int, string]   // timezone names by stop id
+	fvTzCache              *kvcache.Cache[int, string]   // timezone names by feed version id
 	fvidFeedCache          *simpleCache[int, string]
 	fvidAgencyCountCache   *simpleCache[int, int]
 	feedOperatorCountCache *simpleCache[string, int]
 	agencyRouteIdCache     *simpleCache[int, set.Set[string]]
 	routeTripIdCache       *simpleCache[int, set.Set[string]]
-	gtfsTripIdCache        *simpleCache[int, string]
 	gtfsStopIdCache        *simpleCache[int, string]
 	gtfsAgencyIdCache      *simpleCache[int, string]
 	routeIdCache           *simpleCache[skey, int]
 	tzCache                *tzcache.Cache[int]
-	rtLookupLock           sync.Mutex
 }
 
-func newLookupCache(db sqlx.Ext) *lookupCache {
-	return &lookupCache{
+func newLookupCache(db tldb.Ext) *lookupCache {
+	f := &lookupCache{
 		db:                     db,
 		tzCache:                tzcache.NewCache[int](),
-		fvidSourceCache:        newSimpleCache[int, []string](),
 		fvidFeedCache:          newSimpleCache[int, string](),
 		fvidAgencyCountCache:   newSimpleCache[int, int](),
 		feedOperatorCountCache: newSimpleCache[string, int](),
 		agencyRouteIdCache:     newSimpleCache[int, set.Set[string]](),
 		routeTripIdCache:       newSimpleCache[int, set.Set[string]](),
-		gtfsTripIdCache:        newSimpleCache[int, string](),
 		gtfsStopIdCache:        newSimpleCache[int, string](),
 		gtfsAgencyIdCache:      newSimpleCache[int, string](),
 		routeIdCache:           newSimpleCache[skey, int](),
 	}
+	f.rtFeedsCache = kvcache.NewRefreshCache(nil, "rtfeeds", f.queryFeedVersionRTFeeds)
+	f.rtFeedsCache.RefreshTimeout = lookupTimeout
+	f.stopTzCache = kvcache.NewRefreshCache(nil, "stoptz", f.queryStopTimezone)
+	f.stopTzCache.RefreshTimeout = lookupTimeout
+	f.fvTzCache = kvcache.NewRefreshCache(nil, "fvtz", f.queryFeedVersionTimezone)
+	f.fvTzCache.RefreshTimeout = lookupTimeout
+	return f
 }
 
 func (f *lookupCache) GetRouteID(fvid int, tid string) (int, bool) {
@@ -52,17 +63,6 @@ func (f *lookupCache) GetRouteID(fvid int, tid string) (int, bool) {
 	eid := 0
 	err := sqlx.Get(f.db, &eid, "select id from gtfs_routes where feed_version_id = $1 and route_id = $2", fvid, tid)
 	f.routeIdCache.Set(sk, eid)
-	return eid, err == nil
-}
-
-func (f *lookupCache) GetGtfsTripID(id int) (string, bool) {
-	if a, ok := f.gtfsTripIdCache.Get(id); ok {
-		return a, ok
-	}
-	q := `select trip_id from gtfs_trips where id = $1 limit 1`
-	eid := ""
-	err := sqlx.Get(f.db, &eid, q, id)
-	f.gtfsTripIdCache.Set(id, eid)
 	return eid, err == nil
 }
 
@@ -157,12 +157,13 @@ func (f *lookupCache) GetRouteTripIDs(ctx context.Context, id int) set.Set[strin
 	return ret
 }
 
-func (f *lookupCache) GetFeedVersionRTFeeds(id int) ([]string, bool) {
-	f.rtLookupLock.Lock()
-	defer f.rtLookupLock.Unlock()
-	if a, ok := f.fvidSourceCache.Get(id); ok {
-		return a, ok
-	}
+// GetFeedVersionRTFeeds returns the onestop_ids of the feeds that share an
+// operator with a feed version: the topics that may hold its realtime data.
+func (f *lookupCache) GetFeedVersionRTFeeds(ctx context.Context, id int) ([]string, bool) {
+	return f.rtFeedsCache.Get(ctx, id)
+}
+
+func (f *lookupCache) queryFeedVersionRTFeeds(ctx context.Context, id int) ([]string, error) {
 	q := `
 	select 
 		distinct on(cf.onestop_id)
@@ -175,43 +176,22 @@ func (f *lookupCache) GetFeedVersionRTFeeds(id int) ([]string, bool) {
 	order by cf.onestop_id
 	`
 	var eid []string
-	err := sqlx.Select(
-		f.db,
-		&eid,
-		q,
-		id,
-	)
-	f.fvidSourceCache.Set(id, eid) // set before return
-	if err != nil {
-		return nil, false
+	if err := sqlx.SelectContext(ctx, f.db, &eid, q, id); err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", id).Msg("rtfinder: rt feeds lookup failed")
+		return nil, err
 	}
-	return eid, true
+	return eid, nil
 }
 
 // StopTimezone looks up the timezone for a stop
 func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*time.Location, bool) {
-	// Need to lock while looking up or setting.
-	f.rtLookupLock.Lock()
-	defer f.rtLookupLock.Unlock()
-
 	// If a timezone is provided, save it and return immediately
 	if known != "" {
 		log.TraceCheck(func() {
 			log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Msg("tz: using known timezone")
 		})
-		return f.tzCache.Add(id, known)
-	}
-
-	// Check the cache
-	if loc, ok := f.tzCache.Get(id); ok {
-		log.TraceCheck(func() {
-			log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Str("loc", loc.String()).Msg("tz: using cached timezone")
-		})
-		return loc, ok
-	} else {
-		log.TraceCheck(func() {
-			log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Str("loc", loc.String()).Msg("tz: timezone not in cache")
-		})
+		f.stopTzCache.Set(ctx, id, known)
+		return f.tzCache.Location(known)
 	}
 	if id == 0 {
 		log.TraceCheck(func() {
@@ -219,7 +199,14 @@ func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*
 		})
 		return nil, false
 	}
-	// Otherwise lookup the timezone
+	tz, ok := f.stopTzCache.Get(ctx, id)
+	if !ok {
+		return nil, false
+	}
+	return f.tzCache.Location(tz)
+}
+
+func (f *lookupCache) queryStopTimezone(ctx context.Context, id int) (string, error) {
 	q := `
 		select COALESCE(nullif(s.stop_timezone, ''), nullif(p.stop_timezone, ''), a.agency_timezone)
 		from gtfs_stops s
@@ -233,32 +220,33 @@ func (f *lookupCache) StopTimezone(ctx context.Context, id int, known string) (*
 		where s.id = $1
 		limit 1`
 	tz := ""
-	if err := sqlx.Get(f.db, &tz, q, id); err != nil {
-		log.For(ctx).Error().Err(err).Int("stop_id", id).Str("known", known).Msg("tz: lookup failed")
-		return nil, false
+	if err := sqlx.GetContext(ctx, f.db, &tz, q, id); err != nil {
+		log.For(ctx).Error().Err(err).Int("stop_id", id).Msg("tz: lookup failed")
+		return "", err
 	}
-	loc, ok := f.tzCache.Add(id, tz)
 	log.TraceCheck(func() {
-		log.For(ctx).Trace().Int("stop_id", id).Str("known", known).Str("loc", loc.String()).Msg("tz: lookup successful")
+		log.For(ctx).Trace().Int("stop_id", id).Str("tz", tz).Msg("tz: lookup successful")
 	})
-	return loc, ok
+	return tz, nil
 }
 
 // FeedVersionTimezone looks up the timezone for a feed version using the first agency's timezone
 func (f *lookupCache) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Location, bool) {
-	// Use a special key for feed version timezones (negative to avoid collision with stop IDs)
-	cacheKey := -fvid
-	if loc, ok := f.tzCache.Get(cacheKey); ok {
-		return loc, ok
-	}
-	q := `SELECT agency_timezone FROM gtfs_agencies WHERE feed_version_id = $1 LIMIT 1`
-	tz := ""
-	if err := sqlx.Get(f.db, &tz, q, fvid); err != nil {
-		log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("tz: feed version timezone lookup failed")
+	tz, ok := f.fvTzCache.Get(ctx, fvid)
+	if !ok {
 		return nil, false
 	}
-	loc, ok := f.tzCache.Add(cacheKey, tz)
-	return loc, ok
+	return f.tzCache.Location(tz)
+}
+
+func (f *lookupCache) queryFeedVersionTimezone(ctx context.Context, fvid int) (string, error) {
+	q := `SELECT agency_timezone FROM gtfs_agencies WHERE feed_version_id = $1 LIMIT 1`
+	tz := ""
+	if err := sqlx.GetContext(ctx, f.db, &tz, q, fvid); err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Msg("tz: feed version timezone lookup failed")
+		return "", err
+	}
+	return tz, nil
 }
 
 // Lookup time.Location by name

@@ -47,23 +47,24 @@ import (
 
 // ServerCommand runs the transitland API server.
 type ServerCommand struct {
-	Timeout                 int
-	LongQueryDuration       int
-	Port                    string
-	RestPrefix              string
-	LoadAdmins              bool
-	ValidateLargeFiles      bool
-	UseMaterialized         bool
-	UseGeohashFilter        bool
-	LoaderBatchSize         int
-	LoaderStopTimeBatchSize int
-	SecretsFile             string
-	Storage                 string
-	RTStorage               string
-	DBURL                   string
-	RedisURL                string
-	MaxRadius               float64
-	secrets                 []dmfr.Secret
+	Timeout                   int
+	LongQueryDuration         int
+	Port                      string
+	RestPrefix                string
+	LoadAdmins                bool
+	ValidateLargeFiles        bool
+	UseMaterialized           bool
+	UseMaterializedDepartures bool
+	UseGeohashFilter          bool
+	LoaderBatchSize           int
+	LoaderStopTimeBatchSize   int
+	SecretsFile               string
+	Storage                   string
+	RTStorage                 string
+	DBURL                     string
+	RedisURL                  string
+	MaxRadius                 float64
+	secrets                   []dmfr.Secret
 }
 
 func (cmd *ServerCommand) HelpDesc() (string, string) {
@@ -90,6 +91,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
 	fl.BoolVar(&cmd.UseMaterialized, "use-materialized", false, "Use materialized views for active entities")
+	fl.BoolVar(&cmd.UseMaterializedDepartures, "use-materialized-departures", false, "Plan departure queries from a materialized CTE of the requested stops' stop_times")
 	fl.BoolVar(&cmd.UseGeohashFilter, "use-geohash-filter", false, "Filter feed/feed_version bbox queries by precomputed stop geohash cells (requires populated tl_feed_version_geohashes)")
 }
 
@@ -182,25 +184,26 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// compose their own binary with a real Checker.
 	log.For(ctx).Warn().Msg("authorization disabled: demo mode")
 	cfg := model.Config{
-		Finder:                  dbFinder,
-		RTFinder:                rtFinder,
-		GbfsFinder:              gbfsFinder,
-		Adapter:                 dbAdapter,
-		FeedManager:             feedmanager.NewDBFeedManager(dbAdapter),
-		Checker:                 allowAllCheckerInstance,
-		Actions:                 actionFinder,
-		Jobs:                    jobBackend,
-		JobRunner:               jobRunner,
-		Secrets:                 cmd.secrets,
-		Storage:                 cmd.Storage,
-		RTStorage:               cmd.RTStorage,
-		ValidateLargeFiles:      cmd.ValidateLargeFiles,
-		UseMaterialized:         cmd.UseMaterialized,
-		UseGeohashFilter:        cmd.UseGeohashFilter,
-		RestPrefix:              cmd.RestPrefix,
-		LoaderBatchSize:         cmd.LoaderBatchSize,
-		LoaderStopTimeBatchSize: cmd.LoaderStopTimeBatchSize,
-		MaxRadius:               cmd.MaxRadius,
+		Finder:                    dbFinder,
+		RTFinder:                  rtFinder,
+		GbfsFinder:                gbfsFinder,
+		Adapter:                   dbAdapter,
+		FeedManager:               feedmanager.NewDBFeedManager(dbAdapter),
+		Checker:                   allowAllCheckerInstance,
+		Actions:                   actionFinder,
+		Jobs:                      jobBackend,
+		JobRunner:                 jobRunner,
+		Secrets:                   cmd.secrets,
+		Storage:                   cmd.Storage,
+		RTStorage:                 cmd.RTStorage,
+		ValidateLargeFiles:        cmd.ValidateLargeFiles,
+		UseMaterialized:           cmd.UseMaterialized,
+		UseMaterializedDepartures: cmd.UseMaterializedDepartures,
+		UseGeohashFilter:          cmd.UseGeohashFilter,
+		RestPrefix:                cmd.RestPrefix,
+		LoaderBatchSize:           cmd.LoaderBatchSize,
+		LoaderStopTimeBatchSize:   cmd.LoaderStopTimeBatchSize,
+		MaxRadius:                 cmd.MaxRadius,
 	}
 
 	// Install cfg into the job context and start the in-process worker pool.

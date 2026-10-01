@@ -1,6 +1,7 @@
 package gql
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
@@ -138,8 +139,15 @@ func TestStopResolver_StopTimes(t *testing.T) {
 			selectExpect: []string{"10:05:00", "10:20:00", "10:35:00", "10:50:00"},
 		},
 	}
-	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterializedDepartures=%t", materialized), func(t *testing.T) {
+			c, _ := newTestClientWithOpts(t, testconfig.Options{
+				RTJsons:                   testconfig.DefaultRTJson(),
+				UseMaterializedDepartures: materialized,
+			})
+			queryTestcases(t, c, testcases)
+		})
+	}
 }
 
 func TestStopResolver_StopTimes_Dates(t *testing.T) {
