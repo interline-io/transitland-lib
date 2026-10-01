@@ -1,10 +1,17 @@
 package rtfinder
 
 import (
+	"context"
+	"sync"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/internal/set"
+	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
+	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/server/testutil"
+	"github.com/interline-io/transitland-lib/testdata"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
@@ -68,14 +75,16 @@ func TestSelectorNamesRoute(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			looked := false
-			tripIds := func() set.Set[string] {
+			tripRoutes := func() map[string]string {
 				looked = true
-				return set.New("T05")
+				return map[string]string{"T05": "05", "T03": "03"}
 			}
-			assert.Equal(t, tc.expect, selectorNamesRoute(tc.s, "05", tripIds))
+			assert.Equal(t, tc.expect, selectorNamesRoute(tc.s, "05", tripRoutes))
 			assert.Equal(t, tc.lookup, looked, "trip lookup")
 		})
 	}
+	// A trip that resolves to no route matches none, not even a route without a route_id.
+	assert.False(t, tripOnRoute(testTrip("T99", ""), "", func() map[string]string { return nil }))
 }
 
 func TestMatchesRouteType(t *testing.T) {
@@ -100,4 +109,58 @@ func TestMatchesRouteType(t *testing.T) {
 			assert.Equal(t, tc.expect, matchesRouteType(tc.s, 1))
 		})
 	}
+}
+
+// Route.alerts across every route of a feed version resolves the trips named
+// without a route in one query, however many routes ask.
+func TestFindAlertsForRoute_TripLookup(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	raw := testutil.MustOpenTestDB(t)
+	fvid := testBartFeedVersion(t, raw)
+	var routes []*model.Route
+	q := `select id, feed_version_id, route_id, agency_id, route_type from gtfs_routes where feed_version_id = $1`
+	if err := sqlx.Select(raw, &routes, q, fvid); err != nil {
+		t.Fatal(err)
+	}
+	db := &countingDB{Ext: raw}
+	f := NewFinder(kvcache.NewMemoryStore(), db)
+	defer f.Close()
+	ctx := context.Background()
+	msg, err := rt.ReadFile(testdata.Path("server", "rt", "BA-alerts-trips.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.AddData(ctx, getTopicKey("BA", "realtime_alerts"), data); err != nil {
+		t.Fatal(err)
+	}
+	headers := map[string][]string{}
+	var lock sync.Mutex
+	run := func() {
+		var wg sync.WaitGroup
+		for _, r := range routes {
+			for range 10 {
+				wg.Go(func() {
+					for _, a := range f.FindAlertsForRoute(ctx, r, nil, nil) {
+						lock.Lock()
+						headers[r.RouteID.Val] = append(headers[r.RouteID.Val], a.HeaderText[0].Text)
+						lock.Unlock()
+					}
+				})
+			}
+		}
+		wg.Wait()
+	}
+	run()
+	assert.EqualValues(t, 1, db.tripQueries.Load(), "cold")
+	run()
+	assert.EqualValues(t, 1, db.tripQueries.Load(), "warm")
+	assert.Contains(t, headers["05"], "Trip 1031527WKDY")
+	assert.Contains(t, headers["03"], "Trip 2211533WKDY")
+	assert.NotContains(t, headers["05"], "Trip 2211533WKDY")
 }

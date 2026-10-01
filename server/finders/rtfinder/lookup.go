@@ -26,7 +26,6 @@ type lookupCache struct {
 	fvidAgencyCountCache   *simpleCache[int, int]
 	feedOperatorCountCache *simpleCache[string, int]
 	agencyRouteIdCache     *simpleCache[int, set.Set[string]]
-	routeTripIdCache       *simpleCache[int, set.Set[string]]
 	gtfsStopIdCache        *simpleCache[int, string]
 	gtfsAgencyIdCache      *simpleCache[int, string]
 	routeIdCache           *simpleCache[skey, int]
@@ -41,7 +40,6 @@ func newLookupCache(db tldb.Ext) *lookupCache {
 		fvidAgencyCountCache:   newSimpleCache[int, int](),
 		feedOperatorCountCache: newSimpleCache[string, int](),
 		agencyRouteIdCache:     newSimpleCache[int, set.Set[string]](),
-		routeTripIdCache:       newSimpleCache[int, set.Set[string]](),
 		gtfsStopIdCache:        newSimpleCache[int, string](),
 		gtfsAgencyIdCache:      newSimpleCache[int, string](),
 		routeIdCache:           newSimpleCache[skey, int](),
@@ -84,9 +82,11 @@ func (f *lookupCache) GetGtfsAgencyID(id int) (string, bool) {
 	}
 	q := `select agency_id from gtfs_agencies where id = $1 limit 1`
 	eid := ""
-	err := sqlx.Get(f.db, &eid, q, id)
+	if err := sqlx.Get(f.db, &eid, q, id); err != nil {
+		return "", false
+	}
 	f.gtfsAgencyIdCache.Set(id, eid)
-	return eid, err == nil
+	return eid, true
 }
 
 // GetFeedVersionAgencyCount returns the number of agencies in a feed version.
@@ -141,20 +141,43 @@ func (f *lookupCache) GetAgencyRouteIDs(ctx context.Context, id int) set.Set[str
 	return ret
 }
 
-// GetRouteTripIDs returns the set of GTFS trip_ids belonging to a route.
-func (f *lookupCache) GetRouteTripIDs(ctx context.Context, id int) set.Set[string] {
-	if a, ok := f.routeTripIdCache.Get(id); ok {
-		return a
-	}
-	var tripIds []string
-	q := `select trip_id from gtfs_trips where route_id = $1`
-	if err := sqlx.Select(f.db, &tripIds, q, id); err != nil {
-		log.For(ctx).Error().Err(err).Int("route_id", id).Msg("rtfinder: route trip id lookup failed")
+// GetTripRouteIDs returns the GTFS route_ids, by trip_id, of the trips a
+// realtime message names without a route_id, within a feed version.
+func (f *lookupCache) GetTripRouteIDs(ctx context.Context, src *Source, fvid int) map[string]string {
+	if len(src.unroutedTripIds) == 0 {
 		return nil
 	}
-	ret := set.New(tripIds...)
-	f.routeTripIdCache.Set(id, ret)
+	src.tripRoutesOnce.Do(func() {
+		src.tripRoutes = kvcache.NewRefreshCache(nil, "triproutes", func(ctx context.Context, fvid int) (map[string]string, error) {
+			return f.queryTripRouteIDs(ctx, fvid, src.unroutedTripIds)
+		})
+		src.tripRoutes.RefreshTimeout = lookupTimeout
+	})
+	// A failed lookup is not cached: its trips match no route until a later
+	// call succeeds.
+	ret, _ := src.tripRoutes.Get(ctx, fvid)
 	return ret
+}
+
+func (f *lookupCache) queryTripRouteIDs(ctx context.Context, fvid int, tripIds []string) (map[string]string, error) {
+	q := `
+	select gtfs_trips.trip_id, gtfs_routes.route_id
+	from gtfs_trips
+	join gtfs_routes on gtfs_routes.id = gtfs_trips.route_id
+	where gtfs_trips.feed_version_id = $1 and gtfs_trips.trip_id = any($2)`
+	var rows []struct {
+		TripID  string `db:"trip_id"`
+		RouteID string `db:"route_id"`
+	}
+	if err := sqlx.SelectContext(ctx, f.db, &rows, q, fvid, tripIds); err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", fvid).Int("trip_ids", len(tripIds)).Msg("rtfinder: trip route id lookup failed")
+		return nil, err
+	}
+	ret := make(map[string]string, len(rows))
+	for _, row := range rows {
+		ret[row.TripID] = row.RouteID
+	}
+	return ret, nil
 }
 
 // GetFeedVersionRTFeeds returns the onestop_ids of the feeds that share an

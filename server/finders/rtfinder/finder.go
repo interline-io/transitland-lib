@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
-	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -107,13 +105,13 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 	foundAlerts := []*model.Alert{}
 	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
-	// Looked up only for a trip named by trip_id alone.
-	tripIds := sync.OnceValue(func() set.Set[string] { return f.lc.GetRouteTripIDs(ctx, t.ID) })
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
 		if a == nil || !ok {
 			continue
 		}
+		// Looked up only for a trip named by trip_id alone.
+		tripRoutes := func() map[string]string { return f.lc.GetTripRouteIDs(ctx, a, t.FeedVersionID) }
 		for _, alert := range a.alerts {
 			if !checkAlertActivePeriod(tnow, active, alert) {
 				continue
@@ -130,7 +128,7 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 				}
 				// A stop or a trip narrows the route to the route at that stop or
 				// on that trip, which is still an alert about the route.
-				if selectorNamesRoute(s, t.RouteID.Val, tripIds) || matchesRouteType(s, t.RouteType.Int()) {
+				if selectorNamesRoute(s, t.RouteID.Val, tripRoutes) || matchesRouteType(s, t.RouteType.Int()) {
 					found = true
 					break
 				}
@@ -157,21 +155,24 @@ func (f *Finder) agencyMatches(s *pb.EntitySelector, t *model.Route) bool {
 
 // selectorNamesRoute reports whether a selector names this route, directly or
 // through one of its trips.
-func selectorNamesRoute(s *pb.EntitySelector, routeId string, tripIds func() set.Set[string]) bool {
+func selectorNamesRoute(s *pb.EntitySelector, routeId string, tripRoutes func() map[string]string) bool {
 	if rid := s.GetRouteId(); rid != "" {
 		return rid == routeId
 	}
-	return tripOnRoute(s.GetTrip(), routeId, tripIds)
+	return tripOnRoute(s.GetTrip(), routeId, tripRoutes)
 }
 
 // tripOnRoute reports whether a trip descriptor names a trip of this route, by
 // its route_id or, without one, its trip_id.
-func tripOnRoute(td *pb.TripDescriptor, routeId string, tripIds func() set.Set[string]) bool {
+func tripOnRoute(td *pb.TripDescriptor, routeId string, tripRoutes func() map[string]string) bool {
 	if rid := td.GetRouteId(); rid != "" {
 		return rid == routeId
 	}
-	tid := td.GetTripId()
-	return tid != "" && tripIds().Contains(tid)
+	if tid := td.GetTripId(); tid != "" {
+		rid, ok := tripRoutes()[tid]
+		return ok && rid == routeId
+	}
+	return false
 }
 
 // matchesRouteType reports whether a selector naming no route, stop or trip
