@@ -7,6 +7,7 @@ import (
 	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/interline-io/transitland-lib/internal/generated/gqlout"
 	"github.com/interline-io/transitland-lib/server/gql"
+	"github.com/interline-io/transitland-lib/server/rest/oatype"
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -248,77 +249,6 @@ func queryToOAResponses(queryString string) (*oa.Responses, error) {
 	return ret, nil
 }
 
-var gqlScalarToOASchema = map[string]oa.Schema{
-	"Time": {
-		Type:    oa.NewStringSchema().Type,
-		Format:  "datetime",
-		Example: "2019-11-15T00:45:55.409906",
-	},
-	"Int": {
-		Type: oa.NewIntegerSchema().Type,
-	},
-	"Float": {
-		Type: oa.NewFloat64Schema().Type,
-	},
-	"String": {
-		Type: oa.NewStringSchema().Type,
-	},
-	"Boolean": {
-		Type: oa.NewBoolSchema().Type,
-	},
-	"ID": {
-		Type: oa.NewInt64Schema().Type,
-	},
-	"Counts": {
-		Type: oa.NewObjectSchema().Type,
-	},
-	"Tags": {
-		Type: oa.NewObjectSchema().Type,
-	},
-	"Date": {
-		Type:    oa.NewStringSchema().Type,
-		Format:  "date",
-		Example: "2019-11-15",
-	},
-	"Seconds": {
-		Type:    oa.NewStringSchema().Type,
-		Format:  "hms",
-		Example: "15:21:04",
-	},
-	"Map": {
-		Type: oa.NewObjectSchema().Type,
-	},
-	"Bool": {
-		Type: oa.NewBoolSchema().Type,
-	},
-	"Strings": {
-		Type: oa.NewArraySchema().Type,
-	},
-	"Color": {
-		Type: oa.NewStringSchema().Type,
-	},
-	"Language": {
-		Type: oa.NewStringSchema().Type,
-	},
-	"Url": {
-		Type: oa.NewStringSchema().Type,
-	},
-	"Email": {
-		Type:   oa.NewStringSchema().Type,
-		Format: "email",
-	},
-	"Timezone": {
-		Type: oa.NewStringSchema().Type,
-	},
-	"Any":        {},
-	"Upload":     {},
-	"Key":        {},
-	"Polygon":    {},
-	"Geometry":   {},
-	"Point":      {},
-	"LineString": {},
-}
-
 type ParsedUrl struct {
 	Text string
 	URL  string
@@ -364,117 +294,61 @@ func ParseDocstring(v string) ParsedDocstring {
 }
 
 func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, level int, order int) int {
-	schema := &oa.Schema{
-		Properties: oa.Schemas{},
-		Extensions: map[string]any{},
-	}
-	gqlType := ""
-	isArray := false
-	nestedArray := false
-	if field, ok := recurseValue.(*ast.Field); ok {
-		if field.Comment != nil {
-			for _, c := range field.Comment.List {
-				pd := ParseDocstring(c.Value)
-				if pd.Hide {
-					return order
-				}
-			}
-		}
-		schema.Title = field.Name
-		schema.Description = field.Definition.Description
-		schema.Nullable = !field.Definition.Type.NonNull
-		// Name is the innermost named type, so a list is typed by its element.
-		gqlType = field.Definition.Type.Name()
-		isArray = field.Definition.Type.Elem != nil
-		// One array level is emitted, so a list of lists is left untyped rather
-		// than documented as a flat list of its innermost scalar.
-		nestedArray = isArray && field.Definition.Type.Elem.Elem != nil
-		if gst, ok := gs.Types[gqlType]; ok {
-			for _, ev := range gst.EnumValues {
-				schema.Enum = append(schema.Enum, ev.Name)
-			}
-		}
-		for _, sel := range field.SelectionSet {
-			order = queryRecurse(gs, sel, schema.Properties, level+1, order+1)
-		}
-	} else if frag, ok := recurseValue.(*ast.FragmentSpread); ok {
+	if frag, ok := recurseValue.(*ast.FragmentSpread); ok {
 		for _, sel := range frag.Definition.SelectionSet {
 			// Ugly hack to put fragments at the end of the selection set
 			order = queryRecurse(gs, sel, parentSchema, level, order+1)
 		}
 		return order
-	} else {
+	}
+	field, ok := recurseValue.(*ast.Field)
+	if !ok {
 		return order
 	}
+	if field.Comment != nil {
+		for _, c := range field.Comment.List {
+			if ParseDocstring(c.Value).Hide {
+				return order
+			}
+		}
+	}
 
+	props := oa.Schemas{}
+	for _, sel := range field.SelectionSet {
+		order = queryRecurse(gs, sel, props, level+1, order+1)
+	}
+	if len(props) == 0 {
+		props = nil
+	}
+	schema := oatype.Schema(gs, field.Definition.Type, props)
+	schema.Title = field.Name
 	order += 1
+	if schema.Extensions == nil {
+		schema.Extensions = map[string]any{}
+	}
 	schema.Extensions["x-order"] = order
 
-	// Type the field from its GraphQL kind, looked up by the element type of a
-	// list. Scalars take their JSON type from gqlScalarToOASchema, since a custom
-	// scalar does not declare one; enums are strings; objects stay objects.
-	// x-graphql-type names the GraphQL type wherever the JSON type alone does
-	// not: objects, enums, and scalars with no JSON type.
-	scalarType, isMappedScalar := gqlScalarToOASchema[gqlType]
-	kind := ast.Object
-	if def, ok := gs.Types[gqlType]; ok {
-		kind = def.Kind
-	}
-	switch {
-	case nestedArray:
-		schema.Type = oa.NewObjectSchema().Type
-	case isMappedScalar:
-		schema.Type = scalarType.Type
-		schema.Format = scalarType.Format
-		schema.Example = scalarType.Example
-	case kind == ast.Enum:
-		schema.Type = oa.NewStringSchema().Type
-	case kind == ast.Scalar:
-		// An unmapped scalar: no JSON type is known, so none is claimed.
-	default:
-		schema.Type = oa.NewObjectSchema().Type
-	}
-	if gqlType != "" && (schema.Type == nil || !isMappedScalar || nestedArray) {
-		schema.Extensions["x-graphql-type"] = gqlType
-	}
-
-	// Parse docstring
-	parsed := ParseDocstring(schema.Description)
+	// Docstring: text and links describe the field; enum values constrain its
+	// innermost element. An example is a single string, so it is applied only
+	// where the field is not a list.
+	parsed := ParseDocstring(field.Definition.Description)
+	schema.Description = field.Definition.Description
 	if parsed.Text != "" {
 		schema.Description = parsed.Text
-	}
-	for _, example := range parsed.Examples {
-		schema.Example = example
 	}
 	for _, doc := range parsed.ExternalDocs {
 		schema.ExternalDocs = &oa.ExternalDocs{URL: doc.URL, Description: doc.Text}
 	}
+	element := oatype.Element(schema)
 	for _, e := range parsed.Enum {
-		schema.Enum = append(schema.Enum, e)
+		element.Enum = append(element.Enum, e)
+	}
+	if field.Definition.Type.Elem == nil {
+		for _, example := range parsed.Examples {
+			schema.Example = example
+		}
 	}
 
-	if isArray {
-		innerSchema := &oa.Schema{
-			Properties: schema.Properties,
-			Type:       schema.Type,
-			Format:     schema.Format,
-			Example:    schema.Example,
-			Enum:       schema.Enum,
-			Extensions: schema.Extensions,
-		}
-		outerSchema := &oa.Schema{
-			Title:        schema.Title,
-			Description:  schema.Description,
-			Nullable:     schema.Nullable,
-			Type:         oa.NewArraySchema().Type,
-			ExternalDocs: schema.ExternalDocs,
-			Items:        oa.NewSchemaRef("", innerSchema),
-			Extensions:   schema.Extensions,
-		}
-		schema = outerSchema
-	}
-
-	// Add to parent
 	parentSchema[schema.Title] = oa.NewSchemaRef("", schema)
 	return order
 }

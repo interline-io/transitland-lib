@@ -9,6 +9,7 @@ import (
 	oa "github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/server/rest/oatype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -152,10 +153,10 @@ func TestOnestopIdRedirectIncludesMountSegment(t *testing.T) {
 	})
 }
 
-// A list of scalars documents its items as that scalar. A list type's
-// NamedType is empty, so looking the scalar up by it typed every [Int!] and
-// [String!] item as an object.
-func TestScalarListItemsAreTyped(t *testing.T) {
+// The generated document applies oatype to every REST response: a schema
+// named after a mapped scalar has that scalar's type, and an array leaves the
+// name to its items. oatype's own tests cover each type shape.
+func TestResponseSchemasAreTypedByGraphQLType(t *testing.T) {
 	doc, err := GenerateOpenAPI("/rest")
 	require.NoError(t, err)
 
@@ -165,57 +166,47 @@ func TestScalarListItemsAreTyped(t *testing.T) {
 			return
 		}
 		s := ref.Value
-		if s.Items != nil && s.Items.Value != nil {
-			items := s.Items.Value
-			gqlType, named := items.Extensions["x-graphql-type"].(string)
-			if _, scalar := gqlScalarToOASchema[gqlType]; named && scalar {
-				t.Errorf("%s: items of scalar type %s are documented as %v", path, gqlType, items.Type)
-			}
-			if items.Type == nil && !named {
-				t.Errorf("%s: items have neither a type nor x-graphql-type", path)
-			}
-			if len(s.Enum) > 0 {
-				t.Errorf("%s: enum values are on the array rather than its items", path)
-			}
-			walk(path+"[]", s.Items)
+		name, named := s.Extensions["x-graphql-type"].(string)
+		if scalar, ok := oatype.Scalars[name]; named && ok {
+			assert.Equal(t, scalar.Type, s.Type, "%s: scalar %s", path, name)
 		}
-		for name, prop := range s.Properties {
-			walk(path+"."+name, prop)
+		if s.Type.Is(oa.TypeArray) {
+			assert.False(t, named, "%s: array repeats its items' x-graphql-type", path)
+		}
+		walk(path+"[]", s.Items)
+		for prop, child := range s.Properties {
+			walk(path+"."+prop, child)
 		}
 	}
 	for path, item := range doc.Paths.Map() {
-		if item.Get == nil {
+		if item.Get == nil || item.Get.Responses == nil {
 			continue
 		}
 		for code, resp := range item.Get.Responses.Map() {
-			if resp.Value == nil {
+			if resp == nil || resp.Value == nil {
 				continue
 			}
 			for _, media := range resp.Value.Content {
-				walk(path+" "+code, media.Schema)
+				if media != nil {
+					walk(path+" "+code, media.Schema)
+				}
 			}
 		}
 	}
 
 	routeTypes := responseProperty(t, doc, "/agencies", "agencies", "route_types")
-	assert.True(t, routeTypes.Type.Is("array"))
+	assert.True(t, routeTypes.Type.Is(oa.TypeArray))
 	require.NotNil(t, routeTypes.Items)
-	assert.True(t, routeTypes.Items.Value.Type.Is("integer"))
-}
-
-// Fields are typed by their GraphQL kind: an enum is a string carrying its
-// values, and a scalar with no JSON type still names its GraphQL type.
-func TestFieldsAreTypedByKind(t *testing.T) {
-	doc, err := GenerateOpenAPI("/rest")
-	require.NoError(t, err)
+	require.NotNil(t, routeTypes.Items.Value)
+	assert.True(t, routeTypes.Items.Value.Type.Is(oa.TypeInteger))
 
 	spec := responseProperty(t, doc, "/feeds", "feeds", "spec")
-	assert.True(t, spec.Type.Is("string"), "enum spec is typed %v", spec.Type)
+	assert.True(t, spec.Type.Is(oa.TypeString))
 	assert.NotEmpty(t, spec.Enum)
 	assert.Equal(t, "FeedSpecTypes", spec.Extensions["x-graphql-type"])
 
 	geometry := responseProperty(t, doc, "/stops", "stops", "geometry")
-	assert.Nil(t, geometry.Type)
+	assert.True(t, geometry.Type.Is(oa.TypeObject))
 	assert.Equal(t, "Point", geometry.Extensions["x-graphql-type"])
 }
 
@@ -226,17 +217,23 @@ func responseProperty(t *testing.T, doc *oa.T, path string, names ...string) *oa
 	item := doc.Paths.Value(path)
 	require.NotNil(t, item, path)
 	require.NotNil(t, item.Get, path)
+	require.NotNil(t, item.Get.Responses, path)
 	resp := item.Get.Responses.Value("200")
 	require.NotNil(t, resp, path)
+	require.NotNil(t, resp.Value, path)
 	media := resp.Value.Content.Get("application/json")
 	require.NotNil(t, media, path)
+	require.NotNil(t, media.Schema, path)
+	require.NotNil(t, media.Schema.Value, path)
 	s := media.Schema.Value
 	for _, name := range names {
 		if s.Items != nil {
+			require.NotNil(t, s.Items.Value, "%s: %s", path, name)
 			s = s.Items.Value
 		}
 		prop, ok := s.Properties[name]
 		require.True(t, ok, "%s: no property %s", path, name)
+		require.NotNil(t, prop.Value, "%s: %s", path, name)
 		s = prop.Value
 	}
 	return s
