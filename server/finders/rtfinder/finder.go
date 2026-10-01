@@ -50,10 +50,6 @@ func (f *Finder) AddData(ctx context.Context, topic string, data []byte) error {
 	return f.cache.AddData(ctx, topic, data)
 }
 
-func (f *Finder) GetGtfsTripID(ctx context.Context, id int) (string, bool) {
-	return f.lc.GetGtfsTripID(id)
-}
-
 func (f *Finder) StopTimezone(ctx context.Context, id int, known string) (*time.Location, bool) {
 	return f.lc.StopTimezone(ctx, id, known)
 }
@@ -63,7 +59,7 @@ func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Locat
 }
 
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	for _, topic := range topics {
 		if a, ok := f.getTrip(ctx, topic, t.TripID.Val); ok {
 			return a
@@ -74,7 +70,7 @@ func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
 
 func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
@@ -109,7 +105,7 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 
 func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	// Looked up only for a trip named by trip_id alone.
 	tripIds := sync.OnceValue(func() set.Set[string] { return f.lc.GetRouteTripIDs(ctx, t.ID) })
@@ -190,7 +186,7 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 
 func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
@@ -225,7 +221,7 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 
 func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
@@ -263,7 +259,7 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 	// Resolve the trip in each RT feed once. Both passes below ask every topic
 	// the same question, and a feed version can be associated with dozens of RT
 	// feeds, so answering twice is most of the work.
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	var rtTrips []*pb.TripUpdate
 	for _, topic := range topics {
 		if rtTrip, ok := f.getTrip(ctx, topic, t.TripID.Val); ok {
@@ -319,7 +315,7 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.TripUpdate {
 	sid := t.StopID
 	var ret []*pb.TripUpdate
-	topics, _ := f.lc.GetFeedVersionRTFeeds(t.FeedVersionID)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	for _, topic := range topics {
 		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
 		if !ok {

@@ -31,6 +31,7 @@ transitland server [flags]
       --timeout int                        (default 60)
       --use-geohash-filter                Filter feed/feed_version bbox queries by precomputed stop geohash cells (requires populated tl_feed_version_geohashes)
       --use-materialized                  Use materialized views for active entities
+      --use-materialized-departures       Plan departure queries from a materialized CTE of the requested stops' stop_times
       --validate-large-files              Allow validation of large files
 ```
 

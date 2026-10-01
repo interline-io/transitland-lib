@@ -30,13 +30,16 @@ type Config struct {
 	JobRunner   *jobs.Runner
 	// JobPolicy gates the synchronous /run endpoint (which doesn't go
 	// through a Queue). Nil means no kind-level RBAC on /run.
-	JobPolicy                jobs.AccessPolicy
-	Clock                    clock.Clock
-	Secrets                  []dmfr.Secret
-	ValidateLargeFiles       bool
-	UseMaterialized          bool
-	UseGeohashFilter         bool
-	AllowHTTPFetchUnfiltered bool
+	JobPolicy          jobs.AccessPolicy
+	Clock              clock.Clock
+	Secrets            []dmfr.Secret
+	ValidateLargeFiles bool
+	UseMaterialized    bool
+	// UseMaterializedDepartures plans departure queries from a materialized
+	// CTE of the requested entities' stop_times.
+	UseMaterializedDepartures bool
+	UseGeohashFilter          bool
+	AllowHTTPFetchUnfiltered  bool
 	// RestPrefix is the public prefix of the REST mount's *parent*, e.g.
 	// https://transit.land/api/v2 for a server reachable at .../api/v2/rest. The
 	// mount segment is not known at config time; the server recovers it from the
