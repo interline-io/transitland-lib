@@ -12,7 +12,9 @@ import (
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/internal/testpath"
+	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"google.golang.org/protobuf/proto"
 )
 
 // NewValidatorFromReader returns a Validator with data from a Reader.
@@ -78,7 +80,68 @@ func TestValidateTripUpdate(t *testing.T) {
 }
 
 func TestValidateAlert(t *testing.T) {
-
+	fi, err := newTestValidator()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Run("feed", func(t *testing.T) {
+		msg, err := ReadFile(testpath.RelPath("testdata/rt/bart-alerts.pb"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := 0
+		for _, ent := range msg.GetEntity() {
+			if alert := ent.GetAlert(); alert != nil {
+				count++
+				if errs := fi.ValidateAlert(alert); len(errs) > 0 {
+					t.Errorf("got unexpected errors %v", errs)
+				}
+			}
+		}
+		if count == 0 {
+			t.Error("expected at least one alert")
+		}
+	})
+	sel := func(f func(*pb.EntitySelector)) *pb.EntitySelector {
+		s := &pb.EntitySelector{}
+		f(s)
+		return s
+	}
+	tcs := []struct {
+		name     string
+		entities []*pb.EntitySelector
+		codes    []string
+	}{
+		{"no informed_entity", nil, []string{"E032"}},
+		{"empty informed_entity", []*pb.EntitySelector{{}}, []string{"E033"}},
+		{"one of two empty", []*pb.EntitySelector{sel(func(s *pb.EntitySelector) { s.RouteId = proto.String("L1") }), {}}, []string{"E033"}},
+		{"two empty", []*pb.EntitySelector{{}, {}}, []string{"E033", "E033"}},
+		{"agency_id", []*pb.EntitySelector{sel(func(s *pb.EntitySelector) { s.AgencyId = proto.String("CT") })}, nil},
+		{"route_id", []*pb.EntitySelector{sel(func(s *pb.EntitySelector) { s.RouteId = proto.String("L1") })}, nil},
+		{"route_type zero value", []*pb.EntitySelector{sel(func(s *pb.EntitySelector) { s.RouteType = proto.Int32(0) })}, nil},
+		{"direction_id zero value", []*pb.EntitySelector{sel(func(s *pb.EntitySelector) { s.DirectionId = proto.Uint32(0) })}, nil},
+		{"trip", []*pb.EntitySelector{sel(func(s *pb.EntitySelector) { s.Trip = &pb.TripDescriptor{TripId: proto.String("124")} })}, nil},
+		{"stop_id", []*pb.EntitySelector{sel(func(s *pb.EntitySelector) { s.StopId = proto.String("70011") })}, nil},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			errs := fi.ValidateAlert(&pb.Alert{InformedEntity: tc.entities})
+			var codes []string
+			for _, err := range errs {
+				rterr, ok := err.(*RealtimeError)
+				if !ok {
+					t.Fatalf("expected *RealtimeError, got %T", err)
+				}
+				if rterr.Field != "alert.informed_entity" {
+					t.Errorf("got field '%s', expected 'alert.informed_entity'", rterr.Field)
+				}
+				codes = append(codes, rterr.ErrorCode)
+			}
+			if strings.Join(codes, ",") != strings.Join(tc.codes, ",") {
+				t.Errorf("got error codes %v, expected %v", codes, tc.codes)
+			}
+		})
+	}
 }
 
 func TestValidatorErrors(t *testing.T) {
