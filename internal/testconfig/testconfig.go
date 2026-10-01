@@ -45,6 +45,8 @@ type Options struct {
 	// UseGeohashFilter enables the secondary stop-geohash filter on bbox/within/near
 	// queries. Requires the test database to have tl_feed_version_geohashes populated.
 	UseGeohashFilter bool
+	// UseMaterializedDepartures plans departure queries from a materialized CTE.
+	UseMaterializedDepartures bool
 }
 
 func Config(t testing.TB, opts Options) model.Config {
@@ -191,20 +193,21 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	dbAdapter := postgres.NewPostgresAdapterFromDBX(db)
 
 	return model.Config{
-		Finder:                   dbf,
-		RTFinder:                 rtf,
-		GbfsFinder:               gbf,
-		Adapter:                  dbAdapter,
-		FeedManager:              feedmanager.NewDBFeedManager(dbAdapter),
-		Checker:                  checker,
-		Jobs:                     jobBackend,
-		JobRunner:                jobRunner,
-		Actions:                  actionFinder,
-		Clock:                    cl,
-		Storage:                  opts.Storage,
-		RTStorage:                opts.RTStorage,
-		MaxRadius:                100_000,
-		AllowHTTPFetchUnfiltered: true,
-		UseGeohashFilter:         opts.UseGeohashFilter,
+		Finder:                    dbf,
+		RTFinder:                  rtf,
+		GbfsFinder:                gbf,
+		Adapter:                   dbAdapter,
+		FeedManager:               feedmanager.NewDBFeedManager(dbAdapter),
+		Checker:                   checker,
+		Jobs:                      jobBackend,
+		JobRunner:                 jobRunner,
+		Actions:                   actionFinder,
+		Clock:                     cl,
+		Storage:                   opts.Storage,
+		RTStorage:                 opts.RTStorage,
+		MaxRadius:                 100_000,
+		AllowHTTPFetchUnfiltered:  true,
+		UseGeohashFilter:          opts.UseGeohashFilter,
+		UseMaterializedDepartures: opts.UseMaterializedDepartures,
 	}
 }

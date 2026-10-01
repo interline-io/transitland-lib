@@ -120,6 +120,7 @@ type RTStopTimeUpdate struct {
 type StopTime struct {
 	ServiceDate      tt.Date
 	Date             tt.Date
+	GtfsTripID       string            // internal: the trip's GTFS trip_id, for matching realtime
 	RTTripID         string            // internal: for ADDED trips
 	RTStopTimeUpdate *RTStopTimeUpdate // internal
 	gtfs.StopTime

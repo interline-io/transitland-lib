@@ -54,7 +54,7 @@ func TestAgency_Errors(t *testing.T) {
 			agency: newAgency(func(a *Agency) {
 				a.AgencyLang = tt.NewLanguage("xyz")
 			}),
-			expectedErrors: PE("InvalidFieldError:agency_lang"),
+			expectedErrors: PE("InvalidLanguageError:agency_lang"),
 		},
 		{
 			name: "Invalid cemv_support",
