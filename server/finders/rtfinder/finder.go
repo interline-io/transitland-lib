@@ -123,13 +123,16 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// A stop or a trip narrows the route to the route at that stop or
-				// on that trip, which is still an alert about the route.
-				if s == nil {
+				// The agency is checked first so that another agency's trip never
+				// costs a trip lookup.
+				if s == nil || !f.agencyMatches(s, t) {
 					continue
 				}
-				if selectorNamesRoute(s, t.RouteID.Val, tripIds) || f.matchesRouteType(s, t) {
+				// A stop or a trip narrows the route to the route at that stop or
+				// on that trip, which is still an alert about the route.
+				if selectorNamesRoute(s, t.RouteID.Val, tripIds) || matchesRouteType(s, t.RouteType.Int()) {
 					found = true
+					break
 				}
 			}
 			if found {
@@ -140,39 +143,47 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 	return limitAlerts(foundAlerts, limit)
 }
 
-// selectorNamesRoute reports whether a selector names this route: by route_id,
-// alone or with a stop or trip, or through a trip of the route, by the trip's
-// own route_id or, failing that, its trip_id.
+// agencyMatches reports whether a selector's agency_id, if it gives one, is the
+// route's agency.
+func (f *Finder) agencyMatches(s *pb.EntitySelector, t *model.Route) bool {
+	aid := s.GetAgencyId()
+	if aid == "" {
+		return true
+	}
+	agencyId, ok := f.lc.GetGtfsAgencyID(t.AgencyID.Int())
+	// A single-agency feed may omit agency_id, leaving nothing to compare.
+	return ok && (agencyId == "" || agencyId == aid)
+}
+
+// selectorNamesRoute reports whether a selector names this route, directly or
+// through one of its trips.
 func selectorNamesRoute(s *pb.EntitySelector, routeId string, tripIds func() set.Set[string]) bool {
 	if rid := s.GetRouteId(); rid != "" {
 		return rid == routeId
 	}
-	trip := s.GetTrip()
-	if trip == nil {
-		return false
-	}
-	if rid := trip.GetRouteId(); rid != "" {
+	return tripOnRoute(s.GetTrip(), routeId, tripIds)
+}
+
+// tripOnRoute reports whether a trip descriptor names a trip of this route, by
+// its route_id or, without one, its trip_id.
+func tripOnRoute(td *pb.TripDescriptor, routeId string, tripIds func() set.Set[string]) bool {
+	if rid := td.GetRouteId(); rid != "" {
 		return rid == routeId
 	}
-	tid := trip.GetTripId()
+	tid := td.GetTripId()
 	return tid != "" && tripIds().Contains(tid)
 }
 
 // matchesRouteType reports whether a selector naming no route, stop or trip
-// covers this route by its mode: every route of that type, within the given
-// agency where there is one.
-func (f *Finder) matchesRouteType(s *pb.EntitySelector, t *model.Route) bool {
-	if s.RouteType == nil || s.GetRouteId() != "" || s.GetStopId() != "" || s.Trip != nil {
+// covers every route of this type.
+func matchesRouteType(s *pb.EntitySelector, routeType int) bool {
+	if s.RouteType == nil || s.GetRouteId() != "" || s.GetStopId() != "" {
 		return false
 	}
-	if tt.BasicRouteType(int(s.GetRouteType())) != tt.BasicRouteType(t.RouteType.Int()) {
+	if td := s.GetTrip(); td.GetTripId() != "" || td.GetRouteId() != "" {
 		return false
 	}
-	if s.GetAgencyId() == "" {
-		return true
-	}
-	agencyId, ok := f.lc.GetGtfsAgencyID(t.AgencyID.Int())
-	return ok && s.GetAgencyId() == agencyId
+	return tt.BasicRouteType(int(s.GetRouteType())) == tt.BasicRouteType(routeType)
 }
 
 func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) (*pb.FeedMessage, bool) {

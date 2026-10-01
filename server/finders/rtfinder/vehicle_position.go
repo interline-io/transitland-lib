@@ -78,13 +78,7 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 	}
 	tripIds := sync.OnceValue(func() set.Set[string] { return f.lc.GetRouteTripIDs(ctx, r.ID) })
 	match := func(_ string, v *pb.VehiclePosition) vpMatch {
-		matched := false
-		if rid := v.GetTrip().GetRouteId(); rid != "" {
-			matched = rid == routeId
-		} else {
-			matched = tripIds().Contains(v.GetTrip().GetTripId())
-		}
-		if !matched {
+		if !tripOnRoute(v.GetTrip(), routeId, tripIds) {
 			return vpNoMatch
 		}
 		return vpMatchByEntityID

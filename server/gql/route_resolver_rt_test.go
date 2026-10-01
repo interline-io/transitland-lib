@@ -77,7 +77,8 @@ func TestRouteRT_Alerts(t *testing.T) {
 }
 
 // Route.alerts returns an alert on the route at one stop wherever the stop is,
-// and one on the route's mode; Stop.alerts only the alert at that stop.
+// one on the route's mode, and one on one of its trips, but not one on another
+// agency's route with the same route_id; Stop.alerts only the alert at that stop.
 func TestRouteRT_AlertsAtStop(t *testing.T) {
 	rtfiles := []testconfig.RTJsonFile{
 		{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts-informed-entity.json"},
@@ -152,8 +153,8 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 }
 
 // Route.alerts returns an alert on one of the route's trips, named by the trip's
-// trip_id or route_id; Trip.alerts only those naming the trip itself, and
-// Stop.alerts none of them.
+// trip_id or route_id, but not one on another agency's trip; Trip.alerts only
+// those naming the trip itself, and Stop.alerts none of them.
 func TestRouteRT_TripAlerts(t *testing.T) {
 	headers := func(alerts []gjson.Result) []string {
 		var ret []string

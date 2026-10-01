@@ -107,6 +107,27 @@
           ]
         }
       }
+    },
+    {
+      "id": "other-agency-trip",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "AC",
+            "trip": {
+              "route_id": "05"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "AC Transit trip on route 05",
+              "language": "en"
+            }
+          ]
+        }
+      }
     }
   ]
 }

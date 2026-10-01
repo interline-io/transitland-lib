@@ -120,6 +120,13 @@ func TestRouteRequest(t *testing.T) {
 			},
 		},
 		{
+			// An alert on one of the route's trips says so in its informed entities.
+			name:         "include_alerts:informed_entity",
+			h:            RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
+			selector:     "routes.0.alerts.#.informed_entity.0.trip.trip_id",
+			expectSelect: []string{"1031527WKDY", "1031527WKDY"},
+		},
+		{
 			name: "include_alerts:false",
 			h:    RouteRequest{RouteKey: "BA:05", IncludeAlerts: false},
 			f: func(t *testing.T, jj string) {

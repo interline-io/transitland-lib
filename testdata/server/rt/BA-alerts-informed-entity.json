@@ -104,6 +104,25 @@
           ]
         }
       }
+    },
+    {
+      "id": "other-agency-route",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "AC",
+            "route_id": "05"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "AC Transit route 05",
+              "language": "en"
+            }
+          ]
+        }
+      }
     }
   ]
 }
