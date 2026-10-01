@@ -102,7 +102,11 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 				for _, k := range entityPairs {
 					entityKeys = append(entityKeys, k.EntityID)
 				}
-				q = stopDeparturesSelect(fvid, entityKeys, entityType, w)
+				if model.ForContext(ctx).UseMaterializedDepartures {
+					q = stopDeparturesMaterializedSelect(fvid, entityKeys, entityType, w)
+				} else {
+					q = stopDeparturesSelect(fvid, entityKeys, entityType, w)
+				}
 			} else {
 				// Otherwise get all stop_times for entity
 				q = stopTimeSelect(entityPairs, entityType, nil)
@@ -236,6 +240,141 @@ func activeServicesCTE(fvid int, serviceDate time.Time) sq.CTE {
 // stopDeparturesSelect returns stop_times for a specific date.
 // Filters by the entity IDs based on entityType (stop_id, location_id, or location_group_id).
 func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, where *model.StopTimeFilter) sq.SelectBuilder {
+	// Where must already be set for local service date and timezone
+	serviceDate := time.Now()
+	if where != nil && where.ServiceDate != nil {
+		serviceDate = where.ServiceDate.Val
+	}
+
+	// Build main query with CTEs
+	q := sq.StatementBuilder.Select(
+		"gtfs_trips.journey_pattern_id",
+		"gtfs_trips.journey_pattern_offset",
+		"gtfs_trips.id AS trip_id",
+		"gtfs_trips.trip_id AS gtfs_trip_id",
+		"gtfs_trips.feed_version_id",
+		"sts.stop_id",
+		"sts.location_id",
+		"sts.location_group_id",
+		"sts.arrival_time_freq AS arrival_time",
+		"sts.departure_time_freq AS departure_time",
+		"sts.stop_sequence",
+		"sts.shape_dist_traveled",
+		"sts.pickup_type",
+		"sts.drop_off_type",
+		"sts.timepoint",
+		"sts.interpolated",
+		"sts.stop_headsign",
+		"sts.continuous_pickup",
+		"sts.continuous_drop_off",
+		"sts.start_pickup_drop_off_window",
+		"sts.end_pickup_drop_off_window",
+		"sts.pickup_booking_rule_id",
+		"sts.drop_off_booking_rule_id",
+	).
+		WithCTE(activeServicesCTE(fvid, serviceDate)).
+		From("gtfs_trips").
+		Join("active_services gc on gc.id = gtfs_trips.service_id").
+		Join("gtfs_trips base_trip ON base_trip.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = base_trip.feed_version_id").
+		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
+		JoinClause(`left join lateral (
+			select
+				generate_series(start_time, end_time, headway_secs) freq_start
+			from gtfs_frequencies
+			where gtfs_frequencies.trip_id = gtfs_trips.id
+			) freq on true`).
+		JoinClause(`join lateral (
+			select 
+				min(sts2.departure_time) first_departure_time,
+				min(sts2.stop_sequence) stop_sequence_min, 
+				max(sts2.stop_sequence) stop_sequence_max 
+			from gtfs_stop_times sts2 
+			where sts2.trip_id = base_trip.id and sts2.feed_version_id = base_trip.feed_version_id
+			) trip_stop_sequence on true`).
+		JoinClause(`join lateral (
+			select 
+				sts.*,
+				sts.arrival_time + gtfs_trips.journey_pattern_offset + coalesce(
+					- trip_stop_sequence.first_departure_time + freq.freq_start,
+					0
+				) AS arrival_time_freq,
+				sts.departure_time + gtfs_trips.journey_pattern_offset + coalesce(
+					- trip_stop_sequence.first_departure_time + freq.freq_start,
+					0
+				) AS departure_time_freq
+			from gtfs_stop_times sts
+			where sts.trip_id = base_trip.id and sts.feed_version_id = base_trip.feed_version_id		
+			) sts on true`).
+		Where(sq.Eq{"sts.feed_version_id": fvid}).
+		OrderBy("sts.departure_time_freq", "sts.trip_id") // base + offset
+
+	// Filter by entity type
+	if len(entityIDs) > 0 {
+		switch entityType {
+		case stopTimeEntityStop:
+			q = q.Where(In("sts.stop_id", entityIDs))
+		case stopTimeEntityLocation:
+			q = q.Where(In("sts.location_id", entityIDs))
+		case stopTimeEntityLocationGroup:
+			q = q.Where(In("sts.location_group_id", entityIDs))
+		}
+	}
+
+	if where != nil {
+		if where.ExcludeFirst != nil && *where.ExcludeFirst {
+			q = q.Where("sts.stop_sequence > trip_stop_sequence.stop_sequence_min")
+		}
+		if where.ExcludeLast != nil && *where.ExcludeLast {
+			q = q.Where("sts.stop_sequence < trip_stop_sequence.stop_sequence_max")
+		}
+		if len(where.RouteOnestopIds) > 0 {
+			if where.AllowPreviousRouteOnestopIds != nil && *where.AllowPreviousRouteOnestopIds {
+				// Use CTE for route lookup optimization
+				sub := sq.StatementBuilder.
+					Select("feed_version_route_onestop_ids.entity_id", "feed_versions.feed_id").
+					Distinct().Options("on (feed_version_route_onestop_ids.entity_id, feed_versions.feed_id)").
+					From("feed_version_route_onestop_ids").
+					Join("feed_versions on feed_versions.id = feed_version_route_onestop_ids.feed_version_id").
+					Where(In("feed_version_route_onestop_ids.onestop_id", where.RouteOnestopIds)).
+					OrderBy("feed_version_route_onestop_ids.entity_id, feed_versions.feed_id, feed_versions.id DESC")
+				routeLookupCte := sq.CTE{
+					Materialized: true,
+					Alias:        "route_lookup",
+					Expression:   sub,
+				}
+				q = q.
+					WithCTE(routeLookupCte).
+					Join("gtfs_routes on gtfs_routes.id = gtfs_trips.route_id and gtfs_routes.feed_version_id = gtfs_trips.feed_version_id").
+					Join("route_lookup tlros on tlros.entity_id = gtfs_routes.route_id and tlros.feed_id = feed_versions.feed_id")
+			} else {
+				q = q.
+					Join("gtfs_routes on gtfs_routes.id = gtfs_trips.route_id").
+					Join("feed_version_route_onestop_ids on feed_version_route_onestop_ids.entity_id = gtfs_routes.route_id and feed_version_route_onestop_ids.feed_version_id = gtfs_trips.feed_version_id").
+					Where(In("feed_version_route_onestop_ids.onestop_id", where.RouteOnestopIds))
+
+			}
+		}
+		// Accept either Start/End or StartTime/EndTime
+		if where.Start != nil && where.Start.Valid {
+			where.StartTime = ptr(where.Start.Int())
+		}
+		if where.End != nil && where.End.Valid {
+			where.EndTime = ptr(where.End.Int())
+		}
+		if where.StartTime != nil {
+			q = q.Where(sq.GtOrEq{"sts.departure_time_freq": *where.StartTime})
+		}
+		if where.EndTime != nil {
+			q = q.Where(sq.LtOrEq{"sts.departure_time_freq": *where.EndTime})
+		}
+	}
+	return q
+}
+
+// stopDeparturesMaterializedSelect is stopDeparturesSelect planned from a
+// materialized CTE of the entities' stop_times. It checks service on each
+// pattern's base trip, so relies on a pattern's trips sharing a service_id.
+func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, where *model.StopTimeFilter) sq.SelectBuilder {
 	// Where must already be set for local service date and timezone
 	serviceDate := time.Now()
 	if where != nil && where.ServiceDate != nil {
