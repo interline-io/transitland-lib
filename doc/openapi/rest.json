@@ -2201,7 +2201,7 @@
             ]
           },
           {
-            "description": "Feed version feed contents SHA1 (sha1_dir)",
+            "description": "Feed version SHA1 of the top-level .txt files (sha1_dir)",
             "in": "query",
             "name": "sha1_dir",
             "schema": {
@@ -2645,7 +2645,7 @@
                             "x-order": 4
                           },
                           "sha1_dir": {
-                            "description": "SHA1 hash of the feed contents, stable across re-zipping",
+                            "description": "SHA1 hash of the top-level .txt files, concatenated in filename order; stable across re-zipping, but other files such as locations.geojson are not included",
                             "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
                             "nullable": true,
                             "title": "sha1_dir",
@@ -3264,7 +3264,7 @@
                             "x-order": 4
                           },
                           "sha1_dir": {
-                            "description": "SHA1 hash of the feed contents, stable across re-zipping",
+                            "description": "SHA1 hash of the top-level .txt files, concatenated in filename order; stable across re-zipping, but other files such as locations.geojson are not included",
                             "example": "c1026b895dbe7476c0a6dcc1b82c909bfa952c63",
                             "nullable": true,
                             "title": "sha1_dir",

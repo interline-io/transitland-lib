@@ -69,7 +69,7 @@ func (r FeedVersionRequest) RequestInfo() RequestInfo {
 					&pref{Value: &param{
 						Name:        "sha1_dir",
 						In:          "query",
-						Description: `Feed version feed contents SHA1 (sha1_dir)`,
+						Description: `Feed version SHA1 of the top-level .txt files (sha1_dir)`,
 						Schema:      newSRVal("string", "", nil),
 					}},
 					&pref{Value: &param{
