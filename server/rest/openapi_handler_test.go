@@ -167,9 +167,15 @@ func TestScalarListItemsAreTyped(t *testing.T) {
 		s := ref.Value
 		if s.Items != nil && s.Items.Value != nil {
 			items := s.Items.Value
-			if gqlType, ok := items.Extensions["x-graphql-type"].(string); ok {
-				_, scalar := gqlScalarToOASchema[gqlType]
-				assert.False(t, scalar, "%s: items of scalar type %s are documented as %v", path, gqlType, items.Type)
+			gqlType, named := items.Extensions["x-graphql-type"].(string)
+			if _, scalar := gqlScalarToOASchema[gqlType]; named && scalar {
+				t.Errorf("%s: items of scalar type %s are documented as %v", path, gqlType, items.Type)
+			}
+			if items.Type == nil && !named {
+				t.Errorf("%s: items have neither a type nor x-graphql-type", path)
+			}
+			if len(s.Enum) > 0 {
+				t.Errorf("%s: enum values are on the array rather than its items", path)
 			}
 			walk(path+"[]", s.Items)
 		}
@@ -191,8 +197,31 @@ func TestScalarListItemsAreTyped(t *testing.T) {
 		}
 	}
 
-	agencies := doc.Paths.Value("/agencies").Get.Responses.Value("200").Value.Content.Get("application/json").Schema.Value.Properties["agencies"].Value.Items.Value
-	routeTypes := agencies.Properties["route_types"].Value
+	routeTypes := responseProperty(t, doc, "/agencies", "agencies", "route_types")
 	assert.True(t, routeTypes.Type.Is("array"))
+	require.NotNil(t, routeTypes.Items)
 	assert.True(t, routeTypes.Items.Value.Type.Is("integer"))
+}
+
+// responseProperty follows a list response's items down to one property,
+// failing rather than panicking if any step is missing.
+func responseProperty(t *testing.T, doc *oa.T, path string, names ...string) *oa.Schema {
+	t.Helper()
+	item := doc.Paths.Value(path)
+	require.NotNil(t, item, path)
+	require.NotNil(t, item.Get, path)
+	resp := item.Get.Responses.Value("200")
+	require.NotNil(t, resp, path)
+	media := resp.Value.Content.Get("application/json")
+	require.NotNil(t, media, path)
+	s := media.Schema.Value
+	for _, name := range names {
+		if s.Items != nil {
+			s = s.Items.Value
+		}
+		prop, ok := s.Properties[name]
+		require.True(t, ok, "%s: no property %s", path, name)
+		s = prop.Value
+	}
+	return s
 }

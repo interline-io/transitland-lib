@@ -370,6 +370,7 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 	}
 	gqlType := ""
 	isArray := false
+	nestedArray := false
 	if field, ok := recurseValue.(*ast.Field); ok {
 		if field.Comment != nil {
 			for _, c := range field.Comment.List {
@@ -382,18 +383,16 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 		schema.Title = field.Name
 		schema.Description = field.Definition.Description
 		schema.Nullable = !field.Definition.Type.NonNull
-		gqlType = field.Definition.Type.NamedType
-		if field.Definition.Type.Elem != nil {
-			gqlType = field.Definition.Type.Elem.Name()
-
-		}
-		if gst, ok := gs.Types[field.Definition.Type.String()]; ok {
+		// Name is the innermost named type, so a list is typed by its element.
+		gqlType = field.Definition.Type.Name()
+		isArray = field.Definition.Type.Elem != nil
+		// One array level is emitted, so a list of lists is left untyped rather
+		// than documented as a flat list of its innermost scalar.
+		nestedArray = isArray && field.Definition.Type.Elem.Elem != nil
+		if gst, ok := gs.Types[gqlType]; ok {
 			for _, ev := range gst.EnumValues {
 				schema.Enum = append(schema.Enum, ev.Name)
 			}
-		}
-		if strings.HasPrefix(field.Definition.Type.String(), "[") {
-			isArray = true
 		}
 		for _, sel := range field.SelectionSet {
 			order = queryRecurse(gs, sel, schema.Properties, level+1, order+1)
@@ -411,10 +410,8 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 	order += 1
 	schema.Extensions["x-order"] = order
 
-	// Scalar types. Looked up by gqlType, which names the element of a list
-	// type: a list's NamedType is empty, so [Int!] would otherwise fall through
-	// to an object.
-	if scalarType, ok := gqlScalarToOASchema[gqlType]; ok {
+	// Scalar types, looked up by the element type of a list.
+	if scalarType, ok := gqlScalarToOASchema[gqlType]; ok && !nestedArray {
 		schema.Type = scalarType.Type
 		schema.Format = scalarType.Format
 		schema.Example = scalarType.Example
@@ -446,6 +443,7 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 			Type:       schema.Type,
 			Format:     schema.Format,
 			Example:    schema.Example,
+			Enum:       schema.Enum,
 			Extensions: schema.Extensions,
 		}
 		outerSchema := &oa.Schema{
@@ -454,7 +452,6 @@ func queryRecurse(gs *ast.Schema, recurseValue any, parentSchema oa.Schemas, lev
 			Nullable:     schema.Nullable,
 			Type:         oa.NewArraySchema().Type,
 			ExternalDocs: schema.ExternalDocs,
-			Enum:         schema.Enum,
 			Items:        oa.NewSchemaRef("", innerSchema),
 			Extensions:   schema.Extensions,
 		}
