@@ -107,6 +107,80 @@ func TestMatchesRouteType(t *testing.T) {
 	}
 }
 
+func TestMatchesAgencyMode(t *testing.T) {
+	tcs := []struct {
+		name     string
+		s        *pb.EntitySelector
+		agencyId string
+		expect   bool
+	}{
+		{"mode of agency", &pb.EntitySelector{AgencyId: proto.String("BART"), RouteType: proto.Int32(1)}, "BART", true},
+		{"mode", &pb.EntitySelector{RouteType: proto.Int32(1)}, "BART", true},
+		{"extended type of mode", &pb.EntitySelector{RouteType: proto.Int32(401)}, "BART", true},
+		{"basic type of extended type", &pb.EntitySelector{RouteType: proto.Int32(2)}, "BART", true},
+		{"mode with empty trip", &pb.EntitySelector{RouteType: proto.Int32(1), Trip: &pb.TripDescriptor{}}, "BART", true},
+		{"mode not run", &pb.EntitySelector{RouteType: proto.Int32(3)}, "BART", false},
+		{"mode of agency without agency_id", &pb.EntitySelector{AgencyId: proto.String("BART"), RouteType: proto.Int32(1)}, "", false},
+		{"mode, agency without agency_id", &pb.EntitySelector{RouteType: proto.Int32(1)}, "", true},
+		{"mode of other agency", &pb.EntitySelector{AgencyId: proto.String("AC"), RouteType: proto.Int32(1)}, "BART", false},
+		{"mode on route", &pb.EntitySelector{RouteType: proto.Int32(1), RouteId: proto.String("05")}, "BART", false},
+		{"mode at stop", &pb.EntitySelector{RouteType: proto.Int32(1), StopId: proto.String("FTVL")}, "BART", false},
+		{"mode on trip", &pb.EntitySelector{RouteType: proto.Int32(1), Trip: testTrip("T05", "")}, "BART", false},
+		{"agency", &pb.EntitySelector{AgencyId: proto.String("BART")}, "BART", false},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expect, matchesAgencyMode(tc.s, tc.agencyId, []int{1, 109}))
+		})
+	}
+	// Without route types, as when mode-wide alerts are not asked for, no mode matches.
+	assert.False(t, matchesAgencyMode(&pb.EntitySelector{RouteType: proto.Int32(1)}, "BART", nil))
+}
+
+func TestNamesAgency(t *testing.T) {
+	tcs := []struct {
+		name     string
+		s        *pb.EntitySelector
+		agencyId string
+		expect   bool
+	}{
+		{"agency", &pb.EntitySelector{AgencyId: proto.String("BART")}, "BART", true},
+		{"agency with empty trip", &pb.EntitySelector{AgencyId: proto.String("BART"), Trip: &pb.TripDescriptor{}}, "BART", true},
+		{"other agency", &pb.EntitySelector{AgencyId: proto.String("AC")}, "BART", false},
+		{"mode of agency", &pb.EntitySelector{AgencyId: proto.String("BART"), RouteType: proto.Int32(1)}, "BART", false},
+		{"route of agency", &pb.EntitySelector{AgencyId: proto.String("BART"), RouteId: proto.String("05")}, "BART", false},
+		{"agency at stop", &pb.EntitySelector{AgencyId: proto.String("BART"), StopId: proto.String("FTVL")}, "BART", false},
+		{"trip of agency", &pb.EntitySelector{AgencyId: proto.String("BART"), Trip: testTrip("T05", "")}, "BART", false},
+		{"agency without agency_id", &pb.EntitySelector{AgencyId: proto.String("BART")}, "", false},
+		{"empty selector, agency without agency_id", &pb.EntitySelector{}, "", false},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expect, namesAgency(tc.s, tc.agencyId))
+		})
+	}
+}
+
+func TestAgencyIdMatches(t *testing.T) {
+	tcs := []struct {
+		name     string
+		s        *pb.EntitySelector
+		agencyId string
+		expect   bool
+	}{
+		{"agency", &pb.EntitySelector{AgencyId: proto.String("BART")}, "BART", true},
+		{"other agency", &pb.EntitySelector{AgencyId: proto.String("AC")}, "BART", false},
+		{"no agency", &pb.EntitySelector{RouteId: proto.String("05")}, "BART", true},
+		{"agency without agency_id", &pb.EntitySelector{AgencyId: proto.String("BART")}, "", false},
+		{"no agency, agency without agency_id", &pb.EntitySelector{RouteId: proto.String("05")}, "", true},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expect, agencyIdMatches(tc.s, tc.agencyId))
+		})
+	}
+}
+
 // Route.alerts across every route of a feed version resolves the trips named
 // without a route in one query, however many routes ask.
 func TestFindAlertsForRoute_TripLookup(t *testing.T) {

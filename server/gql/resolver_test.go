@@ -309,7 +309,7 @@ fragment alert on Alert {
 	}
 }
 
-query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean) {
+query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean, $include_modes:Boolean) {
 	stops(where: { stop_id: $stop_id }) {
 	  id
 	  stop_id
@@ -339,7 +339,7 @@ query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean) {
 			  agency {
 				  agency_id
 				  agency_name
-				  alerts(active:$active) {
+				  alerts(active:$active, include_modes:$include_modes) {
 					  ...alert
 				  }
 			  }

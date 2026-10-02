@@ -85,7 +85,7 @@ type ComplexityRoot struct {
 		AgencyPhone       func(childComplexity int) int
 		AgencyTimezone    func(childComplexity int) int
 		AgencyURL         func(childComplexity int) int
-		Alerts            func(childComplexity int, active *bool, limit *int) int
+		Alerts            func(childComplexity int, active *bool, limit *int, includeModes *bool) int
 		CEMVSupport       func(childComplexity int) int
 		CensusGeographies func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		FeedOnestopID     func(childComplexity int) int
@@ -1387,7 +1387,7 @@ type AgencyResolver interface {
 	RouteTypesBasic(ctx context.Context, obj *model.Agency) ([]int, error)
 	Stops(ctx context.Context, obj *model.Agency, limit *int, after *int, where *model.AgencyStopFilter) ([]*model.Stop, error)
 	CensusGeographies(ctx context.Context, obj *model.Agency, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
-	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error)
+	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int, includeModes *bool) ([]*model.Alert, error)
 	VehiclePositions(ctx context.Context, obj *model.Agency, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 }
 type BookingRuleResolver interface {
@@ -1739,7 +1739,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Agency.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int)), true
+		return e.ComplexityRoot.Agency.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int), args["include_modes"].(*bool)), true
 	case "Agency.cemv_support":
 		if e.ComplexityRoot.Agency.CEMVSupport == nil {
 			break
@@ -9852,8 +9852,8 @@ type Agency {
   "Census geographies intersecting this agency's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
-  "GTFS-RT service alerts for this agency; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
-  alerts(active: Boolean, limit: Int): [Alert!]
+  "GTFS-RT service alerts for this agency; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts, and ` + "`" + `include_modes: true` + "`" + ` to also return alerts on a mode the agency runs, such as all of its subway service"
+  alerts(active: Boolean, limit: Int, include_modes: Boolean = false): [Alert!]
 
   "Current GTFS-RT vehicle positions for this agency, most recently reported first"
   vehicle_positions(limit: Int, where: VehiclePositionFilter): [VehiclePosition!]
@@ -15120,6 +15120,14 @@ func (ec *executionContext) field_Agency_alerts_args(ctx context.Context, rawArg
 		return nil, err
 	}
 	args["limit"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "include_modes",
+		func(ctx context.Context, v any) (*bool, error) {
+			return ec.unmarshalOBoolean2ᚖbool(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["include_modes"] = arg2
 	return args, nil
 }
 
@@ -18096,7 +18104,7 @@ func (ec *executionContext) _Agency_alerts(ctx context.Context, field graphql.Co
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Agency().Alerts(ctx, obj, fc.Args["active"].(*bool), fc.Args["limit"].(*int))
+			return ec.Resolvers.Agency().Alerts(ctx, obj, fc.Args["active"].(*bool), fc.Args["limit"].(*int), fc.Args["include_modes"].(*bool))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Alert) graphql.Marshaler {

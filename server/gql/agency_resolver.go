@@ -65,7 +65,16 @@ func (r *agencyResolver) Operator(ctx context.Context, obj *model.Agency) (*mode
 	return LoaderFor(ctx).OperatorsByCOIFs.Load(ctx, *obj.CoifID)()
 }
 
-func (r *agencyResolver) Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int) ([]*model.Alert, error) {
-	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForAgency(ctx, obj, resolverCheckLimit(limit), active)
+func (r *agencyResolver) Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int, includeModes *bool) ([]*model.Alert, error) {
+	// Mode-wide alerts are matched against the modes the agency runs.
+	var routeTypes []int
+	if includeModes != nil && *includeModes {
+		var err error
+		routeTypes, err = LoaderFor(ctx).RouteTypesByAgencyIDs.Load(ctx, obj.ID)()
+		if err != nil {
+			return nil, err
+		}
+	}
+	rtAlerts := model.ForContext(ctx).RTFinder.FindAlertsForAgency(ctx, obj, resolverCheckLimit(limit), active, routeTypes)
 	return rtAlerts, nil
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -163,6 +164,35 @@ func TestAgencyRequest(t *testing.T) {
 			checkTestCase(t, tc)
 		})
 	}
+}
+
+// The agency and operator endpoints return an agency's alerts on a mode it runs,
+// alongside its agency-wide alerts.
+func TestAgencyRequest_ModeAlerts(t *testing.T) {
+	graphqlHandler, _, _ := testHandlersWithOptions(t, testconfig.Options{
+		WhenUtc: "2018-06-01T00:00:00Z",
+		RTJsons: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts-informed-entity.json"}},
+		Storage: testdata.Path("server", "tmp"),
+	})
+	headers := func(t *testing.T, h apiHandler, selector string) []string {
+		data, err := makeRequest(context.Background(), graphqlHandler, h, "", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ret []string
+		for _, a := range gjson.GetBytes(data, selector).Array() {
+			ret = append(ret, a.Get("header_text.0.text").String())
+		}
+		return ret
+	}
+	t.Run("agencies", func(t *testing.T) {
+		got := headers(t, AgencyRequest{AgencyKey: "BA:BART", IncludeAlerts: true}, "agencies.0.alerts")
+		assert.Equal(t, []string{"All BART subway service"}, got)
+	})
+	t.Run("operators", func(t *testing.T) {
+		got := headers(t, OperatorRequest{OnestopID: "o-9q9-bayarearapidtransit", IncludeAlerts: true}, "operators.0.agencies.0.alerts")
+		assert.Equal(t, []string{"All BART subway service"}, got)
+	})
 }
 
 func TestAgencyRequest_Format(t *testing.T) {
