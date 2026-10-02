@@ -157,6 +157,15 @@ func TestAgencyRequest(t *testing.T) {
 			expectSelect: []string{"2", "2a"},
 		},
 		{
+			// A route's own two alerts, and the two on one of its trips.
+			name: "include_alerts:routes",
+			h:    AgencyRequest{AgencyKey: "BA:BART", IncludeAlerts: true, IncludeRoutes: true},
+			f: func(t *testing.T, jj string) {
+				a := gjson.Get(jj, `agencies.0.routes.#(route_id=="05").alerts`).Array()
+				assert.Equal(t, 4, len(a), "alert count")
+			},
+		},
+		{
 			name: "include_alerts:false",
 			h:    AgencyRequest{AgencyKey: "BA:BART", IncludeAlerts: false},
 			f: func(t *testing.T, jj string) {

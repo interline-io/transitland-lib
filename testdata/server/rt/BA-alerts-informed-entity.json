@@ -123,6 +123,182 @@
           ]
         }
       }
+    },
+    {
+      "id": "other-agency-stop",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "AC",
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "AC Transit at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "other-route-stop",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_id": "51A",
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Route 51A at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "other-agency-trip",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "AC",
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "AC Transit trip 1031527WKDY",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "other-route-trip",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "route_id": "03",
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Trip 1031527WKDY on route 03",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "agency-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "BART",
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "BART at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "empty-trip-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "stop_id": "FTVL",
+            "trip": {}
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Fruitvale with an empty trip descriptor",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "subway-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_type": 1,
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Subway at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bus-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_type": 3,
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Buses at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "route-as-bus-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_id": "05",
+            "route_type": 3,
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Route 05 as a bus at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
     }
   ]
 }

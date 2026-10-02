@@ -311,7 +311,7 @@ fragment alert on Alert {
 	}
 }
 
-query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean, $include_modes:Boolean) {
+query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean, $include_modes:Boolean, $include_route_modes:Boolean, $include_route_trips:Boolean) {
 	stops(where: { stop_id: $stop_id }) {
 	  id
 	  stop_id
@@ -335,7 +335,7 @@ query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean, $include_modes:Bo
 			  route_id
 			  route_short_name
 			  route_long_name
-			  alerts(active:$active) {
+			  alerts(active:$active, include_modes:$include_route_modes, include_trips:$include_route_trips) {
 				  ...alert
 			  }
 			  agency {

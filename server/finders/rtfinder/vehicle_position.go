@@ -44,8 +44,8 @@ func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Age
 	// box resolves to have no vehicle inside it and never need any of them.
 	routeIds := sync.OnceValue(func() set.Set[string] { return f.lc.GetAgencyRouteIDs(ctx, a.ID) })
 	singleAgency := sync.OnceValue(func() bool {
-		agencyCount, ok := f.lc.GetFeedVersionAgencyCount(ctx, a.FeedVersionID)
-		return ok && agencyCount == 1
+		agencyIds, ok := f.lc.GetFeedVersionAgencyIDs(ctx, a.FeedVersionID)
+		return ok && len(agencyIds) == 1
 	})
 	exclusive := map[string]bool{}
 	match := func(topic string, _ *Source, v *pb.VehiclePosition) vpMatch {
