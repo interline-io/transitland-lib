@@ -97,7 +97,7 @@ fragment departures on StopTime {
     ...trip
     route {
       ...route
-      alerts @include(if: $include_alerts) {
+      alerts(include_modes: true, include_trips: true) @include(if: $include_alerts) {
         ...alert
       }
       agency {

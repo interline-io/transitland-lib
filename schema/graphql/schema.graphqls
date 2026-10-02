@@ -724,7 +724,7 @@ type Agency {
   "Census geographies intersecting this agency's stop locations; use with a `radius` filter and the `intersection_area` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
-  "GTFS-RT service alerts for this agency; pass `active: true` to return only currently active alerts, and `include_modes: true` to also return alerts on a mode the agency runs, such as all of its subway service"
+  "GTFS-RT service alerts on this agency as a whole, not those narrowed to a route, stop or trip; pass `active: true` to return only currently active alerts, and `include_modes: true` to also return alerts on a mode the agency runs, such as all of its subway service"
   alerts(active: Boolean, limit: Int, include_modes: Boolean = false): [Alert!]
 
   "Current GTFS-RT vehicle positions for this agency, most recently reported first"
@@ -827,8 +827,8 @@ type Route {
   "Unique stop sequences operated on this route"
   patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
   
-  "GTFS-RT service alerts for this route, including those on its mode, at its stops, or on its trips; pass `active: true` to return only currently active alerts"
-  alerts(active: Boolean, limit: Int): [Alert!]
+  "GTFS-RT service alerts on this route, as a whole or at one of its stops, whose agency and mode, if given, are the route's; pass `active: true` to return only currently active alerts, `include_modes: true` to also return alerts on the route's mode, such as all of its agency's subway service, and `include_trips: true` to also return alerts on the route's trips"
+  alerts(active: Boolean, limit: Int, include_modes: Boolean = false, include_trips: Boolean = false): [Alert!]
 
   "Current GTFS-RT vehicle positions for this route, most recently reported first"
   vehicle_positions(limit: Int, where: VehiclePositionFilter): [VehiclePosition!]
@@ -954,7 +954,7 @@ type Stop {
   "Stops within a specified radius of this stop; `radius` is in meters"
   nearby_stops(limit: Int, radius: Float): [Stop!]
   
-  "GTFS-RT service alerts for this stop; pass `active: true` to return only currently active alerts"
+  "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
   
   "When this stop was returned by a `StopFilter.location.features` search, the IDs of the input features that contain this stop; otherwise empty"
@@ -1112,7 +1112,7 @@ type Trip {
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   
-  "GTFS-RT service alerts for this trip; pass `active: true` to return only currently active alerts"
+  "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle position for this trip"

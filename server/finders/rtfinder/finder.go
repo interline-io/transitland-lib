@@ -68,6 +68,7 @@ func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
 	return nil
 }
 
+// FindAlertsForTrip returns the alerts on a trip.
 func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
 	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
@@ -87,13 +88,12 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// trip must match
-				// route, stop, agency are not checked
-				if s == nil || s.Trip == nil {
+				if s == nil || t.TripID.Val == "" || s.GetTrip().GetTripId() != t.TripID.Val {
 					continue
 				}
-				if s.Trip.GetTripId() == t.TripID.Val {
+				if f.tripAgrees(ctx, s, t) {
 					found = true
+					break
 				}
 			}
 			if found {
@@ -104,7 +104,10 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 	return limitAlerts(foundAlerts, limit)
 }
 
-func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *int, active *bool) []*model.Alert {
+// FindAlertsForRoute returns the alerts on a route, as a whole or at one of its
+// stops; with includeModes also those on its mode, and with includeTrips those
+// on its trips.
+func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *int, active *bool, includeModes bool, includeTrips bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
 	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
@@ -130,9 +133,7 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 				if s == nil || !f.agencyMatches(ctx, s, t) {
 					continue
 				}
-				// A stop or a trip narrows the route to the route at that stop or
-				// on that trip, which is still an alert about the route.
-				if selectorNamesRoute(s, t.RouteID.Val, tripRoutes) || matchesRouteType(s, t.RouteType.Int()) {
+				if onRoute(s, t.RouteID.Val, t.RouteType.Int(), includeModes, includeTrips, tripRoutes) {
 					found = true
 					break
 				}
@@ -164,6 +165,23 @@ func agencyIdMatches(s *pb.EntitySelector, agencyId string) bool {
 	return aid == "" || aid == agencyId
 }
 
+// onRoute reports whether a selector, its agency already checked, is on this
+// route: it names the route, as a whole or at a stop; with includeModes it
+// covers the route's mode; with includeTrips it names one of the route's trips,
+// however the trip names its route.
+func onRoute(s *pb.EntitySelector, routeId string, routeType int, includeModes bool, includeTrips bool, tripRoutes func() map[string]string) bool {
+	if !modeAgrees(s, routeType) {
+		return false
+	}
+	if namesTrip(s) {
+		return includeTrips && selectorNamesRoute(s, routeId, tripRoutes)
+	}
+	if rid := s.GetRouteId(); rid != "" {
+		return rid == routeId
+	}
+	return includeModes && matchesRouteType(s, routeType)
+}
+
 // selectorNamesRoute reports whether a selector names this route, directly or
 // through one of its trips.
 func selectorNamesRoute(s *pb.EntitySelector, routeId string, tripRoutes func() map[string]string) bool {
@@ -189,7 +207,13 @@ func tripOnRoute(td *pb.TripDescriptor, routeId string, tripRoutes func() map[st
 // matchesRouteType reports whether a selector naming no route, stop or trip
 // covers every route of this type.
 func matchesRouteType(s *pb.EntitySelector, routeType int) bool {
-	return isModeWide(s) && tt.BasicRouteType(int(s.GetRouteType())) == tt.BasicRouteType(routeType)
+	return isModeWide(s) && modeAgrees(s, routeType)
+}
+
+// modeAgrees reports whether a selector's route_type, if it gives one, is this
+// route type's mode.
+func modeAgrees(s *pb.EntitySelector, routeType int) bool {
+	return s.RouteType == nil || tt.BasicRouteType(int(s.GetRouteType())) == tt.BasicRouteType(routeType)
 }
 
 // isModeWide reports whether a selector names a route type and no route, stop
@@ -205,10 +229,42 @@ func namesAgency(s *pb.EntitySelector, agencyId string) bool {
 }
 
 // namesRouteStopOrTrip reports whether a selector names a route, stop or trip.
-// An empty trip descriptor names no trip.
 func namesRouteStopOrTrip(s *pb.EntitySelector) bool {
+	return s.GetRouteId() != "" || s.GetStopId() != "" || namesTrip(s)
+}
+
+// namesTrip reports whether a selector narrows to a trip, by its trip_id or its
+// route_id. An empty trip descriptor names no trip.
+func namesTrip(s *pb.EntitySelector) bool {
 	td := s.GetTrip()
-	return s.GetRouteId() != "" || s.GetStopId() != "" || td.GetTripId() != "" || td.GetRouteId() != ""
+	return td.GetTripId() != "" || td.GetRouteId() != ""
+}
+
+// tripAgrees reports whether the agency, route and mode a selector gives, if
+// any, are this trip's.
+func (f *Finder) tripAgrees(ctx context.Context, s *pb.EntitySelector, t *model.Trip) bool {
+	rid, tdRid := s.GetRouteId(), s.GetTrip().GetRouteId()
+	if s.GetAgencyId() == "" && rid == "" && tdRid == "" && s.RouteType == nil {
+		return true
+	}
+	r, ok := f.lc.GetGtfsRoute(ctx, t.RouteID.Int())
+	if !ok {
+		return false
+	}
+	return agencyIdMatches(s, r.AgencyID) && (rid == "" || rid == r.RouteID) && (tdRid == "" || tdRid == r.RouteID) && modeAgrees(s, r.RouteType)
+}
+
+// inFeedVersion reports whether the agency and route a selector gives, if any,
+// are in this feed version. A stop belongs to no single agency or route, so this
+// only keeps out another feed's selectors that share the stop's stop_id.
+func (f *Finder) inFeedVersion(ctx context.Context, s *pb.EntitySelector, fvid int) bool {
+	if aid := s.GetAgencyId(); aid != "" && !f.lc.GetFeedVersionAgencyIDs(ctx, fvid).Contains(aid) {
+		return false
+	}
+	if rid := s.GetRouteId(); rid != "" && !f.lc.GetFeedVersionRouteIDs(ctx, fvid).Contains(rid) {
+		return false
+	}
+	return true
 }
 
 // matchesAgencyMode reports whether a mode-wide selector for this agency covers
@@ -267,6 +323,8 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 	return limitAlerts(foundAlerts, limit)
 }
 
+// FindAlertsForStop returns the alerts on a stop, with or without a route, but
+// not those on a trip at the stop.
 func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *int, active *bool) []*model.Alert {
 	foundAlerts := []*model.Alert{}
 	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
@@ -286,13 +344,12 @@ func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *in
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// agency, route can be anything
-				// trip must be empty
-				if s == nil || s.Trip != nil {
+				if s == nil || namesTrip(s) || s.GetStopId() != t.StopID.Val {
 					continue
 				}
-				if s.GetStopId() == t.StopID.Val {
+				if f.inFeedVersion(ctx, s, t.FeedVersionID) {
 					found = true
+					break
 				}
 			}
 			if found {

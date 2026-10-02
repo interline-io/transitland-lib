@@ -992,7 +992,7 @@ type ComplexityRoot struct {
 
 	Route struct {
 		Agency            func(childComplexity int) int
-		Alerts            func(childComplexity int, active *bool, limit *int) int
+		Alerts            func(childComplexity int, active *bool, limit *int, includeModes *bool, includeTrips *bool) int
 		CEMVSupport       func(childComplexity int) int
 		CensusGeographies func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		ContinuousDropOff func(childComplexity int) int
@@ -1572,7 +1572,7 @@ type RouteResolver interface {
 	CensusGeographies(ctx context.Context, obj *model.Route, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	RouteStopBuffer(ctx context.Context, obj *model.Route, radius *float64) (*model.RouteStopBuffer, error)
 	Patterns(ctx context.Context, obj *model.Route, where *model.RouteStopPatternFilter) ([]*model.RouteStopPattern, error)
-	Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int) ([]*model.Alert, error)
+	Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int, includeModes *bool, includeTrips *bool) ([]*model.Alert, error)
 	VehiclePositions(ctx context.Context, obj *model.Route, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 	Segments(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentFilter) ([]*model.Segment, error)
 	SegmentPatterns(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentPatternFilter) ([]*model.SegmentPattern, error)
@@ -6062,7 +6062,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Route.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int)), true
+		return e.ComplexityRoot.Route.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int), args["include_modes"].(*bool), args["include_trips"].(*bool)), true
 	case "Route.cemv_support":
 		if e.ComplexityRoot.Route.CEMVSupport == nil {
 			break
@@ -9866,7 +9866,7 @@ type Agency {
   "Census geographies intersecting this agency's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
   
-  "GTFS-RT service alerts for this agency; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts, and ` + "`" + `include_modes: true` + "`" + ` to also return alerts on a mode the agency runs, such as all of its subway service"
+  "GTFS-RT service alerts on this agency as a whole, not those narrowed to a route, stop or trip; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts, and ` + "`" + `include_modes: true` + "`" + ` to also return alerts on a mode the agency runs, such as all of its subway service"
   alerts(active: Boolean, limit: Int, include_modes: Boolean = false): [Alert!]
 
   "Current GTFS-RT vehicle positions for this agency, most recently reported first"
@@ -9969,8 +9969,8 @@ type Route {
   "Unique stop sequences operated on this route"
   patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
   
-  "GTFS-RT service alerts for this route, including those on its mode, at its stops, or on its trips; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
-  alerts(active: Boolean, limit: Int): [Alert!]
+  "GTFS-RT service alerts on this route, as a whole or at one of its stops, whose agency and mode, if given, are the route's; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts, ` + "`" + `include_modes: true` + "`" + ` to also return alerts on the route's mode, such as all of its agency's subway service, and ` + "`" + `include_trips: true` + "`" + ` to also return alerts on the route's trips"
+  alerts(active: Boolean, limit: Int, include_modes: Boolean = false, include_trips: Boolean = false): [Alert!]
 
   "Current GTFS-RT vehicle positions for this route, most recently reported first"
   vehicle_positions(limit: Int, where: VehiclePositionFilter): [VehiclePosition!]
@@ -10096,7 +10096,7 @@ type Stop {
   "Stops within a specified radius of this stop; ` + "`" + `radius` + "`" + ` is in meters"
   nearby_stops(limit: Int, radius: Float): [Stop!]
   
-  "GTFS-RT service alerts for this stop; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
+  "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
   
   "When this stop was returned by a ` + "`" + `StopFilter.location.features` + "`" + ` search, the IDs of the input features that contain this stop; otherwise empty"
@@ -10254,7 +10254,7 @@ type Trip {
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   
-  "GTFS-RT service alerts for this trip; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
+  "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
 
   "Current GTFS-RT vehicle position for this trip"
@@ -16690,6 +16690,22 @@ func (ec *executionContext) field_Route_alerts_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["limit"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "include_modes",
+		func(ctx context.Context, v any) (*bool, error) {
+			return ec.unmarshalOBoolean2ᚖbool(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["include_modes"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "include_trips",
+		func(ctx context.Context, v any) (*bool, error) {
+			return ec.unmarshalOBoolean2ᚖbool(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["include_trips"] = arg3
 	return args, nil
 }
 
@@ -35926,7 +35942,7 @@ func (ec *executionContext) _Route_alerts(ctx context.Context, field graphql.Col
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Route().Alerts(ctx, obj, fc.Args["active"].(*bool), fc.Args["limit"].(*int))
+			return ec.Resolvers.Route().Alerts(ctx, obj, fc.Args["active"].(*bool), fc.Args["limit"].(*int), fc.Args["include_modes"].(*bool), fc.Args["include_trips"].(*bool))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Alert) graphql.Marshaler {

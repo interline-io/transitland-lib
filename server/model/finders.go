@@ -165,7 +165,7 @@ type RTFinder interface {
 	MakeTrip(context.Context, *Trip) (*Trip, error)
 	FindAlertsForTrip(context.Context, *Trip, *int, *bool) []*Alert
 	FindAlertsForStop(context.Context, *Stop, *int, *bool) []*Alert
-	FindAlertsForRoute(context.Context, *Route, *int, *bool) []*Alert
+	FindAlertsForRoute(context.Context, *Route, *int, *bool, bool, bool) []*Alert
 	FindAlertsForAgency(context.Context, *Agency, *int, *bool, []int) []*Alert
 	FindVehiclePositionsForAgency(context.Context, *Agency, *int, *VehiclePositionFilter) []*VehiclePosition
 	FindVehiclePositionsForRoute(context.Context, *Route, *int, *VehiclePositionFilter) []*VehiclePosition

@@ -113,6 +113,40 @@ func TestMatchesRouteType(t *testing.T) {
 	}
 }
 
+func TestOnRoute(t *testing.T) {
+	tcs := []struct {
+		name   string
+		s      *pb.EntitySelector
+		modes  bool
+		trips  bool
+		expect bool
+	}{
+		{"route", &pb.EntitySelector{RouteId: proto.String("05")}, false, false, true},
+		{"route at stop", &pb.EntitySelector{RouteId: proto.String("05"), StopId: proto.String("FTVL")}, false, false, true},
+		{"route of its mode", &pb.EntitySelector{RouteId: proto.String("05"), RouteType: proto.Int32(1)}, false, false, true},
+		{"route of another mode", &pb.EntitySelector{RouteId: proto.String("05"), RouteType: proto.Int32(3)}, false, false, false},
+		{"route with empty trip", &pb.EntitySelector{RouteId: proto.String("05"), Trip: &pb.TripDescriptor{}}, false, false, true},
+		{"other route", &pb.EntitySelector{RouteId: proto.String("03")}, false, false, false},
+		{"stop", &pb.EntitySelector{StopId: proto.String("FTVL")}, true, true, false},
+		{"mode", &pb.EntitySelector{RouteType: proto.Int32(1)}, false, false, false},
+		{"mode, include_modes", &pb.EntitySelector{RouteType: proto.Int32(1)}, true, false, true},
+		{"other mode, include_modes", &pb.EntitySelector{RouteType: proto.Int32(3)}, true, false, false},
+		{"route and trip", &pb.EntitySelector{RouteId: proto.String("05"), Trip: testTrip("T05", "")}, false, false, false},
+		{"route and trip, include_trips", &pb.EntitySelector{RouteId: proto.String("05"), Trip: testTrip("T05", "")}, false, true, true},
+		{"trip route", &pb.EntitySelector{Trip: testTrip("", "05")}, false, false, false},
+		{"trip route, include_trips", &pb.EntitySelector{Trip: testTrip("", "05")}, false, true, true},
+		{"trip of this route, include_trips", &pb.EntitySelector{Trip: testTrip("T05", "")}, false, true, true},
+		{"trip of other route, include_trips", &pb.EntitySelector{Trip: testTrip("T03", "")}, false, true, false},
+		{"trip of another mode, include_trips", &pb.EntitySelector{RouteType: proto.Int32(3), Trip: testTrip("T05", "")}, false, true, false},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			tripRoutes := func() map[string]string { return map[string]string{"T05": "05", "T03": "03"} }
+			assert.Equal(t, tc.expect, onRoute(tc.s, "05", 1, tc.modes, tc.trips, tripRoutes))
+		})
+	}
+}
+
 func TestMatchesAgencyMode(t *testing.T) {
 	tcs := []struct {
 		name     string
@@ -214,7 +248,7 @@ func TestFindAlertsForRoute_TripLookup(t *testing.T) {
 			for rid, r := range routes {
 				for range 10 {
 					wg.Go(func() {
-						h := headers(f.FindAlertsForRoute(ctx, r, nil, nil))
+						h := headers(f.FindAlertsForRoute(ctx, r, nil, nil, false, true))
 						lock.Lock()
 						found[rid] = append(found[rid], h...)
 						lock.Unlock()
@@ -231,20 +265,27 @@ func TestFindAlertsForRoute_TripLookup(t *testing.T) {
 		assert.Contains(t, found["03"], "Trip 2211533WKDY")
 		assert.NotContains(t, found["05"], "Trip 2211533WKDY")
 	})
+	t.Run("without include_trips", func(t *testing.T) {
+		// Trip alerts are left out, and so is the lookup that places them.
+		db := &countingDB{Ext: raw}
+		f := testFinder(t, db, "realtime_alerts", msg)
+		assert.Empty(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil, false, false)))
+		assert.EqualValues(t, 0, db.tripQueries.Load())
+	})
 	t.Run("failing lookup", func(t *testing.T) {
 		// Route 05's call reaches three trips named by trip_id alone, which
 		// share one lookup per call; a canceled call starts none.
 		db := &countingDB{Ext: raw}
 		db.fail.Store(true)
 		f := testFinder(t, db, "realtime_alerts", msg)
-		assert.NotContains(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil)), "Trip 1031527WKDY")
+		assert.NotContains(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil, false, true)), "Trip 1031527WKDY")
 		assert.EqualValues(t, 1, db.tripQueries.Load(), "failing")
 		canceled, cancel := context.WithCancel(ctx)
 		cancel()
-		f.FindAlertsForRoute(canceled, routes["05"], nil, nil)
+		f.FindAlertsForRoute(canceled, routes["05"], nil, nil, false, true)
 		assert.EqualValues(t, 1, db.tripQueries.Load(), "canceled")
 		db.fail.Store(false)
-		assert.Contains(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil)), "Trip 1031527WKDY")
+		assert.Contains(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil, false, true)), "Trip 1031527WKDY")
 		assert.EqualValues(t, 2, db.tripQueries.Load(), "recovered")
 	})
 }

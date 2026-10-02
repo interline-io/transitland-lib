@@ -26,6 +26,9 @@ type lookupCache struct {
 	fvidAgencyCountCache   *simpleCache[int, int]
 	feedOperatorCountCache *simpleCache[string, int]
 	agencyRouteIdCache     *simpleCache[int, set.Set[string]]
+	fvidAgencyIdCache      *simpleCache[int, set.Set[string]]
+	fvidRouteIdCache       *simpleCache[int, set.Set[string]]
+	gtfsRouteCache         *simpleCache[int, gtfsRoute]
 	gtfsStopIdCache        *simpleCache[int, string]
 	gtfsAgencyIdCache      *simpleCache[int, string]
 	routeIdCache           *simpleCache[skey, int]
@@ -40,6 +43,9 @@ func newLookupCache(db tldb.Ext) *lookupCache {
 		fvidAgencyCountCache:   newSimpleCache[int, int](),
 		feedOperatorCountCache: newSimpleCache[string, int](),
 		agencyRouteIdCache:     newSimpleCache[int, set.Set[string]](),
+		fvidAgencyIdCache:      newSimpleCache[int, set.Set[string]](),
+		fvidRouteIdCache:       newSimpleCache[int, set.Set[string]](),
+		gtfsRouteCache:         newSimpleCache[int, gtfsRoute](),
 		gtfsStopIdCache:        newSimpleCache[int, string](),
 		gtfsAgencyIdCache:      newSimpleCache[int, string](),
 		routeIdCache:           newSimpleCache[skey, int](),
@@ -140,6 +146,64 @@ func (f *lookupCache) GetAgencyRouteIDs(ctx context.Context, id int) set.Set[str
 	ret := set.New(routeIds...)
 	f.agencyRouteIdCache.Set(id, ret)
 	return ret
+}
+
+// GetFeedVersionAgencyIDs returns the set of GTFS agency_ids in a feed version.
+func (f *lookupCache) GetFeedVersionAgencyIDs(ctx context.Context, id int) set.Set[string] {
+	if a, ok := f.fvidAgencyIdCache.Get(id); ok {
+		return a
+	}
+	var agencyIds []string
+	q := `select agency_id from gtfs_agencies where feed_version_id = $1`
+	if err := sqlx.Select(f.db, &agencyIds, q, id); err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", id).Msg("rtfinder: feed version agency id lookup failed")
+		return nil
+	}
+	ret := set.New(agencyIds...)
+	f.fvidAgencyIdCache.Set(id, ret)
+	return ret
+}
+
+// GetFeedVersionRouteIDs returns the set of GTFS route_ids in a feed version.
+func (f *lookupCache) GetFeedVersionRouteIDs(ctx context.Context, id int) set.Set[string] {
+	if a, ok := f.fvidRouteIdCache.Get(id); ok {
+		return a
+	}
+	var routeIds []string
+	q := `select route_id from gtfs_routes where feed_version_id = $1`
+	if err := sqlx.Select(f.db, &routeIds, q, id); err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", id).Msg("rtfinder: feed version route id lookup failed")
+		return nil
+	}
+	ret := set.New(routeIds...)
+	f.fvidRouteIdCache.Set(id, ret)
+	return ret
+}
+
+// gtfsRoute is a route's GTFS route_id, route_type and agency_id.
+type gtfsRoute struct {
+	RouteID   string `db:"route_id"`
+	RouteType int    `db:"route_type"`
+	AgencyID  string `db:"agency_id"`
+}
+
+// GetGtfsRoute returns a route's GTFS ids and type by database id.
+func (f *lookupCache) GetGtfsRoute(ctx context.Context, id int) (gtfsRoute, bool) {
+	if a, ok := f.gtfsRouteCache.Get(id); ok {
+		return a, true
+	}
+	q := `
+	select gtfs_routes.route_id, gtfs_routes.route_type, gtfs_agencies.agency_id
+	from gtfs_routes
+	join gtfs_agencies on gtfs_agencies.id = gtfs_routes.agency_id
+	where gtfs_routes.id = $1`
+	var ret gtfsRoute
+	if err := sqlx.Get(f.db, &ret, q, id); err != nil {
+		log.For(ctx).Error().Err(err).Int("route_id", id).Msg("rtfinder: route lookup failed")
+		return gtfsRoute{}, false
+	}
+	f.gtfsRouteCache.Set(id, ret)
+	return ret, true
 }
 
 // GetTripRouteIDs returns the GTFS route_ids, by trip_id, of the trips a

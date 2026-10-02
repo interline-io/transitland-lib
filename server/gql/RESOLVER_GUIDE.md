@@ -361,8 +361,8 @@ func (r *agencyResolver) Routes(ctx context.Context, obj *model.Agency, limit *i
 For operations that don't fit the loader pattern (e.g., complex searches or RT data), use `model.ForContext(ctx)` to access the `Finder` or `RTFinder`.
 
 ```go
-func (r *routeResolver) Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int) ([]*model.Alert, error) {
-    return model.ForContext(ctx).RTFinder.FindAlertsForRoute(ctx, obj, resolverCheckLimit(limit), active), nil
+func (r *routeResolver) Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int, includeModes *bool, includeTrips *bool) ([]*model.Alert, error) {
+    return model.ForContext(ctx).RTFinder.FindAlertsForRoute(ctx, obj, resolverCheckLimit(limit), active, includeModes != nil && *includeModes, includeTrips != nil && *includeTrips), nil
 }
 ```
 

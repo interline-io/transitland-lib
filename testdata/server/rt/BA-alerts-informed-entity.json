@@ -123,6 +123,86 @@
           ]
         }
       }
+    },
+    {
+      "id": "other-agency-stop",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "AC",
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "AC Transit at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "other-route-stop",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_id": "51A",
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Route 51A at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "other-agency-trip",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "AC",
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "AC Transit trip 1031527WKDY",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "other-route-trip",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "route_id": "03",
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Trip 1031527WKDY on route 03",
+              "language": "en"
+            }
+          ]
+        }
+      }
     }
   ]
 }
