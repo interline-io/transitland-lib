@@ -11906,7 +11906,7 @@ input RouteFilter {
   onestop_id: String
   "Search for routes with these Onestop IDs"
   onestop_ids: [String!]
-  "Include previously used Onestop IDs that match the same (feed,route_id)"
+  "Include previously used Onestop IDs that match the same (feed,route_id). In currently active feed versions, a requested Onestop ID is looked up among previous ones only when no current route matching the rest of the filter has it"
   allow_previous_onestop_ids: Boolean
   "Search for routes with this feed version SHA1 hash"
   feed_version_sha1: String
@@ -11987,7 +11987,7 @@ input StopFilter {
   onestop_id: String
   "Search for stops with these Onestop IDs"
   onestop_ids: [String!]
-  "Include previously used Onestop IDs that match the same (feed, stop_id)"
+  "Include previously used Onestop IDs that match the same (feed, stop_id). In currently active feed versions, a requested Onestop ID is looked up among previous ones only when no current stop matching the rest of the filter has it"
   allow_previous_onestop_ids: Boolean
   "Search for stops with this feed version SHA1 hash"
   feed_version_sha1: String

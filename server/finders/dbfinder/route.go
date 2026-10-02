@@ -17,11 +17,53 @@ func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
 		useActive.active = false
 	}
+	// Onestop IDs that may be previous ones resolve to active routes first, and the
+	// query filters by their ids.
+	if where != nil && useActive.Active() && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
+		if osids := allOnestopIDs(where.OnestopID, where.OnestopIds); len(osids) > 0 {
+			byID := *where
+			byID.OnestopID = nil
+			byID.OnestopIds = nil
+			byID.AllowPreviousOnestopIds = nil
+			// The routes the query would return that have the IDs now.
+			currentWhere := byID
+			currentWhere.OnestopIds = osids
+			var current []*model.Route
+			if err := dbutil.Select(ctx, f.db, routeSelect(nil, nil, nil, useActive, f.PermFilter(ctx), &currentWhere), &current); err != nil {
+				return nil, logErr(ctx, err)
+			}
+			var err error
+			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Route) (int, *string) { return ent.ID, ent.OnestopID }, previousRouteIDsSelect)
+			if err != nil {
+				return nil, logErr(ctx, err)
+			}
+			if len(ids) == 0 {
+				return nil, nil
+			}
+			where = &byID
+		}
+	}
 	q := routeSelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
 	return ents, nil
+}
+
+// previousRouteIDsSelect finds the active routes with the feed and route_id of a
+// route that ever had one of the onestop IDs, for activeIDsByOnestopID.
+func previousRouteIDsSelect(osids []string) sq.SelectBuilder {
+	hist := sq.StatementBuilder.
+		Select("feed_version_route_onestop_ids.entity_id", "feed_versions.feed_id").
+		Distinct().
+		From("feed_version_route_onestop_ids").
+		Join("feed_versions on feed_versions.id = feed_version_route_onestop_ids.feed_version_id").
+		Where(In("feed_version_route_onestop_ids.onestop_id", osids))
+	return sq.StatementBuilder.
+		Select("gtfs_routes.id").
+		FromSelect(hist, "hist").
+		Join("feed_states on feed_states.feed_id = hist.feed_id").
+		Join("gtfs_routes on gtfs_routes.feed_version_id = feed_states.materialized_feed_version_id and gtfs_routes.route_id = hist.entity_id")
 }
 
 func (f *Finder) RouteStopBuffer(ctx context.Context, limit *int, radius *float64, routeId int) ([]*model.RouteStopBuffer, error) {
@@ -315,6 +357,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			where.OnestopIds = append(where.OnestopIds, *where.OnestopID)
 		}
 		if len(where.OnestopIds) > 0 && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
+			// Lookups of active routes resolve these IDs first, in FindRoutes.
 			sub := sq.StatementBuilder.
 				Select(
 					"feed_version_route_onestop_ids.onestop_id",
@@ -334,13 +377,20 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			q = q.
 				WithCTE(routeLookupCte).
 				Join("feed_version_route_onestop_ids on feed_version_route_onestop_ids.entity_id = gtfs_routes.route_id and feed_version_route_onestop_ids.feed_id = feed_versions.feed_id")
+		} else if useActive.Materialized() {
+			// The materialized table carries each active route's onestop_id under its own
+			// index, as it does for stops; see stopSelect.
+			if len(where.OnestopIds) > 0 {
+				q = q.Where(In("gtfs_routes.onestop_id", where.OnestopIds))
+			}
 		} else {
 			q = q.JoinClause(`LEFT JOIN feed_version_route_onestop_ids ON feed_version_route_onestop_ids.entity_id = gtfs_routes.route_id and feed_version_route_onestop_ids.feed_version_id = gtfs_routes.feed_version_id`)
 			if len(where.OnestopIds) > 0 {
 				q = q.Where(In("feed_version_route_onestop_ids.onestop_id", where.OnestopIds))
 			}
 		}
-	} else {
+	} else if !useActive.Materialized() {
+		// For the onestop_id column, which the materialized table carries itself.
 		q = q.JoinClause(`LEFT JOIN feed_version_route_onestop_ids ON feed_version_route_onestop_ids.entity_id = gtfs_routes.route_id and feed_version_route_onestop_ids.feed_version_id = gtfs_routes.feed_version_id`)
 	}
 

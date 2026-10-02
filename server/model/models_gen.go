@@ -1082,7 +1082,7 @@ type RouteFilter struct {
 	OnestopID *string `json:"onestop_id,omitempty"`
 	// Search for routes with these Onestop IDs
 	OnestopIds []string `json:"onestop_ids,omitempty"`
-	// Include previously used Onestop IDs that match the same (feed,route_id)
+	// Include previously used Onestop IDs that match the same (feed,route_id). In currently active feed versions, a requested Onestop ID is looked up among previous ones only when no current route matching the rest of the filter has it
 	AllowPreviousOnestopIds *bool `json:"allow_previous_onestop_ids,omitempty"`
 	// Search for routes with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`
@@ -1345,7 +1345,7 @@ type StopFilter struct {
 	OnestopID *string `json:"onestop_id,omitempty"`
 	// Search for stops with these Onestop IDs
 	OnestopIds []string `json:"onestop_ids,omitempty"`
-	// Include previously used Onestop IDs that match the same (feed, stop_id)
+	// Include previously used Onestop IDs that match the same (feed, stop_id). In currently active feed versions, a requested Onestop ID is looked up among previous ones only when no current stop matching the rest of the filter has it
 	AllowPreviousOnestopIds *bool `json:"allow_previous_onestop_ids,omitempty"`
 	// Search for stops with this feed version SHA1 hash
 	FeedVersionSha1 *string `json:"feed_version_sha1,omitempty"`

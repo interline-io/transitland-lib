@@ -3,9 +3,15 @@ package gql
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
+	"github.com/99designs/gqlgen/client"
+	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/testconfig"
+	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -14,6 +20,149 @@ import (
 func TestStopResolver(t *testing.T) {
 	c, cfg := newTestClient(t)
 	queryTestcases(t, c, stopResolverTestcases(t, cfg))
+}
+
+// Onestop ID lookups read the materialized table's own onestop_id when the server
+// uses materialized tables, and the onestop ID history otherwise. Both must agree.
+func TestStopResolver_OnestopID_Materialized(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:         "where onestop_id",
+			query:        `query{stops(where:{onestop_id:"s-9q9k658fd1-sanjosediridoncaltrain"}) {stop_id} }`,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"70262"},
+		},
+		{
+			name:         "where onestop_ids",
+			query:        `query{stops(where:{onestop_ids:["s-9q9k658fd1-sanjosediridoncaltrain","s-9q9p1wxf72-macarthur"]}) {stop_id} }`,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"70262", "MCAR", "MCAR_S"},
+		},
+		{
+			// Two records share MacArthur's onestop_id.
+			name:         "selected onestop_id",
+			query:        `query{stops(where:{onestop_id:"s-9q9p1wxf72-macarthur"}) {stop_id onestop_id} }`,
+			selector:     "stops.#.onestop_id",
+			selectExpect: []string{"s-9q9p1wxf72-macarthur", "s-9q9p1wxf72-macarthur"},
+		},
+		{
+			name:         "unknown onestop_id",
+			query:        `query{stops(where:{onestop_id:"s-0000000000-nowhere"}) {stop_id} }`,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{},
+		},
+		// With previous IDs allowed, a current ID is answered without the history,
+		// and anything else by it. Fruitvale's onestop_id changed between versions;
+		// either way the stop comes back with its current one.
+		{
+			name:         "previous allowed, current id",
+			query:        `query{stops(where:{onestop_id:"s-9q9nfsxn67-fruitvale", allow_previous_onestop_ids:true}) {stop_id} }`,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"FTVL"},
+		},
+		{
+			name:  "previous allowed, previous id",
+			query: `query{stops(where:{onestop_id:"s-9q9nfswzpg-fruitvale", allow_previous_onestop_ids:true}) {stop_id onestop_id} }`,
+			sel: []testcaseSelector{
+				{selector: "stops.#.stop_id", expect: []string{"FTVL"}},
+				{selector: "stops.#.onestop_id", expect: []string{"s-9q9nfsxn67-fruitvale"}},
+			},
+		},
+		{
+			name:         "previous allowed, current and previous ids",
+			query:        `query{stops(where:{onestop_ids:["s-9q9k658fd1-sanjosediridoncaltrain","s-9q9nfswzpg-fruitvale"], allow_previous_onestop_ids:true}) {stop_id} }`,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"70262", "FTVL"},
+		},
+		{
+			name:         "previous allowed, current and previous ids of one stop",
+			query:        `query{stops(where:{onestop_ids:["s-9q9nfsxn67-fruitvale","s-9q9nfswzpg-fruitvale"], allow_previous_onestop_ids:true}) {stop_id} }`,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"FTVL"},
+		},
+		{
+			name:         "previous allowed, unknown id",
+			query:        `query{stops(where:{onestop_id:"s-0000000000-nowhere", allow_previous_onestop_ids:true}) {stop_id} }`,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{},
+		},
+	}
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
+			c, _ := newTestClientWithOpts(t, testconfig.Options{UseMaterialized: materialized})
+			queryTestcases(t, c, testcases)
+		})
+	}
+}
+
+// Stops found with previous IDs allowed page like any others.
+func TestStopResolver_OnestopID_PreviousCursor(t *testing.T) {
+	c, cfg := newTestClient(t)
+	osid := "s-9q9p1wxf72-macarthur"
+	ents, err := cfg.Finder.FindStops(context.Background(), nil, nil, nil, &model.StopFilter{OnestopID: &osid})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ents) != 2 {
+		t.Fatalf("got %d stops for %s, expected 2", len(ents), osid)
+	}
+	query := `query($after:Int){stops(after:$after, limit:1, where:{onestop_id:"s-9q9p1wxf72-macarthur", allow_previous_onestop_ids:true}) {stop_id} }`
+	queryTestcases(t, c, []testcase{
+		{
+			name:         "first page",
+			query:        query,
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{ents[0].StopID.Val},
+		},
+		{
+			name:         "second page",
+			query:        query,
+			vars:         hw{"after": ents[0].ID},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{ents[1].StopID.Val},
+		},
+	})
+}
+
+// With previous IDs allowed, a current match that the rest of the filter excludes
+// leaves the ID to the history. Here the old BART version gives Fruitvale the
+// onestop ID San Jose Diridon has now.
+func TestStopResolver_OnestopID_PreviousFiltered(t *testing.T) {
+	sanJose := "s-9q9k658fd1-sanjosediridoncaltrain"
+	testcases := []testcase{
+		{
+			name:         "current match",
+			query:        `query($osid:String!){stops(where:{onestop_id:$osid, allow_previous_onestop_ids:true}) {stop_id} }`,
+			vars:         hw{"osid": sanJose},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"70262"},
+		},
+		{
+			name:         "current match filtered out",
+			query:        `query($osid:String!){stops(where:{onestop_id:$osid, allow_previous_onestop_ids:true, feed_onestop_id:"BA"}) {stop_id} }`,
+			vars:         hw{"osid": sanJose},
+			selector:     "stops.#.stop_id",
+			selectExpect: []string{"FTVL"},
+		},
+	}
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
+			testconfig.ConfigTxRollback(t, testconfig.Options{UseMaterialized: materialized}, func(cfg model.Config) {
+				ctx := context.Background()
+				sha1 := "dd7aca4a8e4c90908fd3603c097fabee75fea907"
+				fvs, err := cfg.Finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &sha1})
+				if err != nil || len(fvs) != 1 {
+					t.Fatalf("feed version %s: %v", sha1, err)
+				}
+				previous := stats.FeedVersionStats{StopOnestopIDs: []dmfr.FeedVersionStopOnestopID{{EntityID: "FTVL", OnestopID: sanJose}}}
+				if err := stats.WriteFeedVersionStats(ctx, cfg.Adapter, previous, fvs[0].ID, stats.WriteOptions{Stats: []string{stats.StatOnestopIDs}}); err != nil {
+					t.Fatal(err)
+				}
+				srv := model.AddConfigAndPerms(cfg, NewDefaultHandler())
+				queryTestcases(t, client.New(usercheck.UserDefaultMiddleware("test")(srv)), testcases)
+			})
+		})
+	}
 }
 
 func TestStopResolverLocation(t *testing.T) {
@@ -986,7 +1135,7 @@ func stopResolverPreviousOnestopIDTestcases(t testing.TB, cfg model.Config) []te
 			query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
 			vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": true},
 			selector:     "stops.#.onestop_id",
-			selectExpect: []string{"s-9q9nfswzpg-fruitvale"},
+			selectExpect: []string{"s-9q9nfsxn67-fruitvale"},
 		},
 	}
 	return testcases
