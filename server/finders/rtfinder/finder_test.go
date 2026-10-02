@@ -20,7 +20,7 @@ func TestMakeAlert_ActivePeriod(t *testing.T) {
 			{End: proto.Uint64(400)},
 		},
 	}
-	got := makeAlert(AlertEntity{Alert: a}, "").ActivePeriod
+	got := makeAlert(alertEntity{Alert: a}, "").ActivePeriod
 	if !assert.Len(t, got, 3) {
 		return
 	}
@@ -31,6 +31,12 @@ func TestMakeAlert_ActivePeriod(t *testing.T) {
 	check(0, intp(100), intp(200))
 	check(1, intp(300), nil)
 	check(2, nil, intp(400))
+}
+
+func TestMakeAlert_Entity(t *testing.T) {
+	got := makeAlert(alertEntity{ID: "ent-1", Alert: &pb.Alert{}}, "BA~rt")
+	assert.Equal(t, "ent-1", got.EntityID)
+	assert.Equal(t, "BA~rt", got.RtFeedOnestopID)
 }
 
 func intp(v int) *int {

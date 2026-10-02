@@ -457,10 +457,10 @@ func limitAlerts(alerts []*model.Alert, limit *int) []*model.Alert {
 	return alerts
 }
 
-func makeAlert(ent AlertEntity, rtFeedOnestopID string) *model.Alert {
+func makeAlert(ent alertEntity, rtFeedOnestopID string) *model.Alert {
 	a := ent.Alert
 	r := model.Alert{
-		ID:              ent.ID,
+		EntityID:        ent.ID,
 		RtFeedOnestopID: rtFeedOnestopID,
 	}
 	if a.Cause != nil {

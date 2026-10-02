@@ -128,9 +128,9 @@ func TestRouteRequest(t *testing.T) {
 		},
 		{
 			// Each alert carries the id of its entity and its realtime feed.
-			name:         "include_alerts:id",
+			name:         "include_alerts:entity_id",
 			h:            RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
-			selector:     "routes.0.alerts.#.id",
+			selector:     "routes.0.alerts.#.entity_id",
 			expectSelect: []string{"1", "1a", "4", "4a"},
 		},
 		{

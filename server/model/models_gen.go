@@ -103,9 +103,9 @@ type AgencyStopFilter struct {
 
 // [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
 type Alert struct {
-	// Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency
-	ID string `json:"id"`
-	// Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema
+	// Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches
+	EntityID string `json:"entity_id"`
+	// Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema
 	RtFeedOnestopID string `json:"rt_feed_onestop_id"`
 	// Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange
 	ActivePeriod []*RTTimeRange `json:"active_period,omitempty"`
@@ -1767,7 +1767,7 @@ type ValidationReportFilter struct {
 type VehiclePosition struct {
 	// Identifier of the GTFS-RT FeedEntity carrying this vehicle. Unique within its feed and stable between messages, so `rt_feed_onestop_id` and `id` together identify a vehicle across polls
 	ID string `json:"id"`
-	// Onestop ID of the GTFS-RT feed this vehicle came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema
+	// Onestop ID of the feed whose GTFS-RT data this vehicle came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema
 	RtFeedOnestopID string `json:"rt_feed_onestop_id"`
 	// Vehicle descriptor from the GTFS-RT VehiclePosition
 	Vehicle *RTVehicleDescriptor `json:"vehicle,omitempty"`

@@ -269,7 +269,7 @@ func astr(a []gjson.Result) []string {
 // Additional tests for RT data on StopResolver
 var rtTestStopQuery = `
 fragment alert on Alert {
-	id
+	entity_id
 	rt_feed_onestop_id
 	cause
 	effect

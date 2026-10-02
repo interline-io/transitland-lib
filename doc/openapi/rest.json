@@ -638,6 +638,12 @@
                                   "type": "string",
                                   "x-order": 58
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 52
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -662,12 +668,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 72
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 52
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -774,7 +774,7 @@
                                   "x-order": 122
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 54
@@ -1171,6 +1171,12 @@
                                         "type": "string",
                                         "x-order": 164
                                       },
+                                      "entity_id": {
+                                        "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                        "title": "entity_id",
+                                        "type": "string",
+                                        "x-order": 158
+                                      },
                                       "header_text": {
                                         "description": "GTFS-RT Alert header text",
                                         "items": {
@@ -1195,12 +1201,6 @@
                                         "title": "header_text",
                                         "type": "array",
                                         "x-order": 178
-                                      },
-                                      "id": {
-                                        "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                        "title": "id",
-                                        "type": "string",
-                                        "x-order": 158
                                       },
                                       "informed_entity": {
                                         "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -1307,7 +1307,7 @@
                                         "x-order": 228
                                       },
                                       "rt_feed_onestop_id": {
-                                        "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                        "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                         "title": "rt_feed_onestop_id",
                                         "type": "string",
                                         "x-order": 160
@@ -1694,6 +1694,12 @@
                                   "type": "string",
                                   "x-order": 58
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 52
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -1718,12 +1724,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 72
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 52
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -1830,7 +1830,7 @@
                                   "x-order": 122
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 54
@@ -2227,6 +2227,12 @@
                                         "type": "string",
                                         "x-order": 164
                                       },
+                                      "entity_id": {
+                                        "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                        "title": "entity_id",
+                                        "type": "string",
+                                        "x-order": 158
+                                      },
                                       "header_text": {
                                         "description": "GTFS-RT Alert header text",
                                         "items": {
@@ -2251,12 +2257,6 @@
                                         "title": "header_text",
                                         "type": "array",
                                         "x-order": 178
-                                      },
-                                      "id": {
-                                        "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                        "title": "id",
-                                        "type": "string",
-                                        "x-order": 158
                                       },
                                       "informed_entity": {
                                         "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -2363,7 +2363,7 @@
                                         "x-order": 228
                                       },
                                       "rt_feed_onestop_id": {
-                                        "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                        "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                         "title": "rt_feed_onestop_id",
                                         "type": "string",
                                         "x-order": 160
@@ -5206,6 +5206,12 @@
                                         "type": "string",
                                         "x-order": 45
                                       },
+                                      "entity_id": {
+                                        "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                        "title": "entity_id",
+                                        "type": "string",
+                                        "x-order": 39
+                                      },
                                       "header_text": {
                                         "description": "GTFS-RT Alert header text",
                                         "items": {
@@ -5230,12 +5236,6 @@
                                         "title": "header_text",
                                         "type": "array",
                                         "x-order": 59
-                                      },
-                                      "id": {
-                                        "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                        "title": "id",
-                                        "type": "string",
-                                        "x-order": 39
                                       },
                                       "informed_entity": {
                                         "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -5342,7 +5342,7 @@
                                         "x-order": 109
                                       },
                                       "rt_feed_onestop_id": {
-                                        "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                        "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                         "title": "rt_feed_onestop_id",
                                         "type": "string",
                                         "x-order": 41
@@ -5825,6 +5825,12 @@
                                         "type": "string",
                                         "x-order": 45
                                       },
+                                      "entity_id": {
+                                        "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                        "title": "entity_id",
+                                        "type": "string",
+                                        "x-order": 39
+                                      },
                                       "header_text": {
                                         "description": "GTFS-RT Alert header text",
                                         "items": {
@@ -5849,12 +5855,6 @@
                                         "title": "header_text",
                                         "type": "array",
                                         "x-order": 59
-                                      },
-                                      "id": {
-                                        "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                        "title": "id",
-                                        "type": "string",
-                                        "x-order": 39
                                       },
                                       "informed_entity": {
                                         "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -5961,7 +5961,7 @@
                                         "x-order": 109
                                       },
                                       "rt_feed_onestop_id": {
-                                        "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                        "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                         "title": "rt_feed_onestop_id",
                                         "type": "string",
                                         "x-order": 41
@@ -6615,6 +6615,12 @@
                                       "type": "string",
                                       "x-order": 126
                                     },
+                                    "entity_id": {
+                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                      "title": "entity_id",
+                                      "type": "string",
+                                      "x-order": 120
+                                    },
                                     "header_text": {
                                       "description": "GTFS-RT Alert header text",
                                       "items": {
@@ -6639,12 +6645,6 @@
                                       "title": "header_text",
                                       "type": "array",
                                       "x-order": 140
-                                    },
-                                    "id": {
-                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                      "title": "id",
-                                      "type": "string",
-                                      "x-order": 120
                                     },
                                     "informed_entity": {
                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -6751,7 +6751,7 @@
                                       "x-order": 190
                                     },
                                     "rt_feed_onestop_id": {
-                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                       "title": "rt_feed_onestop_id",
                                       "type": "string",
                                       "x-order": 122
@@ -6946,6 +6946,12 @@
                                   "type": "string",
                                   "x-order": 42
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 36
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -6970,12 +6976,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 56
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 36
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -7082,7 +7082,7 @@
                                   "x-order": 106
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 38
@@ -7400,6 +7400,12 @@
                                             "type": "string",
                                             "x-order": 226
                                           },
+                                          "entity_id": {
+                                            "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                            "title": "entity_id",
+                                            "type": "string",
+                                            "x-order": 220
+                                          },
                                           "header_text": {
                                             "description": "GTFS-RT Alert header text",
                                             "items": {
@@ -7424,12 +7430,6 @@
                                             "title": "header_text",
                                             "type": "array",
                                             "x-order": 240
-                                          },
-                                          "id": {
-                                            "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                            "title": "id",
-                                            "type": "string",
-                                            "x-order": 220
                                           },
                                           "informed_entity": {
                                             "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -7536,7 +7536,7 @@
                                             "x-order": 290
                                           },
                                           "rt_feed_onestop_id": {
-                                            "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                            "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                             "title": "rt_feed_onestop_id",
                                             "type": "string",
                                             "x-order": 222
@@ -7904,6 +7904,12 @@
                                       "type": "string",
                                       "x-order": 126
                                     },
+                                    "entity_id": {
+                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                      "title": "entity_id",
+                                      "type": "string",
+                                      "x-order": 120
+                                    },
                                     "header_text": {
                                       "description": "GTFS-RT Alert header text",
                                       "items": {
@@ -7928,12 +7934,6 @@
                                       "title": "header_text",
                                       "type": "array",
                                       "x-order": 140
-                                    },
-                                    "id": {
-                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                      "title": "id",
-                                      "type": "string",
-                                      "x-order": 120
                                     },
                                     "informed_entity": {
                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -8040,7 +8040,7 @@
                                       "x-order": 190
                                     },
                                     "rt_feed_onestop_id": {
-                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                       "title": "rt_feed_onestop_id",
                                       "type": "string",
                                       "x-order": 122
@@ -8235,6 +8235,12 @@
                                   "type": "string",
                                   "x-order": 42
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 36
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -8259,12 +8265,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 56
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 36
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -8371,7 +8371,7 @@
                                   "x-order": 106
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 38
@@ -8689,6 +8689,12 @@
                                             "type": "string",
                                             "x-order": 226
                                           },
+                                          "entity_id": {
+                                            "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                            "title": "entity_id",
+                                            "type": "string",
+                                            "x-order": 220
+                                          },
                                           "header_text": {
                                             "description": "GTFS-RT Alert header text",
                                             "items": {
@@ -8713,12 +8719,6 @@
                                             "title": "header_text",
                                             "type": "array",
                                             "x-order": 240
-                                          },
-                                          "id": {
-                                            "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                            "title": "id",
-                                            "type": "string",
-                                            "x-order": 220
                                           },
                                           "informed_entity": {
                                             "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -8825,7 +8825,7 @@
                                             "x-order": 290
                                           },
                                           "rt_feed_onestop_id": {
-                                            "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                            "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                             "title": "rt_feed_onestop_id",
                                             "type": "string",
                                             "x-order": 222
@@ -9292,6 +9292,12 @@
                                   "type": "string",
                                   "x-order": 88
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 82
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -9316,12 +9322,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 102
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 82
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -9428,7 +9428,7 @@
                                   "x-order": 152
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 84
@@ -9838,6 +9838,12 @@
                                           "type": "string",
                                           "x-order": 258
                                         },
+                                        "entity_id": {
+                                          "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                          "title": "entity_id",
+                                          "type": "string",
+                                          "x-order": 252
+                                        },
                                         "header_text": {
                                           "description": "GTFS-RT Alert header text",
                                           "items": {
@@ -9862,12 +9868,6 @@
                                           "title": "header_text",
                                           "type": "array",
                                           "x-order": 272
-                                        },
-                                        "id": {
-                                          "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                          "title": "id",
-                                          "type": "string",
-                                          "x-order": 252
                                         },
                                         "informed_entity": {
                                           "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -9974,7 +9974,7 @@
                                           "x-order": 322
                                         },
                                         "rt_feed_onestop_id": {
-                                          "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                          "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                           "title": "rt_feed_onestop_id",
                                           "type": "string",
                                           "x-order": 254
@@ -10169,6 +10169,12 @@
                                       "type": "string",
                                       "x-order": 174
                                     },
+                                    "entity_id": {
+                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                      "title": "entity_id",
+                                      "type": "string",
+                                      "x-order": 168
+                                    },
                                     "header_text": {
                                       "description": "GTFS-RT Alert header text",
                                       "items": {
@@ -10193,12 +10199,6 @@
                                       "title": "header_text",
                                       "type": "array",
                                       "x-order": 188
-                                    },
-                                    "id": {
-                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                      "title": "id",
-                                      "type": "string",
-                                      "x-order": 168
                                     },
                                     "informed_entity": {
                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -10305,7 +10305,7 @@
                                       "x-order": 238
                                     },
                                     "rt_feed_onestop_id": {
-                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                       "title": "rt_feed_onestop_id",
                                       "type": "string",
                                       "x-order": 170
@@ -10624,6 +10624,12 @@
                                             "type": "string",
                                             "x-order": 361
                                           },
+                                          "entity_id": {
+                                            "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                            "title": "entity_id",
+                                            "type": "string",
+                                            "x-order": 355
+                                          },
                                           "header_text": {
                                             "description": "GTFS-RT Alert header text",
                                             "items": {
@@ -10648,12 +10654,6 @@
                                             "title": "header_text",
                                             "type": "array",
                                             "x-order": 375
-                                          },
-                                          "id": {
-                                            "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                            "title": "id",
-                                            "type": "string",
-                                            "x-order": 355
                                           },
                                           "informed_entity": {
                                             "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -10760,7 +10760,7 @@
                                             "x-order": 425
                                           },
                                           "rt_feed_onestop_id": {
-                                            "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                            "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                             "title": "rt_feed_onestop_id",
                                             "type": "string",
                                             "x-order": 357
@@ -11173,6 +11173,12 @@
                                   "type": "string",
                                   "x-order": 88
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 82
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -11197,12 +11203,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 102
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 82
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -11309,7 +11309,7 @@
                                   "x-order": 152
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 84
@@ -11719,6 +11719,12 @@
                                           "type": "string",
                                           "x-order": 258
                                         },
+                                        "entity_id": {
+                                          "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                          "title": "entity_id",
+                                          "type": "string",
+                                          "x-order": 252
+                                        },
                                         "header_text": {
                                           "description": "GTFS-RT Alert header text",
                                           "items": {
@@ -11743,12 +11749,6 @@
                                           "title": "header_text",
                                           "type": "array",
                                           "x-order": 272
-                                        },
-                                        "id": {
-                                          "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                          "title": "id",
-                                          "type": "string",
-                                          "x-order": 252
                                         },
                                         "informed_entity": {
                                           "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -11855,7 +11855,7 @@
                                           "x-order": 322
                                         },
                                         "rt_feed_onestop_id": {
-                                          "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                          "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                           "title": "rt_feed_onestop_id",
                                           "type": "string",
                                           "x-order": 254
@@ -12050,6 +12050,12 @@
                                       "type": "string",
                                       "x-order": 174
                                     },
+                                    "entity_id": {
+                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                      "title": "entity_id",
+                                      "type": "string",
+                                      "x-order": 168
+                                    },
                                     "header_text": {
                                       "description": "GTFS-RT Alert header text",
                                       "items": {
@@ -12074,12 +12080,6 @@
                                       "title": "header_text",
                                       "type": "array",
                                       "x-order": 188
-                                    },
-                                    "id": {
-                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                      "title": "id",
-                                      "type": "string",
-                                      "x-order": 168
                                     },
                                     "informed_entity": {
                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -12186,7 +12186,7 @@
                                       "x-order": 238
                                     },
                                     "rt_feed_onestop_id": {
-                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                       "title": "rt_feed_onestop_id",
                                       "type": "string",
                                       "x-order": 170
@@ -12505,6 +12505,12 @@
                                             "type": "string",
                                             "x-order": 361
                                           },
+                                          "entity_id": {
+                                            "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                            "title": "entity_id",
+                                            "type": "string",
+                                            "x-order": 355
+                                          },
                                           "header_text": {
                                             "description": "GTFS-RT Alert header text",
                                             "items": {
@@ -12529,12 +12535,6 @@
                                             "title": "header_text",
                                             "type": "array",
                                             "x-order": 375
-                                          },
-                                          "id": {
-                                            "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                            "title": "id",
-                                            "type": "string",
-                                            "x-order": 355
                                           },
                                           "informed_entity": {
                                             "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -12641,7 +12641,7 @@
                                             "x-order": 425
                                           },
                                           "rt_feed_onestop_id": {
-                                            "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                            "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                             "title": "rt_feed_onestop_id",
                                             "type": "string",
                                             "x-order": 357
@@ -13164,6 +13164,12 @@
                                   "type": "string",
                                   "x-order": 157
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 151
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -13188,12 +13194,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 171
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 151
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -13300,7 +13300,7 @@
                                   "x-order": 221
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 153
@@ -13587,6 +13587,12 @@
                                       "type": "string",
                                       "x-order": 81
                                     },
+                                    "entity_id": {
+                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                      "title": "entity_id",
+                                      "type": "string",
+                                      "x-order": 75
+                                    },
                                     "header_text": {
                                       "description": "GTFS-RT Alert header text",
                                       "items": {
@@ -13611,12 +13617,6 @@
                                       "title": "header_text",
                                       "type": "array",
                                       "x-order": 95
-                                    },
-                                    "id": {
-                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                      "title": "id",
-                                      "type": "string",
-                                      "x-order": 75
                                     },
                                     "informed_entity": {
                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -13723,7 +13723,7 @@
                                       "x-order": 145
                                     },
                                     "rt_feed_onestop_id": {
-                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                       "title": "rt_feed_onestop_id",
                                       "type": "string",
                                       "x-order": 77
@@ -14163,6 +14163,12 @@
                                   "type": "string",
                                   "x-order": 157
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 151
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -14187,12 +14193,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 171
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 151
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -14299,7 +14299,7 @@
                                   "x-order": 221
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 153
@@ -14586,6 +14586,12 @@
                                       "type": "string",
                                       "x-order": 81
                                     },
+                                    "entity_id": {
+                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                      "title": "entity_id",
+                                      "type": "string",
+                                      "x-order": 75
+                                    },
                                     "header_text": {
                                       "description": "GTFS-RT Alert header text",
                                       "items": {
@@ -14610,12 +14616,6 @@
                                       "title": "header_text",
                                       "type": "array",
                                       "x-order": 95
-                                    },
-                                    "id": {
-                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                      "title": "id",
-                                      "type": "string",
-                                      "x-order": 75
                                     },
                                     "informed_entity": {
                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -14722,7 +14722,7 @@
                                       "x-order": 145
                                     },
                                     "rt_feed_onestop_id": {
-                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                       "title": "rt_feed_onestop_id",
                                       "type": "string",
                                       "x-order": 77
@@ -15274,6 +15274,12 @@
                                   "type": "string",
                                   "x-order": 1546
                                 },
+                                "entity_id": {
+                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                  "title": "entity_id",
+                                  "type": "string",
+                                  "x-order": 1540
+                                },
                                 "header_text": {
                                   "description": "GTFS-RT Alert header text",
                                   "items": {
@@ -15298,12 +15304,6 @@
                                   "title": "header_text",
                                   "type": "array",
                                   "x-order": 1560
-                                },
-                                "id": {
-                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                  "title": "id",
-                                  "type": "string",
-                                  "x-order": 1540
                                 },
                                 "informed_entity": {
                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -15410,7 +15410,7 @@
                                   "x-order": 1610
                                 },
                                 "rt_feed_onestop_id": {
-                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                   "title": "rt_feed_onestop_id",
                                   "type": "string",
                                   "x-order": 1542
@@ -15591,6 +15591,12 @@
                                         "type": "string",
                                         "x-order": 865
                                       },
+                                      "entity_id": {
+                                        "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                        "title": "entity_id",
+                                        "type": "string",
+                                        "x-order": 859
+                                      },
                                       "header_text": {
                                         "description": "GTFS-RT Alert header text",
                                         "items": {
@@ -15615,12 +15621,6 @@
                                         "title": "header_text",
                                         "type": "array",
                                         "x-order": 879
-                                      },
-                                      "id": {
-                                        "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                        "title": "id",
-                                        "type": "string",
-                                        "x-order": 859
                                       },
                                       "informed_entity": {
                                         "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -15727,7 +15727,7 @@
                                         "x-order": 929
                                       },
                                       "rt_feed_onestop_id": {
-                                        "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                        "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                         "title": "rt_feed_onestop_id",
                                         "type": "string",
                                         "x-order": 861
@@ -16198,6 +16198,12 @@
                                                   "type": "string",
                                                   "x-order": 788
                                                 },
+                                                "entity_id": {
+                                                  "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                  "title": "entity_id",
+                                                  "type": "string",
+                                                  "x-order": 782
+                                                },
                                                 "header_text": {
                                                   "description": "GTFS-RT Alert header text",
                                                   "items": {
@@ -16222,12 +16228,6 @@
                                                   "title": "header_text",
                                                   "type": "array",
                                                   "x-order": 802
-                                                },
-                                                "id": {
-                                                  "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                  "title": "id",
-                                                  "type": "string",
-                                                  "x-order": 782
                                                 },
                                                 "informed_entity": {
                                                   "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -16334,7 +16334,7 @@
                                                   "x-order": 852
                                                 },
                                                 "rt_feed_onestop_id": {
-                                                  "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                  "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                   "title": "rt_feed_onestop_id",
                                                   "type": "string",
                                                   "x-order": 784
@@ -16610,6 +16610,12 @@
                                                           "type": "string",
                                                           "x-order": 689
                                                         },
+                                                        "entity_id": {
+                                                          "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                          "title": "entity_id",
+                                                          "type": "string",
+                                                          "x-order": 683
+                                                        },
                                                         "header_text": {
                                                           "description": "GTFS-RT Alert header text",
                                                           "items": {
@@ -16634,12 +16640,6 @@
                                                           "title": "header_text",
                                                           "type": "array",
                                                           "x-order": 703
-                                                        },
-                                                        "id": {
-                                                          "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                          "title": "id",
-                                                          "type": "string",
-                                                          "x-order": 683
                                                         },
                                                         "informed_entity": {
                                                           "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -16746,7 +16746,7 @@
                                                           "x-order": 753
                                                         },
                                                         "rt_feed_onestop_id": {
-                                                          "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                          "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                           "title": "rt_feed_onestop_id",
                                                           "type": "string",
                                                           "x-order": 685
@@ -16941,6 +16941,12 @@
                                                       "type": "string",
                                                       "x-order": 604
                                                     },
+                                                    "entity_id": {
+                                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                      "title": "entity_id",
+                                                      "type": "string",
+                                                      "x-order": 598
+                                                    },
                                                     "header_text": {
                                                       "description": "GTFS-RT Alert header text",
                                                       "items": {
@@ -16965,12 +16971,6 @@
                                                       "title": "header_text",
                                                       "type": "array",
                                                       "x-order": 618
-                                                    },
-                                                    "id": {
-                                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                      "title": "id",
-                                                      "type": "string",
-                                                      "x-order": 598
                                                     },
                                                     "informed_entity": {
                                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -17077,7 +17077,7 @@
                                                       "x-order": 668
                                                     },
                                                     "rt_feed_onestop_id": {
-                                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                       "title": "rt_feed_onestop_id",
                                                       "type": "string",
                                                       "x-order": 600
@@ -17875,6 +17875,12 @@
                                             "type": "string",
                                             "x-order": 367
                                           },
+                                          "entity_id": {
+                                            "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                            "title": "entity_id",
+                                            "type": "string",
+                                            "x-order": 361
+                                          },
                                           "header_text": {
                                             "description": "GTFS-RT Alert header text",
                                             "items": {
@@ -17899,12 +17905,6 @@
                                             "title": "header_text",
                                             "type": "array",
                                             "x-order": 381
-                                          },
-                                          "id": {
-                                            "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                            "title": "id",
-                                            "type": "string",
-                                            "x-order": 361
                                           },
                                           "informed_entity": {
                                             "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -18011,7 +18011,7 @@
                                             "x-order": 431
                                           },
                                           "rt_feed_onestop_id": {
-                                            "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                            "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                             "title": "rt_feed_onestop_id",
                                             "type": "string",
                                             "x-order": 363
@@ -18287,6 +18287,12 @@
                                                     "type": "string",
                                                     "x-order": 268
                                                   },
+                                                  "entity_id": {
+                                                    "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                    "title": "entity_id",
+                                                    "type": "string",
+                                                    "x-order": 262
+                                                  },
                                                   "header_text": {
                                                     "description": "GTFS-RT Alert header text",
                                                     "items": {
@@ -18311,12 +18317,6 @@
                                                     "title": "header_text",
                                                     "type": "array",
                                                     "x-order": 282
-                                                  },
-                                                  "id": {
-                                                    "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                    "title": "id",
-                                                    "type": "string",
-                                                    "x-order": 262
                                                   },
                                                   "informed_entity": {
                                                     "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -18423,7 +18423,7 @@
                                                     "x-order": 332
                                                   },
                                                   "rt_feed_onestop_id": {
-                                                    "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                    "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                     "title": "rt_feed_onestop_id",
                                                     "type": "string",
                                                     "x-order": 264
@@ -18618,6 +18618,12 @@
                                                 "type": "string",
                                                 "x-order": 183
                                               },
+                                              "entity_id": {
+                                                "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                "title": "entity_id",
+                                                "type": "string",
+                                                "x-order": 177
+                                              },
                                               "header_text": {
                                                 "description": "GTFS-RT Alert header text",
                                                 "items": {
@@ -18642,12 +18648,6 @@
                                                 "title": "header_text",
                                                 "type": "array",
                                                 "x-order": 197
-                                              },
-                                              "id": {
-                                                "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                "title": "id",
-                                                "type": "string",
-                                                "x-order": 177
                                               },
                                               "informed_entity": {
                                                 "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -18754,7 +18754,7 @@
                                                 "x-order": 247
                                               },
                                               "rt_feed_onestop_id": {
-                                                "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                 "title": "rt_feed_onestop_id",
                                                 "type": "string",
                                                 "x-order": 179
@@ -19224,6 +19224,12 @@
                                       "type": "string",
                                       "x-order": 1470
                                     },
+                                    "entity_id": {
+                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                      "title": "entity_id",
+                                      "type": "string",
+                                      "x-order": 1464
+                                    },
                                     "header_text": {
                                       "description": "GTFS-RT Alert header text",
                                       "items": {
@@ -19248,12 +19254,6 @@
                                       "title": "header_text",
                                       "type": "array",
                                       "x-order": 1484
-                                    },
-                                    "id": {
-                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                      "title": "id",
-                                      "type": "string",
-                                      "x-order": 1464
                                     },
                                     "informed_entity": {
                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -19360,7 +19360,7 @@
                                       "x-order": 1534
                                     },
                                     "rt_feed_onestop_id": {
-                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                       "title": "rt_feed_onestop_id",
                                       "type": "string",
                                       "x-order": 1466
@@ -19541,6 +19541,12 @@
                                             "type": "string",
                                             "x-order": 1394
                                           },
+                                          "entity_id": {
+                                            "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                            "title": "entity_id",
+                                            "type": "string",
+                                            "x-order": 1388
+                                          },
                                           "header_text": {
                                             "description": "GTFS-RT Alert header text",
                                             "items": {
@@ -19565,12 +19571,6 @@
                                             "title": "header_text",
                                             "type": "array",
                                             "x-order": 1408
-                                          },
-                                          "id": {
-                                            "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                            "title": "id",
-                                            "type": "string",
-                                            "x-order": 1388
                                           },
                                           "informed_entity": {
                                             "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -19677,7 +19677,7 @@
                                             "x-order": 1458
                                           },
                                           "rt_feed_onestop_id": {
-                                            "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                            "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                             "title": "rt_feed_onestop_id",
                                             "type": "string",
                                             "x-order": 1390
@@ -20148,6 +20148,12 @@
                                                       "type": "string",
                                                       "x-order": 1317
                                                     },
+                                                    "entity_id": {
+                                                      "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                      "title": "entity_id",
+                                                      "type": "string",
+                                                      "x-order": 1311
+                                                    },
                                                     "header_text": {
                                                       "description": "GTFS-RT Alert header text",
                                                       "items": {
@@ -20172,12 +20178,6 @@
                                                       "title": "header_text",
                                                       "type": "array",
                                                       "x-order": 1331
-                                                    },
-                                                    "id": {
-                                                      "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                      "title": "id",
-                                                      "type": "string",
-                                                      "x-order": 1311
                                                     },
                                                     "informed_entity": {
                                                       "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -20284,7 +20284,7 @@
                                                       "x-order": 1381
                                                     },
                                                     "rt_feed_onestop_id": {
-                                                      "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                      "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                       "title": "rt_feed_onestop_id",
                                                       "type": "string",
                                                       "x-order": 1313
@@ -20560,6 +20560,12 @@
                                                               "type": "string",
                                                               "x-order": 1218
                                                             },
+                                                            "entity_id": {
+                                                              "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                              "title": "entity_id",
+                                                              "type": "string",
+                                                              "x-order": 1212
+                                                            },
                                                             "header_text": {
                                                               "description": "GTFS-RT Alert header text",
                                                               "items": {
@@ -20584,12 +20590,6 @@
                                                               "title": "header_text",
                                                               "type": "array",
                                                               "x-order": 1232
-                                                            },
-                                                            "id": {
-                                                              "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                              "title": "id",
-                                                              "type": "string",
-                                                              "x-order": 1212
                                                             },
                                                             "informed_entity": {
                                                               "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -20696,7 +20696,7 @@
                                                               "x-order": 1282
                                                             },
                                                             "rt_feed_onestop_id": {
-                                                              "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                              "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                               "title": "rt_feed_onestop_id",
                                                               "type": "string",
                                                               "x-order": 1214
@@ -20891,6 +20891,12 @@
                                                           "type": "string",
                                                           "x-order": 1133
                                                         },
+                                                        "entity_id": {
+                                                          "description": "Id of the GTFS-RT FeedEntity that carried this alert, as published by its realtime feed. This is the realtime message's own entity id, not a GTFS static id like those in `informed_entity`. It should be unique within one realtime feed but not across feeds, so identify an alert by `rt_feed_onestop_id` and `entity_id` together, for example to merge the copies of an alert reached through a stop, its routes and their agency. Producers are not required to keep it the same between fetches",
+                                                          "title": "entity_id",
+                                                          "type": "string",
+                                                          "x-order": 1127
+                                                        },
                                                         "header_text": {
                                                           "description": "GTFS-RT Alert header text",
                                                           "items": {
@@ -20915,12 +20921,6 @@
                                                           "title": "header_text",
                                                           "type": "array",
                                                           "x-order": 1147
-                                                        },
-                                                        "id": {
-                                                          "description": "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency",
-                                                          "title": "id",
-                                                          "type": "string",
-                                                          "x-order": 1127
                                                         },
                                                         "informed_entity": {
                                                           "description": "Entities this alert applies to, as published. See https://gtfs.org/realtime/reference/#message-entityselector",
@@ -21027,7 +21027,7 @@
                                                           "x-order": 1197
                                                         },
                                                         "rt_feed_onestop_id": {
-                                                          "description": "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema",
+                                                          "description": "Onestop ID of the feed whose GTFS-RT data this alert came from. A feed may carry both static and realtime URLs, so this can be the same feed as a `feed_onestop_id` elsewhere in the schema",
                                                           "title": "rt_feed_onestop_id",
                                                           "type": "string",
                                                           "x-order": 1129
