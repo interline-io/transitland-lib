@@ -73,3 +73,40 @@ func TestAgencyRT_Alerts(t *testing.T) {
 		testRt(t, tc)
 	}
 }
+
+// With include_modes, Agency.alerts also returns an alert on a mode the agency
+// runs, but not one on a mode it doesn't run, nor one narrowed to a route, stop
+// or trip; alerts on the agency itself still come back.
+func TestAgencyRT_AlertsIncludeModes(t *testing.T) {
+	vars := rtTestStopQueryVars()
+	vars["include_modes"] = true
+	agencyAlerts := func(t *testing.T, jj string) []string {
+		st := gjson.Get(jj, `stops.0.stop_times.#(trip.trip_id=="1031527WKDY")`)
+		if !st.Exists() {
+			t.Fatal("expected to find trip '1031527WKDY'")
+		}
+		var ret []string
+		for _, a := range st.Get("trip.route.agency.alerts").Array() {
+			ret = append(ret, a.Get("header_text.0.text").String())
+		}
+		return ret
+	}
+	testRt(t, rtTestCase{
+		name:    "modes",
+		query:   rtTestStopQuery,
+		vars:    vars,
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts-informed-entity.json"}},
+		cb: func(t *testing.T, jj string) {
+			assert.Equal(t, []string{"All BART subway service"}, agencyAlerts(t, jj))
+		},
+	})
+	testRt(t, rtTestCase{
+		name:    "agency",
+		query:   rtTestStopQuery,
+		vars:    vars,
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"}},
+		cb: func(t *testing.T, jj string) {
+			assert.ElementsMatch(t, []string{"Test agency header", "Test agency header - active"}, agencyAlerts(t, jj))
+		},
+	})
+}

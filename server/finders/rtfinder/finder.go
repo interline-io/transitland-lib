@@ -3,6 +3,7 @@ package rtfinder
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -145,13 +146,20 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 // agencyMatches reports whether a selector's agency_id, if it gives one, is the
 // route's agency.
 func (f *Finder) agencyMatches(ctx context.Context, s *pb.EntitySelector, t *model.Route) bool {
-	aid := s.GetAgencyId()
-	if aid == "" {
+	if s.GetAgencyId() == "" {
 		return true
 	}
 	agencyId, ok := f.lc.GetGtfsAgencyID(ctx, t.AgencyID.Int())
-	// A single-agency feed may omit agency_id, leaving nothing to compare.
-	return ok && (agencyId == "" || agencyId == aid)
+	return ok && agencyIdMatches(s, agencyId)
+}
+
+// agencyIdMatches reports whether a selector's agency_id, if it gives one, is
+// this GTFS agency_id.
+func agencyIdMatches(s *pb.EntitySelector, agencyId string) bool {
+	// An agency without an agency_id matches no selector naming one: alerts also
+	// come from RT feeds shared with other operators, naming their agencies.
+	aid := s.GetAgencyId()
+	return aid == "" || aid == agencyId
 }
 
 // selectorNamesRoute reports whether a selector names this route, directly or
@@ -179,13 +187,36 @@ func tripOnRoute(td *pb.TripDescriptor, routeId string, tripRoutes func() map[st
 // matchesRouteType reports whether a selector naming no route, stop or trip
 // covers every route of this type.
 func matchesRouteType(s *pb.EntitySelector, routeType int) bool {
-	if s.RouteType == nil || s.GetRouteId() != "" || s.GetStopId() != "" {
+	return isModeWide(s) && tt.BasicRouteType(int(s.GetRouteType())) == tt.BasicRouteType(routeType)
+}
+
+// isModeWide reports whether a selector names a route type and no route, stop
+// or trip.
+func isModeWide(s *pb.EntitySelector) bool {
+	return s.RouteType != nil && !namesRouteStopOrTrip(s)
+}
+
+// namesAgency reports whether a selector names this agency and nothing narrower.
+func namesAgency(s *pb.EntitySelector, agencyId string) bool {
+	aid := s.GetAgencyId()
+	return aid != "" && aid == agencyId && s.RouteType == nil && !namesRouteStopOrTrip(s)
+}
+
+// namesRouteStopOrTrip reports whether a selector names a route, stop or trip.
+// An empty trip descriptor names no trip.
+func namesRouteStopOrTrip(s *pb.EntitySelector) bool {
+	td := s.GetTrip()
+	return s.GetRouteId() != "" || s.GetStopId() != "" || td.GetTripId() != "" || td.GetRouteId() != ""
+}
+
+// matchesAgencyMode reports whether a mode-wide selector for this agency covers
+// any of these route types.
+func matchesAgencyMode(s *pb.EntitySelector, agencyId string, routeTypes []int) bool {
+	if !isModeWide(s) || !agencyIdMatches(s, agencyId) {
 		return false
 	}
-	if td := s.GetTrip(); td.GetTripId() != "" || td.GetRouteId() != "" {
-		return false
-	}
-	return tt.BasicRouteType(int(s.GetRouteType())) == tt.BasicRouteType(routeType)
+	mode := tt.BasicRouteType(int(s.GetRouteType()))
+	return slices.ContainsFunc(routeTypes, func(rt int) bool { return tt.BasicRouteType(rt) == mode })
 }
 
 func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) (*pb.FeedMessage, bool) {
@@ -197,7 +228,9 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 	return nil, false
 }
 
-func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit *int, active *bool) []*model.Alert {
+// FindAlertsForAgency returns the alerts on an agency, and also its mode-wide
+// alerts on any of routeTypes.
+func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit *int, active *bool, routeTypes []int) []*model.Alert {
 	foundAlerts := []*model.Alert{}
 	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	tnow := f.Clock.Now()
@@ -215,13 +248,12 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 			}
 			found := false
 			for _, s := range alert.GetInformedEntity() {
-				// trip, route, route type, stop must be empty
-				// agency must match
-				if s == nil || s.Trip != nil || s.GetRouteId() != "" || s.RouteType != nil || s.GetStopId() != "" {
+				if s == nil {
 					continue
 				}
-				if s.GetAgencyId() == t.AgencyID.Val {
+				if namesAgency(s, t.AgencyID.Val) || matchesAgencyMode(s, t.AgencyID.Val, routeTypes) {
 					found = true
+					break
 				}
 			}
 			if found {
