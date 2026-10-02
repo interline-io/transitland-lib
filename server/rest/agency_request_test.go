@@ -151,6 +151,12 @@ func TestAgencyRequest(t *testing.T) {
 			},
 		},
 		{
+			name:         "include_alerts:entity_id",
+			h:            AgencyRequest{AgencyKey: "BA:BART", IncludeAlerts: true},
+			selector:     "agencies.0.alerts.#.entity_id",
+			expectSelect: []string{"2", "2a"},
+		},
+		{
 			name: "include_alerts:false",
 			h:    AgencyRequest{AgencyKey: "BA:BART", IncludeAlerts: false},
 			f: func(t *testing.T, jj string) {

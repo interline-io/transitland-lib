@@ -15,7 +15,7 @@ type Source struct {
 	feed             string
 	msg              *pb.FeedMessage
 	entityByTrip     map[string]*pb.TripUpdate
-	alerts           []*pb.Alert
+	alerts           []alertEntity
 	vehiclePositions []VehiclePositionEntity
 	// unroutedTripIds are the trip_ids this message names without a route_id,
 	// which only the static trip can place on a route.
@@ -32,6 +32,13 @@ type Source struct {
 type VehiclePositionEntity struct {
 	ID       string
 	Position *pb.VehiclePosition
+}
+
+// alertEntity pairs an alert with the id of the FeedEntity that carried it,
+// which identifies the alert within its feed.
+type alertEntity struct {
+	ID    string
+	Alert *pb.Alert
 }
 
 func NewSource(feed string) (*Source, error) {
@@ -65,7 +72,7 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 	defaultTimestamp := rtmsg.GetHeader().GetTimestamp()
 	hasDefaultTimestamp := defaultTimestamp > 0
 	a := map[string]*pb.TripUpdate{}
-	var alerts []*pb.Alert
+	var alerts []alertEntity
 	vehiclePositions := make([]VehiclePositionEntity, 0, len(rtmsg.Entity))
 	unrouted := set.New[string]()
 	addUnrouted := func(td *pb.TripDescriptor) {
@@ -82,7 +89,7 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 			a[tid] = v
 		}
 		if v := ent.Alert; v != nil {
-			alerts = append(alerts, v)
+			alerts = append(alerts, alertEntity{ID: ent.GetId(), Alert: v})
 			for _, s := range v.GetInformedEntity() {
 				if s.GetRouteId() == "" {
 					addUnrouted(s.GetTrip())

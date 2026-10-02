@@ -129,6 +129,31 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 			assert.Empty(t, headers(st.Get("trip.route.agency.alerts").Array()))
 		},
 	})
+	// An alert reached through several entities carries the same entity id from
+	// each, whether it came through a stop, a route, a trip or an agency.
+	idVars := rtTestStopQueryVars()
+	idVars["include_modes"] = true
+	testRt(t, rtTestCase{
+		name:    "entity id",
+		query:   rtTestStopQuery,
+		vars:    idVars,
+		rtfiles: rtfiles,
+		cb: func(t *testing.T, jj string) {
+			st := gjson.Get(jj, `stops.0.stop_times.#(trip.trip_id=="1031527WKDY")`)
+			if !st.Exists() {
+				t.Fatal("expected to find trip '1031527WKDY'")
+			}
+			check := func(path string, a gjson.Result, entityId string) {
+				assert.Equal(t, entityId, a.Get("entity_id").String(), path)
+				assert.Equal(t, "BA", a.Get("rt_feed_onestop_id").String(), path)
+			}
+			check("stop", gjson.Get(jj, "stops.0.alerts.0"), "route-at-ftvl")
+			check("route at stop", st.Get(`trip.route.alerts.#(header_text.0.text=="Route 05 at Fruitvale")`), "route-at-ftvl")
+			check("trip", st.Get("trip.alerts.0"), "trip")
+			check("route trip", st.Get(`trip.route.alerts.#(header_text.0.text=="Trip 1031527WKDY")`), "trip")
+			check("agency mode", st.Get("trip.route.agency.alerts.0"), "mode-subway")
+		},
+	})
 	testRt(t, rtTestCase{
 		name:    "informed entity",
 		query:   rtTestStopQuery,
