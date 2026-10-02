@@ -95,7 +95,7 @@ query ($limit: Int, $ids: [Int!], $after: Int, $include_alerts: Boolean!, $inclu
       route_id
       route_short_name
       route_long_name
-      alerts @include(if: $include_alerts) {
+      alerts(include_modes: true, include_trips: true) @include(if: $include_alerts) {
         ...alert
       }
     }

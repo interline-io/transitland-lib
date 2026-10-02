@@ -20,22 +20,37 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// countingDB counts the trip lookups run through it, and fails them while fail
-// is set.
+// countingDB counts the trip, feed version agency and route lookups run
+// through it, and fails the trip and agency lookups while fail is set.
 type countingDB struct {
 	tldb.Ext
-	tripQueries atomic.Int64
-	fail        atomic.Bool
+	tripQueries   atomic.Int64
+	agencyQueries atomic.Int64
+	routeQueries  atomic.Int64
+	fail          atomic.Bool
 }
 
 func (db *countingDB) QueryxContext(ctx context.Context, query string, args ...any) (*sqlx.Rows, error) {
+	counter := (*atomic.Int64)(nil)
 	if strings.Contains(query, "gtfs_trips") {
-		db.tripQueries.Add(1)
+		counter = &db.tripQueries
+	} else if query == feedVersionAgencyIdsQuery {
+		counter = &db.agencyQueries
+	}
+	if counter != nil {
+		counter.Add(1)
 		if db.fail.Load() {
 			return nil, errors.New("test failure")
 		}
 	}
 	return db.Ext.QueryxContext(ctx, query, args...)
+}
+
+func (db *countingDB) QueryRowxContext(ctx context.Context, query string, args ...any) *sqlx.Row {
+	if query == feedVersionRouteQuery || query == routeQuery {
+		db.routeQueries.Add(1)
+	}
+	return db.Ext.QueryRowxContext(ctx, query, args...)
 }
 
 // testBartFeedVersion returns a BART feed version holding the trips the RT
@@ -60,6 +75,16 @@ func testRoutes(t *testing.T, db tldb.Ext, fvid int) map[string]*model.Route {
 		ret[r.RouteID.Val] = r
 	}
 	return ret
+}
+
+// testStop returns a feed version's stop by GTFS stop_id.
+func testStop(t *testing.T, db tldb.Ext, fvid int, stopId string) *model.Stop {
+	stop := &model.Stop{}
+	q := `select id, feed_version_id, stop_id from gtfs_stops where feed_version_id = $1 and stop_id = $2`
+	if err := sqlx.Get(db, stop, q, fvid, stopId); err != nil {
+		t.Fatal(err)
+	}
+	return stop
 }
 
 // testReadRT reads an RT fixture from testdata/server/rt.
@@ -167,4 +192,49 @@ func TestLookupCache_GetGtfsAgencyID(t *testing.T) {
 		_, ok := lc.GetGtfsAgencyID(ctx, -1)
 		assert.False(t, ok)
 	}
+}
+
+func TestLookupCache_GetFeedVersionRoute(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	raw := testutil.MustOpenTestDB(t)
+	db := &countingDB{Ext: raw}
+	fvid := testBartFeedVersion(t, raw)
+	lc := newLookupCache(db)
+	ctx := context.Background()
+	r, ok := lc.GetFeedVersionRoute(ctx, fvid, "05")
+	if assert.True(t, ok) {
+		assert.NotZero(t, r.ID)
+		assert.Equal(t, "05", r.RouteID)
+		assert.Equal(t, 1, r.RouteType)
+		assert.Equal(t, "BART", r.AgencyID)
+	}
+	byId, ok := lc.GetRoute(ctx, r.ID)
+	assert.True(t, ok)
+	assert.Equal(t, r, byId)
+	// A route that isn't there is looked up once, and remembered as missing.
+	for range 2 {
+		_, ok := lc.GetFeedVersionRoute(ctx, fvid, "99")
+		assert.False(t, ok)
+		_, ok = lc.GetRoute(ctx, -1)
+		assert.False(t, ok)
+	}
+	assert.EqualValues(t, 4, db.routeQueries.Load())
+}
+
+func TestLookupCache_GetFeedVersionAgencyIDs(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	db := testutil.MustOpenTestDB(t)
+	fvid := testBartFeedVersion(t, db)
+	lc := newLookupCache(db)
+	ctx := context.Background()
+	agencyIds, ok := lc.GetFeedVersionAgencyIDs(ctx, fvid)
+	assert.True(t, ok)
+	assert.Equal(t, []string{"BART"}, agencyIds)
+	routeTypes, ok := lc.GetFeedVersionRouteTypes(ctx, fvid)
+	assert.True(t, ok)
+	assert.Equal(t, []int{1}, routeTypes)
 }

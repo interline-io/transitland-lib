@@ -203,6 +203,102 @@
           ]
         }
       }
+    },
+    {
+      "id": "agency-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "agency_id": "BART",
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "BART at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "empty-trip-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "stop_id": "FTVL",
+            "trip": {}
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Fruitvale with an empty trip descriptor",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "subway-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_type": 1,
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Subway at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bus-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_type": 3,
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Buses at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "route-as-bus-at-ftvl",
+      "alert": {
+        "informed_entity": [
+          {
+            "route_id": "05",
+            "route_type": 3,
+            "stop_id": "FTVL"
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Route 05 as a bus at Fruitvale",
+              "language": "en"
+            }
+          ]
+        }
+      }
     }
   ]
 }

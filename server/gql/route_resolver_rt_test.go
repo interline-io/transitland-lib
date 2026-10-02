@@ -93,16 +93,17 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 		vars:    rtTestStopQueryVars(),
 		rtfiles: rtfiles,
 		cb: func(t *testing.T, jj string) {
-			// Not another agency's alert at a stop with this stop_id, nor one naming
-			// a route this feed version doesn't have.
+			// Not another agency's alert at a stop with this stop_id, one naming a
+			// route this feed version doesn't have, one on a mode it doesn't run,
+			// nor one giving route 05 another mode.
 			stopAlerts := gjson.Get(jj, "stops.0.alerts").Array()
-			assert.Equal(t, []string{"Route 05 at Fruitvale"}, headers(stopAlerts))
-			if len(stopAlerts) == 1 {
-				ie := stopAlerts[0].Get("informed_entity").Array()
-				if assert.Len(t, ie, 1) {
-					assert.Equal(t, "05", ie[0].Get("route_id").String())
-					assert.Equal(t, "FTVL", ie[0].Get("stop_id").String())
-				}
+			assert.ElementsMatch(t,
+				[]string{"Route 05 at Fruitvale", "BART at Fruitvale", "Fruitvale with an empty trip descriptor", "Subway at Fruitvale"},
+				headers(stopAlerts))
+			ie := gjson.Get(jj, `stops.0.alerts.#(header_text.0.text=="Route 05 at Fruitvale").informed_entity`).Array()
+			if assert.Len(t, ie, 1) {
+				assert.Equal(t, "05", ie[0].Get("route_id").String())
+				assert.Equal(t, "FTVL", ie[0].Get("stop_id").String())
 			}
 			assert.ElementsMatch(t, []string{"Route 05 at Fruitvale", "Route 05 at 12th St"}, headers(tripAt(t, jj).Get("trip.route.alerts").Array()))
 		},
@@ -179,9 +180,8 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 }
 
 // With include_trips, Route.alerts returns an alert on one of the route's trips,
-// named by the trip's trip_id or route_id, but not one on another agency's trip;
-// without it, none of them. Trip.alerts returns only those naming the trip
-// itself, and Stop.alerts none of them.
+// but not one on another agency's; without it, none of them. Trip.alerts returns
+// only those naming the trip itself, and Stop.alerts none of them.
 func TestRouteRT_TripAlerts(t *testing.T) {
 	rtfiles := []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts-trips.json"}}
 	headers := func(alerts []gjson.Result) []string {
@@ -228,8 +228,9 @@ func TestRouteRT_TripAlerts(t *testing.T) {
 		vars:    rtTestStopQueryVars(),
 		rtfiles: rtfiles,
 		cb: func(t *testing.T, jj string) {
+			// A trip descriptor naming only the route picks out no trip: it is the route.
 			route05, route03 := trips(t, jj)
-			assert.Empty(t, headers(route05.Get("trip.route.alerts").Array()))
+			assert.Equal(t, []string{"Route 05 by trip descriptor"}, headers(route05.Get("trip.route.alerts").Array()))
 			assert.Empty(t, headers(route03.Get("trip.route.alerts").Array()))
 			assert.ElementsMatch(t,
 				[]string{"Trip 1031527WKDY", "Trip 1031527WKDY at Fruitvale"},
