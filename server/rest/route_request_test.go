@@ -127,6 +127,19 @@ func TestRouteRequest(t *testing.T) {
 			expectSelect: []string{"1031527WKDY", "1031527WKDY"},
 		},
 		{
+			// Each alert carries the id of its entity and its realtime feed.
+			name:         "include_alerts:id",
+			h:            RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
+			selector:     "routes.0.alerts.#.id",
+			expectSelect: []string{"1", "1a", "4", "4a"},
+		},
+		{
+			name:         "include_alerts:rt_feed_onestop_id",
+			h:            RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
+			selector:     "routes.0.alerts.#.rt_feed_onestop_id",
+			expectSelect: []string{"BA", "BA", "BA", "BA"},
+		},
+		{
 			name: "include_alerts:false",
 			h:    RouteRequest{RouteKey: "BA:05", IncludeAlerts: false},
 			f: func(t *testing.T, jj string) {

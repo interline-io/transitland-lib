@@ -20,7 +20,7 @@ func TestMakeAlert_ActivePeriod(t *testing.T) {
 			{End: proto.Uint64(400)},
 		},
 	}
-	got := makeAlert(a).ActivePeriod
+	got := makeAlert(AlertEntity{Alert: a}, "").ActivePeriod
 	if !assert.Len(t, got, 3) {
 		return
 	}

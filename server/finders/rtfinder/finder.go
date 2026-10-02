@@ -77,7 +77,8 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 		if a == nil || !ok {
 			continue
 		}
-		for _, alert := range a.alerts {
+		for _, ent := range a.alerts {
+			alert := ent.Alert
 			if alert == nil {
 				continue
 			}
@@ -96,7 +97,7 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 				}
 			}
 			if found {
-				foundAlerts = append(foundAlerts, makeAlert(alert))
+				foundAlerts = append(foundAlerts, makeAlert(ent, topic))
 			}
 		}
 	}
@@ -114,7 +115,8 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 		}
 		// Looked up at most once per call, and only for a trip named by trip_id alone.
 		tripRoutes := sync.OnceValue(func() map[string]string { return f.lc.GetTripRouteIDs(ctx, a, t.FeedVersionID) })
-		for _, alert := range a.alerts {
+		for _, ent := range a.alerts {
+			alert := ent.Alert
 			if !checkAlertActivePeriod(tnow, active, alert) {
 				continue
 			}
@@ -136,7 +138,7 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 				}
 			}
 			if found {
-				foundAlerts = append(foundAlerts, makeAlert(alert))
+				foundAlerts = append(foundAlerts, makeAlert(ent, topic))
 			}
 		}
 	}
@@ -239,7 +241,8 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 		if a == nil || !ok {
 			continue
 		}
-		for _, alert := range a.alerts {
+		for _, ent := range a.alerts {
+			alert := ent.Alert
 			if alert == nil {
 				continue
 			}
@@ -257,7 +260,7 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 				}
 			}
 			if found {
-				foundAlerts = append(foundAlerts, makeAlert(alert))
+				foundAlerts = append(foundAlerts, makeAlert(ent, topic))
 			}
 		}
 	}
@@ -273,7 +276,8 @@ func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *in
 		if a == nil || !ok {
 			continue
 		}
-		for _, alert := range a.alerts {
+		for _, ent := range a.alerts {
+			alert := ent.Alert
 			if !checkAlertActivePeriod(tnow, active, alert) {
 				continue
 			}
@@ -292,7 +296,7 @@ func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *in
 				}
 			}
 			if found {
-				foundAlerts = append(foundAlerts, makeAlert(alert))
+				foundAlerts = append(foundAlerts, makeAlert(ent, topic))
 			}
 		}
 	}
@@ -453,8 +457,12 @@ func limitAlerts(alerts []*model.Alert, limit *int) []*model.Alert {
 	return alerts
 }
 
-func makeAlert(a *pb.Alert) *model.Alert {
-	r := model.Alert{}
+func makeAlert(ent AlertEntity, rtFeedOnestopID string) *model.Alert {
+	a := ent.Alert
+	r := model.Alert{
+		ID:              ent.ID,
+		RtFeedOnestopID: rtFeedOnestopID,
+	}
 	if a.Cause != nil {
 		r.Cause = pstr(a.Cause.String())
 	}

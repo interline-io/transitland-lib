@@ -2300,6 +2300,10 @@ type VehiclePosition {
 [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
 """
 type Alert {
+  "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so `rt_feed_onestop_id` and `id` together identify an alert reached through several entities, such as a stop, its routes and their agency"
+  id: String!
+  "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by `feed_onestop_id` elsewhere in the schema"
+  rt_feed_onestop_id: String!
   "Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange"
   active_period: [RTTimeRange!]
   "GTFS-RT Alert [cause](https://gtfs.org/realtime/reference/#enum-cause)"

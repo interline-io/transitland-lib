@@ -129,6 +129,25 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 			assert.Empty(t, headers(st.Get("trip.route.agency.alerts").Array()))
 		},
 	})
+	// An alert reached through several entities carries the same id from each.
+	testRt(t, rtTestCase{
+		name:    "id",
+		query:   rtTestStopQuery,
+		vars:    rtTestStopQueryVars(),
+		rtfiles: rtfiles,
+		cb: func(t *testing.T, jj string) {
+			st := gjson.Get(jj, `stops.0.stop_times.#(trip.trip_id=="1031527WKDY")`)
+			if !st.Exists() {
+				t.Fatal("expected to find trip '1031527WKDY'")
+			}
+			stopAlert := gjson.Get(jj, "stops.0.alerts.0")
+			routeAlert := st.Get(`trip.route.alerts.#(header_text.0.text=="Route 05 at Fruitvale")`)
+			for _, a := range []gjson.Result{stopAlert, routeAlert} {
+				assert.Equal(t, "route-at-ftvl", a.Get("id").String())
+				assert.Equal(t, "BA", a.Get("rt_feed_onestop_id").String())
+			}
+		},
+	})
 	testRt(t, rtTestCase{
 		name:    "informed entity",
 		query:   rtTestStopQuery,

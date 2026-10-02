@@ -119,7 +119,9 @@ type ComplexityRoot struct {
 		DescriptionText    func(childComplexity int) int
 		Effect             func(childComplexity int) int
 		HeaderText         func(childComplexity int) int
+		ID                 func(childComplexity int) int
 		InformedEntity     func(childComplexity int) int
+		RtFeedOnestopID    func(childComplexity int) int
 		SeverityLevel      func(childComplexity int) int
 		TtsDescriptionText func(childComplexity int) int
 		TtsHeaderText      func(childComplexity int) int
@@ -1929,12 +1931,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Alert.HeaderText(childComplexity), true
+	case "Alert.id":
+		if e.ComplexityRoot.Alert.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Alert.ID(childComplexity), true
 	case "Alert.informed_entity":
 		if e.ComplexityRoot.Alert.InformedEntity == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Alert.InformedEntity(childComplexity), true
+	case "Alert.rt_feed_onestop_id":
+		if e.ComplexityRoot.Alert.RtFeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Alert.RtFeedOnestopID(childComplexity), true
 	case "Alert.severity_level":
 		if e.ComplexityRoot.Alert.SeverityLevel == nil {
 			break
@@ -11428,6 +11442,10 @@ type VehiclePosition {
 [Alert](https://gtfs.org/reference/realtime/v2/#message-alert) message, also called a service alert, provided by a source GTFS Realtime feed.
 """
 type Alert {
+  "Identifier of the GTFS-RT FeedEntity carrying this alert. Unique within its feed, so ` + "`" + `rt_feed_onestop_id` + "`" + ` and ` + "`" + `id` + "`" + ` together identify an alert reached through several entities, such as a stop, its routes and their agency"
+  id: String!
+  "Onestop ID of the GTFS-RT feed this alert came from. This is the realtime feed, not the static GTFS feed named by ` + "`" + `feed_onestop_id` + "`" + ` elsewhere in the schema"
+  rt_feed_onestop_id: String!
   "Time ranges during which this alert is active. See https://gtfs.org/realtime/reference/#message-timerange"
   active_period: [RTTimeRange!]
   "GTFS-RT Alert [cause](https://gtfs.org/realtime/reference/#enum-cause)"
@@ -12583,6 +12601,10 @@ func (ec *executionContext) childFields_AgencyPlace(ctx context.Context, field g
 
 func (ec *executionContext) childFields_Alert(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
+	case "id":
+		return ec.fieldContext_Alert_id(ctx, field)
+	case "rt_feed_onestop_id":
+		return ec.fieldContext_Alert_rt_feed_onestop_id(ctx, field)
 	case "active_period":
 		return ec.fieldContext_Alert_active_period(ctx, field)
 	case "cause":
@@ -18318,6 +18340,52 @@ func (ec *executionContext) _AgencyPlace_rank(ctx context.Context, field graphql
 }
 func (ec *executionContext) fieldContext_AgencyPlace_rank(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AgencyPlace", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _Alert_id(ctx context.Context, field graphql.CollectedField, obj *model.Alert) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Alert_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Alert_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Alert", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Alert_rt_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Alert) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Alert_rt_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RtFeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Alert_rt_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Alert", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Alert_active_period(ctx context.Context, field graphql.CollectedField, obj *model.Alert) (ret graphql.Marshaler) {
@@ -48005,6 +48073,16 @@ func (ec *executionContext) _Alert(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Alert")
+		case "id":
+			out.Values[i] = ec._Alert_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rt_feed_onestop_id":
+			out.Values[i] = ec._Alert_rt_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "active_period":
 			out.Values[i] = ec._Alert_active_period(ctx, field, obj)
 		case "cause":

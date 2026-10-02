@@ -1,4 +1,6 @@
 fragment alert on Alert {
+  id
+  rt_feed_onestop_id
   cause
   effect
   severity_level
