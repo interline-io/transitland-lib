@@ -326,8 +326,8 @@
             },
             "x-example-requests": [
               {
-                "description": "agency_id=BART",
-                "url": "agency_id=BART"
+                "description": "By GTFS agency_id in one feed",
+                "url": "feed_onestop_id=f-sf~bay~area~rg\u0026agency_id=BA"
               }
             ]
           },
@@ -340,7 +340,7 @@
             },
             "x-example-requests": [
               {
-                "description": "agency_name=Caltrain",
+                "description": "By agency name",
                 "url": "agency_name=Caltrain"
               }
             ]
@@ -361,7 +361,7 @@
             "$ref": "#/components/parameters/limitParam",
             "x-example-requests": [
               {
-                "description": "limit=1",
+                "description": "First result only",
                 "url": "limit=1"
               }
             ]
@@ -370,8 +370,8 @@
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "As GeoJSON",
+                "url": "format=geojson\u0026limit=1"
               }
             ]
           },
@@ -379,7 +379,7 @@
             "$ref": "#/components/parameters/searchParam",
             "x-example-requests": [
               {
-                "description": "search=bart",
+                "description": "Name search",
                 "url": "search=bart"
               }
             ]
@@ -388,7 +388,7 @@
             "$ref": "#/components/parameters/onestopParam",
             "x-example-requests": [
               {
-                "description": "onestop_id=o-9q9-caltrain",
+                "description": "By Onestop ID",
                 "url": "onestop_id=o-9q9-caltrain"
               }
             ]
@@ -397,8 +397,8 @@
             "$ref": "#/components/parameters/sha1Param",
             "x-example-requests": [
               {
-                "description": "feed_version_sha1=1c4721d4...",
-                "url": "feed_version_sha1=1c4721d4e0c9fae1e81f7c79660696e4280ed05b"
+                "description": "In one feed version",
+                "url": "feed_version_sha1=34d6bc485d02631cce789ae8a8c27d8e6551fd43"
               }
             ]
           },
@@ -406,7 +406,7 @@
             "$ref": "#/components/parameters/feedParam",
             "x-example-requests": [
               {
-                "description": "feed_onestop_id=f-sf~bay~area~rg",
+                "description": "In one feed",
                 "url": "feed_onestop_id=f-sf~bay~area~rg"
               }
             ]
@@ -416,7 +416,7 @@
             "x-description": "Search for agencies geographically, based on stops at this location; radius is in meters, requires lon and lat",
             "x-example-requests": [
               {
-                "description": "lon=-122.3\u0026lat=37.8\u0026radius=1000",
+                "description": "Within 1 km of a point",
                 "url": "lon=-122.3\u0026lat=37.8\u0026radius=1000"
               }
             ]
@@ -431,7 +431,7 @@
             "$ref": "#/components/parameters/bboxParam",
             "x-example-requests": [
               {
-                "description": "bbox=-122.269,37.807,-122.267,37.808",
+                "description": "In a bounding box",
                 "url": "bbox=-122.269,37.807,-122.267,37.808"
               }
             ]
@@ -440,7 +440,7 @@
             "$ref": "#/components/parameters/adm0NameParam",
             "x-example-requests": [
               {
-                "description": "adm0_name=Mexico",
+                "description": "In a country, by name",
                 "url": "adm0_name=Mexico"
               }
             ]
@@ -449,7 +449,7 @@
             "$ref": "#/components/parameters/adm0IsoParam",
             "x-example-requests": [
               {
-                "description": "adm0_iso=US",
+                "description": "In a country, by ISO code",
                 "url": "adm0_iso=US"
               }
             ]
@@ -458,7 +458,7 @@
             "$ref": "#/components/parameters/adm1NameParam",
             "x-example-requests": [
               {
-                "description": "adm1_name=California",
+                "description": "In a state or province, by name",
                 "url": "adm1_name=California"
               }
             ]
@@ -467,7 +467,7 @@
             "$ref": "#/components/parameters/adm1IsoParam",
             "x-example-requests": [
               {
-                "description": "adm1_iso=US-CA",
+                "description": "In a state or province, by ISO code",
                 "url": "adm1_iso=US-CA"
               }
             ]
@@ -476,7 +476,7 @@
             "$ref": "#/components/parameters/cityNameParam",
             "x-example-requests": [
               {
-                "description": "city_name=Oakland",
+                "description": "In a city",
                 "url": "city_name=Oakland"
               }
             ]
@@ -1526,7 +1526,13 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "x-example-requests": [
+              {
+                "description": "By Onestop ID",
+                "url": "/agencies/o-9q9-bart"
+              }
+            ]
           },
           {
             "$ref": "#/components/parameters/includeAlertsParam"
@@ -1535,20 +1541,14 @@
             "$ref": "#/components/parameters/includeRoutesParam"
           },
           {
-            "$ref": "#/components/parameters/limitParam",
-            "x-example-requests": [
-              {
-                "description": "limit=1",
-                "url": "limit=1"
-              }
-            ]
+            "$ref": "#/components/parameters/limitParam"
           },
           {
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "By feed and GTFS agency_id, as GeoJSON",
+                "url": "/agencies/f-sf~bay~area~rg:BA?format=geojson"
               }
             ]
           }
@@ -2583,8 +2583,8 @@
             },
             "x-example-requests": [
               {
-                "description": "sha1=e535eb2b3...",
-                "url": "sha1=dd7aca4a8e4c90908fd3603c097fabee75fea907"
+                "description": "By SHA1 hash",
+                "url": "sha1=34d6bc485d02631cce789ae8a8c27d8e6551fd43"
               }
             ]
           },
@@ -2605,7 +2605,7 @@
             },
             "x-example-requests": [
               {
-                "description": "feed_onestop_id=f-sf~bay~area~rg",
+                "description": "Versions of one feed",
                 "url": "feed_onestop_id=f-sf~bay~area~rg"
               }
             ]
@@ -2620,7 +2620,7 @@
             },
             "x-example-requests": [
               {
-                "description": "fetched_before=2023-01-01T00:00:00Z",
+                "description": "Fetched before a time",
                 "url": "fetched_before=2023-01-01T00:00:00Z"
               }
             ]
@@ -2635,7 +2635,7 @@
             },
             "x-example-requests": [
               {
-                "description": "fetched_after=2023-01-01T00:00:00Z",
+                "description": "Fetched after a time",
                 "url": "fetched_after=2023-01-01T00:00:00Z"
               }
             ]
@@ -2650,7 +2650,7 @@
             "$ref": "#/components/parameters/limitParam",
             "x-example-requests": [
               {
-                "description": "limit=1",
+                "description": "First result only",
                 "url": "limit=1"
               }
             ]
@@ -2659,8 +2659,8 @@
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "As GeoJSON",
+                "url": "format=geojson\u0026limit=1"
               }
             ]
           },
@@ -2669,7 +2669,7 @@
             "x-description": "Search for feed versions geographically; radius is in meters, requires lon and lat",
             "x-example-requests": [
               {
-                "description": "lon=-122.3\u0026lat=37.8\u0026radius=1000",
+                "description": "Within 1 km of a point",
                 "url": "lon=-122.3\u0026lat=37.8\u0026radius=1000"
               }
             ]
@@ -2684,7 +2684,7 @@
             "$ref": "#/components/parameters/bboxParam",
             "x-example-requests": [
               {
-                "description": "bbox=-122.269,37.807,-122.267,37.808",
+                "description": "In a bounding box",
                 "url": "bbox=-122.269,37.807,-122.267,37.808"
               }
             ]
@@ -3280,26 +3280,20 @@
             },
             "x-example-requests": [
               {
-                "description": "dd7aca4a8e4c90908fd3603c097fabee75fea907",
-                "url": "dd7aca4a8e4c90908fd3603c097fabee75fea907"
+                "description": "By SHA1 hash",
+                "url": "/feed_versions/34d6bc485d02631cce789ae8a8c27d8e6551fd43"
               }
             ]
           },
           {
-            "$ref": "#/components/parameters/limitParam",
-            "x-example-requests": [
-              {
-                "description": "limit=1",
-                "url": "limit=1"
-              }
-            ]
+            "$ref": "#/components/parameters/limitParam"
           },
           {
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "By SHA1 hash, as GeoJSON",
+                "url": "/feed_versions/34d6bc485d02631cce789ae8a8c27d8e6551fd43?format=geojson"
               }
             ]
           }
@@ -3782,7 +3776,7 @@
             },
             "x-example-requests": [
               {
-                "description": "spec=gtfs",
+                "description": "GTFS feeds only",
                 "url": "spec=gtfs"
               }
             ]
@@ -3800,7 +3794,7 @@
             },
             "x-example-requests": [
               {
-                "description": "fetch_error=true",
+                "description": "Feeds whose last fetch failed",
                 "url": "fetch_error=true"
               }
             ]
@@ -3814,7 +3808,7 @@
             },
             "x-example-requests": [
               {
-                "description": "tag_key=gtfs_data_exchange",
+                "description": "With a tag",
                 "url": "tag_key=gtfs_data_exchange"
               }
             ]
@@ -3828,7 +3822,7 @@
             },
             "x-example-requests": [
               {
-                "description": "tag_key=unstable_url\u0026tag_value=true",
+                "description": "With a tag set to a value",
                 "url": "tag_key=unstable_url\u0026tag_value=true"
               }
             ]
@@ -3843,7 +3837,7 @@
             "$ref": "#/components/parameters/limitParam",
             "x-example-requests": [
               {
-                "description": "limit=1",
+                "description": "First result only",
                 "url": "limit=1"
               }
             ]
@@ -3852,8 +3846,8 @@
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "As GeoJSON",
+                "url": "format=geojson\u0026limit=1"
               }
             ]
           },
@@ -3861,7 +3855,7 @@
             "$ref": "#/components/parameters/searchParam",
             "x-example-requests": [
               {
-                "description": "search=caltrain",
+                "description": "Name search",
                 "url": "search=caltrain"
               }
             ]
@@ -3870,7 +3864,7 @@
             "$ref": "#/components/parameters/onestopParam",
             "x-example-requests": [
               {
-                "description": "onestop_id=f-sf~bay~area~rg",
+                "description": "By Onestop ID",
                 "url": "onestop_id=f-sf~bay~area~rg"
               }
             ]
@@ -3886,8 +3880,8 @@
             "x-description": "Search for feeds geographically; radius is in meters, requires lon and lat",
             "x-example-requests": [
               {
-                "description": "lon=-122.3?lat=37.8\u0026radius=1000",
-                "url": "lon=-122.3?lat=37.8\u0026radius=1000"
+                "description": "Within 1 km of a point",
+                "url": "lon=-122.3\u0026lat=37.8\u0026radius=1000"
               }
             ]
           },
@@ -3895,7 +3889,7 @@
             "$ref": "#/components/parameters/bboxParam",
             "x-example-requests": [
               {
-                "description": "bbox=-122.269,37.807,-122.267,37.808",
+                "description": "In a bounding box",
                 "url": "bbox=-122.269,37.807,-122.267,37.808"
               }
             ]
@@ -4367,26 +4361,20 @@
             },
             "x-example-requests": [
               {
-                "description": "f-sf~bay~area~rg",
-                "url": "f-sf~bay~area~rg"
+                "description": "By Onestop ID",
+                "url": "/feeds/f-sf~bay~area~rg"
               }
             ]
           },
           {
-            "$ref": "#/components/parameters/limitParam",
-            "x-example-requests": [
-              {
-                "description": "limit=1",
-                "url": "limit=1"
-              }
-            ]
+            "$ref": "#/components/parameters/limitParam"
           },
           {
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "By Onestop ID, as GeoJSON",
+                "url": "/feeds/f-sf~bay~area~rg?format=geojson"
               }
             ]
           }
@@ -4958,7 +4946,7 @@
             },
             "x-example-requests": [
               {
-                "description": "tag_key=us_ntd_id",
+                "description": "With a US NTD ID",
                 "url": "tag_key=us_ntd_id"
               }
             ]
@@ -4972,7 +4960,7 @@
             },
             "x-example-requests": [
               {
-                "description": "tag_key=us_ntd_id\u0026tag_value=40029",
+                "description": "By US NTD ID",
                 "url": "tag_key=us_ntd_id\u0026tag_value=40029"
               }
             ]
@@ -4981,7 +4969,7 @@
             "$ref": "#/components/parameters/onestopParam",
             "x-example-requests": [
               {
-                "description": "onestop_id=o-9q9-caltrain",
+                "description": "By Onestop ID",
                 "url": "onestop_id=o-9q9-caltrain"
               }
             ]
@@ -4990,7 +4978,7 @@
             "$ref": "#/components/parameters/feedParam",
             "x-example-requests": [
               {
-                "description": "feed_onestop_id=f-sf~bay~area~rg",
+                "description": "In one feed",
                 "url": "feed_onestop_id=f-sf~bay~area~rg"
               }
             ]
@@ -4999,7 +4987,7 @@
             "$ref": "#/components/parameters/searchParam",
             "x-example-requests": [
               {
-                "description": "search=bart",
+                "description": "Name search",
                 "url": "search=bart"
               }
             ]
@@ -5020,7 +5008,7 @@
             "$ref": "#/components/parameters/adm0NameParam",
             "x-example-requests": [
               {
-                "description": "adm0_name=Mexico",
+                "description": "In a country, by name",
                 "url": "adm0_name=Mexico"
               }
             ]
@@ -5029,7 +5017,7 @@
             "$ref": "#/components/parameters/adm0IsoParam",
             "x-example-requests": [
               {
-                "description": "adm0_iso=US",
+                "description": "In a country, by ISO code",
                 "url": "adm0_iso=US"
               }
             ]
@@ -5038,7 +5026,7 @@
             "$ref": "#/components/parameters/adm1NameParam",
             "x-example-requests": [
               {
-                "description": "adm1_name=California",
+                "description": "In a state or province, by name",
                 "url": "adm1_name=California"
               }
             ]
@@ -5047,7 +5035,7 @@
             "$ref": "#/components/parameters/adm1IsoParam",
             "x-example-requests": [
               {
-                "description": "adm1_iso=US-CA",
+                "description": "In a state or province, by ISO code",
                 "url": "adm1_iso=US-CA"
               }
             ]
@@ -5056,7 +5044,7 @@
             "$ref": "#/components/parameters/cityNameParam",
             "x-example-requests": [
               {
-                "description": "city_name=Oakland",
+                "description": "In a city",
                 "url": "city_name=Oakland"
               }
             ]
@@ -5066,7 +5054,7 @@
             "x-description": "Search for operators geographically, based on stops at this location; radius is in meters, requires lon and lat",
             "x-example-requests": [
               {
-                "description": "lon=-122.3\u0026lat=37.8\u0026radius=1000",
+                "description": "Within 1 km of a point",
                 "url": "lon=-122.3\u0026lat=37.8\u0026radius=1000"
               }
             ]
@@ -5081,7 +5069,7 @@
             "$ref": "#/components/parameters/bboxParam",
             "x-example-requests": [
               {
-                "description": "bbox=-122.269,37.807,-122.267,37.808",
+                "description": "In a bounding box",
                 "url": "bbox=-122.269,37.807,-122.267,37.808"
               }
             ]
@@ -5694,8 +5682,8 @@
             },
             "x-example-requests": [
               {
-                "description": "o-9q9-caltrain",
-                "url": "o-9q9-caltrain"
+                "description": "By Onestop ID",
+                "url": "/operators/o-9q9-caltrain"
               }
             ]
           },
@@ -5703,20 +5691,14 @@
             "$ref": "#/components/parameters/includeAlertsParam"
           },
           {
-            "$ref": "#/components/parameters/limitParam",
-            "x-example-requests": [
-              {
-                "description": "limit=1",
-                "url": "limit=1"
-              }
-            ]
+            "$ref": "#/components/parameters/limitParam"
           },
           {
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "By Onestop ID, as GeoJSON",
+                "url": "/operators/o-9q9-bart?format=geojson"
               }
             ]
           }
@@ -6311,8 +6293,8 @@
             },
             "x-example-requests": [
               {
-                "description": "route_id=Bu-130",
-                "url": "feed_onestop_id=f-sf~bay~area~rg\u0026route_id=AC:10"
+                "description": "By GTFS route_id in one feed",
+                "url": "feed_onestop_id=f-sf~bay~area~rg\u0026route_id=CT:Limited"
               }
             ]
           },
@@ -6325,7 +6307,7 @@
             },
             "x-example-requests": [
               {
-                "description": "route_type=1",
+                "description": "Subway and metro routes",
                 "url": "route_type=1"
               }
             ]
@@ -6339,7 +6321,7 @@
             },
             "x-example-requests": [
               {
-                "description": "route_types=1,2",
+                "description": "Subway, metro, and rail routes",
                 "url": "route_types=1,2"
               }
             ]
@@ -6353,7 +6335,7 @@
             },
             "x-example-requests": [
               {
-                "description": "operator_onestop_id=...",
+                "description": "Routes of one operator",
                 "url": "operator_onestop_id=o-9q9-caltrain"
               }
             ]
@@ -6367,8 +6349,8 @@
             },
             "x-example-requests": [
               {
-                "description": "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero",
-                "url": "serves_stop_onestop_id=s-9q8yyzcny3-embarcadero"
+                "description": "Routes serving a stop",
+                "url": "serves_stop_onestop_id=s-9q8yyzcnrh-embarcadero"
               }
             ]
           },
@@ -6388,8 +6370,8 @@
             },
             "x-example-requests": [
               {
-                "description": "include_geometry=true",
-                "url": "include_geometry=true"
+                "description": "With route geometry",
+                "url": "operator_onestop_id=o-9q9-caltrain\u0026include_geometry=true"
               }
             ]
           },
@@ -6406,8 +6388,8 @@
             },
             "x-example-requests": [
               {
-                "description": "include_stops=true",
-                "url": "include_stops=true"
+                "description": "With the stops each route serves",
+                "url": "onestop_id=r-9q9j-limited\u0026include_stops=true"
               }
             ]
           },
@@ -6421,7 +6403,7 @@
             "$ref": "#/components/parameters/limitParam",
             "x-example-requests": [
               {
-                "description": "limit=1",
+                "description": "First result only",
                 "url": "limit=1"
               }
             ]
@@ -6430,8 +6412,8 @@
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "?format=geojson\u0026feed_onestop_id=f-dr5r7-nycdotsiferry"
+                "description": "As GeoJSON",
+                "url": "format=geojson\u0026feed_onestop_id=f-dr5r7-nycdotsiferry"
               }
             ]
           },
@@ -6439,8 +6421,8 @@
             "$ref": "#/components/parameters/searchParam",
             "x-example-requests": [
               {
-                "description": "search=daly+city",
-                "url": "?search=daly+city"
+                "description": "Name search",
+                "url": "search=daly+city"
               }
             ]
           },
@@ -6448,8 +6430,8 @@
             "$ref": "#/components/parameters/onestopParam",
             "x-example-requests": [
               {
-                "description": "onestop_id=r-9q9j-l1",
-                "url": "onestop_id=r-9q9j-l1"
+                "description": "By Onestop ID",
+                "url": "onestop_id=r-9q9j-limited"
               }
             ]
           },
@@ -6457,8 +6439,8 @@
             "$ref": "#/components/parameters/sha1Param",
             "x-example-requests": [
               {
-                "description": "feed_version_sha1=041ffeec...",
-                "url": "feed_version_sha1=041ffeec98316e560bc2b91960f7150ad329bd5f"
+                "description": "In one feed version",
+                "url": "feed_version_sha1=34d6bc485d02631cce789ae8a8c27d8e6551fd43"
               }
             ]
           },
@@ -6466,7 +6448,7 @@
             "$ref": "#/components/parameters/feedParam",
             "x-example-requests": [
               {
-                "description": "feed_onestop_id=f-sf~bay~area~rg",
+                "description": "In one feed",
                 "url": "feed_onestop_id=f-sf~bay~area~rg"
               }
             ]
@@ -6476,7 +6458,7 @@
             "x-description": "Search for routes geographically, based on stops at this location; radius is in meters, requires lon and lat",
             "x-example-requests": [
               {
-                "description": "lon=-122\u0026lat=37\u0026radius=1000",
+                "description": "Within 1 km of a point",
                 "url": "lon=-122.3\u0026lat=37.8\u0026radius=1000"
               }
             ]
@@ -6491,7 +6473,7 @@
             "$ref": "#/components/parameters/bboxParam",
             "x-example-requests": [
               {
-                "description": "bbox=-122.269,37.807,-122.267,37.808",
+                "description": "In a bounding box",
                 "url": "bbox=-122.269,37.807,-122.267,37.808"
               }
             ]
@@ -9070,13 +9052,7 @@
             "schema": {
               "format": "date",
               "type": "string"
-            },
-            "x-example-requests": [
-              {
-                "description": "service_date=...",
-                "url": "route_onestop_id=r-9q9j-l1\u0026service_date=2021-07-14"
-              }
-            ]
+            }
           },
           {
             "description": "Search for records with this GTFS trip_id",
@@ -9087,8 +9063,8 @@
             },
             "x-example-requests": [
               {
-                "description": "trip_id=305",
-                "url": "route_onestop_id=r-9q9j-l1\u0026trip_id=305"
+                "description": "By GTFS trip_id",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?trip_id=weekendstgeorge000000"
               }
             ]
           },
@@ -9105,8 +9081,8 @@
             },
             "x-example-requests": [
               {
-                "description": "include_geometry=true",
-                "url": "route_onestop_id=r-9q9j-l1\u0026include_geometry=true"
+                "description": "With trip geometry",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?include_geometry=true\u0026limit=1"
               }
             ]
           },
@@ -9123,8 +9099,8 @@
             },
             "x-example-requests": [
               {
-                "description": "use_service_window=false",
-                "url": "route_onestop_id=r-9q9j-l1\u0026use_service_window=false"
+                "description": "Without the fall-back service date",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?use_service_window=false"
               }
             ]
           },
@@ -9132,8 +9108,8 @@
             "$ref": "#/components/parameters/relativeDateParam",
             "x-example-requests": [
               {
-                "description": "relative_date=NEXT_MONDAY",
-                "url": "route_onestop_id=r-9q9j-l1\u0026relative_date=NEXT_MONDAY"
+                "description": "Next Monday",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?relative_date=NEXT_MONDAY"
               }
             ]
           },
@@ -9150,8 +9126,8 @@
             "$ref": "#/components/parameters/limitParam",
             "x-example-requests": [
               {
-                "description": "limit=1",
-                "url": "route_onestop_id=r-9q9j-l1\u0026limit=10\u0026limit=1"
+                "description": "First trip only",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?limit=1"
               }
             ]
           },
@@ -9159,8 +9135,8 @@
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "route_onestop_id=r-9q9j-l1\u0026limit=10\u0026format=geojson"
+                "description": "As GeoJSON",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?format=geojson\u0026limit=1"
               }
             ]
           },
@@ -9168,8 +9144,8 @@
             "$ref": "#/components/parameters/sha1Param",
             "x-example-requests": [
               {
-                "description": "feed_version_sha1=041ffeec...",
-                "url": "route_onestop_id=r-9q9j-l1\u0026feed_version_sha1=041ffeec98316e560bc2b91960f7150ad329bd5f"
+                "description": "In one feed version",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?feed_version_sha1=34d6bc485d02631cce789ae8a8c27d8e6551fd43"
               }
             ]
           },
@@ -9177,8 +9153,8 @@
             "$ref": "#/components/parameters/feedParam",
             "x-example-requests": [
               {
-                "description": "feed_onestop_id=f-sf~bay~area~rg",
-                "url": "route_onestop_id=r-9q9j-l1\u0026feed_onestop_id=f-sf~bay~area~rg"
+                "description": "In one feed",
+                "url": "/routes/r-dr5r7-statenislandferry/trips?feed_onestop_id=f-dr5r7-nycdotsiferry"
               }
             ]
           },
@@ -11058,8 +11034,8 @@
             },
             "x-example-requests": [
               {
-                "description": "include_geometry=true",
-                "url": "route_onestop_id=r-9q9j-l1\u0026include_geometry=true"
+                "description": "With trip geometry",
+                "url": "/routes/r-dr5r7-statenislandferry/trips/9505148953?include_geometry=true"
               }
             ]
           },
@@ -11067,20 +11043,14 @@
             "$ref": "#/components/parameters/includeAlertsParam"
           },
           {
-            "$ref": "#/components/parameters/limitParam",
-            "x-example-requests": [
-              {
-                "description": "limit=1",
-                "url": "route_onestop_id=r-9q9j-l1\u0026limit=1"
-              }
-            ]
+            "$ref": "#/components/parameters/limitParam"
           },
           {
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "route_onestop_id=r-9q9j-l1\u0026format=geojson"
+                "description": "By ID, as GeoJSON",
+                "url": "/routes/r-dr5r7-statenislandferry/trips/9505148953?format=geojson"
               }
             ]
           }
@@ -12908,7 +12878,7 @@
             },
             "x-example-requests": [
               {
-                "description": "stop_id=EMBR",
+                "description": "By GTFS stop_id in one feed",
                 "url": "feed_onestop_id=f-c20-trimet\u0026stop_id=1108"
               }
             ]
@@ -12922,7 +12892,7 @@
             },
             "x-example-requests": [
               {
-                "description": "served_by_onestop_ids=o-9q9-bart,o-9q9-caltrain",
+                "description": "Served by either of two operators",
                 "url": "served_by_onestop_ids=o-9q9-bart,o-9q9-caltrain"
               }
             ]
@@ -12936,7 +12906,7 @@
             },
             "x-example-requests": [
               {
-                "description": "served_by_route_type=1",
+                "description": "Served by subway or metro",
                 "url": "served_by_route_type=1"
               }
             ]
@@ -12950,7 +12920,7 @@
             },
             "x-example-requests": [
               {
-                "description": "served_by_route_types=1,2",
+                "description": "Served by subway, metro, or rail",
                 "url": "served_by_route_types=1,2"
               }
             ]
@@ -12964,7 +12934,7 @@
             },
             "x-example-requests": [
               {
-                "description": "location_type=1",
+                "description": "Stations only",
                 "url": "location_type=1"
               }
             ]
@@ -12985,7 +12955,7 @@
             "$ref": "#/components/parameters/limitParam",
             "x-example-requests": [
               {
-                "description": "limit=1",
+                "description": "First result only",
                 "url": "limit=1"
               }
             ]
@@ -12994,8 +12964,8 @@
             "$ref": "#/components/parameters/formatParam",
             "x-example-requests": [
               {
-                "description": "format=geojson",
-                "url": "format=geojson"
+                "description": "As GeoJSON",
+                "url": "format=geojson\u0026limit=1"
               }
             ]
           },
@@ -13003,7 +12973,7 @@
             "$ref": "#/components/parameters/searchParam",
             "x-example-requests": [
               {
-                "description": "search=embarcadero",
+                "description": "Name search",
                 "url": "search=embarcadero"
               }
             ]
@@ -13012,8 +12982,8 @@
             "$ref": "#/components/parameters/onestopParam",
             "x-example-requests": [
               {
-                "description": "onestop_id=...",
-                "url": "onestop_id=s-9q8yyzcny3-embarcadero"
+                "description": "By Onestop ID",
+                "url": "onestop_id=s-9q8yyzcnrh-embarcadero"
               }
             ]
           },
@@ -13021,8 +12991,8 @@
             "$ref": "#/components/parameters/sha1Param",
             "x-example-requests": [
               {
-                "description": "feed_version_sha1=1c4721d4...",
-                "url": "feed_version_sha1=1c4721d4e0c9fae1e81f7c79660696e4280ed05b"
+                "description": "In one feed version",
+                "url": "feed_version_sha1=34d6bc485d02631cce789ae8a8c27d8e6551fd43"
               }
             ]
           },
@@ -13030,7 +13000,7 @@
             "$ref": "#/components/parameters/feedParam",
             "x-example-requests": [
               {
-                "description": "feed_onestop_id=f-c20-trimet",
+                "description": "In one feed",
                 "url": "feed_onestop_id=f-c20-trimet"
               }
             ]
@@ -13040,8 +13010,8 @@
             "x-description": "Search for stops geographically; radius is in meters, requires lon and lat",
             "x-example-requests": [
               {
-                "description": "lon=-122.3\u0026lat=37.8\u0026radius=1000",
-                "url": "lon=-122.3\u0026lat=37.8\u0026radius=1000"
+                "description": "Within 250 m of a point",
+                "url": "lon=-122.3966\u0026lat=37.7929\u0026radius=250"
               }
             ]
           },
@@ -13055,7 +13025,7 @@
             "$ref": "#/components/parameters/bboxParam",
             "x-example-requests": [
               {
-                "description": "bbox=-122.269,37.807,-122.267,37.808",
+                "description": "In a bounding box",
                 "url": "bbox=-122.269,37.807,-122.267,37.808"
               }
             ]
@@ -15045,8 +15015,8 @@
             },
             "x-example-requests": [
               {
-                "description": "f-sf~bay~area~rg:LAKE",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures"
+                "description": "From a stop, by Onestop ID",
+                "url": "/stops/s-9q9p1bc1td-lakemerritt/departures"
               }
             ]
           },
@@ -15054,8 +15024,8 @@
             "$ref": "#/components/parameters/limitParam",
             "x-example-requests": [
               {
-                "description": "limit=1",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?limit=1"
+                "description": "By feed and GTFS stop_id, first departure only",
+                "url": "/stops/f-sf~bay~area~rg:902102/departures?limit=1"
               }
             ]
           },
@@ -15066,13 +15036,7 @@
             "schema": {
               "format": "date",
               "type": "string"
-            },
-            "x-example-requests": [
-              {
-                "description": "service_date=2022-09-28",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?service_date=2022-09-28"
-              }
-            ]
+            }
           },
           {
             "description": "Search for departures on a specified calendar date, in YYYY-MM-DD format",
@@ -15081,13 +15045,7 @@
             "schema": {
               "format": "date",
               "type": "string"
-            },
-            "x-example-requests": [
-              {
-                "description": "date=2022-09-28",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?date=2022-09-28"
-              }
-            ]
+            }
           },
           {
             "description": "Search for departures leaving within the next specified number of seconds in local time",
@@ -15098,8 +15056,8 @@
             },
             "x-example-requests": [
               {
-                "description": "next=600",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?next=600"
+                "description": "In the next hour",
+                "url": "/stops/s-9q9p1bc1td-lakemerritt/departures?next=3600"
               }
             ]
           },
@@ -15112,8 +15070,8 @@
             },
             "x-example-requests": [
               {
-                "description": "start_time=10:00:00",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?start_time=10:00:00\u0026service_date=2022-09-28"
+                "description": "Next Monday, from 8 am",
+                "url": "/stops/s-9q9p1bc1td-lakemerritt/departures?relative_date=NEXT_MONDAY\u0026start_time=08:00:00"
               }
             ]
           },
@@ -15126,8 +15084,8 @@
             },
             "x-example-requests": [
               {
-                "description": "end_time=11:00:00",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?end_time=11:00:00\u0026service_date=2022-09-28"
+                "description": "Next Monday, 8 to 9 am",
+                "url": "/stops/s-9q9p1bc1td-lakemerritt/departures?relative_date=NEXT_MONDAY\u0026start_time=08:00:00\u0026end_time=09:00:00"
               }
             ]
           },
@@ -15144,8 +15102,8 @@
             },
             "x-example-requests": [
               {
-                "description": "include_geometry=true",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?include_geometry=true"
+                "description": "With route geometry",
+                "url": "/stops/s-9q9p1bc1td-lakemerritt/departures?include_geometry=true\u0026limit=1"
               }
             ]
           },
@@ -15162,8 +15120,8 @@
             },
             "x-example-requests": [
               {
-                "description": "use_service_window=false",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?use_service_window=false"
+                "description": "Without the fall-back service date",
+                "url": "/stops/s-9q9p1bc1td-lakemerritt/departures?use_service_window=false"
               }
             ]
           },
@@ -15174,8 +15132,8 @@
             "$ref": "#/components/parameters/relativeDateParam",
             "x-example-requests": [
               {
-                "description": "relative_date=NEXT_MONDAY",
-                "url": "/stops/f-sf~bay~area~rg:LAKE/departures?relative_date=NEXT_MONDAY"
+                "description": "Next Monday",
+                "url": "/stops/s-9q9p1bc1td-lakemerritt/departures?relative_date=NEXT_MONDAY"
               }
             ]
           },
