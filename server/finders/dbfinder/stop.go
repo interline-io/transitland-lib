@@ -23,19 +23,57 @@ func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor,
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
 		useActive.active = false
 	}
+	// Onestop IDs that may be previous ones resolve to active stops first, and the
+	// query filters by their ids.
+	if where != nil && useActive.Active() && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
+		if osids := allOnestopIDs(where.OnestopID, where.OnestopIds); len(osids) > 0 {
+			// Temporary instrumentation; see probeAllowPrev.
+			if allowPrevProbeEnabled {
+				f.probeAllowPrev(ctx, osids)
+			}
+			byID := *where
+			byID.OnestopID = nil
+			byID.OnestopIds = nil
+			byID.AllowPreviousOnestopIds = nil
+			// The stops the query would return that have the IDs now.
+			currentWhere := byID
+			currentWhere.OnestopIds = osids
+			var current []*model.Stop
+			if err := dbutil.Select(ctx, f.db, stopSelect(nil, nil, nil, useActive, f.PermFilter(ctx), &currentWhere), &current); err != nil {
+				return nil, logErr(ctx, err)
+			}
+			var err error
+			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Stop) (int, *string) { return ent.ID, ent.OnestopID }, previousStopIDsSelect)
+			if err != nil {
+				return nil, logErr(ctx, err)
+			}
+			if len(ids) == 0 {
+				return nil, nil
+			}
+			where = &byID
+		}
+	}
 	q := stopSelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, logErr(ctx, err)
 	}
-	// Temporary instrumentation for tlv2#354: only for bare-osid AllowPrev
-	// requests (the durable-key case), not pinned-version browsing. stopSelect
-	// has already merged where.OnestopID into where.OnestopIds.
-	if allowPrevProbeEnabled && where != nil &&
-		where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds &&
-		where.FeedVersionSha1 == nil && len(ids) == 0 && len(where.OnestopIds) > 0 {
-		f.probeAllowPrev(ctx, where.OnestopIds)
-	}
 	return ents, nil
+}
+
+// previousStopIDsSelect finds the active stops with the feed and stop_id of a stop
+// that ever had one of the onestop IDs, for activeIDsByOnestopID.
+func previousStopIDsSelect(osids []string) sq.SelectBuilder {
+	hist := sq.StatementBuilder.
+		Select("feed_version_stop_onestop_ids.entity_id", "feed_versions.feed_id").
+		Distinct().
+		From("feed_version_stop_onestop_ids").
+		Join("feed_versions on feed_versions.id = feed_version_stop_onestop_ids.feed_version_id").
+		Where(In("feed_version_stop_onestop_ids.onestop_id", osids))
+	return sq.StatementBuilder.
+		Select("gtfs_stops.id").
+		FromSelect(hist, "hist").
+		Join("feed_states on feed_states.feed_id = hist.feed_id").
+		Join("gtfs_stops on gtfs_stops.feed_version_id = feed_states.materialized_feed_version_id and gtfs_stops.stop_id = hist.entity_id")
 }
 
 func (f *Finder) StopExternalReferencesByStopIDs(ctx context.Context, ids []int) ([]*model.StopExternalReference, []error) {
@@ -415,6 +453,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 			where.OnestopIds = append(where.OnestopIds, *where.OnestopID)
 		}
 		if len(where.OnestopIds) > 0 && where.AllowPreviousOnestopIds != nil && *where.AllowPreviousOnestopIds {
+			// Lookups of active stops resolve these IDs first, in FindStops.
 			// Use CTE for stop lookup optimization
 			sub := sq.StatementBuilder.
 				Select(
@@ -435,13 +474,21 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 			q = q.
 				WithCTE(stopLookupCte).
 				Join("feed_version_stop_onestop_ids on feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_id = feed_versions.feed_id")
+		} else if useActive.Materialized() {
+			// The materialized table carries each active stop's onestop_id under its own
+			// index. Matching through the history table instead reads a row for every
+			// feed version the stop was ever in.
+			if len(where.OnestopIds) > 0 {
+				q = q.Where(In("gtfs_stops.onestop_id", where.OnestopIds))
+			}
 		} else {
 			q = q.JoinClause(`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`)
 			if len(where.OnestopIds) > 0 {
 				q = q.Where(In("feed_version_stop_onestop_ids.onestop_id", where.OnestopIds))
 			}
 		}
-	} else {
+	} else if !useActive.Materialized() {
+		// For the onestop_id column, which the materialized table carries itself.
 		q = q.JoinClause(`LEFT JOIN feed_version_stop_onestop_ids ON feed_version_stop_onestop_ids.entity_id = gtfs_stops.stop_id and feed_version_stop_onestop_ids.feed_version_id = gtfs_stops.feed_version_id`)
 	}
 

@@ -2,10 +2,15 @@ package gql
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/99designs/gqlgen/client"
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
+	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -323,6 +328,109 @@ func TestRouteResolver(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 
+// As for stops: both ways of matching an onestop_id must agree.
+func TestRouteResolver_OnestopID_Materialized(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:         "where onestop_id",
+			query:        `query {routes(where:{onestop_id:"r-9q9j-bullet"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130"},
+		},
+		{
+			name:         "where onestop_ids",
+			query:        `query {routes(where:{onestop_ids:["r-9q9j-bullet","r-9q9n-warmsprings~southfremont~richmond"]}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "03"},
+		},
+		{
+			name:         "selected onestop_id",
+			query:        `query {routes(where:{onestop_id:"r-9q9j-bullet"}) {onestop_id} }`,
+			selector:     "routes.#.onestop_id",
+			selectExpect: []string{"r-9q9j-bullet"},
+		},
+		{
+			name:         "unknown onestop_id",
+			query:        `query {routes(where:{onestop_id:"r-0000-nowhere"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
+		// As for stops. This route's onestop_id changed between versions.
+		{
+			name:         "previous allowed, current id",
+			query:        `query {routes(where:{onestop_id:"r-9q9-antioch~sfia~millbrae", allow_previous_onestop_ids:true}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01"},
+		},
+		{
+			name:  "previous allowed, previous id",
+			query: `query {routes(where:{onestop_id:"r-9q9-pittsburg~baypoint~sfia~millbrae", allow_previous_onestop_ids:true}) {route_id onestop_id} }`,
+			sel: []testcaseSelector{
+				{selector: "routes.#.route_id", expect: []string{"01"}},
+				{selector: "routes.#.onestop_id", expect: []string{"r-9q9-antioch~sfia~millbrae"}},
+			},
+		},
+		{
+			name:         "previous allowed, current and previous ids",
+			query:        `query {routes(where:{onestop_ids:["r-9q9j-bullet","r-9q9-pittsburg~baypoint~sfia~millbrae"], allow_previous_onestop_ids:true}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "01"},
+		},
+		{
+			name:         "previous allowed, unknown id",
+			query:        `query {routes(where:{onestop_id:"r-0000-nowhere", allow_previous_onestop_ids:true}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
+	}
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
+			c, _ := newTestClientWithOpts(t, testconfig.Options{UseMaterialized: materialized})
+			queryTestcases(t, c, testcases)
+		})
+	}
+}
+
+// As for stops, with the operator filter the Explore route page sends. Here the
+// old BART version gives route 01 the onestop ID of Caltrain's Baby Bullet.
+func TestRouteResolver_OnestopID_PreviousFiltered(t *testing.T) {
+	bullet := "r-9q9j-bullet"
+	testcases := []testcase{
+		{
+			name:         "current match",
+			query:        `query($osid:String!){routes(where:{onestop_id:$osid, allow_previous_onestop_ids:true}) {route_id} }`,
+			vars:         hw{"osid": bullet},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130"},
+		},
+		{
+			name:         "current match filtered out",
+			query:        `query($osid:String!){routes(where:{onestop_id:$osid, allow_previous_onestop_ids:true, operator_onestop_id:"o-9q9-bayarearapidtransit"}) {route_id} }`,
+			vars:         hw{"osid": bullet},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"01"},
+		},
+	}
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
+			testconfig.ConfigTxRollback(t, testconfig.Options{UseMaterialized: materialized}, func(cfg model.Config) {
+				ctx := context.Background()
+				sha1 := "dd7aca4a8e4c90908fd3603c097fabee75fea907"
+				fvs, err := cfg.Finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &sha1})
+				if err != nil || len(fvs) != 1 {
+					t.Fatalf("feed version %s: %v", sha1, err)
+				}
+				previous := stats.FeedVersionStats{RouteOnestopIDs: []dmfr.FeedVersionRouteOnestopID{{EntityID: "01", OnestopID: bullet}}}
+				if err := stats.WriteFeedVersionStats(ctx, cfg.Adapter, previous, fvs[0].ID, stats.WriteOptions{Stats: []string{stats.StatOnestopIDs}}); err != nil {
+					t.Fatal(err)
+				}
+				srv := model.AddConfigAndPerms(cfg, NewDefaultHandler())
+				queryTestcases(t, client.New(usercheck.UserDefaultMiddleware("test")(srv)), testcases)
+			})
+		})
+	}
+}
+
 func TestRouteResolver_Location(t *testing.T) {
 	c, cfg := newTestClient(t)
 
@@ -594,7 +702,7 @@ func TestRouteResolver_PreviousOnestopID(t *testing.T) {
 			query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { route_id onestop_id }}`,
 			vars:         hw{"osid": "r-9q9-pittsburg~baypoint~sfia~millbrae", "previous": true},
 			selector:     "routes.#.onestop_id",
-			selectExpect: []string{"r-9q9-pittsburg~baypoint~sfia~millbrae"},
+			selectExpect: []string{"r-9q9-antioch~sfia~millbrae"},
 		},
 	}
 	c, _ := newTestClient(t)

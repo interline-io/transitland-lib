@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
+	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
@@ -359,10 +361,55 @@ func (u *UseActive) Active() bool {
 	return u != nil && u.active
 }
 
+// Materialized returns true if the query reads the materialized active tables
+func (u *UseActive) Materialized() bool {
+	return u != nil && u.active && u.materialized
+}
+
 // UseTable returns the materialized table name if conditions are met, otherwise returns the base table name
 func (u *UseActive) UseTable(baseTable, materializedTable string) string {
-	if u != nil && u.active && u.materialized {
+	if u.Materialized() {
 		return materializedTable
 	}
 	return baseTable
+}
+
+// activeIDsByOnestopID returns the ids of current, the entities a query would
+// return with a requested onestop ID now, plus those of the active entities that
+// once had an ID none of current has.
+//
+// previous selects the latter for the IDs current misses. It reads a row for every
+// feed version an entity was ever in, which takes seconds when cold.
+func activeIDsByOnestopID[T any](ctx context.Context, db tldb.Ext, osids []string, current []T, key func(T) (int, *string), previous func([]string) sq.SelectBuilder) ([]int, error) {
+	var ids []int
+	found := map[string]bool{}
+	for _, ent := range current {
+		id, osid := key(ent)
+		ids = append(ids, id)
+		if osid != nil {
+			found[*osid] = true
+		}
+	}
+	var missing []string
+	for _, osid := range osids {
+		if !found[osid] {
+			missing = append(missing, osid)
+		}
+	}
+	if len(missing) == 0 {
+		return ids, nil
+	}
+	var previousIDs []int
+	if err := dbutil.Select(ctx, db, previous(missing), &previousIDs); err != nil {
+		return nil, err
+	}
+	return append(ids, previousIDs...), nil
+}
+
+// allOnestopIDs returns a filter's onestop IDs from its single and plural fields.
+func allOnestopIDs(one *string, many []string) []string {
+	if one == nil {
+		return many
+	}
+	return append(slices.Clone(many), *one)
 }

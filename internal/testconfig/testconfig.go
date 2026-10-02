@@ -47,6 +47,8 @@ type Options struct {
 	UseGeohashFilter bool
 	// UseMaterializedDepartures plans departure queries from a materialized CTE.
 	UseMaterializedDepartures bool
+	// UseMaterialized reads active entities from the materialized active tables.
+	UseMaterialized bool
 }
 
 func Config(t testing.TB, opts Options) model.Config {
@@ -209,5 +211,6 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 		AllowHTTPFetchUnfiltered:  true,
 		UseGeohashFilter:          opts.UseGeohashFilter,
 		UseMaterializedDepartures: opts.UseMaterializedDepartures,
+		UseMaterialized:           opts.UseMaterialized,
 	}
 }
