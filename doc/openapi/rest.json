@@ -7323,7 +7323,7 @@
                                   "description": "Associated stop",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                      "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -8612,7 +8612,7 @@
                                   "description": "Associated stop",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                      "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -10547,7 +10547,7 @@
                                   "description": "Stop associated with this stop time",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                      "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -12428,7 +12428,7 @@
                                   "description": "Stop associated with this stop time",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                      "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -13087,7 +13087,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                            "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -13510,7 +13510,7 @@
                             "nullable": true,
                             "properties": {
                               "alerts": {
-                                "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -14086,7 +14086,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                            "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -14509,7 +14509,7 @@
                             "nullable": true,
                             "properties": {
                               "alerts": {
-                                "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -15197,7 +15197,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                            "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -15514,7 +15514,7 @@
                             "items": {
                               "properties": {
                                 "alerts": {
-                                  "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                  "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                   "items": {
                                     "properties": {
                                       "active_period": {
@@ -19147,7 +19147,7 @@
                             "nullable": true,
                             "properties": {
                               "alerts": {
-                                "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                 "items": {
                                   "properties": {
                                     "active_period": {
@@ -19464,7 +19464,7 @@
                                 "items": {
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
+                                      "description": "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass `active: true` to return only currently active alerts",
                                       "items": {
                                         "properties": {
                                           "active_period": {

@@ -10096,7 +10096,7 @@ type Stop {
   "Stops within a specified radius of this stop; ` + "`" + `radius` + "`" + ` is in meters"
   nearby_stops(limit: Int, radius: Float): [Stop!]
   
-  "GTFS-RT service alerts on this stop, with or without a route, whose agency and route, if given, are in this stop's feed version; alerts on a trip at the stop are on the trip instead. Pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
+  "GTFS-RT service alerts on this stop, with or without a route. An agency, route or mode the alert also gives must be in this stop's feed version and agree with each other; alerts on a trip at the stop are on the trip instead. Pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts"
   alerts(active: Boolean, limit: Int): [Alert!]
   
   "When this stop was returned by a ` + "`" + `StopFilter.location.features` + "`" + ` search, the IDs of the input features that contain this stop; otherwise empty"
