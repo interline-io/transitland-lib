@@ -31,10 +31,10 @@ func newPRef(paramRef string) *oa.ParameterRef {
 	}
 }
 
-func newPRefExt(paramRef, paramDesc, exampleDesc, exampleUrl string) *oa.ParameterRef {
+func newPRefExt(paramRef, paramDesc string) *oa.ParameterRef {
 	return &oa.ParameterRef{
 		Ref:        "#/components/parameters/" + paramRef,
-		Extensions: newExt(paramDesc, exampleDesc, exampleUrl),
+		Extensions: newExt(paramDesc),
 	}
 }
 
@@ -46,25 +46,17 @@ func newSRVal(st string, format string, enum []any) *oa.SchemaRef {
 	}}
 }
 
-func newExt(paramDesc, exampleDesc, exampleUrl string) map[string]any {
-	ret := map[string]any{}
-	if paramDesc != "" {
-		ret["x-description"] = paramDesc
-	}
-	if exampleUrl == "" {
-		exampleUrl = exampleDesc
-	}
-	if exampleDesc != "" {
-		ret["x-example-requests"] = []any{map[string]any{"description": exampleDesc, "url": exampleUrl}}
-	}
-	if len(ret) == 0 {
+// newExt describes a shared parameter for one endpoint, overriding its
+// component description.
+func newExt(paramDesc string) map[string]any {
+	if paramDesc == "" {
 		return nil
 	}
-	return ret
+	return map[string]any{"x-description": paramDesc}
 }
 
-func newExtWithRole(paramDesc, exampleDesc, exampleUrl, requiredRole string) map[string]any {
-	ret := newExt(paramDesc, exampleDesc, exampleUrl)
+func newExtWithRole(paramDesc, requiredRole string) map[string]any {
+	ret := newExt(paramDesc)
 	if requiredRole != "" {
 		if ret == nil {
 			ret = map[string]any{}
@@ -289,7 +281,6 @@ var ParameterComponents = oa.ParametersMap{
 			In:          "query",
 			Description: `Include routes that serve this stop`,
 			Schema:      newSRVal("string", "", []any{"true", "false"}),
-			Extensions:  newExt("", "include_routes=true", "include_routes=true"),
 		},
 	},
 }
