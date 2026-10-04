@@ -40,6 +40,10 @@ type Config struct {
 	UseMaterializedDepartures bool
 	UseGeohashFilter          bool
 	AllowHTTPFetchUnfiltered  bool
+	// FetchHeaders are sent with every outbound feed fetch and validation
+	// request, replacing defaults of the same name such as User-Agent. Lets a
+	// deployment identify itself differently from the CLI.
+	FetchHeaders http.Header
 	// RestPrefix is the public prefix of the REST mount's *parent*, e.g.
 	// https://transit.land/api/v2 for a server reachable at .../api/v2/rest. The
 	// mount segment is not known at config time; the server recovers it from the
