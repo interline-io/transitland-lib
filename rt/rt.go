@@ -25,9 +25,11 @@ func FlexDecode(data []byte, msg protoreflect.ProtoMessage) error {
 	return err
 }
 
-// ReadURL opens a message from a url.
+// ReadURL opens a message from a url. Requests are made as URL type "realtime"
+// unless opts set another with request.WithURLType.
 func ReadURL(ctx context.Context, address string, opts ...request.RequestOption) (*pb.FeedMessage, error) {
 	var out bytes.Buffer
+	opts = append([]request.RequestOption{request.WithURLType("realtime")}, opts...)
 	fr, err := request.AuthenticatedRequest(ctx, &out, address, opts...)
 	if err != nil {
 		return nil, err

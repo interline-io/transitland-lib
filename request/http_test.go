@@ -1,10 +1,12 @@
 package request
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -432,4 +434,99 @@ func TestHttp_DownloadAuth_RedirectLoop(t *testing.T) {
 	// CheckRedirect fires when len(via) >= MaxRedirects, so the initial request
 	// plus (MaxRedirects - 1) redirects are followed before the cap triggers.
 	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
+}
+
+func TestAcceptForURLType(t *testing.T) {
+	testcases := []struct {
+		urlType  string
+		expected string
+	}{
+		{"", DefaultAccept},
+		{"manual", DefaultAccept},
+		{"static_current", DefaultAccept},
+		{"gbfs_auto_discovery", DefaultAccept},
+		{"realtime", RealtimeAccept},
+		{"realtime_trip_updates", RealtimeAccept},
+		{"realtime_vehicle_positions", RealtimeAccept},
+		{"realtime_alerts", RealtimeAccept},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.urlType, func(t *testing.T) {
+			assert.Equal(t, tc.expected, AcceptForURLType(tc.urlType))
+		})
+	}
+}
+
+// negotiatingServer mimics a server that returns base64 text unless
+// GTFS-RT protobuf is the first Accept type, and records request headers.
+func negotiatingServer(t *testing.T, got *http.Header) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*got = r.Header.Clone()
+		if strings.HasPrefix(r.Header.Get("Accept"), "application/x-google-protobuf") {
+			w.Header().Set("Content-Type", "application/x-google-protobuf")
+			w.Write([]byte{0x0a, 0x00})
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("CgA="))
+	}))
+}
+
+func TestAuthenticatedRequest_AcceptByURLType(t *testing.T) {
+	testcases := []struct {
+		name       string
+		opts       []RequestOption
+		wantAccept string
+		wantBody   []byte
+	}{
+		{"default", nil, DefaultAccept, []byte("CgA=")},
+		{"static", []RequestOption{WithURLType("static_current")}, DefaultAccept, []byte("CgA=")},
+		{"realtime", []RequestOption{WithURLType("realtime_trip_updates")}, RealtimeAccept, []byte{0x0a, 0x00}},
+		{"header overrides url type", []RequestOption{WithURLType("realtime_trip_updates"), WithHeaders(http.Header{"accept": {"*/*"}})}, "*/*", []byte("CgA=")},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got http.Header
+			ts := negotiatingServer(t, &got)
+			defer ts.Close()
+			var out bytes.Buffer
+			opts := append([]RequestOption{WithAllowHTTPUnfiltered}, tc.opts...)
+			fr, err := AuthenticatedRequest(context.Background(), &out, ts.URL, opts...)
+			assert.NoError(t, err)
+			assert.NoError(t, fr.FetchError)
+			assert.Equal(t, tc.wantAccept, got.Get("Accept"))
+			assert.Equal(t, tc.wantBody, out.Bytes())
+		})
+	}
+}
+
+func TestAuthenticatedRequest_Headers(t *testing.T) {
+	var got http.Header
+	ts := negotiatingServer(t, &got)
+	defer ts.Close()
+	headers, err := ParseHeaders([]string{"User-Agent: custom/1.0", "X-Extra: a", "X-Extra: b"})
+	assert.NoError(t, err)
+	var out bytes.Buffer
+	_, err = AuthenticatedRequest(context.Background(), &out, ts.URL,
+		WithAllowHTTPUnfiltered,
+		WithHeaders(headers),
+		WithAuth(dmfr.Secret{Key: "secret"}, dmfr.FeedAuthorization{Type: "header", ParamName: "Authorization"}),
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, "custom/1.0", got.Get("User-Agent"))
+	assert.Equal(t, []string{"a", "b"}, got.Values("X-Extra"))
+	assert.Equal(t, "secret", got.Get("Authorization"))
+	assert.Equal(t, DefaultAccept, got.Get("Accept"))
+}
+
+func TestParseHeaders(t *testing.T) {
+	h, err := ParseHeaders([]string{"accept: application/json", " X-Key :  v1:v2 "})
+	assert.NoError(t, err)
+	assert.Equal(t, "application/json", h.Get("Accept"))
+	assert.Equal(t, "v1:v2", h.Get("X-Key"))
+	for _, bad := range []string{"no-colon", ": empty name"} {
+		_, err := ParseHeaders([]string{bad})
+		assert.Error(t, err, bad)
+	}
 }

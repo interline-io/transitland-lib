@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -79,6 +80,10 @@ type Request struct {
 	MaxSize             uint64
 	Secret              dmfr.Secret
 	Auth                dmfr.FeedAuthorization
+	// URLType is the DMFR feed.urls key being fetched; it selects the Accept header.
+	URLType string
+	// Headers replace default request headers of the same name.
+	Headers http.Header
 }
 
 func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
@@ -103,10 +108,12 @@ func (req *Request) newDownloader(ustr string) (Downloader, string, error) {
 	var reqErr error
 	reqUrl := req.URL
 	switch u.Scheme {
-	case "http":
-		downloader = &Http{AllowHTTPUnfiltered: req.AllowHTTPUnfiltered}
-	case "https":
-		downloader = &Http{AllowHTTPUnfiltered: req.AllowHTTPUnfiltered}
+	case "http", "https":
+		downloader = &Http{
+			AllowHTTPUnfiltered: req.AllowHTTPUnfiltered,
+			Accept:              AcceptForURLType(req.URLType),
+			Headers:             req.Headers,
+		}
 	case "ftp":
 		if req.AllowFTP {
 			downloader = &Ftp{}
@@ -166,6 +173,39 @@ func WithMaxSize(s uint64) RequestOption {
 	return func(req *Request) {
 		req.MaxSize = s
 	}
+}
+
+// WithURLType sets the DMFR feed.urls key being fetched, e.g. "realtime_trip_updates".
+func WithURLType(urlType string) RequestOption {
+	return func(req *Request) {
+		req.URLType = urlType
+	}
+}
+
+// WithHeaders adds request headers, replacing defaults of the same name.
+func WithHeaders(headers http.Header) RequestOption {
+	return func(req *Request) {
+		if req.Headers == nil {
+			req.Headers = http.Header{}
+		}
+		for k, vs := range headers {
+			req.Headers[http.CanonicalHeaderKey(k)] = append([]string(nil), vs...)
+		}
+	}
+}
+
+// ParseHeaders parses "Name: value" strings, as given on the command line.
+func ParseHeaders(values []string) (http.Header, error) {
+	headers := http.Header{}
+	for _, v := range values {
+		k, val, ok := strings.Cut(v, ":")
+		k = strings.TrimSpace(k)
+		if !ok || k == "" {
+			return nil, fmt.Errorf("invalid header %q; expected 'Name: value'", v)
+		}
+		headers.Add(k, strings.TrimSpace(val))
+	}
+	return headers, nil
 }
 
 func WithAuth(secret dmfr.Secret, auth dmfr.FeedAuthorization) func(req *Request) {

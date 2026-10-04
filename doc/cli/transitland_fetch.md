@@ -27,6 +27,7 @@ transitland fetch [flags] [feeds...]
       --fail                               Exit with error code if any fetch is not successful
       --feed-url string                    Manually fetch a single URL; you must specify exactly one feed_id
       --fetched-at string                  Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z
+      --header stringArray                 Request header as 'Name: value', replacing any default of the same name; may be repeated
   -h, --help                               help for fetch
       --jobs-file string                   Specify fetch jobs in file, one per line as 'feed_id <tab> url'
       --limit int                          Maximum number of feeds to fetch
@@ -34,6 +35,7 @@ transitland fetch [flags] [feeds...]
       --secrets string                     Path to DMFR Secrets file
       --storage string                     Storage destination; can be s3://... az://... or path to a directory (default ".")
       --strict                             Reject feeds with validation errors
+      --url-type string                    DMFR feed.urls key recorded for the fetch; also selects secrets and request headers (default: static_current, or manual with --feed-url)
       --validation-report                  Save validation report
       --validation-report-storage string   Storage path for saving validation report JSON
       --workers int                        Worker threads (default 1)
