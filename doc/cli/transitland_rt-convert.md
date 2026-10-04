@@ -27,9 +27,11 @@ transitland rt-convert [flags] <input pb>
 ### Options
 
 ```
-  -f, --format string   Output format: json, geojson, geojsonl (geojson formats only convert vehicle position entities) (default "json")
-  -h, --help            help for rt-convert
-  -o, --out string      Write output to file; defaults to stdout
+  -f, --format string        Output format: json, geojson, geojsonl (geojson formats only convert vehicle position entities) (default "json")
+      --header stringArray   Request header as 'Name: value', replacing any default of the same name; may be repeated
+  -h, --help                 help for rt-convert
+  -o, --out string           Write output to file; defaults to stdout
+      --url-type string      DMFR feed.urls key for the request; selects request headers (default "realtime")
 ```
 
 ### SEE ALSO

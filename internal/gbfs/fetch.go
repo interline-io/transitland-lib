@@ -27,7 +27,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) ([]GbfsFeed, Res
 	if opts.FetchedAt.IsZero() {
 		opts.FetchedAt = time.Now().UTC()
 	}
-	var reqOpts []request.RequestOption
+	reqOpts := []request.RequestOption{request.WithURLType(opts.URLType), request.WithHeaders(opts.Headers)}
 	if opts.AllowFTPFetch {
 		reqOpts = append(reqOpts, request.WithAllowFTP)
 	}
