@@ -10993,7 +10993,7 @@ type RouteStopPattern {
   "Number of trips that operate this stop pattern"
   count: Int!
 
-  "The service date the trips are counted on: the date ` + "`" + `Route.patterns` + "`" + ` was given, moved into the feed's service window where ` + "`" + `use_service_window` + "`" + ` asked for that. Null when it was given no date"
+  "The service date the trips are counted on: the date ` + "`" + `Route.patterns` + "`" + ` was given, moved into the feed's service window where ` + "`" + `use_service_window` + "`" + ` asked for that. Null when it was given no date, or a ` + "`" + `relative_date` + "`" + ` the feed version has no service window to resolve"
   service_date: Date
 
   """
@@ -11003,11 +11003,11 @@ type RouteStopPattern {
   """
   representative_trip: Trip
 
-  "Representative trips that follow this stop pattern; useful for fetching full stop_times"
+  "Trips that follow this stop pattern, only those counted on ` + "`" + `service_date` + "`" + ` when it is set; useful for fetching full stop_times"
   trips(limit: Int): [Trip!]
 
   """
-  The trips ` + "`" + `count` + "`" + ` counted on ` + "`" + `service_date` + "`" + `, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when ` + "`" + `Route.patterns` + "`" + ` was given no date, or when the pattern's stop times are not all at stops, as with flex service.
+  The trips ` + "`" + `count` + "`" + ` counted on ` + "`" + `service_date` + "`" + `, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when ` + "`" + `Route.patterns` + "`" + ` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
   """
   departures: RouteStopPatternDepartures
 }
@@ -11019,7 +11019,7 @@ type RouteStopPatternDepartures {
   "The pattern's stops in order, by internal ID. A stop the trips call at twice appears twice"
   stop_ids: [Int!]!
 
-  "The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its ` + "`" + `frequencies` + "`" + ` say when it repeats. A trip whose stored stop times do not match the pattern's stops is left out"
+  "The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its ` + "`" + `frequencies` + "`" + ` say when it repeats. Flex trips, and trips whose stored stop times do not match the pattern's stops, are left out"
   trips: [Trip!]!
 
   "GTFS ` + "`" + `stop_times.departure_time` + "`" + `; null where the feed gives none. A stop the feed left untimed may carry an estimate the import interpolated"
@@ -37135,8 +37135,8 @@ func (ec *executionContext) _RouteStopPatternDepartures_departure_times(ctx cont
 			return obj.DepartureTimes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]*tt.Seconds) graphql.Marshaler {
-			return ec.marshalNSeconds2ᚕᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Seconds) graphql.Marshaler {
+			return ec.marshalNSeconds2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx, selections, v)
 		},
 		true,
 		true,
@@ -37158,8 +37158,8 @@ func (ec *executionContext) _RouteStopPatternDepartures_arrival_times(ctx contex
 			return obj.ArrivalTimes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]*tt.Seconds) graphql.Marshaler {
-			return ec.marshalNSeconds2ᚕᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Seconds) graphql.Marshaler {
+			return ec.marshalNSeconds2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx, selections, v)
 		},
 		true,
 		true,
@@ -37181,8 +37181,8 @@ func (ec *executionContext) _RouteStopPatternDepartures_pickup_types(ctx context
 			return obj.PickupTypes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]*int) graphql.Marshaler {
-			return ec.marshalNInt2ᚕᚕᚖintᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx, selections, v)
 		},
 		true,
 		true,
@@ -37204,8 +37204,8 @@ func (ec *executionContext) _RouteStopPatternDepartures_drop_off_types(ctx conte
 			return obj.DropOffTypes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]*int) graphql.Marshaler {
-			return ec.marshalNInt2ᚕᚕᚖintᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx, selections, v)
 		},
 		true,
 		true,
@@ -37227,8 +37227,8 @@ func (ec *executionContext) _RouteStopPatternDepartures_timepoints(ctx context.C
 			return obj.Timepoints, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]*int) graphql.Marshaler {
-			return ec.marshalNInt2ᚕᚕᚖintᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx, selections, v)
 		},
 		true,
 		true,
@@ -61707,6 +61707,30 @@ func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.Selec
 	return res
 }
 
+func (ec *executionContext) unmarshalNInt2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx context.Context, v any) ([]tt.Int, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]tt.Int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx context.Context, sel ast.SelectionSet, v []tt.Int) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, sel, v[i])
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNInt2ᚕintᚄ(ctx context.Context, v any) ([]int, error) {
 	var vSlice []any
 	vSlice = graphql.CoerceList(v)
@@ -61737,14 +61761,14 @@ func (ec *executionContext) marshalNInt2ᚕintᚄ(ctx context.Context, sel ast.S
 	return ret
 }
 
-func (ec *executionContext) unmarshalNInt2ᚕᚕᚖintᚄ(ctx context.Context, v any) ([][]*int, error) {
+func (ec *executionContext) unmarshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx context.Context, v any) ([][]tt.Int, error) {
 	var vSlice []any
 	vSlice = graphql.CoerceList(v)
 	var err error
-	res := make([][]*int, len(vSlice))
+	res := make([][]tt.Int, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNInt2ᚕᚖint(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNInt2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -61752,40 +61776,16 @@ func (ec *executionContext) unmarshalNInt2ᚕᚕᚖintᚄ(ctx context.Context, v
 	return res, nil
 }
 
-func (ec *executionContext) marshalNInt2ᚕᚕᚖintᚄ(ctx context.Context, sel ast.SelectionSet, v [][]*int) graphql.Marshaler {
+func (ec *executionContext) marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx context.Context, sel ast.SelectionSet, v [][]tt.Int) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalNInt2ᚕᚖint(ctx, sel, v[i])
+		ret[i] = ec.marshalNInt2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, sel, v[i])
 	}
 
 	for _, e := range ret {
 		if e == graphql.Null {
 			return graphql.Null
 		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalNInt2ᚕᚖint(ctx context.Context, v any) ([]*int, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]*int, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalOInt2ᚖint(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNInt2ᚕᚖint(ctx context.Context, sel ast.SelectionSet, v []*int) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalOInt2ᚖint(ctx, sel, v[i])
 	}
 
 	return ret
@@ -62323,14 +62323,14 @@ func (ec *executionContext) marshalNSeconds2githubᚗcomᚋinterlineᚑioᚋtran
 	return v
 }
 
-func (ec *executionContext) unmarshalNSeconds2ᚕᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx context.Context, v any) ([][]*tt.Seconds, error) {
+func (ec *executionContext) unmarshalNSeconds2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx context.Context, v any) ([]tt.Seconds, error) {
 	var vSlice []any
 	vSlice = graphql.CoerceList(v)
 	var err error
-	res := make([][]*tt.Seconds, len(vSlice))
+	res := make([]tt.Seconds, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNSeconds2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, vSlice[i])
+		res[i], err = ec.unmarshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -62338,40 +62338,40 @@ func (ec *executionContext) unmarshalNSeconds2ᚕᚕᚖgithubᚗcomᚋinterline�
 	return res, nil
 }
 
-func (ec *executionContext) marshalNSeconds2ᚕᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx context.Context, sel ast.SelectionSet, v [][]*tt.Seconds) graphql.Marshaler {
+func (ec *executionContext) marshalNSeconds2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx context.Context, sel ast.SelectionSet, v []tt.Seconds) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalNSeconds2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, sel, v[i])
+		ret[i] = ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, sel, v[i])
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNSeconds2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx context.Context, v any) ([][]tt.Seconds, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([][]tt.Seconds, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNSeconds2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNSeconds2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx context.Context, sel ast.SelectionSet, v [][]tt.Seconds) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNSeconds2ᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, sel, v[i])
 	}
 
 	for _, e := range ret {
 		if e == graphql.Null {
 			return graphql.Null
 		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalNSeconds2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx context.Context, v any) ([]*tt.Seconds, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]*tt.Seconds, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalOSeconds2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNSeconds2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx context.Context, sel ast.SelectionSet, v []*tt.Seconds) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalOSeconds2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, sel, v[i])
 	}
 
 	return ret

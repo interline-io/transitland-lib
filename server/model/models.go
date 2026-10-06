@@ -111,6 +111,17 @@ type Trip struct {
 	gtfs.Trip
 }
 
+// RouteStopPatternDepartures is a stop pattern's trips as grids by stop and trip.
+type RouteStopPatternDepartures struct {
+	StopIds        []int
+	Trips          []*Trip
+	DepartureTimes [][]tt.Seconds
+	ArrivalTimes   [][]tt.Seconds
+	PickupTypes    [][]tt.Int
+	DropOffTypes   [][]tt.Int
+	Timepoints     [][]tt.Int
+}
+
 type RTStopTimeUpdate struct {
 	LastDelay      *int32
 	StopTimeUpdate *pb.TripUpdate_StopTimeUpdate

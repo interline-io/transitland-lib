@@ -1783,7 +1783,7 @@ type RouteStopPattern {
   "Number of trips that operate this stop pattern"
   count: Int!
 
-  "The service date the trips are counted on: the date `Route.patterns` was given, moved into the feed's service window where `use_service_window` asked for that. Null when it was given no date"
+  "The service date the trips are counted on: the date `Route.patterns` was given, moved into the feed's service window where `use_service_window` asked for that. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve"
   service_date: Date
 
   """
@@ -1793,11 +1793,11 @@ type RouteStopPattern {
   """
   representative_trip: Trip
 
-  "Representative trips that follow this stop pattern; useful for fetching full stop_times"
+  "Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times"
   trips(limit: Int): [Trip!]
 
   """
-  The trips `count` counted on `service_date`, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's stop times are not all at stops, as with flex service.
+  The trips `count` counted on `service_date`, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
   """
   departures: RouteStopPatternDepartures
 }
@@ -1809,7 +1809,7 @@ type RouteStopPatternDepartures {
   "The pattern's stops in order, by internal ID. A stop the trips call at twice appears twice"
   stop_ids: [Int!]!
 
-  "The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its `frequencies` say when it repeats. A trip whose stored stop times do not match the pattern's stops is left out"
+  "The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its `frequencies` say when it repeats. Flex trips, and trips whose stored stop times do not match the pattern's stops, are left out"
   trips: [Trip!]!
 
   "GTFS `stop_times.departure_time`; null where the feed gives none. A stop the feed left untimed may carry an estimate the import interpolated"

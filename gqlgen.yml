@@ -201,10 +201,10 @@ models:
         type: int
       RepresentativeTripID:
         type: int
-      # The trips counted, when Route.patterns was given a date; unset without one.
       TripIDs:
         type: "github.com/interline-io/transitland-lib/tt.Ints"
         overrideTags: db:"trip_ids"
+        description: "The trips counted, when Route.patterns was given a date; unset without one."
   RouteGeometry:
     extraFields:
       RouteID:

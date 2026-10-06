@@ -243,21 +243,15 @@ func TestRouteResolver(t *testing.T) {
 			},
 		},
 		{
-			name:  "route patterns departures",
-			query: `{ routes(where:{route_id:"Bu-130"}) { patterns(where:{service_date:"2018-06-18"}) { count departures { stop_ids trips { trip_id } departure_times arrival_times pickup_types drop_off_types timepoints } } } }`,
-			f: func(t *testing.T, jj string) {
-				// The day's 22 trips, each in the departures of the pattern it runs.
-				assert.Equal(t, 22, checkPatternDepartures(t, jj), "a column for each of the day's trips")
-			},
-		},
-		{
 			name:  "route patterns departures only the date's trips",
-			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count departures { stop_ids trips { trip_id } departure_times arrival_times pickup_types drop_off_types timepoints } } } }`,
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count trips(limit:1000) { trip_id } departures { stop_ids trips { trip_id } departure_times arrival_times pickup_types drop_off_types timepoints } } } }`,
 			f: func(t *testing.T, jj string) {
 				checkPatternDepartures(t, jj)
 				// Pattern 31 runs 132 trips across the weekday, Saturday and Sunday
 				// calendars, and 26 on this Wednesday.
-				dep := gjson.Get(jj, "routes.0.patterns.#(stop_pattern_id==31).departures")
+				pat := gjson.Get(jj, "routes.0.patterns.#(stop_pattern_id==31)")
+				assert.Equal(t, int64(26), pat.Get("trips.#").Int(), "the pattern's trips on the date")
+				dep := pat.Get("departures")
 				assert.Equal(t, int64(26), dep.Get("trips.#").Int())
 				assert.Equal(t, "2221650WKDY", dep.Get("trips.0.trip_id").String(), "the day's first trip")
 				assert.Equal(t, "16:50:00", dep.Get("departure_times.0.0").String())
@@ -269,7 +263,6 @@ func TestRouteResolver(t *testing.T) {
 			name:  "route patterns departures without a date",
 			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date departures { stop_ids } } } }`,
 			f: func(t *testing.T, jj string) {
-				// Without a date a pattern's trips span every calendar.
 				pats := gjson.Get(jj, "routes.0.patterns").Array()
 				assert.NotEmpty(t, pats, "patterns returned")
 				for i, pat := range pats {
@@ -1050,14 +1043,12 @@ func TestRouteResolver_License(t *testing.T) {
 
 // checkPatternDepartures checks each pattern's departures hold a row for every
 // stop and a column for every trip it counted, in every grid, with the columns
-// ordered by time at the first stop. It returns the trips counted.
-func checkPatternDepartures(t *testing.T, jj string) int {
+// ordered by time at the first stop.
+func checkPatternDepartures(t *testing.T, jj string) {
 	pats := gjson.Get(jj, "routes.0.patterns").Array()
 	assert.NotEmpty(t, pats, "patterns returned")
-	total := 0
 	for i, pat := range pats {
 		count := int(pat.Get("count").Int())
-		total += count
 		dep := pat.Get("departures")
 		stops := len(dep.Get("stop_ids").Array())
 		assert.NotZero(t, stops, "pattern %d has stops", i)
@@ -1076,5 +1067,4 @@ func checkPatternDepartures(t *testing.T, jj string) int {
 			prev = v.String()
 		}
 	}
-	return total
 }

@@ -201,10 +201,10 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 			if err != nil {
 				return nil, err
 			}
-			// The trips counted, for the pattern's departures. Only for a date:
-			// without one, a pattern's trips span every calendar.
+			// Trip IDs only for a date: without one, a pattern's trips span every
+			// calendar.
 			if serviceDate != nil {
-				q = serviceDateLateral(q, *serviceDate).Column("json_agg(gtfs_trips.id) AS trip_ids")
+				q = serviceDateLateral(q, *serviceDate).Column("json_agg(gtfs_trips.id ORDER BY gtfs_trips.id) AS trip_ids")
 			}
 		}
 		var groupEnts []*model.RouteStopPattern
