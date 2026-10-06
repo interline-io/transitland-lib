@@ -2,7 +2,10 @@ package gql
 
 import (
 	"context"
+	"sort"
 
+	dataloader "github.com/graph-gophers/dataloader/v7"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
 )
@@ -151,6 +154,138 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 	// TODO: N+1 query
 	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, resolverCheckLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
 	return trips, err
+}
+
+// Departures lays the stop times of the trips `count` counted out as grids, a row
+// per stop of the pattern and a column per trip, ordered by time at the first
+// stop. Only for a date: without one, a pattern's trips span every calendar.
+func (r *routePatternResolver) Departures(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternDepartures, error) {
+	if len(obj.TripIDs.Val) == 0 {
+		return nil, nil
+	}
+
+	type column struct {
+		trip *model.Trip
+		sts  []*model.StopTime
+	}
+	// Every load is asked for before any is read, so the loaders batch them.
+	var tripLoads []dataloader.Thunk[*model.Trip]
+	var stopTimeLoads []dataloader.Thunk[[]*model.StopTime]
+	for _, id := range obj.TripIDs.Val {
+		tripLoads = append(tripLoads, LoaderFor(ctx).TripsByIDs.Load(ctx, int(id)))
+		stopTimeLoads = append(stopTimeLoads, LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
+			FeedVersionID: obj.FeedVersionID,
+			TripID:        int(id),
+			Limit:         ptr(RESOLVER_MAXLIMIT),
+		}))
+	}
+	cols := make([]column, len(tripLoads))
+	for i := range cols {
+		var err error
+		if cols[i].trip, err = tripLoads[i](); err != nil {
+			return nil, err
+		}
+		if cols[i].sts, err = stopTimeLoads[i](); err != nil {
+			return nil, err
+		}
+	}
+
+	// The pattern's stops are those of the trip storing the most. Trips share a
+	// pattern by the stops they were imported with, and the import can drop a
+	// trip's invalid rows while keeping the trip, so only a shorter list differs.
+	var header []*model.StopTime
+	for _, c := range cols {
+		if len(c.sts) > len(header) {
+			header = c.sts
+		}
+	}
+	// Flex stop times are at locations rather than stops, so they have no rows.
+	sts := make([]gtfs.StopTime, len(header))
+	for i, st := range header {
+		sts[i] = st.StopTime
+	}
+	if len(header) == 0 || !gtfs.CheckFlexStopTimes(sts).AllStopsHaveStopID {
+		return nil, nil
+	}
+
+	var kept []column
+	for _, c := range cols {
+		if c.trip != nil && sameStops(c.sts, header) {
+			kept = append(kept, c)
+		}
+	}
+	firstTime := func(c column) int {
+		st := c.sts[0]
+		if st.DepartureTime.Valid {
+			return st.DepartureTime.Int()
+		}
+		return st.ArrivalTime.Int()
+	}
+	sort.Slice(kept, func(a, b int) bool {
+		ta, tb := firstTime(kept[a]), firstTime(kept[b])
+		if ta != tb {
+			return ta < tb
+		}
+		return kept[a].trip.ID < kept[b].trip.ID
+	})
+
+	ret := &model.RouteStopPatternDepartures{
+		StopIds:        make([]int, len(header)),
+		Trips:          make([]*model.Trip, len(kept)),
+		DepartureTimes: make([][]*tt.Seconds, len(header)),
+		ArrivalTimes:   make([][]*tt.Seconds, len(header)),
+		PickupTypes:    make([][]*int, len(header)),
+		DropOffTypes:   make([][]*int, len(header)),
+		Timepoints:     make([][]*int, len(header)),
+	}
+	for i, st := range header {
+		ret.StopIds[i] = st.StopID.Int()
+		ret.DepartureTimes[i] = make([]*tt.Seconds, len(kept))
+		ret.ArrivalTimes[i] = make([]*tt.Seconds, len(kept))
+		ret.PickupTypes[i] = make([]*int, len(kept))
+		ret.DropOffTypes[i] = make([]*int, len(kept))
+		ret.Timepoints[i] = make([]*int, len(kept))
+	}
+	for j, c := range kept {
+		ret.Trips[j] = c.trip
+		for i, st := range c.sts {
+			ret.DepartureTimes[i][j] = validSeconds(st.DepartureTime)
+			ret.ArrivalTimes[i][j] = validSeconds(st.ArrivalTime)
+			ret.PickupTypes[i][j] = validInt(st.PickupType)
+			ret.DropOffTypes[i][j] = validInt(st.DropOffType)
+			ret.Timepoints[i][j] = validInt(st.Timepoint)
+		}
+	}
+	return ret, nil
+}
+
+// sameStops reports whether two runs of stop times call at the same stops in
+// the same order.
+func sameStops(a, b []*model.StopTime) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].StopID.Val != b[i].StopID.Val {
+			return false
+		}
+	}
+	return true
+}
+
+// Grid cells are null where the feed leaves the field blank.
+func validSeconds(v tt.Seconds) *tt.Seconds {
+	if !v.Valid {
+		return nil
+	}
+	return &v
+}
+
+func validInt(v tt.Int) *int {
+	if !v.Valid {
+		return nil
+	}
+	return ptr(v.Int())
 }
 
 // func (r *routePatternResolver) Stops(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Stop, error) {

@@ -1202,15 +1202,38 @@ type RouteStopPattern struct {
 	DirectionID int `json:"direction_id"`
 	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
+	// The service date the trips are counted on: the date `Route.patterns` was given, moved into the feed's service window where `use_service_window` asked for that. Null when it was given no date
+	ServiceDate *tt.Date `json:"service_date,omitempty"`
 	// One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
 	//
 	// Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
 	RepresentativeTrip *Trip `json:"representative_trip,omitempty"`
 	// Representative trips that follow this stop pattern; useful for fetching full stop_times
-	Trips                []*Trip `json:"trips,omitempty"`
-	FeedVersionID        int     `json:"-"`
-	RepresentativeTripID int     `json:"-"`
-	RouteID              int     `json:"-"`
+	Trips []*Trip `json:"trips,omitempty"`
+	// The trips `count` counted on `service_date`, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's stop times are not all at stops, as with flex service.
+	Departures           *RouteStopPatternDepartures `json:"departures,omitempty"`
+	FeedVersionID        int                         `json:"-"`
+	RepresentativeTripID int                         `json:"-"`
+	RouteID              int                         `json:"-"`
+	TripIDs              tt.Ints                     `db:"trip_ids"`
+}
+
+// A stop pattern's trips as grids: row `i` is stop `stop_ids[i]` and column `j` is trip `trips[j]`, in every grid below.
+type RouteStopPatternDepartures struct {
+	// The pattern's stops in order, by internal ID. A stop the trips call at twice appears twice
+	StopIds []int `json:"stop_ids"`
+	// The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its `frequencies` say when it repeats. A trip whose stored stop times do not match the pattern's stops is left out
+	Trips []*Trip `json:"trips"`
+	// GTFS `stop_times.departure_time`; null where the feed gives none. A stop the feed left untimed may carry an estimate the import interpolated
+	DepartureTimes [][]*tt.Seconds `json:"departure_times"`
+	// GTFS `stop_times.arrival_time`; null where the feed gives none. A stop the feed left untimed may carry an estimate the import interpolated
+	ArrivalTimes [][]*tt.Seconds `json:"arrival_times"`
+	// GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]
+	PickupTypes [][]*int `json:"pickup_types"`
+	// GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]
+	DropOffTypes [][]*int `json:"drop_off_types"`
+	// GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]
+	Timepoints [][]*int `json:"timepoints"`
 }
 
 // Search options for a route's stop patterns
