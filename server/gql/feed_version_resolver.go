@@ -69,6 +69,54 @@ func (r *feedVersionResolver) BookingRules(ctx context.Context, obj *model.FeedV
 	return LoaderFor(ctx).BookingRulesByFeedVersionIDs.Load(ctx, bookingRuleLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
+func (r *feedVersionResolver) FareAttributes(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareAttribute, error) {
+	return LoaderFor(ctx).FareAttributesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) FareRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareRule, error) {
+	return LoaderFor(ctx).FareRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) FareMedia(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareMedia, error) {
+	return LoaderFor(ctx).FareMediaByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) FareProducts(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareProduct, error) {
+	return LoaderFor(ctx).FareProductsByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) FareLegRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareLegRule, error) {
+	return LoaderFor(ctx).FareLegRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) FareLegJoinRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareLegJoinRule, error) {
+	return LoaderFor(ctx).FareLegJoinRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) FareTransferRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareTransferRule, error) {
+	return LoaderFor(ctx).FareTransferRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) RiderCategories(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.RiderCategory, error) {
+	return LoaderFor(ctx).RiderCategoriesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) Timeframes(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Timeframe, error) {
+	return LoaderFor(ctx).TimeframesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) Areas(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Area, error) {
+	return LoaderFor(ctx).AreasByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) Networks(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Network, error) {
+	return LoaderFor(ctx).NetworksByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
+func (r *feedVersionResolver) RouteNetworks(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.RouteNetwork, error) {
+	return LoaderFor(ctx).RouteNetworksByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+}
+
 func (r *feedVersionResolver) LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error) {
 	return LoaderFor(ctx).LocationGroupsByFeedVersionIDs.Load(ctx, locationGroupLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }

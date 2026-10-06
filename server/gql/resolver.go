@@ -26,6 +26,9 @@ const (
 	// one: paramGroupQuery falls back to RESOLVER_DEFAULT_LIMIT when a group's
 	// limit is nil, which would cut a long route's patterns to 100.
 	RESOLVER_PATTERN_MAXLIMIT = 100_000
+	// A regional feed can have tens of thousands of fare products and
+	// stop_areas; clients fetch a feed version's fares in one request.
+	RESOLVER_FARE_MAXLIMIT = 100_000
 )
 
 // RESOLVER_MAXLIMIT is the API limit maximum
@@ -226,6 +229,49 @@ func (r *Resolver) Location() gqlout.LocationResolver { return &locationResolver
 
 // BookingRule .
 func (r *Resolver) BookingRule() gqlout.BookingRuleResolver { return &bookingRuleResolver{r} }
+
+// FareAttribute .
+func (r *Resolver) FareAttribute() gqlout.FareAttributeResolver { return &fareAttributeResolver{r} }
+
+// FareRule .
+func (r *Resolver) FareRule() gqlout.FareRuleResolver { return &fareRuleResolver{r} }
+
+// FareMedia .
+func (r *Resolver) FareMedia() gqlout.FareMediaResolver { return &fareMediaResolver{r} }
+
+// FareProduct .
+func (r *Resolver) FareProduct() gqlout.FareProductResolver { return &fareProductResolver{r} }
+
+// FareLegRule .
+func (r *Resolver) FareLegRule() gqlout.FareLegRuleResolver { return &fareLegRuleResolver{r} }
+
+// FareLegJoinRule .
+func (r *Resolver) FareLegJoinRule() gqlout.FareLegJoinRuleResolver {
+	return &fareLegJoinRuleResolver{r}
+}
+
+// FareTransferRule .
+func (r *Resolver) FareTransferRule() gqlout.FareTransferRuleResolver {
+	return &fareTransferRuleResolver{r}
+}
+
+// RiderCategory .
+func (r *Resolver) RiderCategory() gqlout.RiderCategoryResolver { return &riderCategoryResolver{r} }
+
+// Timeframe .
+func (r *Resolver) Timeframe() gqlout.TimeframeResolver { return &timeframeResolver{r} }
+
+// Area .
+func (r *Resolver) Area() gqlout.AreaResolver { return &areaResolver{r} }
+
+// Network .
+func (r *Resolver) Network() gqlout.NetworkResolver { return &networkResolver{r} }
+
+// RouteNetwork .
+func (r *Resolver) RouteNetwork() gqlout.RouteNetworkResolver { return &routeNetworkResolver{r} }
+
+// StopArea .
+func (r *Resolver) StopArea() gqlout.StopAreaResolver { return &stopAreaResolver{r} }
 
 // LocationGroup .
 func (r *Resolver) LocationGroup() gqlout.LocationGroupResolver { return &locationGroupResolver{r} }

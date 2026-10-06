@@ -124,6 +124,60 @@ func (UnimplementedFinder) BookingRulesByFeedVersionIDs(context.Context, *int, *
 func (UnimplementedFinder) BookingRulesByIDs(_ context.Context, ids []int) ([]*BookingRule, []error) {
 	return notImplBatch[*BookingRule](ids)
 }
+
+// GTFS Fares v1 and v2
+func (UnimplementedFinder) FareAttributesByFeedVersionIDs(context.Context, *int, []int) ([][]*FareAttribute, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) FareAttributesByIDs(_ context.Context, ids []int) ([]*FareAttribute, []error) {
+	return notImplBatch[*FareAttribute](ids)
+}
+func (UnimplementedFinder) FareRulesByFeedVersionIDs(context.Context, *int, []int) ([][]*FareRule, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) FareMediaByFeedVersionIDs(context.Context, *int, []int) ([][]*FareMedia, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) FareMediaByIDs(_ context.Context, ids []int) ([]*FareMedia, []error) {
+	return notImplBatch[*FareMedia](ids)
+}
+func (UnimplementedFinder) FareProductsByFeedVersionIDs(context.Context, *int, []int) ([][]*FareProduct, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) FareLegRulesByFeedVersionIDs(context.Context, *int, []int) ([][]*FareLegRule, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) FareLegJoinRulesByFeedVersionIDs(context.Context, *int, []int) ([][]*FareLegJoinRule, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) FareTransferRulesByFeedVersionIDs(context.Context, *int, []int) ([][]*FareTransferRule, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) RiderCategoriesByFeedVersionIDs(context.Context, *int, []int) ([][]*RiderCategory, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) TimeframesByFeedVersionIDs(context.Context, *int, []int) ([][]*Timeframe, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) AreasByFeedVersionIDs(context.Context, *int, []int) ([][]*Area, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) AreasByIDs(_ context.Context, ids []int) ([]*Area, []error) {
+	return notImplBatch[*Area](ids)
+}
+func (UnimplementedFinder) NetworksByFeedVersionIDs(context.Context, *int, []int) ([][]*Network, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) NetworksByIDs(_ context.Context, ids []int) ([]*Network, []error) {
+	return notImplBatch[*Network](ids)
+}
+func (UnimplementedFinder) RouteNetworksByFeedVersionIDs(context.Context, *int, []int) ([][]*RouteNetwork, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) StopAreasByAreaIDs(context.Context, *int, []int) ([][]*StopArea, error) {
+	return nil, notImplErr()
+}
+
 func (UnimplementedFinder) CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error) {
 	return nil, notImplErr()
 }
