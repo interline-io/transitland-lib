@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
+	"github.com/twpayne/go-polyline"
 )
 
 // ROUTE
@@ -256,34 +257,119 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 		return kept[a].trip.ID < kept[b].trip.ID
 	})
 
+	nStops, nTrips := len(header), len(kept)
 	ret := &model.RouteStopPatternTimetable{
-		StopIds:        make([]int, len(header)),
-		Trips:          make([]*model.Trip, len(kept)),
-		DepartureTimes: make([][]tt.Seconds, len(header)),
-		ArrivalTimes:   make([][]tt.Seconds, len(header)),
-		PickupTypes:    make([][]tt.Int, len(header)),
-		DropOffTypes:   make([][]tt.Int, len(header)),
-		Timepoints:     make([][]tt.Int, len(header)),
+		StopIds:        make([]int, nStops),
+		Trips:          make([]*model.Trip, nTrips),
+		DepartureTimes: &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
+		ArrivalTimes:   &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
+		PickupTypes:    &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		DropOffTypes:   &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		Timepoints:     &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
 	}
 	for i, st := range header {
 		ret.StopIds[i] = st.StopID.Int()
-		ret.DepartureTimes[i] = make([]tt.Seconds, len(kept))
-		ret.ArrivalTimes[i] = make([]tt.Seconds, len(kept))
-		ret.PickupTypes[i] = make([]tt.Int, len(kept))
-		ret.DropOffTypes[i] = make([]tt.Int, len(kept))
-		ret.Timepoints[i] = make([]tt.Int, len(kept))
 	}
 	for j, c := range kept {
 		ret.Trips[j] = c.trip
 		for i, st := range c.sts {
-			ret.DepartureTimes[i][j] = st.DepartureTime
-			ret.ArrivalTimes[i][j] = st.ArrivalTime
-			ret.PickupTypes[i][j] = st.PickupType
-			ret.DropOffTypes[i][j] = st.DropOffType
-			ret.Timepoints[i][j] = st.Timepoint
+			ret.DepartureTimes.Values[i][j] = st.DepartureTime
+			ret.ArrivalTimes.Values[i][j] = st.ArrivalTime
+			ret.PickupTypes.Values[i][j] = st.PickupType
+			ret.DropOffTypes.Values[i][j] = st.DropOffType
+			ret.Timepoints.Values[i][j] = st.Timepoint
 		}
 	}
 	return ret, nil
+}
+
+type routePatternGridResolver struct{ *Resolver }
+
+// Delta is the grid as each trip's first non-null value, then each later value
+// less it.
+func (r *routePatternGridResolver) Delta(ctx context.Context, obj *model.RouteStopPatternTimetableGrid) ([][]*int, error) {
+	return gridDeltas(obj.Values), nil
+}
+
+// Polyline is each row of Delta as one string, in the polyline algorithm's
+// integer encoding: each value less the last one present before it.
+func (r *routePatternGridResolver) Polyline(ctx context.Context, obj *model.RouteStopPatternTimetableGrid) ([]string, error) {
+	return gridPolylines(gridDeltas(obj.Values)), nil
+}
+
+type routePatternTimeGridResolver struct{ *Resolver }
+
+// Delta is the grid as each trip's first non-null time, then each later time
+// less it, in seconds.
+func (r *routePatternTimeGridResolver) Delta(ctx context.Context, obj *model.RouteStopPatternTimetableTimeGrid) ([][]*int, error) {
+	return gridDeltas(obj.Values), nil
+}
+
+// Polyline is each row of Delta as one string, encoded as for any other grid.
+func (r *routePatternTimeGridResolver) Polyline(ctx context.Context, obj *model.RouteStopPatternTimetableTimeGrid) ([]string, error) {
+	return gridPolylines(gridDeltas(obj.Values)), nil
+}
+
+// gridCell is a nullable grid value, a tt.Int or tt.Seconds.
+type gridCell interface {
+	IsValid() bool
+	Int() int
+}
+
+// gridPolylines encodes each row of a delta grid, '.' for a missing value.
+func gridPolylines(rows [][]*int) []string {
+	ret := make([]string, len(rows))
+	for i, row := range rows {
+		var buf []byte
+		prev := 0
+		for _, v := range row {
+			// Encoded characters start at '?', so a '.' cannot be read as one.
+			if v == nil {
+				buf = append(buf, '.')
+				continue
+			}
+			buf = polyline.EncodeInt(buf, *v-prev)
+			prev = *v
+		}
+		ret[i] = string(buf)
+	}
+	return ret
+}
+
+// gridDeltas keeps each column's first non-null value and makes each later one
+// a difference from it.
+func gridDeltas[T gridCell](values [][]T) [][]*int {
+	ret := make([][]*int, len(values))
+	for i, row := range values {
+		ret[i] = make([]*int, len(row))
+	}
+	if len(values) == 0 {
+		return ret
+	}
+	for j := range values[0] {
+		var first *int
+		for i, row := range values {
+			if !row[j].IsValid() {
+				continue
+			}
+			if first == nil {
+				first = ptr(row[j].Int())
+				ret[i][j] = first
+				continue
+			}
+			ret[i][j] = ptr(row[j].Int() - *first)
+		}
+	}
+	return ret
+}
+
+// newCells is a grid of zero values, rows by cols.
+func newCells[T any](rows, cols int) [][]T {
+	ret := make([][]T, rows)
+	for i := range ret {
+		ret[i] = make([]T, cols)
+	}
+	return ret
 }
 
 // isFlex reports whether stop times run to locations or within time windows.

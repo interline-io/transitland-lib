@@ -59,6 +59,8 @@ type ResolverRoot interface {
 	RouteHeadway() RouteHeadwayResolver
 	RouteStop() RouteStopResolver
 	RouteStopPattern() RouteStopPatternResolver
+	RouteStopPatternTimetableGrid() RouteStopPatternTimetableGridResolver
+	RouteStopPatternTimetableTimeGrid() RouteStopPatternTimetableTimeGridResolver
 	Segment() SegmentResolver
 	SegmentPattern() SegmentPatternResolver
 	Shape() ShapeResolver
@@ -1088,6 +1090,18 @@ type ComplexityRoot struct {
 		Trips          func(childComplexity int) int
 	}
 
+	RouteStopPatternTimetableGrid struct {
+		Delta    func(childComplexity int) int
+		Polyline func(childComplexity int) int
+		Values   func(childComplexity int) int
+	}
+
+	RouteStopPatternTimetableTimeGrid struct {
+		Delta    func(childComplexity int) int
+		Polyline func(childComplexity int) int
+		Values   func(childComplexity int) int
+	}
+
 	Segment struct {
 		Geometry        func(childComplexity int) int
 		ID              func(childComplexity int) int
@@ -1603,6 +1617,14 @@ type RouteStopPatternResolver interface {
 	RepresentativeTrip(ctx context.Context, obj *model.RouteStopPattern) (*model.Trip, error)
 	Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error)
 	Timetable(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternTimetable, error)
+}
+type RouteStopPatternTimetableGridResolver interface {
+	Delta(ctx context.Context, obj *model.RouteStopPatternTimetableGrid) ([][]*int, error)
+	Polyline(ctx context.Context, obj *model.RouteStopPatternTimetableGrid) ([]string, error)
+}
+type RouteStopPatternTimetableTimeGridResolver interface {
+	Delta(ctx context.Context, obj *model.RouteStopPatternTimetableTimeGrid) ([][]*int, error)
+	Polyline(ctx context.Context, obj *model.RouteStopPatternTimetableTimeGrid) ([]string, error)
 }
 type SegmentResolver interface {
 	SegmentPatterns(ctx context.Context, obj *model.Segment) ([]*model.SegmentPattern, error)
@@ -6576,6 +6598,44 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RouteStopPatternTimetable.Trips(childComplexity), true
 
+	case "RouteStopPatternTimetableGrid.delta":
+		if e.ComplexityRoot.RouteStopPatternTimetableGrid.Delta == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPatternTimetableGrid.Delta(childComplexity), true
+	case "RouteStopPatternTimetableGrid.polyline":
+		if e.ComplexityRoot.RouteStopPatternTimetableGrid.Polyline == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPatternTimetableGrid.Polyline(childComplexity), true
+	case "RouteStopPatternTimetableGrid.values":
+		if e.ComplexityRoot.RouteStopPatternTimetableGrid.Values == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPatternTimetableGrid.Values(childComplexity), true
+
+	case "RouteStopPatternTimetableTimeGrid.delta":
+		if e.ComplexityRoot.RouteStopPatternTimetableTimeGrid.Delta == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPatternTimetableTimeGrid.Delta(childComplexity), true
+	case "RouteStopPatternTimetableTimeGrid.polyline":
+		if e.ComplexityRoot.RouteStopPatternTimetableTimeGrid.Polyline == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPatternTimetableTimeGrid.Polyline(childComplexity), true
+	case "RouteStopPatternTimetableTimeGrid.values":
+		if e.ComplexityRoot.RouteStopPatternTimetableTimeGrid.Values == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPatternTimetableTimeGrid.Values(childComplexity), true
+
 	case "Segment.geometry":
 		if e.ComplexityRoot.Segment.Geometry == nil {
 			break
@@ -11022,20 +11082,48 @@ type RouteStopPatternTimetable {
   "The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its ` + "`" + `frequencies` + "`" + ` say when it repeats. Flex trips, and trips whose stored stop times do not match the pattern's stops, are left out"
   trips: [Trip!]!
 
-  "GTFS ` + "`" + `stop_times.departure_time` + "`" + `; null where the feed gives none. A stop the feed left untimed may carry an estimate the import interpolated"
-  departure_times: [[Seconds]!]!
+  "GTFS ` + "`" + `stop_times.departure_time` + "`" + `. A stop the feed left untimed may carry an estimate the import interpolated"
+  departure_times: RouteStopPatternTimetableTimeGrid!
 
-  "GTFS ` + "`" + `stop_times.arrival_time` + "`" + `; null where the feed gives none. A stop the feed left untimed may carry an estimate the import interpolated"
-  arrival_times: [[Seconds]!]!
+  "GTFS ` + "`" + `stop_times.arrival_time` + "`" + `. A stop the feed left untimed may carry an estimate the import interpolated"
+  arrival_times: RouteStopPatternTimetableTimeGrid!
 
   "GTFS ` + "`" + `stop_times.pickup_type` + "`" + ` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]"
-  pickup_types: [[Int]!]!
+  pickup_types: RouteStopPatternTimetableGrid!
 
   "GTFS ` + "`" + `stop_times.drop_off_type` + "`" + ` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]"
-  drop_off_types: [[Int]!]!
+  drop_off_types: RouteStopPatternTimetableGrid!
 
   "GTFS ` + "`" + `stop_times.timepoint` + "`" + ` [0=times are approximate, 1=times are exact]"
-  timepoints: [[Int]!]!
+  timepoints: RouteStopPatternTimetableGrid!
+}
+
+"""
+One of a timetable's grids of numbers, in three encodings. A cell is null (` + "`" + `.` + "`" + ` in ` + "`" + `polyline` + "`" + `) where the feed gives no value.
+"""
+type RouteStopPatternTimetableGrid {
+  "The values, unencoded"
+  values: [[Int]!]!
+
+  "Each trip's first non-null value, then each later value as the difference from it: what ` + "`" + `polyline` + "`" + ` encodes, to check a decoder against"
+  delta: [[Int]!]!
+
+  "Each row of ` + "`" + `delta` + "`" + ` as one string, in the encoded polyline algorithm applied to single unscaled integers rather than coordinate pairs: each value as the difference from the last one present before it in the row, the first from 0. A ` + "`" + `.` + "`" + ` marks a missing value"
+  polyline: [String!]!
+}
+
+"""
+One of a timetable's grids of times, in three encodings. A cell is null (` + "`" + `.` + "`" + ` in ` + "`" + `polyline` + "`" + `) where the feed gives no value.
+"""
+type RouteStopPatternTimetableTimeGrid {
+  "The times, unencoded"
+  values: [[Seconds]!]!
+
+  "Each trip's first non-null time in seconds since midnight, then each later time as the seconds since it: what ` + "`" + `polyline` + "`" + ` encodes, to check a decoder against"
+  delta: [[Int]!]!
+
+  "Each row of ` + "`" + `delta` + "`" + ` as one string, in the encoded polyline algorithm applied to single unscaled integers rather than coordinate pairs: each value as the difference from the last one present before it in the row, the first from 0. A ` + "`" + `.` + "`" + ` marks a missing value"
+  polyline: [String!]!
 }
 
 """
@@ -14527,6 +14615,30 @@ func (ec *executionContext) childFields_RouteStopPatternTimetable(ctx context.Co
 		return ec.fieldContext_RouteStopPatternTimetable_timepoints(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type RouteStopPatternTimetable", field.Name)
+}
+
+func (ec *executionContext) childFields_RouteStopPatternTimetableGrid(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "values":
+		return ec.fieldContext_RouteStopPatternTimetableGrid_values(ctx, field)
+	case "delta":
+		return ec.fieldContext_RouteStopPatternTimetableGrid_delta(ctx, field)
+	case "polyline":
+		return ec.fieldContext_RouteStopPatternTimetableGrid_polyline(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RouteStopPatternTimetableGrid", field.Name)
+}
+
+func (ec *executionContext) childFields_RouteStopPatternTimetableTimeGrid(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "values":
+		return ec.fieldContext_RouteStopPatternTimetableTimeGrid_values(ctx, field)
+	case "delta":
+		return ec.fieldContext_RouteStopPatternTimetableTimeGrid_delta(ctx, field)
+	case "polyline":
+		return ec.fieldContext_RouteStopPatternTimetableTimeGrid_polyline(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RouteStopPatternTimetableTimeGrid", field.Name)
 }
 
 func (ec *executionContext) childFields_Segment(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -37135,15 +37247,24 @@ func (ec *executionContext) _RouteStopPatternTimetable_departure_times(ctx conte
 			return obj.DepartureTimes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Seconds) graphql.Marshaler {
-			return ec.marshalNSeconds2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternTimetableTimeGrid) graphql.Marshaler {
+			return ec.marshalNRouteStopPatternTimetableTimeGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableTimeGrid(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_RouteStopPatternTimetable_departure_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Seconds does not have child fields"))
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPatternTimetable",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteStopPatternTimetableTimeGrid(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _RouteStopPatternTimetable_arrival_times(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
@@ -37158,15 +37279,24 @@ func (ec *executionContext) _RouteStopPatternTimetable_arrival_times(ctx context
 			return obj.ArrivalTimes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Seconds) graphql.Marshaler {
-			return ec.marshalNSeconds2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternTimetableTimeGrid) graphql.Marshaler {
+			return ec.marshalNRouteStopPatternTimetableTimeGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableTimeGrid(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_RouteStopPatternTimetable_arrival_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Seconds does not have child fields"))
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPatternTimetable",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteStopPatternTimetableTimeGrid(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _RouteStopPatternTimetable_pickup_types(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
@@ -37181,15 +37311,24 @@ func (ec *executionContext) _RouteStopPatternTimetable_pickup_types(ctx context.
 			return obj.PickupTypes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Int) graphql.Marshaler {
-			return ec.marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternTimetableGrid) graphql.Marshaler {
+			return ec.marshalNRouteStopPatternTimetableGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableGrid(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_RouteStopPatternTimetable_pickup_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Int does not have child fields"))
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPatternTimetable",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteStopPatternTimetableGrid(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _RouteStopPatternTimetable_drop_off_types(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
@@ -37204,15 +37343,24 @@ func (ec *executionContext) _RouteStopPatternTimetable_drop_off_types(ctx contex
 			return obj.DropOffTypes, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Int) graphql.Marshaler {
-			return ec.marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternTimetableGrid) graphql.Marshaler {
+			return ec.marshalNRouteStopPatternTimetableGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableGrid(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_RouteStopPatternTimetable_drop_off_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Int does not have child fields"))
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPatternTimetable",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteStopPatternTimetableGrid(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _RouteStopPatternTimetable_timepoints(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
@@ -37227,6 +37375,38 @@ func (ec *executionContext) _RouteStopPatternTimetable_timepoints(ctx context.Co
 			return obj.Timepoints, nil
 		},
 		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternTimetableGrid) graphql.Marshaler {
+			return ec.marshalNRouteStopPatternTimetableGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableGrid(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_timepoints(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPatternTimetable",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteStopPatternTimetableGrid(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RouteStopPatternTimetableGrid_values(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetableGrid) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPatternTimetableGrid_values(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Values, nil
+		},
+		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Int) graphql.Marshaler {
 			return ec.marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐIntᚄ(ctx, selections, v)
 		},
@@ -37234,8 +37414,123 @@ func (ec *executionContext) _RouteStopPatternTimetable_timepoints(ctx context.Co
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternTimetable_timepoints(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Int does not have child fields"))
+func (ec *executionContext) fieldContext_RouteStopPatternTimetableGrid_values(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetableGrid", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopPatternTimetableGrid_delta(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetableGrid) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPatternTimetableGrid_delta(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPatternTimetableGrid().Delta(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v [][]*int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕᚕᚖintᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPatternTimetableGrid_delta(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetableGrid", field, true, true, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopPatternTimetableGrid_polyline(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetableGrid) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPatternTimetableGrid_polyline(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPatternTimetableGrid().Polyline(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPatternTimetableGrid_polyline(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetableGrid", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopPatternTimetableTimeGrid_values(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetableTimeGrid) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPatternTimetableTimeGrid_values(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Values, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v [][]tt.Seconds) graphql.Marshaler {
+			return ec.marshalNSeconds2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSecondsᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPatternTimetableTimeGrid_values(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetableTimeGrid", field, false, false, errors.New("field of type Seconds does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopPatternTimetableTimeGrid_delta(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetableTimeGrid) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPatternTimetableTimeGrid_delta(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPatternTimetableTimeGrid().Delta(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v [][]*int) graphql.Marshaler {
+			return ec.marshalNInt2ᚕᚕᚖintᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPatternTimetableTimeGrid_delta(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetableTimeGrid", field, true, true, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopPatternTimetableTimeGrid_polyline(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetableTimeGrid) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPatternTimetableTimeGrid_polyline(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPatternTimetableTimeGrid().Polyline(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPatternTimetableTimeGrid_polyline(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetableTimeGrid", field, true, true, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Segment_id(ctx context.Context, field graphql.CollectedField, obj *model.Segment) (ret graphql.Marshaler) {
@@ -57350,6 +57645,228 @@ func (ec *executionContext) _RouteStopPatternTimetable(ctx context.Context, sel 
 	return out
 }
 
+var routeStopPatternTimetableGridImplementors = []string{"RouteStopPatternTimetableGrid"}
+
+func (ec *executionContext) _RouteStopPatternTimetableGrid(ctx context.Context, sel ast.SelectionSet, obj *model.RouteStopPatternTimetableGrid) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, routeStopPatternTimetableGridImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RouteStopPatternTimetableGrid")
+		case "values":
+			out.Values[i] = ec._RouteStopPatternTimetableGrid_values(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "delta":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPatternTimetableGrid_delta(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "polyline":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPatternTimetableGrid_polyline(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var routeStopPatternTimetableTimeGridImplementors = []string{"RouteStopPatternTimetableTimeGrid"}
+
+func (ec *executionContext) _RouteStopPatternTimetableTimeGrid(ctx context.Context, sel ast.SelectionSet, obj *model.RouteStopPatternTimetableTimeGrid) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, routeStopPatternTimetableTimeGridImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RouteStopPatternTimetableTimeGrid")
+		case "values":
+			out.Values[i] = ec._RouteStopPatternTimetableTimeGrid_values(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "delta":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPatternTimetableTimeGrid_delta(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "polyline":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPatternTimetableTimeGrid_polyline(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var segmentImplementors = []string{"Segment"}
 
 func (ec *executionContext) _Segment(ctx context.Context, sel ast.SelectionSet, obj *model.Segment) graphql.Marshaler {
@@ -61791,6 +62308,60 @@ func (ec *executionContext) marshalNInt2ᚕᚕgithubᚗcomᚋinterlineᚑioᚋtr
 	return ret
 }
 
+func (ec *executionContext) unmarshalNInt2ᚕᚕᚖintᚄ(ctx context.Context, v any) ([][]*int, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([][]*int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNInt2ᚕᚖint(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt2ᚕᚕᚖintᚄ(ctx context.Context, sel ast.SelectionSet, v [][]*int) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNInt2ᚕᚖint(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNInt2ᚕᚖint(ctx context.Context, v any) ([]*int, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOInt2ᚖint(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt2ᚕᚖint(ctx context.Context, sel ast.SelectionSet, v []*int) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOInt2ᚖint(ctx, sel, v[i])
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNItinerary2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐItinerary(ctx context.Context, sel ast.SelectionSet, v *model.Itinerary) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -62311,6 +62882,26 @@ func (ec *executionContext) marshalNRouteStopPattern2ᚖgithubᚗcomᚋinterline
 		return graphql.Null
 	}
 	return ec._RouteStopPattern(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRouteStopPatternTimetableGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableGrid(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopPatternTimetableGrid) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RouteStopPatternTimetableGrid(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRouteStopPatternTimetableTimeGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableTimeGrid(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopPatternTimetableTimeGrid) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RouteStopPatternTimetableTimeGrid(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx context.Context, v any) (tt.Seconds, error) {

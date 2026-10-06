@@ -193,6 +193,16 @@ func (r *Resolver) RouteStopPattern() gqlout.RouteStopPatternResolver {
 	return &routePatternResolver{r}
 }
 
+// RouteStopPatternTimetableGrid .
+func (r *Resolver) RouteStopPatternTimetableGrid() gqlout.RouteStopPatternTimetableGridResolver {
+	return &routePatternGridResolver{r}
+}
+
+// RouteStopPatternTimetableTimeGrid .
+func (r *Resolver) RouteStopPatternTimetableTimeGrid() gqlout.RouteStopPatternTimetableTimeGridResolver {
+	return &routePatternTimeGridResolver{r}
+}
+
 // Segment .
 func (r *Resolver) Segment() gqlout.SegmentResolver { return &segmentResolver{r} }
 
