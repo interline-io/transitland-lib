@@ -1693,12 +1693,12 @@ type FeedVersionResolver interface {
 	Permissions(ctx context.Context, obj *model.FeedVersion) (*model.Permissions, error)
 }
 type FeedVersionGtfsImportResolver interface {
-	SkipEntityErrorCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
-	EntityCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
-	WarningCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
-	SkipEntityReferenceCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
-	SkipEntityFilterCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
-	SkipEntityMarkedCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (interface{}, error)
+	SkipEntityErrorCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
+	EntityCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
+	WarningCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
+	SkipEntityReferenceCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
+	SkipEntityFilterCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
+	SkipEntityMarkedCount(ctx context.Context, obj *model.FeedVersionGtfsImport) (any, error)
 }
 type FlexStopTimeResolver interface {
 	PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
