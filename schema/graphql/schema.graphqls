@@ -1783,6 +1783,9 @@ type RouteStopPattern {
   "Number of trips that operate this stop pattern"
   count: Int!
 
+  "The service date the trips are counted on: the date `Route.patterns` was given, moved into the feed's service window where `use_service_window` asked for that. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve"
+  service_date: Date
+
   """
   One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
 
@@ -1790,8 +1793,67 @@ type RouteStopPattern {
   """
   representative_trip: Trip
 
-  "Representative trips that follow this stop pattern; useful for fetching full stop_times"
+  "Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times"
   trips(limit: Int): [Trip!]
+
+  """
+  The trips `count` counted on `service_date`, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
+  """
+  timetable: RouteStopPatternTimetable
+}
+
+"""
+A stop pattern's trips as grids: row `i` is stop `stop_ids[i]` and column `j` is trip `trips[j]`, in every grid below.
+"""
+type RouteStopPatternTimetable {
+  "The pattern's stops in order, by internal ID. A stop the trips call at twice appears twice"
+  stop_ids: [Int!]!
+
+  "The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its `frequencies` say when it repeats. Flex trips, and trips whose stored stop times do not match the pattern's stops, are left out"
+  trips: [Trip!]!
+
+  "GTFS `stop_times.departure_time`. A stop the feed left untimed may carry an estimate the import interpolated"
+  departure_times: RouteStopPatternTimetableTimeGrid!
+
+  "GTFS `stop_times.arrival_time`. A stop the feed left untimed may carry an estimate the import interpolated"
+  arrival_times: RouteStopPatternTimetableTimeGrid!
+
+  "GTFS `stop_times.pickup_type` [0=regular scheduled pickup, 1=no pickup available, 2=must phone agency to arrange, 3=must coordinate with driver]"
+  pickup_types: RouteStopPatternTimetableGrid!
+
+  "GTFS `stop_times.drop_off_type` [0=regular scheduled drop-off, 1=no drop-off available, 2=must phone agency to arrange, 3=must coordinate with driver]"
+  drop_off_types: RouteStopPatternTimetableGrid!
+
+  "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]"
+  timepoints: RouteStopPatternTimetableGrid!
+}
+
+"""
+One of a timetable's grids of numbers, in three encodings. A cell is null (`.` in `polyline`) where the feed gives no value.
+"""
+type RouteStopPatternTimetableGrid {
+  "The values, unencoded"
+  values: [[Int]!]!
+
+  "Each trip's first non-null value, then each later value as the difference from it: what `polyline` encodes, to check a decoder against"
+  delta: [[Int]!]!
+
+  "Each row of `delta` as one string, in the encoded polyline algorithm applied to single unscaled integers rather than coordinate pairs: each value as the difference from the last one present before it in the row, the first from 0. A `.` marks a missing value"
+  polyline: [String!]!
+}
+
+"""
+One of a timetable's grids of times, in three encodings. A cell is null (`.` in `polyline`) where the feed gives no value.
+"""
+type RouteStopPatternTimetableTimeGrid {
+  "The times, unencoded"
+  values: [[Seconds]!]!
+
+  "Each trip's first non-null time in seconds since midnight, then each later time as the seconds since it: what `polyline` encodes, to check a decoder against"
+  delta: [[Int]!]!
+
+  "Each row of `delta` as one string, in the encoded polyline algorithm applied to single unscaled integers rather than coordinate pairs: each value as the difference from the last one present before it in the row, the first from 0. A `.` marks a missing value"
+  polyline: [String!]!
 }
 
 """

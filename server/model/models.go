@@ -111,6 +111,29 @@ type Trip struct {
 	gtfs.Trip
 }
 
+// RouteStopPatternTimetable is a stop pattern's trips as grids by stop and trip.
+type RouteStopPatternTimetable struct {
+	StopIds        []int
+	Trips          []*Trip
+	DepartureTimes *RouteStopPatternTimetableTimeGrid
+	ArrivalTimes   *RouteStopPatternTimetableTimeGrid
+	PickupTypes    *RouteStopPatternTimetableGrid
+	DropOffTypes   *RouteStopPatternTimetableGrid
+	Timepoints     *RouteStopPatternTimetableGrid
+}
+
+// RouteStopPatternTimetableGrid is one of a timetable's grids of numbers, by stop
+// and trip.
+type RouteStopPatternTimetableGrid struct {
+	Values [][]tt.Int
+}
+
+// RouteStopPatternTimetableTimeGrid is one of a timetable's grids of times, by
+// stop and trip.
+type RouteStopPatternTimetableTimeGrid struct {
+	Values [][]tt.Seconds
+}
+
 type RTStopTimeUpdate struct {
 	LastDelay      *int32
 	StopTimeUpdate *pb.TripUpdate_StopTimeUpdate

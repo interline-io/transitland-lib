@@ -1202,15 +1202,21 @@ type RouteStopPattern struct {
 	DirectionID int `json:"direction_id"`
 	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
+	// The service date the trips are counted on: the date `Route.patterns` was given, moved into the feed's service window where `use_service_window` asked for that. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve
+	ServiceDate *tt.Date `json:"service_date,omitempty"`
 	// One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
 	//
 	// Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
 	RepresentativeTrip *Trip `json:"representative_trip,omitempty"`
-	// Representative trips that follow this stop pattern; useful for fetching full stop_times
-	Trips                []*Trip `json:"trips,omitempty"`
-	FeedVersionID        int     `json:"-"`
-	RepresentativeTripID int     `json:"-"`
-	RouteID              int     `json:"-"`
+	// Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times
+	Trips []*Trip `json:"trips,omitempty"`
+	// The trips `count` counted on `service_date`, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
+	Timetable            *RouteStopPatternTimetable `json:"timetable,omitempty"`
+	FeedVersionID        int                        `json:"-"`
+	RepresentativeTripID int                        `json:"-"`
+	RouteID              int                        `json:"-"`
+	// The trips counted, when Route.patterns was given a date; unset without one.
+	TripIDs tt.Ints `db:"trip_ids"`
 }
 
 // Search options for a route's stop patterns

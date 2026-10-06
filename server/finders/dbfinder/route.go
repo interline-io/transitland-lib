@@ -5,6 +5,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
 
@@ -188,23 +189,30 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 			GroupBy("gtfs_trips.feed_version_id,gtfs_trips.route_id,gtfs_trips.direction_id,gtfs_trips.stop_pattern_id").
 			OrderBy("gtfs_trips.route_id,count desc").
 			Limit(finderCheckLimit(limit))
+		var serviceDate *tt.Date
 		if where != nil {
 			// A feed version whose window has not been computed resolves the date as
 			// given rather than failing: the lookup errors outright when the row is
 			// missing, and one such feed version would otherwise take down every route
 			// in the batch, including those from healthy feed versions.
 			fvsw, _ := f.FindFeedVersionServiceWindow(ctx, fvid)
-			serviceDate, err := resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
+			var err error
+			serviceDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
 			if err != nil {
 				return nil, err
 			}
+			// Trip IDs only for a date: without one, a pattern's trips span every
+			// calendar.
 			if serviceDate != nil {
-				q = serviceDateLateral(q, *serviceDate)
+				q = serviceDateLateral(q, *serviceDate).Column("json_agg(gtfs_trips.id ORDER BY gtfs_trips.id) AS trip_ids")
 			}
 		}
 		var groupEnts []*model.RouteStopPattern
 		if err := dbutil.Select(ctx, f.db, q, &groupEnts); err != nil {
 			return nil, err
+		}
+		for _, ent := range groupEnts {
+			ent.ServiceDate = serviceDate
 		}
 		ents = append(ents, groupEnts...)
 	}
