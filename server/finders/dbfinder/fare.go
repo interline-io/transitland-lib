@@ -2,7 +2,6 @@ package dbfinder
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -12,6 +11,16 @@ import (
 // GTFS Fares v1 and v2 entities. These tables have no filters of their own:
 // each is loaded as a child of its feed version (or, for stop_areas, its area),
 // with the limit applied per parent.
+//
+// The importer rewrites some text references (fare_leg_rules.network_id,
+// from_area_id, to_area_id, and every fare_leg_join_rules column) to the
+// referenced row's internal id when that row exists, and leaves them as GTFS
+// ids otherwise: a network named only in routes.network_id has no
+// gtfs_networks row. Those selects join the referenced table on a numeric
+// stored value and return its GTFS id, falling back to the stored value.
+// The importer leaves a reference unresolved only when the referenced table
+// has no row for it (routes.network_id) or when reference errors are allowed,
+// so a numeric GTFS id matching an unrelated internal id needs both.
 
 func (f *Finder) FareAttributesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareAttribute, error) {
 	var ents []*model.FareAttribute
@@ -30,15 +39,25 @@ func (f *Finder) FareAttributesByIDs(ctx context.Context, ids []int) ([]*model.F
 }
 
 func fareAttributeSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_fare_attributes", limit, ids,
-		"fare_id",
-		"price",
-		"currency_type",
-		"payment_method",
-		"transfers",
-		"agency_id",
-		"transfer_duration",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_fare_attributes.id",
+		"gtfs_fare_attributes.feed_version_id",
+		"gtfs_fare_attributes.fare_id",
+		"gtfs_fare_attributes.price",
+		"gtfs_fare_attributes.currency_type",
+		"gtfs_fare_attributes.payment_method",
+		"gtfs_fare_attributes.transfers",
+		"gtfs_fare_attributes.agency_id",
+		"gtfs_fare_attributes.transfer_duration",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_fare_attributes").
+		Join("feed_versions ON feed_versions.id = gtfs_fare_attributes.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_fare_attributes.id", ids))
+	}
+	return q.OrderBy("gtfs_fare_attributes.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareRule, error) {
@@ -49,13 +68,23 @@ func (f *Finder) FareRulesByFeedVersionIDs(ctx context.Context, limit *int, keys
 }
 
 func fareRuleSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_fare_rules", limit, ids,
-		"fare_id",
-		"route_id",
-		"origin_id",
-		"destination_id",
-		"contains_id",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_fare_rules.id",
+		"gtfs_fare_rules.feed_version_id",
+		"gtfs_fare_rules.fare_id",
+		"gtfs_fare_rules.route_id",
+		"gtfs_fare_rules.origin_id",
+		"gtfs_fare_rules.destination_id",
+		"gtfs_fare_rules.contains_id",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_fare_rules").
+		Join("feed_versions ON feed_versions.id = gtfs_fare_rules.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_fare_rules.id", ids))
+	}
+	return q.OrderBy("gtfs_fare_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareMediaByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareMedia, error) {
@@ -75,11 +104,21 @@ func (f *Finder) FareMediaByIDs(ctx context.Context, ids []int) ([]*model.FareMe
 }
 
 func fareMediaSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_fare_media", limit, ids,
-		"fare_media_id",
-		"fare_media_name",
-		"fare_media_type",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_fare_media.id",
+		"gtfs_fare_media.feed_version_id",
+		"gtfs_fare_media.fare_media_id",
+		"gtfs_fare_media.fare_media_name",
+		"gtfs_fare_media.fare_media_type",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_fare_media").
+		Join("feed_versions ON feed_versions.id = gtfs_fare_media.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_fare_media.id", ids))
+	}
+	return q.OrderBy("gtfs_fare_media.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareProductsByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareProduct, error) {
@@ -90,18 +129,28 @@ func (f *Finder) FareProductsByFeedVersionIDs(ctx context.Context, limit *int, k
 }
 
 func fareProductSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_fare_products", limit, ids,
-		"fare_product_id",
-		"fare_product_name",
-		"amount",
-		"currency",
-		"rider_category_id",
-		"fare_media_id",
-		"duration_start",
-		"duration_amount",
-		"duration_unit",
-		"duration_type",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_fare_products.id",
+		"gtfs_fare_products.feed_version_id",
+		"gtfs_fare_products.fare_product_id",
+		"gtfs_fare_products.fare_product_name",
+		"gtfs_fare_products.amount",
+		"gtfs_fare_products.currency",
+		"gtfs_fare_products.rider_category_id",
+		"gtfs_fare_products.fare_media_id",
+		"gtfs_fare_products.duration_start",
+		"gtfs_fare_products.duration_amount",
+		"gtfs_fare_products.duration_unit",
+		"gtfs_fare_products.duration_type",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_fare_products").
+		Join("feed_versions ON feed_versions.id = gtfs_fare_products.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_fare_products.id", ids))
+	}
+	return q.OrderBy("gtfs_fare_products.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareLegRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareLegRule, error) {
@@ -112,17 +161,30 @@ func (f *Finder) FareLegRulesByFeedVersionIDs(ctx context.Context, limit *int, k
 }
 
 func fareLegRuleSelect(limit *int, ids []int) sq.SelectBuilder {
-	q := fareEntitySelect("gtfs_fare_leg_rules", limit, ids,
-		"leg_group_id",
-		"from_timeframe_group_id",
-		"to_timeframe_group_id",
-		"fare_product_id",
-		"rule_priority",
-		"transfer_only",
-	)
-	q = selectGtfsID(q, "gtfs_fare_leg_rules", "network_id", "gtfs_networks", "network_id", "ref_network")
-	q = selectGtfsID(q, "gtfs_fare_leg_rules", "from_area_id", "gtfs_areas", "area_id", "ref_from_area")
-	return selectGtfsID(q, "gtfs_fare_leg_rules", "to_area_id", "gtfs_areas", "area_id", "ref_to_area")
+	q := sq.StatementBuilder.Select(
+		"gtfs_fare_leg_rules.id",
+		"gtfs_fare_leg_rules.feed_version_id",
+		"gtfs_fare_leg_rules.leg_group_id",
+		"gtfs_fare_leg_rules.from_timeframe_group_id",
+		"gtfs_fare_leg_rules.to_timeframe_group_id",
+		"gtfs_fare_leg_rules.fare_product_id",
+		"gtfs_fare_leg_rules.rule_priority",
+		"gtfs_fare_leg_rules.transfer_only",
+		"COALESCE(ref_network.network_id, gtfs_fare_leg_rules.network_id) AS network_id",
+		"COALESCE(ref_from_area.area_id, gtfs_fare_leg_rules.from_area_id) AS from_area_id",
+		"COALESCE(ref_to_area.area_id, gtfs_fare_leg_rules.to_area_id) AS to_area_id",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_fare_leg_rules").
+		Join("feed_versions ON feed_versions.id = gtfs_fare_leg_rules.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		LeftJoin("gtfs_networks ref_network ON ref_network.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_network.id = (CASE WHEN gtfs_fare_leg_rules.network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.network_id::bigint END)").
+		LeftJoin("gtfs_areas ref_from_area ON ref_from_area.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_from_area.id = (CASE WHEN gtfs_fare_leg_rules.from_area_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.from_area_id::bigint END)").
+		LeftJoin("gtfs_areas ref_to_area ON ref_to_area.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_to_area.id = (CASE WHEN gtfs_fare_leg_rules.to_area_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.to_area_id::bigint END)")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_fare_leg_rules.id", ids))
+	}
+	return q.OrderBy("gtfs_fare_leg_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareLegJoinRule, error) {
@@ -133,11 +195,26 @@ func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *in
 }
 
 func fareLegJoinRuleSelect(limit *int, ids []int) sq.SelectBuilder {
-	q := fareEntitySelect("gtfs_fare_leg_join_rules", limit, ids)
-	q = selectGtfsID(q, "gtfs_fare_leg_join_rules", "from_network_id", "gtfs_networks", "network_id", "ref_from_network")
-	q = selectGtfsID(q, "gtfs_fare_leg_join_rules", "to_network_id", "gtfs_networks", "network_id", "ref_to_network")
-	q = selectGtfsID(q, "gtfs_fare_leg_join_rules", "from_stop_id", "gtfs_stops", "stop_id", "ref_from_stop")
-	return selectGtfsID(q, "gtfs_fare_leg_join_rules", "to_stop_id", "gtfs_stops", "stop_id", "ref_to_stop")
+	q := sq.StatementBuilder.Select(
+		"gtfs_fare_leg_join_rules.id",
+		"gtfs_fare_leg_join_rules.feed_version_id",
+		"COALESCE(ref_from_network.network_id, gtfs_fare_leg_join_rules.from_network_id) AS from_network_id",
+		"COALESCE(ref_to_network.network_id, gtfs_fare_leg_join_rules.to_network_id) AS to_network_id",
+		"COALESCE(ref_from_stop.stop_id, gtfs_fare_leg_join_rules.from_stop_id) AS from_stop_id",
+		"COALESCE(ref_to_stop.stop_id, gtfs_fare_leg_join_rules.to_stop_id) AS to_stop_id",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_fare_leg_join_rules").
+		Join("feed_versions ON feed_versions.id = gtfs_fare_leg_join_rules.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		LeftJoin("gtfs_networks ref_from_network ON ref_from_network.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_from_network.id = (CASE WHEN gtfs_fare_leg_join_rules.from_network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.from_network_id::bigint END)").
+		LeftJoin("gtfs_networks ref_to_network ON ref_to_network.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_to_network.id = (CASE WHEN gtfs_fare_leg_join_rules.to_network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.to_network_id::bigint END)").
+		LeftJoin("gtfs_stops ref_from_stop ON ref_from_stop.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_from_stop.id = (CASE WHEN gtfs_fare_leg_join_rules.from_stop_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.from_stop_id::bigint END)").
+		LeftJoin("gtfs_stops ref_to_stop ON ref_to_stop.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_to_stop.id = (CASE WHEN gtfs_fare_leg_join_rules.to_stop_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.to_stop_id::bigint END)")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_fare_leg_join_rules.id", ids))
+	}
+	return q.OrderBy("gtfs_fare_leg_join_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareTransferRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareTransferRule, error) {
@@ -148,16 +225,26 @@ func (f *Finder) FareTransferRulesByFeedVersionIDs(ctx context.Context, limit *i
 }
 
 func fareTransferRuleSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_fare_transfer_rules", limit, ids,
-		"from_leg_group_id",
-		"to_leg_group_id",
-		"transfer_count",
-		"duration_limit",
-		"duration_limit_type",
-		"fare_transfer_type",
-		"fare_product_id",
-		"filter_fare_product_id",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_fare_transfer_rules.id",
+		"gtfs_fare_transfer_rules.feed_version_id",
+		"gtfs_fare_transfer_rules.from_leg_group_id",
+		"gtfs_fare_transfer_rules.to_leg_group_id",
+		"gtfs_fare_transfer_rules.transfer_count",
+		"gtfs_fare_transfer_rules.duration_limit",
+		"gtfs_fare_transfer_rules.duration_limit_type",
+		"gtfs_fare_transfer_rules.fare_transfer_type",
+		"gtfs_fare_transfer_rules.fare_product_id",
+		"gtfs_fare_transfer_rules.filter_fare_product_id",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_fare_transfer_rules").
+		Join("feed_versions ON feed_versions.id = gtfs_fare_transfer_rules.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_fare_transfer_rules.id", ids))
+	}
+	return q.OrderBy("gtfs_fare_transfer_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) RiderCategoriesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RiderCategory, error) {
@@ -168,14 +255,24 @@ func (f *Finder) RiderCategoriesByFeedVersionIDs(ctx context.Context, limit *int
 }
 
 func riderCategorySelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_rider_categories", limit, ids,
-		"rider_category_id",
-		"rider_category_name",
-		"is_default_fare_category",
-		"eligibility_url",
-		"min_age",
-		"max_age",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_rider_categories.id",
+		"gtfs_rider_categories.feed_version_id",
+		"gtfs_rider_categories.rider_category_id",
+		"gtfs_rider_categories.rider_category_name",
+		"gtfs_rider_categories.is_default_fare_category",
+		"gtfs_rider_categories.eligibility_url",
+		"gtfs_rider_categories.min_age",
+		"gtfs_rider_categories.max_age",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_rider_categories").
+		Join("feed_versions ON feed_versions.id = gtfs_rider_categories.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_rider_categories.id", ids))
+	}
+	return q.OrderBy("gtfs_rider_categories.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) TimeframesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Timeframe, error) {
@@ -186,12 +283,22 @@ func (f *Finder) TimeframesByFeedVersionIDs(ctx context.Context, limit *int, key
 }
 
 func timeframeSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_timeframes", limit, ids,
-		"timeframe_group_id",
-		"start_time",
-		"end_time",
-		"service_id",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_timeframes.id",
+		"gtfs_timeframes.feed_version_id",
+		"gtfs_timeframes.timeframe_group_id",
+		"gtfs_timeframes.start_time",
+		"gtfs_timeframes.end_time",
+		"gtfs_timeframes.service_id",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_timeframes").
+		Join("feed_versions ON feed_versions.id = gtfs_timeframes.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_timeframes.id", ids))
+	}
+	return q.OrderBy("gtfs_timeframes.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) AreasByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Area, error) {
@@ -211,10 +318,20 @@ func (f *Finder) AreasByIDs(ctx context.Context, ids []int) ([]*model.Area, []er
 }
 
 func areaSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_areas", limit, ids,
-		"area_id",
-		"area_name",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_areas.id",
+		"gtfs_areas.feed_version_id",
+		"gtfs_areas.area_id",
+		"gtfs_areas.area_name",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_areas").
+		Join("feed_versions ON feed_versions.id = gtfs_areas.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_areas.id", ids))
+	}
+	return q.OrderBy("gtfs_areas.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) NetworksByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Network, error) {
@@ -234,10 +351,20 @@ func (f *Finder) NetworksByIDs(ctx context.Context, ids []int) ([]*model.Network
 }
 
 func networkSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_networks", limit, ids,
-		"network_id",
-		"network_name",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_networks.id",
+		"gtfs_networks.feed_version_id",
+		"gtfs_networks.network_id",
+		"gtfs_networks.network_name",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_networks").
+		Join("feed_versions ON feed_versions.id = gtfs_networks.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_networks.id", ids))
+	}
+	return q.OrderBy("gtfs_networks.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) RouteNetworksByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteNetwork, error) {
@@ -248,10 +375,20 @@ func (f *Finder) RouteNetworksByFeedVersionIDs(ctx context.Context, limit *int, 
 }
 
 func routeNetworkSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_route_networks", limit, ids,
-		"network_id",
-		"route_id",
-	)
+	q := sq.StatementBuilder.Select(
+		"gtfs_route_networks.id",
+		"gtfs_route_networks.feed_version_id",
+		"gtfs_route_networks.network_id",
+		"gtfs_route_networks.route_id",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_route_networks").
+		Join("feed_versions ON feed_versions.id = gtfs_route_networks.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if len(ids) > 0 {
+		q = q.Where(In("gtfs_route_networks.id", ids))
+	}
+	return q.OrderBy("gtfs_route_networks.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) StopAreasByAreaIDs(ctx context.Context, limit *int, keys []int) ([][]*model.StopArea, error) {
@@ -262,45 +399,18 @@ func (f *Finder) StopAreasByAreaIDs(ctx context.Context, limit *int, keys []int)
 }
 
 func stopAreaSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_stop_areas", limit, ids,
-		"area_id",
-		"stop_id",
-	)
-}
-
-// selectGtfsID selects table.col as the GTFS id it references. The importer
-// rewrites a text reference to the referenced row's internal id when that row
-// exists (e.g. a network from networks.txt) and leaves it as the GTFS id
-// otherwise (e.g. a network that only appears in routes.network_id), so
-// resolve ids through refTable and fall back to the stored value.
-func selectGtfsID(q sq.SelectBuilder, table, col, refTable, refCol, alias string) sq.SelectBuilder {
-	ref := az09(table) + "." + az09(col)
-	return q.
-		Column(fmt.Sprintf("COALESCE(%s.%s, %s) AS %s", alias, az09(refCol), ref, az09(col))).
-		LeftJoin(fmt.Sprintf(
-			"%s %s ON %s.id = (CASE WHEN %s ~ '^[0-9]{1,18}$' THEN %s::bigint END) AND %s.feed_version_id = %s.feed_version_id",
-			az09(refTable), alias, alias, ref, ref, alias, az09(table),
-		))
-}
-
-// fareEntitySelect selects the listed columns of a fares table, plus the id,
-// feed version, and feed metadata common to every entity.
-func fareEntitySelect(table string, limit *int, ids []int, cols ...string) sq.SelectBuilder {
-	table = az09(table)
-	sel := []string{table + ".id", table + ".feed_version_id"}
-	for _, col := range cols {
-		sel = append(sel, table+"."+az09(col))
-	}
-	sel = append(sel,
+	q := sq.StatementBuilder.Select(
+		"gtfs_stop_areas.id",
+		"gtfs_stop_areas.feed_version_id",
+		"gtfs_stop_areas.area_id",
+		"gtfs_stop_areas.stop_id",
 		"feed_versions.sha1 AS feed_version_sha1",
 		"current_feeds.onestop_id AS feed_onestop_id",
-	)
-	q := sq.StatementBuilder.Select(sel...).
-		From(table).
-		Join("feed_versions ON feed_versions.id = " + table + ".feed_version_id").
+	).From("gtfs_stop_areas").
+		Join("feed_versions ON feed_versions.id = gtfs_stop_areas.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
 	if len(ids) > 0 {
-		q = q.Where(In(table+".id", ids))
+		q = q.Where(In("gtfs_stop_areas.id", ids))
 	}
-	return q.OrderBy(table + ".id ASC").Limit(finderCheckLimit(limit))
+	return q.OrderBy("gtfs_stop_areas.id ASC").Limit(finderCheckLimit(limit))
 }

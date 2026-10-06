@@ -96,6 +96,9 @@ func (r *fareAttributeResolver) Agency(ctx context.Context, obj *model.FareAttri
 // FareAttribute resolves fare_rules.fare_id, which the importer stores as the
 // referenced fare_attributes row id.
 func (r *fareRuleResolver) FareAttribute(ctx context.Context, obj *model.FareRule) (*model.FareAttribute, error) {
+	if !obj.FareID.Valid {
+		return nil, nil
+	}
 	return LoaderFor(ctx).FareAttributesByIDs.Load(ctx, obj.FareID.Int())()
 }
 
@@ -120,6 +123,9 @@ func (r *fareProductResolver) FareMedia(ctx context.Context, obj *model.FareProd
 }
 
 func (r *timeframeResolver) Service(ctx context.Context, obj *model.Timeframe) (*model.Calendar, error) {
+	if !obj.ServiceID.Valid {
+		return nil, nil
+	}
 	return LoaderFor(ctx).CalendarsByIDs.Load(ctx, obj.ServiceID.Int())()
 }
 

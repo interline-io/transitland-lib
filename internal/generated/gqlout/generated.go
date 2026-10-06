@@ -11840,7 +11840,7 @@ type FareRule {
   id: Int!
 
   "GTFS ` + "`" + `fare_rules.fare_id` + "`" + `; the fare this rule applies"
-  fare_attribute: FareAttribute!
+  fare_attribute: FareAttribute
 
   "GTFS ` + "`" + `fare_rules.route_id` + "`" + `; route associated with this fare, if specified"
   route: Route
@@ -11878,7 +11878,7 @@ type FareMedia {
   fare_media_name: String
 
   "GTFS ` + "`" + `fare_media.fare_media_type` + "`" + ` [0=none, 1=physical paper ticket, 2=physical transit card, 3=cEMV, 4=mobile app]"
-  fare_media_type: Int!
+  fare_media_type: Int
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -11898,7 +11898,7 @@ type FareProduct {
   id: Int!
 
   "GTFS ` + "`" + `fare_products.fare_product_id` + "`" + `; several records may share a ` + "`" + `fare_product_id` + "`" + ` with different rider categories or fare media"
-  fare_product_id: String!
+  fare_product_id: String
 
   "GTFS ` + "`" + `fare_products.fare_product_name` + "`" + `"
   fare_product_name: String
@@ -11910,10 +11910,10 @@ type FareProduct {
   fare_media: FareMedia
 
   "GTFS ` + "`" + `fare_products.amount` + "`" + `; cost of the fare product; may be negative to represent a transfer discount"
-  amount: Float!
+  amount: Float
 
   "GTFS ` + "`" + `fare_products.currency` + "`" + `; ISO 4217 currency code"
-  currency: String!
+  currency: String
 
   "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_start` + "`" + `; event that starts the product's validity period"
   duration_start: Int
@@ -11963,7 +11963,7 @@ type FareLegRule {
   to_timeframe_group_id: String
 
   "GTFS ` + "`" + `fare_leg_rules.fare_product_id` + "`" + `; references ` + "`" + `fare_products.fare_product_id` + "`" + `"
-  fare_product_id: String!
+  fare_product_id: String
 
   "GTFS ` + "`" + `fare_leg_rules.rule_priority` + "`" + `; when several rules match a leg, those with the highest priority apply"
   rule_priority: Int
@@ -11989,10 +11989,10 @@ type FareLegJoinRule {
   id: Int!
 
   "GTFS ` + "`" + `fare_leg_join_rules.from_network_id` + "`" + `"
-  from_network_id: String!
+  from_network_id: String
 
   "GTFS ` + "`" + `fare_leg_join_rules.to_network_id` + "`" + `"
-  to_network_id: String!
+  to_network_id: String
 
   "GTFS ` + "`" + `fare_leg_join_rules.from_stop_id` + "`" + `"
   from_stop_id: String
@@ -12033,7 +12033,7 @@ type FareTransferRule {
   duration_limit_type: Int
 
   "GTFS ` + "`" + `fare_transfer_rules.fare_transfer_type` + "`" + ` [0=A + AB, 1=A + AB + B, 2=AB]"
-  fare_transfer_type: Int!
+  fare_transfer_type: Int
 
   "GTFS ` + "`" + `fare_transfer_rules.fare_product_id` + "`" + `; empty means the transfer costs nothing"
   fare_product_id: String
@@ -12103,7 +12103,7 @@ type Timeframe {
   end_time: Seconds
 
   "GTFS ` + "`" + `timeframes.service_id` + "`" + `; dates on which this timeframe is in effect"
-  service: Calendar!
+  service: Calendar
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -24117,10 +24117,10 @@ func (ec *executionContext) _FareLegJoinRule_from_network_id(ctx context.Context
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareLegJoinRule_from_network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -24140,10 +24140,10 @@ func (ec *executionContext) _FareLegJoinRule_to_network_id(ctx context.Context, 
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareLegJoinRule_to_network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -24448,10 +24448,10 @@ func (ec *executionContext) _FareLegRule_fare_product_id(ctx context.Context, fi
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareLegRule_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -24664,10 +24664,10 @@ func (ec *executionContext) _FareMedia_fare_media_type(ctx context.Context, fiel
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareMedia_fare_media_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -24788,10 +24788,10 @@ func (ec *executionContext) _FareProduct_fare_product_id(ctx context.Context, fi
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareProduct_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -24889,10 +24889,10 @@ func (ec *executionContext) _FareProduct_amount(ctx context.Context, field graph
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.CurrencyAmount) graphql.Marshaler {
-			return ec.marshalNFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx, selections, v)
+			return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareProduct_amount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -24912,10 +24912,10 @@ func (ec *executionContext) _FareProduct_currency(ctx context.Context, field gra
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.Currency) graphql.Marshaler {
-			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx, selections, v)
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareProduct_currency(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -25128,10 +25128,10 @@ func (ec *executionContext) _FareRule_fare_attribute(ctx context.Context, field 
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.FareAttribute) graphql.Marshaler {
-			return ec.marshalNFareAttribute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx, selections, v)
+			return ec.marshalOFareAttribute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareRule_fare_attribute(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -25477,10 +25477,10 @@ func (ec *executionContext) _FareTransferRule_fare_transfer_type(ctx context.Con
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_FareTransferRule_fare_transfer_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -45818,10 +45818,10 @@ func (ec *executionContext) _Timeframe_service(ctx context.Context, field graphq
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
-			return ec.marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx, selections, v)
+			return ec.marshalOCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_Timeframe_service(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -55427,14 +55427,8 @@ func (ec *executionContext) _FareLegJoinRule(ctx context.Context, sel ast.Select
 			}
 		case "from_network_id":
 			out.Values[i] = ec._FareLegJoinRule_from_network_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "to_network_id":
 			out.Values[i] = ec._FareLegJoinRule_to_network_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "from_stop_id":
 			out.Values[i] = ec._FareLegJoinRule_from_stop_id(ctx, field, obj)
 		case "to_stop_id":
@@ -55538,9 +55532,6 @@ func (ec *executionContext) _FareLegRule(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._FareLegRule_to_timeframe_group_id(ctx, field, obj)
 		case "fare_product_id":
 			out.Values[i] = ec._FareLegRule_fare_product_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "rule_priority":
 			out.Values[i] = ec._FareLegRule_rule_priority(ctx, field, obj)
 		case "transfer_only":
@@ -55639,9 +55630,6 @@ func (ec *executionContext) _FareMedia(ctx context.Context, sel ast.SelectionSet
 			out.Values[i] = ec._FareMedia_fare_media_name(ctx, field, obj)
 		case "fare_media_type":
 			out.Values[i] = ec._FareMedia_fare_media_type(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "feed_version_sha1":
 			out.Values[i] = ec._FareMedia_feed_version_sha1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -55729,9 +55717,6 @@ func (ec *executionContext) _FareProduct(ctx context.Context, sel ast.SelectionS
 			}
 		case "fare_product_id":
 			out.Values[i] = ec._FareProduct_fare_product_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "fare_product_name":
 			out.Values[i] = ec._FareProduct_fare_product_name(ctx, field, obj)
 		case "rider_category_id":
@@ -55802,14 +55787,8 @@ func (ec *executionContext) _FareProduct(ctx context.Context, sel ast.SelectionS
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "amount":
 			out.Values[i] = ec._FareProduct_amount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "currency":
 			out.Values[i] = ec._FareProduct_currency(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "duration_start":
 			out.Values[i] = ec._FareProduct_duration_start(ctx, field, obj)
 		case "duration_amount":
@@ -55906,16 +55885,13 @@ func (ec *executionContext) _FareRule(ctx context.Context, sel ast.SelectionSet,
 		case "fare_attribute":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._FareRule_fare_attribute(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
@@ -56075,9 +56051,6 @@ func (ec *executionContext) _FareTransferRule(ctx context.Context, sel ast.Selec
 			out.Values[i] = ec._FareTransferRule_duration_limit_type(ctx, field, obj)
 		case "fare_transfer_type":
 			out.Values[i] = ec._FareTransferRule_fare_transfer_type(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "fare_product_id":
 			out.Values[i] = ec._FareTransferRule_fare_product_id(ctx, field, obj)
 		case "filter_fare_product_id":
@@ -66256,16 +66229,13 @@ func (ec *executionContext) _Timeframe(ctx context.Context, sel ast.SelectionSet
 		case "service":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._Timeframe_service(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
@@ -68431,10 +68401,6 @@ func (ec *executionContext) marshalNEntityDeleteResult2ᚖgithubᚗcomᚋinterli
 	return ec._EntityDeleteResult(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFareAttribute2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx context.Context, sel ast.SelectionSet, v model.FareAttribute) graphql.Marshaler {
-	return ec._FareAttribute(ctx, sel, &v)
-}
-
 func (ec *executionContext) marshalNFareAttribute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttributeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareAttribute) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -68862,16 +68828,6 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx context.Context, v any) (tt.CurrencyAmount, error) {
-	var res tt.CurrencyAmount
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx context.Context, sel ast.SelectionSet, v tt.CurrencyAmount) graphql.Marshaler {
-	return v
 }
 
 func (ec *executionContext) unmarshalNFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx context.Context, v any) (tt.Float, error) {
@@ -70925,6 +70881,13 @@ func (ec *executionContext) marshalOEmail2githubᚗcomᚋinterlineᚑioᚋtransi
 	return v
 }
 
+func (ec *executionContext) marshalOFareAttribute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx context.Context, sel ast.SelectionSet, v *model.FareAttribute) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._FareAttribute(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOFareMedia2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareMedia(ctx context.Context, sel ast.SelectionSet, v *model.FareMedia) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -71167,6 +71130,16 @@ func (ec *executionContext) marshalOFeedVersionServiceWindow2ᚖgithubᚗcomᚋi
 		return graphql.Null
 	}
 	return ec._FeedVersionServiceWindow(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx context.Context, v any) (tt.CurrencyAmount, error) {
+	var res tt.CurrencyAmount
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx context.Context, sel ast.SelectionSet, v tt.CurrencyAmount) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx context.Context, v any) (tt.Float, error) {
@@ -72458,6 +72431,16 @@ func (ec *executionContext) unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterline
 	}
 	res, err := ec.unmarshalInputStopTimeFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx context.Context, v any) (tt.Currency, error) {
+	var res tt.Currency
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx context.Context, sel ast.SelectionSet, v tt.Currency) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx context.Context, v any) (tt.String, error) {

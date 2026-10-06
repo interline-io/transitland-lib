@@ -115,6 +115,11 @@ func TestUnimportFeedVersion(t *testing.T) {
 	dburl := os.Getenv("TL_TEST_DATABASE_URL")
 	err := testdb.TempPostgres(dburl, func(atx tldb.Adapter) error {
 		fvid := setupImport(ctx, t, atx)
+		// The example feed has no fare_leg_join_rules.txt; add a row so the
+		// test covers that table too.
+		if _, err := atx.Sqrl().Insert("gtfs_fare_leg_join_rules").Columns("feed_version_id", "from_network_id", "to_network_id").Values(fvid, "a", "b").Exec(); err != nil {
+			t.Fatal(err)
+		}
 		// TODO: test ExtraTables option
 		if err := UnimportFeedVersion(ctx, atx, fvid, nil); err != nil {
 			t.Fatal(err)
@@ -145,6 +150,10 @@ func TestUnimportFeedVersion(t *testing.T) {
 			},
 			{
 				table:  "feed_version_gtfs_imports",
+				expect: 0,
+			},
+			{
+				table:  "gtfs_fare_leg_join_rules",
 				expect: 0,
 			},
 		}

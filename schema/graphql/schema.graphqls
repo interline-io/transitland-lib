@@ -1589,7 +1589,7 @@ type FareRule {
   id: Int!
 
   "GTFS `fare_rules.fare_id`; the fare this rule applies"
-  fare_attribute: FareAttribute!
+  fare_attribute: FareAttribute
 
   "GTFS `fare_rules.route_id`; route associated with this fare, if specified"
   route: Route
@@ -1627,7 +1627,7 @@ type FareMedia {
   fare_media_name: String
 
   "GTFS `fare_media.fare_media_type` [0=none, 1=physical paper ticket, 2=physical transit card, 3=cEMV, 4=mobile app]"
-  fare_media_type: Int!
+  fare_media_type: Int
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -1647,7 +1647,7 @@ type FareProduct {
   id: Int!
 
   "GTFS `fare_products.fare_product_id`; several records may share a `fare_product_id` with different rider categories or fare media"
-  fare_product_id: String!
+  fare_product_id: String
 
   "GTFS `fare_products.fare_product_name`"
   fare_product_name: String
@@ -1659,10 +1659,10 @@ type FareProduct {
   fare_media: FareMedia
 
   "GTFS `fare_products.amount`; cost of the fare product; may be negative to represent a transfer discount"
-  amount: Float!
+  amount: Float
 
   "GTFS `fare_products.currency`; ISO 4217 currency code"
-  currency: String!
+  currency: String
 
   "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. `fare_products.duration_start`; event that starts the product's validity period"
   duration_start: Int
@@ -1712,7 +1712,7 @@ type FareLegRule {
   to_timeframe_group_id: String
 
   "GTFS `fare_leg_rules.fare_product_id`; references `fare_products.fare_product_id`"
-  fare_product_id: String!
+  fare_product_id: String
 
   "GTFS `fare_leg_rules.rule_priority`; when several rules match a leg, those with the highest priority apply"
   rule_priority: Int
@@ -1738,10 +1738,10 @@ type FareLegJoinRule {
   id: Int!
 
   "GTFS `fare_leg_join_rules.from_network_id`"
-  from_network_id: String!
+  from_network_id: String
 
   "GTFS `fare_leg_join_rules.to_network_id`"
-  to_network_id: String!
+  to_network_id: String
 
   "GTFS `fare_leg_join_rules.from_stop_id`"
   from_stop_id: String
@@ -1782,7 +1782,7 @@ type FareTransferRule {
   duration_limit_type: Int
 
   "GTFS `fare_transfer_rules.fare_transfer_type` [0=A + AB, 1=A + AB + B, 2=AB]"
-  fare_transfer_type: Int!
+  fare_transfer_type: Int
 
   "GTFS `fare_transfer_rules.fare_product_id`; empty means the transfer costs nothing"
   fare_product_id: String
@@ -1852,7 +1852,7 @@ type Timeframe {
   end_time: Seconds
 
   "GTFS `timeframes.service_id`; dates on which this timeframe is in effect"
-  service: Calendar!
+  service: Calendar
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!

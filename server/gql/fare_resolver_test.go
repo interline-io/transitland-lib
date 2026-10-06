@@ -127,11 +127,16 @@ func TestFareResolver(t *testing.T) {
 			},
 		},
 		{
-			name:              "fare_leg_rules from a real feed",
-			query:             `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_rules { network_id } } }`,
-			vars:              hw{"sha1": ctranFlexSha1},
-			selector:          "feed_versions.0.fare_leg_rules.#.network_id",
-			selectExpectCount: 3,
+			// ctran-flex names its network only in routes.network_id, so the
+			// importer keeps the GTFS id in fare_leg_rules.network_id.
+			name:         "fare_leg_rules network from routes.network_id",
+			query:        `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_rules { network_id } networks { id } } }`,
+			vars:         hw{"sha1": ctranFlexSha1},
+			selector:     "feed_versions.0.fare_leg_rules.#.network_id",
+			selectExpect: []string{"LOCAL", "LOCAL", "LOCAL"},
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.networks.#.id", expect: []string{}},
+			},
 		},
 		// Experimental age fields; the ctran-flex rider_categories case below covers the spec fields
 		{
@@ -196,11 +201,19 @@ func TestFareResolver(t *testing.T) {
 			},
 		},
 		{
+			// CT assigns networks with route_networks.txt, so routes.network_id is empty
 			name:         "route network_id",
 			query:        `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { routes { route_id network_id } } }`,
 			vars:         hw{"sha1": ctSha1},
 			selector:     "feed_versions.0.routes.#.network_id",
 			selectExpect: []string{"", "", "", "", "", ""},
+		},
+		{
+			name:                 "route network_id from routes.txt",
+			query:                `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { routes { network_id } } }`,
+			vars:                 hw{"sha1": ctranFlexSha1},
+			selector:             "feed_versions.0.routes.#.network_id",
+			selectExpectContains: []string{"LOCAL"},
 		},
 		{
 			// Several feed versions load in one batch; the limit applies to each.

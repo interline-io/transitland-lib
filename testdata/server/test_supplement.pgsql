@@ -139,12 +139,10 @@ create temporary table ct_ref as
         (select s.id::text from gtfs_stops s join ct_fv on ct_fv.id = s.feed_version_id where s.stop_id = '70261') as stop_70261,
         (select s.id::text from gtfs_stops s join ct_fv on ct_fv.id = s.feed_version_id where s.stop_id = '70262') as stop_70262;
 
--- The ct_express rule keeps the GTFS network id, as for a network that is only
--- named in routes.network_id, to cover the fallback when no row matches.
 insert into gtfs_fare_leg_rules(feed_version_id, leg_group_id, network_id, from_area_id, to_area_id, from_timeframe_group_id, to_timeframe_group_id, fare_product_id, rule_priority, transfer_only)
     select ct_fv.id, 'ct_local', local_net, zone1, zone4, null, null, 'two_zone', 0, null::int from ct_fv, ct_ref
     union all select ct_fv.id, 'ct_local', local_net, zone1, zone4, 'weekday_peak', null, 'two_zone_peak', 1, null::int from ct_fv, ct_ref
-    union all select ct_fv.id, 'ct_express', 'express', null, null, null, null, 'two_zone', 0, 1 from ct_fv, ct_ref;
+    union all select ct_fv.id, 'ct_express', express_net, null, null, null, null, 'two_zone', 0, 1 from ct_fv, ct_ref;
 
 insert into gtfs_fare_transfer_rules(feed_version_id, from_leg_group_id, to_leg_group_id, transfer_count, duration_limit, duration_limit_type, fare_transfer_type, fare_product_id, filter_fare_product_id)
     select id, 'ct_local', 'ct_express', 1, 5400, 1, 0, 'express_upgrade', 'two_zone' from ct_fv;
