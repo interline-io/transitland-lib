@@ -75,8 +75,8 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 			"co.id as operator_id",
 			"co.website as website",
 			"co.operator_tags as operator_tags",
-			// No operator record defined in Atlas: a virtual (generated) operator record.
-			"(co.id IS NULL) as generated",
+			// Not linked to an operator record defined in Atlas: a virtual (generated) operator record.
+			"(coif.operator_id IS NULL) as generated",
 		).
 		From("current_operators_in_feed coif").
 		Join("current_feeds on current_feeds.id = coif.feed_id").
