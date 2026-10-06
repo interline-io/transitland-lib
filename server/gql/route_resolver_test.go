@@ -243,73 +243,73 @@ func TestRouteResolver(t *testing.T) {
 			},
 		},
 		{
-			name:  "route patterns departures only the date's trips",
-			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count trips(limit:1000) { trip_id } departures { stop_ids trips { trip_id } departure_times arrival_times pickup_types drop_off_types timepoints } } } }`,
+			name:  "route patterns timetable only the date's trips",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count trips(limit:1000) { trip_id } timetable { stop_ids trips { trip_id } departure_times arrival_times pickup_types drop_off_types timepoints } } } }`,
 			f: func(t *testing.T, jj string) {
-				checkPatternDepartures(t, jj)
+				checkPatternTimetable(t, jj)
 				// Pattern 31 runs 132 trips across the weekday, Saturday and Sunday
 				// calendars, and 26 on this Wednesday.
 				pat := gjson.Get(jj, "routes.0.patterns.#(stop_pattern_id==31)")
 				assert.Equal(t, int64(26), pat.Get("trips.#").Int(), "the pattern's trips on the date")
-				dep := pat.Get("departures")
-				assert.Equal(t, int64(26), dep.Get("trips.#").Int())
-				assert.Equal(t, "2221650WKDY", dep.Get("trips.0.trip_id").String(), "the day's first trip")
-				assert.Equal(t, "16:50:00", dep.Get("departure_times.0.0").String())
-				assert.Equal(t, "18:00:00", dep.Get("arrival_times.18.0").String())
-				assert.Equal(t, int64(1), dep.Get("timepoints.0.0").Int())
+				table := pat.Get("timetable")
+				assert.Equal(t, int64(26), table.Get("trips.#").Int())
+				assert.Equal(t, "2221650WKDY", table.Get("trips.0.trip_id").String(), "the day's first trip")
+				assert.Equal(t, "16:50:00", table.Get("departure_times.0.0").String())
+				assert.Equal(t, "18:00:00", table.Get("arrival_times.18.0").String())
+				assert.Equal(t, int64(1), table.Get("timepoints.0.0").Int())
 			},
 		},
 		{
-			name:  "route patterns departures without a date",
-			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date departures { stop_ids } } } }`,
+			name:  "route patterns timetable without a date",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date timetable { stop_ids } } } }`,
 			f: func(t *testing.T, jj string) {
 				pats := gjson.Get(jj, "routes.0.patterns").Array()
 				assert.NotEmpty(t, pats, "patterns returned")
 				for i, pat := range pats {
 					assert.Equal(t, gjson.Null, pat.Get("service_date").Type, "pattern %d", i)
-					assert.Equal(t, gjson.Null, pat.Get("departures").Type, "pattern %d", i)
+					assert.Equal(t, gjson.Null, pat.Get("timetable").Type, "pattern %d", i)
 				}
 			},
 		},
 		{
-			name:  "route patterns departures pickup and drop-off",
-			query: `{ routes(where:{feed_onestop_id:"WMATA", route_id:"GREEN"}) { patterns(where:{service_date:"2026-04-29"}) { departures { trips { trip_id } pickup_types drop_off_types } } } }`,
+			name:  "route patterns timetable pickup and drop-off",
+			query: `{ routes(where:{feed_onestop_id:"WMATA", route_id:"GREEN"}) { patterns(where:{service_date:"2026-04-29"}) { timetable { trips { trip_id } pickup_types drop_off_types } } } }`,
 			f: func(t *testing.T, jj string) {
 				// This late trip lets nobody off at the stop it starts from.
 				found := false
 				for _, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
-					for j, trip := range pat.Get("departures.trips").Array() {
+					for j, trip := range pat.Get("timetable.trips").Array() {
 						if trip.Get("trip_id").String() != "11687110_20571" {
 							continue
 						}
 						found = true
-						assert.Equal(t, int64(0), pat.Get(fmt.Sprintf("departures.pickup_types.0.%d", j)).Int())
-						assert.Equal(t, int64(1), pat.Get(fmt.Sprintf("departures.drop_off_types.0.%d", j)).Int())
+						assert.Equal(t, int64(0), pat.Get(fmt.Sprintf("timetable.pickup_types.0.%d", j)).Int())
+						assert.Equal(t, int64(1), pat.Get(fmt.Sprintf("timetable.drop_off_types.0.%d", j)).Int())
 					}
 				}
-				assert.True(t, found, "trip found in a pattern's departures")
+				assert.True(t, found, "trip found in a pattern's timetable")
 			},
 		},
 		{
-			name:  "route patterns departures frequency trip",
-			query: `{ feed_versions(where:{feed_onestop_id:"EX"}) { routes(where:{route_id:"STBA"}) { patterns(where:{service_date:"2007-01-02"}) { departures { trips { trip_id frequencies { headway_secs } } departure_times } } } } }`,
+			name:  "route patterns timetable frequency trip",
+			query: `{ feed_versions(where:{feed_onestop_id:"EX"}) { routes(where:{route_id:"STBA"}) { patterns(where:{service_date:"2007-01-02"}) { timetable { trips { trip_id frequencies { headway_secs } } departure_times } } } } }`,
 			f: func(t *testing.T, jj string) {
 				// A trip run from frequencies.txt is one column, its template, and says
 				// when it repeats.
-				dep := gjson.Get(jj, "feed_versions.0.routes.0.patterns.0.departures")
-				assert.Equal(t, int64(1), dep.Get("trips.#").Int())
-				assert.Equal(t, int64(1800), dep.Get("trips.0.frequencies.0.headway_secs").Int())
-				assert.Equal(t, "06:20:00", dep.Get("departure_times.1.0").String())
+				table := gjson.Get(jj, "feed_versions.0.routes.0.patterns.0.timetable")
+				assert.Equal(t, int64(1), table.Get("trips.#").Int())
+				assert.Equal(t, int64(1800), table.Get("trips.0.frequencies.0.headway_secs").Int())
+				assert.Equal(t, "06:20:00", table.Get("departure_times.1.0").String())
 			},
 		},
 		{
-			name:  "route patterns departures flex",
-			query: `{ routes(where:{feed_onestop_id:"ctran-flex", route_id:"2bc6804f-9e24-4b91-8947-c73a2363e7b6"}) { patterns(where:{service_date:"2026-01-06"}) { departures { stop_ids } } } }`,
+			name:  "route patterns timetable flex",
+			query: `{ routes(where:{feed_onestop_id:"ctran-flex", route_id:"2bc6804f-9e24-4b91-8947-c73a2363e7b6"}) { patterns(where:{service_date:"2026-01-06"}) { timetable { stop_ids } } } }`,
 			f: func(t *testing.T, jj string) {
 				pats := gjson.Get(jj, "routes.0.patterns").Array()
 				assert.NotEmpty(t, pats, "patterns returned")
 				for i, pat := range pats {
-					assert.Equal(t, gjson.Null, pat.Get("departures").Type, "pattern %d", i)
+					assert.Equal(t, gjson.Null, pat.Get("timetable").Type, "pattern %d", i)
 				}
 			},
 		},
@@ -737,14 +737,14 @@ func TestRouteResolver_Date(t *testing.T) {
 		{
 			whenUtc: "2024-07-22T22:00:00Z",
 			testcase: testcase{
-				name:  "patterns departures relative date next-sunday, outside of window, use fallback",
-				query: `{ routes(where:{route_id:"Bu-130"}) { patterns(where:{relative_date:NEXT_SUNDAY, use_service_window:true}) { service_date departures { trips { trip_id } } } } }`,
+				name:  "patterns timetable relative date next-sunday, outside of window, use fallback",
+				query: `{ routes(where:{route_id:"Bu-130"}) { patterns(where:{relative_date:NEXT_SUNDAY, use_service_window:true}) { service_date timetable { trips { trip_id } } } } }`,
 				f: func(t *testing.T, jj string) {
 					// The same trips the trips() query falls back to, on the date it fell back to.
 					var tripIDs []string
 					for _, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
 						assert.Equal(t, "2018-06-24", pat.Get("service_date").String(), "the Sunday the window falls back to")
-						for _, trip := range pat.Get("departures.trips").Array() {
+						for _, trip := range pat.Get("timetable.trips").Array() {
 							tripIDs = append(tripIDs, trip.Get("trip_id").String())
 						}
 					}
@@ -1041,20 +1041,20 @@ func TestRouteResolver_License(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 
-// checkPatternDepartures checks each pattern's departures hold a row for every
+// checkPatternTimetable checks each pattern's timetable holds a row for every
 // stop and a column for every trip it counted, in every grid, with the columns
 // ordered by time at the first stop.
-func checkPatternDepartures(t *testing.T, jj string) {
+func checkPatternTimetable(t *testing.T, jj string) {
 	pats := gjson.Get(jj, "routes.0.patterns").Array()
 	assert.NotEmpty(t, pats, "patterns returned")
 	for i, pat := range pats {
 		count := int(pat.Get("count").Int())
-		dep := pat.Get("departures")
-		stops := len(dep.Get("stop_ids").Array())
+		table := pat.Get("timetable")
+		stops := len(table.Get("stop_ids").Array())
 		assert.NotZero(t, stops, "pattern %d has stops", i)
-		assert.Len(t, dep.Get("trips").Array(), count, "pattern %d: a column per trip", i)
+		assert.Len(t, table.Get("trips").Array(), count, "pattern %d: a column per trip", i)
 		for _, grid := range []string{"departure_times", "arrival_times", "pickup_types", "drop_off_types", "timepoints"} {
-			rows := dep.Get(grid).Array()
+			rows := table.Get(grid).Array()
 			assert.Len(t, rows, stops, "pattern %d %s: a row per stop", i, grid)
 			for k, row := range rows {
 				assert.Len(t, row.Array(), count, "pattern %d %s stop %d: a cell per trip", i, grid, k)
@@ -1062,7 +1062,7 @@ func checkPatternDepartures(t *testing.T, jj string) {
 		}
 		// Times are zero-padded HH:MM:SS, so they sort as strings.
 		prev := ""
-		for _, v := range dep.Get("departure_times.0").Array() {
+		for _, v := range table.Get("departure_times.0").Array() {
 			assert.LessOrEqual(t, prev, v.String(), "pattern %d: trips by time at the first stop", i)
 			prev = v.String()
 		}

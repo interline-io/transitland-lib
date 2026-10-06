@@ -179,10 +179,10 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 	return trips, err
 }
 
-// Departures lays the stop times of the trips `count` counted out as grids, a row
+// Timetable lays the stop times of the trips `count` counted out as grids, a row
 // per stop of the pattern and a column per trip, ordered by time at the first
 // stop.
-func (r *routePatternResolver) Departures(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternDepartures, error) {
+func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternTimetable, error) {
 	if len(obj.TripIDs.Val) == 0 {
 		return nil, nil
 	}
@@ -256,7 +256,7 @@ func (r *routePatternResolver) Departures(ctx context.Context, obj *model.RouteS
 		return kept[a].trip.ID < kept[b].trip.ID
 	})
 
-	ret := &model.RouteStopPatternDepartures{
+	ret := &model.RouteStopPatternTimetable{
 		StopIds:        make([]int, len(header)),
 		Trips:          make([]*model.Trip, len(kept)),
 		DepartureTimes: make([][]tt.Seconds, len(header)),

@@ -1070,15 +1070,15 @@ type ComplexityRoot struct {
 
 	RouteStopPattern struct {
 		Count              func(childComplexity int) int
-		Departures         func(childComplexity int) int
 		DirectionID        func(childComplexity int) int
 		RepresentativeTrip func(childComplexity int) int
 		ServiceDate        func(childComplexity int) int
 		StopPatternID      func(childComplexity int) int
+		Timetable          func(childComplexity int) int
 		Trips              func(childComplexity int, limit *int) int
 	}
 
-	RouteStopPatternDepartures struct {
+	RouteStopPatternTimetable struct {
 		ArrivalTimes   func(childComplexity int) int
 		DepartureTimes func(childComplexity int) int
 		DropOffTypes   func(childComplexity int) int
@@ -1602,7 +1602,7 @@ type RouteStopResolver interface {
 type RouteStopPatternResolver interface {
 	RepresentativeTrip(ctx context.Context, obj *model.RouteStopPattern) (*model.Trip, error)
 	Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error)
-	Departures(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternDepartures, error)
+	Timetable(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternTimetable, error)
 }
 type SegmentResolver interface {
 	SegmentPatterns(ctx context.Context, obj *model.Segment) ([]*model.SegmentPattern, error)
@@ -6491,12 +6491,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteStopPattern.Count(childComplexity), true
-	case "RouteStopPattern.departures":
-		if e.ComplexityRoot.RouteStopPattern.Departures == nil {
-			break
-		}
-
-		return e.ComplexityRoot.RouteStopPattern.Departures(childComplexity), true
 	case "RouteStopPattern.direction_id":
 		if e.ComplexityRoot.RouteStopPattern.DirectionID == nil {
 			break
@@ -6521,6 +6515,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteStopPattern.StopPatternID(childComplexity), true
+	case "RouteStopPattern.timetable":
+		if e.ComplexityRoot.RouteStopPattern.Timetable == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPattern.Timetable(childComplexity), true
 	case "RouteStopPattern.trips":
 		if e.ComplexityRoot.RouteStopPattern.Trips == nil {
 			break
@@ -6533,48 +6533,48 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RouteStopPattern.Trips(childComplexity, args["limit"].(*int)), true
 
-	case "RouteStopPatternDepartures.arrival_times":
-		if e.ComplexityRoot.RouteStopPatternDepartures.ArrivalTimes == nil {
+	case "RouteStopPatternTimetable.arrival_times":
+		if e.ComplexityRoot.RouteStopPatternTimetable.ArrivalTimes == nil {
 			break
 		}
 
-		return e.ComplexityRoot.RouteStopPatternDepartures.ArrivalTimes(childComplexity), true
-	case "RouteStopPatternDepartures.departure_times":
-		if e.ComplexityRoot.RouteStopPatternDepartures.DepartureTimes == nil {
+		return e.ComplexityRoot.RouteStopPatternTimetable.ArrivalTimes(childComplexity), true
+	case "RouteStopPatternTimetable.departure_times":
+		if e.ComplexityRoot.RouteStopPatternTimetable.DepartureTimes == nil {
 			break
 		}
 
-		return e.ComplexityRoot.RouteStopPatternDepartures.DepartureTimes(childComplexity), true
-	case "RouteStopPatternDepartures.drop_off_types":
-		if e.ComplexityRoot.RouteStopPatternDepartures.DropOffTypes == nil {
+		return e.ComplexityRoot.RouteStopPatternTimetable.DepartureTimes(childComplexity), true
+	case "RouteStopPatternTimetable.drop_off_types":
+		if e.ComplexityRoot.RouteStopPatternTimetable.DropOffTypes == nil {
 			break
 		}
 
-		return e.ComplexityRoot.RouteStopPatternDepartures.DropOffTypes(childComplexity), true
-	case "RouteStopPatternDepartures.pickup_types":
-		if e.ComplexityRoot.RouteStopPatternDepartures.PickupTypes == nil {
+		return e.ComplexityRoot.RouteStopPatternTimetable.DropOffTypes(childComplexity), true
+	case "RouteStopPatternTimetable.pickup_types":
+		if e.ComplexityRoot.RouteStopPatternTimetable.PickupTypes == nil {
 			break
 		}
 
-		return e.ComplexityRoot.RouteStopPatternDepartures.PickupTypes(childComplexity), true
-	case "RouteStopPatternDepartures.stop_ids":
-		if e.ComplexityRoot.RouteStopPatternDepartures.StopIds == nil {
+		return e.ComplexityRoot.RouteStopPatternTimetable.PickupTypes(childComplexity), true
+	case "RouteStopPatternTimetable.stop_ids":
+		if e.ComplexityRoot.RouteStopPatternTimetable.StopIds == nil {
 			break
 		}
 
-		return e.ComplexityRoot.RouteStopPatternDepartures.StopIds(childComplexity), true
-	case "RouteStopPatternDepartures.timepoints":
-		if e.ComplexityRoot.RouteStopPatternDepartures.Timepoints == nil {
+		return e.ComplexityRoot.RouteStopPatternTimetable.StopIds(childComplexity), true
+	case "RouteStopPatternTimetable.timepoints":
+		if e.ComplexityRoot.RouteStopPatternTimetable.Timepoints == nil {
 			break
 		}
 
-		return e.ComplexityRoot.RouteStopPatternDepartures.Timepoints(childComplexity), true
-	case "RouteStopPatternDepartures.trips":
-		if e.ComplexityRoot.RouteStopPatternDepartures.Trips == nil {
+		return e.ComplexityRoot.RouteStopPatternTimetable.Timepoints(childComplexity), true
+	case "RouteStopPatternTimetable.trips":
+		if e.ComplexityRoot.RouteStopPatternTimetable.Trips == nil {
 			break
 		}
 
-		return e.ComplexityRoot.RouteStopPatternDepartures.Trips(childComplexity), true
+		return e.ComplexityRoot.RouteStopPatternTimetable.Trips(childComplexity), true
 
 	case "Segment.geometry":
 		if e.ComplexityRoot.Segment.Geometry == nil {
@@ -11007,15 +11007,15 @@ type RouteStopPattern {
   trips(limit: Int): [Trip!]
 
   """
-  The trips ` + "`" + `count` + "`" + ` counted on ` + "`" + `service_date` + "`" + `, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when ` + "`" + `Route.patterns` + "`" + ` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
+  The trips ` + "`" + `count` + "`" + ` counted on ` + "`" + `service_date` + "`" + `, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when ` + "`" + `Route.patterns` + "`" + ` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
   """
-  departures: RouteStopPatternDepartures
+  timetable: RouteStopPatternTimetable
 }
 
 """
 A stop pattern's trips as grids: row ` + "`" + `i` + "`" + ` is stop ` + "`" + `stop_ids[i]` + "`" + ` and column ` + "`" + `j` + "`" + ` is trip ` + "`" + `trips[j]` + "`" + `, in every grid below.
 """
-type RouteStopPatternDepartures {
+type RouteStopPatternTimetable {
   "The pattern's stops in order, by internal ID. A stop the trips call at twice appears twice"
   stop_ids: [Int!]!
 
@@ -14503,30 +14503,30 @@ func (ec *executionContext) childFields_RouteStopPattern(ctx context.Context, fi
 		return ec.fieldContext_RouteStopPattern_representative_trip(ctx, field)
 	case "trips":
 		return ec.fieldContext_RouteStopPattern_trips(ctx, field)
-	case "departures":
-		return ec.fieldContext_RouteStopPattern_departures(ctx, field)
+	case "timetable":
+		return ec.fieldContext_RouteStopPattern_timetable(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type RouteStopPattern", field.Name)
 }
 
-func (ec *executionContext) childFields_RouteStopPatternDepartures(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+func (ec *executionContext) childFields_RouteStopPatternTimetable(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "stop_ids":
-		return ec.fieldContext_RouteStopPatternDepartures_stop_ids(ctx, field)
+		return ec.fieldContext_RouteStopPatternTimetable_stop_ids(ctx, field)
 	case "trips":
-		return ec.fieldContext_RouteStopPatternDepartures_trips(ctx, field)
+		return ec.fieldContext_RouteStopPatternTimetable_trips(ctx, field)
 	case "departure_times":
-		return ec.fieldContext_RouteStopPatternDepartures_departure_times(ctx, field)
+		return ec.fieldContext_RouteStopPatternTimetable_departure_times(ctx, field)
 	case "arrival_times":
-		return ec.fieldContext_RouteStopPatternDepartures_arrival_times(ctx, field)
+		return ec.fieldContext_RouteStopPatternTimetable_arrival_times(ctx, field)
 	case "pickup_types":
-		return ec.fieldContext_RouteStopPatternDepartures_pickup_types(ctx, field)
+		return ec.fieldContext_RouteStopPatternTimetable_pickup_types(ctx, field)
 	case "drop_off_types":
-		return ec.fieldContext_RouteStopPatternDepartures_drop_off_types(ctx, field)
+		return ec.fieldContext_RouteStopPatternTimetable_drop_off_types(ctx, field)
 	case "timepoints":
-		return ec.fieldContext_RouteStopPatternDepartures_timepoints(ctx, field)
+		return ec.fieldContext_RouteStopPatternTimetable_timepoints(ctx, field)
 	}
-	return nil, fmt.Errorf("no field named %q was found under type RouteStopPatternDepartures", field.Name)
+	return nil, fmt.Errorf("no field named %q was found under type RouteStopPatternTimetable", field.Name)
 }
 
 func (ec *executionContext) childFields_Segment(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -37036,45 +37036,45 @@ func (ec *executionContext) fieldContext_RouteStopPattern_trips(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _RouteStopPattern_departures(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPattern_timetable(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPattern_departures(ctx, field)
+			return ec.fieldContext_RouteStopPattern_timetable(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.RouteStopPattern().Departures(ctx, obj)
+			return ec.Resolvers.RouteStopPattern().Timetable(ctx, obj)
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternDepartures) graphql.Marshaler {
-			return ec.marshalORouteStopPatternDepartures2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternDepartures(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternTimetable) graphql.Marshaler {
+			return ec.marshalORouteStopPatternTimetable2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetable(ctx, selections, v)
 		},
 		true,
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPattern_departures(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_RouteStopPattern_timetable(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "RouteStopPattern",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_RouteStopPatternDepartures(ctx, field)
+			return ec.childFields_RouteStopPatternTimetable(ctx, field)
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _RouteStopPatternDepartures_stop_ids(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternDepartures) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPatternTimetable_stop_ids(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPatternDepartures_stop_ids(ctx, field)
+			return ec.fieldContext_RouteStopPatternTimetable_stop_ids(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			return obj.StopIds, nil
@@ -37087,17 +37087,17 @@ func (ec *executionContext) _RouteStopPatternDepartures_stop_ids(ctx context.Con
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternDepartures_stop_ids(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternDepartures", field, false, false, errors.New("field of type Int does not have child fields"))
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_stop_ids(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
-func (ec *executionContext) _RouteStopPatternDepartures_trips(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternDepartures) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPatternTimetable_trips(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPatternDepartures_trips(ctx, field)
+			return ec.fieldContext_RouteStopPatternTimetable_trips(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			return obj.Trips, nil
@@ -37110,9 +37110,9 @@ func (ec *executionContext) _RouteStopPatternDepartures_trips(ctx context.Contex
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternDepartures_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "RouteStopPatternDepartures",
+		Object:     "RouteStopPatternTimetable",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -37123,13 +37123,13 @@ func (ec *executionContext) fieldContext_RouteStopPatternDepartures_trips(_ cont
 	return fc, nil
 }
 
-func (ec *executionContext) _RouteStopPatternDepartures_departure_times(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternDepartures) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPatternTimetable_departure_times(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPatternDepartures_departure_times(ctx, field)
+			return ec.fieldContext_RouteStopPatternTimetable_departure_times(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			return obj.DepartureTimes, nil
@@ -37142,17 +37142,17 @@ func (ec *executionContext) _RouteStopPatternDepartures_departure_times(ctx cont
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternDepartures_departure_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternDepartures", field, false, false, errors.New("field of type Seconds does not have child fields"))
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_departure_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Seconds does not have child fields"))
 }
 
-func (ec *executionContext) _RouteStopPatternDepartures_arrival_times(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternDepartures) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPatternTimetable_arrival_times(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPatternDepartures_arrival_times(ctx, field)
+			return ec.fieldContext_RouteStopPatternTimetable_arrival_times(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			return obj.ArrivalTimes, nil
@@ -37165,17 +37165,17 @@ func (ec *executionContext) _RouteStopPatternDepartures_arrival_times(ctx contex
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternDepartures_arrival_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternDepartures", field, false, false, errors.New("field of type Seconds does not have child fields"))
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_arrival_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Seconds does not have child fields"))
 }
 
-func (ec *executionContext) _RouteStopPatternDepartures_pickup_types(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternDepartures) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPatternTimetable_pickup_types(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPatternDepartures_pickup_types(ctx, field)
+			return ec.fieldContext_RouteStopPatternTimetable_pickup_types(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			return obj.PickupTypes, nil
@@ -37188,17 +37188,17 @@ func (ec *executionContext) _RouteStopPatternDepartures_pickup_types(ctx context
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternDepartures_pickup_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternDepartures", field, false, false, errors.New("field of type Int does not have child fields"))
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_pickup_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
-func (ec *executionContext) _RouteStopPatternDepartures_drop_off_types(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternDepartures) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPatternTimetable_drop_off_types(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPatternDepartures_drop_off_types(ctx, field)
+			return ec.fieldContext_RouteStopPatternTimetable_drop_off_types(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			return obj.DropOffTypes, nil
@@ -37211,17 +37211,17 @@ func (ec *executionContext) _RouteStopPatternDepartures_drop_off_types(ctx conte
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternDepartures_drop_off_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternDepartures", field, false, false, errors.New("field of type Int does not have child fields"))
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_drop_off_types(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
-func (ec *executionContext) _RouteStopPatternDepartures_timepoints(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternDepartures) (ret graphql.Marshaler) {
+func (ec *executionContext) _RouteStopPatternTimetable_timepoints(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RouteStopPatternDepartures_timepoints(ctx, field)
+			return ec.fieldContext_RouteStopPatternTimetable_timepoints(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			return obj.Timepoints, nil
@@ -37234,8 +37234,8 @@ func (ec *executionContext) _RouteStopPatternDepartures_timepoints(ctx context.C
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_RouteStopPatternDepartures_timepoints(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RouteStopPatternDepartures", field, false, false, errors.New("field of type Int does not have child fields"))
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_timepoints(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopPatternTimetable", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _Segment_id(ctx context.Context, field graphql.CollectedField, obj *model.Segment) (ret graphql.Marshaler) {
@@ -57225,7 +57225,7 @@ func (ec *executionContext) _RouteStopPattern(ctx context.Context, sel ast.Selec
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "departures":
+		case "timetable":
 			field := field
 
 			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
@@ -57234,7 +57234,7 @@ func (ec *executionContext) _RouteStopPattern(ctx context.Context, sel ast.Selec
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._RouteStopPattern_departures(ctx, field, obj)
+				res = ec._RouteStopPattern_timetable(ctx, field, obj)
 				return res
 			}
 
@@ -57281,49 +57281,49 @@ func (ec *executionContext) _RouteStopPattern(ctx context.Context, sel ast.Selec
 	return out
 }
 
-var routeStopPatternDeparturesImplementors = []string{"RouteStopPatternDepartures"}
+var routeStopPatternTimetableImplementors = []string{"RouteStopPatternTimetable"}
 
-func (ec *executionContext) _RouteStopPatternDepartures(ctx context.Context, sel ast.SelectionSet, obj *model.RouteStopPatternDepartures) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, routeStopPatternDeparturesImplementors)
+func (ec *executionContext) _RouteStopPatternTimetable(ctx context.Context, sel ast.SelectionSet, obj *model.RouteStopPatternTimetable) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, routeStopPatternTimetableImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("RouteStopPatternDepartures")
+			out.Values[i] = graphql.MarshalString("RouteStopPatternTimetable")
 		case "stop_ids":
-			out.Values[i] = ec._RouteStopPatternDepartures_stop_ids(ctx, field, obj)
+			out.Values[i] = ec._RouteStopPatternTimetable_stop_ids(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "trips":
-			out.Values[i] = ec._RouteStopPatternDepartures_trips(ctx, field, obj)
+			out.Values[i] = ec._RouteStopPatternTimetable_trips(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "departure_times":
-			out.Values[i] = ec._RouteStopPatternDepartures_departure_times(ctx, field, obj)
+			out.Values[i] = ec._RouteStopPatternTimetable_departure_times(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "arrival_times":
-			out.Values[i] = ec._RouteStopPatternDepartures_arrival_times(ctx, field, obj)
+			out.Values[i] = ec._RouteStopPatternTimetable_arrival_times(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "pickup_types":
-			out.Values[i] = ec._RouteStopPatternDepartures_pickup_types(ctx, field, obj)
+			out.Values[i] = ec._RouteStopPatternTimetable_pickup_types(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "drop_off_types":
-			out.Values[i] = ec._RouteStopPatternDepartures_drop_off_types(ctx, field, obj)
+			out.Values[i] = ec._RouteStopPatternTimetable_drop_off_types(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "timepoints":
-			out.Values[i] = ec._RouteStopPatternDepartures_timepoints(ctx, field, obj)
+			out.Values[i] = ec._RouteStopPatternTimetable_timepoints(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -64670,19 +64670,19 @@ func (ec *executionContext) marshalORouteStopPattern2ᚕᚖgithubᚗcomᚋinterl
 	return ret
 }
 
-func (ec *executionContext) marshalORouteStopPatternDepartures2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternDepartures(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopPatternDepartures) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._RouteStopPatternDepartures(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalORouteStopPatternFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternFilter(ctx context.Context, v any) (*model.RouteStopPatternFilter, error) {
 	if v == nil {
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputRouteStopPatternFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalORouteStopPatternTimetable2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetable(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopPatternTimetable) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._RouteStopPatternTimetable(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOScheduleRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐScheduleRelationship(ctx context.Context, v any) (*model.ScheduleRelationship, error) {

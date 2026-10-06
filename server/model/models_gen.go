@@ -1210,11 +1210,11 @@ type RouteStopPattern struct {
 	RepresentativeTrip *Trip `json:"representative_trip,omitempty"`
 	// Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times
 	Trips []*Trip `json:"trips,omitempty"`
-	// The trips `count` counted on `service_date`, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
-	Departures           *RouteStopPatternDepartures `json:"departures,omitempty"`
-	FeedVersionID        int                         `json:"-"`
-	RepresentativeTripID int                         `json:"-"`
-	RouteID              int                         `json:"-"`
+	// The trips `count` counted on `service_date`, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
+	Timetable            *RouteStopPatternTimetable `json:"timetable,omitempty"`
+	FeedVersionID        int                        `json:"-"`
+	RepresentativeTripID int                        `json:"-"`
+	RouteID              int                        `json:"-"`
 	// The trips counted, when Route.patterns was given a date; unset without one.
 	TripIDs tt.Ints `db:"trip_ids"`
 }

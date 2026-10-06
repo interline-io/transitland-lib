@@ -22,7 +22,7 @@ const (
 	// A busy route runs close to 1,000 trips in a week, so the default limit
 	// truncates a multi-week range without an error.
 	RESOLVER_TRIP_MAXLIMIT = 100_000
-	// Route.patterns and a pattern's departures take no limit argument, but their
+	// Route.patterns and a pattern's timetable take no limit argument, but their
 	// grouped loaders still need one, and the API-wide limits would cut a long
 	// route's patterns or a long trip's stop times short without an error.
 	RESOLVER_PATTERN_MAXLIMIT = 100_000

@@ -1797,15 +1797,15 @@ type RouteStopPattern {
   trips(limit: Int): [Trip!]
 
   """
-  The trips `count` counted on `service_date`, as grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
+  The trips `count` counted on `service_date`, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
   """
-  departures: RouteStopPatternDepartures
+  timetable: RouteStopPatternTimetable
 }
 
 """
 A stop pattern's trips as grids: row `i` is stop `stop_ids[i]` and column `j` is trip `trips[j]`, in every grid below.
 """
-type RouteStopPatternDepartures {
+type RouteStopPatternTimetable {
   "The pattern's stops in order, by internal ID. A stop the trips call at twice appears twice"
   stop_ids: [Int!]!
 
