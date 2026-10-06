@@ -110,12 +110,6 @@ models:
   Language:
     model: 
       - "github.com/interline-io/transitland-lib/tt.Language"      
-  Currency:
-    model: 
-      - "github.com/interline-io/transitland-lib/tt.Currency"      
-  CurrencyAmount:
-    model: 
-      - "github.com/interline-io/transitland-lib/tt.CurrencyAmount"      
   Timezone:
     model:
       - "github.com/interline-io/transitland-lib/tt.Timezone"

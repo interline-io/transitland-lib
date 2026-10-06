@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/interline-io/transitland-lib/server/model"
 )
@@ -97,11 +96,7 @@ func (r *fareAttributeResolver) Agency(ctx context.Context, obj *model.FareAttri
 // FareAttribute resolves fare_rules.fare_id, which the importer stores as the
 // referenced fare_attributes row id.
 func (r *fareRuleResolver) FareAttribute(ctx context.Context, obj *model.FareRule) (*model.FareAttribute, error) {
-	id, err := strconv.Atoi(obj.FareID.Val)
-	if err != nil {
-		return nil, err
-	}
-	return LoaderFor(ctx).FareAttributesByIDs.Load(ctx, id)()
+	return LoaderFor(ctx).FareAttributesByIDs.Load(ctx, obj.FareID.Int())()
 }
 
 func (r *fareRuleResolver) Route(ctx context.Context, obj *model.FareRule) (*model.Route, error) {
@@ -112,10 +107,7 @@ func (r *fareRuleResolver) Route(ctx context.Context, obj *model.FareRule) (*mod
 }
 
 func (r *fareProductResolver) RiderCategoryID(ctx context.Context, obj *model.FareProduct) (*string, error) {
-	if !obj.RiderCategoryID.Valid {
-		return nil, nil
-	}
-	return &obj.RiderCategoryID.Val, nil
+	return obj.RiderCategoryID.Ptr(), nil
 }
 
 // FareMedia resolves fare_products.fare_media_id, which the importer stores as

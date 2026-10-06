@@ -147,6 +147,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		stopTimeBatchSize = maxBatch
 	}
 
+	fareParamKey := func(p fareLoaderParam) (int, bool, *int) {
+		return p.FeedVersionID, false, p.Limit
+	}
 	loaders := &Loaders{
 		AgenciesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.AgenciesByFeedVersionIDs,
 			func(p agencyLoaderParam) (int, *model.AgencyFilter, *int) {
@@ -254,79 +257,55 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		// GTFS Fares v1 and v2
 		FareAttributesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FareAttributesByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		FareAttributesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareAttributesByIDs),
 		FareRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FareRulesByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		FareMediaByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FareMediaByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		FareMediaByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareMediaByIDs),
 		FareProductsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FareProductsByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		FareLegRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FareLegRulesByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		FareLegJoinRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FareLegJoinRulesByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		FareTransferRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FareTransferRulesByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		RiderCategoriesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.RiderCategoriesByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		TimeframesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.TimeframesByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		AreasByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.AreasByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		AreasByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.AreasByIDs),
 		NetworksByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.NetworksByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		NetworksByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.NetworksByIDs),
 		RouteNetworksByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.RouteNetworksByFeedVersionIDs),
-			func(p fareLoaderParam) (int, bool, *int) {
-				return p.FeedVersionID, false, p.Limit
-			},
+			fareParamKey,
 		),
 		StopAreasByAreaIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.StopAreasByAreaIDs),
