@@ -342,6 +342,7 @@ type ComplexityRoot struct {
 		RulePriority         func(childComplexity int) int
 		ToAreaID             func(childComplexity int) int
 		ToTimeframeGroupID   func(childComplexity int) int
+		TransferOnly         func(childComplexity int) int
 	}
 
 	FareMedia struct {
@@ -357,6 +358,10 @@ type ComplexityRoot struct {
 	FareProduct struct {
 		Amount          func(childComplexity int) int
 		Currency        func(childComplexity int) int
+		DurationAmount  func(childComplexity int) int
+		DurationStart   func(childComplexity int) int
+		DurationType    func(childComplexity int) int
+		DurationUnit    func(childComplexity int) int
 		FareMedia       func(childComplexity int) int
 		FareProductID   func(childComplexity int) int
 		FareProductName func(childComplexity int) int
@@ -380,17 +385,18 @@ type ComplexityRoot struct {
 	}
 
 	FareTransferRule struct {
-		DurationLimit     func(childComplexity int) int
-		DurationLimitType func(childComplexity int) int
-		FareProductID     func(childComplexity int) int
-		FareTransferType  func(childComplexity int) int
-		FeedOnestopID     func(childComplexity int) int
-		FeedVersion       func(childComplexity int) int
-		FeedVersionSHA1   func(childComplexity int) int
-		FromLegGroupID    func(childComplexity int) int
-		ID                func(childComplexity int) int
-		ToLegGroupID      func(childComplexity int) int
-		TransferCount     func(childComplexity int) int
+		DurationLimit       func(childComplexity int) int
+		DurationLimitType   func(childComplexity int) int
+		FareProductID       func(childComplexity int) int
+		FareTransferType    func(childComplexity int) int
+		FeedOnestopID       func(childComplexity int) int
+		FeedVersion         func(childComplexity int) int
+		FeedVersionSHA1     func(childComplexity int) int
+		FilterFareProductID func(childComplexity int) int
+		FromLegGroupID      func(childComplexity int) int
+		ID                  func(childComplexity int) int
+		ToLegGroupID        func(childComplexity int) int
+		TransferCount       func(childComplexity int) int
 	}
 
 	Feed struct {
@@ -1130,6 +1136,8 @@ type ComplexityRoot struct {
 		FeedVersionSHA1       func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		IsDefaultFareCategory func(childComplexity int) int
+		MaxAge                func(childComplexity int) int
+		MinAge                func(childComplexity int) int
 		RiderCategoryID       func(childComplexity int) int
 		RiderCategoryName     func(childComplexity int) int
 	}
@@ -3166,6 +3174,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegRule.ToTimeframeGroupID(childComplexity), true
+	case "FareLegRule.transfer_only":
+		if e.ComplexityRoot.FareLegRule.TransferOnly == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.TransferOnly(childComplexity), true
 
 	case "FareMedia.fare_media_id":
 		if e.ComplexityRoot.FareMedia.FareMediaID == nil {
@@ -3222,6 +3236,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareProduct.Currency(childComplexity), true
+	case "FareProduct.duration_amount":
+		if e.ComplexityRoot.FareProduct.DurationAmount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationAmount(childComplexity), true
+	case "FareProduct.duration_start":
+		if e.ComplexityRoot.FareProduct.DurationStart == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationStart(childComplexity), true
+	case "FareProduct.duration_type":
+		if e.ComplexityRoot.FareProduct.DurationType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationType(childComplexity), true
+	case "FareProduct.duration_unit":
+		if e.ComplexityRoot.FareProduct.DurationUnit == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationUnit(childComplexity), true
 	case "FareProduct.fare_media":
 		if e.ComplexityRoot.FareProduct.FareMedia == nil {
 			break
@@ -3368,6 +3406,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareTransferRule.FeedVersionSHA1(childComplexity), true
+	case "FareTransferRule.filter_fare_product_id":
+		if e.ComplexityRoot.FareTransferRule.FilterFareProductID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FilterFareProductID(childComplexity), true
 	case "FareTransferRule.from_leg_group_id":
 		if e.ComplexityRoot.FareTransferRule.FromLegGroupID == nil {
 			break
@@ -6957,6 +7001,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RiderCategory.IsDefaultFareCategory(childComplexity), true
+	case "RiderCategory.max_age":
+		if e.ComplexityRoot.RiderCategory.MaxAge == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.MaxAge(childComplexity), true
+	case "RiderCategory.min_age":
+		if e.ComplexityRoot.RiderCategory.MinAge == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.MinAge(childComplexity), true
 	case "RiderCategory.rider_category_id":
 		if e.ComplexityRoot.RiderCategory.RiderCategoryID == nil {
 			break
@@ -11859,6 +11915,18 @@ type FareProduct {
   "GTFS ` + "`" + `fare_products.currency` + "`" + `; ISO 4217 currency code"
   currency: String!
 
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_start` + "`" + `; event that starts the product's validity period"
+  duration_start: Int
+
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_amount` + "`" + `; length of the product's validity period, in ` + "`" + `duration_unit` + "`" + `"
+  duration_amount: Float
+
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_unit` + "`" + ` [0=seconds, 1=minutes, 2=hours, 3=days, 4=weeks, 5=months, 6=years]"
+  duration_unit: Int
+
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_type` + "`" + `; how the validity period is measured"
+  duration_type: Int
+
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
 
@@ -11899,6 +11967,9 @@ type FareLegRule {
 
   "GTFS ` + "`" + `fare_leg_rules.rule_priority` + "`" + `; when several rules match a leg, those with the highest priority apply"
   rule_priority: Int
+
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_leg_rules.transfer_only` + "`" + ` [0 or empty=any leg, 1=only a leg that follows a transfer, not the first leg of a journey]"
+  transfer_only: Int
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -11967,6 +12038,9 @@ type FareTransferRule {
   "GTFS ` + "`" + `fare_transfer_rules.fare_product_id` + "`" + `; empty means the transfer costs nothing"
   fare_product_id: String
 
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_transfer_rules.filter_fare_product_id` + "`" + `; the rule applies only if the rider holds this fare product, bought in advance or for the previous leg"
+  filter_fare_product_id: String
+
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
 
@@ -11995,6 +12069,12 @@ type RiderCategory {
 
   "GTFS ` + "`" + `rider_categories.eligibility_url` + "`" + `"
   eligibility_url: Url
+
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `rider_categories.min_age` + "`" + `; minimum age, inclusive"
+  min_age: Int
+
+  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `rider_categories.max_age` + "`" + `; maximum age, inclusive"
+  max_age: Int
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -14509,6 +14589,8 @@ func (ec *executionContext) childFields_FareLegRule(ctx context.Context, field g
 		return ec.fieldContext_FareLegRule_fare_product_id(ctx, field)
 	case "rule_priority":
 		return ec.fieldContext_FareLegRule_rule_priority(ctx, field)
+	case "transfer_only":
+		return ec.fieldContext_FareLegRule_transfer_only(ctx, field)
 	case "feed_version_sha1":
 		return ec.fieldContext_FareLegRule_feed_version_sha1(ctx, field)
 	case "feed_onestop_id":
@@ -14555,6 +14637,14 @@ func (ec *executionContext) childFields_FareProduct(ctx context.Context, field g
 		return ec.fieldContext_FareProduct_amount(ctx, field)
 	case "currency":
 		return ec.fieldContext_FareProduct_currency(ctx, field)
+	case "duration_start":
+		return ec.fieldContext_FareProduct_duration_start(ctx, field)
+	case "duration_amount":
+		return ec.fieldContext_FareProduct_duration_amount(ctx, field)
+	case "duration_unit":
+		return ec.fieldContext_FareProduct_duration_unit(ctx, field)
+	case "duration_type":
+		return ec.fieldContext_FareProduct_duration_type(ctx, field)
 	case "feed_version_sha1":
 		return ec.fieldContext_FareProduct_feed_version_sha1(ctx, field)
 	case "feed_onestop_id":
@@ -14607,6 +14697,8 @@ func (ec *executionContext) childFields_FareTransferRule(ctx context.Context, fi
 		return ec.fieldContext_FareTransferRule_fare_transfer_type(ctx, field)
 	case "fare_product_id":
 		return ec.fieldContext_FareTransferRule_fare_product_id(ctx, field)
+	case "filter_fare_product_id":
+		return ec.fieldContext_FareTransferRule_filter_fare_product_id(ctx, field)
 	case "feed_version_sha1":
 		return ec.fieldContext_FareTransferRule_feed_version_sha1(ctx, field)
 	case "feed_onestop_id":
@@ -15967,6 +16059,10 @@ func (ec *executionContext) childFields_RiderCategory(ctx context.Context, field
 		return ec.fieldContext_RiderCategory_is_default_fare_category(ctx, field)
 	case "eligibility_url":
 		return ec.fieldContext_RiderCategory_eligibility_url(ctx, field)
+	case "min_age":
+		return ec.fieldContext_RiderCategory_min_age(ctx, field)
+	case "max_age":
+		return ec.fieldContext_RiderCategory_max_age(ctx, field)
 	case "feed_version_sha1":
 		return ec.fieldContext_RiderCategory_feed_version_sha1(ctx, field)
 	case "feed_onestop_id":
@@ -24385,6 +24481,29 @@ func (ec *executionContext) fieldContext_FareLegRule_rule_priority(_ context.Con
 	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _FareLegRule_transfer_only(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_transfer_only(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TransferOnly, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_transfer_only(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _FareLegRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -24801,6 +24920,98 @@ func (ec *executionContext) _FareProduct_currency(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_FareProduct_currency(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_start(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_start(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationStart, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_start(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_amount(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_amount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationAmount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Float) graphql.Marshaler {
+			return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_amount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_unit(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_unit(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationUnit, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_unit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_type(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _FareProduct_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
@@ -25296,6 +25507,29 @@ func (ec *executionContext) _FareTransferRule_fare_product_id(ctx context.Contex
 	)
 }
 func (ec *executionContext) fieldContext_FareTransferRule_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_filter_fare_product_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_filter_fare_product_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FilterFareProductID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_filter_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -39677,6 +39911,52 @@ func (ec *executionContext) _RiderCategory_eligibility_url(ctx context.Context, 
 }
 func (ec *executionContext) fieldContext_RiderCategory_eligibility_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Url does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_min_age(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_min_age(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MinAge, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_min_age(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_max_age(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_max_age(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MaxAge, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_max_age(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _RiderCategory_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
@@ -55263,6 +55543,8 @@ func (ec *executionContext) _FareLegRule(ctx context.Context, sel ast.SelectionS
 			}
 		case "rule_priority":
 			out.Values[i] = ec._FareLegRule_rule_priority(ctx, field, obj)
+		case "transfer_only":
+			out.Values[i] = ec._FareLegRule_transfer_only(ctx, field, obj)
 		case "feed_version_sha1":
 			out.Values[i] = ec._FareLegRule_feed_version_sha1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -55528,6 +55810,14 @@ func (ec *executionContext) _FareProduct(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "duration_start":
+			out.Values[i] = ec._FareProduct_duration_start(ctx, field, obj)
+		case "duration_amount":
+			out.Values[i] = ec._FareProduct_duration_amount(ctx, field, obj)
+		case "duration_unit":
+			out.Values[i] = ec._FareProduct_duration_unit(ctx, field, obj)
+		case "duration_type":
+			out.Values[i] = ec._FareProduct_duration_type(ctx, field, obj)
 		case "feed_version_sha1":
 			out.Values[i] = ec._FareProduct_feed_version_sha1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -55790,6 +56080,8 @@ func (ec *executionContext) _FareTransferRule(ctx context.Context, sel ast.Selec
 			}
 		case "fare_product_id":
 			out.Values[i] = ec._FareTransferRule_fare_product_id(ctx, field, obj)
+		case "filter_fare_product_id":
+			out.Values[i] = ec._FareTransferRule_filter_fare_product_id(ctx, field, obj)
 		case "feed_version_sha1":
 			out.Values[i] = ec._FareTransferRule_feed_version_sha1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -62530,6 +62822,10 @@ func (ec *executionContext) _RiderCategory(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._RiderCategory_is_default_fare_category(ctx, field, obj)
 		case "eligibility_url":
 			out.Values[i] = ec._RiderCategory_eligibility_url(ctx, field, obj)
+		case "min_age":
+			out.Values[i] = ec._RiderCategory_min_age(ctx, field, obj)
+		case "max_age":
+			out.Values[i] = ec._RiderCategory_max_age(ctx, field, obj)
 		case "feed_version_sha1":
 			out.Values[i] = ec._RiderCategory_feed_version_sha1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

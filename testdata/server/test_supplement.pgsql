@@ -117,9 +117,9 @@ insert into gtfs_timeframes(feed_version_id, timeframe_group_id, start_time, end
     select c.feed_version_id, 'weekday_peak', 21600, 32400, c.id
     from gtfs_calendars c join ct_fv on ct_fv.id = c.feed_version_id where c.service_id = 'mtwtf';
 
-insert into gtfs_rider_categories(feed_version_id, rider_category_id, rider_category_name, is_default_fare_category, eligibility_url)
-    select id, 'adult', 'Adult', 1, null from ct_fv
-    union all select id, 'youth', 'Youth', 0, 'https://www.caltrain.com/fares' from ct_fv;
+insert into gtfs_rider_categories(feed_version_id, rider_category_id, rider_category_name, is_default_fare_category, eligibility_url, min_age, max_age)
+    select id, 'adult', 'Adult', 1, null, null, null from ct_fv
+    union all select id, 'youth', 'Youth', 0, 'https://www.caltrain.com/fares', 5, 18 from ct_fv;
 
 insert into gtfs_fare_products(feed_version_id, fare_product_id, fare_product_name, amount, currency, rider_category_id)
     select id, 'two_zone', 'Two zones', 6.40, 'USD', 'adult' from ct_fv
@@ -127,13 +127,16 @@ insert into gtfs_fare_products(feed_version_id, fare_product_id, fare_product_na
     union all select id, 'two_zone_peak', 'Two zones, peak', 7.40, 'USD', 'adult' from ct_fv
     union all select id, 'express_upgrade', 'Express upgrade', 1.00, 'USD', null from ct_fv;
 
-insert into gtfs_fare_leg_rules(feed_version_id, leg_group_id, network_id, from_area_id, to_area_id, from_timeframe_group_id, to_timeframe_group_id, fare_product_id, rule_priority)
-    select id, 'ct_local', 'local', 'zone1', 'zone4', null, null, 'two_zone', 0 from ct_fv
-    union all select id, 'ct_local', 'local', 'zone1', 'zone4', 'weekday_peak', null, 'two_zone_peak', 1 from ct_fv
-    union all select id, 'ct_express', 'express', null, null, null, null, 'two_zone', 0 from ct_fv;
+insert into gtfs_fare_products(feed_version_id, fare_product_id, fare_product_name, amount, currency, rider_category_id, duration_start, duration_amount, duration_unit, duration_type)
+    select id, 'day_pass', 'Day pass', 15.00, 'USD', 'adult', 0, 1, 3, 1 from ct_fv;
 
-insert into gtfs_fare_transfer_rules(feed_version_id, from_leg_group_id, to_leg_group_id, transfer_count, duration_limit, duration_limit_type, fare_transfer_type, fare_product_id)
-    select id, 'ct_local', 'ct_express', 1, 5400, 1, 0, 'express_upgrade' from ct_fv;
+insert into gtfs_fare_leg_rules(feed_version_id, leg_group_id, network_id, from_area_id, to_area_id, from_timeframe_group_id, to_timeframe_group_id, fare_product_id, rule_priority, transfer_only)
+    select id, 'ct_local', 'local', 'zone1', 'zone4', null, null, 'two_zone', 0, null::int from ct_fv
+    union all select id, 'ct_local', 'local', 'zone1', 'zone4', 'weekday_peak', null, 'two_zone_peak', 1, null::int from ct_fv
+    union all select id, 'ct_express', 'express', null, null, null, null, 'two_zone', 0, 1 from ct_fv;
+
+insert into gtfs_fare_transfer_rules(feed_version_id, from_leg_group_id, to_leg_group_id, transfer_count, duration_limit, duration_limit_type, fare_transfer_type, fare_product_id, filter_fare_product_id)
+    select id, 'ct_local', 'ct_express', 1, 5400, 1, 0, 'express_upgrade', 'two_zone' from ct_fv;
 
 insert into gtfs_fare_leg_join_rules(feed_version_id, from_network_id, to_network_id, from_stop_id, to_stop_id)
     select id, 'local', 'express', '70261', '70262' from ct_fv;

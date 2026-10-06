@@ -101,10 +101,10 @@ func TestFareResolver(t *testing.T) {
 			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_products { fare_product_id rider_category_id fare_media { id } amount } } }`,
 			vars:  hw{"sha1": ctSha1},
 			sel: []testcaseSelector{
-				{selector: "feed_versions.0.fare_products.#.fare_product_id", expect: []string{"two_zone", "two_zone", "two_zone_peak", "express_upgrade"}},
-				{selector: "feed_versions.0.fare_products.#.rider_category_id", expect: []string{"adult", "youth", "adult", ""}},
-				{selector: "feed_versions.0.fare_products.#.fare_media", expect: []string{"", "", "", ""}},
-				{selector: "feed_versions.0.fare_products.#.amount", expect: []string{"6.4", "3.2", "7.4", "1"}},
+				{selector: "feed_versions.0.fare_products.#.fare_product_id", expect: []string{"two_zone", "two_zone", "two_zone_peak", "express_upgrade", "day_pass"}},
+				{selector: "feed_versions.0.fare_products.#.rider_category_id", expect: []string{"adult", "youth", "adult", "", "adult"}},
+				{selector: "feed_versions.0.fare_products.#.fare_media", expect: []string{"", "", "", "", ""}},
+				{selector: "feed_versions.0.fare_products.#.amount", expect: []string{"6.4", "3.2", "7.4", "1", "15"}},
 			},
 		},
 		{
@@ -127,6 +127,43 @@ func TestFareResolver(t *testing.T) {
 			vars:              hw{"sha1": ctranFlexSha1},
 			selector:          "feed_versions.0.fare_leg_rules.#.network_id",
 			selectExpectCount: 3,
+		},
+		// Experimental fields from earlier Fares v2 proposal drafts and Interline extensions
+		{
+			name:  "fare_products duration",
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_products { fare_product_id duration_start duration_amount duration_unit duration_type } } }`,
+			vars:  hw{"sha1": ctSha1},
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.fare_products.4.fare_product_id", expect: []string{"day_pass"}},
+				{selector: "feed_versions.0.fare_products.#.duration_start", expect: []string{"", "", "", "", "0"}},
+				{selector: "feed_versions.0.fare_products.#.duration_amount", expect: []string{"", "", "", "", "1"}},
+				{selector: "feed_versions.0.fare_products.#.duration_unit", expect: []string{"", "", "", "", "3"}},
+				{selector: "feed_versions.0.fare_products.#.duration_type", expect: []string{"", "", "", "", "1"}},
+			},
+		},
+		{
+			name:         "fare_leg_rules transfer_only",
+			query:        `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_rules { transfer_only } } }`,
+			vars:         hw{"sha1": ctSha1},
+			selector:     "feed_versions.0.fare_leg_rules.#.transfer_only",
+			selectExpect: []string{"", "", "1"},
+		},
+		{
+			name:         "fare_transfer_rules filter_fare_product_id",
+			query:        `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_transfer_rules { filter_fare_product_id } } }`,
+			vars:         hw{"sha1": ctSha1},
+			selector:     "feed_versions.0.fare_transfer_rules.#.filter_fare_product_id",
+			selectExpect: []string{"two_zone"},
+		},
+		{
+			name:  "rider_categories ages",
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { rider_categories { rider_category_id min_age max_age } } }`,
+			vars:  hw{"sha1": ctSha1},
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.rider_categories.#.rider_category_id", expect: []string{"adult", "youth"}},
+				{selector: "feed_versions.0.rider_categories.#.min_age", expect: []string{"", "5"}},
+				{selector: "feed_versions.0.rider_categories.#.max_age", expect: []string{"", "18"}},
+			},
 		},
 		{
 			name:   "fare_leg_join_rules",

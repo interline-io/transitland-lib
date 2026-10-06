@@ -96,6 +96,10 @@ func fareProductSelect(limit *int, ids []int) sq.SelectBuilder {
 		"currency",
 		"rider_category_id",
 		"fare_media_id",
+		"duration_start",
+		"duration_amount",
+		"duration_unit",
+		"duration_type",
 	)
 }
 
@@ -116,6 +120,7 @@ func fareLegRuleSelect(limit *int, ids []int) sq.SelectBuilder {
 		"to_timeframe_group_id",
 		"fare_product_id",
 		"rule_priority",
+		"transfer_only",
 	)
 }
 
@@ -151,6 +156,7 @@ func fareTransferRuleSelect(limit *int, ids []int) sq.SelectBuilder {
 		"duration_limit_type",
 		"fare_transfer_type",
 		"fare_product_id",
+		"filter_fare_product_id",
 	)
 }
 
@@ -167,6 +173,8 @@ func riderCategorySelect(limit *int, ids []int) sq.SelectBuilder {
 		"rider_category_name",
 		"is_default_fare_category",
 		"eligibility_url",
+		"min_age",
+		"max_age",
 	)
 }
 
