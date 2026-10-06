@@ -2,6 +2,7 @@ package dbfinder
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -111,17 +112,17 @@ func (f *Finder) FareLegRulesByFeedVersionIDs(ctx context.Context, limit *int, k
 }
 
 func fareLegRuleSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_fare_leg_rules", limit, ids,
+	q := fareEntitySelect("gtfs_fare_leg_rules", limit, ids,
 		"leg_group_id",
-		"network_id",
-		"from_area_id",
-		"to_area_id",
 		"from_timeframe_group_id",
 		"to_timeframe_group_id",
 		"fare_product_id",
 		"rule_priority",
 		"transfer_only",
 	)
+	q = selectGtfsID(q, "gtfs_fare_leg_rules", "network_id", "gtfs_networks", "network_id", "ref_network")
+	q = selectGtfsID(q, "gtfs_fare_leg_rules", "from_area_id", "gtfs_areas", "area_id", "ref_from_area")
+	return selectGtfsID(q, "gtfs_fare_leg_rules", "to_area_id", "gtfs_areas", "area_id", "ref_to_area")
 }
 
 func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareLegJoinRule, error) {
@@ -132,12 +133,11 @@ func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *in
 }
 
 func fareLegJoinRuleSelect(limit *int, ids []int) sq.SelectBuilder {
-	return fareEntitySelect("gtfs_fare_leg_join_rules", limit, ids,
-		"from_network_id",
-		"to_network_id",
-		"from_stop_id",
-		"to_stop_id",
-	)
+	q := fareEntitySelect("gtfs_fare_leg_join_rules", limit, ids)
+	q = selectGtfsID(q, "gtfs_fare_leg_join_rules", "from_network_id", "gtfs_networks", "network_id", "ref_from_network")
+	q = selectGtfsID(q, "gtfs_fare_leg_join_rules", "to_network_id", "gtfs_networks", "network_id", "ref_to_network")
+	q = selectGtfsID(q, "gtfs_fare_leg_join_rules", "from_stop_id", "gtfs_stops", "stop_id", "ref_from_stop")
+	return selectGtfsID(q, "gtfs_fare_leg_join_rules", "to_stop_id", "gtfs_stops", "stop_id", "ref_to_stop")
 }
 
 func (f *Finder) FareTransferRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareTransferRule, error) {
@@ -266,6 +266,21 @@ func stopAreaSelect(limit *int, ids []int) sq.SelectBuilder {
 		"area_id",
 		"stop_id",
 	)
+}
+
+// selectGtfsID selects table.col as the GTFS id it references. The importer
+// rewrites a text reference to the referenced row's internal id when that row
+// exists (e.g. a network from networks.txt) and leaves it as the GTFS id
+// otherwise (e.g. a network that only appears in routes.network_id), so
+// resolve ids through refTable and fall back to the stored value.
+func selectGtfsID(q sq.SelectBuilder, table, col, refTable, refCol, alias string) sq.SelectBuilder {
+	ref := az09(table) + "." + az09(col)
+	return q.
+		Column(fmt.Sprintf("COALESCE(%s.%s, %s) AS %s", alias, az09(refCol), ref, az09(col))).
+		LeftJoin(fmt.Sprintf(
+			"%s %s ON %s.id = (CASE WHEN %s ~ '^[0-9]{1,18}$' THEN %s::bigint END) AND %s.feed_version_id = %s.feed_version_id",
+			az09(refTable), alias, alias, ref, ref, alias, az09(table),
+		))
 }
 
 // fareEntitySelect selects the listed columns of a fares table, plus the id,
