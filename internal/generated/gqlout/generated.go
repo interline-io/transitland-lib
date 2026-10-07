@@ -14,6 +14,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	"github.com/interline-io/transitland-lib/internal/gbfs"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
 	gqlparser "github.com/vektah/gqlparser/v2"
@@ -26052,8 +26053,8 @@ func (ec *executionContext) _GbfsAlertTime_start(ctx context.Context, field grap
 			return obj.Start, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.Timestamp) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx, selections, v)
 		},
 		true,
 		false,
@@ -26075,8 +26076,8 @@ func (ec *executionContext) _GbfsAlertTime_end(ctx context.Context, field graphq
 			return obj.End, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.Timestamp) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx, selections, v)
 		},
 		true,
 		false,
@@ -26488,8 +26489,8 @@ func (ec *executionContext) _GbfsFreeBikeStatus_last_reported(ctx context.Contex
 			return obj.LastReported, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.Timestamp) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx, selections, v)
 		},
 		true,
 		false,
@@ -26580,8 +26581,8 @@ func (ec *executionContext) _GbfsFreeBikeStatus_available_until(ctx context.Cont
 			return obj.AvailableUntil, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.Timestamp) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx, selections, v)
 		},
 		true,
 		false,
@@ -27415,8 +27416,8 @@ func (ec *executionContext) _GbfsStationInformation_name(ctx context.Context, fi
 			return obj.Name, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -27438,8 +27439,8 @@ func (ec *executionContext) _GbfsStationInformation_short_name(ctx context.Conte
 			return obj.ShortName, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -27665,7 +27666,7 @@ func (ec *executionContext) _GbfsStationInformation_parking_hoop(ctx context.Con
 			return ec.fieldContext_GbfsStationInformation_parking_hoop(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.ParkingHoop, nil
+			return obj.ParkingHoop(), nil
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
@@ -27676,7 +27677,7 @@ func (ec *executionContext) _GbfsStationInformation_parking_hoop(ctx context.Con
 	)
 }
 func (ec *executionContext) fieldContext_GbfsStationInformation_parking_hoop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("GbfsStationInformation", field, false, false, errors.New("field of type Int does not have child fields"))
+	return graphql.NewScalarFieldContext("GbfsStationInformation", field, true, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _GbfsStationInformation_contact_phone(ctx context.Context, field graphql.CollectedField, obj *model.GbfsStationInformation) (ret graphql.Marshaler) {
@@ -28063,8 +28064,8 @@ func (ec *executionContext) _GbfsStationStatus_last_reported(ctx context.Context
 			return obj.LastReported, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.Timestamp) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28196,8 +28197,8 @@ func (ec *executionContext) _GbfsSystemAlert_url(ctx context.Context, field grap
 			return obj.URL, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28219,8 +28220,8 @@ func (ec *executionContext) _GbfsSystemAlert_summary(ctx context.Context, field 
 			return obj.Summary, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28242,8 +28243,8 @@ func (ec *executionContext) _GbfsSystemAlert_description(ctx context.Context, fi
 			return obj.Description, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28265,8 +28266,8 @@ func (ec *executionContext) _GbfsSystemAlert_last_updated(ctx context.Context, f
 			return obj.LastUpdated, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.Timestamp) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28596,8 +28597,8 @@ func (ec *executionContext) _GbfsSystemInformation_name(ctx context.Context, fie
 			return obj.Name, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28619,8 +28620,8 @@ func (ec *executionContext) _GbfsSystemInformation_short_name(ctx context.Contex
 			return obj.ShortName, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28642,8 +28643,8 @@ func (ec *executionContext) _GbfsSystemInformation_operator(ctx context.Context,
 			return obj.Operator, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28849,8 +28850,8 @@ func (ec *executionContext) _GbfsSystemInformation_terms_url(ctx context.Context
 			return obj.TermsURL, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -28895,8 +28896,8 @@ func (ec *executionContext) _GbfsSystemInformation_privacy_url(ctx context.Conte
 			return obj.PrivacyURL, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -29051,8 +29052,8 @@ func (ec *executionContext) _GbfsSystemPricingPlan_name(ctx context.Context, fie
 			return obj.Name, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -29143,8 +29144,8 @@ func (ec *executionContext) _GbfsSystemPricingPlan_description(ctx context.Conte
 			return obj.Description, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -29276,8 +29277,8 @@ func (ec *executionContext) _GbfsSystemRegion_name(ctx context.Context, field gr
 			return obj.Name, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -29699,8 +29700,8 @@ func (ec *executionContext) _GbfsVehicleType_name(ctx context.Context, field gra
 			return obj.Name, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -29791,8 +29792,8 @@ func (ec *executionContext) _GbfsVehicleType_make(ctx context.Context, field gra
 			return obj.Make, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -29814,8 +29815,8 @@ func (ec *executionContext) _GbfsVehicleType_model(ctx context.Context, field gr
 			return obj.Model, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx, selections, v)
 		},
 		true,
 		false,
@@ -64735,6 +64736,16 @@ func (ec *executionContext) marshalOImportStatus2ᚖgithubᚗcomᚋinterlineᚑi
 	return v
 }
 
+func (ec *executionContext) unmarshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx context.Context, v any) (gbfs.Timestamp, error) {
+	var res gbfs.Timestamp
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐTimestamp(ctx context.Context, sel ast.SelectionSet, v gbfs.Timestamp) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx context.Context, v any) (tt.Int, error) {
 	var res tt.Int
 	err := res.UnmarshalGQL(v)
@@ -65605,6 +65616,22 @@ func (ec *executionContext) unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterline
 	}
 	res, err := ec.unmarshalInputStopTimeFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx context.Context, v any) (gbfs.LocalizedString, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res gbfs.LocalizedString
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋinternalᚋgbfsᚐLocalizedString(ctx context.Context, sel ast.SelectionSet, v gbfs.LocalizedString) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx context.Context, v any) (tt.String, error) {

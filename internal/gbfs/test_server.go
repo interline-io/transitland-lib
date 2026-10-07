@@ -49,6 +49,10 @@ func (g *TestGbfsServer) open(host string, path string) ([]byte, error) {
 				sfs.Feeds = append(sfs.Feeds, &SystemFeed{Name: tt.NewString(fn), URL: tt.NewString(url)})
 			}
 		}
+		if g.Language == "" {
+			// A 3.x discovery file lists one set of files.
+			return json.Marshal(map[string]any{"data": sfs})
+		}
 		sf.Data = map[string]*SystemFeeds{}
 		sf.Data[g.Language] = &sfs
 		data, err := json.Marshal(sf)

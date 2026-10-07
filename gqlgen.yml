@@ -30,6 +30,7 @@ models:
     model:
       - "github.com/99designs/gqlgen/graphql.String"
       - "github.com/interline-io/transitland-lib/tt.String"
+      - "github.com/interline-io/transitland-lib/internal/gbfs.LocalizedString"
   Time:
     model:
       - "github.com/99designs/gqlgen/graphql.Time"
@@ -40,6 +41,7 @@ models:
       - "github.com/99designs/gqlgen/graphql.Int64"
       - "github.com/99designs/gqlgen/graphql.Int32"
       - "github.com/interline-io/transitland-lib/tt.Int"
+      - "github.com/interline-io/transitland-lib/internal/gbfs.Timestamp"
   Float:
     model:
       - "github.com/99designs/gqlgen/graphql.Float"
