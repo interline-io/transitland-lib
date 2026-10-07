@@ -47,6 +47,8 @@ func TestGbfsFetch(t *testing.T) {
 		if err := actions.GbfsFetch(ctx, "test-gbfs", ts.URL+"/gbfs.json"); err != nil {
 			t.Fatal(err)
 		}
+		_, ok := cfg.GbfsFinder.GetFeed(ctx, "test-gbfs")
+		assert.True(t, ok, "stored under the feed's onestop id")
 
 		// Test
 		bikes, err := cfg.GbfsFinder.FindBikes(
