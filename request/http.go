@@ -67,6 +67,25 @@ const (
 	defaultMaxRedirects = 10
 )
 
+// DefaultAccept is sent unless a request asks for something else. Some CDNs
+// block requests that lack Accept or Accept-Language.
+const DefaultAccept = "application/zip,application/x-zip-compressed,application/octet-stream;q=0.9,*/*;q=0.8"
+
+// RealtimeAccept prefers GTFS-RT protobuf. Some servers negotiate on Accept and
+// otherwise return base64 text instead of binary protobuf. Each type has a
+// distinct q so servers that sort only by q get a stable order.
+const RealtimeAccept = "application/x-google-protobuf,application/x-protobuf;q=0.95,application/protobuf;q=0.9,application/octet-stream;q=0.8,*/*;q=0.1"
+
+// AcceptForURLType returns the Accept header for a DMFR feed.urls key, such as
+// "static_current" or "realtime_trip_updates". The key decides, not the feed
+// spec, since any URL type can appear on any feed record.
+func AcceptForURLType(urlType string) string {
+	if strings.HasPrefix(urlType, "realtime") {
+		return RealtimeAccept
+	}
+	return DefaultAccept
+}
+
 // defaultBackoffSchedule defines the backoff duration for each retry attempt.
 var defaultBackoffSchedule = []time.Duration{
 	10 * time.Second,
@@ -92,6 +111,11 @@ type Http struct {
 	// IPs are allowed). Off by default — only set in CLI contexts where the
 	// operator legitimately fetches from internal addresses.
 	AllowHTTPUnfiltered bool
+	// Accept sets the Accept header. If empty, DefaultAccept is used.
+	Accept string
+	// Headers are added to each request, replacing any default header of the
+	// same name.
+	Headers http.Header
 }
 
 func (r *Http) SetSecret(secret dmfr.Secret) error {
@@ -235,8 +259,19 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 	// Make HTTP request
 	req.Header.Set("User-Agent", fmt.Sprintf("transitland/%s", tl.Version.Tag))
 	// If the following headers are not set, some CDNs may block the request as coming from a bot rather than a browser
-	req.Header.Set("Accept", "application/zip,application/x-zip-compressed,application/octet-stream;q=0.9,*/*;q=0.8")
+	accept := r.Accept
+	if accept == "" {
+		accept = DefaultAccept
+	}
+	req.Header.Set("Accept", accept)
 	req.Header.Set("Accept-Language", "")
+	// Caller-supplied headers replace any of the above
+	for k, vs := range r.Headers {
+		req.Header.Del(k)
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
+	}
 
 	// Remove default ports from host header if explicitly specified as it
 	// may break pre-signed S3 URLs or other systems that rely on the host header

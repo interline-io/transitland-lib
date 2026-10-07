@@ -16,6 +16,7 @@ transitland server [flags]
 
 ```
       --dburl string                      Database URL (default: $TL_DATABASE_URL)
+      --fetch-header stringArray          Header sent with outbound feed fetches as 'Name: value', e.g. a User-Agent; may be repeated
   -h, --help                              help for server
       --load-admins                       Load admin polygons from database into memory
       --loader-batch-size int             GraphQL Loader batch size (default 100)

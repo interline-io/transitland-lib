@@ -43,6 +43,7 @@ func StaticFetch(ctx context.Context, feedId string, feedSrc io.Reader, feedUrl 
 			FetchedAt:                time.Now().In(time.UTC),
 			AllowFTPFetch:            true,
 			AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
+			Headers:                  cfg.FetchHeaders,
 		},
 	}
 	if user := authn.ForContext(ctx); user != nil {
@@ -110,6 +111,7 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 			Secrets:                  cfg.Secrets,
 			FetchedAt:                time.Now().In(time.UTC),
 			AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
+			Headers:                  cfg.FetchHeaders,
 		},
 	}
 
@@ -152,6 +154,7 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 	opts.URLType = "gbfs_auto_discovery"
 	opts.FetchedAt = time.Now().In(time.UTC)
 	opts.AllowHTTPFetchUnfiltered = cfg.AllowHTTPFetchUnfiltered
+	opts.Headers = cfg.FetchHeaders
 	if feedUrl != "" {
 		opts.FeedURL = feedUrl
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -26,6 +27,8 @@ type Options struct {
 	HideURL                  bool
 	FetchedAt                time.Time
 	Secrets                  []dmfr.Secret
+	// Headers replace default request headers of the same name.
+	Headers http.Header
 }
 
 // Result contains results of a fetch operation.
@@ -60,7 +63,7 @@ func download(ctx context.Context, fm feedmanager.FeedManager, opts Options) (*d
 	if opts.FeedURL == "" {
 		return feed, "", request.FetchResponse{FetchError: errors.New("no url provided")}, nil
 	}
-	var reqOpts []request.RequestOption
+	reqOpts := []request.RequestOption{request.WithURLType(opts.URLType), request.WithHeaders(opts.Headers)}
 	if opts.AllowFTPFetch {
 		reqOpts = append(reqOpts, request.WithAllowFTP)
 	}
