@@ -216,8 +216,42 @@ func (fi *Validator) ValidateFeedEntity(ent *pb.FeedEntity, current *pb.FeedMess
 		errs = append(errs, fi.ValidateVehiclePosition(vehicle)...)
 	}
 	if alert := ent.GetAlert(); alert != nil {
-		// TODO: ValidateAlert
+		errs = append(errs, fi.ValidateAlert(alert)...)
 		// TODO: Check that route_id is not set in a TripDescriptor
+	}
+	return errs
+}
+
+// ValidateAlert .
+func (fi *Validator) ValidateAlert(alert *pb.Alert) (errs []error) {
+	informedEntities := alert.GetInformedEntity()
+	if len(informedEntities) == 0 {
+		errs = append(errs, withFieldAndJson(
+			E032,
+			"alert.informed_entity",
+			"",
+			"",
+			alert,
+			"Alert does not have an informed_entity",
+		))
+	}
+	for i, informedEntity := range informedEntities {
+		if informedEntity.AgencyId == nil &&
+			informedEntity.RouteId == nil &&
+			informedEntity.RouteType == nil &&
+			informedEntity.DirectionId == nil &&
+			informedEntity.Trip == nil &&
+			informedEntity.StopId == nil {
+			errs = append(errs, withFieldAndJson(
+				E033,
+				"alert.informed_entity",
+				"",
+				"",
+				informedEntity,
+				"Alert informed_entity %d does not have any of agency_id, route_id, route_type, direction_id, trip, or stop_id",
+				i,
+			))
+		}
 	}
 	return errs
 }

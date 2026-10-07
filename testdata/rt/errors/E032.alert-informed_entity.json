@@ -1,0 +1,22 @@
+{
+    "header": {
+      "gtfsRealtimeVersion": "1.0",
+      "incrementality": "FULL_DATASET",
+      "timestamp": "1699405534"
+    },
+    "entity": [
+      {
+        "id": "alert-1",
+        "alert": {
+          "headerText": {
+            "translation": [
+              {
+                "text": "Service disruption",
+                "language": "en"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
