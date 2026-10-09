@@ -101,7 +101,7 @@ func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip, 
 	if tripId == "" {
 		return nil
 	}
-	runs := f.tripRunsOf(ctx, t.FeedVersionID, t.ID, t.RunDates)
+	runs := f.tripRunsOf(ctx, t)
 	match := func(_ string, _ *Source, v *pb.VehiclePosition) vpMatch {
 		if v.GetTrip().GetTripId() != tripId || !runs.describes(v.GetTrip()) {
 			return vpNoMatch
@@ -240,10 +240,8 @@ func makeTripDescriptor(td *pb.TripDescriptor) *model.RTTripDescriptor {
 			r.StartTime = &s
 		}
 	}
-	if v := td.GetStartDate(); v != "" {
-		if d, err := tt.ParseDate(v); err == nil {
-			r.StartDate = &d
-		}
+	if d, ok := descriptorDate(td); ok {
+		r.StartDate = &d
 	}
 	return &r
 }

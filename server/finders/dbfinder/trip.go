@@ -152,7 +152,8 @@ func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilde
 // tripDate is a service date to match in the database and the dates it is
 // reported as. They differ under use_service_window, which relocates a date
 // into the fallback week; several requested dates can land on the same day.
-// A query for a single service_date has one, with no aggregated dates.
+// Single marks a query for one service_date, which has no aggregated column, so
+// every trip found is a run on its one reported date.
 type tripDate struct {
 	query  time.Time
 	report []time.Time
@@ -200,9 +201,7 @@ func resolveTripDates(where *model.TripFilter, fvsw *model.ServiceWindow) []trip
 func expandTripServiceDates(ents []*model.Trip, dates []tripDate) {
 	if len(dates) == 1 && dates[0].single {
 		for _, ent := range ents {
-			for _, r := range dates[0].report {
-				ent.RunDates = append(ent.RunDates, tt.NewDate(r))
-			}
+			ent.RunDates = []tt.Date{tt.NewDate(dates[0].report[0])}
 		}
 		return
 	}
@@ -439,7 +438,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 			`, strings.Join(dates, ",")).Where("svc.service_dates_agg is not null")
 		} else if serviceDate != nil {
 			q = serviceDateLateral(q, *serviceDate)
-			tripDates = []tripDate{{query: serviceDate.Val, report: []time.Time{askedDate.Val}, single: true}}
+			tripDates = []tripDate{{report: []time.Time{askedDate.Val}, single: true}}
 		}
 		// Handle license filtering
 		q = licenseFilter(where.License, q)

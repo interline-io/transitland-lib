@@ -56,10 +56,15 @@ func (r *vehiclePositionResolver) Trip(ctx context.Context, obj *model.VehiclePo
 	if tripId == "" {
 		return nil, nil
 	}
-	return LoaderFor(ctx).TripsByFeedVersionTripIDs.Load(ctx, model.FVEntityID{
+	trip, err := LoaderFor(ctx).TripsByFeedVersionTripIDs.Load(ctx, model.FVEntityID{
 		FeedVersionID: obj.FeedVersionID,
 		EntityID:      tripId,
 	})()
+	// The run the vehicle names; one naming none is the trip's current run.
+	if obj.TripDescriptor != nil && obj.TripDescriptor.StartDate != nil {
+		return tripRun(trip, *obj.TripDescriptor.StartDate), err
+	}
+	return trip, err
 }
 
 func (r *vehiclePositionResolver) Route(ctx context.Context, obj *model.VehiclePosition) (*model.Route, error) {

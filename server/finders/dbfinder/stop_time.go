@@ -91,13 +91,9 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		// Run separate queries for each possible service day
 		for _, day := range stopTimeFilterExpand(fvWhere, fvsw) {
 			w := day.where
-			var serviceDate *tt.Date
-			if w != nil && w.ServiceDate != nil {
-				serviceDate = w.ServiceDate
-			}
 			var sts []*model.StopTime
 			var q sq.SelectBuilder
-			if serviceDate != nil {
+			if day.report != nil {
 				// Get stop_times on a specified day
 				var entityKeys []int
 				for _, k := range entityPairs {
@@ -116,8 +112,7 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 			if err := dbutil.Select(ctx, f.db, q, &sts); err != nil {
 				return nil, err
 			}
-			// Set each stop time's reported service date, and adjust the calendar
-			// date if needed
+			// Report the requested service date
 			if day.report != nil {
 				for _, ent := range sts {
 					ent.SetServiceDate(*day.report)
@@ -510,9 +505,7 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 }
 
 // serviceDayQuery is one service day's share of a stop time filter: the filter
-// to run, and the service date its stop times report. The two differ under
-// use_service_window, which queries the fallback week for a date outside the
-// feed version's window but reports the requested date.
+// to run, and the requested service date its stop times report.
 type serviceDayQuery struct {
 	where  *model.StopTimeFilter
 	report *tt.Date
@@ -573,17 +566,11 @@ func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow
 
 	}
 
-	// A service day to query: the requested one, or under use_service_window, the
-	// same weekday of the fallback week where the requested one is outside the
-	// window. Each service day is relocated on its own, so a neighboring day
-	// inside the window keeps its own schedule.
+	// Each service day is relocated on its own, so a neighboring day inside the
+	// window keeps its own schedule.
 	serviceDay := func(asked tt.Date) serviceDayQuery {
-		query := asked
-		if nilOr(where.UseServiceWindow, false) && fvsw != nil {
-			query = *mapIntoServiceWindow(asked.Val, fvsw)
-		}
 		w := *where
-		w.ServiceDate = &query
+		w.ServiceDate, _, _ = resolveServiceDate(&asked, nil, nilOr(where.UseServiceWindow, false), fvsw)
 		return serviceDayQuery{where: &w, report: &asked}
 	}
 

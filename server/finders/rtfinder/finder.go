@@ -61,21 +61,22 @@ func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Locat
 // FindTrip returns the trip update on a trip's run: the run it was reached as,
 // or its current run.
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
-	if found := f.runUpdates(ctx, t.FeedVersionID, t.TripID.Val, f.tripRunsOf(ctx, t.FeedVersionID, t.ID, t.RunDates)); len(found) > 0 {
+	if found := f.runUpdates(ctx, t); len(found) > 0 {
 		return found[0]
 	}
 	return nil
 }
 
-// runUpdates returns the trip updates describing the given runs of a trip, one
-// from each realtime feed. A feed should send one update per run; where it sends
-// several, the last wins.
-func (f *Finder) runUpdates(ctx context.Context, fvid int, tripId string, runs tripRuns) []*pb.TripUpdate {
+// runUpdates returns the trip updates on a trip's runs, one from each realtime
+// feed. A feed should send one update per run; where it sends several, the last
+// wins.
+func (f *Finder) runUpdates(ctx context.Context, t *model.Trip) []*pb.TripUpdate {
+	runs := f.tripRunsOf(ctx, t)
 	var ret []*pb.TripUpdate
-	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, fvid)
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	for _, topic := range topics {
 		var found *pb.TripUpdate
-		for _, a := range f.getTrips(ctx, topic, tripId) {
+		for _, a := range f.getTrips(ctx, topic, t.TripID.Val) {
 			if runs.describes(a.GetTrip()) {
 				found = a
 			}
@@ -94,7 +95,7 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 	// Looked up at most once per call, and only for a selector naming this trip
 	// along with an agency, route or mode.
 	route := sync.OnceValues(func() (gtfsRoute, bool) { return f.lc.GetRoute(ctx, t.RouteID.Int()) })
-	runs := f.tripRunsOf(ctx, t.FeedVersionID, t.ID, t.RunDates)
+	runs := f.tripRunsOf(ctx, t)
 	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(_ string, _ *Source, s *pb.EntitySelector) bool {
 		return tripId != "" && s.GetTrip().GetTripId() == tripId && tripAgrees(s, route) && runs.describes(s.GetTrip())
 	})
@@ -350,17 +351,10 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 
 func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
 	seq := st.StopSequence.Int()
-	// The stop time is on its own service date's run, else its trip's run. The
-	// trip may be a stand-in carrying only its GTFS trip_id, so its database id
-	// comes from the stop time.
-	dates := t.RunDates
-	if st.ServiceDate.Valid {
-		dates = []tt.Date{st.ServiceDate}
-	}
 	// Resolve the trip in each RT feed once. Both passes below ask every topic
 	// the same question, and a feed version can be associated with dozens of RT
 	// feeds, so answering twice is most of the work.
-	rtTrips := f.runUpdates(ctx, t.FeedVersionID, t.TripID.Val, f.tripRunsOf(ctx, t.FeedVersionID, st.TripID.Int(), dates))
+	rtTrips := f.runUpdates(ctx, t)
 	// Attempt to match on stop sequence
 	for _, rtTrip := range rtTrips {
 		for _, ste := range rtTrip.StopTimeUpdate {
@@ -406,7 +400,7 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 	return nil, false
 }
 
-// TODO: put this method on consumer and wrap, as with GetTrip
+// TODO: put this method on consumer and wrap, as with GetTrips
 func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.TripUpdate {
 	sid := t.StopID
 	var ret []*pb.TripUpdate
@@ -419,14 +413,8 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 		// TODO: index more efficiently
 		for _, trips := range a.tripUpdates {
 			for _, trip := range trips {
-				if trip.Trip.GetScheduleRelationship() != pb.TripDescriptor_ADDED {
-					continue
-				}
-				for _, ste := range trip.StopTimeUpdate {
-					if ste.GetStopId() == sid.Val {
-						ret = append(ret, trip)
-						break // continue to next trip
-					}
+				if trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
+					ret = append(ret, trip)
 				}
 			}
 		}

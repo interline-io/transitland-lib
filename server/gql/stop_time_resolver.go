@@ -61,18 +61,15 @@ func (r *stopTimeResolver) Trip(ctx context.Context, obj *model.StopTime) (*mode
 		return a, err
 	}
 	trip, err := LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
-	if err != nil || !obj.ServiceDate.Valid {
-		return trip, err
-	}
-	return tripRun(trip, obj.ServiceDate), nil
+	return tripRun(trip, obj.ServiceDate), err
 }
 
 // tripRun returns a trip as its run on a service date, so its realtime data is
-// matched to that run. A copy, as the loader shares one trip across every
-// request for it.
+// matched to that run; without a date, the trip unchanged. A copy, as the loader
+// shares one trip across every request for it.
 func tripRun(trip *model.Trip, serviceDate tt.Date) *model.Trip {
-	if trip == nil {
-		return nil
+	if trip == nil || !serviceDate.Valid {
+		return trip
 	}
 	run := *trip
 	run.RunDates = []tt.Date{serviceDate}

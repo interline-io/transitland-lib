@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -41,11 +42,11 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	return slices.ContainsFunc(r.dates, func(d tt.Date) bool { return sameDay(d, run) })
 }
 
-// tripRunsOf returns the given runs of a trip, by its database id.
-func (f *Finder) tripRunsOf(ctx context.Context, fvid int, tripId int, dates []tt.Date) tripRuns {
+// tripRunsOf returns the runs a trip was reached as.
+func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
 	return tripRuns{
-		dates:   dates,
-		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, fvid, tripId) }),
+		dates:   t.RunDates,
+		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, t.ID) }),
 	}
 }
 
@@ -55,10 +56,7 @@ func (f *Finder) currentRun(ctx context.Context, fvid int, tripId int) (tt.Date,
 	if !ok {
 		return tt.Date{}, false
 	}
-	// A trip that isn't found, such as one added in real time, has no run past
-	// midnight.
-	lastArrival, _ := f.lc.GetTripLastArrival(ctx, fvid, tripId)
-	return currentRunDate(f.Clock.Now(), loc, lastArrival), true
+	return currentRunDate(f.Clock.Now(), loc, f.lc.GetTripLastArrival(ctx, fvid, tripId)), true
 }
 
 // currentRunDate returns the service date of the current run of a trip whose
@@ -75,9 +73,6 @@ func currentRunDate(now time.Time, loc *time.Location, lastArrival int) tt.Date 
 
 // descriptorDate returns the service date a trip descriptor names, if any.
 func descriptorDate(td *pb.TripDescriptor) (tt.Date, bool) {
-	if td.GetStartDate() == "" {
-		return tt.Date{}, false
-	}
 	d, err := tt.ParseDate(td.GetStartDate())
 	return d, err == nil && d.Valid
 }

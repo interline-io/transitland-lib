@@ -65,10 +65,6 @@ func optionalInt(v gjson.Result) *int64 {
 	return &i
 }
 
-func ptrInt64(v int64) *int64 {
-	return &v
-}
-
 func TestTripRT_Runs_Departures(t *testing.T) {
 	// The departures of 4:00 to 4:05 pm at Fruitvale on a service date.
 	window := func(serviceDate string) hw {
@@ -85,8 +81,8 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: rtFixtureWhenUtc,
 			vars:    window("2018-05-30"),
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(60), alerts: []string{"Run of May 30", "Current run"}, vehicle: "May 30 train"},
-				"2211533WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(120), vehicle: "Undated train"},
+				"1031527WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(60)), alerts: []string{"Run of May 30", "Current run"}, vehicle: "May 30 train"},
+				"2211533WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(120)), vehicle: "Undated train"},
 				"1131530WKDY": {serviceDate: "2018-05-30"},
 			},
 		},
@@ -96,7 +92,7 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: rtFixtureWhenUtc,
 			vars:    window("2018-05-31"),
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2018-05-31", delay: ptrInt64(300), alerts: []string{"Run of May 31"}},
+				"1031527WKDY": {serviceDate: "2018-05-31", delay: ptr(int64(300)), alerts: []string{"Run of May 31"}},
 				"2211533WKDY": {serviceDate: "2018-05-31"},
 				"1131530WKDY": {serviceDate: "2018-05-31"},
 			},
@@ -117,7 +113,7 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: "2018-05-31T07:10:00Z",
 			vars:    hw{"where": hw{"date": "2018-05-31", "start_time": 0, "end_time": 300}},
 			expect: map[string]runRT{
-				"5172328WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(180), alerts: []string{"Late run, current", "Late run of May 30"}},
+				"5172328WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(180)), alerts: []string{"Late run, current", "Late run of May 30"}},
 				"2232328WKDY": {serviceDate: "2018-05-30"},
 			},
 		},
@@ -137,8 +133,8 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: "2030-05-28T23:00:00Z",
 			vars:    hw{"where": hw{"date": "2030-05-28", "start_time": 57600, "end_time": 57900, "use_service_window": true}},
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2030-05-28", delay: ptrInt64(90), alerts: []string{"Run of May 28, 2030", "Current run"}},
-				"2211533WKDY": {serviceDate: "2030-05-28", delay: ptrInt64(120), vehicle: "Undated train"},
+				"1031527WKDY": {serviceDate: "2030-05-28", delay: ptr(int64(90)), alerts: []string{"Run of May 28, 2030", "Current run"}},
+				"2211533WKDY": {serviceDate: "2030-05-28", delay: ptr(int64(120)), vehicle: "Undated train"},
 				"1131530WKDY": {serviceDate: "2030-05-28"},
 			},
 		},
@@ -212,7 +208,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "today's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-30"},
-			delay:        ptrInt64(60),
+			delay:        ptr(int64(60)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 30", "Current run"},
 			vehicle:      "May 30 train",
@@ -220,7 +216,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "tomorrow's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-31"},
-			delay:        ptrInt64(300),
+			delay:        ptr(int64(300)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 31"},
 		},

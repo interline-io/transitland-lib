@@ -169,12 +169,8 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 			if err != nil {
 				return nil, err
 			}
-			// The trips counted on the pattern's date are that date's runs.
-			if trip != nil && obj.ServiceDate != nil {
-				trip = tripRun(trip, *obj.ServiceDate)
-			}
 			if trip != nil {
-				trips = append(trips, trip)
+				trips = append(trips, tripRun(trip, patternDate(obj)))
 			}
 		}
 		return trips, nil
@@ -182,6 +178,14 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 	// TODO: N+1 query
 	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, resolverCheckLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
 	return trips, err
+}
+
+// patternDate is the date a pattern's trips are counted on, whose runs they are.
+func patternDate(obj *model.RouteStopPattern) tt.Date {
+	if obj.ServiceDate == nil {
+		return tt.Date{}
+	}
+	return *obj.ServiceDate
 }
 
 // Timetable lays the stop times of the trips `count` counted out as grids, a row
@@ -220,7 +224,7 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 			return nil, err
 		}
 		if trip != nil && len(sts) > 0 && !isFlex(sts) {
-			cols = append(cols, column{trip: trip, sts: sts})
+			cols = append(cols, column{trip: tripRun(trip, patternDate(obj)), sts: sts})
 		}
 	}
 	if len(cols) == 0 {
