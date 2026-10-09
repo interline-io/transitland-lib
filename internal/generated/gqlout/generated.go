@@ -12049,16 +12049,16 @@ type FareProduct {
   "GTFS ` + "`" + `fare_products.currency` + "`" + `; ISO 4217 currency code"
   currency: String
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_start` + "`" + `; event that starts the product's validity period"
+  "` + "`" + `fare_products.duration_start` + "`" + `; event that starts the product's validity period (experimental; not part of the GTFS spec)"
   duration_start: Int
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_amount` + "`" + `; length of the product's validity period, in ` + "`" + `duration_unit` + "`" + `"
+  "` + "`" + `fare_products.duration_amount` + "`" + `; length of the product's validity period, in ` + "`" + `duration_unit` + "`" + ` (experimental; not part of the GTFS spec)"
   duration_amount: Float
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_unit` + "`" + ` [0=seconds, 1=minutes, 2=hours, 3=days, 4=weeks, 5=months, 6=years]"
+  "` + "`" + `fare_products.duration_unit` + "`" + ` [0=seconds, 1=minutes, 2=hours, 3=days, 4=weeks, 5=months, 6=years] (experimental; not part of the GTFS spec)"
   duration_unit: Int
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_products.duration_type` + "`" + `; how the validity period is measured"
+  "` + "`" + `fare_products.duration_type` + "`" + `; how the validity period is measured (experimental; not part of the GTFS spec)"
   duration_type: Int
 
   "Feed version SHA1 associated with this entity"
@@ -12102,7 +12102,7 @@ type FareLegRule {
   "GTFS ` + "`" + `fare_leg_rules.rule_priority` + "`" + `; when several rules match a leg, those with the highest priority apply"
   rule_priority: Int
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_leg_rules.transfer_only` + "`" + ` [0 or empty=any leg, 1=only a leg that follows a transfer, not the first leg of a journey]"
+  "` + "`" + `fare_leg_rules.transfer_only` + "`" + ` [0 or empty=any leg, 1=only a leg that follows a transfer, not the first leg of a journey] (experimental; not part of the GTFS spec)"
   transfer_only: Int
 
   "Feed version SHA1 associated with this entity"
@@ -12172,7 +12172,7 @@ type FareTransferRule {
   "GTFS ` + "`" + `fare_transfer_rules.fare_product_id` + "`" + `; empty means the transfer costs nothing"
   fare_product_id: String
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `fare_transfer_rules.filter_fare_product_id` + "`" + `; the rule applies only if the rider holds this fare product, bought in advance or for the previous leg"
+  "` + "`" + `fare_transfer_rules.filter_fare_product_id` + "`" + `; the rule applies only if the rider holds this fare product, bought in advance or for the previous leg (experimental; not part of the GTFS spec)"
   filter_fare_product_id: String
 
   "Feed version SHA1 associated with this entity"
@@ -12204,10 +12204,10 @@ type RiderCategory {
   "GTFS ` + "`" + `rider_categories.eligibility_url` + "`" + `"
   eligibility_url: Url
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `rider_categories.min_age` + "`" + `; minimum age, inclusive"
+  "` + "`" + `rider_categories.min_age` + "`" + `; minimum age, inclusive (experimental; not part of the GTFS spec)"
   min_age: Int
 
-  "Experimental: not part of the current GTFS specification (from an earlier draft of the Fares v2 proposal or an Interline extension); subject to change or removal. ` + "`" + `rider_categories.max_age` + "`" + `; maximum age, inclusive"
+  "` + "`" + `rider_categories.max_age` + "`" + `; maximum age, inclusive (experimental; not part of the GTFS spec)"
   max_age: Int
 
   "Feed version SHA1 associated with this entity"

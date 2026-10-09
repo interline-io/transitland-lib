@@ -43,17 +43,17 @@ func fareAttributeSelect(limit *int, ids []int) sq.SelectBuilder {
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_fare_attributes.id", ids))
 	}
-	return q.OrderBy("gtfs_fare_attributes.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_fare_attributes.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareRule, error) {
 	var ents []*model.FareRule
-	q := lateralWrap(fareRuleSelect(limit, nil), "feed_versions", "id", "gtfs_fare_rules", "feed_version_id", keys)
+	q := lateralWrap(fareRuleSelect(limit), "feed_versions", "id", "gtfs_fare_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.FareRule) int { return ent.FeedVersionID }), err
 }
 
-func fareRuleSelect(limit *int, ids []int) sq.SelectBuilder {
+func fareRuleSelect(limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_fare_rules.id",
 		"gtfs_fare_rules.feed_version_id",
@@ -67,10 +67,7 @@ func fareRuleSelect(limit *int, ids []int) sq.SelectBuilder {
 	).From("gtfs_fare_rules").
 		Join("feed_versions ON feed_versions.id = gtfs_fare_rules.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_fare_rules.id", ids))
-	}
-	return q.OrderBy("gtfs_fare_rules.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_fare_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareMediaByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareMedia, error) {
@@ -104,17 +101,17 @@ func fareMediaSelect(limit *int, ids []int) sq.SelectBuilder {
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_fare_media.id", ids))
 	}
-	return q.OrderBy("gtfs_fare_media.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_fare_media.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareProductsByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareProduct, error) {
 	var ents []*model.FareProduct
-	q := lateralWrap(fareProductSelect(limit, nil), "feed_versions", "id", "gtfs_fare_products", "feed_version_id", keys)
+	q := lateralWrap(fareProductSelect(limit), "feed_versions", "id", "gtfs_fare_products", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.FareProduct) int { return ent.FeedVersionID }), err
 }
 
-func fareProductSelect(limit *int, ids []int) sq.SelectBuilder {
+func fareProductSelect(limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_fare_products.id",
 		"gtfs_fare_products.feed_version_id",
@@ -133,20 +130,17 @@ func fareProductSelect(limit *int, ids []int) sq.SelectBuilder {
 	).From("gtfs_fare_products").
 		Join("feed_versions ON feed_versions.id = gtfs_fare_products.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_fare_products.id", ids))
-	}
-	return q.OrderBy("gtfs_fare_products.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_fare_products.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareLegRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareLegRule, error) {
 	var ents []*model.FareLegRule
-	q := lateralWrap(fareLegRuleSelect(limit, nil), "feed_versions", "id", "gtfs_fare_leg_rules", "feed_version_id", keys)
+	q := lateralWrap(fareLegRuleSelect(limit), "feed_versions", "id", "gtfs_fare_leg_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.FareLegRule) int { return ent.FeedVersionID }), err
 }
 
-func fareLegRuleSelect(limit *int, ids []int) sq.SelectBuilder {
+func fareLegRuleSelect(limit *int) sq.SelectBuilder {
 	// network_id holds a gtfs_networks row id when networks.txt defines the
 	// network, or the GTFS id when routes.network_id does (see
 	// RouteNetworkIDCompatFilter); the join returns the GTFS id either way.
@@ -168,20 +162,17 @@ func fareLegRuleSelect(limit *int, ids []int) sq.SelectBuilder {
 		Join("feed_versions ON feed_versions.id = gtfs_fare_leg_rules.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("gtfs_networks ref_network ON ref_network.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_network.id = (CASE WHEN gtfs_fare_leg_rules.network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.network_id::bigint END)")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_fare_leg_rules.id", ids))
-	}
-	return q.OrderBy("gtfs_fare_leg_rules.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_fare_leg_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareLegJoinRule, error) {
 	var ents []*model.FareLegJoinRule
-	q := lateralWrap(fareLegJoinRuleSelect(limit, nil), "feed_versions", "id", "gtfs_fare_leg_join_rules", "feed_version_id", keys)
+	q := lateralWrap(fareLegJoinRuleSelect(limit), "feed_versions", "id", "gtfs_fare_leg_join_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.FareLegJoinRule) int { return ent.FeedVersionID }), err
 }
 
-func fareLegJoinRuleSelect(limit *int, ids []int) sq.SelectBuilder {
+func fareLegJoinRuleSelect(limit *int) sq.SelectBuilder {
 	// Network ids are stored as in fare_leg_rules; see fareLegRuleSelect.
 	q := sq.StatementBuilder.Select(
 		"gtfs_fare_leg_join_rules.id",
@@ -197,20 +188,17 @@ func fareLegJoinRuleSelect(limit *int, ids []int) sq.SelectBuilder {
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("gtfs_networks ref_from_network ON ref_from_network.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_from_network.id = (CASE WHEN gtfs_fare_leg_join_rules.from_network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.from_network_id::bigint END)").
 		LeftJoin("gtfs_networks ref_to_network ON ref_to_network.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_to_network.id = (CASE WHEN gtfs_fare_leg_join_rules.to_network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.to_network_id::bigint END)")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_fare_leg_join_rules.id", ids))
-	}
-	return q.OrderBy("gtfs_fare_leg_join_rules.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_fare_leg_join_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareTransferRulesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareTransferRule, error) {
 	var ents []*model.FareTransferRule
-	q := lateralWrap(fareTransferRuleSelect(limit, nil), "feed_versions", "id", "gtfs_fare_transfer_rules", "feed_version_id", keys)
+	q := lateralWrap(fareTransferRuleSelect(limit), "feed_versions", "id", "gtfs_fare_transfer_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.FareTransferRule) int { return ent.FeedVersionID }), err
 }
 
-func fareTransferRuleSelect(limit *int, ids []int) sq.SelectBuilder {
+func fareTransferRuleSelect(limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_fare_transfer_rules.id",
 		"gtfs_fare_transfer_rules.feed_version_id",
@@ -227,20 +215,17 @@ func fareTransferRuleSelect(limit *int, ids []int) sq.SelectBuilder {
 	).From("gtfs_fare_transfer_rules").
 		Join("feed_versions ON feed_versions.id = gtfs_fare_transfer_rules.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_fare_transfer_rules.id", ids))
-	}
-	return q.OrderBy("gtfs_fare_transfer_rules.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_fare_transfer_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) RiderCategoriesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RiderCategory, error) {
 	var ents []*model.RiderCategory
-	q := lateralWrap(riderCategorySelect(limit, nil), "feed_versions", "id", "gtfs_rider_categories", "feed_version_id", keys)
+	q := lateralWrap(riderCategorySelect(limit), "feed_versions", "id", "gtfs_rider_categories", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.RiderCategory) int { return ent.FeedVersionID }), err
 }
 
-func riderCategorySelect(limit *int, ids []int) sq.SelectBuilder {
+func riderCategorySelect(limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_rider_categories.id",
 		"gtfs_rider_categories.feed_version_id",
@@ -255,20 +240,17 @@ func riderCategorySelect(limit *int, ids []int) sq.SelectBuilder {
 	).From("gtfs_rider_categories").
 		Join("feed_versions ON feed_versions.id = gtfs_rider_categories.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_rider_categories.id", ids))
-	}
-	return q.OrderBy("gtfs_rider_categories.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_rider_categories.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) TimeframesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Timeframe, error) {
 	var ents []*model.Timeframe
-	q := lateralWrap(timeframeSelect(limit, nil), "feed_versions", "id", "gtfs_timeframes", "feed_version_id", keys)
+	q := lateralWrap(timeframeSelect(limit), "feed_versions", "id", "gtfs_timeframes", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.Timeframe) int { return ent.FeedVersionID }), err
 }
 
-func timeframeSelect(limit *int, ids []int) sq.SelectBuilder {
+func timeframeSelect(limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_timeframes.id",
 		"gtfs_timeframes.feed_version_id",
@@ -281,10 +263,7 @@ func timeframeSelect(limit *int, ids []int) sq.SelectBuilder {
 	).From("gtfs_timeframes").
 		Join("feed_versions ON feed_versions.id = gtfs_timeframes.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_timeframes.id", ids))
-	}
-	return q.OrderBy("gtfs_timeframes.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_timeframes.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) AreasByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Area, error) {
@@ -317,7 +296,7 @@ func areaSelect(limit *int, ids []int) sq.SelectBuilder {
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_areas.id", ids))
 	}
-	return q.OrderBy("gtfs_areas.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_areas.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) NetworksByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Network, error) {
@@ -350,17 +329,17 @@ func networkSelect(limit *int, ids []int) sq.SelectBuilder {
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_networks.id", ids))
 	}
-	return q.OrderBy("gtfs_networks.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_networks.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) RouteNetworksByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteNetwork, error) {
 	var ents []*model.RouteNetwork
-	q := lateralWrap(routeNetworkSelect(limit, nil), "feed_versions", "id", "gtfs_route_networks", "feed_version_id", keys)
+	q := lateralWrap(routeNetworkSelect(limit), "feed_versions", "id", "gtfs_route_networks", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.RouteNetwork) int { return ent.FeedVersionID }), err
 }
 
-func routeNetworkSelect(limit *int, ids []int) sq.SelectBuilder {
+func routeNetworkSelect(limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_route_networks.id",
 		"gtfs_route_networks.feed_version_id",
@@ -371,20 +350,17 @@ func routeNetworkSelect(limit *int, ids []int) sq.SelectBuilder {
 	).From("gtfs_route_networks").
 		Join("feed_versions ON feed_versions.id = gtfs_route_networks.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_route_networks.id", ids))
-	}
-	return q.OrderBy("gtfs_route_networks.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_route_networks.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) StopAreasByAreaIDs(ctx context.Context, limit *int, keys []int) ([][]*model.StopArea, error) {
 	var ents []*model.StopArea
-	q := lateralWrap(stopAreaSelect(limit, nil), "gtfs_areas", "id", "gtfs_stop_areas", "area_id", keys)
+	q := lateralWrap(stopAreaSelect(limit), "gtfs_areas", "id", "gtfs_stop_areas", "area_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.StopArea) int { return ent.AreaID.Int() }), err
 }
 
-func stopAreaSelect(limit *int, ids []int) sq.SelectBuilder {
+func stopAreaSelect(limit *int) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_stop_areas.id",
 		"gtfs_stop_areas.feed_version_id",
@@ -395,8 +371,5 @@ func stopAreaSelect(limit *int, ids []int) sq.SelectBuilder {
 	).From("gtfs_stop_areas").
 		Join("feed_versions ON feed_versions.id = gtfs_stop_areas.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	if len(ids) > 0 {
-		q = q.Where(In("gtfs_stop_areas.id", ids))
-	}
-	return q.OrderBy("gtfs_stop_areas.id ASC").Limit(finderCheckLimit(limit))
+	return joinImported(q).OrderBy("gtfs_stop_areas.id ASC").Limit(finderCheckLimit(limit))
 }

@@ -2,16 +2,10 @@ package gql
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/tidwall/gjson"
 )
 
-// Fares v1 data comes from the CT and BA test feeds. Fares v2 data comes from
-// the ctran-flex feed (fare_media, fare_products, fare_leg_rules,
-// fare_transfer_rules, rider_categories) and from synthetic CT records in
-// testdata/server/test_supplement.pgsql (networks, route_networks, areas,
-// stop_areas, timeframes, fare_leg_join_rules, and the rules that use them).
+// Fares v1 data comes from the CT and BA feeds; Fares v2 data comes from
+// ctran-flex and from synthetic CT rows in testdata/server/test_supplement.pgsql.
 func TestFareResolver(t *testing.T) {
 	ctSha1 := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
 	baSha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
@@ -139,17 +133,6 @@ func TestFareResolver(t *testing.T) {
 				{selector: "feed_versions.0.networks.#.id", expect: []string{}},
 			},
 		},
-		// Experimental age fields; the ctran-flex rider_categories case below covers the spec fields
-		{
-			name:  "rider_categories ages",
-			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { rider_categories { rider_category_id min_age max_age } } }`,
-			vars:  hw{"sha1": ctSha1},
-			sel: []testcaseSelector{
-				{selector: "feed_versions.0.rider_categories.#.rider_category_id", expect: []string{"adult", "youth"}},
-				{selector: "feed_versions.0.rider_categories.#.min_age", expect: []string{"", "5"}},
-				{selector: "feed_versions.0.rider_categories.#.max_age", expect: []string{"", "18"}},
-			},
-		},
 		{
 			name:   "fare_leg_join_rules",
 			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_join_rules { from_network_id to_network_id from_stop { stop_id } to_stop { stop_id } } } }`,
@@ -170,6 +153,17 @@ func TestFareResolver(t *testing.T) {
 				{selector: "feed_versions.0.rider_categories.#.rider_category_id", expect: []string{"ADULT", "HONORED_CITIZEN", "YOUTH"}},
 				{selector: "feed_versions.0.rider_categories.#.is_default_fare_category", expect: []string{"1", "0", "0"}},
 				{selector: "feed_versions.0.rider_categories.#.eligibility_url", expect: []string{"", "https://c-tran.com/fares/fares-and-id-cards", "https://c-tran.com/fares/fares-and-id-cards"}},
+			},
+		},
+		{
+			// Experimental age fields
+			name:  "rider_categories ages",
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { rider_categories { rider_category_id min_age max_age } } }`,
+			vars:  hw{"sha1": ctSha1},
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.rider_categories.#.rider_category_id", expect: []string{"adult", "youth"}},
+				{selector: "feed_versions.0.rider_categories.#.min_age", expect: []string{"", "5"}},
+				{selector: "feed_versions.0.rider_categories.#.max_age", expect: []string{"", "18"}},
 			},
 		},
 		{
@@ -220,13 +214,9 @@ func TestFareResolver(t *testing.T) {
 			// Several feed versions load in one batch; the limit applies to each.
 			name:  "limit applies per feed version",
 			query: `query { feed_versions(where: {feed_onestop_id: "BA"}) { sha1 fare_attributes(limit: 2) { id } } }`,
-			f: func(t *testing.T, jj string) {
-				counts := map[string]int{}
-				for _, fv := range gjson.Get(jj, "feed_versions").Array() {
-					counts[fv.Get("sha1").String()] = len(fv.Get("fare_attributes").Array())
-				}
-				assert.Equal(t, 2, counts[baSha1])
-				assert.Equal(t, 2, counts["dd7aca4a8e4c90908fd3603c097fabee75fea907"])
+			sel: []testcaseSelector{
+				{selector: `feed_versions.#(sha1=="e535eb2b3b9ac3ef15d82c56575e914575e732e0").fare_attributes.#.id`, expectCount: 2},
+				{selector: `feed_versions.#(sha1=="dd7aca4a8e4c90908fd3603c097fabee75fea907").fare_attributes.#.id`, expectCount: 2},
 			},
 		},
 		{

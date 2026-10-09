@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/feedmanager"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/stats"
@@ -117,9 +118,9 @@ func TestUnimportFeedVersion(t *testing.T) {
 		fvid := setupImport(ctx, t, atx)
 		// The example feed has no fare_leg_join_rules.txt; add a row so the
 		// test covers that table too.
-		if _, err := atx.Sqrl().Insert("gtfs_fare_leg_join_rules").Columns("feed_version_id", "from_network_id", "to_network_id").Values(fvid, "a", "b").Exec(); err != nil {
-			t.Fatal(err)
-		}
+		joinRule := gtfs.FareLegJoinRule{FromNetworkID: tt.NewString("a"), ToNetworkID: tt.NewString("b")}
+		joinRule.FeedVersionID = fvid
+		testdb.ShouldInsert(t, atx, &joinRule)
 		// TODO: test ExtraTables option
 		if err := UnimportFeedVersion(ctx, atx, fvid, nil); err != nil {
 			t.Fatal(err)
