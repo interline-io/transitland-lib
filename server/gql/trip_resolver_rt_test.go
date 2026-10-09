@@ -9,6 +9,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// The departures are the trip's run of 2018-05-30. Of its two alerts, only the
+// one in force that afternoon concerns the run; the other is in force in 2022,
+// over other runs.
 func TestTripRT_Alerts(t *testing.T) {
 	activeVars := rtTestStopQueryVars()
 	activeVars["active"] = true
@@ -30,8 +33,8 @@ func TestTripRT_Alerts(t *testing.T) {
 					}
 					found = true
 					alerts := st.Get("trip.alerts").Array()
-					if len(alerts) != 2 {
-						t.Errorf("got %d alerts, expected 2", len(alerts))
+					if assert.Len(t, alerts, 1) {
+						assert.Equal(t, "Test trip header", alerts[0].Get("header_text.0.text").String(), "header_text.0.text")
 					}
 				}
 				if !found {
@@ -40,9 +43,12 @@ func TestTripRT_Alerts(t *testing.T) {
 			},
 		},
 		{
-			name:  "trip alerts active",
-			query: rtTestStopQuery,
-			vars:  activeVars,
+			// Read that afternoon, once the run's alert has come into force: its
+			// period starts at the moment the fixtures were captured.
+			name:    "trip alerts active",
+			query:   rtTestStopQuery,
+			vars:    activeVars,
+			whenUtc: "2018-05-30T22:30:00Z",
 			rtfiles: []testconfig.RTJsonFile{
 				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
@@ -58,7 +64,7 @@ func TestTripRT_Alerts(t *testing.T) {
 					alerts := st.Get("trip.alerts").Array()
 					if len(alerts) == 1 {
 						firstAlert := alerts[0]
-						assert.Equal(t, "Test trip header - active", firstAlert.Get("header_text.0.text").String(), "header_text.0.text")
+						assert.Equal(t, "Test trip header", firstAlert.Get("header_text.0.text").String(), "header_text.0.text")
 						assert.Contains(t, firstAlert.Get("description_text.0.text").String(), "trip_id:1031527WKDY", "description_text.0.text")
 					} else {
 						t.Errorf("got %d alerts, expected 1", len(alerts))

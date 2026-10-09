@@ -1548,7 +1548,7 @@ type StopTimeFilter struct {
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// GTFS service date (which may differ from the calendar date for trips that cross midnight)
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. Stop times still report the requested date
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Lower bound for departure time, in seconds since midnight
 	StartTime *int `json:"start_time,omitempty"`
@@ -1592,7 +1592,7 @@ type TripFilter struct {
 	Dates []*tt.Date `json:"dates,omitempty"`
 	// Calendar date relative to today; see `RelativeDate`. Ignored if `dates` or `service_dates` is set
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
-	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. The trips are still runs on the requested date, and GTFS-RT data is matched to those runs
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Search for trips with this GTFS trip_id
 	TripID *string `json:"trip_id,omitempty"`

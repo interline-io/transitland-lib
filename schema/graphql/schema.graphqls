@@ -1103,7 +1103,7 @@ type Trip {
   "Feed version for this entity"
   feed_version: FeedVersion!
   
-  "Stop times for this trip"
+  "Stop times for this trip. On a trip reached as one run (see `alerts`), they are on that run's service date, with its GTFS-RT data"
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
   
   "GTFS Flex stop times for this trip (Locations and Location Groups)"
@@ -1112,16 +1112,20 @@ type Trip {
   "Frequencies for this trip"
   frequencies(limit: Int): [Frequency!]!
   
-  "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts"
+  """
+  GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts.
+
+  A trip reached as a run, through a stop time with a `service_date` or a trips query by `service_date`, `service_dates` or `dates`, returns only the alerts on that run: one whose selector names a `start_date` concerns the run on that date, and one naming none the runs operating during its active periods.
+  """
   alerts(active: Boolean, limit: Int): [Alert!]
 
-  "Current GTFS-RT vehicle position for this trip"
+  "Current GTFS-RT vehicle position for this trip. On a trip reached as a run (see `alerts`), only a vehicle running that run: the one its trip descriptor's `start_date` names, or where it names none, the trip's current run"
   vehicle_position(where: VehiclePositionFilter): VehiclePosition
 
-  "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship. See `ScheduleRelationship` for per-value semantics"
+  "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship, matched to a run as `vehicle_position` is. See `ScheduleRelationship` for per-value semantics"
   schedule_relationship: ScheduleRelationship
 
-  "Timestamp from the matching GTFS-RT TripUpdate, if any"
+  "Timestamp from the matching GTFS-RT TripUpdate, if any, matched to a run as `vehicle_position` is"
   timestamp: Time
 }
 
@@ -1279,16 +1283,16 @@ type StopTime {
   "Trip associated with this stop time"
   trip: Trip!
 
-  "Arrival data, including GTFS-RT updates and estimates"
+  "Arrival data, including GTFS-RT updates and estimates for the run on `service_date`: the update its trip descriptor's `start_date` names, or where it names none, the trip's current run"
   arrival: StopTimeEvent!
 
-  "Departure data, including GTFS-RT updates and estimates"
+  "Departure data, including GTFS-RT updates and estimates, matched to a run as `arrival` is"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time. Under `use_service_window` this is the requested date, though the fallback week supplied the schedule"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "When part of an arrival/departure query, the calendar date for this scheduled stop time, from `service_date`"
   date: Date
 
   "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics"
@@ -1353,16 +1357,16 @@ type FlexStopTime {
   "Trip associated with this stop time"
   trip: Trip!
 
-  "Arrival data, including GTFS-RT updates and estimates"
+  "Arrival data, including GTFS-RT updates and estimates for the run on `service_date`: the update its trip descriptor's `start_date` names, or where it names none, the trip's current run"
   arrival: StopTimeEvent!
 
-  "Departure data, including GTFS-RT updates and estimates"
+  "Departure data, including GTFS-RT updates and estimates, matched to a run as `arrival` is"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time. Under `use_service_window` this is the requested date, though the fallback week supplied the schedule"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "When part of an arrival/departure query, the calendar date for this scheduled stop time, from `service_date`"
   date: Date
 
   "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics"
@@ -2969,7 +2973,7 @@ input StopTimeFilter {
   relative_date: RelativeDate
   "GTFS service date (which may differ from the calendar date for trips that cross midnight)"
   service_date: Date
-  "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. Stop times still report the requested date"
   use_service_window: Boolean
   "Lower bound for departure time, in seconds since midnight"
   start_time: Int
@@ -3031,7 +3035,7 @@ input TripFilter {
   dates: [Date!]
   "Calendar date relative to today; see `RelativeDate`. Ignored if `dates` or `service_dates` is set"
   relative_date: RelativeDate
-  "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. The trips are still runs on the requested date, and GTFS-RT data is matched to those runs"
   use_service_window: Boolean
   "Search for trips with this GTFS trip_id"
   trip_id: String

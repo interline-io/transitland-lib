@@ -36,18 +36,27 @@ func (r *tripResolver) Calendar(ctx context.Context, obj *model.Trip) (*model.Ca
 }
 
 func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error) {
-	sts, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
+	loaded, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
 		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})()
-	if wantsRTStopTimeUpdate(ctx) {
-		for _, st := range sts {
-			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, obj, st); ok {
-				st.RTStopTimeUpdate = ste
+	// Copied: the loader shares a trip's stop times across every run of the trip
+	// in the request, and each run has its own date and realtime data.
+	sts := make([]*model.StopTime, 0, len(loaded))
+	for _, st := range loaded {
+		c := *st
+		// A trip reached as one run is on that run's service date.
+		if len(obj.RunDates) == 1 {
+			c.SetServiceDate(obj.RunDates[0])
+		}
+		if wantsRTStopTimeUpdate(ctx) {
+			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, obj, &c); ok {
+				c.RTStopTimeUpdate = ste
 			}
 		}
+		sts = append(sts, &c)
 	}
 	return sts, err
 }

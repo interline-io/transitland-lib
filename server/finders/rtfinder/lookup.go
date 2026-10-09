@@ -81,6 +81,18 @@ const (
 		limit 1`
 
 	feedVersionTimezoneQuery = `SELECT agency_timezone FROM gtfs_agencies WHERE feed_version_id = $1 LIMIT 1`
+
+	// A trip's stop times are stored once per journey pattern, on the pattern's
+	// first trip, and shifted by each other trip's offset.
+	tripSpanQuery = `
+	select
+		min(sts.departure_time) + t.journey_pattern_offset as first_departure,
+		max(sts.arrival_time) + t.journey_pattern_offset as last_arrival
+	from gtfs_trips t
+	join gtfs_trips t2 on t2.trip_id::text = t.journey_pattern_id and t2.feed_version_id = t.feed_version_id
+	join gtfs_stop_times sts on sts.trip_id = t2.id and sts.feed_version_id = $2
+	where t.id = $1 and t.feed_version_id = $2
+	group by t.journey_pattern_offset`
 )
 
 type lookupCache struct {
@@ -92,6 +104,7 @@ type lookupCache struct {
 	fvRouteTypeCache       *kvcache.Cache[int, []int]                     // route types by feed version id
 	fvRouteCache           *kvcache.Cache[feedVersionRouteKey, gtfsRoute] // routes by GTFS route_id within a feed version
 	routeCache             *kvcache.Cache[int, gtfsRoute]                 // routes by database id
+	tripSpanCache          *kvcache.Cache[tripKey, tripSpan]              // scheduled spans of trips by database id
 	fvidFeedCache          *simpleCache[int, string]
 	feedOperatorCountCache *simpleCache[string, int]
 	agencyRouteIdCache     *simpleCache[int, set.Set[string]]
@@ -127,6 +140,9 @@ func newLookupCache(db tldb.Ext) *lookupCache {
 	f.routeCache = kvcache.NewRefreshCache(nil, "routes", f.queryRoute)
 	f.routeCache.RefreshTimeout = lookupTimeout
 	f.routeCache.NegativeTTL = f.routeCache.Expires
+	f.tripSpanCache = kvcache.NewRefreshCache(nil, "tripspans", f.queryTripSpan)
+	f.tripSpanCache.RefreshTimeout = lookupTimeout
+	f.tripSpanCache.NegativeTTL = f.tripSpanCache.Expires
 	return f
 }
 
@@ -241,6 +257,36 @@ func (f *lookupCache) queryFeedVersionRoute(ctx context.Context, key feedVersion
 		return ret, kvcache.ErrNotFound
 	} else if err != nil {
 		log.For(ctx).Error().Err(err).Int("feed_version_id", key.FeedVersionID).Str("route_id", key.RouteID).Msg("rtfinder: route lookup failed")
+	}
+	return ret, err
+}
+
+// tripKey names a trip by database id within its feed version, the key that
+// partitions stop times. Exported fields, as kvcache encodes keys as JSON.
+type tripKey struct {
+	FeedVersionID int
+	TripID        int
+}
+
+// tripSpan is when a trip runs on its service day, in seconds from the day's
+// start: its first departure and last arrival.
+type tripSpan struct {
+	FirstDeparture int `db:"first_departure"`
+	LastArrival    int `db:"last_arrival"`
+}
+
+// GetTripSpan returns when a trip runs on its service day.
+func (f *lookupCache) GetTripSpan(ctx context.Context, fvid int, tripId int) (tripSpan, bool) {
+	return getUnlessGone(ctx, f.tripSpanCache, tripKey{FeedVersionID: fvid, TripID: tripId})
+}
+
+func (f *lookupCache) queryTripSpan(ctx context.Context, key tripKey) (tripSpan, error) {
+	var ret tripSpan
+	err := sqlx.GetContext(ctx, f.db, &ret, tripSpanQuery, key.TripID, key.FeedVersionID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ret, kvcache.ErrNotFound
+	} else if err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", key.FeedVersionID).Int("trip_id", key.TripID).Msg("rtfinder: trip span lookup failed")
 	}
 	return ret, err
 }

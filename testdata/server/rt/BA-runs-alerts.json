@@ -1,0 +1,191 @@
+{
+  "header": {
+    "gtfs_realtime_version": "2.0",
+    "incrementality": 0,
+    "timestamp": 1527719250
+  },
+  "entity": [
+    {
+      "id": "run-20180530",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY",
+              "start_date": "20180530"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Run of May 30",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "run-20180531",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY",
+              "start_date": "20180531"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Run of May 31",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "run-20300528",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY",
+              "start_date": "20300528"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Run of May 28, 2030",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "during-20180530",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "During the May 30 run",
+              "language": "en"
+            }
+          ]
+        },
+        "active_period": [
+          {
+            "start": 1527717600,
+            "end": 1527724800
+          }
+        ]
+      }
+    },
+    {
+      "id": "next-week",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Next week",
+              "language": "en"
+            }
+          ]
+        },
+        "active_period": [
+          {
+            "start": 1528182000,
+            "end": 1528268400
+          }
+        ]
+      }
+    },
+    {
+      "id": "always",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Always",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "after-midnight",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "5172328WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "After midnight",
+              "language": "en"
+            }
+          ]
+        },
+        "active_period": [
+          {
+            "start": 1527750000,
+            "end": 1527753600
+          }
+        ]
+      }
+    },
+    {
+      "id": "after-midnight-run",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "5172328WKDY",
+              "start_date": "20180530"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Run of May 30, after midnight",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

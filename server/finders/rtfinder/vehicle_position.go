@@ -94,15 +94,18 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 }
 
 // FindVehiclePositionForTrip returns the cached vehicle position running a trip,
-// matched on the trip descriptor's trip_id. Where more than one vehicle claims
-// the trip, the most recently reported wins.
+// matched on the trip descriptor's trip_id, and on its run where the trip was
+// reached as one. Where more than one vehicle claims the trip, the most recently
+// reported wins.
 func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip, where *model.VehiclePositionFilter) *model.VehiclePosition {
 	tripId := t.TripID.Val
 	if tripId == "" {
 		return nil
 	}
+	runs := f.tripRunsOf(ctx, t)
+	now := f.Clock.Now()
 	match := func(_ string, _ *Source, v *pb.VehiclePosition) vpMatch {
-		if v.GetTrip().GetTripId() != tripId {
+		if v.GetTrip().GetTripId() != tripId || !runs.currentFor(v.GetTrip(), now) {
 			return vpNoMatch
 		}
 		return vpMatchByEntityID

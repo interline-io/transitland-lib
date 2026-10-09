@@ -197,7 +197,7 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 			// in the batch, including those from healthy feed versions.
 			fvsw, _ := f.FindFeedVersionServiceWindow(ctx, fvid)
 			var err error
-			serviceDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
+			serviceDate, _, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
 			if err != nil {
 				return nil, err
 			}

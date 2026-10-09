@@ -60,7 +60,16 @@ func (r *stopTimeResolver) Trip(ctx context.Context, obj *model.StopTime) (*mode
 		a, err := model.ForContext(ctx).RTFinder.MakeTrip(ctx, &t)
 		return a, err
 	}
-	return LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
+	trip, err := LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
+	if trip == nil || err != nil || !obj.ServiceDate.Valid {
+		return trip, err
+	}
+	// Reached as the run on this stop time's service date, so realtime data
+	// matches that run. Copied, as the loader shares one trip across all of its
+	// stop times.
+	run := *trip
+	run.RunDates = []tt.Date{obj.ServiceDate}
+	return &run, nil
 }
 
 func (r *stopTimeResolver) Arrival(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error) {

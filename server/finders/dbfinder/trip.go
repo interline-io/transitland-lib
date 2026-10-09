@@ -95,23 +95,25 @@ func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
 
 // Resolve a filter's date inputs into the one service date to match, in the feed
 // version's terms: a relative date becomes concrete, and use_service_window
-// relocates a date outside the window into the fallback week.
-func resolveServiceDate(serviceDate *tt.Date, relativeDate *model.RelativeDate, useServiceWindow bool, fvsw *model.ServiceWindow) (*tt.Date, error) {
+// relocates a date outside the window into the fallback week. Also returns the
+// requested date, before any relocation.
+func resolveServiceDate(serviceDate *tt.Date, relativeDate *model.RelativeDate, useServiceWindow bool, fvsw *model.ServiceWindow) (*tt.Date, *tt.Date, error) {
 	if fvsw == nil {
-		return serviceDate, nil
+		return serviceDate, serviceDate, nil
 	}
 	if relativeDate != nil {
 		s, err := tt.RelativeDate(fvsw.NowLocal, kebabize(string(*relativeDate)))
 		if err != nil {
-			return nil, fmt.Errorf("invalid relative_date %q: %w", *relativeDate, err)
+			return nil, nil, fmt.Errorf("invalid relative_date %q: %w", *relativeDate, err)
 		}
 		serviceDate = tzTruncate(s, fvsw.NowLocal.Location())
 	}
+	asked := serviceDate
 	// Guarded: use_service_window with no date at all is a valid filter.
 	if useServiceWindow && serviceDate != nil {
 		serviceDate = mapIntoServiceWindow(serviceDate.Val, fvsw)
 	}
-	return serviceDate, nil
+	return serviceDate, asked, nil
 }
 
 // Restrict a query over gtfs_trips to the trips running on a service date.
@@ -150,9 +152,11 @@ func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilde
 // tripDate is a service date to match in the database and the dates it is
 // reported as. They differ under use_service_window, which relocates a date
 // into the fallback week; several requested dates can land on the same day.
+// A query for a single service_date has one, with no aggregated dates.
 type tripDate struct {
 	query  time.Time
 	report []time.Time
+	single bool
 }
 
 // Resolve a trip filter's dates into the service dates to match. Wall calendar
@@ -191,8 +195,17 @@ func resolveTripDates(where *model.TripFilter, fvsw *model.ServiceWindow) []trip
 }
 
 // Split the aggregated service_dates column into the per-trip list the API
-// returns, relabelled as the dates the caller asked about.
+// returns, relabelled as the dates the caller asked about, and record those as
+// the trip's runs. A single service_date is a run but not a service_dates entry.
 func expandTripServiceDates(ents []*model.Trip, dates []tripDate) {
+	if len(dates) == 1 && dates[0].single {
+		for _, ent := range ents {
+			for _, r := range dates[0].report {
+				ent.RunDates = append(ent.RunDates, tt.NewDate(r))
+			}
+		}
+		return
+	}
 	if len(dates) == 0 {
 		return
 	}
@@ -212,6 +225,7 @@ func expandTripServiceDates(ents []*model.Trip, dates []tripDate) {
 		for _, m := range matched {
 			d := tt.NewDate(m)
 			ent.ServiceDates = append(ent.ServiceDates, &d)
+			ent.RunDates = append(ent.RunDates, d)
 		}
 	}
 }
@@ -361,10 +375,10 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		Limit(finderCheckLimit(limit))
 
 	// Resolved into a local: `where` is reused for every feed version.
-	var serviceDate *tt.Date
+	var serviceDate, askedDate *tt.Date
 	if where != nil {
 		var err error
-		serviceDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
+		serviceDate, askedDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
 		if err != nil {
 			return q, nil, err
 		}
@@ -425,6 +439,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 			`, strings.Join(dates, ",")).Where("svc.service_dates_agg is not null")
 		} else if serviceDate != nil {
 			q = serviceDateLateral(q, *serviceDate)
+			tripDates = []tripDate{{query: serviceDate.Val, report: []time.Time{askedDate.Val}, single: true}}
 		}
 		// Handle license filtering
 		q = licenseFilter(where.License, q)
