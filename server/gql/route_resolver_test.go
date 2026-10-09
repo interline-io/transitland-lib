@@ -769,10 +769,11 @@ func TestRouteResolver_Date(t *testing.T) {
 				name:  "patterns timetable relative date next-sunday, outside of window, use fallback",
 				query: `{ routes(where:{route_id:"Bu-130"}) { patterns(where:{relative_date:NEXT_SUNDAY, use_service_window:true}) { service_date timetable { trips { trip_id } } } } }`,
 				f: func(t *testing.T, jj string) {
-					// The same trips the trips() query falls back to, on the date it fell back to.
+					// The same trips the trips() query falls back to, reported on the
+					// requested Sunday.
 					var tripIDs []string
 					for _, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
-						assert.Equal(t, "2018-06-24", pat.Get("service_date").String(), "the Sunday the window falls back to")
+						assert.Equal(t, "2024-07-28", pat.Get("service_date").String(), "the requested Sunday")
 						for _, trip := range pat.Get("timetable.trips").Array() {
 							tripIDs = append(tripIDs, trip.Get("trip_id").String())
 						}

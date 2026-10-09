@@ -326,7 +326,11 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 			},
 		},
 		{
-			name: "trip vehicle_position",
+			// Read that morning: vehicle 1001 runs the trip's 06:13 departure on
+			// 2022-09-01, Pacific time, and a trip found without a date is its
+			// current run.
+			name:    "trip vehicle_position",
+			whenUtc: "2022-09-01T13:30:00Z",
 			query: `query {
 				trips(where: {feed_onestop_id: "BA", trip_id: "3210613WKDY"}) {
 					vehicle_position { vehicle { id } }

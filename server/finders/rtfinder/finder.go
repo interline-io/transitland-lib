@@ -58,32 +58,45 @@ func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Locat
 	return f.lc.FeedVersionTimezone(ctx, fvid)
 }
 
-// FindTrip returns a trip update naming a trip: for a trip reached as runs, one
-// describing one of those runs.
+// FindTrip returns the trip update on a trip's run: the run it was reached as,
+// or its current run.
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
-	runs := f.tripRunsOf(ctx, t)
-	now := f.Clock.Now()
-	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
-	for _, topic := range topics {
-		for _, a := range f.getTrips(ctx, topic, t.TripID.Val) {
-			if runs.currentFor(a.GetTrip(), now) {
-				return a
-			}
-		}
+	if found := f.runUpdates(ctx, t.FeedVersionID, t.TripID.Val, f.tripRunsOf(ctx, t.FeedVersionID, t.ID, t.RunDates)); len(found) > 0 {
+		return found[0]
 	}
 	return nil
 }
 
-// FindAlertsForTrip returns the alerts on a trip: for a trip reached as runs,
-// only those on its runs.
+// runUpdates returns the trip updates describing the given runs of a trip, one
+// from each realtime feed. A feed should send one update per run; where it sends
+// several, the last wins.
+func (f *Finder) runUpdates(ctx context.Context, fvid int, tripId string, runs tripRuns) []*pb.TripUpdate {
+	var ret []*pb.TripUpdate
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, fvid)
+	for _, topic := range topics {
+		var found *pb.TripUpdate
+		for _, a := range f.getTrips(ctx, topic, tripId) {
+			if runs.describes(a.GetTrip()) {
+				found = a
+			}
+		}
+		if found != nil {
+			ret = append(ret, found)
+		}
+	}
+	return ret
+}
+
+// FindAlertsForTrip returns the alerts on a trip's run: the run it was reached
+// as, or its current run.
 func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *int, active *bool) []*model.Alert {
 	tripId := t.TripID.Val
 	// Looked up at most once per call, and only for a selector naming this trip
 	// along with an agency, route or mode.
 	route := sync.OnceValues(func() (gtfsRoute, bool) { return f.lc.GetRoute(ctx, t.RouteID.Int()) })
-	runs := f.tripRunsOf(ctx, t)
-	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(_ string, _ *Source, a *pb.Alert, s *pb.EntitySelector) bool {
-		return tripId != "" && s.GetTrip().GetTripId() == tripId && tripAgrees(s, route) && runs.coveredBy(s.GetTrip(), a.GetActivePeriod())
+	runs := f.tripRunsOf(ctx, t.FeedVersionID, t.ID, t.RunDates)
+	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(_ string, _ *Source, s *pb.EntitySelector) bool {
+		return tripId != "" && s.GetTrip().GetTripId() == tripId && tripAgrees(s, route) && runs.describes(s.GetTrip())
 	})
 }
 
@@ -93,7 +106,7 @@ func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *in
 func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *int, active *bool, includeModes bool, includeTrips bool) []*model.Alert {
 	// Looked up at most once per topic, and only for a trip named by trip_id alone.
 	tripRoutes := map[string]func() map[string]string{}
-	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(topic string, src *Source, _ *pb.Alert, s *pb.EntitySelector) bool {
+	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(topic string, src *Source, s *pb.EntitySelector) bool {
 		// The agency is checked first so that another agency's trip never costs a
 		// trip lookup.
 		if !f.agencyMatches(ctx, s, t) {
@@ -111,7 +124,7 @@ func (f *Finder) FindAlertsForRoute(ctx context.Context, t *model.Route, limit *
 // FindAlertsForAgency returns the alerts on an agency, and also its mode-wide
 // alerts on any of routeTypes.
 func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit *int, active *bool, routeTypes []int) []*model.Alert {
-	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(_ string, _ *Source, _ *pb.Alert, s *pb.EntitySelector) bool {
+	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(_ string, _ *Source, s *pb.EntitySelector) bool {
 		return namesAgency(s, t.AgencyID.Val) || matchesAgencyMode(s, t.AgencyID.Val, routeTypes)
 	})
 }
@@ -121,14 +134,14 @@ func (f *Finder) FindAlertsForAgency(ctx context.Context, t *model.Agency, limit
 func (f *Finder) FindAlertsForStop(ctx context.Context, t *model.Stop, limit *int, active *bool) []*model.Alert {
 	stopId := t.StopID.Val
 	fv := f.feedVersionRefs(ctx, t.FeedVersionID)
-	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(_ string, _ *Source, _ *pb.Alert, s *pb.EntitySelector) bool {
+	return f.findAlerts(ctx, t.FeedVersionID, limit, active, func(_ string, _ *Source, s *pb.EntitySelector) bool {
 		return stopId != "" && s.GetStopId() == stopId && !namesTrip(s) && stopAgrees(s, fv)
 	})
 }
 
 // alertMatch reports whether a selector of an alert from a realtime feed is on
 // the entity being asked about.
-type alertMatch func(topic string, src *Source, a *pb.Alert, s *pb.EntitySelector) bool
+type alertMatch func(topic string, src *Source, s *pb.EntitySelector) bool
 
 // findAlerts collects the alerts having a selector that match accepts, from
 // every realtime feed associated with a feed version.
@@ -145,7 +158,7 @@ func (f *Finder) findAlerts(ctx context.Context, fvid int, limit *int, active *b
 			if ent.Alert == nil || !checkAlertActivePeriod(tnow, active, ent.Alert) {
 				continue
 			}
-			if slices.ContainsFunc(ent.Alert.GetInformedEntity(), func(s *pb.EntitySelector) bool { return s != nil && match(topic, src, ent.Alert, s) }) {
+			if slices.ContainsFunc(ent.Alert.GetInformedEntity(), func(s *pb.EntitySelector) bool { return s != nil && match(topic, src, s) }) {
 				ret = append(ret, makeAlert(ent, topic))
 			}
 		}
@@ -337,21 +350,17 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 
 func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
 	seq := st.StopSequence.Int()
-	// Only the updates describing this stop time's run.
-	runs := f.stopTimeRuns(ctx, t, st)
-	now := f.Clock.Now()
+	// The stop time is on its own service date's run, else its trip's run. The
+	// trip may be a stand-in carrying only its GTFS trip_id, so its database id
+	// comes from the stop time.
+	dates := t.RunDates
+	if st.ServiceDate.Valid {
+		dates = []tt.Date{st.ServiceDate}
+	}
 	// Resolve the trip in each RT feed once. Both passes below ask every topic
 	// the same question, and a feed version can be associated with dozens of RT
 	// feeds, so answering twice is most of the work.
-	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
-	var rtTrips []*pb.TripUpdate
-	for _, topic := range topics {
-		for _, rtTrip := range f.getTrips(ctx, topic, t.TripID.Val) {
-			if runs.currentFor(rtTrip.GetTrip(), now) {
-				rtTrips = append(rtTrips, rtTrip)
-			}
-		}
-	}
+	rtTrips := f.runUpdates(ctx, t.FeedVersionID, t.TripID.Val, f.tripRunsOf(ctx, t.FeedVersionID, st.TripID.Int(), dates))
 	// Attempt to match on stop sequence
 	for _, rtTrip := range rtTrips {
 		for _, ste := range rtTrip.StopTimeUpdate {
@@ -430,7 +439,17 @@ func (f *Finder) MakeTrip(ctx context.Context, obj *model.Trip) (*model.Trip, er
 	t.FeedVersionID = obj.FeedVersionID
 	t.TripID = obj.TripID
 	t.RTTripID = obj.RTTripID
-	if rtTrip := f.FindTrip(ctx, &t); rtTrip != nil {
+	// Any update naming the trip will do: this only needs its route and
+	// direction, whichever run it describes.
+	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, obj.FeedVersionID)
+	var rtTrip *pb.TripUpdate
+	for _, topic := range topics {
+		if found := f.getTrips(ctx, topic, t.TripID.Val); len(found) > 0 {
+			rtTrip = found[0]
+			break
+		}
+	}
+	if rtTrip != nil {
 		rtt := rtTrip.Trip
 		r, ok := f.lc.GetFeedVersionRoute(ctx, obj.FeedVersionID, rtt.GetRouteId())
 		if !ok {

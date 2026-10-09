@@ -8,10 +8,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// Realtime data is matched to the runs of a trip it describes: a message naming
-// a start_date to that run only, an undated trip update or vehicle position to
-// the current run, and an undated alert to the runs operating while it is in
-// force. See BA-runs-*.json in testdata/server/rt.
+// Every realtime message describes one run of a trip: the run on its trip
+// descriptor's start_date, or where it names none, the trip's current run. See
+// BA-runs-*.json in testdata/server/rt.
 
 var runsRTFiles = []testconfig.RTJsonFile{
 	{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-runs-trip-updates.json"},
@@ -33,7 +32,7 @@ const runsDeparturesQuery = `query($where: StopTimeFilter!) {
 	}
 }`
 
-// One departure's realtime data, by trip_id.
+// One departure's realtime data.
 type runRT struct {
 	serviceDate string
 	delay       *int64
@@ -41,16 +40,14 @@ type runRT struct {
 	vehicle     string
 }
 
-func runsByTrip(t *testing.T, stopTimes gjson.Result) map[string]runRT {
+// The realtime data on each departure, by trip_id.
+func runsByTrip(stopTimes gjson.Result) map[string]runRT {
 	ret := map[string]runRT{}
 	for _, st := range stopTimes.Array() {
 		r := runRT{
 			serviceDate: st.Get("service_date").String(),
+			delay:       optionalInt(st.Get("departure.estimated_delay")),
 			vehicle:     st.Get("trip.vehicle_position.vehicle.label").String(),
-		}
-		if d := st.Get("departure.estimated_delay"); d.Exists() && d.Type != gjson.Null {
-			v := d.Int()
-			r.delay = &v
 		}
 		for _, a := range st.Get("trip.alerts.#.header_text.0.text").Array() {
 			r.alerts = append(r.alerts, a.String())
@@ -58,6 +55,14 @@ func runsByTrip(t *testing.T, stopTimes gjson.Result) map[string]runRT {
 		ret[st.Get("trip.trip_id").String()] = r
 	}
 	return ret
+}
+
+func optionalInt(v gjson.Result) *int64 {
+	if !v.Exists() || v.Type == gjson.Null {
+		return nil
+	}
+	i := v.Int()
+	return &i
 }
 
 func ptrInt64(v int64) *int64 {
@@ -80,19 +85,18 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: rtFixtureWhenUtc,
 			vars:    window("2018-05-30"),
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(60), alerts: []string{"Run of May 30", "During the May 30 run", "Always"}, vehicle: "May 30 train"},
+				"1031527WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(60), alerts: []string{"Run of May 30", "Current run"}, vehicle: "May 30 train"},
 				"2211533WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(120), vehicle: "Undated train"},
 				"1131530WKDY": {serviceDate: "2018-05-30"},
 			},
 		},
 		{
-			// A dated message describes its run whatever day the query comes; an
-			// undated one only the current run, which tomorrow's is not.
+			// Tomorrow's run gets only what is dated for it.
 			name:    "tomorrow's runs",
 			whenUtc: rtFixtureWhenUtc,
 			vars:    window("2018-05-31"),
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2018-05-31", delay: ptrInt64(300), alerts: []string{"Run of May 31", "Always"}},
+				"1031527WKDY": {serviceDate: "2018-05-31", delay: ptrInt64(300), alerts: []string{"Run of May 31"}},
 				"2211533WKDY": {serviceDate: "2018-05-31"},
 				"1131530WKDY": {serviceDate: "2018-05-31"},
 			},
@@ -102,30 +106,38 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: rtFixtureWhenUtc,
 			vars:    window("2018-06-05"),
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2018-06-05", alerts: []string{"Next week", "Always"}},
+				"1031527WKDY": {serviceDate: "2018-06-05"},
 				"2211533WKDY": {serviceDate: "2018-06-05"},
-				"1131530WKDY": {serviceDate: "2018-06-05"},
 			},
 		},
 		{
-			// At half past midnight the current run of a trip departing 24:02 is
-			// the previous service date's.
-			name:    "after midnight",
-			whenUtc: "2018-05-31T07:30:00Z",
+			// At ten past midnight, the previous service date's run of a trip that
+			// arrives at 24:31 is still going, so it is the current run.
+			name:    "after midnight, late run still going",
+			whenUtc: "2018-05-31T07:10:00Z",
 			vars:    hw{"where": hw{"date": "2018-05-31", "start_time": 0, "end_time": 300}},
 			expect: map[string]runRT{
-				"5172328WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(180), alerts: []string{"After midnight", "Run of May 30, after midnight"}},
+				"5172328WKDY": {serviceDate: "2018-05-30", delay: ptrInt64(180), alerts: []string{"Late run, current", "Late run of May 30"}},
 				"2232328WKDY": {serviceDate: "2018-05-30"},
 			},
 		},
 		{
-			// Answered from the fallback week, but for the requested date: its
-			// dated messages and the current run's undated ones still apply.
+			// At a quarter to one it has finished, and today's run is current.
+			name:    "after midnight, late run finished",
+			whenUtc: "2018-05-31T07:45:00Z",
+			vars:    hw{"where": hw{"date": "2018-05-31", "start_time": 0, "end_time": 300}},
+			expect: map[string]runRT{
+				"5172328WKDY": {serviceDate: "2018-05-30", alerts: []string{"Late run of May 30"}},
+			},
+		},
+		{
+			// Answered from the fallback week, but for the requested date, which is
+			// today: its dated messages and the undated ones both apply.
 			name:    "fallback week",
 			whenUtc: "2030-05-28T23:00:00Z",
 			vars:    hw{"where": hw{"date": "2030-05-28", "start_time": 57600, "end_time": 57900, "use_service_window": true}},
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2030-05-28", delay: ptrInt64(90), alerts: []string{"Run of May 28, 2030", "Always"}},
+				"1031527WKDY": {serviceDate: "2030-05-28", delay: ptrInt64(90), alerts: []string{"Run of May 28, 2030", "Current run"}},
 				"2211533WKDY": {serviceDate: "2030-05-28", delay: ptrInt64(120), vehicle: "Undated train"},
 				"1131530WKDY": {serviceDate: "2030-05-28"},
 			},
@@ -139,7 +151,7 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			rtfiles: runsRTFiles,
 			whenUtc: tc.whenUtc,
 			cb: func(t *testing.T, jj string) {
-				got := runsByTrip(t, gjson.Get(jj, "stops.0.stop_times"))
+				got := runsByTrip(gjson.Get(jj, "stops.0.stop_times"))
 				for tripId, want := range tc.expect {
 					r, ok := got[tripId]
 					if !assert.True(t, ok, "expected a departure on trip %s", tripId) {
@@ -177,8 +189,7 @@ func TestTripRT_Runs_FallbackScheduledTime(t *testing.T) {
 }
 
 // A trip found by its service date is that run, as the trip viewer finds one;
-// found without a date, it is no run in particular, and every message that names
-// the trip applies.
+// found without a date, it is its current run.
 func TestTripRT_Runs_Trips(t *testing.T) {
 	const query = `query($where: TripFilter!) {
 		trips(where: $where) {
@@ -191,37 +202,39 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 	tcs := []struct {
 		name  string
 		where hw
-		delay *int64
-		// Realtime data from some run, whichever: a trip reached as no run has
-		// no one run to choose, and no date for a delay-only estimate.
-		anyRun  bool
-		alerts  []string
-		vehicle string
+		// At FTVL. A trip found without a date has no date for a delay-only
+		// estimate, but its stop times still carry the update.
+		delay        *int64
+		relationship string
+		alerts       []string
+		vehicle      string
 	}{
 		{
-			name:    "today's run",
-			where:   hw{"trip_id": "1031527WKDY", "service_date": "2018-05-30"},
-			delay:   ptrInt64(60),
-			alerts:  []string{"Run of May 30", "During the May 30 run", "Always"},
-			vehicle: "May 30 train",
+			name:         "today's run",
+			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-30"},
+			delay:        ptrInt64(60),
+			relationship: "SCHEDULED",
+			alerts:       []string{"Run of May 30", "Current run"},
+			vehicle:      "May 30 train",
 		},
 		{
-			name:   "tomorrow's run",
-			where:  hw{"trip_id": "1031527WKDY", "service_date": "2018-05-31"},
-			delay:  ptrInt64(300),
-			alerts: []string{"Run of May 31", "Always"},
+			name:         "tomorrow's run",
+			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-31"},
+			delay:        ptrInt64(300),
+			relationship: "SCHEDULED",
+			alerts:       []string{"Run of May 31"},
 		},
 		{
-			name:   "next week's run",
-			where:  hw{"trip_id": "1031527WKDY", "service_date": "2018-06-05"},
-			alerts: []string{"Next week", "Always"},
+			name:         "next week's run",
+			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-06-05"},
+			relationship: "STATIC",
 		},
 		{
-			name:    "no run in particular",
-			where:   hw{"trip_id": "1031527WKDY"},
-			anyRun:  true,
-			alerts:  []string{"Run of May 30", "Run of May 31", "Run of May 28, 2030", "During the May 30 run", "Next week", "Always"},
-			vehicle: "May 30 train",
+			name:         "no date, so the current run",
+			where:        hw{"trip_id": "1031527WKDY"},
+			relationship: "SCHEDULED",
+			alerts:       []string{"Run of May 30", "Current run"},
+			vehicle:      "May 30 train",
 		},
 	}
 	for _, tc := range tcs {
@@ -236,20 +249,11 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 				if !assert.Equal(t, "1031527WKDY", trip.Get("trip_id").String()) {
 					return
 				}
-				var delay *int64
-				relationship := ""
 				for _, st := range trip.Get("stop_times").Array() {
 					if st.Get("stop_sequence").Int() == 12 {
-						relationship = st.Get("schedule_relationship").String()
-						if d := st.Get("departure.estimated_delay"); d.Exists() && d.Type != gjson.Null {
-							delay = ptrInt64(d.Int())
-						}
+						assert.Equal(t, tc.delay, optionalInt(st.Get("departure.estimated_delay")), "estimated_delay at FTVL")
+						assert.Equal(t, tc.relationship, st.Get("schedule_relationship").String(), "schedule_relationship at FTVL")
 					}
-				}
-				if tc.anyRun {
-					assert.Equal(t, "SCHEDULED", relationship, "schedule_relationship at FTVL")
-				} else {
-					assert.Equal(t, tc.delay, delay, "estimated_delay at FTVL")
 				}
 				var alerts []string
 				for _, a := range trip.Get("alerts.#.header_text.0.text").Array() {

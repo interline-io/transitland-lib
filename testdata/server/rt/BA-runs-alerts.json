@@ -69,7 +69,7 @@
       }
     },
     {
-      "id": "during-20180530",
+      "id": "current",
       "alert": {
         "informed_entity": [
           {
@@ -81,59 +81,7 @@
         "header_text": {
           "translation": [
             {
-              "text": "During the May 30 run",
-              "language": "en"
-            }
-          ]
-        },
-        "active_period": [
-          {
-            "start": 1527717600,
-            "end": 1527724800
-          }
-        ]
-      }
-    },
-    {
-      "id": "next-week",
-      "alert": {
-        "informed_entity": [
-          {
-            "trip": {
-              "trip_id": "1031527WKDY"
-            }
-          }
-        ],
-        "header_text": {
-          "translation": [
-            {
-              "text": "Next week",
-              "language": "en"
-            }
-          ]
-        },
-        "active_period": [
-          {
-            "start": 1528182000,
-            "end": 1528268400
-          }
-        ]
-      }
-    },
-    {
-      "id": "always",
-      "alert": {
-        "informed_entity": [
-          {
-            "trip": {
-              "trip_id": "1031527WKDY"
-            }
-          }
-        ],
-        "header_text": {
-          "translation": [
-            {
-              "text": "Always",
+              "text": "Current run",
               "language": "en"
             }
           ]
@@ -141,7 +89,7 @@
       }
     },
     {
-      "id": "after-midnight",
+      "id": "late-current",
       "alert": {
         "informed_entity": [
           {
@@ -153,21 +101,15 @@
         "header_text": {
           "translation": [
             {
-              "text": "After midnight",
+              "text": "Late run, current",
               "language": "en"
             }
           ]
-        },
-        "active_period": [
-          {
-            "start": 1527750000,
-            "end": 1527753600
-          }
-        ]
+        }
       }
     },
     {
-      "id": "after-midnight-run",
+      "id": "late-20180530",
       "alert": {
         "informed_entity": [
           {
@@ -180,7 +122,7 @@
         "header_text": {
           "translation": [
             {
-              "text": "Run of May 30, after midnight",
+              "text": "Late run of May 30",
               "language": "en"
             }
           ]

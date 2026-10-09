@@ -8729,7 +8729,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts.\n\nA trip reached as a run, through a stop time with a `service_date` or a trips query by `service_date`, `service_dates` or `dates`, returns only the alerts on that run: one whose selector names a `start_date` concerns the run on that date, and one naming none the runs operating during its active periods.",
+                            "description": "GTFS-RT service alerts on this trip.\n\nOnly alerts on this trip's runs; see `Trip`. An alert's selector must name this trip, and any agency, route or mode it also names must be the trip's. Pass `active: true` to return only alerts in force now.",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -9958,7 +9958,7 @@
                             "x-order": 325
                           },
                           "schedule_relationship": {
-                            "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship, matched to a run as `vehicle_position` is. See `ScheduleRelationship` for per-value semantics",
+                            "description": "Real-time status of this trip.\n\n`STATIC` means no GTFS-RT data was matched. Otherwise this is the matching TripUpdate's schedule_relationship; see `ScheduleRelationship` for each value.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                             "enum": [
                               "SCHEDULED",
                               "ADDED",
@@ -10014,7 +10014,7 @@
                             "x-order": 22
                           },
                           "stop_times": {
-                            "description": "Stop times for this trip. On a trip reached as one run (see `alerts`), they are on that run's service date, with its GTFS-RT data",
+                            "description": "Stop times for this trip.\n\nOn a trip reached as one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.",
                             "items": {
                               "nullable": true,
                               "properties": {
@@ -10592,7 +10592,7 @@
                       "items": {
                         "properties": {
                           "alerts": {
-                            "description": "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts.\n\nA trip reached as a run, through a stop time with a `service_date` or a trips query by `service_date`, `service_dates` or `dates`, returns only the alerts on that run: one whose selector names a `start_date` concerns the run on that date, and one naming none the runs operating during its active periods.",
+                            "description": "GTFS-RT service alerts on this trip.\n\nOnly alerts on this trip's runs; see `Trip`. An alert's selector must name this trip, and any agency, route or mode it also names must be the trip's. Pass `active: true` to return only alerts in force now.",
                             "items": {
                               "properties": {
                                 "active_period": {
@@ -11821,7 +11821,7 @@
                             "x-order": 325
                           },
                           "schedule_relationship": {
-                            "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship, matched to a run as `vehicle_position` is. See `ScheduleRelationship` for per-value semantics",
+                            "description": "Real-time status of this trip.\n\n`STATIC` means no GTFS-RT data was matched. Otherwise this is the matching TripUpdate's schedule_relationship; see `ScheduleRelationship` for each value.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                             "enum": [
                               "SCHEDULED",
                               "ADDED",
@@ -11877,7 +11877,7 @@
                             "x-order": 22
                           },
                           "stop_times": {
-                            "description": "Stop times for this trip. On a trip reached as one run (see `alerts`), they are on that run's service date, with its GTFS-RT data",
+                            "description": "Stop times for this trip.\n\nOn a trip reached as one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.",
                             "items": {
                               "nullable": true,
                               "properties": {
@@ -15189,7 +15189,7 @@
                                   "items": {
                                     "properties": {
                                       "arrival": {
-                                        "description": "Arrival data, including GTFS-RT updates and estimates for the run on `service_date`: the update its trip descriptor's `start_date` names, or where it names none, the trip's current run",
+                                        "description": "Arrival data, including GTFS-RT updates and estimates.\n\nThe GTFS-RT update is the one on the run of `service_date`, or without one, the trip's current run; see `Trip`.",
                                         "properties": {
                                           "delay": {
                                             "description": "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant",
@@ -15296,7 +15296,7 @@
                                         "x-order": 480
                                       },
                                       "date": {
-                                        "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time, from `service_date`",
+                                        "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time.\n\nDerived from `service_date`.",
                                         "example": "2019-11-15",
                                         "format": "date",
                                         "nullable": true,
@@ -15305,7 +15305,7 @@
                                         "x-order": 498
                                       },
                                       "departure": {
-                                        "description": "Departure data, including GTFS-RT updates and estimates, matched to a run as `arrival` is",
+                                        "description": "Departure data, including GTFS-RT updates and estimates.\n\nThe GTFS-RT update is the one on the run of `service_date`, or without one, the trip's current run; see `Trip`.",
                                         "properties": {
                                           "delay": {
                                             "description": "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant",
@@ -15440,7 +15440,7 @@
                                         "x-order": 494
                                       },
                                       "service_date": {
-                                        "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time. Under `use_service_window` this is the requested date, though the fallback week supplied the schedule",
+                                        "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time.\n\nUnder `use_service_window` this is the requested date, even where the fallback week supplied the schedule.",
                                         "example": "2019-11-15",
                                         "format": "date",
                                         "nullable": true,
@@ -15479,7 +15479,7 @@
                                         "description": "Trip associated with this stop time",
                                         "properties": {
                                           "alerts": {
-                                            "description": "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts.\n\nA trip reached as a run, through a stop time with a `service_date` or a trips query by `service_date`, `service_dates` or `dates`, returns only the alerts on that run: one whose selector names a `start_date` concerns the run on that date, and one naming none the runs operating during its active periods.",
+                                            "description": "GTFS-RT service alerts on this trip.\n\nOnly alerts on this trip's runs; see `Trip`. An alert's selector must name this trip, and any agency, route or mode it also names must be the trip's. Pass `active: true` to return only alerts in force now.",
                                             "items": {
                                               "properties": {
                                                 "active_period": {
@@ -16635,7 +16635,7 @@
                                             "x-order": 756
                                           },
                                           "schedule_relationship": {
-                                            "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship, matched to a run as `vehicle_position` is. See `ScheduleRelationship` for per-value semantics",
+                                            "description": "Real-time status of this trip.\n\n`STATIC` means no GTFS-RT data was matched. Otherwise this is the matching TripUpdate's schedule_relationship; see `ScheduleRelationship` for each value.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                                             "enum": [
                                               "SCHEDULED",
                                               "ADDED",
@@ -16697,7 +16697,7 @@
                                             "x-order": 560
                                           },
                                           "timestamp": {
-                                            "description": "Timestamp from the matching GTFS-RT TripUpdate, if any, matched to a run as `vehicle_position` is",
+                                            "description": "Timestamp from the matching GTFS-RT TripUpdate, if any.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                                             "example": "2019-11-15T00:45:55.409906",
                                             "format": "datetime",
                                             "nullable": true,
@@ -16866,7 +16866,7 @@
                             "items": {
                               "properties": {
                                 "arrival": {
-                                  "description": "Arrival data, including GTFS-RT updates and estimates for the run on `service_date`: the update its trip descriptor's `start_date` names, or where it names none, the trip's current run",
+                                  "description": "Arrival data, including GTFS-RT updates and estimates.\n\nThe GTFS-RT update is the one on the run of `service_date`, or without one, the trip's current run; see `Trip`.",
                                   "properties": {
                                     "delay": {
                                       "description": "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant",
@@ -16973,7 +16973,7 @@
                                   "x-order": 59
                                 },
                                 "date": {
-                                  "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time, from `service_date`",
+                                  "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time.\n\nDerived from `service_date`.",
                                   "example": "2019-11-15",
                                   "format": "date",
                                   "nullable": true,
@@ -16982,7 +16982,7 @@
                                   "x-order": 77
                                 },
                                 "departure": {
-                                  "description": "Departure data, including GTFS-RT updates and estimates, matched to a run as `arrival` is",
+                                  "description": "Departure data, including GTFS-RT updates and estimates.\n\nThe GTFS-RT update is the one on the run of `service_date`, or without one, the trip's current run; see `Trip`.",
                                   "properties": {
                                     "delay": {
                                       "description": "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant",
@@ -17117,7 +17117,7 @@
                                   "x-order": 73
                                 },
                                 "service_date": {
-                                  "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time. Under `use_service_window` this is the requested date, though the fallback week supplied the schedule",
+                                  "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time.\n\nUnder `use_service_window` this is the requested date, even where the fallback week supplied the schedule.",
                                   "example": "2019-11-15",
                                   "format": "date",
                                   "nullable": true,
@@ -17156,7 +17156,7 @@
                                   "description": "Trip associated with this stop time",
                                   "properties": {
                                     "alerts": {
-                                      "description": "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts.\n\nA trip reached as a run, through a stop time with a `service_date` or a trips query by `service_date`, `service_dates` or `dates`, returns only the alerts on that run: one whose selector names a `start_date` concerns the run on that date, and one naming none the runs operating during its active periods.",
+                                      "description": "GTFS-RT service alerts on this trip.\n\nOnly alerts on this trip's runs; see `Trip`. An alert's selector must name this trip, and any agency, route or mode it also names must be the trip's. Pass `active: true` to return only alerts in force now.",
                                       "items": {
                                         "properties": {
                                           "active_period": {
@@ -18312,7 +18312,7 @@
                                       "x-order": 335
                                     },
                                     "schedule_relationship": {
-                                      "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship, matched to a run as `vehicle_position` is. See `ScheduleRelationship` for per-value semantics",
+                                      "description": "Real-time status of this trip.\n\n`STATIC` means no GTFS-RT data was matched. Otherwise this is the matching TripUpdate's schedule_relationship; see `ScheduleRelationship` for each value.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                                       "enum": [
                                         "SCHEDULED",
                                         "ADDED",
@@ -18374,7 +18374,7 @@
                                       "x-order": 139
                                     },
                                     "timestamp": {
-                                      "description": "Timestamp from the matching GTFS-RT TripUpdate, if any, matched to a run as `vehicle_position` is",
+                                      "description": "Timestamp from the matching GTFS-RT TripUpdate, if any.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                                       "example": "2019-11-15T00:45:55.409906",
                                       "format": "datetime",
                                       "nullable": true,
@@ -19139,7 +19139,7 @@
                                       "items": {
                                         "properties": {
                                           "arrival": {
-                                            "description": "Arrival data, including GTFS-RT updates and estimates for the run on `service_date`: the update its trip descriptor's `start_date` names, or where it names none, the trip's current run",
+                                            "description": "Arrival data, including GTFS-RT updates and estimates.\n\nThe GTFS-RT update is the one on the run of `service_date`, or without one, the trip's current run; see `Trip`.",
                                             "properties": {
                                               "delay": {
                                                 "description": "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant",
@@ -19246,7 +19246,7 @@
                                             "x-order": 1009
                                           },
                                           "date": {
-                                            "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time, from `service_date`",
+                                            "description": "When part of an arrival/departure query, the calendar date for this scheduled stop time.\n\nDerived from `service_date`.",
                                             "example": "2019-11-15",
                                             "format": "date",
                                             "nullable": true,
@@ -19255,7 +19255,7 @@
                                             "x-order": 1027
                                           },
                                           "departure": {
-                                            "description": "Departure data, including GTFS-RT updates and estimates, matched to a run as `arrival` is",
+                                            "description": "Departure data, including GTFS-RT updates and estimates.\n\nThe GTFS-RT update is the one on the run of `service_date`, or without one, the trip's current run; see `Trip`.",
                                             "properties": {
                                               "delay": {
                                                 "description": "Schedule delay in seconds from a matching GTFS-RT StopTimeUpdate, passed through as-is; see `estimated_delay` for the inferred-fallback variant",
@@ -19390,7 +19390,7 @@
                                             "x-order": 1023
                                           },
                                           "service_date": {
-                                            "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time. Under `use_service_window` this is the requested date, though the fallback week supplied the schedule",
+                                            "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time.\n\nUnder `use_service_window` this is the requested date, even where the fallback week supplied the schedule.",
                                             "example": "2019-11-15",
                                             "format": "date",
                                             "nullable": true,
@@ -19429,7 +19429,7 @@
                                             "description": "Trip associated with this stop time",
                                             "properties": {
                                               "alerts": {
-                                                "description": "GTFS-RT service alerts on this trip, whose agency, route and mode, if given, are the trip's; pass `active: true` to return only currently active alerts.\n\nA trip reached as a run, through a stop time with a `service_date` or a trips query by `service_date`, `service_dates` or `dates`, returns only the alerts on that run: one whose selector names a `start_date` concerns the run on that date, and one naming none the runs operating during its active periods.",
+                                                "description": "GTFS-RT service alerts on this trip.\n\nOnly alerts on this trip's runs; see `Trip`. An alert's selector must name this trip, and any agency, route or mode it also names must be the trip's. Pass `active: true` to return only alerts in force now.",
                                                 "items": {
                                                   "properties": {
                                                     "active_period": {
@@ -20585,7 +20585,7 @@
                                                 "x-order": 1285
                                               },
                                               "schedule_relationship": {
-                                                "description": "Real-time status of this trip. `STATIC` means no GTFS-RT data was matched; otherwise reflects the matching TripUpdate's schedule_relationship, matched to a run as `vehicle_position` is. See `ScheduleRelationship` for per-value semantics",
+                                                "description": "Real-time status of this trip.\n\n`STATIC` means no GTFS-RT data was matched. Otherwise this is the matching TripUpdate's schedule_relationship; see `ScheduleRelationship` for each value.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                                                 "enum": [
                                                   "SCHEDULED",
                                                   "ADDED",
@@ -20647,7 +20647,7 @@
                                                 "x-order": 1089
                                               },
                                               "timestamp": {
-                                                "description": "Timestamp from the matching GTFS-RT TripUpdate, if any, matched to a run as `vehicle_position` is",
+                                                "description": "Timestamp from the matching GTFS-RT TripUpdate, if any.\n\nThe TripUpdate is the one on this trip's runs; see `Trip`.",
                                                 "example": "2019-11-15T00:45:55.409906",
                                                 "format": "datetime",
                                                 "nullable": true,

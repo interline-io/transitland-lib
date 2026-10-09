@@ -103,9 +103,9 @@ type Route struct {
 
 type Trip struct {
 	RTTripID string // internal: for ADDED trips
-	// internal: the service dates of the runs the caller asked for, as requested
-	// rather than relocated into a fallback week. Realtime data is matched to
-	// these runs; with none, to every run of the trip.
+	// internal: the service dates of the requested runs, as given rather than
+	// relocated into a fallback week. Realtime data is matched to these runs;
+	// with none, to the trip's current run.
 	RunDates []tt.Date
 	// Every service date matched by a dates or service_dates query. Under
 	// `dates` this reaches one day before the earliest requested date.
@@ -153,11 +153,11 @@ type StopTime struct {
 	gtfs.StopTime
 }
 
-// SetServiceDate sets the service date a stop time is on, and the calendar date
-// it falls on, which is the next day for a time past midnight.
+// SetServiceDate sets a stop time's service date and its calendar date, which
+// is the next day for a time past midnight.
 func (st *StopTime) SetServiceDate(d tt.Date) {
 	st.ServiceDate = d
-	if st.ArrivalTime.Val > 24*60*60 {
+	if st.ArrivalTime.Val >= 24*60*60 {
 		st.Date.Set(d.Val.AddDate(0, 0, 1))
 	} else {
 		st.Date = d

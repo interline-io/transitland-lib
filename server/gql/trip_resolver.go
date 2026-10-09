@@ -44,6 +44,7 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 	})()
 	// Copied: the loader shares a trip's stop times across every run of the trip
 	// in the request, and each run has its own date and realtime data.
+	wantsRT := wantsRTStopTimeUpdate(ctx)
 	sts := make([]*model.StopTime, 0, len(loaded))
 	for _, st := range loaded {
 		c := *st
@@ -51,7 +52,7 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 		if len(obj.RunDates) == 1 {
 			c.SetServiceDate(obj.RunDates[0])
 		}
-		if wantsRTStopTimeUpdate(ctx) {
+		if wantsRT {
 			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, obj, &c); ok {
 				c.RTStopTimeUpdate = ste
 			}

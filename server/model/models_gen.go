@@ -1202,7 +1202,9 @@ type RouteStopPattern struct {
 	DirectionID int `json:"direction_id"`
 	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
-	// The service date the trips are counted on: the date `Route.patterns` was given, moved into the feed's service window where `use_service_window` asked for that. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve
+	// The service date the trips are counted on.
+	//
+	// This is the date `Route.patterns` was given, even where `use_service_window` counted the trips in the fallback week. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve.
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
 	// One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
 	//
@@ -1548,7 +1550,9 @@ type StopTimeFilter struct {
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// GTFS service date (which may differ from the calendar date for trips that cross midnight)
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. Stop times still report the requested date
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead.
+	//
+	// The stop times still report the requested date.
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Lower bound for departure time, in seconds since midnight
 	StartTime *int `json:"start_time,omitempty"`
@@ -1592,7 +1596,9 @@ type TripFilter struct {
 	Dates []*tt.Date `json:"dates,omitempty"`
 	// Calendar date relative to today; see `RelativeDate`. Ignored if `dates` or `service_dates` is set
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
-	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. The trips are still runs on the requested date, and GTFS-RT data is matched to those runs
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead.
+	//
+	// The trips are still runs on the requested date, and GTFS-RT data is matched to those runs.
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Search for trips with this GTFS trip_id
 	TripID *string `json:"trip_id,omitempty"`

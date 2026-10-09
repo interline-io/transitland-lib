@@ -169,6 +169,10 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 			if err != nil {
 				return nil, err
 			}
+			// The trips counted on the pattern's date are that date's runs.
+			if trip != nil && obj.ServiceDate != nil {
+				trip = tripRun(trip, *obj.ServiceDate)
+			}
 			if trip != nil {
 				trips = append(trips, trip)
 			}

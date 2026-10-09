@@ -195,8 +195,8 @@ func resolveTripDates(where *model.TripFilter, fvsw *model.ServiceWindow) []trip
 }
 
 // Split the aggregated service_dates column into the per-trip list the API
-// returns, relabelled as the dates the caller asked about, and record those as
-// the trip's runs. A single service_date is a run but not a service_dates entry.
+// returns, relabeled as the requested dates, and record those as the trip's
+// runs. A single service_date is a run but not a service_dates entry.
 func expandTripServiceDates(ents []*model.Trip, dates []tripDate) {
 	if len(dates) == 1 && dates[0].single {
 		for _, ent := range ents {
