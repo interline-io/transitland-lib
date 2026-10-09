@@ -8,20 +8,6 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-// GTFS Fares v1 and v2 entities. These tables have no filters of their own:
-// each is loaded as a child of its feed version (or, for stop_areas, its area),
-// with the limit applied per parent.
-//
-// The importer rewrites some text references (fare_leg_rules.network_id,
-// from_area_id, to_area_id, and every fare_leg_join_rules column) to the
-// referenced row's internal id when that row exists, and leaves them as GTFS
-// ids otherwise: a network named only in routes.network_id has no
-// gtfs_networks row. Those selects join the referenced table on a numeric
-// stored value and return its GTFS id, falling back to the stored value.
-// The importer leaves a reference unresolved only when the referenced table
-// has no row for it (routes.network_id) or when reference errors are allowed,
-// so a numeric GTFS id matching an unrelated internal id needs both.
-
 func (f *Finder) FareAttributesByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FareAttribute, error) {
 	var ents []*model.FareAttribute
 	q := lateralWrap(fareAttributeSelect(limit, nil), "feed_versions", "id", "gtfs_fare_attributes", "feed_version_id", keys)
@@ -161,26 +147,27 @@ func (f *Finder) FareLegRulesByFeedVersionIDs(ctx context.Context, limit *int, k
 }
 
 func fareLegRuleSelect(limit *int, ids []int) sq.SelectBuilder {
+	// network_id holds a gtfs_networks row id when networks.txt defines the
+	// network, or the GTFS id when routes.network_id does (see
+	// RouteNetworkIDCompatFilter); the join returns the GTFS id either way.
 	q := sq.StatementBuilder.Select(
 		"gtfs_fare_leg_rules.id",
 		"gtfs_fare_leg_rules.feed_version_id",
 		"gtfs_fare_leg_rules.leg_group_id",
+		"gtfs_fare_leg_rules.from_area_id",
+		"gtfs_fare_leg_rules.to_area_id",
 		"gtfs_fare_leg_rules.from_timeframe_group_id",
 		"gtfs_fare_leg_rules.to_timeframe_group_id",
 		"gtfs_fare_leg_rules.fare_product_id",
 		"gtfs_fare_leg_rules.rule_priority",
 		"gtfs_fare_leg_rules.transfer_only",
 		"COALESCE(ref_network.network_id, gtfs_fare_leg_rules.network_id) AS network_id",
-		"COALESCE(ref_from_area.area_id, gtfs_fare_leg_rules.from_area_id) AS from_area_id",
-		"COALESCE(ref_to_area.area_id, gtfs_fare_leg_rules.to_area_id) AS to_area_id",
 		"feed_versions.sha1 AS feed_version_sha1",
 		"current_feeds.onestop_id AS feed_onestop_id",
 	).From("gtfs_fare_leg_rules").
 		Join("feed_versions ON feed_versions.id = gtfs_fare_leg_rules.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-		LeftJoin("gtfs_networks ref_network ON ref_network.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_network.id = (CASE WHEN gtfs_fare_leg_rules.network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.network_id::bigint END)").
-		LeftJoin("gtfs_areas ref_from_area ON ref_from_area.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_from_area.id = (CASE WHEN gtfs_fare_leg_rules.from_area_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.from_area_id::bigint END)").
-		LeftJoin("gtfs_areas ref_to_area ON ref_to_area.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_to_area.id = (CASE WHEN gtfs_fare_leg_rules.to_area_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.to_area_id::bigint END)")
+		LeftJoin("gtfs_networks ref_network ON ref_network.feed_version_id = gtfs_fare_leg_rules.feed_version_id AND ref_network.id = (CASE WHEN gtfs_fare_leg_rules.network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_rules.network_id::bigint END)")
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_fare_leg_rules.id", ids))
 	}
@@ -195,22 +182,21 @@ func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *in
 }
 
 func fareLegJoinRuleSelect(limit *int, ids []int) sq.SelectBuilder {
+	// Network ids are stored as in fare_leg_rules; see fareLegRuleSelect.
 	q := sq.StatementBuilder.Select(
 		"gtfs_fare_leg_join_rules.id",
 		"gtfs_fare_leg_join_rules.feed_version_id",
 		"COALESCE(ref_from_network.network_id, gtfs_fare_leg_join_rules.from_network_id) AS from_network_id",
 		"COALESCE(ref_to_network.network_id, gtfs_fare_leg_join_rules.to_network_id) AS to_network_id",
-		"COALESCE(ref_from_stop.stop_id, gtfs_fare_leg_join_rules.from_stop_id) AS from_stop_id",
-		"COALESCE(ref_to_stop.stop_id, gtfs_fare_leg_join_rules.to_stop_id) AS to_stop_id",
+		"gtfs_fare_leg_join_rules.from_stop_id",
+		"gtfs_fare_leg_join_rules.to_stop_id",
 		"feed_versions.sha1 AS feed_version_sha1",
 		"current_feeds.onestop_id AS feed_onestop_id",
 	).From("gtfs_fare_leg_join_rules").
 		Join("feed_versions ON feed_versions.id = gtfs_fare_leg_join_rules.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		LeftJoin("gtfs_networks ref_from_network ON ref_from_network.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_from_network.id = (CASE WHEN gtfs_fare_leg_join_rules.from_network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.from_network_id::bigint END)").
-		LeftJoin("gtfs_networks ref_to_network ON ref_to_network.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_to_network.id = (CASE WHEN gtfs_fare_leg_join_rules.to_network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.to_network_id::bigint END)").
-		LeftJoin("gtfs_stops ref_from_stop ON ref_from_stop.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_from_stop.id = (CASE WHEN gtfs_fare_leg_join_rules.from_stop_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.from_stop_id::bigint END)").
-		LeftJoin("gtfs_stops ref_to_stop ON ref_to_stop.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_to_stop.id = (CASE WHEN gtfs_fare_leg_join_rules.to_stop_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.to_stop_id::bigint END)")
+		LeftJoin("gtfs_networks ref_to_network ON ref_to_network.feed_version_id = gtfs_fare_leg_join_rules.feed_version_id AND ref_to_network.id = (CASE WHEN gtfs_fare_leg_join_rules.to_network_id ~ '^[0-9]{1,18}$' THEN gtfs_fare_leg_join_rules.to_network_id::bigint END)")
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_fare_leg_join_rules.id", ids))
 	}

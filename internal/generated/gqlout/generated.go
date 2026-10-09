@@ -323,10 +323,10 @@ type ComplexityRoot struct {
 		FeedVersion     func(childComplexity int) int
 		FeedVersionSHA1 func(childComplexity int) int
 		FromNetworkID   func(childComplexity int) int
-		FromStopID      func(childComplexity int) int
+		FromStop        func(childComplexity int) int
 		ID              func(childComplexity int) int
 		ToNetworkID     func(childComplexity int) int
-		ToStopID        func(childComplexity int) int
+		ToStop          func(childComplexity int) int
 	}
 
 	FareLegRule struct {
@@ -334,13 +334,13 @@ type ComplexityRoot struct {
 		FeedOnestopID        func(childComplexity int) int
 		FeedVersion          func(childComplexity int) int
 		FeedVersionSHA1      func(childComplexity int) int
-		FromAreaID           func(childComplexity int) int
+		FromArea             func(childComplexity int) int
 		FromTimeframeGroupID func(childComplexity int) int
 		ID                   func(childComplexity int) int
 		LegGroupID           func(childComplexity int) int
 		NetworkID            func(childComplexity int) int
 		RulePriority         func(childComplexity int) int
-		ToAreaID             func(childComplexity int) int
+		ToArea               func(childComplexity int) int
 		ToTimeframeGroupID   func(childComplexity int) int
 		TransferOnly         func(childComplexity int) int
 	}
@@ -1620,9 +1620,15 @@ type FareAttributeResolver interface {
 	FeedVersion(ctx context.Context, obj *model.FareAttribute) (*model.FeedVersion, error)
 }
 type FareLegJoinRuleResolver interface {
+	FromStop(ctx context.Context, obj *model.FareLegJoinRule) (*model.Stop, error)
+	ToStop(ctx context.Context, obj *model.FareLegJoinRule) (*model.Stop, error)
+
 	FeedVersion(ctx context.Context, obj *model.FareLegJoinRule) (*model.FeedVersion, error)
 }
 type FareLegRuleResolver interface {
+	FromArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error)
+	ToArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error)
+
 	FeedVersion(ctx context.Context, obj *model.FareLegRule) (*model.FeedVersion, error)
 }
 type FareMediaResolver interface {
@@ -3077,12 +3083,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegJoinRule.FromNetworkID(childComplexity), true
-	case "FareLegJoinRule.from_stop_id":
-		if e.ComplexityRoot.FareLegJoinRule.FromStopID == nil {
+	case "FareLegJoinRule.from_stop":
+		if e.ComplexityRoot.FareLegJoinRule.FromStop == nil {
 			break
 		}
 
-		return e.ComplexityRoot.FareLegJoinRule.FromStopID(childComplexity), true
+		return e.ComplexityRoot.FareLegJoinRule.FromStop(childComplexity), true
 	case "FareLegJoinRule.id":
 		if e.ComplexityRoot.FareLegJoinRule.ID == nil {
 			break
@@ -3095,12 +3101,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegJoinRule.ToNetworkID(childComplexity), true
-	case "FareLegJoinRule.to_stop_id":
-		if e.ComplexityRoot.FareLegJoinRule.ToStopID == nil {
+	case "FareLegJoinRule.to_stop":
+		if e.ComplexityRoot.FareLegJoinRule.ToStop == nil {
 			break
 		}
 
-		return e.ComplexityRoot.FareLegJoinRule.ToStopID(childComplexity), true
+		return e.ComplexityRoot.FareLegJoinRule.ToStop(childComplexity), true
 
 	case "FareLegRule.fare_product_id":
 		if e.ComplexityRoot.FareLegRule.FareProductID == nil {
@@ -3126,12 +3132,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegRule.FeedVersionSHA1(childComplexity), true
-	case "FareLegRule.from_area_id":
-		if e.ComplexityRoot.FareLegRule.FromAreaID == nil {
+	case "FareLegRule.from_area":
+		if e.ComplexityRoot.FareLegRule.FromArea == nil {
 			break
 		}
 
-		return e.ComplexityRoot.FareLegRule.FromAreaID(childComplexity), true
+		return e.ComplexityRoot.FareLegRule.FromArea(childComplexity), true
 	case "FareLegRule.from_timeframe_group_id":
 		if e.ComplexityRoot.FareLegRule.FromTimeframeGroupID == nil {
 			break
@@ -3162,12 +3168,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegRule.RulePriority(childComplexity), true
-	case "FareLegRule.to_area_id":
-		if e.ComplexityRoot.FareLegRule.ToAreaID == nil {
+	case "FareLegRule.to_area":
+		if e.ComplexityRoot.FareLegRule.ToArea == nil {
 			break
 		}
 
-		return e.ComplexityRoot.FareLegRule.ToAreaID(childComplexity), true
+		return e.ComplexityRoot.FareLegRule.ToArea(childComplexity), true
 	case "FareLegRule.to_timeframe_group_id":
 		if e.ComplexityRoot.FareLegRule.ToTimeframeGroupID == nil {
 			break
@@ -11950,11 +11956,11 @@ type FareLegRule {
   "GTFS ` + "`" + `fare_leg_rules.network_id` + "`" + `; references ` + "`" + `routes.network_id` + "`" + ` or ` + "`" + `networks.network_id` + "`" + `"
   network_id: String
 
-  "GTFS ` + "`" + `fare_leg_rules.from_area_id` + "`" + `; references ` + "`" + `areas.area_id` + "`" + `"
-  from_area_id: String
+  "GTFS ` + "`" + `fare_leg_rules.from_area_id` + "`" + `; departure area"
+  from_area: Area
 
-  "GTFS ` + "`" + `fare_leg_rules.to_area_id` + "`" + `; references ` + "`" + `areas.area_id` + "`" + `"
-  to_area_id: String
+  "GTFS ` + "`" + `fare_leg_rules.to_area_id` + "`" + `; arrival area"
+  to_area: Area
 
   "GTFS ` + "`" + `fare_leg_rules.from_timeframe_group_id` + "`" + `; references ` + "`" + `timeframes.timeframe_group_id` + "`" + `"
   from_timeframe_group_id: String
@@ -11995,10 +12001,10 @@ type FareLegJoinRule {
   to_network_id: String
 
   "GTFS ` + "`" + `fare_leg_join_rules.from_stop_id` + "`" + `"
-  from_stop_id: String
+  from_stop: Stop
 
   "GTFS ` + "`" + `fare_leg_join_rules.to_stop_id` + "`" + `"
-  to_stop_id: String
+  to_stop: Stop
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -14555,10 +14561,10 @@ func (ec *executionContext) childFields_FareLegJoinRule(ctx context.Context, fie
 		return ec.fieldContext_FareLegJoinRule_from_network_id(ctx, field)
 	case "to_network_id":
 		return ec.fieldContext_FareLegJoinRule_to_network_id(ctx, field)
-	case "from_stop_id":
-		return ec.fieldContext_FareLegJoinRule_from_stop_id(ctx, field)
-	case "to_stop_id":
-		return ec.fieldContext_FareLegJoinRule_to_stop_id(ctx, field)
+	case "from_stop":
+		return ec.fieldContext_FareLegJoinRule_from_stop(ctx, field)
+	case "to_stop":
+		return ec.fieldContext_FareLegJoinRule_to_stop(ctx, field)
 	case "feed_version_sha1":
 		return ec.fieldContext_FareLegJoinRule_feed_version_sha1(ctx, field)
 	case "feed_onestop_id":
@@ -14577,10 +14583,10 @@ func (ec *executionContext) childFields_FareLegRule(ctx context.Context, field g
 		return ec.fieldContext_FareLegRule_leg_group_id(ctx, field)
 	case "network_id":
 		return ec.fieldContext_FareLegRule_network_id(ctx, field)
-	case "from_area_id":
-		return ec.fieldContext_FareLegRule_from_area_id(ctx, field)
-	case "to_area_id":
-		return ec.fieldContext_FareLegRule_to_area_id(ctx, field)
+	case "from_area":
+		return ec.fieldContext_FareLegRule_from_area(ctx, field)
+	case "to_area":
+		return ec.fieldContext_FareLegRule_to_area(ctx, field)
 	case "from_timeframe_group_id":
 		return ec.fieldContext_FareLegRule_from_timeframe_group_id(ctx, field)
 	case "to_timeframe_group_id":
@@ -24150,50 +24156,68 @@ func (ec *executionContext) fieldContext_FareLegJoinRule_to_network_id(_ context
 	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _FareLegJoinRule_from_stop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+func (ec *executionContext) _FareLegJoinRule_from_stop(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FareLegJoinRule_from_stop_id(ctx, field)
+			return ec.fieldContext_FareLegJoinRule_from_stop(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.FromStopID, nil
+			return ec.Resolvers.FareLegJoinRule().FromStop(ctx, obj)
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+			return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
 		},
 		true,
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_FareLegJoinRule_from_stop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type String does not have child fields"))
+func (ec *executionContext) fieldContext_FareLegJoinRule_from_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegJoinRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
-func (ec *executionContext) _FareLegJoinRule_to_stop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+func (ec *executionContext) _FareLegJoinRule_to_stop(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FareLegJoinRule_to_stop_id(ctx, field)
+			return ec.fieldContext_FareLegJoinRule_to_stop(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.ToStopID, nil
+			return ec.Resolvers.FareLegJoinRule().ToStop(ctx, obj)
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+			return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
 		},
 		true,
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_FareLegJoinRule_to_stop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type String does not have child fields"))
+func (ec *executionContext) fieldContext_FareLegJoinRule_to_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegJoinRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _FareLegJoinRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
@@ -24343,50 +24367,68 @@ func (ec *executionContext) fieldContext_FareLegRule_network_id(_ context.Contex
 	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _FareLegRule_from_area_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+func (ec *executionContext) _FareLegRule_from_area(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FareLegRule_from_area_id(ctx, field)
+			return ec.fieldContext_FareLegRule_from_area(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.FromAreaID, nil
+			return ec.Resolvers.FareLegRule().FromArea(ctx, obj)
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Area) graphql.Marshaler {
+			return ec.marshalOArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx, selections, v)
 		},
 		true,
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_FareLegRule_from_area_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+func (ec *executionContext) fieldContext_FareLegRule_from_area(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
-func (ec *executionContext) _FareLegRule_to_area_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+func (ec *executionContext) _FareLegRule_to_area(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FareLegRule_to_area_id(ctx, field)
+			return ec.fieldContext_FareLegRule_to_area(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.ToAreaID, nil
+			return ec.Resolvers.FareLegRule().ToArea(ctx, obj)
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Area) graphql.Marshaler {
+			return ec.marshalOArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx, selections, v)
 		},
 		true,
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_FareLegRule_to_area_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+func (ec *executionContext) fieldContext_FareLegRule_to_area(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _FareLegRule_from_timeframe_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
@@ -55429,10 +55471,72 @@ func (ec *executionContext) _FareLegJoinRule(ctx context.Context, sel ast.Select
 			out.Values[i] = ec._FareLegJoinRule_from_network_id(ctx, field, obj)
 		case "to_network_id":
 			out.Values[i] = ec._FareLegJoinRule_to_network_id(ctx, field, obj)
-		case "from_stop_id":
-			out.Values[i] = ec._FareLegJoinRule_from_stop_id(ctx, field, obj)
-		case "to_stop_id":
-			out.Values[i] = ec._FareLegJoinRule_to_stop_id(ctx, field, obj)
+		case "from_stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegJoinRule_from_stop(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "to_stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegJoinRule_to_stop(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "feed_version_sha1":
 			out.Values[i] = ec._FareLegJoinRule_feed_version_sha1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -55522,10 +55626,72 @@ func (ec *executionContext) _FareLegRule(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._FareLegRule_leg_group_id(ctx, field, obj)
 		case "network_id":
 			out.Values[i] = ec._FareLegRule_network_id(ctx, field, obj)
-		case "from_area_id":
-			out.Values[i] = ec._FareLegRule_from_area_id(ctx, field, obj)
-		case "to_area_id":
-			out.Values[i] = ec._FareLegRule_to_area_id(ctx, field, obj)
+		case "from_area":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_from_area(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "to_area":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_to_area(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "from_timeframe_group_id":
 			out.Values[i] = ec._FareLegRule_from_timeframe_group_id(ctx, field, obj)
 		case "to_timeframe_group_id":
@@ -70516,6 +70682,13 @@ func (ec *executionContext) marshalOAny2interface(ctx context.Context, sel ast.S
 	_ = ctx
 	res := graphql.MarshalAny(v)
 	return res
+}
+
+func (ec *executionContext) marshalOArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx context.Context, sel ast.SelectionSet, v *model.Area) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Area(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx context.Context, sel ast.SelectionSet, v *model.BookingRule) graphql.Marshaler {

@@ -1699,11 +1699,11 @@ type FareLegRule {
   "GTFS `fare_leg_rules.network_id`; references `routes.network_id` or `networks.network_id`"
   network_id: String
 
-  "GTFS `fare_leg_rules.from_area_id`; references `areas.area_id`"
-  from_area_id: String
+  "GTFS `fare_leg_rules.from_area_id`; departure area"
+  from_area: Area
 
-  "GTFS `fare_leg_rules.to_area_id`; references `areas.area_id`"
-  to_area_id: String
+  "GTFS `fare_leg_rules.to_area_id`; arrival area"
+  to_area: Area
 
   "GTFS `fare_leg_rules.from_timeframe_group_id`; references `timeframes.timeframe_group_id`"
   from_timeframe_group_id: String
@@ -1744,10 +1744,10 @@ type FareLegJoinRule {
   to_network_id: String
 
   "GTFS `fare_leg_join_rules.from_stop_id`"
-  from_stop_id: String
+  from_stop: Stop
 
   "GTFS `fare_leg_join_rules.to_stop_id`"
-  to_stop_id: String
+  to_stop: Stop
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!

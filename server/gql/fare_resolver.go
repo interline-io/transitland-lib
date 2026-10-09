@@ -122,6 +122,34 @@ func (r *fareProductResolver) FareMedia(ctx context.Context, obj *model.FareProd
 	return LoaderFor(ctx).FareMediaByIDs.Load(ctx, obj.FareMediaID.Int())()
 }
 
+func (r *fareLegRuleResolver) FromArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error) {
+	if !obj.FromAreaID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).AreasByIDs.Load(ctx, obj.FromAreaID.Int())()
+}
+
+func (r *fareLegRuleResolver) ToArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error) {
+	if !obj.ToAreaID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).AreasByIDs.Load(ctx, obj.ToAreaID.Int())()
+}
+
+func (r *fareLegJoinRuleResolver) FromStop(ctx context.Context, obj *model.FareLegJoinRule) (*model.Stop, error) {
+	if !obj.FromStopID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).StopsByIDs.Load(ctx, obj.FromStopID.Int())()
+}
+
+func (r *fareLegJoinRuleResolver) ToStop(ctx context.Context, obj *model.FareLegJoinRule) (*model.Stop, error) {
+	if !obj.ToStopID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).StopsByIDs.Load(ctx, obj.ToStopID.Int())()
+}
+
 func (r *timeframeResolver) Service(ctx context.Context, obj *model.Timeframe) (*model.Calendar, error) {
 	if !obj.ServiceID.Valid {
 		return nil, nil

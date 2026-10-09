@@ -113,13 +113,14 @@ func TestFareResolver(t *testing.T) {
 		},
 		{
 			name:  "fare_leg_rules",
-			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_rules { leg_group_id network_id from_area_id to_area_id from_timeframe_group_id to_timeframe_group_id fare_product_id rule_priority transfer_only } } }`,
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_rules { leg_group_id network_id from_area { area_id } to_area { area_id } from_timeframe_group_id to_timeframe_group_id fare_product_id rule_priority transfer_only } } }`,
 			vars:  hw{"sha1": ctSha1},
 			sel: []testcaseSelector{
 				{selector: "feed_versions.0.fare_leg_rules.#.leg_group_id", expect: []string{"ct_local", "ct_local", "ct_express"}},
 				{selector: "feed_versions.0.fare_leg_rules.#.network_id", expect: []string{"local", "local", "express"}},
-				{selector: "feed_versions.0.fare_leg_rules.#.from_area_id", expect: []string{"zone1", "zone1", ""}},
-				{selector: "feed_versions.0.fare_leg_rules.#.to_area_id", expect: []string{"zone4", "zone4", ""}},
+				// The ct_express rule has no areas
+				{selector: "feed_versions.0.fare_leg_rules.#.from_area.area_id", expect: []string{"zone1", "zone1"}},
+				{selector: "feed_versions.0.fare_leg_rules.#.to_area.area_id", expect: []string{"zone4", "zone4"}},
 				{selector: "feed_versions.0.fare_leg_rules.#.from_timeframe_group_id", expect: []string{"", "weekday_peak", ""}},
 				{selector: "feed_versions.0.fare_leg_rules.#.fare_product_id", expect: []string{"two_zone", "two_zone_peak", "two_zone"}},
 				{selector: "feed_versions.0.fare_leg_rules.#.rule_priority", expect: []string{"0", "1", "0"}},
@@ -151,9 +152,9 @@ func TestFareResolver(t *testing.T) {
 		},
 		{
 			name:   "fare_leg_join_rules",
-			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_join_rules { from_network_id to_network_id from_stop_id to_stop_id } } }`,
+			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_join_rules { from_network_id to_network_id from_stop { stop_id } to_stop { stop_id } } } }`,
 			vars:   hw{"sha1": ctSha1},
-			expect: `{"feed_versions":[{"fare_leg_join_rules":[{"from_network_id":"local","from_stop_id":"70261","to_network_id":"express","to_stop_id":"70262"}]}]}`,
+			expect: `{"feed_versions":[{"fare_leg_join_rules":[{"from_network_id":"local","from_stop":{"stop_id":"70261"},"to_network_id":"express","to_stop":{"stop_id":"70262"}}]}]}`,
 		},
 		{
 			name:   "fare_transfer_rules",
