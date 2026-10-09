@@ -183,6 +183,28 @@ func TestTripResolver(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 
+// As for routes: BA's dd7aca4a answers for 2016-06-01, which the active e535eb2b
+// does not cover.
+func TestTripResolver_For(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:         "no trips from the active version on a date it does not cover",
+			query:        `query { trips(limit:10000, where:{feed_onestop_id:"BA", service_date:"2016-06-01"}) { trip_id } }`,
+			selector:     "trips.#.trip_id",
+			selectExpect: []string{},
+		},
+		{
+			name:  "trips from the version for the date",
+			query: `query { trips(limit:10000, for:"2016-06-01", where:{feed_onestop_id:"BA", service_date:"2016-06-01"}) { feed_version { sha1 } } }`,
+			sel: []testcaseSelector{
+				{selector: "trips.#.feed_version.sha1", expectUnique: []string{"dd7aca4a8e4c90908fd3603c097fabee75fea907"}, expectCount: 1101},
+			},
+		},
+	}
+	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
 func TestTripResolver_Frequencies(t *testing.T) {
 	// CITY1 runs five headway bands; its first stop departs at 06:00:00.
 	const q = `query($trip_id:String!) {trips(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", trip_id:$trip_id}) {frequencies{start_time end_time headway_secs trip{trip_id stop_times(limit:1){departure_time}}}}}`

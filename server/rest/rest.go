@@ -348,6 +348,14 @@ func checkIds(id int) []int {
 	return nil
 }
 
+// checkDate returns a date variable, or nil when the date is unset.
+func checkDate(v string) any {
+	if v == "" {
+		return nil
+	}
+	return v
+}
+
 // queryToMap converts url.Values to map[string]string
 func queryToMap(vars url.Values) map[string]string {
 	m := map[string]string{}

@@ -95,11 +95,56 @@ func TestStopResolver_OnestopID_Materialized(t *testing.T) {
 	}
 }
 
+// As for routes: BA's dd7aca4a answers for 2016-06-01, and the active e535eb2b
+// from 2018-05-26.
+func TestStopResolver_For(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:  "active version without for",
+			query: `query { stops(where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			sel: []testcaseSelector{
+				{selector: "stops.#.feed_version_sha1", expectUnique: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0"}, expectCount: 50},
+			},
+		},
+		{
+			name:  "older version for its dates",
+			query: `query { stops(for:"2016-06-01", where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			sel: []testcaseSelector{
+				{selector: "stops.#.feed_version_sha1", expectUnique: []string{"dd7aca4a8e4c90908fd3603c097fabee75fea907"}, expectCount: 47},
+			},
+		},
+		{
+			name:   "previous onestop id finds the stop in the version for the date",
+			query:  `query { stops(for:"2016-06-01", where:{onestop_id:"s-9q9pwk3psm-walnutcreek", allow_previous_onestop_ids:true}) { stop_id onestop_id feed_version_sha1 } }`,
+			expect: `{"stops":[{"stop_id":"WCRK","onestop_id":"s-9q9pwk90qc-walnutcreek","feed_version_sha1":"dd7aca4a8e4c90908fd3603c097fabee75fea907"}]}`,
+		},
+		{
+			name:              "no departures from the active version on a date it does not cover",
+			query:             `query { stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { departures(where:{date:"2016-06-01", start:"08:00:00", end:"09:00:00"}) { trip { trip_id } } } }`,
+			selector:          "stops.0.departures.#.trip.trip_id",
+			selectExpect:      []string{},
+			selectExpectCount: 0,
+		},
+		{
+			name:              "departures from the version for the date",
+			query:             `query { stops(for:"2016-06-01", where:{feed_onestop_id:"BA", stop_id:"12TH"}) { departures(where:{date:"2016-06-01", start:"08:00:00", end:"09:00:00"}) { trip { trip_id } } } }`,
+			selector:          "stops.0.departures.#.trip.trip_id",
+			selectExpectCount: 32,
+		},
+	}
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
+			c, _ := newTestClientWithOpts(t, testconfig.Options{UseMaterialized: materialized})
+			queryTestcases(t, c, testcases)
+		})
+	}
+}
+
 // Stops found with previous IDs allowed page like any others.
 func TestStopResolver_OnestopID_PreviousCursor(t *testing.T) {
 	c, cfg := newTestClient(t)
 	osid := "s-9q9p1wxf72-macarthur"
-	ents, err := cfg.Finder.FindStops(context.Background(), nil, nil, nil, &model.StopFilter{OnestopID: &osid})
+	ents, err := cfg.Finder.FindStops(context.Background(), nil, nil, nil, nil, &model.StopFilter{OnestopID: &osid})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1057,7 +1102,7 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 func stopResolverCursorTestcases(t *testing.T, cfg model.Config) []testcase {
 	// First 1000 stops...
 	dbf := cfg.Finder
-	allEnts, err := dbf.FindStops(context.Background(), nil, nil, nil, nil)
+	allEnts, err := dbf.FindStops(context.Background(), nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

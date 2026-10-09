@@ -253,6 +253,46 @@ func joinImported(q sq.SelectBuilder) sq.SelectBuilder {
 	return q.Join("feed_version_gtfs_imports fvgi on fvgi.feed_version_id = feed_versions.id and fvgi.success and not fvgi.in_progress")
 }
 
+// feedVersionsFor selects the feed version that global queries read for each feed, as
+// (feed_id, feed_version_id): its active version, or given a date, the version its date
+// ranges assign to the date.
+//
+// A range counts only while its feed version has a complete import with a schedule, so
+// a feed with no such range for the date falls back to its active version. Only feeds
+// with a materialized version appear, as on the active path.
+func feedVersionsFor(date *tt.Date) sq.SelectBuilder {
+	if date == nil {
+		return sq.StatementBuilder.
+			Select("feed_states.feed_id", "feed_states.materialized_feed_version_id AS feed_version_id").
+			From("feed_states").
+			Where("feed_states.materialized_feed_version_id IS NOT NULL")
+	}
+	return sq.StatementBuilder.
+		Select(
+			"feed_states.feed_id",
+			"coalesce(fvdr.feed_version_id, feed_states.materialized_feed_version_id) AS feed_version_id",
+		).
+		From("feed_states").
+		JoinClause(`LEFT JOIN feed_version_date_ranges fvdr ON fvdr.feed_id = feed_states.feed_id
+			AND daterange(fvdr.start_date, fvdr.end_date, '[]') @> ?::date
+			AND EXISTS (
+				SELECT 1 FROM feed_version_gtfs_imports fvgi_range
+				WHERE fvgi_range.feed_version_id = fvdr.feed_version_id
+				AND fvgi_range.success AND NOT fvgi_range.in_progress AND NOT fvgi_range.schedule_removed
+			)`, date.Val).
+		Where("feed_states.materialized_feed_version_id IS NOT NULL")
+}
+
+// joinActive restricts a select over imported entity rows to the feed versions that
+// global queries read, unless useActive is off. Like joinImported, it keys off
+// feed_versions.id, which every such select joins.
+func joinActive(q sq.SelectBuilder, useActive *UseActive) sq.SelectBuilder {
+	if !useActive.Active() {
+		return q
+	}
+	return q.JoinClause(feedVersionsFor(useActive.Date()).Prefix("JOIN (").Suffix(") active_fv ON active_fv.feed_version_id = feed_versions.id"))
+}
+
 func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuilder {
 	q = q.Join("feed_states fsp on fsp.feed_id = current_feeds.id").
 		Where(sq.Eq{"current_feeds.deleted_at": nil})
@@ -354,6 +394,7 @@ func quickSelectOrder(table string, limit *int, after *model.Cursor, ids []int, 
 type UseActive struct {
 	active       bool
 	materialized bool
+	date         *tt.Date
 }
 
 // Active returns true if u is non-nil and active is true
@@ -361,9 +402,18 @@ func (u *UseActive) Active() bool {
 	return u != nil && u.active
 }
 
+// Date returns the date whose feed versions the query reads in place of the active
+// ones, or nil.
+func (u *UseActive) Date() *tt.Date {
+	if u == nil || !u.active || u.date == nil || !u.date.Valid {
+		return nil
+	}
+	return u.date
+}
+
 // Materialized returns true if the query reads the materialized active tables
 func (u *UseActive) Materialized() bool {
-	return u != nil && u.active && u.materialized
+	return u != nil && u.active && u.materialized && u.Date() == nil
 }
 
 // UseTable returns the materialized table name if conditions are met, otherwise returns the base table name

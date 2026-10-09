@@ -27,6 +27,7 @@ type RouteRequest struct {
 	Search              string    `json:"search"`
 	AgencyID            int       `json:"agency_id,string"`
 	FeedVersionSHA1     string    `json:"feed_version_sha1"`
+	For                 string    `json:"for"`
 	FeedOnestopID       string    `json:"feed_onestop_id"`
 	Lon                 float64   `json:"lon,string"`
 	Lat                 float64   `json:"lat,string"`
@@ -116,6 +117,7 @@ func (r RouteRequest) RequestInfo() RequestInfo {
 					newPRef("searchParam"),
 					newPRef("onestopParam"),
 					newPRef("sha1Param"),
+					newPRef("forParam"),
 					newPRef("feedParam"),
 					newPRefExt("radiusParam", "Search for routes geographically, based on stops at this location; radius is in meters, requires lon and lat"),
 					newPRef("latParam"),
@@ -210,6 +212,7 @@ func (r RouteRequest) Query(ctx context.Context) (string, map[string]interface{}
 		"limit":            r.CheckLimit(),
 		"after":            r.CheckAfter(),
 		"ids":              checkIds(r.ID),
+		"for":              checkDate(r.For),
 		"where":            where,
 		"include_alerts":   r.IncludeAlerts,
 		"include_geometry": r.IncludeGeometry,

@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/feedmanager"
+	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/stats"
@@ -53,6 +54,10 @@ func setupImport(ctx context.Context, t *testing.T, atx tldb.Adapter) int {
 	if _, err := ImportFeedVersion(ctx, feedmanager.NewDBFeedManager(atx), Options{FeedVersionID: fvid, Storage: "/"}); err != nil {
 		t.Fatal(err)
 	}
+	// Answer for every date, so an unimport has a date range to remove
+	if err := feedstate.NewManager(atx).SetDateRanges(ctx, []feedstate.DateRange{{FeedID: feedid, FeedVersionID: fvid}}); err != nil {
+		t.Fatal(err)
+	}
 	return fv.ID
 }
 
@@ -92,6 +97,10 @@ func TestUnimportSchedule(t *testing.T) {
 			{
 				table:  "feed_version_gtfs_imports",
 				expect: 1,
+			},
+			{
+				table:  "feed_version_date_ranges",
+				expect: 0,
 			},
 		}
 		for _, tc := range tcs {
@@ -145,6 +154,10 @@ func TestUnimportFeedVersion(t *testing.T) {
 			},
 			{
 				table:  "feed_version_gtfs_imports",
+				expect: 0,
+			},
+			{
+				table:  "feed_version_date_ranges",
 				expect: 0,
 			},
 		}
@@ -202,6 +215,10 @@ func TestDeleteFeedVersion(t *testing.T) {
 			},
 			{
 				table:  "feed_version_gtfs_imports",
+				expect: 0,
+			},
+			{
+				table:  "feed_version_date_ranges",
 				expect: 0,
 			},
 		}

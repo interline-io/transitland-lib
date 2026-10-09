@@ -939,7 +939,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Agencies         func(childComplexity int, limit *int, after *int, ids []int, where *model.AgencyFilter) int
+		Agencies         func(childComplexity int, limit *int, after *int, ids []int, forArg *tt.Date, where *model.AgencyFilter) int
 		Bikes            func(childComplexity int, limit *int, where *model.GbfsBikeRequest) int
 		CensusDatasets   func(childComplexity int, limit *int, after *int, ids []int, where *model.CensusDatasetFilter) int
 		Directions       func(childComplexity int, where model.DirectionRequest) int
@@ -950,10 +950,10 @@ type ComplexityRoot struct {
 		Me               func(childComplexity int) int
 		Operators        func(childComplexity int, limit *int, after *int, ids []int, where *model.OperatorFilter) int
 		Places           func(childComplexity int, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) int
-		Routes           func(childComplexity int, limit *int, after *int, ids []int, where *model.RouteFilter) int
-		Stops            func(childComplexity int, limit *int, after *int, ids []int, where *model.StopFilter) int
+		Routes           func(childComplexity int, limit *int, after *int, ids []int, forArg *tt.Date, where *model.RouteFilter) int
+		Stops            func(childComplexity int, limit *int, after *int, ids []int, forArg *tt.Date, where *model.StopFilter) int
 		Tenants          func(childComplexity int, limit *int, ids []int) int
-		Trips            func(childComplexity int, limit *int, after *int, ids []int, where *model.TripFilter) int
+		Trips            func(childComplexity int, limit *int, after *int, ids []int, forArg *tt.Date, where *model.TripFilter) int
 		Users            func(childComplexity int, limit *int, where *model.UserFilter) int
 		VehiclePositions func(childComplexity int, limit *int, where model.VehiclePositionFilter) int
 	}
@@ -1566,10 +1566,10 @@ type QueryResolver interface {
 	Feeds(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedFilter) ([]*model.Feed, error)
 	Operators(ctx context.Context, limit *int, after *int, ids []int, where *model.OperatorFilter) ([]*model.Operator, error)
 	FeedVersions(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error)
-	Agencies(ctx context.Context, limit *int, after *int, ids []int, where *model.AgencyFilter) ([]*model.Agency, error)
-	Routes(ctx context.Context, limit *int, after *int, ids []int, where *model.RouteFilter) ([]*model.Route, error)
-	Stops(ctx context.Context, limit *int, after *int, ids []int, where *model.StopFilter) ([]*model.Stop, error)
-	Trips(ctx context.Context, limit *int, after *int, ids []int, where *model.TripFilter) ([]*model.Trip, error)
+	Agencies(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.AgencyFilter) ([]*model.Agency, error)
+	Routes(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.RouteFilter) ([]*model.Route, error)
+	Stops(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.StopFilter) ([]*model.Stop, error)
+	Trips(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.TripFilter) ([]*model.Trip, error)
 	Places(ctx context.Context, limit *int, after *int, level *model.PlaceAggregationLevel, where *model.PlaceFilter) ([]*model.Place, error)
 	Directions(ctx context.Context, where model.DirectionRequest) (*model.Directions, error)
 	Bikes(ctx context.Context, limit *int, where *model.GbfsBikeRequest) ([]*model.GbfsFreeBikeStatus, error)
@@ -5788,7 +5788,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Agencies(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.AgencyFilter)), true
+		return e.ComplexityRoot.Query.Agencies(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["for"].(*tt.Date), args["where"].(*model.AgencyFilter)), true
 	case "Query.bikes":
 		if e.ComplexityRoot.Query.Bikes == nil {
 			break
@@ -5905,7 +5905,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Routes(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.RouteFilter)), true
+		return e.ComplexityRoot.Query.Routes(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["for"].(*tt.Date), args["where"].(*model.RouteFilter)), true
 	case "Query.stops":
 		if e.ComplexityRoot.Query.Stops == nil {
 			break
@@ -5916,7 +5916,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Stops(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.StopFilter)), true
+		return e.ComplexityRoot.Query.Stops(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["for"].(*tt.Date), args["where"].(*model.StopFilter)), true
 	case "Query.tenants":
 		if e.ComplexityRoot.Query.Tenants == nil {
 			break
@@ -5938,7 +5938,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Trips(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["where"].(*model.TripFilter)), true
+		return e.ComplexityRoot.Query.Trips(childComplexity, args["limit"].(*int), args["after"].(*int), args["ids"].([]int), args["for"].(*tt.Date), args["where"].(*model.TripFilter)), true
 	case "Query.users":
 		if e.ComplexityRoot.Query.Users == nil {
 			break
@@ -9398,17 +9398,17 @@ type Query {
   "List or search for FeedVersions (specific archived import of a Feed)"
   feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
   
-  "List or search for Agencies (each an ` + "`" + `agency.txt` + "`" + ` record from a specific FeedVersion); defaults to currently active feed versions when none is specified"
-  agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
+  "List or search for Agencies (each an ` + "`" + `agency.txt` + "`" + ` record from a specific FeedVersion); defaults to currently active feed versions when none is specified. With ` + "`" + `for` + "`" + `, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; ` + "`" + `for` + "`" + ` is ignored if ` + "`" + `ids` + "`" + ` or ` + "`" + `feed_version_sha1` + "`" + ` is set"
+  agencies(limit: Int, after: Int, ids: [Int!], for: Date, where: AgencyFilter): [Agency!]!
 
-  "List or search for Routes"
-  routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
+  "List or search for Routes; defaults to currently active feed versions. With ` + "`" + `for` + "`" + `, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; ` + "`" + `for` + "`" + ` is ignored if ` + "`" + `ids` + "`" + ` or ` + "`" + `feed_version_sha1` + "`" + ` is set"
+  routes(limit: Int, after: Int, ids: [Int!], for: Date, where: RouteFilter): [Route!]!
 
-  "List or search for Stops"
-  stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
+  "List or search for Stops; defaults to currently active feed versions. With ` + "`" + `for` + "`" + `, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; ` + "`" + `for` + "`" + ` is ignored if ` + "`" + `ids` + "`" + ` or ` + "`" + `feed_version_sha1` + "`" + ` is set"
+  stops(limit: Int, after: Int, ids: [Int!], for: Date, where: StopFilter): [Stop!]!
 
-  "List or search for Trips"
-  trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
+  "List or search for Trips; defaults to currently active feed versions. With ` + "`" + `for` + "`" + `, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; ` + "`" + `for` + "`" + ` is ignored if ` + "`" + `ids` + "`" + `, ` + "`" + `feed_version_sha1` + "`" + ` or ` + "`" + `route_ids` + "`" + ` is set"
+  trips(limit: Int, after: Int, ids: [Int!], for: Date, where: TripFilter): [Trip!]!
   
   "Aggregate operator counts by administrative place (City, State, Country)"
   places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]!
@@ -16434,14 +16434,22 @@ func (ec *executionContext) field_Query_agencies_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["ids"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "for",
+		func(ctx context.Context, v any) (*tt.Date, error) {
+			return ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["for"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.AgencyFilter, error) {
 			return ec.unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["where"] = arg3
+	args["where"] = arg4
 	return args, nil
 }
 
@@ -16742,14 +16750,22 @@ func (ec *executionContext) field_Query_routes_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["ids"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "for",
+		func(ctx context.Context, v any) (*tt.Date, error) {
+			return ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["for"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.RouteFilter, error) {
 			return ec.unmarshalORouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["where"] = arg3
+	args["where"] = arg4
 	return args, nil
 }
 
@@ -16780,14 +16796,22 @@ func (ec *executionContext) field_Query_stops_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["ids"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "for",
+		func(ctx context.Context, v any) (*tt.Date, error) {
+			return ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["for"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.StopFilter, error) {
 			return ec.unmarshalOStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["where"] = arg3
+	args["where"] = arg4
 	return args, nil
 }
 
@@ -16840,14 +16864,22 @@ func (ec *executionContext) field_Query_trips_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["ids"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "for",
+		func(ctx context.Context, v any) (*tt.Date, error) {
+			return ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["for"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.TripFilter, error) {
 			return ec.unmarshalOTripFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["where"] = arg3
+	args["where"] = arg4
 	return args, nil
 }
 
@@ -34169,7 +34201,7 @@ func (ec *executionContext) _Query_agencies(ctx context.Context, field graphql.C
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Agencies(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["where"].(*model.AgencyFilter))
+			return ec.Resolvers.Query().Agencies(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["for"].(*tt.Date), fc.Args["where"].(*model.AgencyFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Agency) graphql.Marshaler {
@@ -34213,7 +34245,7 @@ func (ec *executionContext) _Query_routes(ctx context.Context, field graphql.Col
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Routes(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["where"].(*model.RouteFilter))
+			return ec.Resolvers.Query().Routes(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["for"].(*tt.Date), fc.Args["where"].(*model.RouteFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Route) graphql.Marshaler {
@@ -34257,7 +34289,7 @@ func (ec *executionContext) _Query_stops(ctx context.Context, field graphql.Coll
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Stops(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["where"].(*model.StopFilter))
+			return ec.Resolvers.Query().Stops(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["for"].(*tt.Date), fc.Args["where"].(*model.StopFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
@@ -34301,7 +34333,7 @@ func (ec *executionContext) _Query_trips(ctx context.Context, field graphql.Coll
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Trips(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["where"].(*model.TripFilter))
+			return ec.Resolvers.Query().Trips(ctx, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["ids"].([]int), fc.Args["for"].(*tt.Date), fc.Args["where"].(*model.TripFilter))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Trip) graphql.Marshaler {

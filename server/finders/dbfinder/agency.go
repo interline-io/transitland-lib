@@ -5,14 +5,16 @@ import (
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
 
-func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.AgencyFilter) ([]*model.Agency, error) {
+func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Cursor, ids []int, forDate *tt.Date, where *model.AgencyFilter) ([]*model.Agency, error) {
 	var ents []*model.Agency
 	useActive := &UseActive{
 		active:       true,
 		materialized: model.ForContext(ctx).UseMaterialized,
+		date:         forDate,
 	}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
 		useActive.active = false
@@ -26,7 +28,7 @@ func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Curs
 
 func (f *Finder) AgenciesByIDs(ctx context.Context, ids []int) ([]*model.Agency, []error) {
 	var ents []*model.Agency
-	ents, err := f.FindAgencies(ctx, nil, nil, ids, nil)
+	ents, err := f.FindAgencies(ctx, nil, nil, ids, nil, nil)
 	if err != nil {
 		return nil, logExtendErr(ctx, len(ids), err)
 	}
@@ -219,9 +221,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_agencies.id", ids))
 	}
-	if useActive.Active() {
-		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id")
-	}
+	q = joinActive(q, useActive)
 
 	// Default ordering
 	q = q.OrderBy("gtfs_agencies.feed_version_id,gtfs_agencies.id")

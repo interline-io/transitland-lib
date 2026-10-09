@@ -226,6 +226,16 @@ CREATE TABLE IF NOT EXISTS "feed_states" (
   foreign key(materialized_feed_version_id) REFERENCES feed_versions(id),
   foreign key(feed_id) references current_feeds(id)
 );
+CREATE TABLE IF NOT EXISTS "feed_version_date_ranges" (
+  "id" integer primary key autoincrement,
+  "feed_id" integer not null,
+  "feed_version_id" integer not null,
+  "start_date" datetime,
+  "end_date" datetime,
+  foreign key(feed_id) references current_feeds(id),
+  foreign key(feed_version_id) REFERENCES feed_versions(id)
+);
+CREATE INDEX idx_feed_version_date_ranges_feed_version_id ON "feed_version_date_ranges"(feed_version_id);
 CREATE TABLE IF NOT EXISTS "gtfs_feed_infos" (
   "feed_publisher_name" varchar(255),
   "feed_publisher_url" varchar(255),

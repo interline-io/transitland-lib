@@ -20,6 +20,7 @@ type AgencyRequest struct {
 	AgencyName      string    `json:"agency_name"`
 	OnestopID       string    `json:"onestop_id"`
 	FeedVersionSHA1 string    `json:"feed_version_sha1"`
+	For             string    `json:"for"`
 	FeedOnestopID   string    `json:"feed_onestop_id"`
 	Search          string    `json:"search"`
 	Lon             float64   `json:"lon,string"`
@@ -79,6 +80,7 @@ func (r AgencyRequest) RequestInfo() RequestInfo {
 					newPRef("searchParam"),
 					newPRef("onestopParam"),
 					newPRef("sha1Param"),
+					newPRef("forParam"),
 					newPRef("feedParam"),
 					newPRefExt("radiusParam", "Search for agencies geographically, based on stops at this location; radius is in meters, requires lon and lat"),
 					newPRef("lonParam"),
@@ -166,6 +168,7 @@ func (r AgencyRequest) Query(ctx context.Context) (string, map[string]interface{
 		"ids":            checkIds(r.ID),
 		"include_alerts": r.IncludeAlerts,
 		"include_routes": r.IncludeRoutes,
+		"for":            checkDate(r.For),
 		"where":          where,
 	}
 }

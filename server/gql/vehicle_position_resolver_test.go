@@ -386,7 +386,7 @@ func TestVehiclePositionResolver_BboxTooLarge(t *testing.T) {
 }
 
 func vehiclePositionAgency(t *testing.T, ctx context.Context, cfg model.Config, onestopId string) *model.Agency {
-	agencies, err := cfg.Finder.FindAgencies(ctx, nil, nil, nil, &model.AgencyFilter{OnestopID: &onestopId})
+	agencies, err := cfg.Finder.FindAgencies(ctx, nil, nil, nil, nil, &model.AgencyFilter{OnestopID: &onestopId})
 	if err != nil {
 		t.Fatal(err)
 	}

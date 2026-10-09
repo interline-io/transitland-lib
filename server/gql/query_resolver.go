@@ -29,39 +29,39 @@ func (r *queryResolver) Me(ctx context.Context) (*model.Me, error) {
 	return &me, nil
 }
 
-func (r *queryResolver) Agencies(ctx context.Context, limit *int, after *int, ids []int, where *model.AgencyFilter) ([]*model.Agency, error) {
+func (r *queryResolver) Agencies(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.AgencyFilter) ([]*model.Agency, error) {
 	cfg := model.ForContext(ctx)
 	if where != nil {
 		if err := checkGeo(cfg.MaxRadius, where.Near, where.Bbox); err != nil {
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindAgencies(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindAgencies(ctx, resolverCheckLimit(limit), checkCursor(after), ids, forArg, where)
 }
 
-func (r *queryResolver) Routes(ctx context.Context, limit *int, after *int, ids []int, where *model.RouteFilter) ([]*model.Route, error) {
+func (r *queryResolver) Routes(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.RouteFilter) ([]*model.Route, error) {
 	cfg := model.ForContext(ctx)
 	if where != nil {
 		if err := checkGeo(cfg.MaxRadius, where.Near, where.Bbox); err != nil {
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindRoutes(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindRoutes(ctx, resolverCheckLimit(limit), checkCursor(after), ids, forArg, where)
 }
 
-func (r *queryResolver) Stops(ctx context.Context, limit *int, after *int, ids []int, where *model.StopFilter) ([]*model.Stop, error) {
+func (r *queryResolver) Stops(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.StopFilter) ([]*model.Stop, error) {
 	cfg := model.ForContext(ctx)
 	if where != nil {
 		if err := checkGeo(cfg.MaxRadius, where.Near, where.Bbox); err != nil {
 			return nil, err
 		}
 	}
-	return cfg.Finder.FindStops(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindStops(ctx, resolverCheckLimit(limit), checkCursor(after), ids, forArg, where)
 }
 
-func (r *queryResolver) Trips(ctx context.Context, limit *int, after *int, ids []int, where *model.TripFilter) ([]*model.Trip, error) {
+func (r *queryResolver) Trips(ctx context.Context, limit *int, after *int, ids []int, forArg *tt.Date, where *model.TripFilter) ([]*model.Trip, error) {
 	cfg := model.ForContext(ctx)
-	return cfg.Finder.FindTrips(ctx, resolverCheckLimit(limit), checkCursor(after), ids, where)
+	return cfg.Finder.FindTrips(ctx, resolverCheckLimit(limit), checkCursor(after), ids, forArg, where)
 }
 
 func (r *queryResolver) FeedVersions(ctx context.Context, limit *int, after *int, ids []int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error) {

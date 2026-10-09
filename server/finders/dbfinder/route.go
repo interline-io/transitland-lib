@@ -9,11 +9,12 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.RouteFilter) ([]*model.Route, error) {
+func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor, ids []int, forDate *tt.Date, where *model.RouteFilter) ([]*model.Route, error) {
 	var ents []*model.Route
 	useActive := &UseActive{
 		active:       true,
 		materialized: model.ForContext(ctx).UseMaterialized,
+		date:         forDate,
 	}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
 		useActive.active = false
@@ -34,7 +35,9 @@ func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor
 				return nil, logErr(ctx, err)
 			}
 			var err error
-			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Route) (int, *string) { return ent.ID, ent.OnestopID }, previousRouteIDsSelect)
+			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Route) (int, *string) { return ent.ID, ent.OnestopID }, func(missing []string) sq.SelectBuilder {
+				return previousRouteIDsSelect(missing, useActive.Date())
+			})
 			if err != nil {
 				return nil, logErr(ctx, err)
 			}
@@ -52,8 +55,9 @@ func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor
 }
 
 // previousRouteIDsSelect finds the active routes with the feed and route_id of a
-// route that ever had one of the onestop IDs, for activeIDsByOnestopID.
-func previousRouteIDsSelect(osids []string) sq.SelectBuilder {
+// route that ever had one of the onestop IDs, for activeIDsByOnestopID. Given a date,
+// it reads each feed's feed version for the date instead.
+func previousRouteIDsSelect(osids []string, date *tt.Date) sq.SelectBuilder {
 	hist := sq.StatementBuilder.
 		Select("feed_version_route_onestop_ids.entity_id", "feed_versions.feed_id").
 		Distinct().
@@ -63,8 +67,8 @@ func previousRouteIDsSelect(osids []string) sq.SelectBuilder {
 	return sq.StatementBuilder.
 		Select("gtfs_routes.id").
 		FromSelect(hist, "hist").
-		Join("feed_states on feed_states.feed_id = hist.feed_id").
-		Join("gtfs_routes on gtfs_routes.feed_version_id = feed_states.materialized_feed_version_id and gtfs_routes.route_id = hist.entity_id")
+		JoinClause(feedVersionsFor(date).Prefix("JOIN (").Suffix(") active_fv ON active_fv.feed_id = hist.feed_id")).
+		Join("gtfs_routes on gtfs_routes.feed_version_id = active_fv.feed_version_id and gtfs_routes.route_id = hist.entity_id")
 }
 
 func (f *Finder) RouteStopBuffer(ctx context.Context, limit *int, radius *float64, routeId int) ([]*model.RouteStopBuffer, error) {
@@ -123,7 +127,7 @@ func (f *Finder) RouteTypesByAgencyIDs(ctx context.Context, ids []int) ([][]int,
 }
 
 func (f *Finder) RoutesByIDs(ctx context.Context, ids []int) ([]*model.Route, []error) {
-	ents, err := f.FindRoutes(ctx, nil, nil, ids, nil)
+	ents, err := f.FindRoutes(ctx, nil, nil, ids, nil, nil)
 	if err != nil {
 		return nil, logExtendErr(ctx, len(ids), err)
 	}
@@ -505,9 +509,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 		}
 	}
 
-	if useActive.Active() {
-		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_routes.feed_version_id")
-	}
+	q = joinActive(q, useActive)
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_routes.id", ids))
 	}

@@ -3,12 +3,17 @@ package cmds
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/feedstate"
+	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/spf13/pflag"
 )
 
@@ -23,12 +28,15 @@ type FeedStateManagerCommand struct {
 	ForceDematerialize []string
 	ForceRematerialize []string
 	SyncActive         bool
+	SyncDateRanges     bool
+	SetDateRangesFile  string
 	DryRun             bool
 	Adapter            tldb.Adapter // allow for mocks
+	fileDateRanges     []feedstate.DateRange
 }
 
 func (cmd *FeedStateManagerCommand) HelpDesc() (string, string) {
-	return "Manage feed state and materialized tables", `This command manages feed state including which feed versions are active, and maintains materialized tables that cache active route, stop, and agency data for improved query performance. It provides centralized control over feed version activation across the entire system.`
+	return "Manage feed state and materialized tables", `This command manages feed state including which feed versions are active and which feed version answers for each date, and maintains materialized tables that cache active route, stop, and agency data for improved query performance. It provides centralized control over feed version activation across the entire system.`
 }
 
 func (cmd *FeedStateManagerCommand) HelpArgs() string {
@@ -45,6 +53,8 @@ func (cmd *FeedStateManagerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.ForceDematerialize, "force-dematerialize", nil, "Force dematerialize these feed version IDs (manual intervention)")
 	fl.StringSliceVar(&cmd.ForceRematerialize, "force-rematerialize", nil, "Force rematerialize these feed version IDs (dematerialize + materialize)")
 	fl.BoolVar(&cmd.SyncActive, "sync-active", false, "Make materialized tables match current active feed versions")
+	fl.BoolVar(&cmd.SyncDateRanges, "sync-date-ranges", false, "Recompute every feed's date ranges, giving each date to the most recently fetched imported feed version covering the date")
+	fl.StringVar(&cmd.SetDateRangesFile, "set-date-ranges-file", "", "Set the date ranges of the feeds in a csv file with feed_version_id, start_date and end_date columns, in place of their current or synced ranges; an empty date is open-ended")
 	fl.BoolVar(&cmd.DryRun, "dry-run", false, "Show what would be done without making changes")
 }
 
@@ -63,6 +73,16 @@ func (cmd *FeedStateManagerCommand) Parse(args []string) error {
 		if len(cmd.SetActiveFVIDs) == 0 {
 			return fmt.Errorf("--set-active-fvid-file specified but no feed version ids were read")
 		}
+	}
+	if cmd.SetDateRangesFile != "" {
+		ranges, err := readDateRangesFile(cmd.SetDateRangesFile)
+		if err != nil {
+			return err
+		}
+		if len(ranges) == 0 {
+			return fmt.Errorf("--set-date-ranges-file specified but no date ranges were read")
+		}
+		cmd.fileDateRanges = ranges
 	}
 	return nil
 }
@@ -155,6 +175,32 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 			deactivateIDs = append(deactivateIDs, changes.ToDeactivate...)
 		}
 
+		// The file's ranges replace the synced ones of the feeds it names.
+		var dateRanges []feedstate.DateRange
+		if cmd.SyncDateRanges {
+			log.For(ctx).Info().Msg("computing date ranges")
+			computed, err := txManager.ComputeDateRanges(ctx)
+			if err != nil {
+				return err
+			}
+			dateRanges = computed
+		}
+		if len(cmd.fileDateRanges) > 0 {
+			fileFeeds := map[int]bool{}
+			var fileRanges []feedstate.DateRange
+			for _, r := range cmd.fileDateRanges {
+				feedID, err := txManager.GetFeedIDForFeedVersion(ctx, r.FeedVersionID)
+				if err != nil {
+					return fmt.Errorf("failed to get feed_id for feed version %d: %w", r.FeedVersionID, err)
+				}
+				r.FeedID = feedID
+				fileFeeds[feedID] = true
+				fileRanges = append(fileRanges, r)
+			}
+			dateRanges = slices.DeleteFunc(dateRanges, func(r feedstate.DateRange) bool { return fileFeeds[r.FeedID] })
+			dateRanges = append(dateRanges, fileRanges...)
+		}
+
 		log.For(ctx).Info().Msg("planned operations")
 		if len(forceDematerializeIDs) > 0 {
 			log.For(ctx).Info().Ints("feed_version_ids", forceDematerializeIDs).Msgf("dematerialize %d feed versions", len(forceDematerializeIDs))
@@ -170,6 +216,9 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 		}
 		if len(activateIDs) > 0 {
 			log.For(ctx).Info().Ints("feed_version_ids", activateIDs).Msgf("activate %d feed versions", len(activateIDs))
+		}
+		if len(dateRanges) > 0 {
+			log.For(ctx).Info().Msgf("set %d date ranges", len(dateRanges))
 		}
 
 		// Dry run - show what would be done
@@ -226,6 +275,13 @@ func (cmd *FeedStateManagerCommand) Run(ctx context.Context) error {
 			log.For(ctx).Info().Int("feed_version_id", fvid).Msg("activated feed version")
 		}
 
+		// Date range operations
+		if len(dateRanges) > 0 {
+			if err := txManager.SetDateRanges(ctx, dateRanges); err != nil {
+				return err
+			}
+		}
+
 		log.For(ctx).Info().Msg("feed state operations complete")
 		return nil
 	})
@@ -242,6 +298,44 @@ func (cmd *FeedStateManagerCommand) parseFeedVersionIDs(fvidStrings []string) ([
 		feedVersionIDs = append(feedVersionIDs, fvid)
 	}
 	return feedVersionIDs, nil
+}
+
+// readDateRangesFile reads date ranges from a csv file with feed_version_id,
+// start_date and end_date columns. An empty date is open-ended.
+func readDateRangesFile(fn string) ([]feedstate.DateRange, error) {
+	f, err := os.Open(fn)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var ret []feedstate.DateRange
+	var rowErr error
+	err = tlcsv.ReadRows(f, func(row tlcsv.Row) {
+		if rowErr != nil {
+			return
+		}
+		var r feedstate.DateRange
+		fvid, _ := row.Get("feed_version_id")
+		if r.FeedVersionID, rowErr = strconv.Atoi(strings.TrimSpace(fvid)); rowErr != nil {
+			rowErr = fmt.Errorf("%s line %d: invalid feed_version_id %q", fn, row.Line, fvid)
+			return
+		}
+		start, _ := row.Get("start_date")
+		if r.StartDate, rowErr = tt.ParseDate(strings.TrimSpace(start)); rowErr != nil {
+			rowErr = fmt.Errorf("%s line %d: invalid start_date %q", fn, row.Line, start)
+			return
+		}
+		end, _ := row.Get("end_date")
+		if r.EndDate, rowErr = tt.ParseDate(strings.TrimSpace(end)); rowErr != nil {
+			rowErr = fmt.Errorf("%s line %d: invalid end_date %q", fn, row.Line, end)
+			return
+		}
+		ret = append(ret, r)
+	})
+	if err != nil && err != io.EOF { // io.EOF: empty file, no rows
+		return nil, err
+	}
+	return ret, rowErr
 }
 
 func toSet(ints []int) map[int]bool {

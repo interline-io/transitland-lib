@@ -128,17 +128,17 @@ type Query {
   "List or search for FeedVersions (specific archived import of a Feed)"
   feed_versions(limit: Int, after: Int, ids: [Int!], where: FeedVersionFilter): [FeedVersion!]!
   
-  "List or search for Agencies (each an `agency.txt` record from a specific FeedVersion); defaults to currently active feed versions when none is specified"
-  agencies(limit: Int, after: Int, ids: [Int!], where: AgencyFilter): [Agency!]!
+  "List or search for Agencies (each an `agency.txt` record from a specific FeedVersion); defaults to currently active feed versions when none is specified. With `for`, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; `for` is ignored if `ids` or `feed_version_sha1` is set"
+  agencies(limit: Int, after: Int, ids: [Int!], for: Date, where: AgencyFilter): [Agency!]!
 
-  "List or search for Routes"
-  routes(limit: Int, after: Int, ids: [Int!], where: RouteFilter): [Route!]!
+  "List or search for Routes; defaults to currently active feed versions. With `for`, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; `for` is ignored if `ids` or `feed_version_sha1` is set"
+  routes(limit: Int, after: Int, ids: [Int!], for: Date, where: RouteFilter): [Route!]!
 
-  "List or search for Stops"
-  stops(limit: Int, after: Int, ids: [Int!], where: StopFilter): [Stop!]!
+  "List or search for Stops; defaults to currently active feed versions. With `for`, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; `for` is ignored if `ids` or `feed_version_sha1` is set"
+  stops(limit: Int, after: Int, ids: [Int!], for: Date, where: StopFilter): [Stop!]!
 
-  "List or search for Trips"
-  trips(limit: Int, after: Int, ids: [Int!], where: TripFilter): [Trip!]!
+  "List or search for Trips; defaults to currently active feed versions. With `for`, searches each feed's feed version for that date instead, or its active feed version if it has none for the date; `for` is ignored if `ids`, `feed_version_sha1` or `route_ids` is set"
+  trips(limit: Int, after: Int, ids: [Int!], for: Date, where: TripFilter): [Trip!]!
   
   "Aggregate operator counts by administrative place (City, State, Country)"
   places(limit: Int,after: Int, level: PlaceAggregationLevel, where: PlaceFilter): [Place!]!

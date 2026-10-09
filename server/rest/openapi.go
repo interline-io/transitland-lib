@@ -259,6 +259,14 @@ var ParameterComponents = oa.ParametersMap{
 			Schema:      newSRVal("string", "", nil),
 		},
 	},
+	"forParam": &pref{
+		Value: &param{
+			Name:        "for",
+			In:          "query",
+			Description: `Search each feed's feed version for this date, instead of its active feed version. A feed with no feed version for this date falls back to its active feed version. Ignored if feed_version_sha1 is set`,
+			Schema:      newSRVal("string", "date", nil),
+		},
+	},
 	"includeGeometryParam": &pref{
 		Value: &param{
 			Name:        "include_geometry",

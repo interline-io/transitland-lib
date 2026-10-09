@@ -8,6 +8,8 @@ import (
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/importer"
+	"github.com/interline-io/transitland-lib/internal/feedstate"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -531,6 +533,121 @@ func TestRouteResolver_OnestopID_PreviousFiltered(t *testing.T) {
 	}
 }
 
+// BA has three imported versions, and their date ranges give each one its own dates:
+// 96b67c09 (2010 data) through 2016-02-07, dd7aca4a (2016) through 2018-05-25, and the
+// active e535eb2b from 2018-05-26.
+func TestRouteResolver_For(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:               "active version without for",
+			query:              `query { routes(where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+		},
+		{
+			name:               "older version for its dates",
+			query:              `query { routes(for:"2016-06-01", where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"dd7aca4a8e4c90908fd3603c097fabee75fea907"},
+		},
+		{
+			name:               "last day of the older version",
+			query:              `query { routes(for:"2018-05-25", where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"dd7aca4a8e4c90908fd3603c097fabee75fea907"},
+		},
+		{
+			name:               "first day of the active version",
+			query:              `query { routes(for:"2018-05-26", where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+		},
+		{
+			name:               "date after every version",
+			query:              `query { routes(for:"2030-01-01", where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+		},
+		{
+			name:               "date before every version",
+			query:              `query { routes(for:"2000-01-01", where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"96b67c0934b689d9085c52967365d8c233ea321d"},
+		},
+		{
+			name:               "feed with one version",
+			query:              `query { routes(for:"2016-06-01", where:{feed_onestop_id:"CT"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"},
+		},
+		{
+			name:   "feed_version_sha1 takes precedence",
+			query:  `query { routes(for:"2019-01-01", where:{feed_onestop_id:"BA", route_id:"01", feed_version_sha1:"dd7aca4a8e4c90908fd3603c097fabee75fea907"}) { feed_version_sha1 } }`,
+			expect: `{"routes":[{"feed_version_sha1":"dd7aca4a8e4c90908fd3603c097fabee75fea907"}]}`,
+		},
+		{
+			name:   "onestop id from the version for the date",
+			query:  `query { routes(for:"2016-06-01", where:{onestop_id:"r-9q9-pittsburg~baypoint~sfia~millbrae"}) { route_id feed_version_sha1 } }`,
+			expect: `{"routes":[{"route_id":"01","feed_version_sha1":"dd7aca4a8e4c90908fd3603c097fabee75fea907"}]}`,
+		},
+		{
+			name:   "previous onestop id finds the route in the version for the date",
+			query:  `query { routes(for:"2016-06-01", where:{onestop_id:"r-9q9-antioch~sfia~millbrae", allow_previous_onestop_ids:true}) { route_id onestop_id feed_version_sha1 } }`,
+			expect: `{"routes":[{"route_id":"01","onestop_id":"r-9q9-pittsburg~baypoint~sfia~millbrae","feed_version_sha1":"dd7aca4a8e4c90908fd3603c097fabee75fea907"}]}`,
+		},
+		{
+			name:              "no trips from the active version on a date it does not cover",
+			query:             `query { routes(where:{feed_onestop_id:"BA", route_id:"01"}) { trips(where:{service_date:"2016-06-01"}) { trip_id } } }`,
+			selector:          "routes.0.trips.#.trip_id",
+			selectExpect:      []string{},
+			selectExpectCount: 0,
+		},
+		{
+			name:              "trips from the version for the date",
+			query:             `query { routes(for:"2016-06-01", where:{feed_onestop_id:"BA", route_id:"01"}) { trips(limit:1000, where:{service_date:"2016-06-01"}) { trip_id } } }`,
+			selector:          "routes.0.trips.#.trip_id",
+			selectExpectCount: 192,
+		},
+	}
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
+			c, _ := newTestClientWithOpts(t, testconfig.Options{UseMaterialized: materialized})
+			queryTestcases(t, c, testcases)
+		})
+	}
+}
+
+// A date range counts only while its feed version has a complete import, so a range
+// left on an unimported version falls back to the feed's active version.
+func TestRouteResolver_ForUnimported(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:               "active version for a range without an import",
+			query:              `query { routes(for:"2016-06-01", where:{feed_onestop_id:"BA"}) { feed_version_sha1 } }`,
+			selector:           "routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+		},
+	}
+	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+		ctx := context.Background()
+		sha1 := "dd7aca4a8e4c90908fd3603c097fabee75fea907"
+		fvs, err := cfg.Finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &sha1})
+		if err != nil || len(fvs) != 1 {
+			t.Fatalf("feed version %s: %v", sha1, err)
+		}
+		fv := fvs[0]
+		if err := importer.UnimportFeedVersion(ctx, cfg.Adapter, fv.ID, nil); err != nil {
+			t.Fatal(err)
+		}
+		// The unimport removed the version's range; put one back, as a stale override would.
+		if err := feedstate.NewManager(cfg.Adapter).SetDateRanges(ctx, []feedstate.DateRange{{FeedID: fv.FeedID, FeedVersionID: fv.ID}}); err != nil {
+			t.Fatal(err)
+		}
+		srv := model.AddConfigAndPerms(cfg, NewDefaultHandler())
+		queryTestcases(t, client.New(usercheck.UserDefaultMiddleware("test")(srv)), testcases)
+	})
+}
+
 func TestRouteResolver_Location(t *testing.T) {
 	c, cfg := newTestClient(t)
 
@@ -875,7 +992,7 @@ func TestRouteResolver_Segments(t *testing.T) {
 
 func TestRouteResolver_Cursor(t *testing.T) {
 	c, cfg := newTestClient(t)
-	allEnts, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	allEnts, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

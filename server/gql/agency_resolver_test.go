@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
@@ -233,9 +234,43 @@ func TestAgencyResolver(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 
+// As for routes: BA's dd7aca4a answers for 2016-06-01, and the active e535eb2b
+// from 2018-05-26.
+func TestAgencyResolver_For(t *testing.T) {
+	testcases := []testcase{
+		{
+			name:   "active version without for",
+			query:  `query { agencies(where:{feed_onestop_id:"BA"}) { agency_id feed_version_sha1 } }`,
+			expect: `{"agencies":[{"agency_id":"BART","feed_version_sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0"}]}`,
+		},
+		{
+			name:   "older version for its dates",
+			query:  `query { agencies(for:"2016-06-01", where:{feed_onestop_id:"BA"}) { agency_id feed_version_sha1 } }`,
+			expect: `{"agencies":[{"agency_id":"BART","feed_version_sha1":"dd7aca4a8e4c90908fd3603c097fabee75fea907"}]}`,
+		},
+		{
+			name:   "operator onestop id",
+			query:  `query { agencies(for:"2016-06-01", where:{onestop_id:"o-9q9-bayarearapidtransit"}) { agency_id feed_version_sha1 } }`,
+			expect: `{"agencies":[{"agency_id":"BART","feed_version_sha1":"dd7aca4a8e4c90908fd3603c097fabee75fea907"}]}`,
+		},
+		{
+			name:               "routes come from the agency's version",
+			query:              `query { agencies(for:"2016-06-01", where:{feed_onestop_id:"BA"}) { routes { feed_version_sha1 } } }`,
+			selector:           "agencies.0.routes.#.feed_version_sha1",
+			selectExpectUnique: []string{"dd7aca4a8e4c90908fd3603c097fabee75fea907"},
+		},
+	}
+	for _, materialized := range []bool{false, true} {
+		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
+			c, _ := newTestClientWithOpts(t, testconfig.Options{UseMaterialized: materialized})
+			queryTestcases(t, c, testcases)
+		})
+	}
+}
+
 func TestAgencyResolver_Cursor(t *testing.T) {
 	c, cfg := newTestClient(t)
-	allEnts, err := cfg.Finder.FindAgencies(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	allEnts, err := cfg.Finder.FindAgencies(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,7 +492,7 @@ func TestAgencyResolver_StopsCursor(t *testing.T) {
 	c, cfg := newTestClient(t)
 	ctx := model.WithConfig(context.Background(), cfg)
 	osid := "o-dqcj-wmata"
-	agencies, err := cfg.Finder.FindAgencies(ctx, nil, nil, nil, &model.AgencyFilter{OnestopID: &osid})
+	agencies, err := cfg.Finder.FindAgencies(ctx, nil, nil, nil, nil, &model.AgencyFilter{OnestopID: &osid})
 	if err != nil {
 		t.Fatal(err)
 	}

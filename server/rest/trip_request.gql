@@ -45,8 +45,8 @@ fragment alert on Alert {
   }
 }
 
-query ($limit: Int, $ids: [Int!], $after: Int, $include_route: Boolean!, $include_stop_times: Boolean!, $include_geometry: Boolean!, $include_alerts: Boolean!, $where: TripFilter) {
-  trips(limit: $limit, ids: $ids, after: $after, where: $where) {
+query ($limit: Int, $ids: [Int!], $after: Int, $for: Date, $include_route: Boolean!, $include_stop_times: Boolean!, $include_geometry: Boolean!, $include_alerts: Boolean!, $where: TripFilter) {
+  trips(limit: $limit, ids: $ids, after: $after, for: $for, where: $where) {
     id
     trip_id
     trip_headsign

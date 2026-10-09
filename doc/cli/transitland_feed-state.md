@@ -6,7 +6,7 @@ Manage feed state and materialized tables
 
 Manage feed state and materialized tables
 
-This command manages feed state including which feed versions are active, and maintains materialized tables that cache active route, stop, and agency data for improved query performance. It provides centralized control over feed version activation across the entire system.
+This command manages feed state including which feed versions are active and which feed version answers for each date, and maintains materialized tables that cache active route, stop, and agency data for improved query performance. It provides centralized control over feed version activation across the entire system.
 
 ```
 transitland feed-state  [flags]
@@ -25,7 +25,9 @@ transitland feed-state  [flags]
   -h, --help                          help for feed-state
       --set-active strings            Set ONLY these feed version IDs as active (deactivates all others)
       --set-active-fvid-file string   Set ONLY these feed version IDs as active, read from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)
+      --set-date-ranges-file string   Set the date ranges of the feeds in a csv file with feed_version_id, start_date and end_date columns, in place of their current or synced ranges; an empty date is open-ended
       --sync-active                   Make materialized tables match current active feed versions
+      --sync-date-ranges              Recompute every feed's date ranges, giving each date to the most recently fetched imported feed version covering the date
 ```
 
 ### SEE ALSO

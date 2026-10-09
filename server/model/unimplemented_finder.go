@@ -64,19 +64,19 @@ func (UnimplementedFinder) PermFilter(context.Context) *PermFilter { return nil 
 
 // EntityFinder
 
-func (UnimplementedFinder) FindAgencies(context.Context, *int, *Cursor, []int, *AgencyFilter) ([]*Agency, error) {
+func (UnimplementedFinder) FindAgencies(context.Context, *int, *Cursor, []int, *tt.Date, *AgencyFilter) ([]*Agency, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) FindRoutes(context.Context, *int, *Cursor, []int, *RouteFilter) ([]*Route, error) {
+func (UnimplementedFinder) FindRoutes(context.Context, *int, *Cursor, []int, *tt.Date, *RouteFilter) ([]*Route, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) FindStops(context.Context, *int, *Cursor, []int, *StopFilter) ([]*Stop, error) {
+func (UnimplementedFinder) FindStops(context.Context, *int, *Cursor, []int, *tt.Date, *StopFilter) ([]*Stop, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) FindShapesByFeedVersion(context.Context, int, *int, *Cursor, *ShapeFilter) ([]*Shape, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) FindTrips(context.Context, *int, *Cursor, []int, *TripFilter) ([]*Trip, error) {
+func (UnimplementedFinder) FindTrips(context.Context, *int, *Cursor, []int, *tt.Date, *TripFilter) ([]*Trip, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) FindFeedVersions(context.Context, *int, *Cursor, []int, *FeedVersionFilter) ([]*FeedVersion, error) {

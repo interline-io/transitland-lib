@@ -21,6 +21,7 @@ type TripRequest struct {
 	RouteOnestopID   string `json:"route_onestop_id"`
 	FeedOnestopID    string `json:"feed_onestop_id"`
 	FeedVersionSHA1  string `json:"feed_version_sha1"`
+	For              string `json:"for"`
 	ServiceDate      string `json:"service_date"`
 	RelativeDate     string `json:"relative_date"`
 	IncludeGeometry  bool   `json:"include_geometry,string"`
@@ -84,6 +85,7 @@ func (r TripRequest) RequestInfo() RequestInfo {
 					newPRef("limitParam"),
 					newPRef("formatParam"),
 					newPRef("sha1Param"),
+					newPRef("forParam"),
 					newPRef("feedParam"),
 					newPRef("latParam"),
 					newPRef("lonParam"),
@@ -149,6 +151,7 @@ func (r TripRequest) Query(ctx context.Context) (string, map[string]interface{})
 		"limit":              r.CheckLimit(),
 		"after":              r.CheckAfter(),
 		"ids":                checkIds(r.ID),
+		"for":                checkDate(r.For),
 		"where":              where,
 		"include_geometry":   r.IncludeGeometry,
 		"include_stop_times": r.IncludeStopTimes,
