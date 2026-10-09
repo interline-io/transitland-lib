@@ -12,9 +12,11 @@ import (
 )
 
 type Source struct {
-	feed             string
-	msg              *pb.FeedMessage
-	entityByTrip     map[string]*pb.TripUpdate
+	feed string
+	msg  *pb.FeedMessage
+	// tripUpdates holds every trip update naming a trip_id: a feed can report
+	// several runs of one trip, such as last night's late run and this morning's.
+	tripUpdates      map[string][]*pb.TripUpdate
 	alerts           []alertEntity
 	vehiclePositions []VehiclePositionEntity
 	// unroutedTripIds are the trip_ids this message names without a route_id,
@@ -43,8 +45,8 @@ type alertEntity struct {
 
 func NewSource(feed string) (*Source, error) {
 	f := Source{
-		feed:         feed,
-		entityByTrip: map[string]*pb.TripUpdate{},
+		feed:        feed,
+		tripUpdates: map[string][]*pb.TripUpdate{},
 	}
 	return &f, nil
 }
@@ -53,12 +55,9 @@ func (f *Source) GetTimestamp() uint64 {
 	return f.msg.GetHeader().GetTimestamp()
 }
 
-func (f *Source) GetTrip(tid string) (*pb.TripUpdate, bool) {
-	a, ok := f.entityByTrip[tid]
-	if ok {
-		return a, true
-	}
-	return nil, false
+// GetTrips returns the trip updates naming a trip_id, one for each run reported.
+func (f *Source) GetTrips(tid string) []*pb.TripUpdate {
+	return f.tripUpdates[tid]
 }
 
 func (f *Source) GetVehiclePositions() []VehiclePositionEntity {
@@ -71,7 +70,7 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 	// no time at all, and would be served as 1970-01-01.
 	defaultTimestamp := rtmsg.GetHeader().GetTimestamp()
 	hasDefaultTimestamp := defaultTimestamp > 0
-	a := map[string]*pb.TripUpdate{}
+	a := map[string][]*pb.TripUpdate{}
 	var alerts []alertEntity
 	vehiclePositions := make([]VehiclePositionEntity, 0, len(rtmsg.Entity))
 	unrouted := set.New[string]()
@@ -86,7 +85,7 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 				v.Timestamp = &defaultTimestamp
 			}
 			tid := v.GetTrip().GetTripId()
-			a[tid] = v
+			a[tid] = append(a[tid], v)
 		}
 		if v := ent.Alert; v != nil {
 			alerts = append(alerts, alertEntity{ID: ent.GetId(), Alert: v})
@@ -105,7 +104,7 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 		}
 	}
 	log.For(ctx).Trace().Str("feed_id", f.feed).Int("trip_updates", len(a)).Int("alerts", len(alerts)).Int("vehicle_positions", len(vehiclePositions)).Msg("rtsource: processed data")
-	f.entityByTrip = a
+	f.tripUpdates = a
 	f.alerts = alerts
 	f.vehiclePositions = vehiclePositions
 	f.unroutedTripIds = unrouted.ToSlice()

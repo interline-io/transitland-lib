@@ -115,10 +115,12 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 	// Handle scheduled trips; these can be matched on trip_id or (route_id,direction_id,...)
 	if wantsRTStopTimeUpdate(ctx) {
 		for _, st := range sts {
+			// Only what matching needs: the trip, as the stop time's run.
 			ft := model.Trip{}
+			ft.ID = st.TripID.Int()
 			ft.FeedVersionID = obj.FeedVersionID
 			ft.TripID.Set(st.GtfsTripID)
-			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, &ft, st); ok {
+			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, tripRun(&ft, st.ServiceDate), st); ok {
 				st.RTStopTimeUpdate = ste
 			}
 		}

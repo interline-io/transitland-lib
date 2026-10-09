@@ -149,7 +149,19 @@ func (r *routePatternResolver) RepresentativeTrip(ctx context.Context, obj *mode
 	if obj.RepresentativeTripID == 0 {
 		return nil, nil
 	}
-	return LoaderFor(ctx).TripsByIDs.Load(ctx, obj.RepresentativeTripID)()
+	trip, err := LoaderFor(ctx).TripsByIDs.Load(ctx, obj.RepresentativeTripID)()
+	return noRun(trip), err
+}
+
+// noRun returns a trip that stands for no run, so no realtime data is matched to
+// it. A copy, as the loader shares one trip across every request.
+func noRun(trip *model.Trip) *model.Trip {
+	if trip == nil {
+		return nil
+	}
+	c := *trip
+	c.NoRealtime = true
+	return &c
 }
 
 func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error) {
@@ -170,14 +182,27 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 				return nil, err
 			}
 			if trip != nil {
-				trips = append(trips, trip)
+				trips = append(trips, tripRun(trip, patternDate(obj)))
 			}
 		}
 		return trips, nil
 	}
+	// Without a date, every trip of the pattern, none of them a run.
 	// TODO: N+1 query
 	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, resolverCheckLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
+	for _, trip := range trips {
+		trip.NoRealtime = true
+	}
 	return trips, err
+}
+
+// patternDate is the service date whose trips a pattern counts: the date of
+// their runs.
+func patternDate(obj *model.RouteStopPattern) tt.Date {
+	if obj.ServiceDate == nil {
+		return tt.Date{}
+	}
+	return *obj.ServiceDate
 }
 
 // Timetable lays the stop times of the trips `count` counted out as grids, a row
@@ -216,7 +241,7 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 			return nil, err
 		}
 		if trip != nil && len(sts) > 0 && !isFlex(sts) {
-			cols = append(cols, column{trip: trip, sts: sts})
+			cols = append(cols, column{trip: tripRun(trip, patternDate(obj)), sts: sts})
 		}
 	}
 	if len(cols) == 0 {

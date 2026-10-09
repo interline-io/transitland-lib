@@ -15,6 +15,7 @@ func TestStopRT_Basic(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: testconfig.DefaultRTJson(),
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			// A little more explicit version of the string check test
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
@@ -76,6 +77,7 @@ func TestStopRT_BeforeMidnight(t *testing.T) {
 			},
 		},
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-midnight.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			// before midnight trip
@@ -115,6 +117,7 @@ func TestStopRT_AfterMidnight(t *testing.T) {
 			},
 		},
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-midnight.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			// after midnight trip
@@ -147,6 +150,7 @@ func TestStopRT_ArrivalFallback(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-arrival-fallback.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			checkTrip := "1031527WKDY"
@@ -172,6 +176,7 @@ func TestStopRT_DepartureFallback(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-departure-fallback.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			checkTrip := "1031527WKDY"
@@ -197,6 +202,7 @@ func TestStopRT_LastDelay(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-last-delay.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			checkTrip := "1031527WKDY"
@@ -229,6 +235,7 @@ func TestStopRT_StopIDFallback(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-stop-id-fallback.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			checkTrip := "1031527WKDY"
@@ -255,6 +262,7 @@ func TestStopRT_StopIDFallback_NoDoubleVisit(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-stop-double-visit.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			checkTrip := "1031527WKDY"
@@ -281,6 +289,7 @@ func TestStopRT_NoRT(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-departure-fallback.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			a := gjson.Get(jj, "stops.0.stop_times").Array()
 			checkTrip := "2211533WKDY"
@@ -310,6 +319,7 @@ func TestStopRT_AddedTrip(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			checkTrip := "-123"
 			found := false
@@ -344,6 +354,7 @@ func TestStopRT_ScheduleRelationship(t *testing.T) {
 			query:   rtTestStopQuery,
 			vars:    rtTestStopQueryVars(),
 			rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+			whenUtc: rtFixtureWhenUtc,
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1031527WKDY"
 				found := false
@@ -370,6 +381,7 @@ func TestStopRT_ScheduleRelationship(t *testing.T) {
 			query:   rtTestStopQuery,
 			vars:    rtTestStopQueryVars(),
 			rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+			whenUtc: rtFixtureWhenUtc,
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "1131530WKDY"
 				found := false
@@ -395,6 +407,7 @@ func TestStopRT_ScheduleRelationship(t *testing.T) {
 			query:   rtTestStopQuery,
 			vars:    rtTestStopQueryVars(),
 			rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+			whenUtc: rtFixtureWhenUtc,
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "-123"
 				found := false
@@ -420,6 +433,7 @@ func TestStopRT_ScheduleRelationship(t *testing.T) {
 			query:   rtTestStopQuery,
 			vars:    rtTestStopQueryVars(),
 			rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+			whenUtc: rtFixtureWhenUtc,
 			cb: func(t *testing.T, jj string) {
 				checkTrip := "2211533WKDY"
 				found := false
@@ -452,6 +466,7 @@ func TestStopRT_CanceledTrip(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			checkTrip := "2211533WKDY"
 			found := false
@@ -537,6 +552,7 @@ func TestStopRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
 		query:   query,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added.json"}},
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			checkTrip := "1131530WKDY"
 			found := false

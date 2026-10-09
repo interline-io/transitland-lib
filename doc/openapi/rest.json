@@ -15440,7 +15440,7 @@
                                         "x-order": 494
                                       },
                                       "service_date": {
-                                        "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time",
+                                        "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under `use_service_window`, the requested date",
                                         "example": "2019-11-15",
                                         "format": "date",
                                         "nullable": true,
@@ -17117,7 +17117,7 @@
                                   "x-order": 73
                                 },
                                 "service_date": {
-                                  "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time",
+                                  "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under `use_service_window`, the requested date",
                                   "example": "2019-11-15",
                                   "format": "date",
                                   "nullable": true,
@@ -19390,7 +19390,7 @@
                                             "x-order": 1023
                                           },
                                           "service_date": {
-                                            "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time",
+                                            "description": "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under `use_service_window`, the requested date",
                                             "example": "2019-11-15",
                                             "format": "date",
                                             "nullable": true,

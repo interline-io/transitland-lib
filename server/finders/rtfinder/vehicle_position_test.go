@@ -121,9 +121,9 @@ func TestSourceProcessMessage_VehicleTimestamp(t *testing.T) {
 
 		// Trip updates keep the header default; their timestamp is not used to
 		// rank anything.
-		tu, ok := src.GetTrip("t1")
-		assert.True(t, ok)
-		assert.Equal(t, headerTime, tu.GetTimestamp())
+		tus := src.GetTrips("t1")
+		assert.Len(t, tus, 1)
+		assert.Equal(t, headerTime, tus[0].GetTimestamp())
 	})
 
 	t.Run("entity id is carried", func(t *testing.T) {

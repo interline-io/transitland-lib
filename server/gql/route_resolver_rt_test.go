@@ -201,11 +201,14 @@ func TestRouteRT_TripAlerts(t *testing.T) {
 	}
 	tripVars := rtTestStopQueryVars()
 	tripVars["include_route_trips"] = true
+	// The departures are the 2018-05-30 run, read that afternoon: the alerts
+	// name no start_date, so they are on the trips' current runs.
 	testRt(t, rtTestCase{
 		name:    "trip alerts",
 		query:   rtTestStopQuery,
 		vars:    tripVars,
 		rtfiles: rtfiles,
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			route05, route03 := trips(t, jj)
 			assert.ElementsMatch(t,
@@ -227,6 +230,7 @@ func TestRouteRT_TripAlerts(t *testing.T) {
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: rtfiles,
+		whenUtc: rtFixtureWhenUtc,
 		cb: func(t *testing.T, jj string) {
 			// A trip descriptor naming only the route picks out no trip: it is the route.
 			route05, route03 := trips(t, jj)

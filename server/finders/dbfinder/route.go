@@ -189,7 +189,9 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 			GroupBy("gtfs_trips.feed_version_id,gtfs_trips.route_id,gtfs_trips.direction_id,gtfs_trips.stop_pattern_id").
 			OrderBy("gtfs_trips.route_id,count desc").
 			Limit(finderCheckLimit(limit))
-		var serviceDate *tt.Date
+		// The service date whose trips are counted, and the requested date it
+		// reports.
+		var serviceDate, askedDate *tt.Date
 		if where != nil {
 			// A feed version whose window has not been computed resolves the date as
 			// given rather than failing: the lookup errors outright when the row is
@@ -197,7 +199,7 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 			// in the batch, including those from healthy feed versions.
 			fvsw, _ := f.FindFeedVersionServiceWindow(ctx, fvid)
 			var err error
-			serviceDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
+			serviceDate, askedDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
 			if err != nil {
 				return nil, err
 			}
@@ -212,7 +214,7 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 			return nil, err
 		}
 		for _, ent := range groupEnts {
-			ent.ServiceDate = serviceDate
+			ent.ServiceDate = askedDate
 		}
 		ents = append(ents, groupEnts...)
 	}

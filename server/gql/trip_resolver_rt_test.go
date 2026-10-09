@@ -9,14 +9,17 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// The departures are the trip's run of 2018-05-30, read that afternoon. Its
+// two alerts name no start_date, so both are on the current run.
 func TestTripRT_Alerts(t *testing.T) {
 	activeVars := rtTestStopQueryVars()
 	activeVars["active"] = true
 	tcs := []rtTestCase{
 		{
-			name:  "trip alerts",
-			query: rtTestStopQuery,
-			vars:  rtTestStopQueryVars(),
+			name:    "trip alerts",
+			query:   rtTestStopQuery,
+			vars:    rtTestStopQueryVars(),
+			whenUtc: rtFixtureWhenUtc,
 			rtfiles: []testconfig.RTJsonFile{
 				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
@@ -29,10 +32,7 @@ func TestTripRT_Alerts(t *testing.T) {
 						continue
 					}
 					found = true
-					alerts := st.Get("trip.alerts").Array()
-					if len(alerts) != 2 {
-						t.Errorf("got %d alerts, expected 2", len(alerts))
-					}
+					assert.Len(t, st.Get("trip.alerts").Array(), 2)
 				}
 				if !found {
 					t.Errorf("expected to find trip '%s'", checkTrip)
@@ -40,9 +40,12 @@ func TestTripRT_Alerts(t *testing.T) {
 			},
 		},
 		{
-			name:  "trip alerts active",
-			query: rtTestStopQuery,
-			vars:  activeVars,
+			// Read once the first alert has come into force: its period starts at
+			// the moment the fixtures were captured. The other is in force in 2022.
+			name:    "trip alerts active",
+			query:   rtTestStopQuery,
+			vars:    activeVars,
+			whenUtc: "2018-05-30T22:30:00Z",
 			rtfiles: []testconfig.RTJsonFile{
 				{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 			},
@@ -58,7 +61,7 @@ func TestTripRT_Alerts(t *testing.T) {
 					alerts := st.Get("trip.alerts").Array()
 					if len(alerts) == 1 {
 						firstAlert := alerts[0]
-						assert.Equal(t, "Test trip header - active", firstAlert.Get("header_text.0.text").String(), "header_text.0.text")
+						assert.Equal(t, "Test trip header", firstAlert.Get("header_text.0.text").String(), "header_text.0.text")
 						assert.Contains(t, firstAlert.Get("description_text.0.text").String(), "trip_id:1031527WKDY", "description_text.0.text")
 					} else {
 						t.Errorf("got %d alerts, expected 1", len(alerts))

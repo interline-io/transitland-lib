@@ -10555,7 +10555,7 @@ type StopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under ` + "`" + `use_service_window` + "`" + `, the requested date"
   service_date: Date
 
   "When part of an arrival/departure query, the calendar date for this scheduled stop time"
@@ -10629,7 +10629,7 @@ type FlexStopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time"
+  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under ` + "`" + `use_service_window` + "`" + `, the requested date"
   service_date: Date
 
   "When part of an arrival/departure query, the calendar date for this scheduled stop time"
@@ -11053,17 +11053,17 @@ type RouteStopPattern {
   "Number of trips that operate this stop pattern"
   count: Int!
 
-  "The service date the trips are counted on: the date ` + "`" + `Route.patterns` + "`" + ` was given, moved into the feed's service window where ` + "`" + `use_service_window` + "`" + ` asked for that. Null when it was given no date, or a ` + "`" + `relative_date` + "`" + ` the feed version has no service window to resolve"
+  "The service date given to ` + "`" + `Route.patterns` + "`" + `, on which the trips are counted. Null when it was given no date, or a ` + "`" + `relative_date` + "`" + ` the feed version has no service window to resolve"
   service_date: Date
 
   """
   One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when ` + "`" + `Route.patterns` + "`" + ` was given one.
 
-  Times, headsigns and ` + "`" + `timepoint` + "`" + ` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
+  Times, headsigns and ` + "`" + `timepoint` + "`" + ` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common. It carries no GTFS-RT data.
   """
   representative_trip: Trip
 
-  "Trips that follow this stop pattern, only those counted on ` + "`" + `service_date` + "`" + ` when it is set; useful for fetching full stop_times"
+  "Trips that follow this stop pattern, only those counted on ` + "`" + `service_date` + "`" + ` when it is set; useful for fetching full stop_times. Without a ` + "`" + `service_date` + "`" + `, they carry no GTFS-RT data"
   trips(limit: Int): [Trip!]
 
   """
@@ -12239,7 +12239,7 @@ input StopTimeFilter {
   relative_date: RelativeDate
   "GTFS service date (which may differ from the calendar date for trips that cross midnight)"
   service_date: Date
-  "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead; stop times still report the requested date"
   use_service_window: Boolean
   "Lower bound for departure time, in seconds since midnight"
   start_time: Int
@@ -12301,7 +12301,7 @@ input TripFilter {
   dates: [Date!]
   "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `. Ignored if ` + "`" + `dates` + "`" + ` or ` + "`" + `service_dates` + "`" + ` is set"
   relative_date: RelativeDate
-  "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
+  "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead. Not applied by the top-level ` + "`" + `trips` + "`" + ` query; use ` + "`" + `Route.trips` + "`" + ` or ` + "`" + `FeedVersion.trips` + "`" + `"
   use_service_window: Boolean
   "Search for trips with this GTFS trip_id"
   trip_id: String
