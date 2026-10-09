@@ -1,8 +1,10 @@
 package gql
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -26,7 +28,7 @@ var (
 // BA's answer depend on whether it was visited first, and the same request
 // returns different stop times from one call to the next.
 func TestStopResolver_ServiceWindowIsPerFeedVersion(t *testing.T) {
-	c, _ := newTestClient(t)
+	c, cfg := newTestClient(t)
 
 	query := func(q string) string {
 		var resp map[string]interface{}
@@ -72,17 +74,24 @@ func TestStopResolver_ServiceWindowIsPerFeedVersion(t *testing.T) {
 	assert.Contains(t, alone, `"service_date":"`+serviceWindowDate+`"`,
 		"fixture should answer for the requested date, not a relocated one")
 
-	// The premise: at least one of the others really does relocate the date.
-	// Without this the test can keep passing while asserting nothing, if the
-	// fixtures ever drift so that no feed version resolves the date differently.
+	// The premise: at least one of the others really does relocate the date,
+	// its service window not covering the date. Without this the test can keep
+	// passing while asserting nothing, if the fixtures ever drift so that no
+	// feed version resolves the date differently. Read from the window itself:
+	// a relocated stop time reports the requested date.
 	relocated := false
 	for i, id := range relocating {
-		sd := gjson.Get(departures(id, id), "0.service_date").String()
-		if sd != "" && sd != serviceWindowDate {
+		fvid := gjson.Get(query(`query{stops(ids:[`+id+`]){feed_version{id}}}`), "stops.0.feed_version.id").Int()
+		w, err := cfg.Finder.FindFeedVersionServiceWindow(context.Background(), int(fvid))
+		if err != nil {
+			t.Fatal(err)
+		}
+		day, _ := time.ParseInLocation("2006-01-02", serviceWindowDate, w.StartDate.Location())
+		if day.Before(w.StartDate) || day.After(w.EndDate) {
 			relocated = true
 			break
 		}
-		t.Logf("%v did not relocate %s (service_date %q)", serviceWindowRelocates[i], serviceWindowDate, sd)
+		t.Logf("%v did not relocate %s (window %s to %s)", serviceWindowRelocates[i], serviceWindowDate, w.StartDate.Format("2006-01-02"), w.EndDate.Format("2006-01-02"))
 	}
 	assert.True(t, relocated, "fixture should include a feed version that relocates the date")
 

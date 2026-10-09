@@ -188,6 +188,8 @@ models:
         resolver: true
       representative_trip:
         resolver: true
+      timetable:
+        resolver: true
     extraFields:
       RouteID:
         type: int
@@ -195,6 +197,22 @@ models:
         type: int
       RepresentativeTripID:
         type: int
+      TripIDs:
+        type: "github.com/interline-io/transitland-lib/tt.Ints"
+        overrideTags: db:"trip_ids"
+        description: "The trips counted, when Route.patterns was given a date; unset without one."
+  RouteStopPatternTimetableGrid:
+    fields:
+      delta:
+        resolver: true
+      polyline:
+        resolver: true
+  RouteStopPatternTimetableTimeGrid:
+    fields:
+      delta:
+        resolver: true
+      polyline:
+        resolver: true
   RouteGeometry:
     extraFields:
       RouteID:

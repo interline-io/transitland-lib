@@ -89,14 +89,11 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 			fvWhere = &w
 		}
 		// Run separate queries for each possible service day
-		for _, w := range stopTimeFilterExpand(fvWhere, fvsw) {
-			var serviceDate *tt.Date
-			if w != nil && w.ServiceDate != nil {
-				serviceDate = w.ServiceDate
-			}
+		for _, day := range stopTimeFilterExpand(fvWhere, fvsw) {
+			w := day.where
 			var sts []*model.StopTime
 			var q sq.SelectBuilder
-			if serviceDate != nil {
+			if day.report != nil {
 				// Get stop_times on a specified day
 				var entityKeys []int
 				for _, k := range entityPairs {
@@ -115,15 +112,10 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 			if err := dbutil.Select(ctx, f.db, q, &sts); err != nil {
 				return nil, err
 			}
-			// Set service date based on StopTimeFilter, and adjust calendar date if needed
-			if serviceDate != nil {
+			// Report the requested service date
+			if day.report != nil {
 				for _, ent := range sts {
-					ent.ServiceDate.Set(serviceDate.Val)
-					if ent.ArrivalTime.Val > 24*60*60 {
-						ent.Date.Set(serviceDate.Val.AddDate(0, 0, 1))
-					} else {
-						ent.Date.Set(serviceDate.Val)
-					}
+					ent.SetServiceDate(*day.report)
 				}
 			}
 			ents = append(ents, sts...)
@@ -512,7 +504,14 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 	return q
 }
 
-func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow) []*model.StopTimeFilter {
+// serviceDayQuery is one service day's share of a stop time filter: the filter
+// to run, and the requested service date its stop times report.
+type serviceDayQuery struct {
+	where  *model.StopTimeFilter
+	report *tt.Date
+}
+
+func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow) []serviceDayQuery {
 	// Pre-processing
 	// Convert Start, End to StartTime, EndTime
 	if where != nil {
@@ -565,38 +564,22 @@ func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow
 			where.EndTime = ptr(st + *where.Next)
 		}
 
-		// Map date into service window
-		if nilOr(where.UseServiceWindow, false) && fvsw != nil {
-			startDate, endDate, fallbackWeek := fvsw.StartDate, fvsw.EndDate, fvsw.FallbackWeek
-			// Check if date is outside window
-			if where.Date != nil {
-				s := where.Date.Val
-				if s.Before(startDate) || s.After(endDate) {
-					dow := int(s.Weekday()) - 1
-					if dow < 0 {
-						dow = 6
-					}
-					where.Date = tzTruncate(fallbackWeek.AddDate(0, 0, dow), loc)
-				}
-			}
-			// Repeat for ServiceDate
-			if where.ServiceDate != nil {
-				s := where.ServiceDate.Val
-				if s.Before(startDate) || s.After(endDate) {
-					dow := int(s.Weekday()) - 1
-					if dow < 0 {
-						dow = 6
-					}
-					where.ServiceDate = tzTruncate(fallbackWeek.AddDate(0, 0, dow), loc)
-				}
-			}
-		}
+	}
+
+	// Each service day is relocated on its own, so a neighboring day inside the
+	// window keeps its own schedule.
+	serviceDay := func(asked tt.Date) serviceDayQuery {
+		w := *where
+		w.ServiceDate, _, _ = resolveServiceDate(&asked, nil, nilOr(where.UseServiceWindow, false), fvsw)
+		return serviceDayQuery{where: &w, report: &asked}
 	}
 
 	// Check if we are crossing date boundaires, and split into separate service date queries
-	var whereGroups []*model.StopTimeFilter
+	var whereGroups []serviceDayQuery
 	if where != nil && where.Date != nil {
-		date := where.Date
+		day := func(days int) tt.Date {
+			return tt.NewDate(where.Date.Val.AddDate(0, 0, days))
+		}
 		dayStart := 0
 		dayEnd := 24 * 60 * 60
 		dayEndMax := 100 * 60 * 60
@@ -611,31 +594,30 @@ func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow
 		lookBehind := 6 * 3600
 		// Query previous day
 		if whereStartTime < lookBehind {
-			whereCopy := *where
-			whereCopy.ServiceDate = ptr(tt.NewDate(date.Val.AddDate(0, 0, -1)))
-			whereCopy.StartTime = ptr(dayEnd + whereStartTime)
-			whereCopy.EndTime = ptr(dayEndMax)
-			whereGroups = append(whereGroups, &whereCopy)
+			prev := serviceDay(day(-1))
+			prev.where.StartTime = ptr(dayEnd + whereStartTime)
+			prev.where.EndTime = ptr(dayEndMax)
+			whereGroups = append(whereGroups, prev)
 		}
 		// Query requested day
-		whereCopy := *where
-		whereCopy.ServiceDate = ptr(tt.NewDate(date.Val))
-		whereCopy.StartTime = ptr(max(dayStart, whereStartTime))
-		whereCopy.EndTime = ptr(whereEndTime)
-		whereGroups = append(whereGroups, &whereCopy)
+		requested := serviceDay(day(0))
+		requested.where.StartTime = ptr(max(dayStart, whereStartTime))
+		requested.where.EndTime = ptr(whereEndTime)
+		whereGroups = append(whereGroups, requested)
 		// Query next day
 		if whereEndTime > dayEnd {
-			whereCopy := *where
-			whereCopy.ServiceDate = ptr(tt.NewDate(date.Val.AddDate(0, 0, 1)))
-			whereCopy.StartTime = ptr(dayStart)
-			whereCopy.EndTime = ptr(whereEndTime - dayEnd)
-			whereGroups = append(whereGroups, &whereCopy)
+			next := serviceDay(day(1))
+			next.where.StartTime = ptr(dayStart)
+			next.where.EndTime = ptr(whereEndTime - dayEnd)
+			whereGroups = append(whereGroups, next)
 		}
+	} else if where != nil && where.ServiceDate != nil {
+		whereGroups = append(whereGroups, serviceDay(*where.ServiceDate))
 	}
 
 	// Default
 	if len(whereGroups) == 0 {
-		whereGroups = append(whereGroups, where)
+		whereGroups = append(whereGroups, serviceDayQuery{where: where})
 	}
 
 	return whereGroups

@@ -26,10 +26,7 @@ func (r *operatorResolver) AssociatedFeeds(ctx context.Context, obj *model.Opera
 }
 
 func (r *operatorResolver) Generated(ctx context.Context, obj *model.Operator) (bool, error) {
-	if obj.Generated {
-		return true, nil
-	}
-	return false, nil
+	return obj.Generated, nil
 }
 
 func (r *operatorResolver) Feeds(ctx context.Context, obj *model.Operator, limit *int, where *model.FeedFilter) ([]*model.Feed, error) {

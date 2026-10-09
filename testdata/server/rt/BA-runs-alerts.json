@@ -1,0 +1,133 @@
+{
+  "header": {
+    "gtfs_realtime_version": "2.0",
+    "incrementality": 0,
+    "timestamp": 1527719250
+  },
+  "entity": [
+    {
+      "id": "run-20180530",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY",
+              "start_date": "20180530"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Run of May 30",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "run-20180531",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY",
+              "start_date": "20180531"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Run of May 31",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "run-20300528",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY",
+              "start_date": "20300528"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Run of May 28, 2030",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "current",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "1031527WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Current run",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "late-current",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "5172328WKDY"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Late run, current",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "late-20180530",
+      "alert": {
+        "informed_entity": [
+          {
+            "trip": {
+              "trip_id": "5172328WKDY",
+              "start_date": "20180530"
+            }
+          }
+        ],
+        "header_text": {
+          "translation": [
+            {
+              "text": "Late run of May 30",
+              "language": "en"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

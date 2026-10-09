@@ -161,19 +161,21 @@ func TestStopResolver_StopTimes_Dates(t *testing.T) {
 			selector:     "stops.0.stop_times.0.service_date",
 			selectExpect: []string{"2018-05-29"}, // expect input date
 		},
+		// Answered from the fallback week, which the exact-dates case below shows
+		// has the only service, but reported under the requested date.
 		{
 			name:         "service_date after range",
 			query:        q,
 			vars:         hw{"stop_id": "MCAR_S", "sd": "2030-05-28", "start": "15:00:00", "end": "16:00:00", "ed": true},
 			selector:     "stops.0.stop_times.0.service_date",
-			selectExpect: []string{"2018-06-05"}, // expect adjusted date in window
+			selectExpect: []string{"2030-05-28"},
 		},
 		{
 			name:         "service_date before range, friday",
 			query:        q,
 			vars:         hw{"stop_id": "MCAR_S", "sd": "2010-05-28", "start": "15:00:00", "end": "16:00:00", "ed": true},
 			selector:     "stops.0.stop_times.0.service_date",
-			selectExpect: []string{"2018-06-08"}, // expect adjusted date in window
+			selectExpect: []string{"2010-05-28"},
 		},
 		{
 			name:         "service_date after range, exact dates",
@@ -625,9 +627,10 @@ func TestStopResolver_StopTimes_RelativeDates(t *testing.T) {
 				name:  "today (sunday, outside window, use fallback, next=3600)",
 				query: q,
 				vars:  hw{"stop_id": "MCAR_S", "relative_date": "TODAY", "next": 900, "ed": true},
+				// The fallback week's Sunday trips, reported on the requested Sunday.
 				sel: []testcaseSelector{{
 					selector: "stops.0.stop_times.#.date",
-					expect:   []string{"2018-06-10", "2018-06-10"},
+					expect:   []string{"2024-07-21", "2024-07-21"},
 				}, {
 					selector: "stops.0.stop_times.#.arrival_time",
 					expect:   []string{"12:15:00", "12:15:00"},
@@ -645,7 +648,7 @@ func TestStopResolver_StopTimes_RelativeDates(t *testing.T) {
 				vars:  hw{"stop_id": "MCAR_S", "relative_date": "NEXT_MONDAY", "next": 900, "ed": true},
 				sel: []testcaseSelector{{
 					selector: "stops.0.stop_times.#.date",
-					expect:   []string{"2018-06-04", "2018-06-04", "2018-06-04"},
+					expect:   []string{"2024-07-29", "2024-07-29", "2024-07-29"},
 				}, {
 					selector: "stops.0.stop_times.#.trip.trip_id",
 					expect:   []string{"4591142WKDY", "3691133WKDY", "2211150WKDY"},

@@ -3,6 +3,7 @@ package gql
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
@@ -12,8 +13,10 @@ import (
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
+	"github.com/twpayne/go-polyline"
 )
 
 func TestRouteResolver(t *testing.T) {
@@ -239,6 +242,103 @@ func TestRouteResolver(t *testing.T) {
 					rep := pat.Get("representative_trip.trip_id")
 					assert.True(t, rep.Exists(), "pattern %d resolves a representative trip", i)
 					assert.Equal(t, pat.Get("trips.0.trip_id").String(), rep.String(), "pattern %d", i)
+				}
+			},
+		},
+		{
+			name:  "route patterns timetable only the date's trips",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count trips(limit:1000) { trip_id } timetable { stop_ids trips { trip_id } departure_times { values delta polyline } arrival_times { values } pickup_types { values delta polyline } drop_off_types { values } timepoints { values delta polyline } } } } }`,
+			f: func(t *testing.T, jj string) {
+				checkPatternTimetable(t, jj)
+				// Pattern 31 runs 132 trips across the weekday, Saturday and Sunday
+				// calendars, and 26 on this Wednesday.
+				pat := gjson.Get(jj, "routes.0.patterns.#(stop_pattern_id==31)")
+				assert.Equal(t, int64(26), pat.Get("trips.#").Int(), "the pattern's trips on the date")
+				table := pat.Get("timetable")
+				assert.Equal(t, int64(26), table.Get("trips.#").Int())
+				assert.Equal(t, "2221650WKDY", table.Get("trips.0.trip_id").String(), "the day's first trip")
+				assert.Equal(t, "16:50:00", table.Get("departure_times.values.0.0").String())
+				assert.Equal(t, int64(16*3600+50*60), table.Get("departure_times.delta.0.0").Int(), "delta in seconds")
+				assert.Equal(t, "18:00:00", table.Get("arrival_times.values.18.0").String())
+				assert.Equal(t, int64(1), table.Get("timepoints.values.0.0").Int())
+			},
+		},
+		{
+			name:  "route patterns timetable without a date",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date timetable { stop_ids } } } }`,
+			f: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					assert.Equal(t, gjson.Null, pat.Get("service_date").Type, "pattern %d", i)
+					assert.Equal(t, gjson.Null, pat.Get("timetable").Type, "pattern %d", i)
+				}
+			},
+		},
+		{
+			name:  "route patterns timetable under aliases",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { weekday: patterns(where:{service_date:"2018-05-30"}) { service_date timetable { trips { trip_id } } } again: patterns(where:{service_date:"2018-05-30"}) { service_date timetable { trips { trip_id } } } sunday: patterns(where:{service_date:"2018-06-03"}) { service_date timetable { trips { trip_id } } } } }`,
+			f: func(t *testing.T, jj string) {
+				// Each alias gets its own day's trips, and the same day twice is the
+				// same answer twice.
+				route := gjson.Get(jj, "routes.0")
+				assert.Equal(t, route.Get("weekday").Raw, route.Get("again").Raw)
+				for alias, day := range map[string]struct{ date, service string }{
+					"weekday": {"2018-05-30", "WKDY"},
+					"sunday":  {"2018-06-03", "SUN"},
+				} {
+					pats := route.Get(alias).Array()
+					assert.NotEmpty(t, pats, "%s patterns returned", alias)
+					for i, pat := range pats {
+						assert.Equal(t, day.date, pat.Get("service_date").String(), "%s pattern %d", alias, i)
+						trips := pat.Get("timetable.trips.#.trip_id").Array()
+						assert.NotEmpty(t, trips, "%s pattern %d has trips", alias, i)
+						for _, trip := range trips {
+							assert.True(t, strings.HasSuffix(trip.String(), day.service), "%s pattern %d trip %s", alias, i, trip.String())
+						}
+					}
+				}
+			},
+		},
+		{
+			name:  "route patterns timetable pickup and drop-off",
+			query: `{ routes(where:{feed_onestop_id:"WMATA", route_id:"GREEN"}) { patterns(where:{service_date:"2026-04-29"}) { timetable { trips { trip_id } pickup_types { values } drop_off_types { values } } } } }`,
+			f: func(t *testing.T, jj string) {
+				// This late trip lets nobody off at the stop it starts from.
+				found := false
+				for _, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
+					for j, trip := range pat.Get("timetable.trips").Array() {
+						if trip.Get("trip_id").String() != "11687110_20571" {
+							continue
+						}
+						found = true
+						assert.Equal(t, int64(0), pat.Get(fmt.Sprintf("timetable.pickup_types.values.0.%d", j)).Int())
+						assert.Equal(t, int64(1), pat.Get(fmt.Sprintf("timetable.drop_off_types.values.0.%d", j)).Int())
+					}
+				}
+				assert.True(t, found, "trip found in a pattern's timetable")
+			},
+		},
+		{
+			name:  "route patterns timetable frequency trip",
+			query: `{ feed_versions(where:{feed_onestop_id:"EX"}) { routes(where:{route_id:"STBA"}) { patterns(where:{service_date:"2007-01-02"}) { timetable { trips { trip_id frequencies { headway_secs } } departure_times { values } } } } } }`,
+			f: func(t *testing.T, jj string) {
+				// A trip run from frequencies.txt is one column, its template, and says
+				// when it repeats.
+				table := gjson.Get(jj, "feed_versions.0.routes.0.patterns.0.timetable")
+				assert.Equal(t, int64(1), table.Get("trips.#").Int())
+				assert.Equal(t, int64(1800), table.Get("trips.0.frequencies.0.headway_secs").Int())
+				assert.Equal(t, "06:20:00", table.Get("departure_times.values.1.0").String(), "the template's second stop")
+			},
+		},
+		{
+			name:  "route patterns timetable flex",
+			query: `{ routes(where:{feed_onestop_id:"ctran-flex", route_id:"2bc6804f-9e24-4b91-8947-c73a2363e7b6"}) { patterns(where:{service_date:"2026-01-06"}) { timetable { stop_ids } } } }`,
+			f: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					assert.Equal(t, gjson.Null, pat.Get("timetable").Type, "pattern %d", i)
 				}
 			},
 		},
@@ -663,6 +763,25 @@ func TestRouteResolver_Date(t *testing.T) {
 				selectExpect: []string{"801", "803", "802", "804"},
 			},
 		},
+		{
+			whenUtc: "2024-07-22T22:00:00Z",
+			testcase: testcase{
+				name:  "patterns timetable relative date next-sunday, outside of window, use fallback",
+				query: `{ routes(where:{route_id:"Bu-130"}) { patterns(where:{relative_date:NEXT_SUNDAY, use_service_window:true}) { service_date timetable { trips { trip_id } } } } }`,
+				f: func(t *testing.T, jj string) {
+					// The same trips the trips() query falls back to, reported on the
+					// requested Sunday.
+					var tripIDs []string
+					for _, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
+						assert.Equal(t, "2024-07-28", pat.Get("service_date").String(), "the requested Sunday")
+						for _, trip := range pat.Get("timetable.trips").Array() {
+							tripIDs = append(tripIDs, trip.Get("trip_id").String())
+						}
+					}
+					assert.ElementsMatch(t, []string{"801", "803", "802", "804"}, tripIDs)
+				},
+			},
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -950,4 +1069,182 @@ func TestRouteResolver_License(t *testing.T) {
 	}
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)
+}
+
+func TestRoutePatternGridEncodings(t *testing.T) {
+	// Each trip has a gap, the last trip's at the first stop, and three values,
+	// so a difference from the first value can't pass for one from the previous.
+	cell, gap := tt.NewInt, tt.Int{}
+	grid := &model.RouteStopPatternTimetableGrid{Values: [][]tt.Int{
+		{cell(100), cell(400), gap},
+		{cell(160), gap, cell(700)},
+		{gap, cell(520), cell(790)},
+		{cell(250), cell(610), cell(880)},
+	}}
+	r := &routePatternGridResolver{}
+	delta, err := r.Delta(context.Background(), grid)
+	if assert.NoError(t, err) {
+		assert.Equal(t, [][]*int{{ptr(100), ptr(400), nil}, {ptr(60), nil, ptr(700)}, {nil, ptr(120), ptr(90)}, {ptr(150), ptr(210), ptr(180)}}, delta)
+	}
+	lines, err := r.Polyline(context.Background(), grid)
+	if assert.NoError(t, err) {
+		// The wire format itself, since the encoder and the decoder below share a library.
+		assert.Equal(t, []string{"gEwQ.", "wB._g@", ".oFz@", "kHwBz@"}, lines)
+		var rows [][]*int64
+		for _, line := range lines {
+			rows = append(rows, decodePolylineRow(t, line))
+		}
+		want := [][]*int64{
+			{ptr(int64(100)), ptr(int64(400)), nil},
+			{ptr(int64(160)), nil, ptr(int64(700))},
+			{nil, ptr(int64(520)), ptr(int64(790))},
+			{ptr(int64(250)), ptr(int64(610)), ptr(int64(880))},
+		}
+		assert.Equal(t, want, undoDelta(rows))
+	}
+
+	// The same numbers as times encode the same way, in seconds.
+	times := &model.RouteStopPatternTimetableTimeGrid{}
+	for _, row := range grid.Values {
+		var cells []tt.Seconds
+		for _, v := range row {
+			cells = append(cells, tt.Seconds{Option: v.Option})
+		}
+		times.Values = append(times.Values, cells)
+	}
+	tr := &routePatternTimeGridResolver{}
+	timeDelta, err := tr.Delta(context.Background(), times)
+	if assert.NoError(t, err) {
+		assert.Equal(t, delta, timeDelta)
+	}
+	timeLines, err := tr.Polyline(context.Background(), times)
+	if assert.NoError(t, err) {
+		assert.Equal(t, lines, timeLines)
+	}
+}
+
+// checkPatternTimetable checks each timetable's grids are stops by trips and
+// decode back from their encodings, and its trips run in order of first time.
+func checkPatternTimetable(t *testing.T, jj string) {
+	pats := gjson.Get(jj, "routes.0.patterns").Array()
+	assert.NotEmpty(t, pats, "patterns returned")
+	for i, pat := range pats {
+		count := int(pat.Get("count").Int())
+		table := pat.Get("timetable")
+		stops := len(table.Get("stop_ids").Array())
+		assert.NotZero(t, stops, "pattern %d has stops", i)
+		assert.Len(t, table.Get("trips").Array(), count, "pattern %d: a column per trip", i)
+		for _, name := range []string{"departure_times", "arrival_times", "pickup_types", "drop_off_types", "timepoints"} {
+			grid := table.Get(name)
+			if !grid.Exists() {
+				continue
+			}
+			rows := grid.Get("values").Array()
+			assert.Len(t, rows, stops, "pattern %d %s: a row per stop", i, name)
+			for k, row := range rows {
+				assert.Len(t, row.Array(), count, "pattern %d %s stop %d: a cell per trip", i, name, k)
+			}
+			checkGridEncodings(t, grid, fmt.Sprintf("pattern %d %s", i, name))
+		}
+		prev := int64(-1)
+		for _, v := range gridRow(t, table.Get("departure_times.values.0")) {
+			if v == nil {
+				continue
+			}
+			assert.LessOrEqual(t, prev, *v, "pattern %d: trips by time at the first stop", i)
+			prev = *v
+		}
+	}
+}
+
+// checkGridEncodings checks a grid's delta and polyline, where asked for, decode
+// back to its values.
+func checkGridEncodings(t *testing.T, grid gjson.Result, label string) {
+	var values [][]*int64
+	for _, row := range grid.Get("values").Array() {
+		values = append(values, gridRow(t, row))
+	}
+	if delta := grid.Get("delta"); delta.Exists() {
+		var rows [][]*int64
+		for _, row := range delta.Array() {
+			rows = append(rows, gridRow(t, row))
+		}
+		assert.Equal(t, values, undoDelta(rows), "%s delta", label)
+	}
+	if lines := grid.Get("polyline"); lines.Exists() {
+		var rows [][]*int64
+		for _, line := range lines.Array() {
+			rows = append(rows, decodePolylineRow(t, line.String()))
+		}
+		assert.Equal(t, values, undoDelta(rows), "%s polyline", label)
+	}
+}
+
+// gridRow reads one row of a grid, times as seconds, nil where null.
+func gridRow(t *testing.T, row gjson.Result) []*int64 {
+	cells := row.Array()
+	ret := make([]*int64, 0, len(cells))
+	for _, cell := range cells {
+		switch cell.Type {
+		case gjson.Null:
+			ret = append(ret, nil)
+		case gjson.String:
+			v, err := tt.StringToSeconds(cell.String())
+			assert.NoError(t, err)
+			ret = append(ret, &v)
+		default:
+			v := cell.Int()
+			ret = append(ret, &v)
+		}
+	}
+	return ret
+}
+
+// undoDelta adds each column's first non-null value back to the later ones.
+func undoDelta(rows [][]*int64) [][]*int64 {
+	ret := make([][]*int64, len(rows))
+	for i, row := range rows {
+		ret[i] = make([]*int64, len(row))
+	}
+	if len(rows) == 0 {
+		return ret
+	}
+	for j := range rows[0] {
+		var first *int64
+		for i, row := range rows {
+			if row[j] == nil {
+				continue
+			}
+			v := *row[j]
+			if first == nil {
+				first = &v
+			} else {
+				v += *first
+			}
+			ret[i][j] = &v
+		}
+	}
+	return ret
+}
+
+// decodePolylineRow reads one row of a grid's polyline, nil where '.'.
+func decodePolylineRow(t *testing.T, s string) []*int64 {
+	ret := make([]*int64, 0, len(s))
+	buf, prev := []byte(s), int64(0)
+	for len(buf) > 0 {
+		if buf[0] == '.' {
+			ret = append(ret, nil)
+			buf = buf[1:]
+			continue
+		}
+		d, rest, err := polyline.DecodeInt(buf)
+		if !assert.NoError(t, err) {
+			return ret
+		}
+		prev += int64(d)
+		v := prev
+		ret = append(ret, &v)
+		buf = rest
+	}
+	return ret
 }

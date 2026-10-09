@@ -58,9 +58,28 @@ func (r *stopTimeResolver) Trip(ctx context.Context, obj *model.StopTime) (*mode
 		t.FeedVersionID = obj.FeedVersionID
 		t.TripID.Set(obj.RTTripID)
 		a, err := model.ForContext(ctx).RTFinder.MakeTrip(ctx, &t)
+		// The run the trip update names; one naming none is the current run.
+		if obj.RTStopTimeUpdate != nil {
+			if d, perr := tt.ParseDate(obj.RTStopTimeUpdate.TripUpdate.GetTrip().GetStartDate()); perr == nil {
+				a = tripRun(a, d)
+			}
+		}
 		return a, err
 	}
-	return LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
+	trip, err := LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
+	return tripRun(trip, obj.ServiceDate), err
+}
+
+// tripRun returns a trip as its run on a service date, so its realtime data is
+// matched to that run; without a date, the trip unchanged. A copy, as the loader
+// shares one trip across every request.
+func tripRun(trip *model.Trip, serviceDate tt.Date) *model.Trip {
+	if trip == nil || !serviceDate.Valid {
+		return trip
+	}
+	run := *trip
+	run.RunDates = []tt.Date{serviceDate}
+	return &run
 }
 
 func (r *stopTimeResolver) Arrival(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error) {

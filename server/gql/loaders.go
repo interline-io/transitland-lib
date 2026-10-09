@@ -623,6 +623,10 @@ func withWaitAndCapacity[
 }
 
 // withWaitAndCapacityGroup is a helper that sets a default with time, with less manually specifying type params
+//
+// Uncached: only loaders keyed by plain IDs keep a cache. A parameter key holds
+// pointers, which compare by address, so it almost never matches an earlier load,
+// and a cache would only hold every result for the life of the request.
 func withWaitAndCapacityGroup[
 	T any,
 	ParamT comparable,
@@ -638,6 +642,7 @@ func withWaitAndCapacityGroup[
 		unwrapResult(paramGroupQuery(paramFunc, queryFunc)),
 		dataloader.WithWait[ParamT, []T](d),
 		dataloader.WithBatchCapacity[ParamT, []T](size),
+		dataloader.WithCache[ParamT, []T](&dataloader.NoCache[ParamT, []T]{}),
 	)
 }
 

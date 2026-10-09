@@ -36,13 +36,18 @@ func (r *tripResolver) Calendar(ctx context.Context, obj *model.Trip) (*model.Ca
 }
 
 func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error) {
-	sts, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
+	loaded, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
 		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})()
-	if wantsRTStopTimeUpdate(ctx) {
+	wantsRT := wantsRTStopTimeUpdate(ctx)
+	if !wantsRT && len(obj.RunDates) != 1 {
+		return loaded, err
+	}
+	sts := runStopTimes(obj, loaded)
+	if wantsRT {
 		for _, st := range sts {
 			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, obj, st); ok {
 				st.RTStopTimeUpdate = ste
@@ -52,13 +57,32 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 	return sts, err
 }
 
+// runStopTimes returns copies of a trip's stop times, on its run's service date
+// when the trip is one run. Copies, as the loader shares them across every run of
+// the trip in a request, and each run has its own date and realtime data.
+func runStopTimes(trip *model.Trip, loaded []*model.StopTime) []*model.StopTime {
+	sts := make([]*model.StopTime, 0, len(loaded))
+	for _, st := range loaded {
+		c := *st
+		if len(trip.RunDates) == 1 {
+			c.SetServiceDate(trip.RunDates[0])
+		}
+		sts = append(sts, &c)
+	}
+	return sts
+}
+
 func (r *tripResolver) FlexStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error) {
-	return LoaderFor(ctx).FlexStopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
+	loaded, err := LoaderFor(ctx).FlexStopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
 		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})()
+	if len(obj.RunDates) != 1 {
+		return loaded, err
+	}
+	return runStopTimes(obj, loaded), err
 }
 
 func (r *tripResolver) Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error) {

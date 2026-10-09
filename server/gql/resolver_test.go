@@ -382,6 +382,10 @@ query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean, $include_modes:Bo
   }
 `
 
+// rtFixtureWhenUtc is when the BA and CT realtime fixtures were captured. Their
+// trip updates name no start_date, so they describe the runs current then.
+const rtFixtureWhenUtc = "2018-05-30T22:27:30Z"
+
 func rtTestStopQueryVars() hw {
 	return hw{
 		"stop_id": "FTVL",

@@ -22,9 +22,9 @@ const (
 	// A busy route runs close to 1,000 trips in a week, so the default limit
 	// truncates a multi-week range without an error.
 	RESOLVER_TRIP_MAXLIMIT = 100_000
-	// Route.patterns takes no limit argument, but the grouped loader still needs
-	// one: paramGroupQuery falls back to RESOLVER_DEFAULT_LIMIT when a group's
-	// limit is nil, which would cut a long route's patterns to 100.
+	// Route.patterns and a pattern's timetable take no limit argument, but their
+	// grouped loaders still need one, and the API-wide limits would cut a long
+	// route's patterns or a long trip's stop times short without an error.
 	RESOLVER_PATTERN_MAXLIMIT = 100_000
 	// A regional feed can have tens of thousands of fare products and
 	// stop_areas; clients fetch a feed version's fares in one request.
@@ -194,6 +194,16 @@ func (r *Resolver) RouteHeadway() gqlout.RouteHeadwayResolver { return &routeHea
 // RouteStopPattern .
 func (r *Resolver) RouteStopPattern() gqlout.RouteStopPatternResolver {
 	return &routePatternResolver{r}
+}
+
+// RouteStopPatternTimetableGrid .
+func (r *Resolver) RouteStopPatternTimetableGrid() gqlout.RouteStopPatternTimetableGridResolver {
+	return &routePatternGridResolver{r}
+}
+
+// RouteStopPatternTimetableTimeGrid .
+func (r *Resolver) RouteStopPatternTimetableTimeGrid() gqlout.RouteStopPatternTimetableTimeGridResolver {
+	return &routePatternTimeGridResolver{r}
 }
 
 // Segment .

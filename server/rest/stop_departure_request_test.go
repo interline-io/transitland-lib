@@ -145,11 +145,12 @@ func TestStopDepartureRequest(t *testing.T) {
 			expectSelect: []string{"2018-06-06", "2018-06-06", "2018-06-06", "2018-06-06"},
 		},
 		{
+			// The fallback week's departures, reported on the requested date.
 			name:         "use_service_window=true",
 			h:            StopDepartureRequest{StopKey: sid, ServiceDate: "2022-05-30", StartTime: "10:00:00", EndTime: "10:10:00", UseServiceWindow: bp(true)},
 			format:       "",
 			selector:     "stops.0.departures.#.service_date",
-			expectSelect: []string{"2018-06-04", "2018-06-04", "2018-06-04", "2018-06-04"},
+			expectSelect: []string{"2022-05-30", "2022-05-30", "2022-05-30", "2022-05-30"},
 		},
 		{
 			name:         "use_service_window=false",
@@ -170,7 +171,7 @@ func TestStopDepartureRequest(t *testing.T) {
 			h:            StopDepartureRequest{StopKey: sid, ServiceDate: "2022-05-30", StartTime: "10:00:00", EndTime: "10:10:00"},
 			format:       "",
 			selector:     "stops.0.departures.#.service_date",
-			expectSelect: []string{"2018-06-04", "2018-06-04", "2018-06-04", "2018-06-04"},
+			expectSelect: []string{"2022-05-30", "2022-05-30", "2022-05-30", "2022-05-30"},
 		},
 		{
 			name:         "no pagination",

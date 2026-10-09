@@ -1,0 +1,46 @@
+{
+  "header": {
+    "gtfs_realtime_version": "2.0",
+    "incrementality": 0,
+    "timestamp": 1527719250
+  },
+  "entity": [
+    {
+      "id": "v-20180530",
+      "vehicle": {
+        "trip": {
+          "trip_id": "1031527WKDY",
+          "start_date": "20180530"
+        },
+        "vehicle": {
+          "id": "v-20180530",
+          "label": "May 30 train"
+        },
+        "position": {
+          "latitude": 37.77,
+          "longitude": -122.22
+        },
+        "stop_id": "FTVL",
+        "timestamp": 1527719250
+      }
+    },
+    {
+      "id": "v-undated",
+      "vehicle": {
+        "trip": {
+          "trip_id": "2211533WKDY"
+        },
+        "vehicle": {
+          "id": "v-undated",
+          "label": "Undated train"
+        },
+        "position": {
+          "latitude": 37.77,
+          "longitude": -122.22
+        },
+        "stop_id": "FTVL",
+        "timestamp": 1527719250
+      }
+    }
+  ]
+}

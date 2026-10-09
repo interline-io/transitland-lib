@@ -25,6 +25,15 @@ func TestOperatorResolver(t *testing.T) {
 			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
 		},
 		{
+			// BART is a virtual (generated) operator record in the test data; Caltrain is defined in Atlas.
+			name:  "generated",
+			query: `query{operators(where:{onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) {onestop_id generated}}`,
+			sel: []testcaseSelector{
+				{selector: `operators.#(onestop_id=="o-9q9-bayarearapidtransit").generated`, expect: []string{"true"}},
+				{selector: `operators.#(onestop_id=="o-9q9-caltrain").generated`, expect: []string{"false"}},
+			},
+		},
+		{
 			name:         "onestop_ids no match",
 			query:        `query{operators(where:{onestop_ids:["o-does-not-exist"]}) {onestop_id}}`,
 			selector:     "operators.#.onestop_id",

@@ -243,12 +243,9 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 	jobs := make(chan importer.Options, len(cmd.ImportJobs))
 	results := make(chan ImportCommandResult, len(cmd.ImportJobs))
 	for _, job := range cmd.ImportJobs {
-		jobs <- importer.Options{
-			FeedVersionID: job.FeedVersionID,
-			Storage:       cmd.Options.Storage,
-			Activate:      cmd.Options.Activate,
-			Options:       cmd.Options.Options,
-		}
+		opts := cmd.Options
+		opts.FeedVersionID = job.FeedVersionID
+		jobs <- opts
 	}
 	close(jobs)
 
