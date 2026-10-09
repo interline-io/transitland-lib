@@ -17,7 +17,7 @@ func TestUnimplementedFinderNaming(t *testing.T) {
 	ctx := context.Background()
 
 	// Non-batched stub (notImplErr path).
-	_, err := f.FindAgencies(ctx, nil, nil, nil, nil)
+	_, err := f.FindAgencies(ctx, nil, nil, nil, nil, nil)
 	assertNamed(t, err, "FindAgencies")
 
 	// Batched stub (notImplBatch path): every per-key error is named.

@@ -46,16 +46,16 @@ func TestFinder_ImportGate(t *testing.T) {
 	counts := func(t *testing.T) map[string]int {
 		t.Helper()
 		out := map[string]int{}
-		stops, err := f.FindStops(ctx, nil, nil, nil, &model.StopFilter{FeedVersionSha1: &sha1})
+		stops, err := f.FindStops(ctx, nil, nil, nil, nil, &model.StopFilter{FeedVersionSha1: &sha1})
 		require.NoError(t, err)
 		out["stops"] = len(stops)
-		routes, err := f.FindRoutes(ctx, nil, nil, nil, &model.RouteFilter{FeedVersionSha1: &sha1})
+		routes, err := f.FindRoutes(ctx, nil, nil, nil, nil, &model.RouteFilter{FeedVersionSha1: &sha1})
 		require.NoError(t, err)
 		out["routes"] = len(routes)
-		trips, err := f.FindTrips(ctx, nil, nil, nil, &model.TripFilter{FeedVersionSha1: &sha1})
+		trips, err := f.FindTrips(ctx, nil, nil, nil, nil, &model.TripFilter{FeedVersionSha1: &sha1})
 		require.NoError(t, err)
 		out["trips"] = len(trips)
-		agencies, err := f.FindAgencies(ctx, nil, nil, nil, &model.AgencyFilter{FeedVersionSha1: &sha1})
+		agencies, err := f.FindAgencies(ctx, nil, nil, nil, nil, &model.AgencyFilter{FeedVersionSha1: &sha1})
 		require.NoError(t, err)
 		out["agencies"] = len(agencies)
 		return out

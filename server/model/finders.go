@@ -37,11 +37,11 @@ type PermFinder interface {
 
 // Finder handles basic queries
 type EntityFinder interface {
-	FindAgencies(context.Context, *int, *Cursor, []int, *AgencyFilter) ([]*Agency, error)
-	FindRoutes(context.Context, *int, *Cursor, []int, *RouteFilter) ([]*Route, error)
-	FindStops(context.Context, *int, *Cursor, []int, *StopFilter) ([]*Stop, error)
+	FindAgencies(context.Context, *int, *Cursor, []int, *tt.Date, *AgencyFilter) ([]*Agency, error)
+	FindRoutes(context.Context, *int, *Cursor, []int, *tt.Date, *RouteFilter) ([]*Route, error)
+	FindStops(context.Context, *int, *Cursor, []int, *tt.Date, *StopFilter) ([]*Stop, error)
 	FindShapesByFeedVersion(context.Context, int, *int, *Cursor, *ShapeFilter) ([]*Shape, error)
-	FindTrips(context.Context, *int, *Cursor, []int, *TripFilter) ([]*Trip, error)
+	FindTrips(context.Context, *int, *Cursor, []int, *tt.Date, *TripFilter) ([]*Trip, error)
 	FindFeedVersions(context.Context, *int, *Cursor, []int, *FeedVersionFilter) ([]*FeedVersion, error)
 	FindFeeds(context.Context, *int, *Cursor, []int, *FeedFilter) ([]*Feed, error)
 	FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error)

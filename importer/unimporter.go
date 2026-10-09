@@ -27,6 +27,10 @@ func UnimportSchedule(ctx context.Context, atx tldb.Adapter, id int) error {
 	if _, err := atx.Sqrl().Update("feed_version_gtfs_imports").Set("schedule_removed", true).Where(where).ExecContext(ctx); err != nil {
 		return err
 	}
+	// Without a schedule, the feed version no longer answers for its dates.
+	if err := feedstate.NewManager(atx).RemoveDateRanges(ctx, id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -61,6 +65,9 @@ func UnimportFeedVersion(ctx context.Context, atx tldb.Adapter, id int, extraTab
 	// Deactivate the feed version (handles both feed_states and materialized tables)
 	manager := feedstate.NewManager(atx)
 	if err := manager.DeactivateFeedVersion(ctx, id); err != nil {
+		return err
+	}
+	if err := manager.RemoveDateRanges(ctx, id); err != nil {
 		return err
 	}
 

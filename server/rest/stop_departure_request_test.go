@@ -234,3 +234,33 @@ func TestStopDepartureRequest(t *testing.T) {
 		})
 	}
 }
+
+// BA's date ranges give 2016-06-01 to its older version dd7aca4a. Without for, the
+// active e535eb2b answers from its fallback week instead.
+func TestStopDepartureRequest_For(t *testing.T) {
+	testcases := []testCase{
+		{
+			name:         "active version without for",
+			h:            StopDepartureRequest{StopKey: "BA:12TH", Date: "2016-06-01", StartTime: "08:00:00", EndTime: "09:00:00"},
+			selector:     "stops.#.feed_version.sha1",
+			expectSelect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+		},
+		{
+			name:         "for",
+			h:            StopDepartureRequest{StopKey: "BA:12TH", Date: "2016-06-01", StartTime: "08:00:00", EndTime: "09:00:00", For: "2016-06-01"},
+			selector:     "stops.#.feed_version.sha1",
+			expectSelect: []string{"dd7aca4a8e4c90908fd3603c097fabee75fea907"},
+		},
+		{
+			name:         "departures from the version for the date",
+			h:            StopDepartureRequest{StopKey: "BA:12TH", Date: "2016-06-01", StartTime: "08:00:00", EndTime: "09:00:00", For: "2016-06-01", WithCursor: WithCursor{Limit: 100}},
+			selector:     "stops.0.departures.#.trip.trip_id",
+			expectLength: 32,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			checkTestCase(t, tc)
+		})
+	}
+}

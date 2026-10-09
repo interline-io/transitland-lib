@@ -14,11 +14,12 @@ import (
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
-func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.StopFilter) ([]*model.Stop, error) {
+func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor, ids []int, forDate *tt.Date, where *model.StopFilter) ([]*model.Stop, error) {
 	var ents []*model.Stop
 	useActive := &UseActive{
 		active:       true,
 		materialized: model.ForContext(ctx).UseMaterialized,
+		date:         forDate,
 	}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
 		useActive.active = false
@@ -43,7 +44,9 @@ func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor,
 				return nil, logErr(ctx, err)
 			}
 			var err error
-			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Stop) (int, *string) { return ent.ID, ent.OnestopID }, previousStopIDsSelect)
+			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Stop) (int, *string) { return ent.ID, ent.OnestopID }, func(missing []string) sq.SelectBuilder {
+				return previousStopIDsSelect(missing, useActive.Date())
+			})
 			if err != nil {
 				return nil, logErr(ctx, err)
 			}
@@ -61,8 +64,9 @@ func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor,
 }
 
 // previousStopIDsSelect finds the active stops with the feed and stop_id of a stop
-// that ever had one of the onestop IDs, for activeIDsByOnestopID.
-func previousStopIDsSelect(osids []string) sq.SelectBuilder {
+// that ever had one of the onestop IDs, for activeIDsByOnestopID. Given a date, it
+// reads each feed's feed version for the date instead.
+func previousStopIDsSelect(osids []string, date *tt.Date) sq.SelectBuilder {
 	hist := sq.StatementBuilder.
 		Select("feed_version_stop_onestop_ids.entity_id", "feed_versions.feed_id").
 		Distinct().
@@ -72,8 +76,8 @@ func previousStopIDsSelect(osids []string) sq.SelectBuilder {
 	return sq.StatementBuilder.
 		Select("gtfs_stops.id").
 		FromSelect(hist, "hist").
-		Join("feed_states on feed_states.feed_id = hist.feed_id").
-		Join("gtfs_stops on gtfs_stops.feed_version_id = feed_states.materialized_feed_version_id and gtfs_stops.stop_id = hist.entity_id")
+		JoinClause(feedVersionsFor(date).Prefix("JOIN (").Suffix(") active_fv ON active_fv.feed_id = hist.feed_id")).
+		Join("gtfs_stops on gtfs_stops.feed_version_id = active_fv.feed_version_id and gtfs_stops.stop_id = hist.entity_id")
 }
 
 func (f *Finder) StopExternalReferencesByStopIDs(ctx context.Context, ids []int) ([]*model.StopExternalReference, []error) {
@@ -105,7 +109,7 @@ func (f *Finder) StopObservationsByStopIDs(ctx context.Context, limit *int, wher
 }
 
 func (f *Finder) StopsByIDs(ctx context.Context, ids []int) ([]*model.Stop, []error) {
-	ents, err := f.FindStops(ctx, nil, nil, ids, nil)
+	ents, err := f.FindStops(ctx, nil, nil, ids, nil, nil)
 	if err != nil {
 		return nil, logExtendErr(ctx, len(ids), err)
 	}
@@ -673,9 +677,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 	if distinct {
 		q = q.Distinct().Options("on (gtfs_stops.feed_version_id,gtfs_stops.id)")
 	}
-	if useActive.Active() {
-		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_stops.feed_version_id")
-	}
+	q = joinActive(q, useActive)
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_stops.id", ids))
 	}

@@ -247,7 +247,7 @@ func TestAgencyRequest_Format(t *testing.T) {
 
 func TestAgencyRequest_Pagination(t *testing.T) {
 	cfg := testconfig.Config(t, testconfig.Options{})
-	allEnts, err := cfg.Finder.FindAgencies(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	allEnts, err := cfg.Finder.FindAgencies(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

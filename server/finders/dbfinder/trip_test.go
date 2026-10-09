@@ -52,7 +52,7 @@ func TestTripSelectDoesNotModifyFilter(t *testing.T) {
 	// A window that excludes the requested date, so it is certain to relocate.
 	fvsw := testServiceWindow(t)
 	for i := 0; i < 2; i++ {
-		if _, _, err := tripSelect(nil, nil, nil, false, nil, where, fvsw); err != nil {
+		if _, _, err := tripSelect(nil, nil, nil, nil, nil, where, fvsw); err != nil {
 			t.Fatal(err)
 		}
 		assert.Equal(t, requested.Val.Format("2006-01-02"), where.ServiceDate.Val.Format("2006-01-02"),

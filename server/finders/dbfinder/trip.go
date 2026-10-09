@@ -13,13 +13,13 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-func (f *Finder) FindTrips(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.TripFilter) ([]*model.Trip, error) {
+func (f *Finder) FindTrips(ctx context.Context, limit *int, after *model.Cursor, ids []int, forDate *tt.Date, where *model.TripFilter) ([]*model.Trip, error) {
 	var ents []*model.Trip
-	active := true
+	useActive := &UseActive{active: true, date: forDate}
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) || (where != nil && len(where.RouteIds) > 0) {
-		active = false
+		useActive.active = false
 	}
-	q, tripDates, err := tripSelect(limit, after, ids, active, f.PermFilter(ctx), where, nil)
+	q, tripDates, err := tripSelect(limit, after, ids, useActive, f.PermFilter(ctx), where, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (f *Finder) FindTrips(ctx context.Context, limit *int, after *model.Cursor,
 }
 
 func (f *Finder) TripsByIDs(ctx context.Context, ids []int) ([]*model.Trip, []error) {
-	ents, err := f.FindTrips(ctx, nil, nil, ids, nil)
+	ents, err := f.FindTrips(ctx, nil, nil, ids, nil, nil)
 	if err != nil {
 		return nil, logExtendErr(ctx, len(ids), err)
 	}
@@ -42,7 +42,7 @@ func (f *Finder) TripsByIDs(ctx context.Context, ids []int) ([]*model.Trip, []er
 func (f *Finder) TripsByFeedVersionTripIDs(ctx context.Context, keys []model.FVEntityID) ([]*model.Trip, []error) {
 	var ents []*model.Trip
 	for fvid, tripIds := range groupFVEntityIDs(keys) {
-		q, _, err := tripSelect(nil, nil, nil, false, f.PermFilter(ctx), nil, nil)
+		q, _, err := tripSelect(nil, nil, nil, nil, f.PermFilter(ctx), nil, nil)
 		if err != nil {
 			return nil, logExtendErr(ctx, len(keys), err)
 		}
@@ -241,7 +241,7 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 		if err != nil {
 			return nil, err
 		}
-		inner, tripDates, err := tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		inner, tripDates, err := tripSelect(limit, nil, nil, nil, f.PermFilter(ctx), where, fvsw)
 		if err != nil {
 			return nil, err
 		}
@@ -282,7 +282,7 @@ func (f *Finder) TripsByShapeIDs(ctx context.Context, limit *int, where *model.T
 		if err != nil {
 			return nil, err
 		}
-		inner, tripDates, err := tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		inner, tripDates, err := tripSelect(limit, nil, nil, nil, f.PermFilter(ctx), where, fvsw)
 		if err != nil {
 			return nil, err
 		}
@@ -316,7 +316,7 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 		if err != nil {
 			return nil, err
 		}
-		inner, tripDates, err := tripSelect(limit, nil, nil, false, f.PermFilter(ctx), where, fvsw)
+		inner, tripDates, err := tripSelect(limit, nil, nil, nil, f.PermFilter(ctx), where, fvsw)
 		if err != nil {
 			return nil, err
 		}
@@ -343,7 +343,7 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 }
 
 // Returns the query and how each matched service date should be reported.
-func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.TripFilter, fvsw *model.ServiceWindow) (sq.SelectBuilder, []tripDate, error) {
+func tripSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.TripFilter, fvsw *model.ServiceWindow) (sq.SelectBuilder, []tripDate, error) {
 	q := sq.StatementBuilder.Select(
 		"gtfs_trips.id",
 		"gtfs_trips.feed_version_id",
@@ -443,9 +443,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		// Handle license filtering
 		q = licenseFilter(where.License, q)
 	}
-	if active {
-		q = q.Join("feed_states on feed_states.materialized_feed_version_id = gtfs_trips.feed_version_id")
-	}
+	q = joinActive(q, useActive)
 	if len(ids) > 0 {
 		q = q.Where(In("gtfs_trips.id", ids))
 	}

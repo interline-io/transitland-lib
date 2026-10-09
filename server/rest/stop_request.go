@@ -19,6 +19,7 @@ type StopRequest struct {
 	StopID             string    `json:"stop_id"`
 	OnestopID          string    `json:"onestop_id"`
 	FeedVersionSHA1    string    `json:"feed_version_sha1"`
+	For                string    `json:"for"`
 	FeedOnestopID      string    `json:"feed_onestop_id"`
 	Search             string    `json:"search"`
 	Bbox               *restBbox `json:"bbox"`
@@ -96,6 +97,7 @@ func (r StopRequest) RequestInfo() RequestInfo {
 					newPRef("searchParam"),
 					newPRef("onestopParam"),
 					newPRef("sha1Param"),
+					newPRef("forParam"),
 					newPRef("feedParam"),
 					newPRefExt("radiusParam", "Search for stops geographically; radius is in meters, requires lon and lat"),
 					newPRef("lonParam"),
@@ -172,6 +174,7 @@ func (r StopRequest) Query(ctx context.Context) (string, map[string]any) {
 		"ids":            checkIds(r.ID),
 		"include_alerts": r.IncludeAlerts,
 		"include_routes": r.IncludeRoutes,
+		"for":            checkDate(r.For),
 		"where":          where,
 	}
 }

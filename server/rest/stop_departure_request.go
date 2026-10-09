@@ -23,6 +23,7 @@ type StopDepartureRequest struct {
 	ServiceDate      string `json:"service_date"`
 	Date             string `json:"date"`
 	RelativeDate     string `json:"relative_date"`
+	For              string `json:"for"`
 	StartTime        string `json:"start_time"`
 	EndTime          string `json:"end_time"`
 	IncludeGeometry  bool   `json:"include_geometry,string"`
@@ -94,6 +95,7 @@ func (r StopDepartureRequest) RequestInfo() RequestInfo {
 					}},
 					newPRef("idParam"),
 					newPRef("relativeDateParam"),
+					newPRef("forParam"),
 					newPRef("includeAlertsParam"),
 					newPRef("afterParam"),
 				},
@@ -163,6 +165,7 @@ func (r StopDepartureRequest) Query(ctx context.Context) (string, map[string]int
 		"include_alerts":   r.IncludeAlerts,
 		"limit":            r.CheckLimit(),
 		"ids":              checkIds(r.ID),
+		"for":              checkDate(r.For),
 		"where":            where,
 		"stop_time_where":  stwhere,
 	}

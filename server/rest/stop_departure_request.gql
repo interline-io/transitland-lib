@@ -174,8 +174,8 @@ fragment alert on Alert {
 }
 
 
-query ($include_geometry: Boolean!, $include_alerts: Boolean!, $limit: Int, $ids: [Int!], $after: Int, $where: StopFilter, $stop_time_where: StopTimeFilter) {
-  stops(limit: 100, ids: $ids, after: $after, where: $where) {
+query ($include_geometry: Boolean!, $include_alerts: Boolean!, $limit: Int, $ids: [Int!], $after: Int, $for: Date, $where: StopFilter, $stop_time_where: StopTimeFilter) {
+  stops(limit: 100, ids: $ids, after: $after, for: $for, where: $where) {
     ...stop
     feed_version {
       id

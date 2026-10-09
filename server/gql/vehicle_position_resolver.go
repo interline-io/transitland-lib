@@ -118,7 +118,7 @@ func vehiclePositionAgencies(ctx context.Context, where model.VehiclePositionFil
 	agencyFilter := &model.AgencyFilter{
 		Location: &model.AgencyLocationFilter{Bbox: where.Bbox},
 	}
-	agencies, err := model.ForContext(ctx).Finder.FindAgencies(ctx, ptr(RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT), nil, nil, agencyFilter)
+	agencies, err := model.ForContext(ctx).Finder.FindAgencies(ctx, ptr(RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT), nil, nil, nil, agencyFilter)
 	if len(agencies) >= RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT {
 		log.For(ctx).Warn().Int("scope_limit", RESOLVER_VEHICLE_POSITION_SCOPE_MAXLIMIT).Msg("vehicle_positions: agency scope limit reached, results are incomplete")
 	}

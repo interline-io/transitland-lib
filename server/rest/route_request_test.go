@@ -155,6 +155,29 @@ func TestRouteRequest(t *testing.T) {
 	}
 }
 
+// BA's date ranges give 2016-06-01 to its older version dd7aca4a; e535eb2b is active.
+func TestRouteRequest_For(t *testing.T) {
+	testcases := []testCase{
+		{
+			name:         "active version without for",
+			h:            RouteRequest{RouteKey: "BA:01"},
+			selector:     "routes.#.feed_version.sha1",
+			expectSelect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+		},
+		{
+			name:         "for",
+			h:            RouteRequest{RouteKey: "BA:01", For: "2016-06-01"},
+			selector:     "routes.#.feed_version.sha1",
+			expectSelect: []string{"dd7aca4a8e4c90908fd3603c097fabee75fea907"},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			checkTestCase(t, tc)
+		})
+	}
+}
+
 func TestRouteRequest_Format(t *testing.T) {
 	tcs := []testCase{
 		{
@@ -192,7 +215,7 @@ func TestRouteRequest_Format(t *testing.T) {
 
 func TestRouteRequest_Pagination(t *testing.T) {
 	cfg := testconfig.Config(t, testconfig.Options{})
-	allEnts, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	allEnts, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
