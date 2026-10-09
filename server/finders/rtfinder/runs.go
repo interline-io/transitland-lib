@@ -15,20 +15,26 @@ import (
 // date, and every realtime message describes exactly one run: the run on its
 // trip descriptor's start_date, or where it names none, the trip's current run.
 //
-// The current run is yesterday's while it is still running past midnight, and
-// otherwise today's.
+// The current run is the one going now, or failing that, the nearest of
+// yesterday's, today's and tomorrow's.
 
-// tripRuns holds the runs of one trip that a query asks for.
+// tripRuns holds the runs of one trip that a query wants matched.
 type tripRuns struct {
-	// The runs asked for. None means the trip's current run.
+	// The requested runs. None means the trip's current run.
 	dates []tt.Date
 	// The trip's current run, looked up only when needed.
 	current func() (tt.Date, bool)
+	// Set for a trip that stands for no run, such as a pattern's representative
+	// trip, which no message describes.
+	none bool
 }
 
 // describes reports whether a message with this trip descriptor describes one
 // of the runs.
 func (r tripRuns) describes(td *pb.TripDescriptor) bool {
+	if r.none {
+		return false
+	}
 	run, ok := descriptorDate(td)
 	if !ok {
 		if run, ok = r.current(); !ok {
@@ -42,11 +48,12 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	return slices.ContainsFunc(r.dates, func(d tt.Date) bool { return sameDay(d, run) })
 }
 
-// tripRunsOf returns the runs a trip was reached as.
+// tripRunsOf returns a trip's runs: the requested ones, or its current run.
 func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
 	return tripRuns{
 		dates:   t.RunDates,
 		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, t.ID) }),
+		none:    t.NoRealtime,
 	}
 }
 
@@ -56,19 +63,31 @@ func (f *Finder) currentRun(ctx context.Context, fvid int, tripId int) (tt.Date,
 	if !ok {
 		return tt.Date{}, false
 	}
-	return currentRunDate(f.Clock.Now(), loc, f.lc.GetTripLastArrival(ctx, fvid, tripId)), true
+	return currentRunDate(f.Clock.Now(), loc, f.lc.GetTripSpan(ctx, fvid, tripId)), true
 }
 
-// currentRunDate returns the service date of the current run of a trip whose
-// last arrival is the given number of seconds into its service day.
-func currentRunDate(now time.Time, loc *time.Location, lastArrival int) tt.Date {
+// currentRunDate returns the service date of a trip's current run: the run going
+// now, or failing that, the nearest of yesterday's, today's and tomorrow's. A trip
+// whose span isn't known, such as one added in real time, is on today's.
+func currentRunDate(now time.Time, loc *time.Location, span tripSpan) tt.Date {
 	local := now.In(loc)
 	today := tt.NewDate(time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC))
-	yesterday := tt.NewDate(today.Val.AddDate(0, 0, -1))
-	if now.Before(serviceDayStart(yesterday, loc).Add(time.Duration(lastArrival) * time.Second)) {
-		return yesterday
+	if span.LastArrival == 0 {
+		return today
 	}
-	return today
+	current, nearest := today, time.Duration(-1)
+	for _, days := range []int{-1, 0, 1} {
+		d := tt.NewDate(today.Val.AddDate(0, 0, days))
+		day := serviceDayStart(d, loc)
+		start := day.Add(time.Duration(span.FirstDeparture) * time.Second)
+		end := day.Add(time.Duration(span.LastArrival) * time.Second)
+		// Zero while the run is going.
+		gap := max(start.Sub(now), now.Sub(end), 0)
+		if nearest < 0 || gap < nearest {
+			current, nearest = d, gap
+		}
+	}
+	return current
 }
 
 // descriptorDate returns the service date a trip descriptor names, if any.

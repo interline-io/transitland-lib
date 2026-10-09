@@ -58,8 +58,8 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 }
 
 // runStopTimes returns copies of a trip's stop times, on its run's service date
-// where it was reached as one run. Copies, as the loader shares them across every
-// run of the trip in a request, and each run has its own date and realtime data.
+// when the trip is one run. Copies, as the loader shares them across every run of
+// the trip in a request, and each run has its own date and realtime data.
 func runStopTimes(trip *model.Trip, loaded []*model.StopTime) []*model.StopTime {
 	sts := make([]*model.StopTime, 0, len(loaded))
 	for _, st := range loaded {

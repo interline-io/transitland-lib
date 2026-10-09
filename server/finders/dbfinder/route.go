@@ -189,7 +189,8 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 			GroupBy("gtfs_trips.feed_version_id,gtfs_trips.route_id,gtfs_trips.direction_id,gtfs_trips.stop_pattern_id").
 			OrderBy("gtfs_trips.route_id,count desc").
 			Limit(finderCheckLimit(limit))
-		// The date the trips are counted on, and the date it is reported as.
+		// The service date whose trips are counted, and the requested date it
+		// reports.
 		var serviceDate, askedDate *tt.Date
 		if where != nil {
 			// A feed version whose window has not been computed resolves the date as

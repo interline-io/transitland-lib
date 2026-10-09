@@ -83,15 +83,28 @@ const (
 
 	feedVersionTimezoneQuery = `SELECT agency_timezone FROM gtfs_agencies WHERE feed_version_id = $1 LIMIT 1`
 
-	// A trip's stop times are stored once per journey pattern, on the pattern's
-	// first trip, and shifted by each other trip's offset. Zero for a trip with
-	// no timed stop times, or none at all.
-	tripLastArrivalQuery = `
-	select coalesce(max(sts.arrival_time + t.journey_pattern_offset), 0)
-	from gtfs_trips t
-	join gtfs_trips t2 on t2.trip_id::text = t.journey_pattern_id and t2.feed_version_id = t.feed_version_id
-	join gtfs_stop_times sts on sts.trip_id = t2.id and sts.feed_version_id = $2
-	where t.id = $1 and t.feed_version_id = $2`
+	// When a trip runs on its service day: from its first departure to its last
+	// arrival, or for a frequency-based trip, from its first start to its last
+	// start plus one run's length. A trip's stop times are stored once per
+	// journey pattern, on the pattern's first trip, and shifted by each other
+	// trip's offset. Zero for a trip with no timed stop times, or none at all.
+	tripSpanQuery = `
+	select
+		coalesce(fr.first_start, st.first_departure, 0) as first_departure,
+		coalesce(fr.last_start + st.last_arrival - st.first_departure, st.last_arrival, 0) as last_arrival
+	from (
+		select
+			min(sts.departure_time + t.journey_pattern_offset) as first_departure,
+			max(sts.arrival_time + t.journey_pattern_offset) as last_arrival
+		from gtfs_trips t
+		join gtfs_trips t2 on t2.trip_id::text = t.journey_pattern_id and t2.feed_version_id = t.feed_version_id
+		join gtfs_stop_times sts on sts.trip_id = t2.id and sts.feed_version_id = $2
+		where t.id = $1 and t.feed_version_id = $2
+	) st, (
+		select min(start_time) as first_start, max(end_time) as last_start
+		from gtfs_frequencies
+		where trip_id = $1
+	) fr`
 )
 
 type lookupCache struct {
@@ -103,7 +116,7 @@ type lookupCache struct {
 	fvRouteTypeCache       *kvcache.Cache[int, []int]                     // route types by feed version id
 	fvRouteCache           *kvcache.Cache[feedVersionRouteKey, gtfsRoute] // routes by GTFS route_id within a feed version
 	routeCache             *kvcache.Cache[int, gtfsRoute]                 // routes by database id
-	tripLastArrivalCache   *kvcache.Cache[model.FVPair, int]              // last scheduled arrivals of trips by database id
+	tripSpanCache          *kvcache.Cache[model.FVPair, tripSpan]         // when trips run, by database id
 	fvidFeedCache          *simpleCache[int, string]
 	feedOperatorCountCache *simpleCache[string, int]
 	agencyRouteIdCache     *simpleCache[int, set.Set[string]]
@@ -139,8 +152,8 @@ func newLookupCache(db tldb.Ext) *lookupCache {
 	f.routeCache = kvcache.NewRefreshCache(nil, "routes", f.queryRoute)
 	f.routeCache.RefreshTimeout = lookupTimeout
 	f.routeCache.NegativeTTL = f.routeCache.Expires
-	f.tripLastArrivalCache = kvcache.NewRefreshCache(nil, "triplastarrivals", f.queryTripLastArrival)
-	f.tripLastArrivalCache.RefreshTimeout = lookupTimeout
+	f.tripSpanCache = kvcache.NewRefreshCache(nil, "tripspans", f.queryTripSpan)
+	f.tripSpanCache.RefreshTimeout = lookupTimeout
 	return f
 }
 
@@ -259,18 +272,24 @@ func (f *lookupCache) queryFeedVersionRoute(ctx context.Context, key feedVersion
 	return ret, err
 }
 
-// GetTripLastArrival returns when a trip last arrives, in seconds into its
-// service day: zero for a trip that isn't found, or has no timed stop times.
-func (f *lookupCache) GetTripLastArrival(ctx context.Context, fvid int, tripId int) int {
-	ret, _ := getUnlessGone(ctx, f.tripLastArrivalCache, model.FVPair{FeedVersionID: fvid, EntityID: tripId})
+// tripSpan is when a trip runs on its service day, in seconds into the day.
+type tripSpan struct {
+	FirstDeparture int `db:"first_departure"`
+	LastArrival    int `db:"last_arrival"`
+}
+
+// GetTripSpan returns when a trip runs on its service day: zero for a trip that
+// isn't found, or has no timed stop times.
+func (f *lookupCache) GetTripSpan(ctx context.Context, fvid int, tripId int) tripSpan {
+	ret, _ := getUnlessGone(ctx, f.tripSpanCache, model.FVPair{FeedVersionID: fvid, EntityID: tripId})
 	return ret
 }
 
-func (f *lookupCache) queryTripLastArrival(ctx context.Context, key model.FVPair) (int, error) {
-	var ret int
-	err := sqlx.GetContext(ctx, f.db, &ret, tripLastArrivalQuery, key.EntityID, key.FeedVersionID)
+func (f *lookupCache) queryTripSpan(ctx context.Context, key model.FVPair) (tripSpan, error) {
+	var ret tripSpan
+	err := sqlx.GetContext(ctx, f.db, &ret, tripSpanQuery, key.EntityID, key.FeedVersionID)
 	if err != nil {
-		log.For(ctx).Error().Err(err).Int("feed_version_id", key.FeedVersionID).Int("trip_id", key.EntityID).Msg("rtfinder: trip last arrival lookup failed")
+		log.For(ctx).Error().Err(err).Int("feed_version_id", key.FeedVersionID).Int("trip_id", key.EntityID).Msg("rtfinder: trip span lookup failed")
 	}
 	return ret, err
 }

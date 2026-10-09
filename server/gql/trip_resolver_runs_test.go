@@ -66,9 +66,14 @@ func optionalInt(v gjson.Result) *int64 {
 }
 
 func TestTripRT_Runs_Departures(t *testing.T) {
-	// The departures of 4:00 to 4:05 pm at Fruitvale on a service date.
-	window := func(serviceDate string) hw {
-		return hw{"where": hw{"service_date": serviceDate, "start_time": 57600, "end_time": 57900}}
+	// The departures at Fruitvale on a service date between two times, by default
+	// 4:00 to 4:05 pm.
+	window := func(serviceDate string, times ...int) hw {
+		start, end := 57600, 57900
+		if len(times) == 2 {
+			start, end = times[0], times[1]
+		}
+		return hw{"where": hw{"service_date": serviceDate, "start_time": start, "end_time": end}}
 	}
 	tcs := []struct {
 		name    string
@@ -118,12 +123,40 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			},
 		},
 		{
-			// At a quarter to one it has finished, and today's run is current.
-			name:    "after midnight, late run finished",
+			// At a quarter to one it has just finished, and is still the nearest run:
+			// it may be running late.
+			name:    "after midnight, late run just finished",
 			whenUtc: "2018-05-31T07:45:00Z",
 			vars:    hw{"where": hw{"date": "2018-05-31", "start_time": 0, "end_time": 300}},
 			expect: map[string]runRT{
+				"5172328WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(180)), alerts: []string{"Late run, current", "Late run of May 30"}},
+			},
+		},
+		{
+			// By the next evening, that night's run is the nearest.
+			name:    "late run, the next evening",
+			whenUtc: "2018-06-01T01:00:00Z",
+			vars:    hw{"where": hw{"date": "2018-05-31", "start_time": 0, "end_time": 300}},
+			expect: map[string]runRT{
 				"5172328WKDY": {serviceDate: "2018-05-30", alerts: []string{"Late run of May 30"}},
+			},
+		},
+		{
+			// At half past eleven at night, the nearest run of a trip starting at
+			// 04:03 is tomorrow's.
+			name:    "early run, the evening before",
+			whenUtc: "2018-05-31T06:30:00Z",
+			vars:    window("2018-05-31", 16200, 16500),
+			expect: map[string]runRT{
+				"2290403WKDY": {serviceDate: "2018-05-31", delay: ptr(int64(240))},
+			},
+		},
+		{
+			name:    "early run, the morning before",
+			whenUtc: "2018-05-31T06:30:00Z",
+			vars:    window("2018-05-30", 16200, 16500),
+			expect: map[string]runRT{
+				"2290403WKDY": {serviceDate: "2018-05-30"},
 			},
 		},
 		{
@@ -260,4 +293,64 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 			},
 		})
 	}
+}
+
+// A trip added in real time is the run its trip update names. A feed reporting
+// two runs of one added trip lists it once, as the last update names it.
+func TestTripRT_Runs_AddedTrips(t *testing.T) {
+	const query = `query($where: StopTimeFilter!) {
+		stops(where: {stop_id: "FTVL"}) {
+			stop_times(where: $where) {
+				trip { trip_id schedule_relationship }
+			}
+		}
+	}`
+	testRt(t, rtTestCase{
+		name:    "added trip",
+		query:   query,
+		vars:    hw{"where": hw{"service_date": "2018-05-30", "start_time": 57600, "end_time": 57900}},
+		rtfiles: runsRTFiles,
+		whenUtc: rtFixtureWhenUtc,
+		cb: func(t *testing.T, jj string) {
+			var added []gjson.Result
+			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
+				if st.Get("trip.trip_id").String() == "ADDED1" {
+					added = append(added, st)
+				}
+			}
+			if assert.Len(t, added, 1) {
+				assert.Equal(t, "ADDED", added[0].Get("trip.schedule_relationship").String())
+			}
+		},
+	})
+}
+
+// A route pattern's representative trip, and its trips without a date, stand
+// for no run, so even an undated alert on the trip doesn't reach them.
+func TestTripRT_Runs_PatternTrips(t *testing.T) {
+	const query = `query {
+		routes(where: {route_id: "05"}) {
+			patterns {
+				representative_trip { trip_id alerts { header_text { text } } }
+				trips(limit: 1000) { trip_id alerts { header_text { text } } }
+			}
+		}
+	}`
+	testRt(t, rtTestCase{
+		name:    "pattern trips",
+		query:   query,
+		rtfiles: runsRTFiles,
+		whenUtc: rtFixtureWhenUtc,
+		cb: func(t *testing.T, jj string) {
+			found := false
+			for _, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
+				assert.Empty(t, pat.Get("representative_trip.alerts").Array(), "representative_trip alerts")
+				for _, trip := range pat.Get("trips").Array() {
+					found = found || trip.Get("trip_id").String() == "1031527WKDY"
+					assert.Empty(t, trip.Get("alerts").Array(), "trip %s alerts", trip.Get("trip_id").String())
+				}
+			}
+			assert.True(t, found, "expected trip 1031527WKDY among the patterns' trips")
+		},
+	})
 }

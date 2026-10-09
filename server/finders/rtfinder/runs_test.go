@@ -64,22 +64,27 @@ func TestCurrentRunDate(t *testing.T) {
 		}
 		return v
 	}
-	const lateRun = 24*3600 + 31*60 // last arrives at 24:31
-	const dayRun = 17 * 3600        // last arrives at 17:00
+	dayRun := tripSpan{FirstDeparture: 8 * 3600, LastArrival: 9 * 3600}                // 08:00 to 09:00
+	earlyRun := tripSpan{FirstDeparture: 10 * 60, LastArrival: 50 * 60}                // 00:10 to 00:50
+	lateRun := tripSpan{FirstDeparture: 23*3600 + 40*60, LastArrival: 24*3600 + 31*60} // 23:40 to 24:31
 	tcs := []struct {
-		name        string
-		now         string
-		lastArrival int
-		expect      string
+		name   string
+		now    string
+		span   tripSpan
+		expect string
 	}{
-		{"during the day, today's run", "2018-05-31 15:00", lateRun, "2018-05-31"},
+		{"the run going now", "2018-05-31 08:30", dayRun, "2018-05-31"},
+		{"before it starts, today's run", "2018-05-31 06:00", dayRun, "2018-05-31"},
+		{"just after it ends, still today's run, which may be running late", "2018-05-31 09:20", dayRun, "2018-05-31"},
+		{"late in the evening, tomorrow's run once it is nearest", "2018-05-31 23:50", earlyRun, "2018-06-01"},
 		{"after midnight, yesterday's run while it is still going", "2018-05-31 00:10", lateRun, "2018-05-30"},
-		{"after midnight, today's run once yesterday's has finished", "2018-05-31 00:45", lateRun, "2018-05-31"},
-		{"after midnight, today's run for a trip that ends before midnight", "2018-05-31 00:10", dayRun, "2018-05-31"},
+		{"after midnight, yesterday's run just after it ends", "2018-05-31 00:45", lateRun, "2018-05-30"},
+		{"in the evening, today's run once it is nearest", "2018-05-31 18:00", lateRun, "2018-05-31"},
+		{"a trip whose span isn't known, today's run", "2018-05-31 23:50", tripSpan{}, "2018-05-31"},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expect, currentRunDate(at(tc.now), la, tc.lastArrival).Val.Format("2006-01-02"))
+			assert.Equal(t, tc.expect, currentRunDate(at(tc.now), la, tc.span).Val.Format("2006-01-02"))
 		})
 	}
 

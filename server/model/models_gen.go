@@ -1202,15 +1202,17 @@ type RouteStopPattern struct {
 	DirectionID int `json:"direction_id"`
 	// Number of trips that operate this stop pattern
 	Count int `json:"count"`
-	// The service date the trips are counted on.
+	// The service date whose trips are counted.
 	//
 	// This is the date `Route.patterns` was given, even where `use_service_window` counted the trips in the fallback week. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve.
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
 	// One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
 	//
-	// Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
+	// Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common. It stands for the pattern rather than any run, so it has no GTFS-RT data.
 	RepresentativeTrip *Trip `json:"representative_trip,omitempty"`
-	// Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times
+	// Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times.
+	//
+	// With a `service_date`, these are runs on that date. Without one, they stand for no run and have no GTFS-RT data.
 	Trips []*Trip `json:"trips,omitempty"`
 	// The trips `count` counted on `service_date`, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.
 	Timetable            *RouteStopPatternTimetable `json:"timetable,omitempty"`
@@ -1598,7 +1600,7 @@ type TripFilter struct {
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead.
 	//
-	// The trips are still runs on the requested date, and GTFS-RT data is matched to those runs.
+	// The trips are still runs on the requested date, and GTFS-RT data is matched to those runs. Not applied by the top-level `trips` query, which spans feed versions: ask through `Route.trips` or `FeedVersion.trips` instead.
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Search for trips with this GTFS trip_id
 	TripID *string `json:"trip_id,omitempty"`

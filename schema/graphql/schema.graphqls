@@ -1048,9 +1048,11 @@ Record from a static GTFS [trips.txt](https://gtfs.org/schedule/reference/#trips
 GTFS-RT data is matched to runs. A run is a trip on one service date, and every GTFS-RT message describes exactly one run:
 
 - the run on the `start_date` its trip descriptor names, or
-- where it names none, the trip's current run: yesterday's while that run is still going past midnight, otherwise today's.
+- where it names none, the trip's current run: the run going now, or failing that, the nearest of yesterday's, today's and tomorrow's.
 
-A trip reached through a stop time with a `service_date`, or through a trips query by `service_date`, `service_dates` or `dates`, is the run on each of those dates. A trip reached any other way is its current run.
+A trip found on a date is the run on that date. That covers a trip through a stop time with a `service_date`, a trips query by `service_date`, `service_dates` or `dates`, a route pattern's trips on its `service_date`, and a vehicle's trip on the `start_date` it names. A trip found any other way is its current run.
+
+A route pattern's `representative_trip`, and its `trips` when it has no `service_date`, stand for no run and have no GTFS-RT data.
 
 See [Concepts: Trips & Schedules](https://www.transit.land/documentation/concepts/trips-schedules).
 """
@@ -1113,7 +1115,7 @@ type Trip {
   """
   Stop times for this trip.
 
-  On a trip reached as one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.
+  On a trip that is one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.
   """
   stop_times(limit: Int, where: TripStopTimeFilter): [StopTime]!
   
@@ -1837,7 +1839,7 @@ type RouteStopPattern {
   count: Int!
 
   """
-  The service date the trips are counted on.
+  The service date whose trips are counted.
 
   This is the date `Route.patterns` was given, even where `use_service_window` counted the trips in the fallback week. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve.
   """
@@ -1846,11 +1848,15 @@ type RouteStopPattern {
   """
   One trip that follows this stop pattern, for reading the stop sequence without fetching every trip. Every trip sharing a stop pattern visits the same stops in the same order, so any of them describes the pattern; this is the lowest-numbered, scoped to the queried service date when `Route.patterns` was given one.
 
-  Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common.
+  Times, headsigns and `timepoint` flags are properties of the trip and can differ between trips of the same pattern — only the stop sequence is guaranteed common. It stands for the pattern rather than any run, so it has no GTFS-RT data.
   """
   representative_trip: Trip
 
-  "Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times"
+  """
+  Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times.
+
+  With a `service_date`, these are runs on that date. Without one, they stand for no run and have no GTFS-RT data.
+  """
   trips(limit: Int): [Trip!]
 
   """
@@ -3095,7 +3101,7 @@ input TripFilter {
   """
   If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead.
 
-  The trips are still runs on the requested date, and GTFS-RT data is matched to those runs.
+  The trips are still runs on the requested date, and GTFS-RT data is matched to those runs. Not applied by the top-level `trips` query, which spans feed versions: ask through `Route.trips` or `FeedVersion.trips` instead.
   """
   use_service_window: Boolean
   "Search for trips with this GTFS trip_id"

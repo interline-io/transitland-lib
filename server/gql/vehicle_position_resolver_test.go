@@ -341,7 +341,10 @@ func TestVehiclePositionResolver_Nested(t *testing.T) {
 			},
 		},
 		{
-			name: "trip vehicle_position, bbox excludes",
+			// Read that morning, so the vehicle is on the trip's current run and
+			// only the bounding box excludes it.
+			name:    "trip vehicle_position, bbox excludes",
+			whenUtc: "2022-09-01T13:30:00Z",
 			query: `query($where: VehiclePositionFilter) {
 				trips(where: {feed_onestop_id: "BA", trip_id: "3210613WKDY"}) {
 					vehicle_position(where: $where) { vehicle { id } }

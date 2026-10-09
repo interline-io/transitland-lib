@@ -10014,7 +10014,7 @@
                             "x-order": 22
                           },
                           "stop_times": {
-                            "description": "Stop times for this trip.\n\nOn a trip reached as one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.",
+                            "description": "Stop times for this trip.\n\nOn a trip that is one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.",
                             "items": {
                               "nullable": true,
                               "properties": {
@@ -11877,7 +11877,7 @@
                             "x-order": 22
                           },
                           "stop_times": {
-                            "description": "Stop times for this trip.\n\nOn a trip reached as one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.",
+                            "description": "Stop times for this trip.\n\nOn a trip that is one run, the stop times are on that run's service date. See `Trip` for how GTFS-RT data is matched to runs.",
                             "items": {
                               "nullable": true,
                               "properties": {

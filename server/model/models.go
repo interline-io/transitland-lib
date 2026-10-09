@@ -107,6 +107,9 @@ type Trip struct {
 	// relocated into a fallback week. Realtime data is matched to these runs;
 	// with none, to the trip's current run.
 	RunDates []tt.Date
+	// internal: set for a trip that stands for no run, such as a pattern's
+	// representative trip, which realtime data never matches.
+	NoRealtime bool
 	// Every service date matched by a dates or service_dates query. Under
 	// `dates` this reaches one day before the earliest requested date.
 	ServiceDates []*tt.Date

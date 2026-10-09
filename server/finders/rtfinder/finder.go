@@ -58,7 +58,7 @@ func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Locat
 	return f.lc.FeedVersionTimezone(ctx, fvid)
 }
 
-// FindTrip returns the trip update on a trip's run: the run it was reached as,
+// FindTrip returns the trip update on a trip's runs: the requested ones,
 // or its current run.
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
 	if found := f.runUpdates(ctx, t); len(found) > 0 {
@@ -88,8 +88,8 @@ func (f *Finder) runUpdates(ctx context.Context, t *model.Trip) []*pb.TripUpdate
 	return ret
 }
 
-// FindAlertsForTrip returns the alerts on a trip's run: the run it was reached
-// as, or its current run.
+// FindAlertsForTrip returns the alerts on a trip's runs: the requested ones, or
+// its current run.
 func (f *Finder) FindAlertsForTrip(ctx context.Context, t *model.Trip, limit *int, active *bool) []*model.Alert {
 	tripId := t.TripID.Val
 	// Looked up at most once per call, and only for a selector naming this trip
@@ -411,11 +411,12 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 			continue
 		}
 		// TODO: index more efficiently
-		for _, trips := range a.tripUpdates {
-			for _, trip := range trips {
-				if trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
-					ret = append(ret, trip)
-				}
+		// One added trip per trip_id, the last in the feed, and none without a
+		// trip_id, which has no trip to show.
+		for tid, trips := range a.tripUpdates {
+			trip := trips[len(trips)-1]
+			if tid != "" && trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
+				ret = append(ret, trip)
 			}
 		}
 	}
