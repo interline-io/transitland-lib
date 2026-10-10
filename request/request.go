@@ -81,6 +81,18 @@ type Request struct {
 	Auth                dmfr.FeedAuthorization
 }
 
+// checkSecretHost returns an error unless secret may be sent to host.
+func checkSecretHost(secret dmfr.Secret, host string) error {
+	ok, err := secret.MatchHost(host)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("secret is not allowed for host %q", host)
+	}
+	return nil
+}
+
 func (req *Request) Request(ctx context.Context) (io.ReadCloser, int, error) {
 	// Download
 	log.For(ctx).Debug().Str("url", req.URL).Str("auth_type", req.Auth.Type).Msg("download")

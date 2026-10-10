@@ -30,7 +30,7 @@ transitland fetch [flags] [feeds...]
   -h, --help                               help for fetch
       --jobs-file string                   Specify fetch jobs in file, one per line as 'feed_id <tab> url'
       --limit int                          Maximum number of feeds to fetch
-      --secret-env stringArray             Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR
+      --secret-env stringArray             Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR, optionally followed by :host to limit the secret to one host or *.domain
       --secrets string                     Path to DMFR Secrets file
       --storage string                     Storage destination; can be s3://... az://... or path to a directory (default ".")
       --strict                             Reject feeds with validation errors

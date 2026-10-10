@@ -4,6 +4,7 @@ package cmds
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -53,23 +54,27 @@ func parseErrorThresholds(thresholds []string) (map[string]float64, error) {
 	return result, nil
 }
 
-// parseSecretEnv parses "target:ENV_VAR"; target is a feed_id, or a filename
-// if it ends in .json. The key is read from the named env var.
+// parseSecretEnv parses "target:ENV_VAR[:host]"; target is a feed_id, or a
+// filename if it ends in .json. The key is read from the named env var, and
+// host, if given, scopes the secret.
 func parseSecretEnv(arg string) (dmfr.Secret, error) {
-	parts := strings.SplitN(arg, ":", 2)
-	if len(parts) != 2 {
-		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: expected target:ENV_VAR", arg)
+	parts := strings.SplitN(arg, ":", 3)
+	if len(parts) < 2 {
+		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: expected target:ENV_VAR[:host]", arg)
+	}
+	if slices.Contains(parts, "") {
+		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: target, ENV_VAR and host must not be empty", arg)
 	}
 	target := parts[0]
 	envVar := parts[1]
-	if target == "" || envVar == "" {
-		return dmfr.Secret{}, fmt.Errorf("invalid --secret-env format %q: target and ENV_VAR must not be empty", arg)
-	}
 	key := os.Getenv(envVar)
 	if key == "" {
 		return dmfr.Secret{}, fmt.Errorf("environment variable %q is not set or empty", envVar)
 	}
 	secret := dmfr.Secret{Key: key}
+	if len(parts) == 3 {
+		secret.Host = parts[2]
+	}
 	if strings.HasSuffix(target, ".json") {
 		secret.Filename = target
 	} else {

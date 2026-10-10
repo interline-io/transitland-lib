@@ -44,7 +44,7 @@ transitland validate [flags] [<reader>]
       --rt strings                         Include GTFS-RT proto message in validation report
       --rt-json                            Include GTFS-RT proto messages as JSON in validation report
       --save-fvid int                      Save report to feed version ID
-      --secret-env stringArray             Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR (requires --dmfr and --feed-id)
+      --secret-env stringArray             Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR, optionally followed by :host to limit the secret to one host or *.domain (requires --dmfr and --feed-id)
       --secrets string                     Path to DMFR Secrets file (requires --dmfr and --feed-id)
       --url-type string                    URL type in DMFR feed.urls to validate (default "static_current")
       --validation-report                  Save static validation report in database

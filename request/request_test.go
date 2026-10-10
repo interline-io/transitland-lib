@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -134,7 +135,9 @@ func TestMd5FromReader_PositionPreserved(t *testing.T) {
 
 func TestAuthorizedRequest(t *testing.T) {
 	// Any changes to test server will require adjusting size and sha1 in test cases below
+	var hits int32
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
 		jb := make(map[string]interface{})
 		jb["method"] = r.Method
 		jb["url"] = r.URL.String()
@@ -235,10 +238,72 @@ func TestAuthorizedRequest(t *testing.T) {
 			expectError: true,
 			secret:      dmfr.Secret{ReplaceUrl: "/must/be/full/url"},
 		},
+		{
+			name:       "query_param in scope",
+			url:        "/get",
+			auth:       dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			checkkey:   "url",
+			checkvalue: "/get?api_key=abcd",
+			checkcode:  200,
+			secret:     dmfr.Secret{Key: "abcd", Host: "127.0.0.1"},
+		},
+		{
+			// The scope applies to the replacement URL's host, not the feed URL's.
+			name:       "replace_url in scope",
+			url:        "/get",
+			auth:       dmfr.FeedAuthorization{Type: "replace_url"},
+			checkkey:   "url",
+			checkvalue: "/anything/test",
+			checkcode:  200,
+			secret:     dmfr.Secret{ReplaceUrl: strings.Replace(ts.URL, "127.0.0.1", "localhost", 1) + "/anything/test", Host: "localhost"},
+		},
+		{
+			name:        "query_param out of scope",
+			url:         "/get",
+			auth:        dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			expectError: true,
+			secret:      dmfr.Secret{Key: "abcd", Host: "example.com"},
+		},
+		{
+			name:        "path_segment out of scope",
+			url:         "/anything/{}/ok",
+			auth:        dmfr.FeedAuthorization{Type: "path_segment"},
+			expectError: true,
+			secret:      dmfr.Secret{Key: "abcd", Host: "example.com"},
+		},
+		{
+			name:        "header out of scope",
+			url:         "/headers",
+			auth:        dmfr.FeedAuthorization{Type: "header", ParamName: "Auth"},
+			expectError: true,
+			secret:      dmfr.Secret{Key: "abcd", Host: "example.com"},
+		},
+		{
+			name:        "basic_auth out of scope",
+			url:         "/basic-auth/efgh/ijkl",
+			auth:        dmfr.FeedAuthorization{Type: "basic_auth"},
+			expectError: true,
+			secret:      dmfr.Secret{Username: "efgh", Password: "ijkl", Host: "example.com"},
+		},
+		{
+			name:        "replace_url out of scope",
+			url:         "/get",
+			auth:        dmfr.FeedAuthorization{Type: "replace_url"},
+			expectError: true,
+			secret:      dmfr.Secret{ReplaceUrl: ts.URL + "/anything/test", Host: "example.com"},
+		},
+		{
+			name:        "invalid scope",
+			url:         "/get",
+			auth:        dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			expectError: true,
+			secret:      dmfr.Secret{Key: "abcd", Host: "127.0.0.1:443"},
+		},
 	}
 	ctx := context.TODO()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			atomic.StoreInt32(&hits, 0)
 			var out bytes.Buffer
 			fr, err := AuthenticatedRequest(ctx, &out, ts.URL+tc.url, WithAuth(tc.secret, tc.auth), WithAllowHTTPUnfiltered)
 			if err != nil {
@@ -247,7 +312,13 @@ func TestAuthorizedRequest(t *testing.T) {
 			}
 			ferr := fr.FetchError
 			if tc.expectError && ferr != nil {
-				// ok
+				// Nothing reached the server, and the error quotes no credential.
+				assert.Equal(t, int32(0), atomic.LoadInt32(&hits), "the request reached the server")
+				for _, s := range []string{tc.secret.Key, tc.secret.Password} {
+					if s != "" {
+						assert.NotContains(t, ferr.Error(), s)
+					}
+				}
 				return
 			} else if tc.expectError && ferr == nil {
 				t.Error("expected error")

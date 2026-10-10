@@ -23,15 +23,23 @@ import (
 // Registries (loopback, RFC1918, link-local, multicast, the cloud metadata
 // address, etc.) and restricts IPv6 to global unicast. It runs as a
 // net.Dialer.Control hook, so it sees the resolved IP rather than the
-// hostname, closing basic DNS rebinding and multi-A-record gaps. Connections
-// to private destinations require opting out via Http.AllowHTTPUnfiltered.
+// hostname, closing basic DNS rebinding and multi-A-record gaps. HTTP
+// connections to private destinations require opting out via
+// Http.AllowHTTPUnfiltered; FTP connections can't opt out.
 //
 // Port restriction is disabled (WithAnyPort): legitimate public GTFS feeds
 // commonly serve from non-standard HTTPS ports (8443, 4443, etc.). The
-// library only ever uses http.Client, so the dial port doesn't change the
-// protocol — port allowlisting would block real feeds without preventing
-// any attack the IP-based filter doesn't already cover.
+// library's HTTP and FTP clients pick the protocol, not the dial port, so
+// port allowlisting would block real feeds without preventing any attack the
+// IP-based filter doesn't already cover.
 var defaultGuardian = ssrf.New(ssrf.WithAnyPort())
+
+// safeDialer makes every guarded connection, for HTTP and FTP alike.
+var safeDialer = &net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+	Control:   defaultGuardian.Safe,
+}
 
 // safeTransport is shared across all DownloadAuth calls so that connection
 // pooling and HTTP/2 reuse work across feed fetches.
@@ -42,11 +50,7 @@ var safeTransport = func() *http.Transport {
 	} else {
 		t = &http.Transport{}
 	}
-	t.DialContext = (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-		Control:   defaultGuardian.Safe,
-	}).DialContext
+	t.DialContext = safeDialer.DialContext
 	return t
 }()
 
@@ -217,6 +221,13 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 		}
 	}
 	ustr = u.String()
+	// Check the host that receives the secret, which for replace_url is the
+	// host of the secret's own URL.
+	if auth.Type != "" {
+		if err := checkSecretHost(r.secret, u.Hostname()); err != nil {
+			return nil, 0, err
+		}
+	}
 
 	// Prepare HTTP request
 	req, err := http.NewRequestWithContext(ctx, "GET", ustr, nil)
@@ -224,12 +235,15 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 		return nil, 0, errors.New("invalid request")
 	}
 
-	// Set basic auth, if used
+	// Set a secret carried in a header, noting which header for CheckRedirect
+	var authHeader string
 	switch auth.Type {
 	case "basic_auth":
 		req.SetBasicAuth(r.secret.Username, r.secret.Password)
+		authHeader = "Authorization"
 	case "header":
 		req.Header.Add(auth.ParamName, r.secret.Key)
+		authHeader = auth.ParamName
 	}
 
 	// Make HTTP request
@@ -249,6 +263,21 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 				return fmt.Errorf("stopped after %d redirects", maxRedirects)
 			}
 			removeDefaultPortFromHost(req)
+			if auth.Type == "" {
+				return nil
+			}
+			ok, err := r.secret.MatchHost(req.URL.Hostname())
+			if err != nil {
+				return err
+			}
+			if !ok {
+				// Off the secret's hosts, drop the header carrying the secret. A secret
+				// in the URL may reappear in the Location, so that redirect fails.
+				if authHeader == "" {
+					return fmt.Errorf("redirect to host %q is outside the secret's scope", req.URL.Hostname())
+				}
+				req.Header.Del(authHeader)
+			}
 			return nil
 		},
 	}

@@ -3,14 +3,17 @@ package request
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseRetryAfter(t *testing.T) {
@@ -432,4 +435,104 @@ func TestHttp_DownloadAuth_RedirectLoop(t *testing.T) {
 	// CheckRedirect fires when len(via) >= MaxRedirects, so the initial request
 	// plus (MaxRedirects - 1) redirects are followed before the cap triggers.
 	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
+}
+
+// routeHostsTo sends every connection made through http.DefaultTransport to
+// srv, so a test can fetch any hostname; srv sees the name in r.Host.
+func routeHostsTo(t *testing.T, srv *httptest.Server) {
+	orig := http.DefaultTransport
+	t.Cleanup(func() { http.DefaultTransport = orig })
+	addr := srv.Listener.Addr().String()
+	http.DefaultTransport = &http.Transport{
+		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			var d net.Dialer
+			return d.DialContext(ctx, network, addr)
+		},
+	}
+}
+
+func TestHttp_DownloadAuth_SecretHostRedirect(t *testing.T) {
+	const key = "secret123"
+	reached := make(chan *http.Request, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Host == "feed.example.test" {
+			// Redirect to the host named by "to", keeping the request URI as an
+			// nginx $request_uri redirect does.
+			http.Redirect(w, r, "http://"+r.URL.Query().Get("to")+r.URL.RequestURI(), http.StatusFound)
+			return
+		}
+		reached <- r.Clone(context.Background())
+		w.Write([]byte("ok"))
+	}))
+	defer ts.Close()
+	routeHostsTo(t, ts)
+
+	testcases := []struct {
+		name    string
+		auth    dmfr.FeedAuthorization
+		secret  dmfr.Secret
+		to      string
+		refused bool // the redirect fails instead of being followed
+		carried bool // the redirect target receives the secret
+	}{
+		{
+			name:    "header in scope",
+			auth:    dmfr.FeedAuthorization{Type: "header", ParamName: "apikey"},
+			secret:  dmfr.Secret{Key: key, Host: "*.example.test"},
+			to:      "cdn.example.test",
+			carried: true,
+		},
+		{
+			name:   "header off scope",
+			auth:   dmfr.FeedAuthorization{Type: "header", ParamName: "apikey"},
+			secret: dmfr.Secret{Key: key, Host: "feed.example.test"},
+			to:     "other.example.net",
+		},
+		{
+			// net/http keeps Authorization on a redirect to a subdomain, which
+			// this exact scope doesn't cover.
+			name:   "basic_auth to a subdomain off scope",
+			auth:   dmfr.FeedAuthorization{Type: "basic_auth"},
+			secret: dmfr.Secret{Username: "user", Password: key, Host: "feed.example.test"},
+			to:     "cdn.feed.example.test",
+		},
+		{
+			name:    "query_param off scope",
+			auth:    dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			secret:  dmfr.Secret{Key: key, Host: "feed.example.test"},
+			to:      "other.example.net",
+			refused: true,
+		},
+		{
+			name:    "path_segment off scope",
+			auth:    dmfr.FeedAuthorization{Type: "path_segment"},
+			secret:  dmfr.Secret{Key: key, Host: "feed.example.test"},
+			to:      "other.example.net",
+			refused: true,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := &Http{AllowHTTPUnfiltered: true}
+			h.SetSecret(tc.secret)
+			body, _, err := h.DownloadAuth(context.Background(), "http://feed.example.test/feed/{}?to="+tc.to, tc.auth)
+			if tc.refused {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "outside the secret's scope")
+				assert.Empty(t, reached, "the redirect reached the other host")
+				return
+			}
+			require.NoError(t, err)
+			body.Close()
+			var r *http.Request
+			select {
+			case r = <-reached:
+			default:
+				t.Fatal("the redirect never reached the other host")
+			}
+			_, password, _ := r.BasicAuth()
+			carried := password == key || strings.Contains(fmt.Sprint(r.URL, r.Header), key)
+			assert.Equal(t, tc.carried, carried)
+		})
+	}
 }
