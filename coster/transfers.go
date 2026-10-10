@@ -9,11 +9,12 @@ import (
 	"github.com/interline-io/transitland-lib/gtfs"
 )
 
-// legOption is a leg rule matched to a fare leg, with the product row the rider would buy
-// and the fare medium used to pay.
+// legOption is a leg rule matched to a fare leg, with the product row the rider would use,
+// what the rider pays for it, and the fare medium used to pay.
 type legOption struct {
 	rule        *gtfs.FareLegRule
 	product     *gtfs.FareProduct
+	amount      float64 // nothing when the rider holds the product
 	fareMediaID string
 }
 
@@ -66,12 +67,15 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 				if p == nil {
 					continue
 				}
-				opt := legOption{rule: rule, product: p, fareMediaID: mediaID}
+				opt := legOption{rule: rule, product: p, amount: p.Amount.Val, fareMediaID: mediaID}
+				if r.held[rule.FareProductID.Val] {
+					opt.amount = 0
+				}
 				key := [2]string{rule.LegGroupID.Val, mediaID}
 				if j, ok := cheapest[key]; !ok {
 					cheapest[key] = len(options[i])
 					options[i] = append(options[i], opt)
-				} else if p.Amount.Val < options[i][j].product.Amount.Val {
+				} else if opt.amount < options[i][j].amount {
 					options[i][j] = opt
 				}
 			}
@@ -99,7 +103,7 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 			// A matching transfer rule must price the transfer. Without one, this fare leg
 			// starts a new sub-journey and costs its own product.
 			if len(transfers) == 0 {
-				fl.Amount = opt.product.Amount.Val
+				fl.Amount = opt.amount
 				search(p.next(fl, opt.fareMediaID, nil))
 				continue
 			}
@@ -212,7 +216,7 @@ func transferAmount(t transferOption, p partial, next legOption) float64 {
 	}
 	switch t.rule.FareTransferType.Val {
 	case 1: // A + AB + B, then S + BC + C
-		return ab + next.product.Amount.Val
+		return ab + next.amount
 	case 2: // AB, then S + BC
 		if !p.transferred {
 			// AB replaces A.

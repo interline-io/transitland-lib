@@ -201,6 +201,83 @@ rail,rail_fare`,
 	})
 }
 
+func TestLowestFare_Passes(t *testing.T) {
+	// A product with the draft duration fields is a pass, which never prices a trip.
+	c := newTestCoster(t, map[string]string{
+		"fare_products.txt": `
+fare_product_id,amount,currency,duration_amount,duration_type,duration_unit
+bus_fare,2.00,USD,,,
+bus_day_pass,1.00,USD,1,1,3
+rail_day_pass,5.00,USD,1,1,3`,
+		"fare_leg_rules.txt": `
+network_id,fare_product_id
+bus,bus_fare
+bus,bus_day_pass
+rail,rail_day_pass`,
+	})
+	t.Run("single ride even when a pass costs less", func(t *testing.T) {
+		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, journey(leg("bus1", "a", "b", at(8, 0), at(8, 20)))))
+	})
+	t.Run("no fare when only a pass covers the leg", func(t *testing.T) {
+		fare, err := c.LowestFare(journey(leg("rail1", "a", "b", at(8, 0), at(8, 20))))
+		require.NoError(t, err)
+		assert.Nil(t, fare)
+	})
+}
+
+func TestLowestFare_HeldProducts(t *testing.T) {
+	c := newTestCoster(t, map[string]string{
+		"rider_categories.txt": `
+rider_category_id,rider_category_name,is_default_fare_category
+adult,Adult,1
+smd,Senior,0`,
+		"fare_products.txt": `
+fare_product_id,amount,currency,rider_category_id,duration_amount,duration_type,duration_unit
+bus_fare,2.00,USD,adult,,,
+bus_fare,1.00,USD,smd,,,
+bus_month,80.00,USD,adult,1,1,5
+senior_month,40.00,USD,smd,1,1,5
+rail_fare,4.00,USD,,,,`,
+		"fare_leg_rules.txt": `
+network_id,fare_product_id
+bus,bus_fare
+bus,bus_month
+bus,senior_month
+rail,rail_fare`,
+	})
+	buses := journey(
+		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
+		leg("bus2", "b", "c", at(8, 30), at(8, 50)),
+	)
+	busThenRail := journey(
+		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
+		leg("rail1", "b", "c", at(8, 30), at(8, 50)),
+	)
+	rider := func(j Journey, categories []string, held ...string) Journey {
+		j.RiderCategoryIDs, j.FareProductIDs = categories, held
+		return j
+	}
+	t.Run("held pass covers every leg it lists", func(t *testing.T) {
+		assert.Equal(t, map[string]float64{"": 0}, fareAmounts(t, c, rider(buses, nil, "bus_month")))
+	})
+	t.Run("legs outside the pass still cost", func(t *testing.T) {
+		fare, err := c.LowestFare(rider(busThenRail, nil, "bus_month"))
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 4.00, fare.Amount)
+		assert.Equal(t, "bus_month", fare.FareLegs[0].Product.FareProductID.Val)
+		assert.Equal(t, 0.0, fare.FareLegs[0].Amount)
+	})
+	t.Run("held pass needs one of its categories", func(t *testing.T) {
+		assert.Equal(t, map[string]float64{"": 4.00}, fareAmounts(t, c, rider(buses, nil, "senior_month")))
+		assert.Equal(t, map[string]float64{"": 0}, fareAmounts(t, c, rider(buses, []string{"smd"}, "senior_month")))
+	})
+	t.Run("unknown product", func(t *testing.T) {
+		_, err := c.LowestFare(rider(buses, nil, "token_book"))
+		assert.ErrorContains(t, err, `unknown fare product "token_book"`)
+	})
+}
+
 func TestLowestFare_FareLegs(t *testing.T) {
 	c := newTestCoster(t, transferFeed, map[string]string{
 		"fare_transfer_rules.txt": `

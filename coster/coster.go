@@ -2,7 +2,8 @@
 //
 // It follows the adopted specification, including effective fare legs from
 // fare_leg_join_rules.txt, rule_priority, timeframes, and chained transfers. It ignores
-// Interline's draft extensions, such as transfer_only and filter_fare_product_id.
+// Interline's draft extensions, such as transfer_only and filter_fare_product_id, except
+// that fare products with the draft duration fields are passes, which never price a trip.
 // It is based on an earlier internal implementation.
 package coster
 
@@ -22,6 +23,10 @@ type Journey struct {
 	// RiderCategoryIDs lists the categories that apply to the rider, by rider_category_id.
 	// When empty, the feed's default rider categories apply.
 	RiderCategoryIDs []string
+	// FareProductIDs lists products the rider already holds, such as passes. A fare leg that
+	// one of them covers costs nothing, using the product's row for one of the rider's
+	// categories. The spec has no validity dates, so a held product counts for the whole journey.
+	FareProductIDs []string
 	// FareMediaIDs lists the fare media available to the rider.
 	// When empty, every fare medium in the feed is a candidate.
 	FareMediaIDs []string
@@ -90,6 +95,10 @@ func (c *Coster) LowestFare(journey Journey) (*Fare, error) {
 	if err != nil {
 		return nil, err
 	}
+	held, err := c.heldProducts(journey.FareProductIDs)
+	if err != nil {
+		return nil, err
+	}
 	mediaIDs, err := c.fareMediaOptions(journey.FareMediaIDs)
 	if err != nil {
 		return nil, err
@@ -104,12 +113,14 @@ func (c *Coster) LowestFare(journey Journey) (*Fare, error) {
 			return nil, err
 		}
 	}
-	return c.lowestFare(fareLegs, rules, rider{categories: categories, fareMediaIDs: mediaIDs})
+	return c.lowestFare(fareLegs, rules, rider{categories: categories, held: held, fareMediaIDs: mediaIDs})
 }
 
-// rider describes who pays a fare: their rider categories and the fare media they can use.
+// rider describes who pays a fare: their rider categories, the products they hold, and the
+// fare media they can use.
 type rider struct {
 	categories   map[string]bool
+	held         map[string]bool
 	fareMediaIDs []string
 }
 
@@ -128,6 +139,18 @@ func (c *Coster) riderCategorySet(ids []string) (map[string]bool, error) {
 				ret[id] = true
 			}
 		}
+	}
+	return ret, nil
+}
+
+// heldProducts returns the fare products a rider holds.
+func (c *Coster) heldProducts(ids []string) (map[string]bool, error) {
+	ret := map[string]bool{}
+	for _, id := range ids {
+		if _, ok := c.products[id]; !ok {
+			return nil, fmt.Errorf("unknown fare product %q", id)
+		}
+		ret[id] = true
 	}
 	return ret, nil
 }
@@ -157,6 +180,11 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	rows := c.products[id]
 	for i := range rows {
 		p := &rows[i]
+		if p.DurationAmount.Valid && !r.held[id] {
+			// A row with the draft duration fields is a pass, which prices a trip only when
+			// the rider holds it.
+			continue
+		}
 		if v := p.RiderCategoryID.Val; v != "" && !r.categories[v] {
 			continue
 		}
