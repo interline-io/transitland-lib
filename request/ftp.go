@@ -30,6 +30,9 @@ func (r Ftp) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAuthor
 	if err != nil {
 		return nil, 0, errors.New("could not parse url")
 	}
+	if auth.Type == "basic_auth" && !r.secret.MatchHost(u.Hostname()) {
+		return nil, 0, fmt.Errorf("secret is not allowed for host %q", u.Hostname())
+	}
 	p := u.Port()
 	if p == "" {
 		p = "21"

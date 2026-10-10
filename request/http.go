@@ -217,6 +217,10 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 		}
 	}
 	ustr = u.String()
+	// Never send a host-scoped secret to a host outside its scope.
+	if auth.Type != "" && !r.secret.MatchHost(u.Hostname()) {
+		return nil, 0, fmt.Errorf("secret is not allowed for host %q", u.Hostname())
+	}
 
 	// Prepare HTTP request
 	req, err := http.NewRequestWithContext(ctx, "GET", ustr, nil)
@@ -249,6 +253,18 @@ func (r Http) DownloadAuth(ctx context.Context, ustr string, auth dmfr.FeedAutho
 				return fmt.Errorf("stopped after %d redirects", maxRedirects)
 			}
 			removeDefaultPortFromHost(req)
+			// On a redirect off the secret's hosts, drop the headers carrying the
+			// secret and the Referer, which quotes the previous URL and any
+			// query_param key.
+			if !r.secret.MatchHost(req.URL.Hostname()) {
+				switch auth.Type {
+				case "basic_auth":
+					req.Header.Del("Authorization")
+				case "header":
+					req.Header.Del(auth.ParamName)
+				}
+				req.Header.Del("Referer")
+			}
 			return nil
 		},
 	}

@@ -68,6 +68,34 @@ func TestSecret_MatchFeed(t *testing.T) {
 	}
 }
 
+func TestSecret_MatchHost(t *testing.T) {
+	testcases := []struct {
+		name   string
+		scope  string
+		match  string
+		expect bool
+	}{
+		{"unscoped", "", "abc.com", true},
+		{"exact", "mta.info", "mta.info", true},
+		{"exact ignores case", "mta.info", "MTA.info", true},
+		{"other host", "mta.info", "abc.com", false},
+		{"exact excludes subdomains", "mta.info", "api-endpoint.mta.info", false},
+		{"wildcard subdomain", "*.mta.info", "api-endpoint.mta.info", true},
+		{"wildcard nested subdomain", "*.mta.info", "a.b.mta.info", true},
+		{"wildcard excludes the domain itself", "*.mta.info", "mta.info", false},
+		{"wildcard needs a label boundary", "*.mta.info", "evilmta.info", false},
+		{"wildcard anchors at the end", "*.mta.info", "mta.info.abc.com", false},
+		{"wildcard without a dot matches nothing", "*mta.info", "evilmta.info", false},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			if v := (Secret{Host: tc.scope}).MatchHost(tc.match); v != tc.expect {
+				t.Errorf("got %t, expected %t", v, tc.expect)
+			}
+		})
+	}
+}
+
 func TestFeed_MatchSecrets(t *testing.T) {
 	testcases := []struct {
 		name      string

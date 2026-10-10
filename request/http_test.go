@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseRetryAfter(t *testing.T) {
@@ -432,4 +434,75 @@ func TestHttp_DownloadAuth_RedirectLoop(t *testing.T) {
 	// CheckRedirect fires when len(via) >= MaxRedirects, so the initial request
 	// plus (MaxRedirects - 1) redirects are followed before the cap triggers.
 	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
+}
+
+func TestHttp_DownloadAuth_SecretHost(t *testing.T) {
+	var requestCount int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&requestCount, 1)
+		assert.Equal(t, "secret123", r.URL.Query().Get("api_key"))
+		w.Write([]byte("ok"))
+	}))
+	defer ts.Close()
+
+	auth := dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"}
+	testcases := []struct {
+		name  string
+		scope string
+		allow bool
+	}{
+		{"unscoped", "", true},
+		{"in scope", "127.0.0.1", true},
+		{"out of scope", "mta.info", false},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			atomic.StoreInt32(&requestCount, 0)
+			h := &Http{AllowHTTPUnfiltered: true}
+			h.SetSecret(dmfr.Secret{Key: "secret123", Host: tc.scope})
+			body, _, err := h.DownloadAuth(context.Background(), ts.URL, auth)
+			if tc.allow {
+				require.NoError(t, err)
+				body.Close()
+				assert.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
+				return
+			}
+			require.Error(t, err)
+			assert.NotContains(t, err.Error(), "secret123")
+			assert.Equal(t, int32(0), atomic.LoadInt32(&requestCount), "the request reached the server")
+		})
+	}
+}
+
+func TestHttp_DownloadAuth_SecretHostRedirect(t *testing.T) {
+	var reached, leaked atomic.Bool
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached.Store(true)
+		leaked.Store(strings.Contains(fmt.Sprint(r.URL, r.Header), "secret123"))
+		w.Write([]byte("ok"))
+	}))
+	defer other.Close()
+	// Redirect to the other server under a hostname outside the secret's scope.
+	otherURL := strings.Replace(other.URL, "127.0.0.1", "localhost", 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, otherURL, http.StatusFound)
+	}))
+	defer ts.Close()
+
+	for _, auth := range []dmfr.FeedAuthorization{
+		{Type: "header", ParamName: "apikey"},
+		// The Referer would quote the first URL, key included.
+		{Type: "query_param", ParamName: "api_key"},
+	} {
+		t.Run(auth.Type, func(t *testing.T) {
+			reached.Store(false)
+			h := &Http{AllowHTTPUnfiltered: true}
+			h.SetSecret(dmfr.Secret{Key: "secret123", Host: "127.0.0.1"})
+			body, _, err := h.DownloadAuth(context.Background(), ts.URL, auth)
+			require.NoError(t, err)
+			body.Close()
+			assert.True(t, reached.Load(), "the redirect never reached the other host")
+			assert.False(t, leaked.Load(), "the secret followed the redirect")
+		})
+	}
 }
