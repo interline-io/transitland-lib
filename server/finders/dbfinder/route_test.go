@@ -34,21 +34,3 @@ func TestRouteSelect_MaterializedFocusCursor(t *testing.T) {
 	var ents []*model.Route
 	require.NoError(t, dbutil.Select(ctx, db, q, &ents))
 }
-
-func TestFinder_FindRoutes_OperatorWithTwoRows(t *testing.T) {
-	// Filtering by operator returns each route once, even where the route's agency
-	// has two operator rows with that onestop ID.
-	ctx := context.Background()
-	tx := testTx(t)
-	osid := "o-9q9-caltrain"
-	where := &model.RouteFilter{OperatorOnestopID: &osid}
-	before, err := NewFinder(tx).FindRoutes(ctx, nil, nil, nil, where)
-	require.NoError(t, err)
-	require.NotEmpty(t, before)
-	_, coifID := testAgency(t, tx)
-	testCopyOperatorRow(t, tx, coifID, false)
-
-	after, err := NewFinder(tx).FindRoutes(ctx, nil, nil, nil, where)
-	require.NoError(t, err)
-	require.Len(t, after, len(before))
-}

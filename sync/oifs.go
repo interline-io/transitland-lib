@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/interline-io/log"
@@ -31,6 +32,27 @@ type agencyPlace struct {
 	Adm0name tt.String
 }
 
+// refreshOifSQL rewrites a matched operator-in-feed row's resolved fields where
+// any changed. Each value is bound twice, to set it and to compare it, so an
+// unchanged row is left alone.
+const refreshOifSQL = `update current_operators_in_feed set
+	resolved_onestop_id = ?,
+	resolved_name = ?,
+	resolved_short_name = ?,
+	resolved_places = ?,
+	resolved_gtfs_agency_id = ?
+where id = ? and (
+	resolved_onestop_id is distinct from ?
+	or resolved_name is distinct from ?
+	or resolved_short_name is distinct from ?
+	or resolved_places is distinct from ?
+	or resolved_gtfs_agency_id is distinct from ?
+)`
+
+// deleteHiddenOifsSQL removes the rows of operators that sync has soft-deleted.
+const deleteHiddenOifsSQL = `delete from current_operators_in_feed
+where operator_id in (select id from current_operators where deleted_at is not null)`
+
 var nameTilde = "[-:&@/]"
 var nameFilter = "[^[:alnum:]~><]"
 
@@ -43,10 +65,12 @@ func filterName(name string) string {
 
 func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
 	agencyPlaces := []agencyPlace{}
-	if err := atx.Select(ctx, &agencyPlaces, "select name,adm0name,adm1name from tl_agency_places where agency_id = ? AND rank > 0.2 order by rank desc", id); err != nil {
+	if err := atx.Select(ctx, &agencyPlaces, "select name,adm0name,adm1name from tl_agency_places where agency_id = ? AND rank > 0.2 order by rank desc, id", id); err != nil {
 		return "", err
 	}
-	uniquePlaces := map[string]bool{}
+	// Places stay in rank order, each listed once, so the same rows always give
+	// the same string.
+	places := []string{}
 	for _, a := range agencyPlaces {
 		suba := []string{}
 		if a.Name.Valid {
@@ -58,13 +82,10 @@ func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
 		if a.Adm0name.Valid {
 			suba = append(suba, a.Adm0name.Val)
 		}
-		if len(suba) > 0 {
-			uniquePlaces[strings.Join(suba, ", ")] = true
+		place := strings.Join(suba, ", ")
+		if len(suba) > 0 && !slices.Contains(places, place) {
+			places = append(places, place)
 		}
-	}
-	places := []string{}
-	for k := range uniquePlaces {
-		places = append(places, k)
 	}
 	return strings.Join(places, " / "), nil
 }
@@ -112,35 +133,24 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 				}
 			}
 		}
-		// Match or insert
+		places, err := getPlaces(ctx, atx, agencyID)
+		if err != nil {
+			return false, err
+		}
+		oif.ResolvedPlaces.Set(places)
+		// Match or insert. A matched row is refreshed, not kept as first written:
+		// the operator may have a new name or the agency new places, and a NULL
+		// agency id, written before the feed had a version, matches ''.
 		check := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}
 		if match, ok := oiflookup[check]; ok {
 			oifmatches[match] = true
-			// A row written before the feed had a version holds NULL, which keys the
-			// same as the '' an agency without an agency_id resolves to (tt reads both
-			// as unset), so the row is matched but never rewritten. Set it here.
-			if oif.ResolvedGtfsAgencyID.Valid && oif.ResolvedGtfsAgencyID.Val == "" {
-				r, err := atx.Sqrl().
-					Update("current_operators_in_feed").
-					Set("resolved_gtfs_agency_id", "").
-					Where(sq.Eq{"id": match, "resolved_gtfs_agency_id": nil}).
-					ExecContext(ctx)
-				if err != nil {
-					return false, err
-				}
-				if n, err := r.RowsAffected(); err != nil {
-					return false, err
-				} else if n > 0 {
-					updated = true
-				}
+			changed, err := refreshOif(ctx, atx, match, oif)
+			if err != nil {
+				return false, err
 			}
+			updated = updated || changed
 		} else {
 			updated = true
-			if places, err := getPlaces(ctx, atx, agencyID); err != nil {
-				return false, err
-			} else {
-				oif.ResolvedPlaces.Set(places)
-			}
 			if _, err := atx.Insert(ctx, &oif); err != nil {
 				return false, err
 			}
@@ -159,6 +169,25 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 		}
 	}
 	return updated, nil
+}
+
+// refreshOif writes oif's resolved fields to row id where they differ from what
+// the row holds, and says whether any did.
+func refreshOif(ctx context.Context, atx tldb.Adapter, id int, oif dmfr.OperatorAssociatedFeed) (bool, error) {
+	vals := []any{oif.ResolvedOnestopID, oif.ResolvedName, oif.ResolvedShortName, oif.ResolvedPlaces, oif.ResolvedGtfsAgencyID}
+	r, err := atx.DBX().ExecContext(ctx, atx.DBX().Rebind(refreshOifSQL), slices.Concat(vals, []any{id}, vals)...)
+	if err != nil {
+		return false, err
+	}
+	n, err := r.RowsAffected()
+	return n > 0, err
+}
+
+// deleteHiddenOifs removes the rows of soft-deleted operators, which the finders
+// already hide, so none of them keeps an agency from its generated row.
+func deleteHiddenOifs(ctx context.Context, atx tldb.Adapter) error {
+	_, err := atx.DBX().ExecContext(ctx, atx.DBX().Rebind(deleteHiddenOifsSQL))
+	return err
 }
 
 func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool, error) {

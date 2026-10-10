@@ -135,17 +135,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		JoinClause("left join tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id").
-		// One operator row per agency, preferring an Atlas row over a generated one, so
-		// the agency is returned once. A row written before its feed had a version
-		// holds NULL where an agency without an agency_id holds ''.
-		JoinClause(`left join lateral (
-			select coif.id, coif.resolved_onestop_id
-			from current_operators_in_feed coif
-			where coif.feed_id = current_feeds.id
-			and coalesce(coif.resolved_gtfs_agency_id, '') = gtfs_agencies.agency_id
-			order by coif.operator_id is null, coif.id
-			limit 1
-		) coif on true`).
+		JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
 		Limit(finderCheckLimit(limit))
 
 	if where != nil {
@@ -303,7 +293,7 @@ const placeCityJoinSQL = `left join ne_10m_populated_places ne_place on ne_place
 // placeOperatorJoinSQL joins the operators of each association's agency, as the
 // place operators resolver loads them, so places can be ordered by their count.
 const placeOperatorJoinSQL = `left join gtfs_agencies place_agency on place_agency.id = tlap.agency_id
-left join current_operators_in_feed place_coif on place_coif.feed_id = feed_states.feed_id and coalesce(place_coif.resolved_gtfs_agency_id, '') = place_agency.agency_id
+left join current_operators_in_feed place_coif on place_coif.feed_id = feed_states.feed_id and place_coif.resolved_gtfs_agency_id = place_agency.agency_id
 left join current_operators place_co on place_co.id = place_coif.operator_id`
 
 // placeOperatorCountSQL orders places by operator count, most first.
