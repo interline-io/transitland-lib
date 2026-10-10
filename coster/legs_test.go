@@ -103,6 +103,42 @@ func TestMatchLegRules_RulePriority(t *testing.T) {
 	}
 }
 
+func TestMatchLegRules_RulePriorityTie(t *testing.T) {
+	// Rules that share the highest rule_priority all match, and the cheapest product wins.
+	feed := baseFeed()
+	feed.FareProductList = []gtfs.FareProduct{
+		fareProduct("flat_fare", 1.00, "", ""),
+		fareProduct("rail_fare", 4.00, "", ""),
+		fareProduct("rail_saver", 3.50, "", ""),
+	}
+	railRule := legRule("", "rail", "rail_fare")
+	railRule.RulePriority = tt.NewInt(1)
+	saverRule := legRule("", "rail", "rail_saver")
+	saverRule.RulePriority = tt.NewInt(1)
+	feed.FareLegRuleList = []gtfs.FareLegRule{legRule("", "", "flat_fare"), railRule, saverRule}
+	c := newTestCoster(t, feed)
+	assert.Equal(t, map[string]float64{"": 3.50}, fareAmounts(t, c, journey(leg("rail1", "c", "d", at(8, 0), at(8, 20)))))
+}
+
+func TestMatchLegRules_RouteNetworks(t *testing.T) {
+	// route_networks.txt assigns routes to networks in place of routes.network_id.
+	feed := baseFeed()
+	for i := range feed.RouteList {
+		feed.RouteList[i].NetworkID = tt.String{}
+	}
+	feed.RouteNetworkList = []gtfs.RouteNetwork{
+		{NetworkID: key("bus"), RouteID: key("bus1")},
+		{NetworkID: key("rail"), RouteID: key("rail1")},
+	}
+	feed.FareProductList = []gtfs.FareProduct{fareProduct("bus_fare", 2.00, "", ""), fareProduct("rail_fare", 4.00, "", "")}
+	feed.FareLegRuleList = []gtfs.FareLegRule{legRule("", "bus", "bus_fare"), legRule("", "rail", "rail_fare")}
+	c := newTestCoster(t, feed)
+	assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, journey(leg("bus1", "a", "b", at(8, 0), at(8, 20)))))
+	assert.Equal(t, map[string]float64{"": 4.00}, fareAmounts(t, c, journey(leg("rail1", "a", "b", at(8, 0), at(8, 20)))))
+	// A route in no network matches neither rule.
+	assert.Equal(t, map[string]float64{}, fareAmounts(t, c, journey(leg("ferry", "a", "b", at(8, 0), at(8, 20)))))
+}
+
 func TestMatchLegRules_StationAreas(t *testing.T) {
 	// A platform is in its station's areas unless it has areas of its own.
 	feed := baseFeed()
@@ -255,5 +291,68 @@ func TestFareLegs_JoinRules(t *testing.T) {
 		// A station in the rule matches its platforms.
 		c := newTestCoster(t, joinFeed(gtfs.FareLegJoinRule{FromNetworkID: str("rail"), ToNetworkID: str("rail"), FromStopID: str("station"), ToStopID: str("station")}))
 		assert.Equal(t, map[string]float64{"": 4.50}, fareAmounts(t, c, inStation))
+	})
+	t.Run("consecutive joins", func(t *testing.T) {
+		// Consecutive transfers that each match a join rule make one effective fare leg.
+		c := newTestCoster(t, joinFeed(gtfs.FareLegJoinRule{FromNetworkID: str("rail"), ToNetworkID: str("rail")}))
+		fare, err := c.LowestFare(journey(
+			leg("rail1", "a", "platform1", at(8, 0), at(8, 20)),
+			leg("rail2", "platform2", "platform3", at(8, 30), at(8, 40)),
+			leg("rail1", "platform1", "d", at(8, 50), at(9, 10)),
+		))
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		require.Len(t, fare.FareLegs, 1)
+		assert.Equal(t, []int{0, 1, 2}, fare.FareLegs[0].LegIndexes)
+		assert.Equal(t, 4.50, fare.Amount.InexactFloat64())
+	})
+	t.Run("join across networks", func(t *testing.T) {
+		// The spec asks for one network on both sides of a join rule. When a feed gives two,
+		// the effective fare leg matches only rules with an empty network_id.
+		feed := baseFeed()
+		feed.FareLegJoinRuleList = []gtfs.FareLegJoinRule{{FromNetworkID: str("rail"), ToNetworkID: str("bus")}}
+		feed.FareProductList = []gtfs.FareProduct{
+			fareProduct("rail_fare", 4.00, "", ""),
+			fareProduct("bus_fare", 2.00, "", ""),
+			fareProduct("joint_fare", 5.00, "", ""),
+		}
+		feed.FareLegRuleList = []gtfs.FareLegRule{legRule("", "rail", "rail_fare"), legRule("", "bus", "bus_fare"), legRule("", "", "joint_fare")}
+		fare, err := newTestCoster(t, feed).LowestFare(journey(
+			leg("rail1", "a", "platform1", at(8, 0), at(8, 20)),
+			leg("bus1", "platform2", "d", at(8, 30), at(8, 50)),
+		))
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		require.Len(t, fare.FareLegs, 1)
+		assert.Equal(t, 5.00, fare.Amount.InexactFloat64())
+	})
+}
+
+func TestFareLegs_JoinedLegTimes(t *testing.T) {
+	// An effective fare leg departs with its first leg and arrives with its last. The first
+	// leg here runs off-peak, and the second runs in the peak.
+	j := journey(
+		leg("rail1", "c", "platform1", at(6, 30), at(6, 50)),
+		leg("rail2", "platform2", "d", at(7, 0), at(7, 20)),
+	)
+	joined := func(rules ...gtfs.FareLegRule) *Coster {
+		feed := timeframeFeed()
+		feed.FareLegJoinRuleList = []gtfs.FareLegJoinRule{{FromNetworkID: str("rail"), ToNetworkID: str("rail")}}
+		feed.FareLegRuleList = rules
+		return newTestCoster(t, feed)
+	}
+	t.Run("departure", func(t *testing.T) {
+		c := joined(
+			gtfs.FareLegRule{NetworkID: str("rail"), FromTimeframeGroupID: str("peak"), FareProductID: str("peak_fare")},
+			gtfs.FareLegRule{NetworkID: str("rail"), FromTimeframeGroupID: str("offpeak"), FareProductID: str("offpeak_fare")},
+		)
+		assert.Equal(t, map[string]float64{"": 3.00}, fareAmounts(t, c, j))
+	})
+	t.Run("arrival", func(t *testing.T) {
+		c := joined(
+			gtfs.FareLegRule{NetworkID: str("rail"), ToTimeframeGroupID: str("peak"), FareProductID: str("peak_fare")},
+			gtfs.FareLegRule{NetworkID: str("rail"), ToTimeframeGroupID: str("offpeak"), FareProductID: str("offpeak_fare")},
+		)
+		assert.Equal(t, map[string]float64{"": 5.00}, fareAmounts(t, c, j))
 	})
 }
