@@ -818,8 +818,11 @@ type Route {
   "GTFS `routes.cemv_support`; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips on this route [0=no information, 1=supported, 2=not supported]; takes precedence over `agency.cemv_support`"
   cemv_support: Int
 
-  "GTFS `routes.network_id`; the fare network this route belongs to, referenced by `fare_leg_rules.network_id`. Feeds that use `route_networks.txt` leave this empty; see `FeedVersion.route_networks`"
+  "GTFS `routes.network_id`; the fare network that includes this route, referenced by `fare_leg_rules.network_id`. Feeds that use `route_networks.txt` leave this empty; see `networks`"
   network_id: String
+
+  "Fare networks from `route_networks.txt` that include this route; empty when the feed names networks in `routes.network_id` instead"
+  networks(limit: Int): [Network!]!
 
   "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`"
   geometry: Geometry @goField(forceResolver: true)
@@ -941,6 +944,9 @@ type Stop {
   
   "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
+
+  "Fare areas from `stop_areas.txt` that include this stop"
+  areas(limit: Int): [Area!]!
   
   "Level within the station that this stop/platform belongs to"
   level: Level
@@ -1655,6 +1661,9 @@ type FareProduct {
   "GTFS `fare_products.rider_category_id`; empty means the product is eligible for any rider category"
   rider_category_id: String
 
+  "Rider category named by `rider_category_id`; null when the product is eligible for any rider category"
+  rider_category: RiderCategory
+
   "GTFS `fare_products.fare_media_id`; fare media that can be used for this product; null means unknown"
   fare_media: FareMedia
 
@@ -1708,11 +1717,20 @@ type FareLegRule {
   "GTFS `fare_leg_rules.from_timeframe_group_id`; references `timeframes.timeframe_group_id`"
   from_timeframe_group_id: String
 
+  "Timeframes in the `from_timeframe_group_id` group; empty if the rule has no `from_timeframe_group_id`"
+  from_timeframes: [Timeframe!]!
+
   "GTFS `fare_leg_rules.to_timeframe_group_id`; references `timeframes.timeframe_group_id`"
   to_timeframe_group_id: String
 
+  "Timeframes in the `to_timeframe_group_id` group; empty if the rule has no `to_timeframe_group_id`"
+  to_timeframes: [Timeframe!]!
+
   "GTFS `fare_leg_rules.fare_product_id`; references `fare_products.fare_product_id`"
   fare_product_id: String
+
+  "Fare products with this rule's `fare_product_id`, one for each rider category and fare media"
+  fare_products: [FareProduct!]!
 
   "GTFS `fare_leg_rules.rule_priority`; when several rules match a leg, those with the highest priority apply"
   rule_priority: Int
@@ -1769,8 +1787,14 @@ type FareTransferRule {
   "GTFS `fare_transfer_rules.from_leg_group_id`"
   from_leg_group_id: String
 
+  "Fare leg rules in the `from_leg_group_id` group; empty if the rule has no `from_leg_group_id`"
+  from_leg_rules: [FareLegRule!]!
+
   "GTFS `fare_transfer_rules.to_leg_group_id`"
   to_leg_group_id: String
+
+  "Fare leg rules in the `to_leg_group_id` group; empty if the rule has no `to_leg_group_id`"
+  to_leg_rules: [FareLegRule!]!
 
   "GTFS `fare_transfer_rules.transfer_count`; -1 means no limit"
   transfer_count: Int
@@ -1787,8 +1811,14 @@ type FareTransferRule {
   "GTFS `fare_transfer_rules.fare_product_id`; empty means the transfer costs nothing"
   fare_product_id: String
 
+  "Fare products with this rule's `fare_product_id`; empty when the transfer costs nothing"
+  fare_products: [FareProduct!]!
+
   "`fare_transfer_rules.filter_fare_product_id`; the rule applies only if the rider holds this fare product, bought in advance or for the previous leg (experimental; not part of the GTFS spec)"
   filter_fare_product_id: String
+
+  "Fare products with this rule's `filter_fare_product_id` (experimental; not part of the GTFS spec)"
+  filter_fare_products: [FareProduct!]!
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!

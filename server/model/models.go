@@ -291,12 +291,14 @@ type Timeframe struct {
 type Area struct {
 	FeedOnestopID   string
 	FeedVersionSHA1 string
+	WithStopID      tt.Int
 	gtfs.Area
 }
 
 type Network struct {
 	FeedOnestopID   string
 	FeedVersionSHA1 string
+	WithRouteID     tt.Int
 	gtfs.Network
 }
 

@@ -20,6 +20,16 @@ type stopAreaLoaderParam struct {
 	After  *model.Cursor
 }
 
+type areaLoaderParam struct {
+	StopID int
+	Limit  *int
+}
+
+type networkLoaderParam struct {
+	RouteID int
+	Limit   *int
+}
+
 type frequencyLoaderParam struct {
 	TripID int
 	Limit  *int

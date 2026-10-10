@@ -144,8 +144,14 @@ func (UnimplementedFinder) FareMediaByIDs(_ context.Context, ids []int) ([]*Fare
 func (UnimplementedFinder) FareProductsByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*FareProduct, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) FareProductsByFeedVersionFareProductIDs(_ context.Context, keys []FVEntityID) ([][]*FareProduct, []error) {
+	return notImplBatch[[]*FareProduct](keys)
+}
 func (UnimplementedFinder) FareLegRulesByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*FareLegRule, error) {
 	return nil, notImplErr()
+}
+func (UnimplementedFinder) FareLegRulesByFeedVersionLegGroupIDs(_ context.Context, keys []FVEntityID) ([][]*FareLegRule, []error) {
+	return notImplBatch[[]*FareLegRule](keys)
 }
 func (UnimplementedFinder) FareLegJoinRulesByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*FareLegJoinRule, error) {
 	return nil, notImplErr()
@@ -156,8 +162,14 @@ func (UnimplementedFinder) FareTransferRulesByFeedVersionIDs(context.Context, *i
 func (UnimplementedFinder) RiderCategoriesByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*RiderCategory, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) RiderCategoriesByFeedVersionRiderCategoryIDs(_ context.Context, keys []FVEntityID) ([]*RiderCategory, []error) {
+	return notImplBatch[*RiderCategory](keys)
+}
 func (UnimplementedFinder) TimeframesByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*Timeframe, error) {
 	return nil, notImplErr()
+}
+func (UnimplementedFinder) TimeframesByFeedVersionTimeframeGroupIDs(_ context.Context, keys []FVEntityID) ([][]*Timeframe, []error) {
+	return notImplBatch[[]*Timeframe](keys)
 }
 func (UnimplementedFinder) AreasByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*Area, error) {
 	return nil, notImplErr()
@@ -165,11 +177,17 @@ func (UnimplementedFinder) AreasByFeedVersionIDs(context.Context, *int, *Cursor,
 func (UnimplementedFinder) AreasByIDs(_ context.Context, ids []int) ([]*Area, []error) {
 	return notImplBatch[*Area](ids)
 }
+func (UnimplementedFinder) AreasByStopIDs(context.Context, *int, []int) ([][]*Area, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) NetworksByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*Network, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) NetworksByIDs(_ context.Context, ids []int) ([]*Network, []error) {
 	return notImplBatch[*Network](ids)
+}
+func (UnimplementedFinder) NetworksByRouteIDs(context.Context, *int, []int) ([][]*Network, error) {
+	return nil, notImplErr()
 }
 func (UnimplementedFinder) RouteNetworksByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*RouteNetwork, error) {
 	return nil, notImplErr()

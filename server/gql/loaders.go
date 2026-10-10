@@ -53,15 +53,21 @@ type Loaders struct {
 	FareMediaByFeedVersionIDs                                     *dataloader.Loader[fareLoaderParam, []*model.FareMedia]
 	FareMediaByIDs                                                *dataloader.Loader[int, *model.FareMedia]
 	FareProductsByFeedVersionIDs                                  *dataloader.Loader[fareLoaderParam, []*model.FareProduct]
+	FareProductsByFeedVersionFareProductIDs                       *dataloader.Loader[model.FVEntityID, []*model.FareProduct]
 	FareLegRulesByFeedVersionIDs                                  *dataloader.Loader[fareLoaderParam, []*model.FareLegRule]
+	FareLegRulesByFeedVersionLegGroupIDs                          *dataloader.Loader[model.FVEntityID, []*model.FareLegRule]
 	FareLegJoinRulesByFeedVersionIDs                              *dataloader.Loader[fareLoaderParam, []*model.FareLegJoinRule]
 	FareTransferRulesByFeedVersionIDs                             *dataloader.Loader[fareLoaderParam, []*model.FareTransferRule]
 	RiderCategoriesByFeedVersionIDs                               *dataloader.Loader[fareLoaderParam, []*model.RiderCategory]
+	RiderCategoriesByFeedVersionRiderCategoryIDs                  *dataloader.Loader[model.FVEntityID, *model.RiderCategory]
 	TimeframesByFeedVersionIDs                                    *dataloader.Loader[fareLoaderParam, []*model.Timeframe]
+	TimeframesByFeedVersionTimeframeGroupIDs                      *dataloader.Loader[model.FVEntityID, []*model.Timeframe]
 	AreasByFeedVersionIDs                                         *dataloader.Loader[fareLoaderParam, []*model.Area]
 	AreasByIDs                                                    *dataloader.Loader[int, *model.Area]
+	AreasByStopIDs                                                *dataloader.Loader[areaLoaderParam, []*model.Area]
 	NetworksByFeedVersionIDs                                      *dataloader.Loader[fareLoaderParam, []*model.Network]
 	NetworksByIDs                                                 *dataloader.Loader[int, *model.Network]
+	NetworksByRouteIDs                                            *dataloader.Loader[networkLoaderParam, []*model.Network]
 	RouteNetworksByFeedVersionIDs                                 *dataloader.Loader[fareLoaderParam, []*model.RouteNetwork]
 	StopAreasByAreaIDs                                            *dataloader.Loader[stopAreaLoaderParam, []*model.StopArea]
 	FeedFetchesByFeedIDs                                          *dataloader.Loader[feedFetchLoaderParam, []*model.FeedFetch]
@@ -273,10 +279,12 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			dbf.FareProductsByFeedVersionIDs,
 			fareParamKey,
 		),
+		FareProductsByFeedVersionFareProductIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareProductsByFeedVersionFareProductIDs),
 		FareLegRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.FareLegRulesByFeedVersionIDs,
 			fareParamKey,
 		),
+		FareLegRulesByFeedVersionLegGroupIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareLegRulesByFeedVersionLegGroupIDs),
 		FareLegJoinRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.FareLegJoinRulesByFeedVersionIDs,
 			fareParamKey,
@@ -289,20 +297,34 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			dbf.RiderCategoriesByFeedVersionIDs,
 			fareParamKey,
 		),
+		RiderCategoriesByFeedVersionRiderCategoryIDs: withWaitAndCapacity(waitTime, batchSize, dbf.RiderCategoriesByFeedVersionRiderCategoryIDs),
 		TimeframesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.TimeframesByFeedVersionIDs,
 			fareParamKey,
 		),
+		TimeframesByFeedVersionTimeframeGroupIDs: withWaitAndCapacity(waitTime, batchSize, dbf.TimeframesByFeedVersionTimeframeGroupIDs),
 		AreasByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.AreasByFeedVersionIDs,
 			fareParamKey,
 		),
 		AreasByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.AreasByIDs),
+		AreasByStopIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			paramGroupAdapter(dbf.AreasByStopIDs),
+			func(p areaLoaderParam) (int, bool, *int) {
+				return p.StopID, false, p.Limit
+			},
+		),
 		NetworksByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.NetworksByFeedVersionIDs,
 			fareParamKey,
 		),
 		NetworksByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.NetworksByIDs),
+		NetworksByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			paramGroupAdapter(dbf.NetworksByRouteIDs),
+			func(p networkLoaderParam) (int, bool, *int) {
+				return p.RouteID, false, p.Limit
+			},
+		),
 		RouteNetworksByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.RouteNetworksByFeedVersionIDs,
 			fareParamKey,

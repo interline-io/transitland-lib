@@ -214,6 +214,59 @@ func TestFareResolver(t *testing.T) {
 			selector:             "feed_versions.0.routes.#.network_id",
 			selectExpectContains: []string{"LOCAL"},
 		},
+		// Records matched by GTFS id or group id, and reverse links from stops and routes
+		{
+			name:  "fare_leg_rules group references",
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_leg_rules { leg_group_id fare_products { fare_product_id rider_category_id } from_timeframes { timeframe_group_id } to_timeframes { timeframe_group_id } } } }`,
+			vars:  hw{"sha1": ctSha1},
+			expect: `{"feed_versions":[{"fare_leg_rules":[` +
+				`{"leg_group_id":"ct_local","fare_products":[{"fare_product_id":"two_zone","rider_category_id":"adult"},{"fare_product_id":"two_zone","rider_category_id":"youth"}],"from_timeframes":[],"to_timeframes":[]},` +
+				`{"leg_group_id":"ct_local","fare_products":[{"fare_product_id":"two_zone_peak","rider_category_id":"adult"}],"from_timeframes":[{"timeframe_group_id":"weekday_peak"}],"to_timeframes":[]},` +
+				`{"leg_group_id":"ct_express","fare_products":[{"fare_product_id":"two_zone","rider_category_id":"adult"},{"fare_product_id":"two_zone","rider_category_id":"youth"}],"from_timeframes":[],"to_timeframes":[]}` +
+				`]}]}`,
+		},
+		{
+			name:  "fare_transfer_rules group references",
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_transfer_rules { from_leg_rules { leg_group_id fare_product_id } to_leg_rules { leg_group_id fare_product_id } fare_products { fare_product_id } filter_fare_products { fare_product_id rider_category_id } } } }`,
+			vars:  hw{"sha1": ctSha1},
+			expect: `{"feed_versions":[{"fare_transfer_rules":[{` +
+				`"from_leg_rules":[{"leg_group_id":"ct_local","fare_product_id":"two_zone"},{"leg_group_id":"ct_local","fare_product_id":"two_zone_peak"}],` +
+				`"to_leg_rules":[{"leg_group_id":"ct_express","fare_product_id":"two_zone"}],` +
+				`"fare_products":[{"fare_product_id":"express_upgrade"}],` +
+				`"filter_fare_products":[{"fare_product_id":"two_zone","rider_category_id":"adult"},{"fare_product_id":"two_zone","rider_category_id":"youth"}]` +
+				`}]}]}`,
+		},
+		{
+			name:  "fare_products rider_category",
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_products { fare_product_id rider_category { rider_category_id rider_category_name } } } }`,
+			vars:  hw{"sha1": ctSha1},
+			expect: `{"feed_versions":[{"fare_products":[` +
+				`{"fare_product_id":"two_zone","rider_category":{"rider_category_id":"adult","rider_category_name":"Adult"}},` +
+				`{"fare_product_id":"two_zone","rider_category":{"rider_category_id":"youth","rider_category_name":"Youth"}},` +
+				`{"fare_product_id":"two_zone_peak","rider_category":{"rider_category_id":"adult","rider_category_name":"Adult"}},` +
+				`{"fare_product_id":"express_upgrade","rider_category":null},` +
+				`{"fare_product_id":"day_pass","rider_category":{"rider_category_id":"adult","rider_category_name":"Adult"}}` +
+				`]}]}`,
+		},
+		{
+			name:   "stop areas",
+			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { a: stops(where: {stop_id: "70011"}) { areas { area_id } } b: stops(where: {stop_id: "70262"}) { areas { area_id } } c: stops(where: {stop_id: "70021"}) { areas { area_id } } } }`,
+			vars:   hw{"sha1": ctSha1},
+			expect: `{"feed_versions":[{"a":[{"areas":[{"area_id":"zone1"}]}],"b":[{"areas":[{"area_id":"zone4"}]}],"c":[{"areas":[]}]}]}`,
+		},
+		{
+			name:   "route networks",
+			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { a: routes(where: {route_id: "Lo-130"}) { networks { network_id } } b: routes(where: {route_id: "Bu-130"}) { networks { network_id } } c: routes(where: {route_id: "Li-130"}) { networks { network_id } } } }`,
+			vars:   hw{"sha1": ctSha1},
+			expect: `{"feed_versions":[{"a":[{"networks":[{"network_id":"local"}]}],"b":[{"networks":[{"network_id":"express"}]}],"c":[{"networks":[]}]}]}`,
+		},
+		{
+			// ctran-flex names its network only in routes.network_id, so there is no network record
+			name:   "route networks from routes.network_id",
+			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { routes(where: {route_id: "0553af3e-53b8-4f98-ba47-0fc03d2404de"}) { network_id networks { network_id } } } }`,
+			vars:   hw{"sha1": ctranFlexSha1},
+			expect: `{"feed_versions":[{"routes":[{"network_id":"LOCAL","networks":[]}]}]}`,
+		},
 		{
 			// Several feed versions load in one batch; the limit applies to each.
 			name:  "limit applies per feed version",

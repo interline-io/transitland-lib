@@ -68,6 +68,13 @@ func (r *fareProductResolver) FareMedia(ctx context.Context, obj *model.FareProd
 	return LoaderFor(ctx).FareMediaByIDs.Load(ctx, obj.FareMediaID.Int())()
 }
 
+func (r *fareProductResolver) RiderCategory(ctx context.Context, obj *model.FareProduct) (*model.RiderCategory, error) {
+	if !obj.RiderCategoryID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).RiderCategoriesByFeedVersionRiderCategoryIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.RiderCategoryID.Val})()
+}
+
 type fareLegRuleResolver struct{ *Resolver }
 
 func (r *fareLegRuleResolver) FeedVersion(ctx context.Context, obj *model.FareLegRule) (*model.FeedVersion, error) {
@@ -86,6 +93,27 @@ func (r *fareLegRuleResolver) ToArea(ctx context.Context, obj *model.FareLegRule
 		return nil, nil
 	}
 	return LoaderFor(ctx).AreasByIDs.Load(ctx, obj.ToAreaID.Int())()
+}
+
+func (r *fareLegRuleResolver) FromTimeframes(ctx context.Context, obj *model.FareLegRule) ([]*model.Timeframe, error) {
+	if !obj.FromTimeframeGroupID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).TimeframesByFeedVersionTimeframeGroupIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.FromTimeframeGroupID.Val})()
+}
+
+func (r *fareLegRuleResolver) ToTimeframes(ctx context.Context, obj *model.FareLegRule) ([]*model.Timeframe, error) {
+	if !obj.ToTimeframeGroupID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).TimeframesByFeedVersionTimeframeGroupIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.ToTimeframeGroupID.Val})()
+}
+
+func (r *fareLegRuleResolver) FareProducts(ctx context.Context, obj *model.FareLegRule) ([]*model.FareProduct, error) {
+	if !obj.FareProductID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).FareProductsByFeedVersionFareProductIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.FareProductID.Val})()
 }
 
 type fareLegJoinRuleResolver struct{ *Resolver }
@@ -112,6 +140,34 @@ type fareTransferRuleResolver struct{ *Resolver }
 
 func (r *fareTransferRuleResolver) FeedVersion(ctx context.Context, obj *model.FareTransferRule) (*model.FeedVersion, error) {
 	return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
+}
+
+func (r *fareTransferRuleResolver) FromLegRules(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareLegRule, error) {
+	if !obj.FromLegGroupID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).FareLegRulesByFeedVersionLegGroupIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.FromLegGroupID.Val})()
+}
+
+func (r *fareTransferRuleResolver) ToLegRules(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareLegRule, error) {
+	if !obj.ToLegGroupID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).FareLegRulesByFeedVersionLegGroupIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.ToLegGroupID.Val})()
+}
+
+func (r *fareTransferRuleResolver) FareProducts(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareProduct, error) {
+	if !obj.FareProductID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).FareProductsByFeedVersionFareProductIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.FareProductID.Val})()
+}
+
+func (r *fareTransferRuleResolver) FilterFareProducts(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareProduct, error) {
+	if !obj.FilterFareProductID.Valid {
+		return nil, nil
+	}
+	return LoaderFor(ctx).FareProductsByFeedVersionFareProductIDs.Load(ctx, model.FVEntityID{FeedVersionID: obj.FeedVersionID, EntityID: obj.FilterFareProductID.Val})()
 }
 
 type riderCategoryResolver struct{ *Resolver }

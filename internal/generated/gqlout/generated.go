@@ -333,17 +333,20 @@ type ComplexityRoot struct {
 
 	FareLegRule struct {
 		FareProductID        func(childComplexity int) int
+		FareProducts         func(childComplexity int) int
 		FeedOnestopID        func(childComplexity int) int
 		FeedVersion          func(childComplexity int) int
 		FeedVersionSHA1      func(childComplexity int) int
 		FromArea             func(childComplexity int) int
 		FromTimeframeGroupID func(childComplexity int) int
+		FromTimeframes       func(childComplexity int) int
 		ID                   func(childComplexity int) int
 		LegGroupID           func(childComplexity int) int
 		NetworkID            func(childComplexity int) int
 		RulePriority         func(childComplexity int) int
 		ToArea               func(childComplexity int) int
 		ToTimeframeGroupID   func(childComplexity int) int
+		ToTimeframes         func(childComplexity int) int
 		TransferOnly         func(childComplexity int) int
 	}
 
@@ -371,6 +374,7 @@ type ComplexityRoot struct {
 		FeedVersion     func(childComplexity int) int
 		FeedVersionSHA1 func(childComplexity int) int
 		ID              func(childComplexity int) int
+		RiderCategory   func(childComplexity int) int
 		RiderCategoryID func(childComplexity int) int
 	}
 
@@ -390,14 +394,18 @@ type ComplexityRoot struct {
 		DurationLimit       func(childComplexity int) int
 		DurationLimitType   func(childComplexity int) int
 		FareProductID       func(childComplexity int) int
+		FareProducts        func(childComplexity int) int
 		FareTransferType    func(childComplexity int) int
 		FeedOnestopID       func(childComplexity int) int
 		FeedVersion         func(childComplexity int) int
 		FeedVersionSHA1     func(childComplexity int) int
 		FilterFareProductID func(childComplexity int) int
+		FilterFareProducts  func(childComplexity int) int
 		FromLegGroupID      func(childComplexity int) int
+		FromLegRules        func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		ToLegGroupID        func(childComplexity int) int
+		ToLegRules          func(childComplexity int) int
 		TransferCount       func(childComplexity int) int
 	}
 
@@ -1159,6 +1167,7 @@ type ComplexityRoot struct {
 		Headways          func(childComplexity int, limit *int) int
 		ID                func(childComplexity int) int
 		NetworkID         func(childComplexity int) int
+		Networks          func(childComplexity int, limit *int) int
 		OnestopID         func(childComplexity int) int
 		Patterns          func(childComplexity int, where *model.RouteStopPatternFilter) int
 		RouteAttribute    func(childComplexity int) int
@@ -1304,6 +1313,7 @@ type ComplexityRoot struct {
 
 	Stop struct {
 		Alerts             func(childComplexity int, active *bool, limit *int) int
+		Areas              func(childComplexity int, limit *int) int
 		Arrivals           func(childComplexity int, limit *int, where *model.StopTimeFilter) int
 		CensusGeographies  func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		ChildLevels        func(childComplexity int, limit *int) int
@@ -1655,6 +1665,12 @@ type FareLegRuleResolver interface {
 	FromArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error)
 	ToArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error)
 
+	FromTimeframes(ctx context.Context, obj *model.FareLegRule) ([]*model.Timeframe, error)
+
+	ToTimeframes(ctx context.Context, obj *model.FareLegRule) ([]*model.Timeframe, error)
+
+	FareProducts(ctx context.Context, obj *model.FareLegRule) ([]*model.FareProduct, error)
+
 	FeedVersion(ctx context.Context, obj *model.FareLegRule) (*model.FeedVersion, error)
 }
 type FareMediaResolver interface {
@@ -1662,6 +1678,7 @@ type FareMediaResolver interface {
 }
 type FareProductResolver interface {
 	RiderCategoryID(ctx context.Context, obj *model.FareProduct) (*string, error)
+	RiderCategory(ctx context.Context, obj *model.FareProduct) (*model.RiderCategory, error)
 	FareMedia(ctx context.Context, obj *model.FareProduct) (*model.FareMedia, error)
 
 	FeedVersion(ctx context.Context, obj *model.FareProduct) (*model.FeedVersion, error)
@@ -1673,6 +1690,14 @@ type FareRuleResolver interface {
 	FeedVersion(ctx context.Context, obj *model.FareRule) (*model.FeedVersion, error)
 }
 type FareTransferRuleResolver interface {
+	FromLegRules(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareLegRule, error)
+
+	ToLegRules(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareLegRule, error)
+
+	FareProducts(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareProduct, error)
+
+	FilterFareProducts(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareProduct, error)
+
 	FeedVersion(ctx context.Context, obj *model.FareTransferRule) (*model.FeedVersion, error)
 }
 type FeedResolver interface {
@@ -1824,6 +1849,7 @@ type RiderCategoryResolver interface {
 type RouteResolver interface {
 	RouteTypeBasic(ctx context.Context, obj *model.Route) (int, error)
 
+	Networks(ctx context.Context, obj *model.Route, limit *int) ([]*model.Network, error)
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
 	Agency(ctx context.Context, obj *model.Route) (*model.Agency, error)
 
@@ -1887,6 +1913,7 @@ type ShapeResolver interface {
 type StopResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Stop) (*model.FeedVersion, error)
 	LocationGroups(ctx context.Context, obj *model.Stop, limit *int) ([]*model.LocationGroup, error)
+	Areas(ctx context.Context, obj *model.Stop, limit *int) ([]*model.Area, error)
 	Level(ctx context.Context, obj *model.Stop) (*model.Level, error)
 	Parent(ctx context.Context, obj *model.Stop) (*model.Stop, error)
 	ExternalReference(ctx context.Context, obj *model.Stop) (*model.StopExternalReference, error)
@@ -3149,6 +3176,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegRule.FareProductID(childComplexity), true
+	case "FareLegRule.fare_products":
+		if e.ComplexityRoot.FareLegRule.FareProducts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FareProducts(childComplexity), true
 	case "FareLegRule.feed_onestop_id":
 		if e.ComplexityRoot.FareLegRule.FeedOnestopID == nil {
 			break
@@ -3179,6 +3212,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegRule.FromTimeframeGroupID(childComplexity), true
+	case "FareLegRule.from_timeframes":
+		if e.ComplexityRoot.FareLegRule.FromTimeframes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FromTimeframes(childComplexity), true
 	case "FareLegRule.id":
 		if e.ComplexityRoot.FareLegRule.ID == nil {
 			break
@@ -3215,6 +3254,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareLegRule.ToTimeframeGroupID(childComplexity), true
+	case "FareLegRule.to_timeframes":
+		if e.ComplexityRoot.FareLegRule.ToTimeframes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.ToTimeframes(childComplexity), true
 	case "FareLegRule.transfer_only":
 		if e.ComplexityRoot.FareLegRule.TransferOnly == nil {
 			break
@@ -3343,6 +3388,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareProduct.ID(childComplexity), true
+	case "FareProduct.rider_category":
+		if e.ComplexityRoot.FareProduct.RiderCategory == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.RiderCategory(childComplexity), true
 	case "FareProduct.rider_category_id":
 		if e.ComplexityRoot.FareProduct.RiderCategoryID == nil {
 			break
@@ -3423,6 +3474,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareTransferRule.FareProductID(childComplexity), true
+	case "FareTransferRule.fare_products":
+		if e.ComplexityRoot.FareTransferRule.FareProducts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FareProducts(childComplexity), true
 	case "FareTransferRule.fare_transfer_type":
 		if e.ComplexityRoot.FareTransferRule.FareTransferType == nil {
 			break
@@ -3453,12 +3510,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareTransferRule.FilterFareProductID(childComplexity), true
+	case "FareTransferRule.filter_fare_products":
+		if e.ComplexityRoot.FareTransferRule.FilterFareProducts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FilterFareProducts(childComplexity), true
 	case "FareTransferRule.from_leg_group_id":
 		if e.ComplexityRoot.FareTransferRule.FromLegGroupID == nil {
 			break
 		}
 
 		return e.ComplexityRoot.FareTransferRule.FromLegGroupID(childComplexity), true
+	case "FareTransferRule.from_leg_rules":
+		if e.ComplexityRoot.FareTransferRule.FromLegRules == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FromLegRules(childComplexity), true
 	case "FareTransferRule.id":
 		if e.ComplexityRoot.FareTransferRule.ID == nil {
 			break
@@ -3471,6 +3540,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FareTransferRule.ToLegGroupID(childComplexity), true
+	case "FareTransferRule.to_leg_rules":
+		if e.ComplexityRoot.FareTransferRule.ToLegRules == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.ToLegRules(childComplexity), true
 	case "FareTransferRule.transfer_count":
 		if e.ComplexityRoot.FareTransferRule.TransferCount == nil {
 			break
@@ -7171,6 +7246,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Route.NetworkID(childComplexity), true
+	case "Route.networks":
+		if e.ComplexityRoot.Route.Networks == nil {
+			break
+		}
+
+		args, err := ec.field_Route_networks_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Route.Networks(childComplexity, args["limit"].(*int)), true
 	case "Route.onestop_id":
 		if e.ComplexityRoot.Route.OnestopID == nil {
 			break
@@ -7841,6 +7927,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Stop.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int)), true
+	case "Stop.areas":
+		if e.ComplexityRoot.Stop.Areas == nil {
+			break
+		}
+
+		args, err := ec.field_Stop_areas_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Stop.Areas(childComplexity, args["limit"].(*int)), true
 	case "Stop.arrivals":
 		if e.ComplexityRoot.Stop.Arrivals == nil {
 			break
@@ -11203,8 +11300,11 @@ type Route {
   "GTFS ` + "`" + `routes.cemv_support` + "`" + `; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips on this route [0=no information, 1=supported, 2=not supported]; takes precedence over ` + "`" + `agency.cemv_support` + "`" + `"
   cemv_support: Int
 
-  "GTFS ` + "`" + `routes.network_id` + "`" + `; the fare network this route belongs to, referenced by ` + "`" + `fare_leg_rules.network_id` + "`" + `. Feeds that use ` + "`" + `route_networks.txt` + "`" + ` leave this empty; see ` + "`" + `FeedVersion.route_networks` + "`" + `"
+  "GTFS ` + "`" + `routes.network_id` + "`" + `; the fare network that includes this route, referenced by ` + "`" + `fare_leg_rules.network_id` + "`" + `. Feeds that use ` + "`" + `route_networks.txt` + "`" + ` leave this empty; see ` + "`" + `networks` + "`" + `"
   network_id: String
+
+  "Fare networks from ` + "`" + `route_networks.txt` + "`" + ` that include this route; empty when the feed names networks in ` + "`" + `routes.network_id` + "`" + ` instead"
+  networks(limit: Int): [Network!]!
 
   "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see ` + "`" + `geometries` + "`" + `"
   geometry: Geometry @goField(forceResolver: true)
@@ -11326,6 +11426,9 @@ type Stop {
   
   "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
+
+  "Fare areas from ` + "`" + `stop_areas.txt` + "`" + ` that include this stop"
+  areas(limit: Int): [Area!]!
   
   "Level within the station that this stop/platform belongs to"
   level: Level
@@ -12040,6 +12143,9 @@ type FareProduct {
   "GTFS ` + "`" + `fare_products.rider_category_id` + "`" + `; empty means the product is eligible for any rider category"
   rider_category_id: String
 
+  "Rider category named by ` + "`" + `rider_category_id` + "`" + `; null when the product is eligible for any rider category"
+  rider_category: RiderCategory
+
   "GTFS ` + "`" + `fare_products.fare_media_id` + "`" + `; fare media that can be used for this product; null means unknown"
   fare_media: FareMedia
 
@@ -12093,11 +12199,20 @@ type FareLegRule {
   "GTFS ` + "`" + `fare_leg_rules.from_timeframe_group_id` + "`" + `; references ` + "`" + `timeframes.timeframe_group_id` + "`" + `"
   from_timeframe_group_id: String
 
+  "Timeframes in the ` + "`" + `from_timeframe_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `from_timeframe_group_id` + "`" + `"
+  from_timeframes: [Timeframe!]!
+
   "GTFS ` + "`" + `fare_leg_rules.to_timeframe_group_id` + "`" + `; references ` + "`" + `timeframes.timeframe_group_id` + "`" + `"
   to_timeframe_group_id: String
 
+  "Timeframes in the ` + "`" + `to_timeframe_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `to_timeframe_group_id` + "`" + `"
+  to_timeframes: [Timeframe!]!
+
   "GTFS ` + "`" + `fare_leg_rules.fare_product_id` + "`" + `; references ` + "`" + `fare_products.fare_product_id` + "`" + `"
   fare_product_id: String
+
+  "Fare products with this rule's ` + "`" + `fare_product_id` + "`" + `, one for each rider category and fare media"
+  fare_products: [FareProduct!]!
 
   "GTFS ` + "`" + `fare_leg_rules.rule_priority` + "`" + `; when several rules match a leg, those with the highest priority apply"
   rule_priority: Int
@@ -12154,8 +12269,14 @@ type FareTransferRule {
   "GTFS ` + "`" + `fare_transfer_rules.from_leg_group_id` + "`" + `"
   from_leg_group_id: String
 
+  "Fare leg rules in the ` + "`" + `from_leg_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `from_leg_group_id` + "`" + `"
+  from_leg_rules: [FareLegRule!]!
+
   "GTFS ` + "`" + `fare_transfer_rules.to_leg_group_id` + "`" + `"
   to_leg_group_id: String
+
+  "Fare leg rules in the ` + "`" + `to_leg_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `to_leg_group_id` + "`" + `"
+  to_leg_rules: [FareLegRule!]!
 
   "GTFS ` + "`" + `fare_transfer_rules.transfer_count` + "`" + `; -1 means no limit"
   transfer_count: Int
@@ -12172,8 +12293,14 @@ type FareTransferRule {
   "GTFS ` + "`" + `fare_transfer_rules.fare_product_id` + "`" + `; empty means the transfer costs nothing"
   fare_product_id: String
 
+  "Fare products with this rule's ` + "`" + `fare_product_id` + "`" + `; empty when the transfer costs nothing"
+  fare_products: [FareProduct!]!
+
   "` + "`" + `fare_transfer_rules.filter_fare_product_id` + "`" + `; the rule applies only if the rider holds this fare product, bought in advance or for the previous leg (experimental; not part of the GTFS spec)"
   filter_fare_product_id: String
+
+  "Fare products with this rule's ` + "`" + `filter_fare_product_id` + "`" + ` (experimental; not part of the GTFS spec)"
+  filter_fare_products: [FareProduct!]!
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -14779,10 +14906,16 @@ func (ec *executionContext) childFields_FareLegRule(ctx context.Context, field g
 		return ec.fieldContext_FareLegRule_to_area(ctx, field)
 	case "from_timeframe_group_id":
 		return ec.fieldContext_FareLegRule_from_timeframe_group_id(ctx, field)
+	case "from_timeframes":
+		return ec.fieldContext_FareLegRule_from_timeframes(ctx, field)
 	case "to_timeframe_group_id":
 		return ec.fieldContext_FareLegRule_to_timeframe_group_id(ctx, field)
+	case "to_timeframes":
+		return ec.fieldContext_FareLegRule_to_timeframes(ctx, field)
 	case "fare_product_id":
 		return ec.fieldContext_FareLegRule_fare_product_id(ctx, field)
+	case "fare_products":
+		return ec.fieldContext_FareLegRule_fare_products(ctx, field)
 	case "rule_priority":
 		return ec.fieldContext_FareLegRule_rule_priority(ctx, field)
 	case "transfer_only":
@@ -14827,6 +14960,8 @@ func (ec *executionContext) childFields_FareProduct(ctx context.Context, field g
 		return ec.fieldContext_FareProduct_fare_product_name(ctx, field)
 	case "rider_category_id":
 		return ec.fieldContext_FareProduct_rider_category_id(ctx, field)
+	case "rider_category":
+		return ec.fieldContext_FareProduct_rider_category(ctx, field)
 	case "fare_media":
 		return ec.fieldContext_FareProduct_fare_media(ctx, field)
 	case "amount":
@@ -14881,8 +15016,12 @@ func (ec *executionContext) childFields_FareTransferRule(ctx context.Context, fi
 		return ec.fieldContext_FareTransferRule_id(ctx, field)
 	case "from_leg_group_id":
 		return ec.fieldContext_FareTransferRule_from_leg_group_id(ctx, field)
+	case "from_leg_rules":
+		return ec.fieldContext_FareTransferRule_from_leg_rules(ctx, field)
 	case "to_leg_group_id":
 		return ec.fieldContext_FareTransferRule_to_leg_group_id(ctx, field)
+	case "to_leg_rules":
+		return ec.fieldContext_FareTransferRule_to_leg_rules(ctx, field)
 	case "transfer_count":
 		return ec.fieldContext_FareTransferRule_transfer_count(ctx, field)
 	case "duration_limit":
@@ -14893,8 +15032,12 @@ func (ec *executionContext) childFields_FareTransferRule(ctx context.Context, fi
 		return ec.fieldContext_FareTransferRule_fare_transfer_type(ctx, field)
 	case "fare_product_id":
 		return ec.fieldContext_FareTransferRule_fare_product_id(ctx, field)
+	case "fare_products":
+		return ec.fieldContext_FareTransferRule_fare_products(ctx, field)
 	case "filter_fare_product_id":
 		return ec.fieldContext_FareTransferRule_filter_fare_product_id(ctx, field)
+	case "filter_fare_products":
+		return ec.fieldContext_FareTransferRule_filter_fare_products(ctx, field)
 	case "feed_version_sha1":
 		return ec.fieldContext_FareTransferRule_feed_version_sha1(ctx, field)
 	case "feed_onestop_id":
@@ -16303,6 +16446,8 @@ func (ec *executionContext) childFields_Route(ctx context.Context, field graphql
 		return ec.fieldContext_Route_cemv_support(ctx, field)
 	case "network_id":
 		return ec.fieldContext_Route_network_id(ctx, field)
+	case "networks":
+		return ec.fieldContext_Route_networks(ctx, field)
 	case "geometry":
 		return ec.fieldContext_Route_geometry(ctx, field)
 	case "agency":
@@ -16625,6 +16770,8 @@ func (ec *executionContext) childFields_Stop(ctx context.Context, field graphql.
 		return ec.fieldContext_Stop_feed_version(ctx, field)
 	case "location_groups":
 		return ec.fieldContext_Stop_location_groups(ctx, field)
+	case "areas":
+		return ec.fieldContext_Stop_areas(ctx, field)
 	case "level":
 		return ec.fieldContext_Stop_level(ctx, field)
 	case "parent":
@@ -19191,6 +19338,20 @@ func (ec *executionContext) field_Route_headways_args(ctx context.Context, rawAr
 	return args, nil
 }
 
+func (ec *executionContext) field_Route_networks_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Route_patterns_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -19384,6 +19545,20 @@ func (ec *executionContext) field_Stop_alerts_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Stop_areas_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -24796,6 +24971,38 @@ func (ec *executionContext) fieldContext_FareLegRule_from_timeframe_group_id(_ c
 	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _FareLegRule_from_timeframes(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_from_timeframes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().FromTimeframes(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Timeframe) graphql.Marshaler {
+			return ec.marshalNTimeframe2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_from_timeframes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timeframe(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FareLegRule_to_timeframe_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -24819,6 +25026,38 @@ func (ec *executionContext) fieldContext_FareLegRule_to_timeframe_group_id(_ con
 	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _FareLegRule_to_timeframes(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_to_timeframes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().ToTimeframes(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Timeframe) graphql.Marshaler {
+			return ec.marshalNTimeframe2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_to_timeframes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timeframe(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FareLegRule_fare_product_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -24840,6 +25079,38 @@ func (ec *executionContext) _FareLegRule_fare_product_id(ctx context.Context, fi
 }
 func (ec *executionContext) fieldContext_FareLegRule_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_fare_products(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_fare_products(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().FareProducts(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+			return ec.marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_fare_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareProduct(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _FareLegRule_rule_priority(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
@@ -25226,6 +25497,38 @@ func (ec *executionContext) _FareProduct_rider_category_id(ctx context.Context, 
 }
 func (ec *executionContext) fieldContext_FareProduct_rider_category_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FareProduct", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_rider_category(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_rider_category(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareProduct().RiderCategory(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RiderCategory) graphql.Marshaler {
+			return ec.marshalORiderCategory2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategory(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_rider_category(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareProduct",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RiderCategory(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _FareProduct_fare_media(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
@@ -25756,6 +26059,38 @@ func (ec *executionContext) fieldContext_FareTransferRule_from_leg_group_id(_ co
 	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _FareTransferRule_from_leg_rules(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_from_leg_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().FromLegRules(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegRule) graphql.Marshaler {
+			return ec.marshalNFareLegRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_from_leg_rules(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareLegRule(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FareTransferRule_to_leg_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -25777,6 +26112,38 @@ func (ec *executionContext) _FareTransferRule_to_leg_group_id(ctx context.Contex
 }
 func (ec *executionContext) fieldContext_FareTransferRule_to_leg_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_to_leg_rules(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_to_leg_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().ToLegRules(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegRule) graphql.Marshaler {
+			return ec.marshalNFareLegRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_to_leg_rules(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareLegRule(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _FareTransferRule_transfer_count(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
@@ -25894,6 +26261,38 @@ func (ec *executionContext) fieldContext_FareTransferRule_fare_product_id(_ cont
 	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _FareTransferRule_fare_products(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_fare_products(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().FareProducts(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+			return ec.marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_fare_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareProduct(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FareTransferRule_filter_fare_product_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -25915,6 +26314,38 @@ func (ec *executionContext) _FareTransferRule_filter_fare_product_id(ctx context
 }
 func (ec *executionContext) fieldContext_FareTransferRule_filter_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_filter_fare_products(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_filter_fare_products(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().FilterFareProducts(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+			return ec.marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_filter_fare_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareProduct(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _FareTransferRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
@@ -40789,6 +41220,50 @@ func (ec *executionContext) fieldContext_Route_network_id(_ context.Context, fie
 	return graphql.NewScalarFieldContext("Route", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Route_networks(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_networks(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Route().Networks(ctx, obj, fc.Args["limit"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Network) graphql.Marshaler {
+			return ec.marshalNNetwork2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetworkᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Route_networks(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Route",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Network(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Route_networks_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Route_geometry(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -44000,6 +44475,50 @@ func (ec *executionContext) fieldContext_Stop_location_groups(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Stop_location_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Stop_areas(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Stop_areas(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Stop().Areas(ctx, obj, fc.Args["limit"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Area) graphql.Marshaler {
+			return ec.marshalNArea2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAreaᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Stop_areas(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Stop",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Stop_areas_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -56444,10 +56963,118 @@ func (ec *executionContext) _FareLegRule(ctx context.Context, sel ast.SelectionS
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "from_timeframe_group_id":
 			out.Values[i] = ec._FareLegRule_from_timeframe_group_id(ctx, field, obj)
+		case "from_timeframes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_from_timeframes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "to_timeframe_group_id":
 			out.Values[i] = ec._FareLegRule_to_timeframe_group_id(ctx, field, obj)
+		case "to_timeframes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_to_timeframes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "fare_product_id":
 			out.Values[i] = ec._FareLegRule_fare_product_id(ctx, field, obj)
+		case "fare_products":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_fare_products(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "rule_priority":
 			out.Values[i] = ec._FareLegRule_rule_priority(ctx, field, obj)
 		case "transfer_only":
@@ -56645,6 +57272,39 @@ func (ec *executionContext) _FareProduct(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._FareProduct_rider_category_id(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "rider_category":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareProduct_rider_category(ctx, field, obj)
 				return res
 			}
 
@@ -56957,8 +57617,80 @@ func (ec *executionContext) _FareTransferRule(ctx context.Context, sel ast.Selec
 			}
 		case "from_leg_group_id":
 			out.Values[i] = ec._FareTransferRule_from_leg_group_id(ctx, field, obj)
+		case "from_leg_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_from_leg_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "to_leg_group_id":
 			out.Values[i] = ec._FareTransferRule_to_leg_group_id(ctx, field, obj)
+		case "to_leg_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_to_leg_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "transfer_count":
 			out.Values[i] = ec._FareTransferRule_transfer_count(ctx, field, obj)
 		case "duration_limit":
@@ -56969,8 +57701,80 @@ func (ec *executionContext) _FareTransferRule(ctx context.Context, sel ast.Selec
 			out.Values[i] = ec._FareTransferRule_fare_transfer_type(ctx, field, obj)
 		case "fare_product_id":
 			out.Values[i] = ec._FareTransferRule_fare_product_id(ctx, field, obj)
+		case "fare_products":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_fare_products(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "filter_fare_product_id":
 			out.Values[i] = ec._FareTransferRule_filter_fare_product_id(ctx, field, obj)
+		case "filter_fare_products":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_filter_fare_products(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "feed_version_sha1":
 			out.Values[i] = ec._FareTransferRule_feed_version_sha1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -63870,6 +64674,42 @@ func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Route_cemv_support(ctx, field, obj)
 		case "network_id":
 			out.Values[i] = ec._Route_network_id(ctx, field, obj)
+		case "networks":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Route_networks(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "geometry":
 			field := field
 
@@ -65974,6 +66814,42 @@ func (ec *executionContext) _Stop(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Stop_location_groups(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "areas":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Stop_areas(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -73474,6 +74350,13 @@ func (ec *executionContext) marshalORelativeDate2ᚖgithubᚗcomᚋinterlineᚑi
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) marshalORiderCategory2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategory(ctx context.Context, sel ast.SelectionSet, v *model.RiderCategory) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._RiderCategory(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalORoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx context.Context, sel ast.SelectionSet, v *model.Route) graphql.Marshaler {
