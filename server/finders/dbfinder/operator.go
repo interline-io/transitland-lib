@@ -123,7 +123,8 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 		if where.Bbox != nil || where.Within != nil || where.Near != nil {
 			q = q.
 				Join("feed_states fs_geom ON fs_geom.feed_id = coif.feed_id").
-				Join("gtfs_agencies a_geom ON a_geom.feed_version_id = fs_geom.materialized_feed_version_id AND a_geom.agency_id = coif.resolved_gtfs_agency_id").
+				// The row can hold NULL where the agency's agency_id is ''.
+				Join("gtfs_agencies a_geom ON a_geom.feed_version_id = fs_geom.materialized_feed_version_id AND a_geom.agency_id = coalesce(coif.resolved_gtfs_agency_id, '')").
 				Join("tl_agency_geometries ON tl_agency_geometries.agency_id = a_geom.id")
 			if where.Bbox != nil {
 				q = q.Where("ST_Intersects(tl_agency_geometries.geometry, ST_MakeEnvelope(?,?,?,?,4326))", where.Bbox.MinLon, where.Bbox.MinLat, where.Bbox.MaxLon, where.Bbox.MaxLat)
@@ -141,7 +142,7 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 		if where.Adm0Iso != nil || where.Adm1Iso != nil || where.Adm0Name != nil || where.Adm1Name != nil || where.CityName != nil {
 			q = q.
 				Join("feed_states ON feed_states.feed_id = coif.feed_id").
-				Join("gtfs_agencies ON gtfs_agencies.feed_version_id = feed_states.materialized_feed_version_id AND gtfs_agencies.agency_id = coif.resolved_gtfs_agency_id").
+				Join("gtfs_agencies ON gtfs_agencies.feed_version_id = feed_states.materialized_feed_version_id AND gtfs_agencies.agency_id = coalesce(coif.resolved_gtfs_agency_id, '')").
 				Join("tl_agency_places tlap ON tlap.agency_id = gtfs_agencies.id").
 				Join("ne_10m_admin_1_states_provinces ne_admin on ne_admin.name = tlap.adm1name and ne_admin.admin = tlap.adm0name")
 			if where.Adm0Iso != nil {
@@ -184,7 +185,8 @@ func operatorsByAgencyID(_ *int, _ *model.Cursor, agencyIds []int) sq.SelectBuil
 	q = q.
 		Column("a.id as agency_id").
 		Join("feed_states fs on fs.feed_id = current_feeds.id").
-		Join("gtfs_agencies a on a.feed_version_id = fs.materialized_feed_version_id and a.agency_id = coif.resolved_gtfs_agency_id").
+		// The row can hold NULL where the agency's agency_id is ''.
+		Join("gtfs_agencies a on a.feed_version_id = fs.materialized_feed_version_id and a.agency_id = coalesce(coif.resolved_gtfs_agency_id, '')").
 		Where(In("a.id", agencyIds))
 	return q
 }

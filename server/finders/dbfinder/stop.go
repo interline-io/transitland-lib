@@ -646,7 +646,8 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 			if len(agencies) > 0 {
 				q = q.
 					Join("gtfs_agencies on gtfs_agencies.id = tlrs_routes.agency_id").
-					Join("current_operators_in_feed coif ON coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id AND coif.feed_id = current_feeds.id")
+					// The row can hold NULL where the agency's agency_id is ''.
+					Join("current_operators_in_feed coif ON coalesce(coif.resolved_gtfs_agency_id, '') = gtfs_agencies.agency_id AND coif.feed_id = current_feeds.id")
 			}
 			if len(routes) > 0 && len(agencies) > 0 {
 				q = q.Where(sq.Or{

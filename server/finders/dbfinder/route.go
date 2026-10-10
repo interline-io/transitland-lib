@@ -432,10 +432,17 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 			}
 		}
 		if where.OperatorOnestopID != nil {
+			// A semi-join rather than a join, so a route is returned once even where its
+			// agency has more than one operator row with this onestop ID. The row can
+			// hold NULL where the agency's agency_id is ''.
 			q = q.
 				Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
-				JoinClause("LEFT JOIN current_operators_in_feed coif ON coif.feed_id = feed_versions.feed_id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
-				Where(sq.Eq{"coif.resolved_onestop_id": *where.OperatorOnestopID})
+				Where(`exists (
+					select 1 from current_operators_in_feed coif
+					where coif.feed_id = feed_versions.feed_id
+					and coalesce(coif.resolved_gtfs_agency_id, '') = gtfs_agencies.agency_id
+					and coif.resolved_onestop_id = ?
+				)`, *where.OperatorOnestopID)
 		}
 		if where.ServesStopOnestopID != nil {
 			q = q.JoinClause(`JOIN (

@@ -116,6 +116,24 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 		check := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}
 		if match, ok := oiflookup[check]; ok {
 			oifmatches[match] = true
+			// A row written before the feed had a version holds NULL, which keys the
+			// same as the '' an agency without an agency_id resolves to (tt reads both
+			// as unset), so the row is matched but never rewritten. Set it here.
+			if oif.ResolvedGtfsAgencyID.Valid && oif.ResolvedGtfsAgencyID.Val == "" {
+				r, err := atx.Sqrl().
+					Update("current_operators_in_feed").
+					Set("resolved_gtfs_agency_id", "").
+					Where(sq.Eq{"id": match, "resolved_gtfs_agency_id": nil}).
+					ExecContext(ctx)
+				if err != nil {
+					return false, err
+				}
+				if n, err := r.RowsAffected(); err != nil {
+					return false, err
+				} else if n > 0 {
+					updated = true
+				}
+			}
 		} else {
 			updated = true
 			if places, err := getPlaces(ctx, atx, agencyID); err != nil {
@@ -154,9 +172,14 @@ func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool
 		return false, err
 	}
 	for _, oif := range oifexisting {
-		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}] = oif.ID
+		key := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}
 		if oif.OperatorID.Valid {
-			oifmatches[oif.ID] = true // allow matching on operator associated oifs, but do not delete them
+			// An Atlas row is never deleted here, and owns its key, so a generated row
+			// for the same agency goes unmatched and is deleted below.
+			oifmatches[oif.ID] = true
+			oiflookup[key] = oif.ID
+		} else if _, ok := oiflookup[key]; !ok {
+			oiflookup[key] = oif.ID
 		}
 	}
 	agencies := []agencyOnestop{}

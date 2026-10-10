@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS "current_operators" (
 CREATE INDEX idx_current_operators_onestop_id ON "current_operators"(onestop_id);
 CREATE TABLE IF NOT EXISTS "current_operators_in_feed" (
   "id" integer primary key autoincrement,
-  "operator_id" integer not null,
+  "operator_id" integer,
   "feed_id" integer not null,
   "gtfs_agency_id" varchar(255),
   "resolved_onestop_id" varchar(255),
