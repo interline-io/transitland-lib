@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"time"
 
 	"github.com/interline-io/transitland-lib/gtfs"
@@ -39,12 +38,12 @@ type Leg struct {
 	ArrivalTime   time.Time
 }
 
-// Fare is the lowest fare for a journey paid with one fare medium.
+// Fare is the lowest fare for a journey. Each fare leg's product names the fare medium for
+// that fare leg, unless the feed leaves the medium unknown.
 type Fare struct {
-	FareMediaID string // empty when the feed defines no fare media
-	Amount      float64
-	Currency    string
-	FareLegs    []FareLeg
+	Amount   float64
+	Currency string
+	FareLegs []FareLeg
 }
 
 // FareLeg is one effective fare leg of a fare and the amount it adds to the fare.
@@ -83,9 +82,10 @@ type Coster struct {
 	listedToGroups   map[string]bool
 }
 
-// Fares returns the lowest fare for a journey with each of the rider's fare media, cheapest
-// first. It leaves out a fare medium when some fare leg has no fare for that medium.
-func (c *Coster) Fares(journey Journey) ([]Fare, error) {
+// LowestFare returns the lowest fare for a journey. Each fare leg can use any of the rider's
+// fare media, but a transfer stays on one medium. It returns nil when some fare leg has no
+// fare for the rider.
+func (c *Coster) LowestFare(journey Journey) (*Fare, error) {
 	categories, err := c.riderCategorySet(journey.RiderCategoryIDs)
 	if err != nil {
 		return nil, err
@@ -104,24 +104,13 @@ func (c *Coster) Fares(journey Journey) ([]Fare, error) {
 			return nil, err
 		}
 	}
-	var fares []Fare
-	for _, mediaID := range mediaIDs {
-		fare, ok, err := c.lowestFare(fareLegs, rules, rider{categories: categories, fareMediaID: mediaID})
-		if err != nil {
-			return nil, err
-		}
-		if ok {
-			fares = append(fares, fare)
-		}
-	}
-	sort.SliceStable(fares, func(i, j int) bool { return fares[i].Amount < fares[j].Amount })
-	return fares, nil
+	return c.lowestFare(fareLegs, rules, rider{categories: categories, fareMediaIDs: mediaIDs})
 }
 
-// rider describes who pays a fare: their rider categories and their fare medium.
+// rider describes who pays a fare: their rider categories and the fare media they can use.
 type rider struct {
-	categories  map[string]bool
-	fareMediaID string
+	categories   map[string]bool
+	fareMediaIDs []string
 }
 
 // riderCategorySet returns the rider categories for pricing a journey.
@@ -160,9 +149,10 @@ func (c *Coster) fareMediaOptions(ids []string) ([]string, error) {
 	return []string{""}, nil
 }
 
-// product returns the cheapest row of a fare product that the rider can buy, or nil when
-// there is none. An empty rider_category_id or fare_media_id doesn't restrict a row.
-func (c *Coster) product(id string, r rider) *gtfs.FareProduct {
+// product returns the cheapest row of a fare product that the rider can buy with a fare
+// medium, or nil when there is none. An empty rider_category_id or fare_media_id doesn't
+// restrict a row.
+func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	var best *gtfs.FareProduct
 	rows := c.products[id]
 	for i := range rows {
@@ -170,7 +160,7 @@ func (c *Coster) product(id string, r rider) *gtfs.FareProduct {
 		if v := p.RiderCategoryID.Val; v != "" && !r.categories[v] {
 			continue
 		}
-		if v := p.FareMediaID.Val; v != "" && v != r.fareMediaID {
+		if v := p.FareMediaID.Val; v != "" && v != mediaID {
 			continue
 		}
 		if best == nil || p.Amount.Val < best.Amount.Val {

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // transferFeed puts each network in its own leg group, with products for transfer rules.
@@ -236,4 +237,67 @@ bus,bus,-1,0,card_transfer`,
 		leg("bus2", "b", "c", at(8, 30), at(8, 50)),
 	)
 	assert.Equal(t, map[string]float64{"card": 2.00, "cash": 5.00}, fareAmounts(t, c, j))
+}
+
+// mediaFeed sells rail only for cash and the ferry only for card, while the bus takes both.
+var mediaFeed = map[string]string{
+	"fare_media.txt": `
+fare_media_id,fare_media_name,fare_media_type
+cash,Cash,0
+card,Card,2`,
+	"fare_products.txt": `
+fare_product_id,amount,currency,fare_media_id
+rail_fare,4.00,USD,cash
+ferry_fare,6.00,USD,card
+bus_fare,2.00,USD,cash
+bus_fare,2.50,USD,card
+free_transfer,0.00,USD,
+card_transfer,0.00,USD,card`,
+	"fare_leg_rules.txt": `
+leg_group_id,network_id,fare_product_id
+rail,rail,rail_fare
+ferry,ferry,ferry_fare
+bus,bus,bus_fare`,
+}
+
+func TestTransferOptions_MixedMedia(t *testing.T) {
+	t.Run("each fare leg uses a fare medium it sells, and no transfer crosses media", func(t *testing.T) {
+		c := newTestCoster(t, mediaFeed, map[string]string{
+			"fare_transfer_rules.txt": `
+from_leg_group_id,to_leg_group_id,fare_transfer_type,fare_product_id
+rail,ferry,0,free_transfer`,
+		})
+		j := journey(
+			leg("rail1", "a", "b", at(8, 0), at(8, 20)),
+			leg("ferry", "b", "c", at(8, 30), at(8, 50)),
+		)
+		// No single fare medium prices both legs.
+		assert.Equal(t, map[string]float64{}, fareAmounts(t, c, j))
+		fare, err := c.LowestFare(j)
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 4.00+6.00, fare.Amount)
+		assert.Equal(t, "cash", fare.FareLegs[0].Product.FareMediaID.Val)
+		assert.Equal(t, "card", fare.FareLegs[1].Product.FareMediaID.Val)
+		assert.Nil(t, fare.FareLegs[1].TransferRule)
+	})
+	t.Run("a transfer on one fare medium beats mixing media", func(t *testing.T) {
+		c := newTestCoster(t, mediaFeed, map[string]string{
+			"fare_transfer_rules.txt": `
+from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type,fare_product_id
+bus,bus,-1,0,card_transfer`,
+		})
+		j := journey(
+			leg("bus1", "a", "b", at(8, 0), at(8, 20)),
+			leg("bus2", "b", "c", at(8, 30), at(8, 50)),
+		)
+		// Cash is cheaper for each ride, but only card gets the free transfer.
+		fare, err := c.LowestFare(j)
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 2.50, fare.Amount)
+		for _, fl := range fare.FareLegs {
+			assert.Equal(t, "card", fl.Product.FareMediaID.Val)
+		}
+	})
 }

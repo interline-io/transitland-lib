@@ -83,19 +83,35 @@ func journey(legs ...Leg) Journey {
 	return Journey{Legs: legs}
 }
 
-// fareAmounts returns the amount of the journey's fare for each fare medium.
+// fareAmounts returns the lowest fare for the journey paid entirely with each fare medium:
+// the journey's fare media, or else every fare medium in the feed.
 func fareAmounts(t *testing.T, c *Coster, j Journey) map[string]float64 {
 	t.Helper()
-	fares, err := c.Fares(j)
-	require.NoError(t, err)
+	media := j.FareMediaIDs
+	if len(media) == 0 {
+		media = c.fareMediaIDs
+	}
 	ret := map[string]float64{}
-	for _, fare := range fares {
-		ret[fare.FareMediaID] = fare.Amount
+	if len(media) == 0 {
+		// A feed without fare media has one empty option.
+		media = []string{""}
+	}
+	for _, m := range media {
+		single := j
+		single.FareMediaIDs = nil
+		if m != "" {
+			single.FareMediaIDs = []string{m}
+		}
+		fare, err := c.LowestFare(single)
+		require.NoError(t, err)
+		if fare != nil {
+			ret[m] = fare.Amount
+		}
 	}
 	return ret
 }
 
-func TestFares_RiderCategories(t *testing.T) {
+func TestLowestFare_RiderCategories(t *testing.T) {
 	c := newTestCoster(t, map[string]string{
 		"rider_categories.txt": `
 rider_category_id,rider_category_name,is_default_fare_category
@@ -136,12 +152,12 @@ rail,rail_fare`,
 	t.Run("unknown category", func(t *testing.T) {
 		j := journey(bus)
 		j.RiderCategoryIDs = []string{"student"}
-		_, err := c.Fares(j)
+		_, err := c.LowestFare(j)
 		assert.ErrorContains(t, err, `unknown rider category "student"`)
 	})
 }
 
-func TestFares_FareMedia(t *testing.T) {
+func TestLowestFare_FareMedia(t *testing.T) {
 	c := newTestCoster(t, map[string]string{
 		"fare_media.txt": `
 fare_media_id,fare_media_name,fare_media_type
@@ -158,14 +174,15 @@ bus,bus_fare
 rail,rail_fare`,
 	})
 	bus := leg("bus1", "a", "b", at(8, 0), at(8, 20))
-	t.Run("one fare per fare medium, cheapest first", func(t *testing.T) {
-		fares, err := c.Fares(journey(bus))
+	t.Run("cheapest fare medium", func(t *testing.T) {
+		fare, err := c.LowestFare(journey(bus))
 		require.NoError(t, err)
-		require.Len(t, fares, 2)
-		assert.Equal(t, "card", fares[0].FareMediaID)
-		assert.Equal(t, 2.00, fares[0].Amount)
-		assert.Equal(t, "cash", fares[1].FareMediaID)
-		assert.Equal(t, 2.50, fares[1].Amount)
+		require.NotNil(t, fare)
+		assert.Equal(t, 2.00, fare.Amount)
+		assert.Equal(t, "card", fare.FareLegs[0].Product.FareMediaID.Val)
+	})
+	t.Run("one fare medium at a time", func(t *testing.T) {
+		assert.Equal(t, map[string]float64{"card": 2.00, "cash": 2.50}, fareAmounts(t, c, journey(bus)))
 	})
 	t.Run("listed fare media", func(t *testing.T) {
 		j := journey(bus)
@@ -179,24 +196,23 @@ rail,rail_fare`,
 	t.Run("unknown fare medium", func(t *testing.T) {
 		j := journey(bus)
 		j.FareMediaIDs = []string{"token"}
-		_, err := c.Fares(j)
+		_, err := c.LowestFare(j)
 		assert.ErrorContains(t, err, `unknown fare media "token"`)
 	})
 }
 
-func TestFares_FareLegs(t *testing.T) {
+func TestLowestFare_FareLegs(t *testing.T) {
 	c := newTestCoster(t, transferFeed, map[string]string{
 		"fare_transfer_rules.txt": `
 from_leg_group_id,to_leg_group_id,fare_transfer_type,fare_product_id
 bus,rail,0,ab`,
 	})
-	fares, err := c.Fares(journey(
+	fare, err := c.LowestFare(journey(
 		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
 		leg("rail1", "b", "c", at(8, 30), at(8, 50)),
 	))
 	require.NoError(t, err)
-	require.Len(t, fares, 1)
-	fare := fares[0]
+	require.NotNil(t, fare)
 	assert.Equal(t, 2.50, fare.Amount)
 	assert.Equal(t, "USD", fare.Currency)
 	require.Len(t, fare.FareLegs, 2)
@@ -217,7 +233,7 @@ bus,rail,0,ab`,
 	assert.Equal(t, 0.50, second.Amount)
 }
 
-func TestFares_Errors(t *testing.T) {
+func TestLowestFare_Errors(t *testing.T) {
 	c := newTestCoster(t)
 	tcs := []struct {
 		name    string
@@ -231,7 +247,7 @@ func TestFares_Errors(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := c.Fares(tc.journey)
+			_, err := c.LowestFare(tc.journey)
 			assert.EqualError(t, err, tc.err)
 		})
 	}
