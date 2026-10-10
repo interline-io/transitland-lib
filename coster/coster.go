@@ -2,9 +2,9 @@
 //
 // It follows the adopted specification, including effective fare legs from
 // fare_leg_join_rules.txt, rule_priority, timeframes, and chained transfers. It ignores
-// extensions outside the adopted spec, such as transfer_only and filter_fare_product_id,
-// except that fare products with the draft duration fields are passes, which price a trip
-// only for a rider who holds one. It is based on an earlier internal implementation.
+// extensions outside the adopted spec, such as transfer_only, except for two: fare products
+// with the draft duration fields are passes, which never price a trip, and a Coster can
+// honor filter_fare_product_id. It is based on an earlier internal implementation.
 package coster
 
 import (
@@ -15,6 +15,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/service"
+	"github.com/shopspring/decimal"
 )
 
 // Journey is a rider's transit legs, in travel order.
@@ -23,9 +24,8 @@ type Journey struct {
 	// RiderCategoryIDs lists the categories that apply to the rider, by rider_category_id.
 	// When empty, the feed's default rider categories apply.
 	RiderCategoryIDs []string
-	// FareProductIDs lists products the rider already holds, such as passes. A fare leg that
-	// one of them covers costs nothing, using the product's row for one of the rider's
-	// categories. The spec has no validity dates, so a held product counts for the whole journey.
+	// FareProductIDs lists products the rider already holds, such as passes. Each fare leg
+	// lists the held products that may cover the leg, and the leg still costs its full fare.
 	FareProductIDs []string
 	// FareMediaIDs lists the fare media available to the rider.
 	// When empty, every fare medium in the feed is a candidate.
@@ -43,10 +43,9 @@ type Leg struct {
 	ArrivalTime   time.Time
 }
 
-// Fare is the lowest fare for a journey. Each fare leg's product names the fare medium for
-// that fare leg, unless the feed leaves the medium unknown.
+// Fare is the lowest fare for a journey.
 type Fare struct {
-	Amount   float64
+	Amount   decimal.Decimal
 	Currency string
 	FareLegs []FareLeg
 }
@@ -58,11 +57,21 @@ type FareLeg struct {
 	Product         *gtfs.FareProduct      // the row of the leg rule's product that the rider buys
 	TransferRule    *gtfs.FareTransferRule // rule for the transfer into this fare leg, if any
 	TransferProduct *gtfs.FareProduct      // the transfer rule's product, if it names one
-	Amount          float64
+	Amount          decimal.Decimal
+	// FareMediaID is the fare medium used to pay. A fare leg whose product names no medium
+	// takes the medium of the transfer chain it joins, and is empty when that's unknown.
+	FareMediaID string
+	// HeldProductIDs lists products the rider holds, such as passes, that may cover this
+	// fare leg. Amount is still the full fare.
+	HeldProductIDs []string
 }
 
 // Coster calculates fares for journeys on one feed.
 type Coster struct {
+	// UseFilterFareProductID honors the proposed filter_fare_product_id extension: a transfer
+	// rule with a filter applies only to riders who hold the filter's fare product.
+	UseFilterFareProductID bool
+
 	stops           map[string]gtfs.Stop
 	stopAreas       map[string][]string
 	routeNetworks   map[string]string // network_id by route_id, empty for routes without one
@@ -155,6 +164,29 @@ func (c *Coster) heldProducts(ids []string) (map[string]bool, error) {
 	return ret, nil
 }
 
+// heldProductIDs returns the products that a fare leg's rules name and the rider holds for
+// one of the rider's categories.
+func (c *Coster) heldProductIDs(rules []*gtfs.FareLegRule, r rider) []string {
+	var ret []string
+	for _, rule := range rules {
+		id := rule.FareProductID.Val
+		if !r.held[id] || slices.Contains(ret, id) {
+			continue
+		}
+		if slices.ContainsFunc(c.products[id], func(p gtfs.FareProduct) bool { return r.eligible(&p) }) {
+			ret = append(ret, id)
+		}
+	}
+	return ret
+}
+
+// eligible reports whether a product row is for one of the rider's categories. An empty
+// rider_category_id doesn't restrict a row.
+func (r rider) eligible(p *gtfs.FareProduct) bool {
+	v := p.RiderCategoryID.Val
+	return v == "" || r.categories[v]
+}
+
 // fareMediaOptions returns the fare media for pricing a journey. A feed without fare media
 // has one empty option.
 func (c *Coster) fareMediaOptions(ids []string) ([]string, error) {
@@ -180,11 +212,11 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	rows := c.products[id]
 	for i := range rows {
 		p := &rows[i]
-		if p.DurationAmount.Valid && !r.held[id] {
-			// A row with the draft duration fields is a pass, and only a held pass prices a trip.
+		if p.DurationAmount.Valid {
+			// A row with the draft duration fields is a pass, which never prices a trip.
 			continue
 		}
-		if v := p.RiderCategoryID.Val; v != "" && !r.categories[v] {
+		if !r.eligible(p) {
 			continue
 		}
 		if v := p.FareMediaID.Val; v != "" && v != mediaID {
@@ -197,14 +229,12 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	return best
 }
 
-// location returns the timezone of fare events at a stop: the stop's or its parent
-// station's stop_timezone, or else the feed's agency timezone.
+// location returns the timezone of fare events at a stop: the stop_timezone of its station,
+// or of the stop itself when it has no parent, or else the feed's agency timezone.
 func (c *Coster) location(stopID string) (*time.Location, error) {
 	name := c.agencyTimezone
-	stop := c.stops[stopID]
-	if tz := stop.StopTimezone.Val; tz != "" {
-		name = tz
-	} else if tz := c.stops[stop.ParentStation.Val].StopTimezone.Val; tz != "" {
+	// The spec gives a stop in a station the station's timezone instead of its own.
+	if tz := c.stops[c.station(stopID)].StopTimezone.Val; tz != "" {
 		name = tz
 	}
 	loc, ok := c.locations[name]

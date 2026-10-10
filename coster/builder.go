@@ -1,6 +1,7 @@
 package coster
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,36 +15,46 @@ import (
 func New(reader adapters.Reader) (*Coster, error) {
 	// Calendars come before calendar dates, and routes before route networks, as in a copy.
 	b := NewBuilder()
-	addAll(b, reader.Agencies())
-	addAll(b, reader.Stops())
-	addAll(b, reader.StopAreas())
-	addAll(b, reader.Routes())
-	addAll(b, reader.RouteNetworks())
-	addAll(b, reader.Calendars())
-	addAll(b, reader.CalendarDates())
-	addAll(b, reader.Timeframes())
-	addAll(b, reader.FareProducts())
-	addAll(b, reader.FareMedia())
-	addAll(b, reader.RiderCategories())
-	addAll(b, reader.FareLegRules())
-	addAll(b, reader.FareLegJoinRules())
-	addAll(b, reader.FareTransferRules())
+	err := errors.Join(
+		addAll(b, reader.Agencies()),
+		addAll(b, reader.Stops()),
+		addAll(b, reader.StopAreas()),
+		addAll(b, reader.Routes()),
+		addAll(b, reader.RouteNetworks()),
+		addAll(b, reader.Calendars()),
+		addAll(b, reader.CalendarDates()),
+		addAll(b, reader.Timeframes()),
+		addAll(b, reader.FareProducts()),
+		addAll(b, reader.FareMedia()),
+		addAll(b, reader.RiderCategories()),
+		addAll(b, reader.FareLegRules()),
+		addAll(b, reader.FareLegJoinRules()),
+		addAll(b, reader.FareTransferRules()),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return b.Coster()
 }
 
-// addAll adds each entity from a reader, keyed by its own ID.
+// addAll adds each entity from a reader, keyed by its own ID, and returns the first error.
 func addAll[T any, PT interface {
 	tt.Entity
 	*T
-}](b *Builder, ents chan T) {
+}](b *Builder, ents chan T) error {
+	var ret error
 	for ent := range ents {
 		pt := PT(&ent)
-		b.add(pt.EntityID(), pt)
+		// Keep reading after an error, so the reader doesn't block on a full channel.
+		if err := b.add(pt.EntityID(), pt); err != nil && ret == nil {
+			ret = err
+		}
 	}
+	return ret
 }
 
-// Builder collects a Coster from the entities that a copy writes. Add it to the copy as
-// a copier extension, and call Coster when the copy finishes.
+// Builder is a copier extension that collects a Coster from the entities that a copy
+// writes.
 type Builder struct {
 	c *Coster
 }
@@ -67,27 +78,33 @@ func NewBuilder() *Builder {
 	}}
 }
 
-// AfterWrite collects an entity from a copy. The copier rewrites references to the IDs
-// that the writer returns, so the Builder keys entities by those IDs too.
+// AfterWrite collects an entity from a copy, keyed by the ID that the writer returned.
 func (b *Builder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
-	b.add(eid, ent)
-	return nil
+	return b.add(eid, ent)
 }
 
-// Coster loads the timezones that the collected agencies and stops name, and returns
+// Coster loads the timezones that the collected agencies and stations name, and returns
 // the Coster.
 func (b *Builder) Coster() (*Coster, error) {
 	c := b.c
-	// Load each timezone once, so fare calculations only read shared state.
+	// Load each timezone once, so fare calculations only read shared state. A stop in a
+	// station takes the station's timezone, so only stops without a parent count.
 	names := []string{c.agencyTimezone}
 	for _, stop := range c.stops {
-		names = append(names, stop.StopTimezone.Val)
+		if stop.ParentStation.Val == "" {
+			names = append(names, stop.StopTimezone.Val)
+		}
 	}
 	for _, name := range names {
 		if _, ok := c.locations[name]; ok || name == "" {
 			continue
 		}
-		loc, err := time.LoadLocation(name)
+		// tlib accepts a timezone name in any case, but LoadLocation needs the canonical name.
+		tz, ok := tt.IsValidTimezone(name)
+		if !ok {
+			return nil, fmt.Errorf("invalid timezone %q", name)
+		}
+		loc, err := time.LoadLocation(tz)
 		if err != nil {
 			return nil, fmt.Errorf("timezone %q: %w", name, err)
 		}
@@ -97,7 +114,7 @@ func (b *Builder) Coster() (*Coster, error) {
 }
 
 // add collects one entity. Its references must use the same kind of ID as id.
-func (b *Builder) add(id string, ent tt.Entity) {
+func (b *Builder) add(id string, ent tt.Entity) error {
 	c := b.c
 	switch v := ent.(type) {
 	case *gtfs.Agency:
@@ -122,7 +139,7 @@ func (b *Builder) add(id string, ent tt.Entity) {
 			svc = service.NewService(gtfs.Calendar{ServiceID: tt.NewString(v.ServiceID.Val)})
 			c.services[v.ServiceID.Val] = svc
 		}
-		svc.AddCalendarDate(*v)
+		return svc.AddCalendarDate(*v)
 	case *gtfs.Timeframe:
 		c.timeframes[v.TimeframeGroupID.Val] = append(c.timeframes[v.TimeframeGroupID.Val], *v)
 	case *gtfs.FareProduct:
@@ -144,6 +161,7 @@ func (b *Builder) add(id string, ent tt.Entity) {
 		addListed(c.listedFromGroups, v.FromLegGroupID.Val)
 		addListed(c.listedToGroups, v.ToLegGroupID.Val)
 	}
+	return nil
 }
 
 // addListed records a non-empty column value.

@@ -1,21 +1,23 @@
 package coster
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/shopspring/decimal"
 )
 
-// legOption is a leg rule matched to a fare leg, with the product row the rider would use,
-// the amount the rider pays, and the fare medium used to pay.
+// legOption is a leg rule matched to a fare leg, with the product row the rider would buy.
 type legOption struct {
 	rule        *gtfs.FareLegRule
 	product     *gtfs.FareProduct
-	amount      float64 // zero when the rider holds the product
-	fareMediaID string
+	amount      decimal.Decimal // the product row's amount
+	fareMediaID string          // the product row's fare medium, empty when it names none
 }
 
 // transferOption is a transfer rule that applies to a transfer, with the product row the
@@ -30,21 +32,20 @@ type transferOption struct {
 // partial is a fare priced through some of a journey's fare legs.
 type partial struct {
 	fareLegs []FareLeg
-	amount   float64
+	amount   decimal.Decimal
 	// State after the last fare leg
-	fareMediaID string // fare medium of the last fare leg
+	fareMediaID string // fare medium of the last fare leg, empty when unknown
 	transferred bool   // a transfer rule priced the transfer into the last fare leg
 	runCount    int    // consecutive transfers within one leg group that end at the last fare leg
 	runStart    int    // fare leg where those transfers began
 }
 
-// next returns the partial fare extended by one fare leg, paid with a fare medium and reached
-// by transfer t if not nil.
-func (p partial) next(fl FareLeg, mediaID string, t *transferOption) partial {
+// next returns the partial fare extended by one fare leg, reached by transfer t if not nil.
+func (p partial) next(fl FareLeg, t *transferOption) partial {
 	n := partial{
 		fareLegs:    append(slices.Clip(p.fareLegs), fl),
-		amount:      p.amount + fl.Amount,
-		fareMediaID: mediaID,
+		amount:      p.amount.Add(fl.Amount),
+		fareMediaID: fl.FareMediaID,
 	}
 	if t != nil {
 		n.transferred, n.runCount, n.runStart = true, t.runCount, t.runStart
@@ -67,15 +68,12 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 				if p == nil {
 					continue
 				}
-				opt := legOption{rule: rule, product: p, amount: p.Amount.Val, fareMediaID: mediaID}
-				if r.held[rule.FareProductID.Val] {
-					opt.amount = 0
-				}
-				key := [2]string{rule.LegGroupID.Val, mediaID}
+				opt := legOption{rule: rule, product: p, amount: decimal.NewFromFloat(p.Amount.Val), fareMediaID: p.FareMediaID.Val}
+				key := [2]string{rule.LegGroupID.Val, opt.fareMediaID}
 				if j, ok := cheapest[key]; !ok {
 					cheapest[key] = len(options[i])
 					options[i] = append(options[i], opt)
-				} else if opt.amount < options[i][j].amount {
+				} else if opt.amount.LessThan(options[i][j].amount) {
 					options[i][j] = opt
 				}
 			}
@@ -89,7 +87,7 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 	search = func(p partial) {
 		k := len(p.fareLegs)
 		if k == len(fareLegs) {
-			if best == nil || p.amount < best.amount {
+			if best == nil || p.amount.LessThan(best.amount) {
 				best = &p
 			}
 			return
@@ -103,31 +101,44 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 			// A matching transfer rule must price the transfer. Without one, this fare leg
 			// starts a new sub-journey and costs its own product.
 			if len(transfers) == 0 {
-				fl.Amount = opt.amount
-				search(p.next(fl, opt.fareMediaID, nil))
+				fl.Amount, fl.FareMediaID = opt.amount, opt.fareMediaID
+				search(p.next(fl, nil))
 				continue
 			}
+			// A fare leg whose product names no medium takes the transfer chain's medium.
+			fl.FareMediaID = cmp.Or(opt.fareMediaID, p.fareMediaID)
 			for _, t := range transfers {
 				fl.TransferRule, fl.TransferProduct = t.rule, t.product
 				fl.Amount = transferAmount(t, p, opt)
-				search(p.next(fl, opt.fareMediaID, &t))
+				search(p.next(fl, &t))
 			}
 		}
 	}
 	search(partial{})
-	fare := &Fare{
-		Amount:   best.amount,
-		Currency: best.fareLegs[0].Product.Currency.Val,
-		FareLegs: best.fareLegs,
-	}
-	for _, fl := range fare.FareLegs {
+	fare := &Fare{Amount: best.amount, Currency: best.fareLegs[0].Product.Currency.Val}
+	for k, fl := range best.fareLegs {
 		for _, p := range []*gtfs.FareProduct{fl.Product, fl.TransferProduct} {
-			if p != nil && p.Currency.Val != fare.Currency {
+			// tlib accepts currency codes in any case.
+			if p != nil && !strings.EqualFold(p.Currency.Val, fare.Currency) {
 				return nil, fmt.Errorf("fare mixes currencies %s and %s", fare.Currency, p.Currency.Val)
 			}
 		}
+		// Give the caller copies of the Coster's entities, which other fares share.
+		fl.LegRule, fl.Product = clone(fl.LegRule), clone(fl.Product)
+		fl.TransferRule, fl.TransferProduct = clone(fl.TransferRule), clone(fl.TransferProduct)
+		fl.HeldProductIDs = c.heldProductIDs(rules[k], r)
+		fare.FareLegs = append(fare.FareLegs, fl)
 	}
 	return fare, nil
+}
+
+// clone returns a pointer to a copy of *v, or nil when v is nil.
+func clone[T any](v *T) *T {
+	if v == nil {
+		return nil
+	}
+	ret := *v
+	return &ret
 }
 
 // transferOptions returns the transfer rules that price the transfer from the partial
@@ -139,10 +150,14 @@ func (c *Coster) transferOptions(fareLegs []fareLeg, p partial, next legOption, 
 		// Only legs in leg groups can transfer.
 		return nil
 	}
-	if p.fareMediaID != next.fareMediaID {
-		// A transfer stays on the fare medium that paid for the fare leg before it.
+	if p.fareMediaID != "" && next.fareMediaID != "" && p.fareMediaID != next.fareMediaID {
+		// A transfer stays on the fare medium that paid for the previous fare leg. A product
+		// that names no medium works with any medium.
 		return nil
 	}
+	// The transfer's product must be sold on the fare legs' medium. When neither medium is
+	// known, only a product row that names no medium applies.
+	mediaID := cmp.Or(next.fareMediaID, p.fareMediaID)
 	// Consecutive transfers within one leg group form a run: transfer_count counts its
 	// transfers, and duration_limit is measured from its first fare leg.
 	count, start := 1, k-1
@@ -158,10 +173,14 @@ func (c *Coster) transferOptions(fareLegs []fareLeg, p partial, next legOption, 
 			!withinDuration(rule, fareLegs[start], fareLegs[k]) {
 			continue
 		}
+		if id := rule.FilterFareProductID.Val; c.UseFilterFareProductID && id != "" && !r.held[id] {
+			// The rule is only for riders who hold the filter's product.
+			continue
+		}
 		t := transferOption{rule: rule}
 		if id := rule.FareProductID.Val; id != "" {
 			// A transfer whose product the rider can't buy with that medium doesn't apply.
-			if t.product = c.product(id, r, next.fareMediaID); t.product == nil {
+			if t.product = c.product(id, r, mediaID); t.product == nil {
 				continue
 			}
 		}
@@ -209,18 +228,18 @@ func withinDuration(rule *gtfs.FareTransferRule, first fareLeg, last fareLeg) bo
 // transferAmount returns what a transfer adds to the fare, following the spec's cost
 // processing for fare_transfer_type. The first transfer of a sub-journey builds on A, the
 // preceding fare leg; later transfers add to S, the running total.
-func transferAmount(t transferOption, p partial, next legOption) float64 {
-	ab := 0.0
+func transferAmount(t transferOption, p partial, next legOption) decimal.Decimal {
+	ab := decimal.Zero
 	if t.product != nil {
-		ab = t.product.Amount.Val
+		ab = decimal.NewFromFloat(t.product.Amount.Val)
 	}
 	switch t.rule.FareTransferType.Val {
 	case 1: // A + AB + B, then S + BC + C
-		return ab + next.amount
+		return ab.Add(next.amount)
 	case 2: // AB, then S + BC
 		if !p.transferred {
 			// AB replaces A.
-			return ab - p.fareLegs[len(p.fareLegs)-1].Amount
+			return ab.Sub(p.fareLegs[len(p.fareLegs)-1].Amount)
 		}
 		return ab
 	default: // A + AB, then S + BC

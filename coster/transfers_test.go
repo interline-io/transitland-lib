@@ -1,28 +1,43 @@
 package coster
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/direct"
+	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // transferFeed puts each network in its own leg group, with products for transfer rules.
-var transferFeed = map[string]string{
-	"fare_products.txt": `
-fare_product_id,amount,currency
-bus_fare,2.00,USD
-rail_fare,4.00,USD
-ferry_fare,6.00,USD
-ab,0.50,USD
-bc,1.00,USD
-discount,-1.00,USD
-upgrade,3.00,USD`,
-	"fare_leg_rules.txt": `
-leg_group_id,network_id,fare_product_id
-bus,bus,bus_fare
-rail,rail,rail_fare
-ferry,ferry,ferry_fare`,
+func transferFeed(rules ...gtfs.FareTransferRule) *direct.Reader {
+	feed := baseFeed()
+	feed.FareProductList = []gtfs.FareProduct{
+		fareProduct("bus_fare", 2.00, "", ""),
+		fareProduct("rail_fare", 4.00, "", ""),
+		fareProduct("ferry_fare", 6.00, "", ""),
+		fareProduct("ab", 0.50, "", ""),
+		fareProduct("bc", 1.00, "", ""),
+		fareProduct("discount", -1.00, "", ""),
+		fareProduct("upgrade", 3.00, "", ""),
+	}
+	feed.FareLegRuleList = []gtfs.FareLegRule{
+		legRule("bus", "bus", "bus_fare"),
+		legRule("rail", "rail", "rail_fare"),
+		legRule("ferry", "ferry", "ferry_fare"),
+	}
+	feed.FareTransferRuleList = rules
+	return feed
+}
+
+// countRule returns a transfer rule that covers count transfers within a leg group, or any
+// number of transfers when count is -1.
+func countRule(group string, count int, transferType int, product string) gtfs.FareTransferRule {
+	ret := transferRule(group, group, transferType, product)
+	ret.TransferCount = tt.NewInt(count)
+	return ret
 }
 
 func TestTransferOptions_FareTransferTypes(t *testing.T) {
@@ -32,22 +47,20 @@ func TestTransferOptions_FareTransferTypes(t *testing.T) {
 	)
 	tcs := []struct {
 		name  string
-		rules string
+		rules []gtfs.FareTransferRule
 		want  float64
 	}{
-		{"no transfer rule", "", 6.00},
-		{"A + AB", "bus,rail,0,ab", 2.50},
-		{"A + AB + B", "bus,rail,1,discount", 5.00},
-		{"AB", "bus,rail,2,upgrade", 3.00},
-		{"rule without a product", "bus,rail,0,", 2.00},
-		{"matching rule applies even when separate fares cost less", "bus,rail,1,ab", 6.50},
-		{"rule in the other direction", "rail,bus,0,", 6.00},
+		{"no transfer rule", nil, 6.00},
+		{"A + AB", []gtfs.FareTransferRule{transferRule("bus", "rail", 0, "ab")}, 2.50},
+		{"A + AB + B", []gtfs.FareTransferRule{transferRule("bus", "rail", 1, "discount")}, 5.00},
+		{"AB", []gtfs.FareTransferRule{transferRule("bus", "rail", 2, "upgrade")}, 3.00},
+		{"rule without a product", []gtfs.FareTransferRule{transferRule("bus", "rail", 0, "")}, 2.00},
+		{"matching rule applies even when separate fares cost less", []gtfs.FareTransferRule{transferRule("bus", "rail", 1, "ab")}, 6.50},
+		{"rule in the other direction", []gtfs.FareTransferRule{transferRule("rail", "bus", 0, "")}, 6.00},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			c := newTestCoster(t, transferFeed, map[string]string{
-				"fare_transfer_rules.txt": "from_leg_group_id,to_leg_group_id,fare_transfer_type,fare_product_id\n" + tc.rules,
-			})
+			c := newTestCoster(t, transferFeed(tc.rules...))
 			assert.Equal(t, map[string]float64{"": tc.want}, fareAmounts(t, c, busToRail))
 		})
 	}
@@ -62,25 +75,24 @@ func TestTransferOptions_ChainedTransfers(t *testing.T) {
 		leg("ferry", "c", "d", at(9, 0), at(9, 30)),
 	)
 	tcs := []struct {
-		busToRail   string
-		railToFerry string
+		busToRail   int
+		railToFerry int
 		want        float64
 	}{
-		{"0", "0", 2.00 + 0.50 + 1.00},
-		{"1", "1", 2.00 + 0.50 + 4.00 + 1.00 + 6.00},
-		{"2", "2", 0.50 + 1.00},
-		{"0", "2", 2.00 + 0.50 + 1.00},
-		{"2", "0", 0.50 + 1.00},
-		{"2", "1", 0.50 + 1.00 + 6.00},
-		{"1", "2", 2.00 + 0.50 + 4.00 + 1.00},
+		{0, 0, 2.00 + 0.50 + 1.00},
+		{1, 1, 2.00 + 0.50 + 4.00 + 1.00 + 6.00},
+		{2, 2, 0.50 + 1.00},
+		{0, 2, 2.00 + 0.50 + 1.00},
+		{2, 0, 0.50 + 1.00},
+		{2, 1, 0.50 + 1.00 + 6.00},
+		{1, 2, 2.00 + 0.50 + 4.00 + 1.00},
 	}
 	for _, tc := range tcs {
-		t.Run(tc.busToRail+" then "+tc.railToFerry, func(t *testing.T) {
-			c := newTestCoster(t, transferFeed, map[string]string{
-				"fare_transfer_rules.txt": "from_leg_group_id,to_leg_group_id,fare_transfer_type,fare_product_id\n" +
-					"bus,rail," + tc.busToRail + ",ab\n" +
-					"rail,ferry," + tc.railToFerry + ",bc",
-			})
+		t.Run(fmt.Sprintf("%d then %d", tc.busToRail, tc.railToFerry), func(t *testing.T) {
+			c := newTestCoster(t, transferFeed(
+				transferRule("bus", "rail", tc.busToRail, "ab"),
+				transferRule("rail", "ferry", tc.railToFerry, "bc"),
+			))
 			assert.Equal(t, map[string]float64{"": tc.want}, fareAmounts(t, c, busRailFerry))
 		})
 	}
@@ -94,73 +106,61 @@ func TestTransferOptions_TransferCount(t *testing.T) {
 		leg("bus2", "d", "a", at(9, 30), at(9, 50)),
 	}
 	t.Run("smallest transfer_count that covers each transfer", func(t *testing.T) {
-		c := newTestCoster(t, transferFeed, map[string]string{
-			"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type,fare_product_id
-bus,bus,1,0,
-bus,bus,2,0,ab
-bus,bus,-1,0,bc`,
-		})
+		c := newTestCoster(t, transferFeed(
+			countRule("bus", 1, 0, ""),
+			countRule("bus", 2, 0, "ab"),
+			countRule("bus", -1, 0, "bc"),
+		))
 		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, journey(buses[:2]...)))
 		assert.Equal(t, map[string]float64{"": 2.00 + 0.50}, fareAmounts(t, c, journey(buses[:3]...)))
 		assert.Equal(t, map[string]float64{"": 2.00 + 0.50 + 1.00}, fareAmounts(t, c, journey(buses...)))
 	})
 	t.Run("smallest transfer_count applies even when a larger one costs less", func(t *testing.T) {
-		c := newTestCoster(t, transferFeed, map[string]string{
-			"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type,fare_product_id
-bus,bus,1,0,ab
-bus,bus,-1,0,`,
-		})
+		c := newTestCoster(t, transferFeed(countRule("bus", 1, 0, "ab"), countRule("bus", -1, 0, "")))
 		assert.Equal(t, map[string]float64{"": 2.00 + 0.50}, fareAmounts(t, c, journey(buses[:3]...)))
 	})
 	t.Run("transfers past transfer_count start a new fare", func(t *testing.T) {
-		c := newTestCoster(t, transferFeed, map[string]string{
-			"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type,fare_product_id
-bus,bus,1,0,`,
-		})
+		c := newTestCoster(t, transferFeed(countRule("bus", 1, 0, "")))
 		assert.Equal(t, map[string]float64{"": 4.00}, fareAmounts(t, c, journey(buses[:3]...)))
 		assert.Equal(t, map[string]float64{"": 4.00}, fareAmounts(t, c, journey(buses...)))
 	})
 }
 
 func TestTransferOptions_DurationLimit(t *testing.T) {
-	// Bus 08:00-08:20, then rail 08:40-09:00. Measured by duration_limit_type, the transfer
-	// takes 60 minutes (0), 40 (1), 20 (2), or 40 (3).
+	// Bus 08:00-08:05, then rail 08:40-09:20. Measured by duration_limit_type, the transfer
+	// takes 80 minutes (0), 40 (1), 35 (2), or 75 (3), so each limit below tells the types apart.
 	busToRail := journey(
-		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
-		leg("rail1", "b", "c", at(8, 40), at(9, 0)),
+		leg("bus1", "a", "b", at(8, 0), at(8, 5)),
+		leg("rail1", "b", "c", at(8, 40), at(9, 20)),
 	)
 	tcs := []struct {
-		name  string
-		limit string
-		kind  string
-		want  float64
+		name      string
+		limit     int
+		limitType int
+		want      float64
 	}{
-		{"departure to arrival, over", "2700", "0", 6.00},
-		{"departure to departure, within", "2700", "1", 2.00},
-		{"departure to departure, over", "1800", "1", 6.00},
-		{"arrival to departure, within", "1800", "2", 2.00},
-		{"arrival to arrival, within", "2700", "3", 2.00},
-		{"arrival to arrival, over", "1800", "3", 6.00},
+		{"departure to arrival, within", 4800, 0, 2.00},
+		{"departure to arrival, over", 4500, 0, 6.00},
+		{"departure to departure, within", 2700, 1, 2.00},
+		{"departure to departure, over", 2220, 1, 6.00},
+		{"arrival to departure, within", 2220, 2, 2.00},
+		{"arrival to departure, over", 2040, 2, 6.00},
+		{"arrival to arrival, within", 4500, 3, 2.00},
+		{"arrival to arrival, over", 2700, 3, 6.00},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			c := newTestCoster(t, transferFeed, map[string]string{
-				"fare_transfer_rules.txt": "from_leg_group_id,to_leg_group_id,duration_limit,duration_limit_type,fare_transfer_type\n" +
-					"bus,rail," + tc.limit + "," + tc.kind + ",0",
-			})
+			rule := transferRule("bus", "rail", 0, "")
+			rule.DurationLimit, rule.DurationLimitType = tt.NewInt(tc.limit), tt.NewInt(tc.limitType)
+			c := newTestCoster(t, transferFeed(rule))
 			assert.Equal(t, map[string]float64{"": tc.want}, fareAmounts(t, c, busToRail))
 		})
 	}
 	t.Run("measured from the first leg of consecutive transfers", func(t *testing.T) {
 		// Free transfers between buses for 90 minutes after the first departure.
-		c := newTestCoster(t, transferFeed, map[string]string{
-			"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,transfer_count,duration_limit,duration_limit_type,fare_transfer_type
-bus,bus,-1,5400,1,0`,
-		})
+		rule := countRule("bus", -1, 0, "")
+		rule.DurationLimit, rule.DurationLimitType = tt.NewInt(5400), tt.NewInt(1)
+		c := newTestCoster(t, transferFeed(rule))
 		first := leg("bus1", "a", "b", at(8, 0), at(8, 10))
 		second := leg("bus2", "b", "c", at(8, 40), at(8, 50))
 		within := leg("bus1", "c", "d", at(9, 20), at(9, 30))
@@ -173,12 +173,10 @@ bus,bus,-1,5400,1,0`,
 
 func TestTransferOptions_EmptyLegGroups(t *testing.T) {
 	// An empty leg group matches the leg groups that its column doesn't list.
-	c := newTestCoster(t, transferFeed, map[string]string{
-		"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,fare_transfer_type,fare_product_id
-bus,,0,
-,ferry,1,discount`,
-	})
+	c := newTestCoster(t, transferFeed(
+		transferRule("bus", "", 0, ""),
+		transferRule("", "ferry", 1, "discount"),
+	))
 	tcs := []struct {
 		name  string
 		first Leg
@@ -198,14 +196,9 @@ bus,,0,
 
 func TestTransferOptions_NoLegGroup(t *testing.T) {
 	// A leg rule without a leg group can't transfer, even under a rule with empty leg groups.
-	c := newTestCoster(t, transferFeed, map[string]string{
-		"fare_leg_rules.txt": `
-network_id,fare_product_id
-bus,bus_fare`,
-		"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type
-,,-1,0`,
-	})
+	feed := transferFeed(transferRule("", "", 0, ""))
+	feed.FareLegRuleList = []gtfs.FareLegRule{legRule("", "bus", "bus_fare")}
+	c := newTestCoster(t, feed)
 	j := journey(
 		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
 		leg("bus2", "b", "c", at(8, 30), at(8, 50)),
@@ -215,23 +208,16 @@ from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type
 
 func TestTransferOptions_FareMedia(t *testing.T) {
 	// A transfer whose product the rider can't buy with their fare medium doesn't apply.
-	c := newTestCoster(t, map[string]string{
-		"fare_media.txt": `
-fare_media_id,fare_media_name,fare_media_type
-card,Card,2
-cash,Cash,0`,
-		"fare_products.txt": `
-fare_product_id,amount,currency,fare_media_id
-bus_fare,2.00,USD,card
-bus_fare,2.50,USD,cash
-card_transfer,0.00,USD,card`,
-		"fare_leg_rules.txt": `
-leg_group_id,network_id,fare_product_id
-bus,bus,bus_fare`,
-		"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type,fare_product_id
-bus,bus,-1,0,card_transfer`,
-	})
+	feed := baseFeed()
+	feed.FareMediaList = []gtfs.FareMedia{medium("card", 2), medium("cash", 0)}
+	feed.FareProductList = []gtfs.FareProduct{
+		fareProduct("bus_fare", 2.00, "", "card"),
+		fareProduct("bus_fare", 2.50, "", "cash"),
+		fareProduct("card_transfer", 0.00, "", "card"),
+	}
+	feed.FareLegRuleList = []gtfs.FareLegRule{legRule("bus", "bus", "bus_fare")}
+	feed.FareTransferRuleList = []gtfs.FareTransferRule{countRule("bus", -1, 0, "card_transfer")}
+	c := newTestCoster(t, feed)
 	j := journey(
 		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
 		leg("bus2", "b", "c", at(8, 30), at(8, 50)),
@@ -240,33 +226,29 @@ bus,bus,-1,0,card_transfer`,
 }
 
 // mediaFeed sells rail only for cash and the ferry only for card, while the bus takes both.
-var mediaFeed = map[string]string{
-	"fare_media.txt": `
-fare_media_id,fare_media_name,fare_media_type
-cash,Cash,0
-card,Card,2`,
-	"fare_products.txt": `
-fare_product_id,amount,currency,fare_media_id
-rail_fare,4.00,USD,cash
-ferry_fare,6.00,USD,card
-bus_fare,2.00,USD,cash
-bus_fare,2.50,USD,card
-free_transfer,0.00,USD,
-card_transfer,0.00,USD,card`,
-	"fare_leg_rules.txt": `
-leg_group_id,network_id,fare_product_id
-rail,rail,rail_fare
-ferry,ferry,ferry_fare
-bus,bus,bus_fare`,
+func mediaFeed(rules ...gtfs.FareTransferRule) *direct.Reader {
+	feed := baseFeed()
+	feed.FareMediaList = []gtfs.FareMedia{medium("cash", 0), medium("card", 2)}
+	feed.FareProductList = []gtfs.FareProduct{
+		fareProduct("rail_fare", 4.00, "", "cash"),
+		fareProduct("ferry_fare", 6.00, "", "card"),
+		fareProduct("bus_fare", 2.00, "", "cash"),
+		fareProduct("bus_fare", 2.50, "", "card"),
+		fareProduct("free_transfer", 0.00, "", ""),
+		fareProduct("card_transfer", 0.00, "", "card"),
+	}
+	feed.FareLegRuleList = []gtfs.FareLegRule{
+		legRule("rail", "rail", "rail_fare"),
+		legRule("ferry", "ferry", "ferry_fare"),
+		legRule("bus", "bus", "bus_fare"),
+	}
+	feed.FareTransferRuleList = rules
+	return feed
 }
 
 func TestTransferOptions_MixedMedia(t *testing.T) {
 	t.Run("each fare leg uses a fare medium it sells, and no transfer crosses media", func(t *testing.T) {
-		c := newTestCoster(t, mediaFeed, map[string]string{
-			"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,fare_transfer_type,fare_product_id
-rail,ferry,0,free_transfer`,
-		})
+		c := newTestCoster(t, mediaFeed(transferRule("rail", "ferry", 0, "free_transfer")))
 		j := journey(
 			leg("rail1", "a", "b", at(8, 0), at(8, 20)),
 			leg("ferry", "b", "c", at(8, 30), at(8, 50)),
@@ -276,17 +258,15 @@ rail,ferry,0,free_transfer`,
 		fare, err := c.LowestFare(j)
 		require.NoError(t, err)
 		require.NotNil(t, fare)
-		assert.Equal(t, 4.00+6.00, fare.Amount)
+		assert.Equal(t, 4.00+6.00, fare.Amount.InexactFloat64())
 		assert.Equal(t, "cash", fare.FareLegs[0].Product.FareMediaID.Val)
 		assert.Equal(t, "card", fare.FareLegs[1].Product.FareMediaID.Val)
+		assert.Equal(t, "cash", fare.FareLegs[0].FareMediaID)
+		assert.Equal(t, "card", fare.FareLegs[1].FareMediaID)
 		assert.Nil(t, fare.FareLegs[1].TransferRule)
 	})
 	t.Run("a transfer on one fare medium beats mixing media", func(t *testing.T) {
-		c := newTestCoster(t, mediaFeed, map[string]string{
-			"fare_transfer_rules.txt": `
-from_leg_group_id,to_leg_group_id,transfer_count,fare_transfer_type,fare_product_id
-bus,bus,-1,0,card_transfer`,
-		})
+		c := newTestCoster(t, mediaFeed(countRule("bus", -1, 0, "card_transfer")))
 		j := journey(
 			leg("bus1", "a", "b", at(8, 0), at(8, 20)),
 			leg("bus2", "b", "c", at(8, 30), at(8, 50)),
@@ -295,9 +275,99 @@ bus,bus,-1,0,card_transfer`,
 		fare, err := c.LowestFare(j)
 		require.NoError(t, err)
 		require.NotNil(t, fare)
-		assert.Equal(t, 2.50, fare.Amount)
+		assert.Equal(t, 2.50, fare.Amount.InexactFloat64())
 		for _, fl := range fare.FareLegs {
 			assert.Equal(t, "card", fl.Product.FareMediaID.Val)
 		}
+	})
+}
+
+func TestTransferOptions_UnknownMedium(t *testing.T) {
+	busToRail := journey(
+		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
+		leg("rail1", "b", "c", at(8, 30), at(8, 50)),
+	)
+	t.Run("a product that names no medium never blocks a transfer", func(t *testing.T) {
+		// Fare media that no product names don't let the legs split to skip the transfer.
+		feed := transferFeed(transferRule("bus", "rail", 1, "ab"))
+		feed.FareMediaList = []gtfs.FareMedia{medium("cash", 0), medium("card", 2)}
+		c := newTestCoster(t, feed)
+		assert.Equal(t, map[string]float64{"cash": 6.50, "card": 6.50}, fareAmounts(t, c, busToRail))
+		fare, err := c.LowestFare(busToRail)
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 6.50, fare.Amount.InexactFloat64())
+		assert.NotNil(t, fare.FareLegs[1].TransferRule)
+		assert.Equal(t, []string{"", ""}, []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID})
+	})
+	t.Run("a fare leg whose product names no medium takes the transfer chain's medium", func(t *testing.T) {
+		// Card-only ferry, a free card transfer to a bus that names no medium, then cash-only
+		// rail with a free transfer from the bus. The bus continues the card chain, so the
+		// cash rail can't.
+		feed := baseFeed()
+		feed.FareMediaList = []gtfs.FareMedia{medium("cash", 0), medium("card", 2)}
+		feed.FareProductList = []gtfs.FareProduct{
+			fareProduct("ferry_fare", 6.00, "", "card"),
+			fareProduct("bus_fare", 2.00, "", ""),
+			fareProduct("rail_fare", 4.00, "", "cash"),
+			fareProduct("card_transfer", 0.00, "", "card"),
+			fareProduct("free_transfer", 0.00, "", ""),
+		}
+		feed.FareLegRuleList = []gtfs.FareLegRule{
+			legRule("ferry", "ferry", "ferry_fare"),
+			legRule("bus", "bus", "bus_fare"),
+			legRule("rail", "rail", "rail_fare"),
+		}
+		feed.FareTransferRuleList = []gtfs.FareTransferRule{
+			transferRule("ferry", "bus", 0, "card_transfer"),
+			transferRule("bus", "rail", 0, "free_transfer"),
+		}
+		fare, err := newTestCoster(t, feed).LowestFare(journey(
+			leg("ferry", "a", "b", at(8, 0), at(8, 20)),
+			leg("bus1", "b", "c", at(8, 30), at(8, 50)),
+			leg("rail1", "c", "d", at(9, 0), at(9, 20)),
+		))
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 6.00+4.00, fare.Amount.InexactFloat64())
+		assert.Equal(t, []string{"card", "card", "cash"}, []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID, fare.FareLegs[2].FareMediaID})
+		assert.NotNil(t, fare.FareLegs[1].TransferRule)
+		assert.Nil(t, fare.FareLegs[2].TransferRule)
+	})
+	t.Run("a transfer product on one medium needs a fare leg on that medium", func(t *testing.T) {
+		feed := transferFeed(transferRule("bus", "rail", 0, "card_transfer"))
+		feed.FareMediaList = []gtfs.FareMedia{medium("cash", 0), medium("card", 2)}
+		feed.FareProductList = append(feed.FareProductList, fareProduct("card_transfer", 0.00, "", "card"))
+		assert.Equal(t, map[string]float64{"cash": 6.00, "card": 6.00}, fareAmounts(t, newTestCoster(t, feed), busToRail))
+	})
+}
+
+func TestTransferOptions_FilterFareProductID(t *testing.T) {
+	// Holders of the bus pass get a free transfer to rail.
+	rule := transferRule("bus", "rail", 0, "")
+	rule.FilterFareProductID = str("bus_pass")
+	feed := baseFeed()
+	feed.FareProductList = []gtfs.FareProduct{
+		fareProduct("bus_fare", 2.00, "", ""),
+		fareProduct("rail_fare", 4.00, "", ""),
+		pass("bus_pass", 80.00, ""),
+	}
+	feed.FareLegRuleList = []gtfs.FareLegRule{legRule("bus", "bus", "bus_fare"), legRule("rail", "rail", "rail_fare")}
+	feed.FareTransferRuleList = []gtfs.FareTransferRule{rule}
+	busToRail := journey(
+		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
+		leg("rail1", "b", "c", at(8, 30), at(8, 50)),
+	)
+	holder := busToRail
+	holder.FareProductIDs = []string{"bus_pass"}
+	t.Run("ignored by default", func(t *testing.T) {
+		c := newTestCoster(t, feed)
+		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, busToRail))
+	})
+	t.Run("only for riders who hold the product", func(t *testing.T) {
+		c := newTestCoster(t, feed)
+		c.UseFilterFareProductID = true
+		assert.Equal(t, map[string]float64{"": 6.00}, fareAmounts(t, c, busToRail))
+		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, holder))
 	})
 }
