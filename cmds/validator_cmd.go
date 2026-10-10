@@ -89,7 +89,7 @@ func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringSliceVar(&cmd.errorThresholds, "error-threshold", nil, "Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')")
 	fl.BoolVar(&cmd.AllowPartial, "allow-partial", false, "Allow partial feeds missing normally-required files (agency, routes, trips, stop_times, calendar)")
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file (requires --dmfr and --feed-id)")
-	fl.StringArrayVar(&cmd.SecretEnv, "secret-env", nil, "Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR (requires --dmfr and --feed-id)")
+	fl.StringArrayVar(&cmd.SecretEnv, "secret-env", nil, "Specify secret from environment variable as feed_id:ENV_VAR or file.json:ENV_VAR, optionally followed by :host to limit the secret to one host or *.domain (requires --dmfr and --feed-id)")
 	fl.StringVar(&cmd.DMFRFile, "dmfr", "", "DMFR file providing feed URL and authorization config; used with --feed-id")
 	fl.StringVar(&cmd.FeedID, "feed-id", "", "Feed onestop ID for DMFR and secret lookup (requires --dmfr)")
 	fl.StringVar(&cmd.URLType, "url-type", "static_current", "URL type in DMFR feed.urls to validate")

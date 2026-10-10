@@ -3,6 +3,7 @@ package request
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -436,73 +437,102 @@ func TestHttp_DownloadAuth_RedirectLoop(t *testing.T) {
 	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
 }
 
-func TestHttp_DownloadAuth_SecretHost(t *testing.T) {
-	var requestCount int32
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&requestCount, 1)
-		assert.Equal(t, "secret123", r.URL.Query().Get("api_key"))
-		w.Write([]byte("ok"))
-	}))
-	defer ts.Close()
-
-	auth := dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"}
-	testcases := []struct {
-		name  string
-		scope string
-		allow bool
-	}{
-		{"unscoped", "", true},
-		{"in scope", "127.0.0.1", true},
-		{"out of scope", "mta.info", false},
-	}
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			atomic.StoreInt32(&requestCount, 0)
-			h := &Http{AllowHTTPUnfiltered: true}
-			h.SetSecret(dmfr.Secret{Key: "secret123", Host: tc.scope})
-			body, _, err := h.DownloadAuth(context.Background(), ts.URL, auth)
-			if tc.allow {
-				require.NoError(t, err)
-				body.Close()
-				assert.Equal(t, int32(1), atomic.LoadInt32(&requestCount))
-				return
-			}
-			require.Error(t, err)
-			assert.NotContains(t, err.Error(), "secret123")
-			assert.Equal(t, int32(0), atomic.LoadInt32(&requestCount), "the request reached the server")
-		})
+// routeHostsTo sends every connection made through http.DefaultTransport to
+// srv, so a test can fetch any hostname; srv sees the name in r.Host.
+func routeHostsTo(t *testing.T, srv *httptest.Server) {
+	orig := http.DefaultTransport
+	t.Cleanup(func() { http.DefaultTransport = orig })
+	addr := srv.Listener.Addr().String()
+	http.DefaultTransport = &http.Transport{
+		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			var d net.Dialer
+			return d.DialContext(ctx, network, addr)
+		},
 	}
 }
 
 func TestHttp_DownloadAuth_SecretHostRedirect(t *testing.T) {
-	var reached, leaked atomic.Bool
-	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reached.Store(true)
-		leaked.Store(strings.Contains(fmt.Sprint(r.URL, r.Header), "secret123"))
+	const key = "secret123"
+	reached := make(chan *http.Request, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Host == "feed.example.test" {
+			// Redirect to the host named by "to", keeping the request URI as an
+			// nginx $request_uri redirect does.
+			http.Redirect(w, r, "http://"+r.URL.Query().Get("to")+r.URL.RequestURI(), http.StatusFound)
+			return
+		}
+		reached <- r.Clone(context.Background())
 		w.Write([]byte("ok"))
 	}))
-	defer other.Close()
-	// Redirect to the other server under a hostname outside the secret's scope.
-	otherURL := strings.Replace(other.URL, "127.0.0.1", "localhost", 1)
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, otherURL, http.StatusFound)
-	}))
 	defer ts.Close()
+	routeHostsTo(t, ts)
 
-	for _, auth := range []dmfr.FeedAuthorization{
-		{Type: "header", ParamName: "apikey"},
-		// The Referer would quote the first URL, key included.
-		{Type: "query_param", ParamName: "api_key"},
-	} {
-		t.Run(auth.Type, func(t *testing.T) {
-			reached.Store(false)
+	testcases := []struct {
+		name    string
+		auth    dmfr.FeedAuthorization
+		secret  dmfr.Secret
+		to      string
+		refused bool // the redirect fails instead of being followed
+		carried bool // the redirect target receives the secret
+	}{
+		{
+			name:    "header in scope",
+			auth:    dmfr.FeedAuthorization{Type: "header", ParamName: "apikey"},
+			secret:  dmfr.Secret{Key: key, Host: "*.example.test"},
+			to:      "cdn.example.test",
+			carried: true,
+		},
+		{
+			name:   "header off scope",
+			auth:   dmfr.FeedAuthorization{Type: "header", ParamName: "apikey"},
+			secret: dmfr.Secret{Key: key, Host: "feed.example.test"},
+			to:     "other.example.net",
+		},
+		{
+			// net/http keeps Authorization on a redirect to a subdomain, which
+			// this exact scope doesn't cover.
+			name:   "basic_auth to a subdomain off scope",
+			auth:   dmfr.FeedAuthorization{Type: "basic_auth"},
+			secret: dmfr.Secret{Username: "user", Password: key, Host: "feed.example.test"},
+			to:     "cdn.feed.example.test",
+		},
+		{
+			name:    "query_param off scope",
+			auth:    dmfr.FeedAuthorization{Type: "query_param", ParamName: "api_key"},
+			secret:  dmfr.Secret{Key: key, Host: "feed.example.test"},
+			to:      "other.example.net",
+			refused: true,
+		},
+		{
+			name:    "path_segment off scope",
+			auth:    dmfr.FeedAuthorization{Type: "path_segment"},
+			secret:  dmfr.Secret{Key: key, Host: "feed.example.test"},
+			to:      "other.example.net",
+			refused: true,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
 			h := &Http{AllowHTTPUnfiltered: true}
-			h.SetSecret(dmfr.Secret{Key: "secret123", Host: "127.0.0.1"})
-			body, _, err := h.DownloadAuth(context.Background(), ts.URL, auth)
+			h.SetSecret(tc.secret)
+			body, _, err := h.DownloadAuth(context.Background(), "http://feed.example.test/feed/{}?to="+tc.to, tc.auth)
+			if tc.refused {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "outside the secret's scope")
+				assert.Empty(t, reached, "the redirect reached the other host")
+				return
+			}
 			require.NoError(t, err)
 			body.Close()
-			assert.True(t, reached.Load(), "the redirect never reached the other host")
-			assert.False(t, leaked.Load(), "the secret followed the redirect")
+			var r *http.Request
+			select {
+			case r = <-reached:
+			default:
+				t.Fatal("the redirect never reached the other host")
+			}
+			_, password, _ := r.BasicAuth()
+			carried := password == key || strings.Contains(fmt.Sprint(r.URL, r.Header), key)
+			assert.Equal(t, tc.carried, carried)
 		})
 	}
 }

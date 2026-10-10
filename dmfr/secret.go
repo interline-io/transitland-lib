@@ -1,8 +1,12 @@
 package dmfr
 
 import (
+	"fmt"
 	"path"
 	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/net/idna"
 )
 
 // Secret holds the credentials for fetching a feed.
@@ -19,7 +23,8 @@ type Secret struct {
 	URLType            string `json:"url_type"`
 	ReplaceUrl         string `json:"replace_url"`
 	// Host scopes the secret to one hostname, or with a "*." prefix to every
-	// subdomain of a domain. An empty Host allows any host.
+	// subdomain of a domain. It limits the name only, not the scheme or port,
+	// and isn't checked for S3 credentials. An empty Host allows any host.
 	Host string `json:"host"`
 }
 
@@ -39,15 +44,48 @@ func (s Secret) MatchFeed(feedid string) bool {
 	return s.FeedID == feedid
 }
 
-// MatchHost reports whether the secret may be sent to host.
-func (s Secret) MatchHost(host string) bool {
+// MatchHost reports whether the secret may be sent to host, comparing the
+// ASCII forms that net/http dials. It returns an error if Host is not a valid
+// scope.
+func (s Secret) MatchHost(host string) (bool, error) {
 	if s.Host == "" {
-		return true
+		return true, nil
 	}
-	host = strings.ToLower(host)
-	scope := strings.ToLower(s.Host)
-	if domain, ok := strings.CutPrefix(scope, "*."); ok {
-		return strings.HasSuffix(host, "."+domain)
+	domain, wildcard := strings.CutPrefix(s.Host, "*.")
+	scope, err := asciiHost(domain)
+	if err != nil || !isHostname(scope) {
+		return false, fmt.Errorf("secret host %q is not a hostname or *.domain", s.Host)
 	}
-	return host == scope
+	host, err = asciiHost(host)
+	if err != nil {
+		// net/http can't dial a name with no ASCII form either.
+		return false, nil
+	}
+	if wildcard {
+		// net/http never counts an IPv6 address or zone as a subdomain either.
+		return !strings.ContainsAny(host, ":%") && strings.HasSuffix(host, "."+scope), nil
+	}
+	return host == scope, nil
+}
+
+// asciiHost returns host lowercased, in the IDNA ASCII form net/http dials.
+func asciiHost(host string) (string, error) {
+	if strings.IndexFunc(host, func(r rune) bool { return r >= utf8.RuneSelf }) >= 0 {
+		var err error
+		if host, err = idna.Lookup.ToASCII(host); err != nil {
+			return "", err
+		}
+	}
+	return strings.ToLower(host), nil
+}
+
+// isHostname reports whether s is dot-separated, non-empty labels of lowercase
+// letters, digits, hyphens and underscores.
+func isHostname(s string) bool {
+	for _, label := range strings.Split(s, ".") {
+		if label == "" || strings.Trim(label, "abcdefghijklmnopqrstuvwxyz0123456789-_") != "" {
+			return false
+		}
+	}
+	return true
 }

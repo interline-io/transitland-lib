@@ -3,6 +3,7 @@ package cmds
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -98,6 +99,34 @@ func TestParseErrorThresholds(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.expected, result)
 			}
+		})
+	}
+}
+
+func TestParseSecretEnv(t *testing.T) {
+	t.Setenv("TEST_SECRET_ENV_KEY", "abcd")
+	testCases := []struct {
+		name        string
+		input       string
+		expected    dmfr.Secret
+		expectError bool
+	}{
+		{name: "feed id", input: "f-test:TEST_SECRET_ENV_KEY", expected: dmfr.Secret{Key: "abcd", FeedID: "f-test"}},
+		{name: "filename", input: "test.dmfr.json:TEST_SECRET_ENV_KEY", expected: dmfr.Secret{Key: "abcd", Filename: "test.dmfr.json"}},
+		{name: "host", input: "f-test:TEST_SECRET_ENV_KEY:*.mta.info", expected: dmfr.Secret{Key: "abcd", FeedID: "f-test", Host: "*.mta.info"}},
+		{name: "empty host", input: "f-test:TEST_SECRET_ENV_KEY:", expectError: true},
+		{name: "no env var", input: "f-test", expectError: true},
+		{name: "unset env var", input: "f-test:TEST_SECRET_ENV_UNSET", expectError: true},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			secret, err := parseSecretEnv(tc.input)
+			if tc.expectError {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, secret)
 		})
 	}
 }

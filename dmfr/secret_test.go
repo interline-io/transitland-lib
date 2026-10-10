@@ -70,28 +70,47 @@ func TestSecret_MatchFeed(t *testing.T) {
 
 func TestSecret_MatchHost(t *testing.T) {
 	testcases := []struct {
-		name   string
-		scope  string
-		match  string
-		expect bool
+		name      string
+		scope     string
+		match     string
+		expect    bool
+		expectErr bool
 	}{
-		{"unscoped", "", "abc.com", true},
-		{"exact", "mta.info", "mta.info", true},
-		{"exact ignores case", "mta.info", "MTA.info", true},
-		{"other host", "mta.info", "abc.com", false},
-		{"exact excludes subdomains", "mta.info", "api-endpoint.mta.info", false},
-		{"wildcard subdomain", "*.mta.info", "api-endpoint.mta.info", true},
-		{"wildcard nested subdomain", "*.mta.info", "a.b.mta.info", true},
-		{"wildcard excludes the domain itself", "*.mta.info", "mta.info", false},
-		{"wildcard needs a label boundary", "*.mta.info", "evilmta.info", false},
-		{"wildcard anchors at the end", "*.mta.info", "mta.info.abc.com", false},
-		{"wildcard without a dot matches nothing", "*mta.info", "evilmta.info", false},
+		{name: "unscoped", scope: "", match: "abc.com", expect: true},
+		{name: "exact", scope: "mta.info", match: "mta.info", expect: true},
+		{name: "exact ignores case", scope: "mta.info", match: "MTA.info", expect: true},
+		{name: "scope ignores case", scope: "MTA.info", match: "mta.info", expect: true},
+		{name: "other host", scope: "mta.info", match: "abc.com"},
+		{name: "exact excludes subdomains", scope: "mta.info", match: "api-endpoint.mta.info"},
+		{name: "wildcard subdomain", scope: "*.mta.info", match: "api-endpoint.mta.info", expect: true},
+		{name: "wildcard nested subdomain", scope: "*.mta.info", match: "a.b.mta.info", expect: true},
+		{name: "wildcard excludes the domain itself", scope: "*.mta.info", match: "mta.info"},
+		{name: "wildcard needs a label boundary", scope: "*.mta.info", match: "evilmta.info"},
+		{name: "wildcard anchors at the end", scope: "*.mta.info", match: "mta.info.abc.com"},
+		{name: "IPv4 address", scope: "203.0.113.5", match: "203.0.113.5", expect: true},
+		// strings.ToLower folds U+0130 to "i", but net/http dials another domain.
+		{name: "dotted capital I", scope: "gtfs.trimet.org", match: "gtfs.trİmet.org"},
+		{name: "unicode host matches its ASCII form", scope: "xn--mnchen-3ya.de", match: "münchen.de", expect: true},
+		{name: "unicode scope matches its ASCII form", scope: "münchen.de", match: "xn--mnchen-3ya.de", expect: true},
+		{name: "IPv6 zone is not a subdomain", scope: "*.mta.info", match: "2a01:4f8::1%.mta.info"},
+		{name: "port", scope: "mta.info:443", match: "mta.info", expectErr: true},
+		{name: "scheme", scope: "https://mta.info", match: "mta.info", expectErr: true},
+		{name: "trailing dot", scope: "mta.info.", match: "mta.info", expectErr: true},
+		{name: "whitespace", scope: " mta.info", match: "mta.info", expectErr: true},
+		{name: "IPv6 brackets", scope: "[::1]", match: "::1", expectErr: true},
+		{name: "bare wildcard", scope: "*", match: "mta.info", expectErr: true},
+		{name: "wildcard without a domain", scope: "*.", match: "mta.info.", expectErr: true},
+		{name: "wildcard without a dot", scope: "*mta.info", match: "evilmta.info", expectErr: true},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			if v := (Secret{Host: tc.scope}).MatchHost(tc.match); v != tc.expect {
-				t.Errorf("got %t, expected %t", v, tc.expect)
+			v, err := (Secret{Host: tc.scope}).MatchHost(tc.match)
+			if tc.expectErr {
+				assert.Error(t, err)
+				return
 			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expect, v)
 		})
 	}
 }
