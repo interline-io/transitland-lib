@@ -488,40 +488,40 @@ type FeedVersion {
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
 
   "GTFS Fares v1 records from this feed version's `fare_attributes.txt`, if imported"
-  fare_attributes(limit: Int): [FareAttribute!]!
+  fare_attributes(limit: Int, after: Int): [FareAttribute!]!
 
   "GTFS Fares v1 records from this feed version's `fare_rules.txt`, if imported"
-  fare_rules(limit: Int): [FareRule!]!
+  fare_rules(limit: Int, after: Int): [FareRule!]!
 
   "GTFS Fares v2 records from this feed version's `fare_media.txt`, if imported"
-  fare_media(limit: Int): [FareMedia!]!
+  fare_media(limit: Int, after: Int): [FareMedia!]!
 
   "GTFS Fares v2 records from this feed version's `fare_products.txt`, if imported"
-  fare_products(limit: Int): [FareProduct!]!
+  fare_products(limit: Int, after: Int): [FareProduct!]!
 
   "GTFS Fares v2 records from this feed version's `fare_leg_rules.txt`, if imported"
-  fare_leg_rules(limit: Int): [FareLegRule!]!
+  fare_leg_rules(limit: Int, after: Int): [FareLegRule!]!
 
   "GTFS Fares v2 records from this feed version's `fare_leg_join_rules.txt`, if imported"
-  fare_leg_join_rules(limit: Int): [FareLegJoinRule!]!
+  fare_leg_join_rules(limit: Int, after: Int): [FareLegJoinRule!]!
 
   "GTFS Fares v2 records from this feed version's `fare_transfer_rules.txt`, if imported"
-  fare_transfer_rules(limit: Int): [FareTransferRule!]!
+  fare_transfer_rules(limit: Int, after: Int): [FareTransferRule!]!
 
   "GTFS Fares v2 records from this feed version's `rider_categories.txt`, if imported"
-  rider_categories(limit: Int): [RiderCategory!]!
+  rider_categories(limit: Int, after: Int): [RiderCategory!]!
 
   "GTFS Fares v2 records from this feed version's `timeframes.txt`, if imported"
-  timeframes(limit: Int): [Timeframe!]!
+  timeframes(limit: Int, after: Int): [Timeframe!]!
 
   "GTFS Fares v2 records from this feed version's `areas.txt`, if imported"
-  areas(limit: Int): [Area!]!
+  areas(limit: Int, after: Int): [Area!]!
 
   "GTFS Fares v2 records from this feed version's `networks.txt`, if imported"
-  networks(limit: Int): [Network!]!
+  networks(limit: Int, after: Int): [Network!]!
 
   "GTFS Fares v2 records from this feed version's `route_networks.txt`, if imported"
-  route_networks(limit: Int): [RouteNetwork!]!
+  route_networks(limit: Int, after: Int): [RouteNetwork!]!
   
   "Records from this feed version's `feed_info.txt`"
   feed_infos(limit: Int): [FeedInfo!]!
@@ -1878,7 +1878,7 @@ type Area {
   area_name: String
 
   "Stops assigned to this area by `stop_areas.txt`"
-  stop_areas(limit: Int): [StopArea!]!
+  stop_areas(limit: Int, after: Int): [StopArea!]!
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!

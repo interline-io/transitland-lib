@@ -139,8 +139,8 @@ func (r *areaResolver) FeedVersion(ctx context.Context, obj *model.Area) (*model
 	return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
 }
 
-func (r *areaResolver) StopAreas(ctx context.Context, obj *model.Area, limit *int) ([]*model.StopArea, error) {
-	return LoaderFor(ctx).StopAreasByAreaIDs.Load(ctx, stopAreaLoaderParam{AreaID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT)})()
+func (r *areaResolver) StopAreas(ctx context.Context, obj *model.Area, limit *int, after *int) ([]*model.StopArea, error) {
+	return LoaderFor(ctx).StopAreasByAreaIDs.Load(ctx, stopAreaLoaderParam{AreaID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 type stopAreaResolver struct{ *Resolver }

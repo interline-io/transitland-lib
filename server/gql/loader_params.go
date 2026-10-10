@@ -11,11 +11,13 @@ import (
 type fareLoaderParam struct {
 	FeedVersionID int
 	Limit         *int
+	After         *model.Cursor
 }
 
 type stopAreaLoaderParam struct {
 	AreaID int
 	Limit  *int
+	After  *model.Cursor
 }
 
 type frequencyLoaderParam struct {

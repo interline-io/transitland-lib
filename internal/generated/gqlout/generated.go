@@ -150,7 +150,7 @@ type ComplexityRoot struct {
 		FeedVersion     func(childComplexity int) int
 		FeedVersionSHA1 func(childComplexity int) int
 		ID              func(childComplexity int) int
-		StopAreas       func(childComplexity int, limit *int) int
+		StopAreas       func(childComplexity int, limit *int, after *int) int
 	}
 
 	BookingRule struct {
@@ -481,18 +481,18 @@ type ComplexityRoot struct {
 
 	FeedVersion struct {
 		Agencies              func(childComplexity int, limit *int, where *model.AgencyFilter) int
-		Areas                 func(childComplexity int, limit *int) int
+		Areas                 func(childComplexity int, limit *int, after *int) int
 		BookingRules          func(childComplexity int, limit *int, where *model.BookingRuleFilter) int
 		CreatedBy             func(childComplexity int) int
 		Description           func(childComplexity int) int
 		EarliestCalendarDate  func(childComplexity int) int
-		FareAttributes        func(childComplexity int, limit *int) int
-		FareLegJoinRules      func(childComplexity int, limit *int) int
-		FareLegRules          func(childComplexity int, limit *int) int
-		FareMedia             func(childComplexity int, limit *int) int
-		FareProducts          func(childComplexity int, limit *int) int
-		FareRules             func(childComplexity int, limit *int) int
-		FareTransferRules     func(childComplexity int, limit *int) int
+		FareAttributes        func(childComplexity int, limit *int, after *int) int
+		FareLegJoinRules      func(childComplexity int, limit *int, after *int) int
+		FareLegRules          func(childComplexity int, limit *int, after *int) int
+		FareMedia             func(childComplexity int, limit *int, after *int) int
+		FareProducts          func(childComplexity int, limit *int, after *int) int
+		FareRules             func(childComplexity int, limit *int, after *int) int
+		FareTransferRules     func(childComplexity int, limit *int, after *int) int
 		Feed                  func(childComplexity int) int
 		FeedInfos             func(childComplexity int, limit *int) int
 		FeedVersionGtfsImport func(childComplexity int) int
@@ -505,10 +505,10 @@ type ComplexityRoot struct {
 		LocationGroups        func(childComplexity int, limit *int, where *model.LocationGroupFilter) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
-		Networks              func(childComplexity int, limit *int) int
+		Networks              func(childComplexity int, limit *int, after *int) int
 		Permissions           func(childComplexity int) int
-		RiderCategories       func(childComplexity int, limit *int) int
-		RouteNetworks         func(childComplexity int, limit *int) int
+		RiderCategories       func(childComplexity int, limit *int, after *int) int
+		RouteNetworks         func(childComplexity int, limit *int, after *int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SHA1                  func(childComplexity int) int
 		SHA1Dir               func(childComplexity int) int
@@ -517,7 +517,7 @@ type ComplexityRoot struct {
 		ServiceWindow         func(childComplexity int) int
 		Shapes                func(childComplexity int, limit *int, after *int, where *model.ShapeFilter) int
 		Stops                 func(childComplexity int, limit *int, where *model.StopFilter) int
-		Timeframes            func(childComplexity int, limit *int) int
+		Timeframes            func(childComplexity int, limit *int, after *int) int
 		Trips                 func(childComplexity int, limit *int, where *model.TripFilter) int
 		URL                   func(childComplexity int) int
 		UpdatedBy             func(childComplexity int) int
@@ -1601,7 +1601,7 @@ type AgencyResolver interface {
 	VehiclePositions(ctx context.Context, obj *model.Agency, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 }
 type AreaResolver interface {
-	StopAreas(ctx context.Context, obj *model.Area, limit *int) ([]*model.StopArea, error)
+	StopAreas(ctx context.Context, obj *model.Area, limit *int, after *int) ([]*model.StopArea, error)
 
 	FeedVersion(ctx context.Context, obj *model.Area) (*model.FeedVersion, error)
 }
@@ -1706,18 +1706,18 @@ type FeedVersionResolver interface {
 	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
 	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.BookingRuleFilter) ([]*model.BookingRule, error)
 	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error)
-	FareAttributes(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareAttribute, error)
-	FareRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareRule, error)
-	FareMedia(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareMedia, error)
-	FareProducts(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareProduct, error)
-	FareLegRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareLegRule, error)
-	FareLegJoinRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareLegJoinRule, error)
-	FareTransferRules(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FareTransferRule, error)
-	RiderCategories(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.RiderCategory, error)
-	Timeframes(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Timeframe, error)
-	Areas(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Area, error)
-	Networks(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Network, error)
-	RouteNetworks(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.RouteNetwork, error)
+	FareAttributes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareAttribute, error)
+	FareRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareRule, error)
+	FareMedia(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareMedia, error)
+	FareProducts(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareProduct, error)
+	FareLegRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareLegRule, error)
+	FareLegJoinRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareLegJoinRule, error)
+	FareTransferRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareTransferRule, error)
+	RiderCategories(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RiderCategory, error)
+	Timeframes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Timeframe, error)
+	Areas(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Area, error)
+	Networks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Network, error)
+	RouteNetworks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RouteNetwork, error)
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
@@ -2312,7 +2312,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Area.StopAreas(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.Area.StopAreas(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 
 	case "BookingRule.booking_rule_id":
 		if e.ComplexityRoot.BookingRule.BookingRuleID == nil {
@@ -3858,7 +3858,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.Areas(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.Areas(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.booking_rules":
 		if e.ComplexityRoot.FeedVersion.BookingRules == nil {
 			break
@@ -3898,7 +3898,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.FareAttributes(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.FareAttributes(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.fare_leg_join_rules":
 		if e.ComplexityRoot.FeedVersion.FareLegJoinRules == nil {
 			break
@@ -3909,7 +3909,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.FareLegJoinRules(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.FareLegJoinRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.fare_leg_rules":
 		if e.ComplexityRoot.FeedVersion.FareLegRules == nil {
 			break
@@ -3920,7 +3920,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.FareLegRules(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.FareLegRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.fare_media":
 		if e.ComplexityRoot.FeedVersion.FareMedia == nil {
 			break
@@ -3931,7 +3931,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.FareMedia(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.FareMedia(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.fare_products":
 		if e.ComplexityRoot.FeedVersion.FareProducts == nil {
 			break
@@ -3942,7 +3942,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.FareProducts(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.FareProducts(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.fare_rules":
 		if e.ComplexityRoot.FeedVersion.FareRules == nil {
 			break
@@ -3953,7 +3953,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.FareRules(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.FareRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.fare_transfer_rules":
 		if e.ComplexityRoot.FeedVersion.FareTransferRules == nil {
 			break
@@ -3964,7 +3964,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.FareTransferRules(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.FareTransferRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.feed":
 		if e.ComplexityRoot.FeedVersion.Feed == nil {
 			break
@@ -4067,7 +4067,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.Networks(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.Networks(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.permissions":
 		if e.ComplexityRoot.FeedVersion.Permissions == nil {
 			break
@@ -4084,7 +4084,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.RiderCategories(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.RiderCategories(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.route_networks":
 		if e.ComplexityRoot.FeedVersion.RouteNetworks == nil {
 			break
@@ -4095,7 +4095,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.RouteNetworks(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.RouteNetworks(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.routes":
 		if e.ComplexityRoot.FeedVersion.Routes == nil {
 			break
@@ -4179,7 +4179,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.FeedVersion.Timeframes(childComplexity, args["limit"].(*int)), true
+		return e.ComplexityRoot.FeedVersion.Timeframes(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.trips":
 		if e.ComplexityRoot.FeedVersion.Trips == nil {
 			break
@@ -10873,40 +10873,40 @@ type FeedVersion {
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
 
   "GTFS Fares v1 records from this feed version's ` + "`" + `fare_attributes.txt` + "`" + `, if imported"
-  fare_attributes(limit: Int): [FareAttribute!]!
+  fare_attributes(limit: Int, after: Int): [FareAttribute!]!
 
   "GTFS Fares v1 records from this feed version's ` + "`" + `fare_rules.txt` + "`" + `, if imported"
-  fare_rules(limit: Int): [FareRule!]!
+  fare_rules(limit: Int, after: Int): [FareRule!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `fare_media.txt` + "`" + `, if imported"
-  fare_media(limit: Int): [FareMedia!]!
+  fare_media(limit: Int, after: Int): [FareMedia!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `fare_products.txt` + "`" + `, if imported"
-  fare_products(limit: Int): [FareProduct!]!
+  fare_products(limit: Int, after: Int): [FareProduct!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `fare_leg_rules.txt` + "`" + `, if imported"
-  fare_leg_rules(limit: Int): [FareLegRule!]!
+  fare_leg_rules(limit: Int, after: Int): [FareLegRule!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `fare_leg_join_rules.txt` + "`" + `, if imported"
-  fare_leg_join_rules(limit: Int): [FareLegJoinRule!]!
+  fare_leg_join_rules(limit: Int, after: Int): [FareLegJoinRule!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `fare_transfer_rules.txt` + "`" + `, if imported"
-  fare_transfer_rules(limit: Int): [FareTransferRule!]!
+  fare_transfer_rules(limit: Int, after: Int): [FareTransferRule!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `rider_categories.txt` + "`" + `, if imported"
-  rider_categories(limit: Int): [RiderCategory!]!
+  rider_categories(limit: Int, after: Int): [RiderCategory!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `timeframes.txt` + "`" + `, if imported"
-  timeframes(limit: Int): [Timeframe!]!
+  timeframes(limit: Int, after: Int): [Timeframe!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `areas.txt` + "`" + `, if imported"
-  areas(limit: Int): [Area!]!
+  areas(limit: Int, after: Int): [Area!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `networks.txt` + "`" + `, if imported"
-  networks(limit: Int): [Network!]!
+  networks(limit: Int, after: Int): [Network!]!
 
   "GTFS Fares v2 records from this feed version's ` + "`" + `route_networks.txt` + "`" + `, if imported"
-  route_networks(limit: Int): [RouteNetwork!]!
+  route_networks(limit: Int, after: Int): [RouteNetwork!]!
   
   "Records from this feed version's ` + "`" + `feed_info.txt` + "`" + `"
   feed_infos(limit: Int): [FeedInfo!]!
@@ -12263,7 +12263,7 @@ type Area {
   area_name: String
 
   "Stops assigned to this area by ` + "`" + `stop_areas.txt` + "`" + `"
-  stop_areas(limit: Int): [StopArea!]!
+  stop_areas(limit: Int, after: Int): [StopArea!]!
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -17428,6 +17428,14 @@ func (ec *executionContext) field_Area_stop_areas_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17684,6 +17692,14 @@ func (ec *executionContext) field_FeedVersion_areas_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17720,6 +17736,14 @@ func (ec *executionContext) field_FeedVersion_fare_attributes_args(ctx context.C
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17734,6 +17758,14 @@ func (ec *executionContext) field_FeedVersion_fare_leg_join_rules_args(ctx conte
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17748,6 +17780,14 @@ func (ec *executionContext) field_FeedVersion_fare_leg_rules_args(ctx context.Co
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17762,6 +17802,14 @@ func (ec *executionContext) field_FeedVersion_fare_media_args(ctx context.Contex
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17776,6 +17824,14 @@ func (ec *executionContext) field_FeedVersion_fare_products_args(ctx context.Con
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17790,6 +17846,14 @@ func (ec *executionContext) field_FeedVersion_fare_rules_args(ctx context.Contex
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17804,6 +17868,14 @@ func (ec *executionContext) field_FeedVersion_fare_transfer_rules_args(ctx conte
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17890,6 +17962,14 @@ func (ec *executionContext) field_FeedVersion_networks_args(ctx context.Context,
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17904,6 +17984,14 @@ func (ec *executionContext) field_FeedVersion_rider_categories_args(ctx context.
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -17918,6 +18006,14 @@ func (ec *executionContext) field_FeedVersion_route_networks_args(ctx context.Co
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -18042,6 +18138,14 @@ func (ec *executionContext) field_FeedVersion_timeframes_args(ctx context.Contex
 		return nil, err
 	}
 	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -21104,7 +21208,7 @@ func (ec *executionContext) _Area_stop_areas(ctx context.Context, field graphql.
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Area().StopAreas(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.Area().StopAreas(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.StopArea) graphql.Marshaler {
@@ -28108,7 +28212,7 @@ func (ec *executionContext) _FeedVersion_fare_attributes(ctx context.Context, fi
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().FareAttributes(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().FareAttributes(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareAttribute) graphql.Marshaler {
@@ -28152,7 +28256,7 @@ func (ec *executionContext) _FeedVersion_fare_rules(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().FareRules(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().FareRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareRule) graphql.Marshaler {
@@ -28196,7 +28300,7 @@ func (ec *executionContext) _FeedVersion_fare_media(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().FareMedia(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().FareMedia(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareMedia) graphql.Marshaler {
@@ -28240,7 +28344,7 @@ func (ec *executionContext) _FeedVersion_fare_products(ctx context.Context, fiel
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().FareProducts(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().FareProducts(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
@@ -28284,7 +28388,7 @@ func (ec *executionContext) _FeedVersion_fare_leg_rules(ctx context.Context, fie
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().FareLegRules(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().FareLegRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegRule) graphql.Marshaler {
@@ -28328,7 +28432,7 @@ func (ec *executionContext) _FeedVersion_fare_leg_join_rules(ctx context.Context
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().FareLegJoinRules(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().FareLegJoinRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegJoinRule) graphql.Marshaler {
@@ -28372,7 +28476,7 @@ func (ec *executionContext) _FeedVersion_fare_transfer_rules(ctx context.Context
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().FareTransferRules(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().FareTransferRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareTransferRule) graphql.Marshaler {
@@ -28416,7 +28520,7 @@ func (ec *executionContext) _FeedVersion_rider_categories(ctx context.Context, f
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().RiderCategories(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().RiderCategories(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.RiderCategory) graphql.Marshaler {
@@ -28460,7 +28564,7 @@ func (ec *executionContext) _FeedVersion_timeframes(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Timeframes(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().Timeframes(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Timeframe) graphql.Marshaler {
@@ -28504,7 +28608,7 @@ func (ec *executionContext) _FeedVersion_areas(ctx context.Context, field graphq
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Areas(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().Areas(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Area) graphql.Marshaler {
@@ -28548,7 +28652,7 @@ func (ec *executionContext) _FeedVersion_networks(ctx context.Context, field gra
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Networks(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().Networks(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Network) graphql.Marshaler {
@@ -28592,7 +28696,7 @@ func (ec *executionContext) _FeedVersion_route_networks(ctx context.Context, fie
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().RouteNetworks(ctx, obj, fc.Args["limit"].(*int))
+			return ec.Resolvers.FeedVersion().RouteNetworks(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.RouteNetwork) graphql.Marshaler {

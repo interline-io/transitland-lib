@@ -1,7 +1,11 @@
 package gql
 
 import (
+	"context"
+	"strconv"
 	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
 )
 
 // Fares v1 data comes from the CT and BA feeds; Fares v2 data comes from
@@ -227,5 +231,75 @@ func TestFareResolver(t *testing.T) {
 		},
 	}
 	c, _ := newTestClient(t)
+	queryTestcases(t, c, testcases)
+}
+
+// TestFareResolver_Cursor exercises keyset (after) pagination, mirroring
+// TestFeedVersionResolver_Shapes_Cursor.
+func TestFareResolver_Cursor(t *testing.T) {
+	c, cfg := newTestClient(t)
+	ctx := model.WithConfig(context.Background(), cfg)
+
+	baSha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
+	ctSha1 := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
+	fvids := map[string]int{}
+	for _, sha1 := range []string{baSha1, ctSha1} {
+		fvs, err := cfg.Finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &sha1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(fvs) == 0 {
+			t.Fatalf("feed version %s not found", sha1)
+		}
+		fvids[sha1] = fvs[0].ID
+	}
+	fareRuleGroups, err := cfg.Finder.FareRulesByFeedVersionIDs(ctx, nil, nil, []int{fvids[baSha1]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fareRules := fareRuleGroups[0]
+	var fareRuleIDs []string
+	for _, ent := range fareRules {
+		fareRuleIDs = append(fareRuleIDs, strconv.Itoa(ent.ID))
+	}
+	areaGroups, err := cfg.Finder.AreasByFeedVersionIDs(ctx, nil, nil, []int{fvids[ctSha1]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stopAreaGroups, err := cfg.Finder.StopAreasByAreaIDs(ctx, nil, nil, []int{areaGroups[0][0].ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stopAreas := stopAreaGroups[0]
+	var stopAreaIDs []string
+	for _, ent := range stopAreas {
+		stopAreaIDs = append(stopAreaIDs, strconv.Itoa(ent.ID))
+	}
+
+	fareRulesQuery := `query($sha1: String!, $after: Int) { feed_versions(where: {sha1: $sha1}) { fare_rules(limit: 10000, after: $after) { id } } }`
+	stopAreasQuery := `query($sha1: String!, $after: Int) { feed_versions(where: {sha1: $sha1}) { areas(limit: 1) { stop_areas(after: $after) { id } } } }`
+	testcases := []testcase{
+		{
+			name:         "fare_rules no cursor",
+			query:        fareRulesQuery,
+			vars:         hw{"sha1": baSha1},
+			selector:     "feed_versions.0.fare_rules.#.id",
+			selectExpect: fareRuleIDs,
+		},
+		{
+			name:         "fare_rules after first",
+			query:        fareRulesQuery,
+			vars:         hw{"sha1": baSha1, "after": fareRules[0].ID},
+			selector:     "feed_versions.0.fare_rules.#.id",
+			selectExpect: fareRuleIDs[1:],
+		},
+		{
+			name:         "stop_areas after first",
+			query:        stopAreasQuery,
+			vars:         hw{"sha1": ctSha1, "after": stopAreas[0].ID},
+			selector:     "feed_versions.0.areas.0.stop_areas.#.id",
+			selectExpect: stopAreaIDs[1:],
+		},
+	}
 	queryTestcases(t, c, testcases)
 }
