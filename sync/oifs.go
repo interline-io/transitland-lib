@@ -32,27 +32,6 @@ type agencyPlace struct {
 	Adm0name tt.String
 }
 
-// refreshOifSQL rewrites a matched operator-in-feed row's resolved fields where
-// any changed. Each value is bound twice, to set it and to compare it, so an
-// unchanged row is left alone.
-const refreshOifSQL = `update current_operators_in_feed set
-	resolved_onestop_id = ?,
-	resolved_name = ?,
-	resolved_short_name = ?,
-	resolved_places = ?,
-	resolved_gtfs_agency_id = ?
-where id = ? and (
-	resolved_onestop_id is distinct from ?
-	or resolved_name is distinct from ?
-	or resolved_short_name is distinct from ?
-	or resolved_places is distinct from ?
-	or resolved_gtfs_agency_id is distinct from ?
-)`
-
-// deleteHiddenOifsSQL removes the rows of operators that sync has soft-deleted.
-const deleteHiddenOifsSQL = `delete from current_operators_in_feed
-where operator_id in (select id from current_operators where deleted_at is not null)`
-
 var nameTilde = "[-:&@/]"
 var nameFilter = "[^[:alnum:]~><]"
 
@@ -174,8 +153,28 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 // refreshOif writes oif's resolved fields to row id where they differ from what
 // the row holds, and says whether any did.
 func refreshOif(ctx context.Context, atx tldb.Adapter, id int, oif dmfr.OperatorAssociatedFeed) (bool, error) {
-	vals := []any{oif.ResolvedOnestopID, oif.ResolvedName, oif.ResolvedShortName, oif.ResolvedPlaces, oif.ResolvedGtfsAgencyID}
-	r, err := atx.DBX().ExecContext(ctx, atx.DBX().Rebind(refreshOifSQL), slices.Concat(vals, []any{id}, vals)...)
+	// Compare in SQL: tt reads '' back as unset, so only the database can tell
+	// NULL from ''. An unchanged row matches no condition and isn't written.
+	q := atx.Sqrl().
+		Update("current_operators_in_feed").
+		Set("resolved_onestop_id", oif.ResolvedOnestopID).
+		Set("resolved_name", oif.ResolvedName).
+		Set("resolved_short_name", oif.ResolvedShortName).
+		Set("resolved_places", oif.ResolvedPlaces).
+		Set("resolved_gtfs_agency_id", oif.ResolvedGtfsAgencyID).
+		Where(sq.Eq{"id": id}).
+		Where(sq.Or{
+			sq.Expr("resolved_onestop_id is distinct from ?", oif.ResolvedOnestopID),
+			sq.Expr("resolved_name is distinct from ?", oif.ResolvedName),
+			sq.Expr("resolved_short_name is distinct from ?", oif.ResolvedShortName),
+			sq.Expr("resolved_places is distinct from ?", oif.ResolvedPlaces),
+			sq.Expr("resolved_gtfs_agency_id is distinct from ?", oif.ResolvedGtfsAgencyID),
+		})
+	qstr, qargs, err := q.ToSql()
+	if err != nil {
+		return false, err
+	}
+	r, err := atx.DBX().ExecContext(ctx, qstr, qargs...)
 	if err != nil {
 		return false, err
 	}
@@ -186,7 +185,14 @@ func refreshOif(ctx context.Context, atx tldb.Adapter, id int, oif dmfr.Operator
 // deleteHiddenOifs removes the rows of soft-deleted operators, which the finders
 // already hide, so none of them keeps an agency from its generated row.
 func deleteHiddenOifs(ctx context.Context, atx tldb.Adapter) error {
-	_, err := atx.DBX().ExecContext(ctx, atx.DBX().Rebind(deleteHiddenOifsSQL))
+	q := atx.Sqrl().
+		Delete("current_operators_in_feed").
+		Where("operator_id in (select id from current_operators where deleted_at is not null)")
+	qstr, qargs, err := q.ToSql()
+	if err != nil {
+		return err
+	}
+	_, err = atx.DBX().ExecContext(ctx, qstr, qargs...)
 	return err
 }
 

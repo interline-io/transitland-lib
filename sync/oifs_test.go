@@ -51,8 +51,17 @@ func TestGetPlaces(t *testing.T) {
 			name string
 		}{{0.3, "Oakland"}, {0.6, "San Francisco"}, {0.3, "Berkeley"}, {0.3, "Oakland"}, {0.1, "Alameda"}}
 		for _, p := range places {
-			q := "insert into tl_agency_places (feed_version_id, agency_id, rank, name, adm1name, adm0name) values (?, ?, ?, ?, ?, ?)"
-			_, err := atx.DBX().ExecContext(ctx, atx.DBX().Rebind(q), agency.FeedVersionID, agency.ID, p.rank, p.name, "California", "United States")
+			q := atx.Sqrl().Insert("tl_agency_places").SetMap(map[string]any{
+				"feed_version_id": agency.FeedVersionID,
+				"agency_id":       agency.ID,
+				"rank":            p.rank,
+				"name":            p.name,
+				"adm1name":        "California",
+				"adm0name":        "United States",
+			})
+			qstr, qargs, err := q.ToSql()
+			require.NoError(t, err)
+			_, err = atx.DBX().ExecContext(ctx, qstr, qargs...)
 			require.NoError(t, err)
 		}
 		got, err := getPlaces(ctx, atx, agency.ID)
