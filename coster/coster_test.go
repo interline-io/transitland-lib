@@ -202,7 +202,8 @@ rail,rail_fare`,
 }
 
 func TestLowestFare_Passes(t *testing.T) {
-	// A product with the draft duration fields is a pass, which never prices a trip.
+	// A product with the draft duration fields is a pass, which never prices a trip for a
+	// rider who doesn't hold one.
 	c := newTestCoster(t, map[string]string{
 		"fare_products.txt": `
 fare_product_id,amount,currency,duration_amount,duration_type,duration_unit

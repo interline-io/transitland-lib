@@ -2,9 +2,9 @@
 //
 // It follows the adopted specification, including effective fare legs from
 // fare_leg_join_rules.txt, rule_priority, timeframes, and chained transfers. It ignores
-// Interline's draft extensions, such as transfer_only and filter_fare_product_id, except
-// that fare products with the draft duration fields are passes, which never price a trip.
-// It is based on an earlier internal implementation.
+// extensions outside the adopted spec, such as transfer_only and filter_fare_product_id,
+// except that fare products with the draft duration fields are passes, which price a trip
+// only for a rider who holds one. It is based on an earlier internal implementation.
 package coster
 
 import (
@@ -181,8 +181,7 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	for i := range rows {
 		p := &rows[i]
 		if p.DurationAmount.Valid && !r.held[id] {
-			// A row with the draft duration fields is a pass, which prices a trip only when
-			// the rider holds it.
+			// A row with the draft duration fields is a pass, and only a held pass prices a trip.
 			continue
 		}
 		if v := p.RiderCategoryID.Val; v != "" && !r.categories[v] {

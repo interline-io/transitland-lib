@@ -10,11 +10,11 @@ import (
 )
 
 // legOption is a leg rule matched to a fare leg, with the product row the rider would use,
-// what the rider pays for it, and the fare medium used to pay.
+// the amount the rider pays, and the fare medium used to pay.
 type legOption struct {
 	rule        *gtfs.FareLegRule
 	product     *gtfs.FareProduct
-	amount      float64 // nothing when the rider holds the product
+	amount      float64 // zero when the rider holds the product
 	fareMediaID string
 }
 
