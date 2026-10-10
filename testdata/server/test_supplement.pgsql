@@ -85,6 +85,74 @@ insert into tl_segment_patterns(feed_version_id,segment_id,route_id,shape_id,sto
         2
     );    
 
+-- GTFS Fares v2 for CT. The test feeds have no networks, areas, timeframes, or
+-- fare_leg_join_rules, so add a small synthetic set to the active CT feed version.
+-- As the importer does, text references to networks, areas, and stops hold the
+-- referenced row's internal id; references to fare products, timeframes, leg
+-- groups, and rider categories hold GTFS ids.
+create temporary table ct_fv as
+    select fs.feed_version_id as id from feed_states fs join current_feeds cf on cf.id = fs.feed_id where cf.onestop_id = 'CT';
+
+insert into gtfs_networks(feed_version_id, network_id, network_name)
+    select id, 'local', 'Local service' from ct_fv
+    union all select id, 'express', 'Express service' from ct_fv;
+
+insert into gtfs_route_networks(feed_version_id, network_id, route_id)
+    select r.feed_version_id, n.id, r.id
+    from gtfs_routes r
+    join ct_fv on ct_fv.id = r.feed_version_id
+    join gtfs_networks n on n.feed_version_id = r.feed_version_id and n.network_id = (case when r.route_id = 'Bu-130' then 'express' else 'local' end)
+    where r.route_id in ('Lo-130', 'Bu-130');
+
+insert into gtfs_areas(feed_version_id, area_id, area_name)
+    select id, 'zone1', 'Zone 1' from ct_fv
+    union all select id, 'zone4', 'Zone 4' from ct_fv;
+
+insert into gtfs_stop_areas(feed_version_id, area_id, stop_id)
+    select s.feed_version_id, a.id, s.id
+    from gtfs_stops s
+    join ct_fv on ct_fv.id = s.feed_version_id
+    join gtfs_areas a on a.feed_version_id = s.feed_version_id and a.area_id = (case when s.stop_id in ('70011', '70012') then 'zone1' else 'zone4' end)
+    where s.stop_id in ('70011', '70012', '70261', '70262');
+
+insert into gtfs_timeframes(feed_version_id, timeframe_group_id, start_time, end_time, service_id)
+    select c.feed_version_id, 'weekday_peak', 21600, 32400, c.id
+    from gtfs_calendars c join ct_fv on ct_fv.id = c.feed_version_id where c.service_id = 'mtwtf';
+
+insert into gtfs_rider_categories(feed_version_id, rider_category_id, rider_category_name, is_default_fare_category, eligibility_url, min_age, max_age)
+    select id, 'adult', 'Adult', 1, null, null, null from ct_fv
+    union all select id, 'youth', 'Youth', 0, 'https://www.caltrain.com/fares', 5, 18 from ct_fv;
+
+insert into gtfs_fare_products(feed_version_id, fare_product_id, fare_product_name, amount, currency, rider_category_id, duration_start, duration_amount, duration_unit, duration_type)
+    select id, 'two_zone', 'Two zones', 6.40, 'USD', 'adult', null::int, null::real, null::int, null::int from ct_fv
+    union all select id, 'two_zone', 'Two zones', 3.20, 'USD', 'youth', null, null, null, null from ct_fv
+    union all select id, 'two_zone_peak', 'Two zones, peak', 7.40, 'USD', 'adult', null, null, null, null from ct_fv
+    union all select id, 'express_upgrade', 'Express upgrade', 1.00, 'USD', null, null, null, null, null from ct_fv
+    union all select id, 'day_pass', 'Day pass', 15.00, 'USD', 'adult', 0, 1, 3, 1 from ct_fv;
+
+create temporary table ct_ref as
+    select
+        (select n.id::text from gtfs_networks n join ct_fv on ct_fv.id = n.feed_version_id where n.network_id = 'local') as local_net,
+        (select n.id::text from gtfs_networks n join ct_fv on ct_fv.id = n.feed_version_id where n.network_id = 'express') as express_net,
+        (select a.id::text from gtfs_areas a join ct_fv on ct_fv.id = a.feed_version_id where a.area_id = 'zone1') as zone1,
+        (select a.id::text from gtfs_areas a join ct_fv on ct_fv.id = a.feed_version_id where a.area_id = 'zone4') as zone4,
+        (select s.id::text from gtfs_stops s join ct_fv on ct_fv.id = s.feed_version_id where s.stop_id = '70261') as stop_70261,
+        (select s.id::text from gtfs_stops s join ct_fv on ct_fv.id = s.feed_version_id where s.stop_id = '70262') as stop_70262;
+
+insert into gtfs_fare_leg_rules(feed_version_id, leg_group_id, network_id, from_area_id, to_area_id, from_timeframe_group_id, to_timeframe_group_id, fare_product_id, rule_priority, transfer_only)
+    select ct_fv.id, 'ct_local', local_net, zone1, zone4, null, null, 'two_zone', 0, null::int from ct_fv, ct_ref
+    union all select ct_fv.id, 'ct_local', local_net, zone1, zone4, 'weekday_peak', null, 'two_zone_peak', 1, null::int from ct_fv, ct_ref
+    union all select ct_fv.id, 'ct_express', express_net, null, null, null, null, 'two_zone', 0, 1 from ct_fv, ct_ref;
+
+insert into gtfs_fare_transfer_rules(feed_version_id, from_leg_group_id, to_leg_group_id, transfer_count, duration_limit, duration_limit_type, fare_transfer_type, fare_product_id, filter_fare_product_id)
+    select id, 'ct_local', 'ct_express', 1, 5400, 1, 0, 'express_upgrade', 'two_zone' from ct_fv;
+
+insert into gtfs_fare_leg_join_rules(feed_version_id, from_network_id, to_network_id, from_stop_id, to_stop_id)
+    select ct_fv.id, local_net, express_net, stop_70261, stop_70262 from ct_fv, ct_ref;
+
+drop table ct_ref;
+drop table ct_fv;
+
 -- unactivate feed
 update feed_states set feed_version_id = null, materialized_feed_version_id = null, active_feed_version_id = null where feed_id = (select id from current_feeds where onestop_id = 'EX');
 

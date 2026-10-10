@@ -30,6 +30,10 @@ func (r *stopResolver) LocationGroups(ctx context.Context, obj *model.Stop, limi
 	return LoaderFor(ctx).LocationGroupsByStopIDs.Load(ctx, locationGroupsByStopLoaderParam{StopID: obj.ID, Limit: limit})()
 }
 
+func (r *stopResolver) Areas(ctx context.Context, obj *model.Stop, limit *int) ([]*model.Area, error) {
+	return LoaderFor(ctx).AreasByStopIDs.Load(ctx, areaLoaderParam{StopID: obj.ID, Limit: resolverCheckLimit(limit)})()
+}
+
 func (r *stopResolver) Level(ctx context.Context, obj *model.Stop) (*model.Level, error) {
 	if !obj.LevelID.Valid {
 		return nil, nil

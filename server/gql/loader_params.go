@@ -7,6 +7,29 @@ import (
 // This file contains parameters that can be passed to methods for finding/selecting/grouping entities
 // These are distinct from WHERE graphql input filters, which are available to users.
 
+// fareLoaderParam selects the fares entities (Fares v1 and v2) of a feed version.
+type fareLoaderParam struct {
+	FeedVersionID int
+	Limit         *int
+	After         *model.Cursor
+}
+
+type stopAreaLoaderParam struct {
+	AreaID int
+	Limit  *int
+	After  *model.Cursor
+}
+
+type areaLoaderParam struct {
+	StopID int
+	Limit  *int
+}
+
+type networkLoaderParam struct {
+	RouteID int
+	Limit   *int
+}
+
 type frequencyLoaderParam struct {
 	TripID int
 	Limit  *int

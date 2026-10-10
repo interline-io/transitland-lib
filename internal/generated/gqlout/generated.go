@@ -31,6 +31,7 @@ type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 type ResolverRoot interface {
 	Agency() AgencyResolver
+	Area() AreaResolver
 	BookingRule() BookingRuleResolver
 	Calendar() CalendarResolver
 	CensusDataset() CensusDatasetResolver
@@ -39,6 +40,13 @@ type ResolverRoot interface {
 	CensusSource() CensusSourceResolver
 	CensusTable() CensusTableResolver
 	CensusValue() CensusValueResolver
+	FareAttribute() FareAttributeResolver
+	FareLegJoinRule() FareLegJoinRuleResolver
+	FareLegRule() FareLegRuleResolver
+	FareMedia() FareMediaResolver
+	FareProduct() FareProductResolver
+	FareRule() FareRuleResolver
+	FareTransferRule() FareTransferRuleResolver
 	Feed() FeedResolver
 	FeedState() FeedStateResolver
 	FeedVersion() FeedVersionResolver
@@ -51,12 +59,15 @@ type ResolverRoot interface {
 	LocationGroup() LocationGroupResolver
 	LocationGroupStop() LocationGroupStopResolver
 	Mutation() MutationResolver
+	Network() NetworkResolver
 	Operator() OperatorResolver
 	Pathway() PathwayResolver
 	Place() PlaceResolver
 	Query() QueryResolver
+	RiderCategory() RiderCategoryResolver
 	Route() RouteResolver
 	RouteHeadway() RouteHeadwayResolver
+	RouteNetwork() RouteNetworkResolver
 	RouteStop() RouteStopResolver
 	RouteStopPattern() RouteStopPatternResolver
 	RouteStopPatternTimetableGrid() RouteStopPatternTimetableGridResolver
@@ -65,9 +76,11 @@ type ResolverRoot interface {
 	SegmentPattern() SegmentPatternResolver
 	Shape() ShapeResolver
 	Stop() StopResolver
+	StopArea() StopAreaResolver
 	StopExternalReference() StopExternalReferenceResolver
 	StopTime() StopTimeResolver
 	Tenant() TenantResolver
+	Timeframe() TimeframeResolver
 	Trip() TripResolver
 	ValidationReport() ValidationReportResolver
 	ValidationReportErrorGroup() ValidationReportErrorGroupResolver
@@ -128,6 +141,16 @@ type ComplexityRoot struct {
 		TtsDescriptionText func(childComplexity int) int
 		TtsHeaderText      func(childComplexity int) int
 		URL                func(childComplexity int) int
+	}
+
+	Area struct {
+		AreaID          func(childComplexity int) int
+		AreaName        func(childComplexity int) int
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		ID              func(childComplexity int) int
+		StopAreas       func(childComplexity int, limit *int, after *int) int
 	}
 
 	BookingRule struct {
@@ -283,6 +306,109 @@ type ComplexityRoot struct {
 		ID func(childComplexity int) int
 	}
 
+	FareAttribute struct {
+		Agency           func(childComplexity int) int
+		CurrencyType     func(childComplexity int) int
+		FareID           func(childComplexity int) int
+		FeedOnestopID    func(childComplexity int) int
+		FeedVersion      func(childComplexity int) int
+		FeedVersionSHA1  func(childComplexity int) int
+		ID               func(childComplexity int) int
+		PaymentMethod    func(childComplexity int) int
+		Price            func(childComplexity int) int
+		TransferDuration func(childComplexity int) int
+		Transfers        func(childComplexity int) int
+	}
+
+	FareLegJoinRule struct {
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		FromNetworkID   func(childComplexity int) int
+		FromStop        func(childComplexity int) int
+		ID              func(childComplexity int) int
+		ToNetworkID     func(childComplexity int) int
+		ToStop          func(childComplexity int) int
+	}
+
+	FareLegRule struct {
+		FareProductID        func(childComplexity int) int
+		FareProducts         func(childComplexity int) int
+		FeedOnestopID        func(childComplexity int) int
+		FeedVersion          func(childComplexity int) int
+		FeedVersionSHA1      func(childComplexity int) int
+		FromArea             func(childComplexity int) int
+		FromTimeframeGroupID func(childComplexity int) int
+		FromTimeframes       func(childComplexity int) int
+		ID                   func(childComplexity int) int
+		LegGroupID           func(childComplexity int) int
+		NetworkID            func(childComplexity int) int
+		RulePriority         func(childComplexity int) int
+		ToArea               func(childComplexity int) int
+		ToTimeframeGroupID   func(childComplexity int) int
+		ToTimeframes         func(childComplexity int) int
+		TransferOnly         func(childComplexity int) int
+	}
+
+	FareMedia struct {
+		FareMediaID     func(childComplexity int) int
+		FareMediaName   func(childComplexity int) int
+		FareMediaType   func(childComplexity int) int
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		ID              func(childComplexity int) int
+	}
+
+	FareProduct struct {
+		Amount          func(childComplexity int) int
+		Currency        func(childComplexity int) int
+		DurationAmount  func(childComplexity int) int
+		DurationStart   func(childComplexity int) int
+		DurationType    func(childComplexity int) int
+		DurationUnit    func(childComplexity int) int
+		FareMedia       func(childComplexity int) int
+		FareProductID   func(childComplexity int) int
+		FareProductName func(childComplexity int) int
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		ID              func(childComplexity int) int
+		RiderCategory   func(childComplexity int) int
+		RiderCategoryID func(childComplexity int) int
+	}
+
+	FareRule struct {
+		ContainsID      func(childComplexity int) int
+		DestinationID   func(childComplexity int) int
+		FareAttribute   func(childComplexity int) int
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		ID              func(childComplexity int) int
+		OriginID        func(childComplexity int) int
+		Route           func(childComplexity int) int
+	}
+
+	FareTransferRule struct {
+		DurationLimit       func(childComplexity int) int
+		DurationLimitType   func(childComplexity int) int
+		FareProductID       func(childComplexity int) int
+		FareProducts        func(childComplexity int) int
+		FareTransferType    func(childComplexity int) int
+		FeedOnestopID       func(childComplexity int) int
+		FeedVersion         func(childComplexity int) int
+		FeedVersionSHA1     func(childComplexity int) int
+		FilterFareProductID func(childComplexity int) int
+		FilterFareProducts  func(childComplexity int) int
+		FromLegGroupID      func(childComplexity int) int
+		FromLegRules        func(childComplexity int) int
+		ID                  func(childComplexity int) int
+		ToLegGroupID        func(childComplexity int) int
+		ToLegRules          func(childComplexity int) int
+		TransferCount       func(childComplexity int) int
+	}
+
 	Feed struct {
 		AssociatedOperators func(childComplexity int) int
 		Authorization       func(childComplexity int) int
@@ -363,10 +489,18 @@ type ComplexityRoot struct {
 
 	FeedVersion struct {
 		Agencies              func(childComplexity int, limit *int, where *model.AgencyFilter) int
+		Areas                 func(childComplexity int, limit *int, after *int) int
 		BookingRules          func(childComplexity int, limit *int, where *model.BookingRuleFilter) int
 		CreatedBy             func(childComplexity int) int
 		Description           func(childComplexity int) int
 		EarliestCalendarDate  func(childComplexity int) int
+		FareAttributes        func(childComplexity int, limit *int, after *int) int
+		FareLegJoinRules      func(childComplexity int, limit *int, after *int) int
+		FareLegRules          func(childComplexity int, limit *int, after *int) int
+		FareMedia             func(childComplexity int, limit *int, after *int) int
+		FareProducts          func(childComplexity int, limit *int, after *int) int
+		FareRules             func(childComplexity int, limit *int, after *int) int
+		FareTransferRules     func(childComplexity int, limit *int, after *int) int
 		Feed                  func(childComplexity int) int
 		FeedInfos             func(childComplexity int, limit *int) int
 		FeedVersionGtfsImport func(childComplexity int) int
@@ -379,7 +513,10 @@ type ComplexityRoot struct {
 		LocationGroups        func(childComplexity int, limit *int, where *model.LocationGroupFilter) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
+		Networks              func(childComplexity int, limit *int, after *int) int
 		Permissions           func(childComplexity int) int
+		RiderCategories       func(childComplexity int, limit *int, after *int) int
+		RouteNetworks         func(childComplexity int, limit *int, after *int) int
 		Routes                func(childComplexity int, limit *int, where *model.RouteFilter) int
 		SHA1                  func(childComplexity int) int
 		SHA1Dir               func(childComplexity int) int
@@ -388,6 +525,7 @@ type ComplexityRoot struct {
 		ServiceWindow         func(childComplexity int) int
 		Shapes                func(childComplexity int, limit *int, after *int, where *model.ShapeFilter) int
 		Stops                 func(childComplexity int, limit *int, where *model.StopFilter) int
+		Timeframes            func(childComplexity int, limit *int, after *int) int
 		Trips                 func(childComplexity int, limit *int, where *model.TripFilter) int
 		URL                   func(childComplexity int) int
 		UpdatedBy             func(childComplexity int) int
@@ -870,6 +1008,15 @@ type ComplexityRoot struct {
 		ValidateGtfs        func(childComplexity int, file *graphql.Upload, url *string, realtimeUrls []string) int
 	}
 
+	Network struct {
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		ID              func(childComplexity int) int
+		NetworkID       func(childComplexity int) int
+		NetworkName     func(childComplexity int) int
+	}
+
 	Operator struct {
 		Agencies   func(childComplexity int, limit *int) int
 		Feeds      func(childComplexity int, limit *int, where *model.FeedFilter) int
@@ -992,6 +1139,19 @@ type ComplexityRoot struct {
 		LicensePlate func(childComplexity int) int
 	}
 
+	RiderCategory struct {
+		EligibilityURL        func(childComplexity int) int
+		FeedOnestopID         func(childComplexity int) int
+		FeedVersion           func(childComplexity int) int
+		FeedVersionSHA1       func(childComplexity int) int
+		ID                    func(childComplexity int) int
+		IsDefaultFareCategory func(childComplexity int) int
+		MaxAge                func(childComplexity int) int
+		MinAge                func(childComplexity int) int
+		RiderCategoryID       func(childComplexity int) int
+		RiderCategoryName     func(childComplexity int) int
+	}
+
 	Route struct {
 		Agency            func(childComplexity int) int
 		Alerts            func(childComplexity int, active *bool, limit *int, includeModes *bool, includeTrips *bool) int
@@ -1006,6 +1166,8 @@ type ComplexityRoot struct {
 		Geometry          func(childComplexity int) int
 		Headways          func(childComplexity int, limit *int) int
 		ID                func(childComplexity int) int
+		NetworkID         func(childComplexity int) int
+		Networks          func(childComplexity int, limit *int) int
 		OnestopID         func(childComplexity int) int
 		Patterns          func(childComplexity int, where *model.RouteStopPatternFilter) int
 		RouteAttribute    func(childComplexity int) int
@@ -1052,6 +1214,15 @@ type ComplexityRoot struct {
 		ServiceDate   func(childComplexity int) int
 		Stop          func(childComplexity int) int
 		StopTripCount func(childComplexity int) int
+	}
+
+	RouteNetwork struct {
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		ID              func(childComplexity int) int
+		Network         func(childComplexity int) int
+		Route           func(childComplexity int) int
 	}
 
 	RouteStop struct {
@@ -1142,6 +1313,7 @@ type ComplexityRoot struct {
 
 	Stop struct {
 		Alerts             func(childComplexity int, active *bool, limit *int) int
+		Areas              func(childComplexity int, limit *int) int
 		Arrivals           func(childComplexity int, limit *int, where *model.StopTimeFilter) int
 		CensusGeographies  func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
 		ChildLevels        func(childComplexity int, limit *int) int
@@ -1181,6 +1353,15 @@ type ComplexityRoot struct {
 		WheelchairBoarding func(childComplexity int) int
 		WithinFeatures     func(childComplexity int) int
 		ZoneID             func(childComplexity int) int
+	}
+
+	StopArea struct {
+		Area            func(childComplexity int) int
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		ID              func(childComplexity int) int
+		Stop            func(childComplexity int) int
 	}
 
 	StopExternalReference struct {
@@ -1262,6 +1443,17 @@ type ComplexityRoot struct {
 		ID          func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Permissions func(childComplexity int) int
+	}
+
+	Timeframe struct {
+		EndTime          func(childComplexity int) int
+		FeedOnestopID    func(childComplexity int) int
+		FeedVersion      func(childComplexity int) int
+		FeedVersionSHA1  func(childComplexity int) int
+		ID               func(childComplexity int) int
+		Service          func(childComplexity int) int
+		StartTime        func(childComplexity int) int
+		TimeframeGroupID func(childComplexity int) int
 	}
 
 	Trip struct {
@@ -1418,6 +1610,11 @@ type AgencyResolver interface {
 	Alerts(ctx context.Context, obj *model.Agency, active *bool, limit *int, includeModes *bool) ([]*model.Alert, error)
 	VehiclePositions(ctx context.Context, obj *model.Agency, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 }
+type AreaResolver interface {
+	StopAreas(ctx context.Context, obj *model.Area, limit *int, after *int) ([]*model.StopArea, error)
+
+	FeedVersion(ctx context.Context, obj *model.Area) (*model.FeedVersion, error)
+}
 type BookingRuleResolver interface {
 	PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error)
 
@@ -1453,6 +1650,56 @@ type CensusTableResolver interface {
 type CensusValueResolver interface {
 	Table(ctx context.Context, obj *model.CensusValue) (*model.CensusTable, error)
 }
+type FareAttributeResolver interface {
+	Agency(ctx context.Context, obj *model.FareAttribute) (*model.Agency, error)
+
+	FeedVersion(ctx context.Context, obj *model.FareAttribute) (*model.FeedVersion, error)
+}
+type FareLegJoinRuleResolver interface {
+	FromStop(ctx context.Context, obj *model.FareLegJoinRule) (*model.Stop, error)
+	ToStop(ctx context.Context, obj *model.FareLegJoinRule) (*model.Stop, error)
+
+	FeedVersion(ctx context.Context, obj *model.FareLegJoinRule) (*model.FeedVersion, error)
+}
+type FareLegRuleResolver interface {
+	FromArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error)
+	ToArea(ctx context.Context, obj *model.FareLegRule) (*model.Area, error)
+
+	FromTimeframes(ctx context.Context, obj *model.FareLegRule) ([]*model.Timeframe, error)
+
+	ToTimeframes(ctx context.Context, obj *model.FareLegRule) ([]*model.Timeframe, error)
+
+	FareProducts(ctx context.Context, obj *model.FareLegRule) ([]*model.FareProduct, error)
+
+	FeedVersion(ctx context.Context, obj *model.FareLegRule) (*model.FeedVersion, error)
+}
+type FareMediaResolver interface {
+	FeedVersion(ctx context.Context, obj *model.FareMedia) (*model.FeedVersion, error)
+}
+type FareProductResolver interface {
+	RiderCategoryID(ctx context.Context, obj *model.FareProduct) (*string, error)
+	RiderCategory(ctx context.Context, obj *model.FareProduct) (*model.RiderCategory, error)
+	FareMedia(ctx context.Context, obj *model.FareProduct) (*model.FareMedia, error)
+
+	FeedVersion(ctx context.Context, obj *model.FareProduct) (*model.FeedVersion, error)
+}
+type FareRuleResolver interface {
+	FareAttribute(ctx context.Context, obj *model.FareRule) (*model.FareAttribute, error)
+	Route(ctx context.Context, obj *model.FareRule) (*model.Route, error)
+
+	FeedVersion(ctx context.Context, obj *model.FareRule) (*model.FeedVersion, error)
+}
+type FareTransferRuleResolver interface {
+	FromLegRules(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareLegRule, error)
+
+	ToLegRules(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareLegRule, error)
+
+	FareProducts(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareProduct, error)
+
+	FilterFareProducts(ctx context.Context, obj *model.FareTransferRule) ([]*model.FareProduct, error)
+
+	FeedVersion(ctx context.Context, obj *model.FareTransferRule) (*model.FeedVersion, error)
+}
 type FeedResolver interface {
 	Spec(ctx context.Context, obj *model.Feed) (*model.FeedSpecTypes, error)
 	Languages(ctx context.Context, obj *model.Feed) ([]string, error)
@@ -1484,6 +1731,18 @@ type FeedVersionResolver interface {
 	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
 	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.BookingRuleFilter) ([]*model.BookingRule, error)
 	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error)
+	FareAttributes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareAttribute, error)
+	FareRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareRule, error)
+	FareMedia(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareMedia, error)
+	FareProducts(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareProduct, error)
+	FareLegRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareLegRule, error)
+	FareLegJoinRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareLegJoinRule, error)
+	FareTransferRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareTransferRule, error)
+	RiderCategories(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RiderCategory, error)
+	Timeframes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Timeframe, error)
+	Areas(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Area, error)
+	Networks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Network, error)
+	RouteNetworks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RouteNetwork, error)
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
@@ -1550,6 +1809,9 @@ type MutationResolver interface {
 	PathwayUpdate(ctx context.Context, set model.PathwaySetInput) (*model.Pathway, error)
 	PathwayDelete(ctx context.Context, id int) (*model.EntityDeleteResult, error)
 }
+type NetworkResolver interface {
+	FeedVersion(ctx context.Context, obj *model.Network) (*model.FeedVersion, error)
+}
 type OperatorResolver interface {
 	Agencies(ctx context.Context, obj *model.Operator, limit *int) ([]*model.Agency, error)
 	Feeds(ctx context.Context, obj *model.Operator, limit *int, where *model.FeedFilter) ([]*model.Feed, error)
@@ -1581,9 +1843,13 @@ type QueryResolver interface {
 	Groups(ctx context.Context, limit *int, ids []int) ([]*model.Group, error)
 	Users(ctx context.Context, limit *int, where *model.UserFilter) ([]*model.User, error)
 }
+type RiderCategoryResolver interface {
+	FeedVersion(ctx context.Context, obj *model.RiderCategory) (*model.FeedVersion, error)
+}
 type RouteResolver interface {
 	RouteTypeBasic(ctx context.Context, obj *model.Route) (int, error)
 
+	Networks(ctx context.Context, obj *model.Route, limit *int) ([]*model.Network, error)
 	Geometry(ctx context.Context, obj *model.Route) (*tt.Geometry, error)
 	Agency(ctx context.Context, obj *model.Route) (*model.Agency, error)
 
@@ -1607,6 +1873,12 @@ type RouteHeadwayResolver interface {
 	Stop(ctx context.Context, obj *model.RouteHeadway) (*model.Stop, error)
 
 	Departures(ctx context.Context, obj *model.RouteHeadway) ([]*tt.Seconds, error)
+}
+type RouteNetworkResolver interface {
+	Network(ctx context.Context, obj *model.RouteNetwork) (*model.Network, error)
+	Route(ctx context.Context, obj *model.RouteNetwork) (*model.Route, error)
+
+	FeedVersion(ctx context.Context, obj *model.RouteNetwork) (*model.FeedVersion, error)
 }
 type RouteStopResolver interface {
 	Route(ctx context.Context, obj *model.RouteStop) (*model.Route, error)
@@ -1641,6 +1913,7 @@ type ShapeResolver interface {
 type StopResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Stop) (*model.FeedVersion, error)
 	LocationGroups(ctx context.Context, obj *model.Stop, limit *int) ([]*model.LocationGroup, error)
+	Areas(ctx context.Context, obj *model.Stop, limit *int) ([]*model.Area, error)
 	Level(ctx context.Context, obj *model.Stop) (*model.Level, error)
 	Parent(ctx context.Context, obj *model.Stop) (*model.Stop, error)
 	ExternalReference(ctx context.Context, obj *model.Stop) (*model.StopExternalReference, error)
@@ -1660,6 +1933,12 @@ type StopResolver interface {
 	NearbyStops(ctx context.Context, obj *model.Stop, limit *int, radius *float64) ([]*model.Stop, error)
 	Alerts(ctx context.Context, obj *model.Stop, active *bool, limit *int) ([]*model.Alert, error)
 }
+type StopAreaResolver interface {
+	Area(ctx context.Context, obj *model.StopArea) (*model.Area, error)
+	Stop(ctx context.Context, obj *model.StopArea) (*model.Stop, error)
+
+	FeedVersion(ctx context.Context, obj *model.StopArea) (*model.FeedVersion, error)
+}
 type StopExternalReferenceResolver interface {
 	TargetActiveStop(ctx context.Context, obj *model.StopExternalReference) (*model.Stop, error)
 }
@@ -1676,6 +1955,11 @@ type StopTimeResolver interface {
 type TenantResolver interface {
 	Groups(ctx context.Context, obj *model.Tenant, limit *int) ([]*model.Group, error)
 	Permissions(ctx context.Context, obj *model.Tenant) (*model.Permissions, error)
+}
+type TimeframeResolver interface {
+	Service(ctx context.Context, obj *model.Timeframe) (*model.Calendar, error)
+
+	FeedVersion(ctx context.Context, obj *model.Timeframe) (*model.FeedVersion, error)
 }
 type TripResolver interface {
 	Calendar(ctx context.Context, obj *model.Trip) (*model.Calendar, error)
@@ -2008,6 +2292,54 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Alert.URL(childComplexity), true
+
+	case "Area.area_id":
+		if e.ComplexityRoot.Area.AreaID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Area.AreaID(childComplexity), true
+	case "Area.area_name":
+		if e.ComplexityRoot.Area.AreaName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Area.AreaName(childComplexity), true
+	case "Area.feed_onestop_id":
+		if e.ComplexityRoot.Area.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Area.FeedOnestopID(childComplexity), true
+	case "Area.feed_version":
+		if e.ComplexityRoot.Area.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Area.FeedVersion(childComplexity), true
+	case "Area.feed_version_sha1":
+		if e.ComplexityRoot.Area.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Area.FeedVersionSHA1(childComplexity), true
+	case "Area.id":
+		if e.ComplexityRoot.Area.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Area.ID(childComplexity), true
+	case "Area.stop_areas":
+		if e.ComplexityRoot.Area.StopAreas == nil {
+			break
+		}
+
+		args, err := ec.field_Area_stop_areas_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Area.StopAreas(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 
 	case "BookingRule.booking_rule_id":
 		if e.ComplexityRoot.BookingRule.BookingRuleID == nil {
@@ -2722,6 +3054,505 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.EntityDeleteResult.ID(childComplexity), true
 
+	case "FareAttribute.agency":
+		if e.ComplexityRoot.FareAttribute.Agency == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.Agency(childComplexity), true
+	case "FareAttribute.currency_type":
+		if e.ComplexityRoot.FareAttribute.CurrencyType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.CurrencyType(childComplexity), true
+	case "FareAttribute.fare_id":
+		if e.ComplexityRoot.FareAttribute.FareID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.FareID(childComplexity), true
+	case "FareAttribute.feed_onestop_id":
+		if e.ComplexityRoot.FareAttribute.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.FeedOnestopID(childComplexity), true
+	case "FareAttribute.feed_version":
+		if e.ComplexityRoot.FareAttribute.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.FeedVersion(childComplexity), true
+	case "FareAttribute.feed_version_sha1":
+		if e.ComplexityRoot.FareAttribute.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.FeedVersionSHA1(childComplexity), true
+	case "FareAttribute.id":
+		if e.ComplexityRoot.FareAttribute.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.ID(childComplexity), true
+	case "FareAttribute.payment_method":
+		if e.ComplexityRoot.FareAttribute.PaymentMethod == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.PaymentMethod(childComplexity), true
+	case "FareAttribute.price":
+		if e.ComplexityRoot.FareAttribute.Price == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.Price(childComplexity), true
+	case "FareAttribute.transfer_duration":
+		if e.ComplexityRoot.FareAttribute.TransferDuration == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.TransferDuration(childComplexity), true
+	case "FareAttribute.transfers":
+		if e.ComplexityRoot.FareAttribute.Transfers == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareAttribute.Transfers(childComplexity), true
+
+	case "FareLegJoinRule.feed_onestop_id":
+		if e.ComplexityRoot.FareLegJoinRule.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.FeedOnestopID(childComplexity), true
+	case "FareLegJoinRule.feed_version":
+		if e.ComplexityRoot.FareLegJoinRule.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.FeedVersion(childComplexity), true
+	case "FareLegJoinRule.feed_version_sha1":
+		if e.ComplexityRoot.FareLegJoinRule.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.FeedVersionSHA1(childComplexity), true
+	case "FareLegJoinRule.from_network_id":
+		if e.ComplexityRoot.FareLegJoinRule.FromNetworkID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.FromNetworkID(childComplexity), true
+	case "FareLegJoinRule.from_stop":
+		if e.ComplexityRoot.FareLegJoinRule.FromStop == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.FromStop(childComplexity), true
+	case "FareLegJoinRule.id":
+		if e.ComplexityRoot.FareLegJoinRule.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.ID(childComplexity), true
+	case "FareLegJoinRule.to_network_id":
+		if e.ComplexityRoot.FareLegJoinRule.ToNetworkID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.ToNetworkID(childComplexity), true
+	case "FareLegJoinRule.to_stop":
+		if e.ComplexityRoot.FareLegJoinRule.ToStop == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegJoinRule.ToStop(childComplexity), true
+
+	case "FareLegRule.fare_product_id":
+		if e.ComplexityRoot.FareLegRule.FareProductID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FareProductID(childComplexity), true
+	case "FareLegRule.fare_products":
+		if e.ComplexityRoot.FareLegRule.FareProducts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FareProducts(childComplexity), true
+	case "FareLegRule.feed_onestop_id":
+		if e.ComplexityRoot.FareLegRule.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FeedOnestopID(childComplexity), true
+	case "FareLegRule.feed_version":
+		if e.ComplexityRoot.FareLegRule.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FeedVersion(childComplexity), true
+	case "FareLegRule.feed_version_sha1":
+		if e.ComplexityRoot.FareLegRule.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FeedVersionSHA1(childComplexity), true
+	case "FareLegRule.from_area":
+		if e.ComplexityRoot.FareLegRule.FromArea == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FromArea(childComplexity), true
+	case "FareLegRule.from_timeframe_group_id":
+		if e.ComplexityRoot.FareLegRule.FromTimeframeGroupID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FromTimeframeGroupID(childComplexity), true
+	case "FareLegRule.from_timeframes":
+		if e.ComplexityRoot.FareLegRule.FromTimeframes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.FromTimeframes(childComplexity), true
+	case "FareLegRule.id":
+		if e.ComplexityRoot.FareLegRule.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.ID(childComplexity), true
+	case "FareLegRule.leg_group_id":
+		if e.ComplexityRoot.FareLegRule.LegGroupID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.LegGroupID(childComplexity), true
+	case "FareLegRule.network_id":
+		if e.ComplexityRoot.FareLegRule.NetworkID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.NetworkID(childComplexity), true
+	case "FareLegRule.rule_priority":
+		if e.ComplexityRoot.FareLegRule.RulePriority == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.RulePriority(childComplexity), true
+	case "FareLegRule.to_area":
+		if e.ComplexityRoot.FareLegRule.ToArea == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.ToArea(childComplexity), true
+	case "FareLegRule.to_timeframe_group_id":
+		if e.ComplexityRoot.FareLegRule.ToTimeframeGroupID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.ToTimeframeGroupID(childComplexity), true
+	case "FareLegRule.to_timeframes":
+		if e.ComplexityRoot.FareLegRule.ToTimeframes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.ToTimeframes(childComplexity), true
+	case "FareLegRule.transfer_only":
+		if e.ComplexityRoot.FareLegRule.TransferOnly == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareLegRule.TransferOnly(childComplexity), true
+
+	case "FareMedia.fare_media_id":
+		if e.ComplexityRoot.FareMedia.FareMediaID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareMedia.FareMediaID(childComplexity), true
+	case "FareMedia.fare_media_name":
+		if e.ComplexityRoot.FareMedia.FareMediaName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareMedia.FareMediaName(childComplexity), true
+	case "FareMedia.fare_media_type":
+		if e.ComplexityRoot.FareMedia.FareMediaType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareMedia.FareMediaType(childComplexity), true
+	case "FareMedia.feed_onestop_id":
+		if e.ComplexityRoot.FareMedia.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareMedia.FeedOnestopID(childComplexity), true
+	case "FareMedia.feed_version":
+		if e.ComplexityRoot.FareMedia.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareMedia.FeedVersion(childComplexity), true
+	case "FareMedia.feed_version_sha1":
+		if e.ComplexityRoot.FareMedia.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareMedia.FeedVersionSHA1(childComplexity), true
+	case "FareMedia.id":
+		if e.ComplexityRoot.FareMedia.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareMedia.ID(childComplexity), true
+
+	case "FareProduct.amount":
+		if e.ComplexityRoot.FareProduct.Amount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.Amount(childComplexity), true
+	case "FareProduct.currency":
+		if e.ComplexityRoot.FareProduct.Currency == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.Currency(childComplexity), true
+	case "FareProduct.duration_amount":
+		if e.ComplexityRoot.FareProduct.DurationAmount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationAmount(childComplexity), true
+	case "FareProduct.duration_start":
+		if e.ComplexityRoot.FareProduct.DurationStart == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationStart(childComplexity), true
+	case "FareProduct.duration_type":
+		if e.ComplexityRoot.FareProduct.DurationType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationType(childComplexity), true
+	case "FareProduct.duration_unit":
+		if e.ComplexityRoot.FareProduct.DurationUnit == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.DurationUnit(childComplexity), true
+	case "FareProduct.fare_media":
+		if e.ComplexityRoot.FareProduct.FareMedia == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.FareMedia(childComplexity), true
+	case "FareProduct.fare_product_id":
+		if e.ComplexityRoot.FareProduct.FareProductID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.FareProductID(childComplexity), true
+	case "FareProduct.fare_product_name":
+		if e.ComplexityRoot.FareProduct.FareProductName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.FareProductName(childComplexity), true
+	case "FareProduct.feed_onestop_id":
+		if e.ComplexityRoot.FareProduct.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.FeedOnestopID(childComplexity), true
+	case "FareProduct.feed_version":
+		if e.ComplexityRoot.FareProduct.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.FeedVersion(childComplexity), true
+	case "FareProduct.feed_version_sha1":
+		if e.ComplexityRoot.FareProduct.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.FeedVersionSHA1(childComplexity), true
+	case "FareProduct.id":
+		if e.ComplexityRoot.FareProduct.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.ID(childComplexity), true
+	case "FareProduct.rider_category":
+		if e.ComplexityRoot.FareProduct.RiderCategory == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.RiderCategory(childComplexity), true
+	case "FareProduct.rider_category_id":
+		if e.ComplexityRoot.FareProduct.RiderCategoryID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareProduct.RiderCategoryID(childComplexity), true
+
+	case "FareRule.contains_id":
+		if e.ComplexityRoot.FareRule.ContainsID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.ContainsID(childComplexity), true
+	case "FareRule.destination_id":
+		if e.ComplexityRoot.FareRule.DestinationID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.DestinationID(childComplexity), true
+	case "FareRule.fare_attribute":
+		if e.ComplexityRoot.FareRule.FareAttribute == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.FareAttribute(childComplexity), true
+	case "FareRule.feed_onestop_id":
+		if e.ComplexityRoot.FareRule.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.FeedOnestopID(childComplexity), true
+	case "FareRule.feed_version":
+		if e.ComplexityRoot.FareRule.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.FeedVersion(childComplexity), true
+	case "FareRule.feed_version_sha1":
+		if e.ComplexityRoot.FareRule.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.FeedVersionSHA1(childComplexity), true
+	case "FareRule.id":
+		if e.ComplexityRoot.FareRule.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.ID(childComplexity), true
+	case "FareRule.origin_id":
+		if e.ComplexityRoot.FareRule.OriginID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.OriginID(childComplexity), true
+	case "FareRule.route":
+		if e.ComplexityRoot.FareRule.Route == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareRule.Route(childComplexity), true
+
+	case "FareTransferRule.duration_limit":
+		if e.ComplexityRoot.FareTransferRule.DurationLimit == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.DurationLimit(childComplexity), true
+	case "FareTransferRule.duration_limit_type":
+		if e.ComplexityRoot.FareTransferRule.DurationLimitType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.DurationLimitType(childComplexity), true
+	case "FareTransferRule.fare_product_id":
+		if e.ComplexityRoot.FareTransferRule.FareProductID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FareProductID(childComplexity), true
+	case "FareTransferRule.fare_products":
+		if e.ComplexityRoot.FareTransferRule.FareProducts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FareProducts(childComplexity), true
+	case "FareTransferRule.fare_transfer_type":
+		if e.ComplexityRoot.FareTransferRule.FareTransferType == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FareTransferType(childComplexity), true
+	case "FareTransferRule.feed_onestop_id":
+		if e.ComplexityRoot.FareTransferRule.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FeedOnestopID(childComplexity), true
+	case "FareTransferRule.feed_version":
+		if e.ComplexityRoot.FareTransferRule.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FeedVersion(childComplexity), true
+	case "FareTransferRule.feed_version_sha1":
+		if e.ComplexityRoot.FareTransferRule.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FeedVersionSHA1(childComplexity), true
+	case "FareTransferRule.filter_fare_product_id":
+		if e.ComplexityRoot.FareTransferRule.FilterFareProductID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FilterFareProductID(childComplexity), true
+	case "FareTransferRule.filter_fare_products":
+		if e.ComplexityRoot.FareTransferRule.FilterFareProducts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FilterFareProducts(childComplexity), true
+	case "FareTransferRule.from_leg_group_id":
+		if e.ComplexityRoot.FareTransferRule.FromLegGroupID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FromLegGroupID(childComplexity), true
+	case "FareTransferRule.from_leg_rules":
+		if e.ComplexityRoot.FareTransferRule.FromLegRules == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.FromLegRules(childComplexity), true
+	case "FareTransferRule.id":
+		if e.ComplexityRoot.FareTransferRule.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.ID(childComplexity), true
+	case "FareTransferRule.to_leg_group_id":
+		if e.ComplexityRoot.FareTransferRule.ToLegGroupID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.ToLegGroupID(childComplexity), true
+	case "FareTransferRule.to_leg_rules":
+		if e.ComplexityRoot.FareTransferRule.ToLegRules == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.ToLegRules(childComplexity), true
+	case "FareTransferRule.transfer_count":
+		if e.ComplexityRoot.FareTransferRule.TransferCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FareTransferRule.TransferCount(childComplexity), true
+
 	case "Feed.associated_operators":
 		if e.ComplexityRoot.Feed.AssociatedOperators == nil {
 			break
@@ -3092,6 +3923,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Agencies(childComplexity, args["limit"].(*int), args["where"].(*model.AgencyFilter)), true
+	case "FeedVersion.areas":
+		if e.ComplexityRoot.FeedVersion.Areas == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_areas_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.Areas(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.booking_rules":
 		if e.ComplexityRoot.FeedVersion.BookingRules == nil {
 			break
@@ -3121,6 +3963,83 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.EarliestCalendarDate(childComplexity), true
+	case "FeedVersion.fare_attributes":
+		if e.ComplexityRoot.FeedVersion.FareAttributes == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_fare_attributes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.FareAttributes(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.fare_leg_join_rules":
+		if e.ComplexityRoot.FeedVersion.FareLegJoinRules == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_fare_leg_join_rules_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.FareLegJoinRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.fare_leg_rules":
+		if e.ComplexityRoot.FeedVersion.FareLegRules == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_fare_leg_rules_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.FareLegRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.fare_media":
+		if e.ComplexityRoot.FeedVersion.FareMedia == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_fare_media_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.FareMedia(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.fare_products":
+		if e.ComplexityRoot.FeedVersion.FareProducts == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_fare_products_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.FareProducts(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.fare_rules":
+		if e.ComplexityRoot.FeedVersion.FareRules == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_fare_rules_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.FareRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.fare_transfer_rules":
+		if e.ComplexityRoot.FeedVersion.FareTransferRules == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_fare_transfer_rules_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.FareTransferRules(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.feed":
 		if e.ComplexityRoot.FeedVersion.Feed == nil {
 			break
@@ -3213,12 +4132,45 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Name(childComplexity), true
+	case "FeedVersion.networks":
+		if e.ComplexityRoot.FeedVersion.Networks == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_networks_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.Networks(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.permissions":
 		if e.ComplexityRoot.FeedVersion.Permissions == nil {
 			break
 		}
 
 		return e.ComplexityRoot.FeedVersion.Permissions(childComplexity), true
+	case "FeedVersion.rider_categories":
+		if e.ComplexityRoot.FeedVersion.RiderCategories == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_rider_categories_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.RiderCategories(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.route_networks":
+		if e.ComplexityRoot.FeedVersion.RouteNetworks == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_route_networks_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.RouteNetworks(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.routes":
 		if e.ComplexityRoot.FeedVersion.Routes == nil {
 			break
@@ -3292,6 +4244,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Stops(childComplexity, args["limit"].(*int), args["where"].(*model.StopFilter)), true
+	case "FeedVersion.timeframes":
+		if e.ComplexityRoot.FeedVersion.Timeframes == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_timeframes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.Timeframes(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 	case "FeedVersion.trips":
 		if e.ComplexityRoot.FeedVersion.Trips == nil {
 			break
@@ -5479,6 +6442,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Mutation.ValidateGtfs(childComplexity, args["file"].(*graphql.Upload), args["url"].(*string), args["realtime_urls"].([]string)), true
 
+	case "Network.feed_onestop_id":
+		if e.ComplexityRoot.Network.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Network.FeedOnestopID(childComplexity), true
+	case "Network.feed_version":
+		if e.ComplexityRoot.Network.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Network.FeedVersion(childComplexity), true
+	case "Network.feed_version_sha1":
+		if e.ComplexityRoot.Network.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Network.FeedVersionSHA1(childComplexity), true
+	case "Network.id":
+		if e.ComplexityRoot.Network.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Network.ID(childComplexity), true
+	case "Network.network_id":
+		if e.ComplexityRoot.Network.NetworkID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Network.NetworkID(childComplexity), true
+	case "Network.network_name":
+		if e.ComplexityRoot.Network.NetworkName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Network.NetworkName(childComplexity), true
+
 	case "Operator.agencies":
 		if e.ComplexityRoot.Operator.Agencies == nil {
 			break
@@ -6081,6 +7081,67 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RTVehicleDescriptor.LicensePlate(childComplexity), true
 
+	case "RiderCategory.eligibility_url":
+		if e.ComplexityRoot.RiderCategory.EligibilityURL == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.EligibilityURL(childComplexity), true
+	case "RiderCategory.feed_onestop_id":
+		if e.ComplexityRoot.RiderCategory.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.FeedOnestopID(childComplexity), true
+	case "RiderCategory.feed_version":
+		if e.ComplexityRoot.RiderCategory.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.FeedVersion(childComplexity), true
+	case "RiderCategory.feed_version_sha1":
+		if e.ComplexityRoot.RiderCategory.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.FeedVersionSHA1(childComplexity), true
+	case "RiderCategory.id":
+		if e.ComplexityRoot.RiderCategory.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.ID(childComplexity), true
+	case "RiderCategory.is_default_fare_category":
+		if e.ComplexityRoot.RiderCategory.IsDefaultFareCategory == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.IsDefaultFareCategory(childComplexity), true
+	case "RiderCategory.max_age":
+		if e.ComplexityRoot.RiderCategory.MaxAge == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.MaxAge(childComplexity), true
+	case "RiderCategory.min_age":
+		if e.ComplexityRoot.RiderCategory.MinAge == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.MinAge(childComplexity), true
+	case "RiderCategory.rider_category_id":
+		if e.ComplexityRoot.RiderCategory.RiderCategoryID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.RiderCategoryID(childComplexity), true
+	case "RiderCategory.rider_category_name":
+		if e.ComplexityRoot.RiderCategory.RiderCategoryName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RiderCategory.RiderCategoryName(childComplexity), true
+
 	case "Route.agency":
 		if e.ComplexityRoot.Route.Agency == nil {
 			break
@@ -6179,6 +7240,23 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Route.ID(childComplexity), true
+	case "Route.network_id":
+		if e.ComplexityRoot.Route.NetworkID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Route.NetworkID(childComplexity), true
+	case "Route.networks":
+		if e.ComplexityRoot.Route.Networks == nil {
+			break
+		}
+
+		args, err := ec.field_Route_networks_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Route.Networks(childComplexity, args["limit"].(*int)), true
 	case "Route.onestop_id":
 		if e.ComplexityRoot.Route.OnestopID == nil {
 			break
@@ -6444,6 +7522,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteHeadway.StopTripCount(childComplexity), true
+
+	case "RouteNetwork.feed_onestop_id":
+		if e.ComplexityRoot.RouteNetwork.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteNetwork.FeedOnestopID(childComplexity), true
+	case "RouteNetwork.feed_version":
+		if e.ComplexityRoot.RouteNetwork.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteNetwork.FeedVersion(childComplexity), true
+	case "RouteNetwork.feed_version_sha1":
+		if e.ComplexityRoot.RouteNetwork.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteNetwork.FeedVersionSHA1(childComplexity), true
+	case "RouteNetwork.id":
+		if e.ComplexityRoot.RouteNetwork.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteNetwork.ID(childComplexity), true
+	case "RouteNetwork.network":
+		if e.ComplexityRoot.RouteNetwork.Network == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteNetwork.Network(childComplexity), true
+	case "RouteNetwork.route":
+		if e.ComplexityRoot.RouteNetwork.Route == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteNetwork.Route(childComplexity), true
 
 	case "RouteStop.agency":
 		if e.ComplexityRoot.RouteStop.Agency == nil {
@@ -6812,6 +7927,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Stop.Alerts(childComplexity, args["active"].(*bool), args["limit"].(*int)), true
+	case "Stop.areas":
+		if e.ComplexityRoot.Stop.Areas == nil {
+			break
+		}
+
+		args, err := ec.field_Stop_areas_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Stop.Areas(childComplexity, args["limit"].(*int)), true
 	case "Stop.arrivals":
 		if e.ComplexityRoot.Stop.Arrivals == nil {
 			break
@@ -7111,6 +8237,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Stop.ZoneID(childComplexity), true
+
+	case "StopArea.area":
+		if e.ComplexityRoot.StopArea.Area == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopArea.Area(childComplexity), true
+	case "StopArea.feed_onestop_id":
+		if e.ComplexityRoot.StopArea.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopArea.FeedOnestopID(childComplexity), true
+	case "StopArea.feed_version":
+		if e.ComplexityRoot.StopArea.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopArea.FeedVersion(childComplexity), true
+	case "StopArea.feed_version_sha1":
+		if e.ComplexityRoot.StopArea.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopArea.FeedVersionSHA1(childComplexity), true
+	case "StopArea.id":
+		if e.ComplexityRoot.StopArea.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopArea.ID(childComplexity), true
+	case "StopArea.stop":
+		if e.ComplexityRoot.StopArea.Stop == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopArea.Stop(childComplexity), true
 
 	case "StopExternalReference.id":
 		if e.ComplexityRoot.StopExternalReference.ID == nil {
@@ -7500,6 +8663,55 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Tenant.Permissions(childComplexity), true
+
+	case "Timeframe.end_time":
+		if e.ComplexityRoot.Timeframe.EndTime == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.EndTime(childComplexity), true
+	case "Timeframe.feed_onestop_id":
+		if e.ComplexityRoot.Timeframe.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.FeedOnestopID(childComplexity), true
+	case "Timeframe.feed_version":
+		if e.ComplexityRoot.Timeframe.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.FeedVersion(childComplexity), true
+	case "Timeframe.feed_version_sha1":
+		if e.ComplexityRoot.Timeframe.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.FeedVersionSHA1(childComplexity), true
+	case "Timeframe.id":
+		if e.ComplexityRoot.Timeframe.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.ID(childComplexity), true
+	case "Timeframe.service":
+		if e.ComplexityRoot.Timeframe.Service == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.Service(childComplexity), true
+	case "Timeframe.start_time":
+		if e.ComplexityRoot.Timeframe.StartTime == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.StartTime(childComplexity), true
+	case "Timeframe.timeframe_group_id":
+		if e.ComplexityRoot.Timeframe.TimeframeGroupID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timeframe.TimeframeGroupID(childComplexity), true
 
 	case "Trip.alerts":
 		if e.ComplexityRoot.Trip.Alerts == nil {
@@ -9756,6 +10968,42 @@ type FeedVersion {
   
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
+
+  "GTFS Fares v1 records from this feed version's ` + "`" + `fare_attributes.txt` + "`" + `, if imported"
+  fare_attributes(limit: Int, after: Int): [FareAttribute!]!
+
+  "GTFS Fares v1 records from this feed version's ` + "`" + `fare_rules.txt` + "`" + `, if imported"
+  fare_rules(limit: Int, after: Int): [FareRule!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `fare_media.txt` + "`" + `, if imported"
+  fare_media(limit: Int, after: Int): [FareMedia!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `fare_products.txt` + "`" + `, if imported"
+  fare_products(limit: Int, after: Int): [FareProduct!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `fare_leg_rules.txt` + "`" + `, if imported"
+  fare_leg_rules(limit: Int, after: Int): [FareLegRule!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `fare_leg_join_rules.txt` + "`" + `, if imported"
+  fare_leg_join_rules(limit: Int, after: Int): [FareLegJoinRule!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `fare_transfer_rules.txt` + "`" + `, if imported"
+  fare_transfer_rules(limit: Int, after: Int): [FareTransferRule!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `rider_categories.txt` + "`" + `, if imported"
+  rider_categories(limit: Int, after: Int): [RiderCategory!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `timeframes.txt` + "`" + `, if imported"
+  timeframes(limit: Int, after: Int): [Timeframe!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `areas.txt` + "`" + `, if imported"
+  areas(limit: Int, after: Int): [Area!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `networks.txt` + "`" + `, if imported"
+  networks(limit: Int, after: Int): [Network!]!
+
+  "GTFS Fares v2 records from this feed version's ` + "`" + `route_networks.txt` + "`" + `, if imported"
+  route_networks(limit: Int, after: Int): [RouteNetwork!]!
   
   "Records from this feed version's ` + "`" + `feed_info.txt` + "`" + `"
   feed_infos(limit: Int): [FeedInfo!]!
@@ -10052,6 +11300,12 @@ type Route {
   "GTFS ` + "`" + `routes.cemv_support` + "`" + `; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips on this route [0=no information, 1=supported, 2=not supported]; takes precedence over ` + "`" + `agency.cemv_support` + "`" + `"
   cemv_support: Int
 
+  "GTFS ` + "`" + `routes.network_id` + "`" + `; the fare network that includes this route, referenced by ` + "`" + `fare_leg_rules.network_id` + "`" + `. Feeds that use ` + "`" + `route_networks.txt` + "`" + ` leave this empty; see ` + "`" + `networks` + "`" + `"
+  network_id: String
+
+  "Fare networks from ` + "`" + `route_networks.txt` + "`" + ` that include this route; empty when the feed names networks in ` + "`" + `routes.network_id` + "`" + ` instead"
+  networks(limit: Int): [Network!]!
+
   "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see ` + "`" + `geometries` + "`" + `"
   geometry: Geometry @goField(forceResolver: true)
   
@@ -10172,6 +11426,9 @@ type Stop {
   
   "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
+
+  "Fare areas from ` + "`" + `stop_areas.txt` + "`" + ` that include this stop"
+  areas(limit: Int): [Area!]!
   
   "Level within the station that this stop/platform belongs to"
   level: Level
@@ -10763,6 +12020,446 @@ type BookingRule {
   
   "GTFS ` + "`" + `booking_rules.booking_url` + "`" + `; URL to the booking system or interface for this service"
   booking_url: Url
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_attributes.txt](https://gtfs.org/schedule/reference/#fare_attributestxt) file (Fares v1).
+"""
+type FareAttribute {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `fare_attributes.fare_id` + "`" + `"
+  fare_id: String!
+
+  "GTFS ` + "`" + `fare_attributes.price` + "`" + `; fare price, in the unit specified by ` + "`" + `currency_type` + "`" + `"
+  price: Float!
+
+  "GTFS ` + "`" + `fare_attributes.currency_type` + "`" + `; ISO 4217 currency code"
+  currency_type: String!
+
+  "GTFS ` + "`" + `fare_attributes.payment_method` + "`" + `; when the fare must be paid [0=on board, 1=before boarding]"
+  payment_method: Int!
+
+  "GTFS ` + "`" + `fare_attributes.transfers` + "`" + `; number of transfers permitted [0=none, 1=one, 2=two]; null means unlimited transfers"
+  transfers: Int
+
+  "GTFS ` + "`" + `fare_attributes.transfer_duration` + "`" + `; length of time in seconds before a transfer expires"
+  transfer_duration: Int
+
+  "GTFS ` + "`" + `fare_attributes.agency_id` + "`" + `; agency for this fare, if specified"
+  agency: Agency
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_rules.txt](https://gtfs.org/schedule/reference/#fare_rulestxt) file (Fares v1).
+"""
+type FareRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `fare_rules.fare_id` + "`" + `; the fare this rule applies"
+  fare_attribute: FareAttribute
+
+  "GTFS ` + "`" + `fare_rules.route_id` + "`" + `; route associated with this fare, if specified"
+  route: Route
+
+  "GTFS ` + "`" + `fare_rules.origin_id` + "`" + `; origin zone, referencing ` + "`" + `stops.zone_id` + "`" + `"
+  origin_id: String
+
+  "GTFS ` + "`" + `fare_rules.destination_id` + "`" + `; destination zone, referencing ` + "`" + `stops.zone_id` + "`" + `"
+  destination_id: String
+
+  "GTFS ` + "`" + `fare_rules.contains_id` + "`" + `; a zone the itinerary passes through, referencing ` + "`" + `stops.zone_id` + "`" + `"
+  contains_id: String
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_media.txt](https://gtfs.org/schedule/reference/#fare_mediatxt) file (Fares v2).
+"""
+type FareMedia {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `fare_media.fare_media_id` + "`" + `"
+  fare_media_id: String!
+
+  "GTFS ` + "`" + `fare_media.fare_media_name` + "`" + `"
+  fare_media_name: String
+
+  "GTFS ` + "`" + `fare_media.fare_media_type` + "`" + ` [0=none, 1=physical paper ticket, 2=physical transit card, 3=cEMV, 4=mobile app]"
+  fare_media_type: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_products.txt](https://gtfs.org/schedule/reference/#fare_productstxt) file (Fares v2).
+"""
+type FareProduct {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `fare_products.fare_product_id` + "`" + `; several records may share a ` + "`" + `fare_product_id` + "`" + ` with different rider categories or fare media"
+  fare_product_id: String
+
+  "GTFS ` + "`" + `fare_products.fare_product_name` + "`" + `"
+  fare_product_name: String
+
+  "GTFS ` + "`" + `fare_products.rider_category_id` + "`" + `; empty means the product is eligible for any rider category"
+  rider_category_id: String
+
+  "Rider category named by ` + "`" + `rider_category_id` + "`" + `; null when the product is eligible for any rider category"
+  rider_category: RiderCategory
+
+  "GTFS ` + "`" + `fare_products.fare_media_id` + "`" + `; fare media that can be used for this product; null means unknown"
+  fare_media: FareMedia
+
+  "GTFS ` + "`" + `fare_products.amount` + "`" + `; cost of the fare product; may be negative to represent a transfer discount"
+  amount: Float
+
+  "GTFS ` + "`" + `fare_products.currency` + "`" + `; ISO 4217 currency code"
+  currency: String
+
+  "` + "`" + `fare_products.duration_start` + "`" + `; event that starts the product's validity period (experimental; not part of the GTFS spec)"
+  duration_start: Int
+
+  "` + "`" + `fare_products.duration_amount` + "`" + `; length of the product's validity period, in ` + "`" + `duration_unit` + "`" + ` (experimental; not part of the GTFS spec)"
+  duration_amount: Float
+
+  "` + "`" + `fare_products.duration_unit` + "`" + ` [0=seconds, 1=minutes, 2=hours, 3=days, 4=weeks, 5=months, 6=years] (experimental; not part of the GTFS spec)"
+  duration_unit: Int
+
+  "` + "`" + `fare_products.duration_type` + "`" + `; how the validity period is measured (experimental; not part of the GTFS spec)"
+  duration_type: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_leg_rules.txt](https://gtfs.org/schedule/reference/#fare_leg_rulestxt) file (Fares v2).
+"""
+type FareLegRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `fare_leg_rules.leg_group_id` + "`" + `"
+  leg_group_id: String
+
+  "GTFS ` + "`" + `fare_leg_rules.network_id` + "`" + `; references ` + "`" + `routes.network_id` + "`" + ` or ` + "`" + `networks.network_id` + "`" + `"
+  network_id: String
+
+  "GTFS ` + "`" + `fare_leg_rules.from_area_id` + "`" + `; departure area"
+  from_area: Area
+
+  "GTFS ` + "`" + `fare_leg_rules.to_area_id` + "`" + `; arrival area"
+  to_area: Area
+
+  "GTFS ` + "`" + `fare_leg_rules.from_timeframe_group_id` + "`" + `; references ` + "`" + `timeframes.timeframe_group_id` + "`" + `"
+  from_timeframe_group_id: String
+
+  "Timeframes in the ` + "`" + `from_timeframe_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `from_timeframe_group_id` + "`" + `"
+  from_timeframes: [Timeframe!]!
+
+  "GTFS ` + "`" + `fare_leg_rules.to_timeframe_group_id` + "`" + `; references ` + "`" + `timeframes.timeframe_group_id` + "`" + `"
+  to_timeframe_group_id: String
+
+  "Timeframes in the ` + "`" + `to_timeframe_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `to_timeframe_group_id` + "`" + `"
+  to_timeframes: [Timeframe!]!
+
+  "GTFS ` + "`" + `fare_leg_rules.fare_product_id` + "`" + `; references ` + "`" + `fare_products.fare_product_id` + "`" + `"
+  fare_product_id: String
+
+  "Fare products with this rule's ` + "`" + `fare_product_id` + "`" + `, one for each rider category and fare media"
+  fare_products: [FareProduct!]!
+
+  "GTFS ` + "`" + `fare_leg_rules.rule_priority` + "`" + `; when several rules match a leg, those with the highest priority apply"
+  rule_priority: Int
+
+  "` + "`" + `fare_leg_rules.transfer_only` + "`" + ` [0 or empty=any leg, 1=only a leg that follows a transfer, not the first leg of a journey] (experimental; not part of the GTFS spec)"
+  transfer_only: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_leg_join_rules.txt](https://gtfs.org/schedule/reference/#fare_leg_join_rulestxt) file (Fares v2).
+"""
+type FareLegJoinRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `fare_leg_join_rules.from_network_id` + "`" + `"
+  from_network_id: String
+
+  "GTFS ` + "`" + `fare_leg_join_rules.to_network_id` + "`" + `"
+  to_network_id: String
+
+  "GTFS ` + "`" + `fare_leg_join_rules.from_stop_id` + "`" + `"
+  from_stop: Stop
+
+  "GTFS ` + "`" + `fare_leg_join_rules.to_stop_id` + "`" + `"
+  to_stop: Stop
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_transfer_rules.txt](https://gtfs.org/schedule/reference/#fare_transfer_rulestxt) file (Fares v2).
+"""
+type FareTransferRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `fare_transfer_rules.from_leg_group_id` + "`" + `"
+  from_leg_group_id: String
+
+  "Fare leg rules in the ` + "`" + `from_leg_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `from_leg_group_id` + "`" + `"
+  from_leg_rules: [FareLegRule!]!
+
+  "GTFS ` + "`" + `fare_transfer_rules.to_leg_group_id` + "`" + `"
+  to_leg_group_id: String
+
+  "Fare leg rules in the ` + "`" + `to_leg_group_id` + "`" + ` group; empty if the rule has no ` + "`" + `to_leg_group_id` + "`" + `"
+  to_leg_rules: [FareLegRule!]!
+
+  "GTFS ` + "`" + `fare_transfer_rules.transfer_count` + "`" + `; -1 means no limit"
+  transfer_count: Int
+
+  "GTFS ` + "`" + `fare_transfer_rules.duration_limit` + "`" + `; in seconds"
+  duration_limit: Int
+
+  "GTFS ` + "`" + `fare_transfer_rules.duration_limit_type` + "`" + ` [0=departure to arrival, 1=departure to departure, 2=arrival to departure, 3=arrival to arrival]"
+  duration_limit_type: Int
+
+  "GTFS ` + "`" + `fare_transfer_rules.fare_transfer_type` + "`" + ` [0=A + AB, 1=A + AB + B, 2=AB]"
+  fare_transfer_type: Int
+
+  "GTFS ` + "`" + `fare_transfer_rules.fare_product_id` + "`" + `; empty means the transfer costs nothing"
+  fare_product_id: String
+
+  "Fare products with this rule's ` + "`" + `fare_product_id` + "`" + `; empty when the transfer costs nothing"
+  fare_products: [FareProduct!]!
+
+  "` + "`" + `fare_transfer_rules.filter_fare_product_id` + "`" + `; the rule applies only if the rider holds this fare product, bought in advance or for the previous leg (experimental; not part of the GTFS spec)"
+  filter_fare_product_id: String
+
+  "Fare products with this rule's ` + "`" + `filter_fare_product_id` + "`" + ` (experimental; not part of the GTFS spec)"
+  filter_fare_products: [FareProduct!]!
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [rider_categories.txt](https://gtfs.org/schedule/reference/#rider_categoriestxt) file (Fares v2).
+"""
+type RiderCategory {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `rider_categories.rider_category_id` + "`" + `"
+  rider_category_id: String!
+
+  "GTFS ` + "`" + `rider_categories.rider_category_name` + "`" + `"
+  rider_category_name: String!
+
+  "GTFS ` + "`" + `rider_categories.is_default_fare_category` + "`" + ` [0=not default, 1=default]"
+  is_default_fare_category: Int
+
+  "GTFS ` + "`" + `rider_categories.eligibility_url` + "`" + `"
+  eligibility_url: Url
+
+  "` + "`" + `rider_categories.min_age` + "`" + `; minimum age, inclusive (experimental; not part of the GTFS spec)"
+  min_age: Int
+
+  "` + "`" + `rider_categories.max_age` + "`" + `; maximum age, inclusive (experimental; not part of the GTFS spec)"
+  max_age: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [timeframes.txt](https://gtfs.org/schedule/reference/#timeframestxt) file (Fares v2).
+"""
+type Timeframe {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `timeframes.timeframe_group_id` + "`" + `"
+  timeframe_group_id: String!
+
+  "GTFS ` + "`" + `timeframes.start_time` + "`" + `; empty means 00:00:00"
+  start_time: Seconds
+
+  "GTFS ` + "`" + `timeframes.end_time` + "`" + `; empty means 24:00:00"
+  end_time: Seconds
+
+  "GTFS ` + "`" + `timeframes.service_id` + "`" + `; dates on which this timeframe is in effect"
+  service: Calendar
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [areas.txt](https://gtfs.org/schedule/reference/#areastxt) file (Fares v2).
+"""
+type Area {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `areas.area_id` + "`" + `"
+  area_id: String!
+
+  "GTFS ` + "`" + `areas.area_name` + "`" + `"
+  area_name: String
+
+  "Stops assigned to this area by ` + "`" + `stop_areas.txt` + "`" + `"
+  stop_areas(limit: Int, after: Int): [StopArea!]!
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [stop_areas.txt](https://gtfs.org/schedule/reference/#stop_areastxt) file (Fares v2).
+"""
+type StopArea {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `stop_areas.area_id` + "`" + `"
+  area: Area!
+
+  "GTFS ` + "`" + `stop_areas.stop_id` + "`" + `"
+  stop: Stop!
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [networks.txt](https://gtfs.org/schedule/reference/#networkstxt) file (Fares v2).
+"""
+type Network {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `networks.network_id` + "`" + `"
+  network_id: String!
+
+  "GTFS ` + "`" + `networks.network_name` + "`" + `"
+  network_name: String
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [route_networks.txt](https://gtfs.org/schedule/reference/#route_networkstxt) file (Fares v2).
+"""
+type RouteNetwork {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS ` + "`" + `route_networks.network_id` + "`" + `"
+  network: Network!
+
+  "GTFS ` + "`" + `route_networks.route_id` + "`" + `"
+  route: Route!
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!
@@ -12819,6 +14516,26 @@ func (ec *executionContext) childFields_Alert(ctx context.Context, field graphql
 	return nil, fmt.Errorf("no field named %q was found under type Alert", field.Name)
 }
 
+func (ec *executionContext) childFields_Area(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_Area_id(ctx, field)
+	case "area_id":
+		return ec.fieldContext_Area_area_id(ctx, field)
+	case "area_name":
+		return ec.fieldContext_Area_area_name(ctx, field)
+	case "stop_areas":
+		return ec.fieldContext_Area_stop_areas(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_Area_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_Area_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_Area_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Area", field.Name)
+}
+
 func (ec *executionContext) childFields_BookingRule(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -13125,6 +14842,212 @@ func (ec *executionContext) childFields_EntityDeleteResult(ctx context.Context, 
 	return nil, fmt.Errorf("no field named %q was found under type EntityDeleteResult", field.Name)
 }
 
+func (ec *executionContext) childFields_FareAttribute(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_FareAttribute_id(ctx, field)
+	case "fare_id":
+		return ec.fieldContext_FareAttribute_fare_id(ctx, field)
+	case "price":
+		return ec.fieldContext_FareAttribute_price(ctx, field)
+	case "currency_type":
+		return ec.fieldContext_FareAttribute_currency_type(ctx, field)
+	case "payment_method":
+		return ec.fieldContext_FareAttribute_payment_method(ctx, field)
+	case "transfers":
+		return ec.fieldContext_FareAttribute_transfers(ctx, field)
+	case "transfer_duration":
+		return ec.fieldContext_FareAttribute_transfer_duration(ctx, field)
+	case "agency":
+		return ec.fieldContext_FareAttribute_agency(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_FareAttribute_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_FareAttribute_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_FareAttribute_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FareAttribute", field.Name)
+}
+
+func (ec *executionContext) childFields_FareLegJoinRule(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_FareLegJoinRule_id(ctx, field)
+	case "from_network_id":
+		return ec.fieldContext_FareLegJoinRule_from_network_id(ctx, field)
+	case "to_network_id":
+		return ec.fieldContext_FareLegJoinRule_to_network_id(ctx, field)
+	case "from_stop":
+		return ec.fieldContext_FareLegJoinRule_from_stop(ctx, field)
+	case "to_stop":
+		return ec.fieldContext_FareLegJoinRule_to_stop(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_FareLegJoinRule_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_FareLegJoinRule_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_FareLegJoinRule_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FareLegJoinRule", field.Name)
+}
+
+func (ec *executionContext) childFields_FareLegRule(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_FareLegRule_id(ctx, field)
+	case "leg_group_id":
+		return ec.fieldContext_FareLegRule_leg_group_id(ctx, field)
+	case "network_id":
+		return ec.fieldContext_FareLegRule_network_id(ctx, field)
+	case "from_area":
+		return ec.fieldContext_FareLegRule_from_area(ctx, field)
+	case "to_area":
+		return ec.fieldContext_FareLegRule_to_area(ctx, field)
+	case "from_timeframe_group_id":
+		return ec.fieldContext_FareLegRule_from_timeframe_group_id(ctx, field)
+	case "from_timeframes":
+		return ec.fieldContext_FareLegRule_from_timeframes(ctx, field)
+	case "to_timeframe_group_id":
+		return ec.fieldContext_FareLegRule_to_timeframe_group_id(ctx, field)
+	case "to_timeframes":
+		return ec.fieldContext_FareLegRule_to_timeframes(ctx, field)
+	case "fare_product_id":
+		return ec.fieldContext_FareLegRule_fare_product_id(ctx, field)
+	case "fare_products":
+		return ec.fieldContext_FareLegRule_fare_products(ctx, field)
+	case "rule_priority":
+		return ec.fieldContext_FareLegRule_rule_priority(ctx, field)
+	case "transfer_only":
+		return ec.fieldContext_FareLegRule_transfer_only(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_FareLegRule_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_FareLegRule_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_FareLegRule_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FareLegRule", field.Name)
+}
+
+func (ec *executionContext) childFields_FareMedia(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_FareMedia_id(ctx, field)
+	case "fare_media_id":
+		return ec.fieldContext_FareMedia_fare_media_id(ctx, field)
+	case "fare_media_name":
+		return ec.fieldContext_FareMedia_fare_media_name(ctx, field)
+	case "fare_media_type":
+		return ec.fieldContext_FareMedia_fare_media_type(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_FareMedia_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_FareMedia_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_FareMedia_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FareMedia", field.Name)
+}
+
+func (ec *executionContext) childFields_FareProduct(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_FareProduct_id(ctx, field)
+	case "fare_product_id":
+		return ec.fieldContext_FareProduct_fare_product_id(ctx, field)
+	case "fare_product_name":
+		return ec.fieldContext_FareProduct_fare_product_name(ctx, field)
+	case "rider_category_id":
+		return ec.fieldContext_FareProduct_rider_category_id(ctx, field)
+	case "rider_category":
+		return ec.fieldContext_FareProduct_rider_category(ctx, field)
+	case "fare_media":
+		return ec.fieldContext_FareProduct_fare_media(ctx, field)
+	case "amount":
+		return ec.fieldContext_FareProduct_amount(ctx, field)
+	case "currency":
+		return ec.fieldContext_FareProduct_currency(ctx, field)
+	case "duration_start":
+		return ec.fieldContext_FareProduct_duration_start(ctx, field)
+	case "duration_amount":
+		return ec.fieldContext_FareProduct_duration_amount(ctx, field)
+	case "duration_unit":
+		return ec.fieldContext_FareProduct_duration_unit(ctx, field)
+	case "duration_type":
+		return ec.fieldContext_FareProduct_duration_type(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_FareProduct_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_FareProduct_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_FareProduct_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FareProduct", field.Name)
+}
+
+func (ec *executionContext) childFields_FareRule(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_FareRule_id(ctx, field)
+	case "fare_attribute":
+		return ec.fieldContext_FareRule_fare_attribute(ctx, field)
+	case "route":
+		return ec.fieldContext_FareRule_route(ctx, field)
+	case "origin_id":
+		return ec.fieldContext_FareRule_origin_id(ctx, field)
+	case "destination_id":
+		return ec.fieldContext_FareRule_destination_id(ctx, field)
+	case "contains_id":
+		return ec.fieldContext_FareRule_contains_id(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_FareRule_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_FareRule_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_FareRule_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FareRule", field.Name)
+}
+
+func (ec *executionContext) childFields_FareTransferRule(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_FareTransferRule_id(ctx, field)
+	case "from_leg_group_id":
+		return ec.fieldContext_FareTransferRule_from_leg_group_id(ctx, field)
+	case "from_leg_rules":
+		return ec.fieldContext_FareTransferRule_from_leg_rules(ctx, field)
+	case "to_leg_group_id":
+		return ec.fieldContext_FareTransferRule_to_leg_group_id(ctx, field)
+	case "to_leg_rules":
+		return ec.fieldContext_FareTransferRule_to_leg_rules(ctx, field)
+	case "transfer_count":
+		return ec.fieldContext_FareTransferRule_transfer_count(ctx, field)
+	case "duration_limit":
+		return ec.fieldContext_FareTransferRule_duration_limit(ctx, field)
+	case "duration_limit_type":
+		return ec.fieldContext_FareTransferRule_duration_limit_type(ctx, field)
+	case "fare_transfer_type":
+		return ec.fieldContext_FareTransferRule_fare_transfer_type(ctx, field)
+	case "fare_product_id":
+		return ec.fieldContext_FareTransferRule_fare_product_id(ctx, field)
+	case "fare_products":
+		return ec.fieldContext_FareTransferRule_fare_products(ctx, field)
+	case "filter_fare_product_id":
+		return ec.fieldContext_FareTransferRule_filter_fare_product_id(ctx, field)
+	case "filter_fare_products":
+		return ec.fieldContext_FareTransferRule_filter_fare_products(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_FareTransferRule_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_FareTransferRule_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_FareTransferRule_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FareTransferRule", field.Name)
+}
+
 func (ec *executionContext) childFields_Feed(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -13333,6 +15256,30 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
 	case "location_groups":
 		return ec.fieldContext_FeedVersion_location_groups(ctx, field)
+	case "fare_attributes":
+		return ec.fieldContext_FeedVersion_fare_attributes(ctx, field)
+	case "fare_rules":
+		return ec.fieldContext_FeedVersion_fare_rules(ctx, field)
+	case "fare_media":
+		return ec.fieldContext_FeedVersion_fare_media(ctx, field)
+	case "fare_products":
+		return ec.fieldContext_FeedVersion_fare_products(ctx, field)
+	case "fare_leg_rules":
+		return ec.fieldContext_FeedVersion_fare_leg_rules(ctx, field)
+	case "fare_leg_join_rules":
+		return ec.fieldContext_FeedVersion_fare_leg_join_rules(ctx, field)
+	case "fare_transfer_rules":
+		return ec.fieldContext_FeedVersion_fare_transfer_rules(ctx, field)
+	case "rider_categories":
+		return ec.fieldContext_FeedVersion_rider_categories(ctx, field)
+	case "timeframes":
+		return ec.fieldContext_FeedVersion_timeframes(ctx, field)
+	case "areas":
+		return ec.fieldContext_FeedVersion_areas(ctx, field)
+	case "networks":
+		return ec.fieldContext_FeedVersion_networks(ctx, field)
+	case "route_networks":
+		return ec.fieldContext_FeedVersion_route_networks(ctx, field)
 	case "feed_infos":
 		return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
 	case "validation_reports":
@@ -14217,6 +16164,24 @@ func (ec *executionContext) childFields_Me(ctx context.Context, field graphql.Co
 	return nil, fmt.Errorf("no field named %q was found under type Me", field.Name)
 }
 
+func (ec *executionContext) childFields_Network(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_Network_id(ctx, field)
+	case "network_id":
+		return ec.fieldContext_Network_network_id(ctx, field)
+	case "network_name":
+		return ec.fieldContext_Network_network_name(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_Network_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_Network_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_Network_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Network", field.Name)
+}
+
 func (ec *executionContext) childFields_Operator(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -14421,6 +16386,32 @@ func (ec *executionContext) childFields_RTVehicleDescriptor(ctx context.Context,
 	return nil, fmt.Errorf("no field named %q was found under type RTVehicleDescriptor", field.Name)
 }
 
+func (ec *executionContext) childFields_RiderCategory(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_RiderCategory_id(ctx, field)
+	case "rider_category_id":
+		return ec.fieldContext_RiderCategory_rider_category_id(ctx, field)
+	case "rider_category_name":
+		return ec.fieldContext_RiderCategory_rider_category_name(ctx, field)
+	case "is_default_fare_category":
+		return ec.fieldContext_RiderCategory_is_default_fare_category(ctx, field)
+	case "eligibility_url":
+		return ec.fieldContext_RiderCategory_eligibility_url(ctx, field)
+	case "min_age":
+		return ec.fieldContext_RiderCategory_min_age(ctx, field)
+	case "max_age":
+		return ec.fieldContext_RiderCategory_max_age(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_RiderCategory_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_RiderCategory_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_RiderCategory_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RiderCategory", field.Name)
+}
+
 func (ec *executionContext) childFields_Route(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -14453,6 +16444,10 @@ func (ec *executionContext) childFields_Route(ctx context.Context, field graphql
 		return ec.fieldContext_Route_continuous_drop_off(ctx, field)
 	case "cemv_support":
 		return ec.fieldContext_Route_cemv_support(ctx, field)
+	case "network_id":
+		return ec.fieldContext_Route_network_id(ctx, field)
+	case "networks":
+		return ec.fieldContext_Route_networks(ctx, field)
 	case "geometry":
 		return ec.fieldContext_Route_geometry(ctx, field)
 	case "agency":
@@ -14543,6 +16538,24 @@ func (ec *executionContext) childFields_RouteHeadway(ctx context.Context, field 
 		return ec.fieldContext_RouteHeadway_departures(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type RouteHeadway", field.Name)
+}
+
+func (ec *executionContext) childFields_RouteNetwork(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_RouteNetwork_id(ctx, field)
+	case "network":
+		return ec.fieldContext_RouteNetwork_network(ctx, field)
+	case "route":
+		return ec.fieldContext_RouteNetwork_route(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_RouteNetwork_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_RouteNetwork_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_RouteNetwork_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RouteNetwork", field.Name)
 }
 
 func (ec *executionContext) childFields_RouteStop(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -14757,6 +16770,8 @@ func (ec *executionContext) childFields_Stop(ctx context.Context, field graphql.
 		return ec.fieldContext_Stop_feed_version(ctx, field)
 	case "location_groups":
 		return ec.fieldContext_Stop_location_groups(ctx, field)
+	case "areas":
+		return ec.fieldContext_Stop_areas(ctx, field)
 	case "level":
 		return ec.fieldContext_Stop_level(ctx, field)
 	case "parent":
@@ -14801,6 +16816,24 @@ func (ec *executionContext) childFields_Stop(ctx context.Context, field graphql.
 		return ec.fieldContext_Stop_updated_at(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Stop", field.Name)
+}
+
+func (ec *executionContext) childFields_StopArea(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_StopArea_id(ctx, field)
+	case "area":
+		return ec.fieldContext_StopArea_area(ctx, field)
+	case "stop":
+		return ec.fieldContext_StopArea_stop(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_StopArea_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_StopArea_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_StopArea_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type StopArea", field.Name)
 }
 
 func (ec *executionContext) childFields_StopExternalReference(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -14963,6 +16996,28 @@ func (ec *executionContext) childFields_Tenant(ctx context.Context, field graphq
 		return ec.fieldContext_Tenant_permissions(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Tenant", field.Name)
+}
+
+func (ec *executionContext) childFields_Timeframe(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_Timeframe_id(ctx, field)
+	case "timeframe_group_id":
+		return ec.fieldContext_Timeframe_timeframe_group_id(ctx, field)
+	case "start_time":
+		return ec.fieldContext_Timeframe_start_time(ctx, field)
+	case "end_time":
+		return ec.fieldContext_Timeframe_end_time(ctx, field)
+	case "service":
+		return ec.fieldContext_Timeframe_service(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_Timeframe_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_Timeframe_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_Timeframe_feed_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Timeframe", field.Name)
 }
 
 func (ec *executionContext) childFields_Trip(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -15509,6 +17564,28 @@ func (ec *executionContext) field_Agency_vehicle_positions_args(ctx context.Cont
 	return args, nil
 }
 
+func (ec *executionContext) field_Area_stop_areas_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Calendar_added_dates_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -15751,6 +17828,28 @@ func (ec *executionContext) field_FeedVersion_agencies_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_FeedVersion_areas_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_FeedVersion_booking_rules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -15770,6 +17869,160 @@ func (ec *executionContext) field_FeedVersion_booking_rules_args(ctx context.Con
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_fare_attributes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_fare_leg_join_rules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_fare_leg_rules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_fare_media_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_fare_products_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_fare_rules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_fare_transfer_rules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -15842,6 +18095,72 @@ func (ec *executionContext) field_FeedVersion_locations_args(ctx context.Context
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_networks_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_rider_categories_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_route_networks_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -15952,6 +18271,28 @@ func (ec *executionContext) field_FeedVersion_stops_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_timeframes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
 	return args, nil
 }
 
@@ -16997,6 +19338,20 @@ func (ec *executionContext) field_Route_headways_args(ctx context.Context, rawAr
 	return args, nil
 }
 
+func (ec *executionContext) field_Route_networks_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Route_patterns_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -17190,6 +19545,20 @@ func (ec *executionContext) field_Stop_alerts_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Stop_areas_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -18930,6 +21299,197 @@ func (ec *executionContext) fieldContext_Alert_informed_entity(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_RTEntitySelector(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Area_id(ctx context.Context, field graphql.CollectedField, obj *model.Area) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Area_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Area_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Area", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Area_area_id(ctx context.Context, field graphql.CollectedField, obj *model.Area) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Area_area_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AreaID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Area_area_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Area", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Area_area_name(ctx context.Context, field graphql.CollectedField, obj *model.Area) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Area_area_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AreaName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Area_area_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Area", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Area_stop_areas(ctx context.Context, field graphql.CollectedField, obj *model.Area) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Area_stop_areas(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Area().StopAreas(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.StopArea) graphql.Marshaler {
+			return ec.marshalNStopArea2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopAreaᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Area_stop_areas(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Area",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_StopArea(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Area_stop_areas_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Area_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Area) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Area_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Area_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Area", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Area_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Area) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Area_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Area_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Area", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Area_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Area) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Area_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Area().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Area_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Area",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
 		},
 	}
 	return fc, nil
@@ -21773,6 +24333,2099 @@ func (ec *executionContext) fieldContext_EntityDeleteResult_id(_ context.Context
 	return graphql.NewScalarFieldContext("EntityDeleteResult", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _FareAttribute_id(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_fare_id(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_fare_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_fare_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_price(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_price(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Price, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Float) graphql.Marshaler {
+			return ec.marshalNFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_price(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_currency_type(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_currency_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CurrencyType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Currency) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_currency_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_payment_method(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_payment_method(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PaymentMethod, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_payment_method(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_transfers(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_transfers(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Transfers, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_transfers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_transfer_duration(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_transfer_duration(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TransferDuration, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_transfer_duration(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_agency(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_agency(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareAttribute().Agency(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agency) graphql.Marshaler {
+			return ec.marshalOAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_agency(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareAttribute",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agency(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareAttribute_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareAttribute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareAttribute_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FareAttribute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareAttribute_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareAttribute().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareAttribute_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareAttribute",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegJoinRule_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegJoinRule_from_network_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_from_network_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FromNetworkID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_from_network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegJoinRule_to_network_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_to_network_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ToNetworkID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_to_network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegJoinRule_from_stop(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_from_stop(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegJoinRule().FromStop(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+			return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_from_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegJoinRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegJoinRule_to_stop(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_to_stop(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegJoinRule().ToStop(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+			return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_to_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegJoinRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegJoinRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegJoinRule_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegJoinRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegJoinRule_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FareLegJoinRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegJoinRule_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegJoinRule().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegJoinRule_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegJoinRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegRule_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_leg_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_leg_group_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LegGroupID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_leg_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_network_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_network_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.NetworkID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_from_area(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_from_area(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().FromArea(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Area) graphql.Marshaler {
+			return ec.marshalOArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_from_area(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegRule_to_area(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_to_area(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().ToArea(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Area) graphql.Marshaler {
+			return ec.marshalOArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_to_area(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegRule_from_timeframe_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_from_timeframe_group_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FromTimeframeGroupID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_from_timeframe_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_from_timeframes(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_from_timeframes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().FromTimeframes(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Timeframe) graphql.Marshaler {
+			return ec.marshalNTimeframe2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_from_timeframes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timeframe(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegRule_to_timeframe_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_to_timeframe_group_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ToTimeframeGroupID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_to_timeframe_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_to_timeframes(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_to_timeframes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().ToTimeframes(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Timeframe) graphql.Marshaler {
+			return ec.marshalNTimeframe2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_to_timeframes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timeframe(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegRule_fare_product_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_fare_product_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareProductID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_fare_products(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_fare_products(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().FareProducts(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+			return ec.marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_fare_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareProduct(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareLegRule_rule_priority(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_rule_priority(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RulePriority, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_rule_priority(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_transfer_only(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_transfer_only(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TransferOnly, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_transfer_only(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareLegRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareLegRule_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FareLegRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareLegRule_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareLegRule().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareLegRule_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareLegRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareMedia_id(ctx context.Context, field graphql.CollectedField, obj *model.FareMedia) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareMedia_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareMedia_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareMedia", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareMedia_fare_media_id(ctx context.Context, field graphql.CollectedField, obj *model.FareMedia) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareMedia_fare_media_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareMediaID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareMedia_fare_media_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareMedia", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareMedia_fare_media_name(ctx context.Context, field graphql.CollectedField, obj *model.FareMedia) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareMedia_fare_media_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareMediaName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareMedia_fare_media_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareMedia", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareMedia_fare_media_type(ctx context.Context, field graphql.CollectedField, obj *model.FareMedia) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareMedia_fare_media_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareMediaType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareMedia_fare_media_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareMedia", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareMedia_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareMedia) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareMedia_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareMedia_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareMedia", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareMedia_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareMedia) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareMedia_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareMedia_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareMedia", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareMedia_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FareMedia) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareMedia_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareMedia().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareMedia_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareMedia",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareProduct_id(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_fare_product_id(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_fare_product_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareProductID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_fare_product_name(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_fare_product_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareProductName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_fare_product_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_rider_category_id(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_rider_category_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareProduct().RiderCategoryID(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_rider_category_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_rider_category(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_rider_category(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareProduct().RiderCategory(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RiderCategory) graphql.Marshaler {
+			return ec.marshalORiderCategory2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategory(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_rider_category(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareProduct",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RiderCategory(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareProduct_fare_media(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_fare_media(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareProduct().FareMedia(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FareMedia) graphql.Marshaler {
+			return ec.marshalOFareMedia2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareMedia(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_fare_media(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareProduct",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareMedia(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareProduct_amount(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_amount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Amount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.CurrencyAmount) graphql.Marshaler {
+			return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_amount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_currency(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_currency(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Currency, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Currency) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_currency(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_start(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_start(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationStart, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_start(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_amount(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_amount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationAmount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Float) graphql.Marshaler {
+			return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_amount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_unit(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_unit(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationUnit, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_unit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_duration_type(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_duration_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_duration_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareProduct", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareProduct_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FareProduct) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareProduct_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareProduct().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareProduct_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareProduct",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareRule_id(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareRule_fare_attribute(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_fare_attribute(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareRule().FareAttribute(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FareAttribute) graphql.Marshaler {
+			return ec.marshalOFareAttribute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_fare_attribute(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareAttribute(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareRule_route(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_route(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareRule().Route(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Route) graphql.Marshaler {
+			return ec.marshalORoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_route(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Route(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareRule_origin_id(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_origin_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OriginID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_origin_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareRule_destination_id(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_destination_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DestinationID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_destination_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareRule_contains_id(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_contains_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ContainsID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_contains_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareRule_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareRule_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FareRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareRule_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareRule().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareRule_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareTransferRule_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_from_leg_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_from_leg_group_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FromLegGroupID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_from_leg_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_from_leg_rules(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_from_leg_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().FromLegRules(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegRule) graphql.Marshaler {
+			return ec.marshalNFareLegRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_from_leg_rules(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareLegRule(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareTransferRule_to_leg_group_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_to_leg_group_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ToLegGroupID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_to_leg_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_to_leg_rules(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_to_leg_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().ToLegRules(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegRule) graphql.Marshaler {
+			return ec.marshalNFareLegRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_to_leg_rules(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareLegRule(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareTransferRule_transfer_count(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_transfer_count(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TransferCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_transfer_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_duration_limit(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_duration_limit(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationLimit, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_duration_limit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_duration_limit_type(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_duration_limit_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationLimitType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_duration_limit_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_fare_transfer_type(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_fare_transfer_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareTransferType, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_fare_transfer_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_fare_product_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_fare_product_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FareProductID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_fare_products(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_fare_products(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().FareProducts(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+			return ec.marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_fare_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareProduct(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareTransferRule_filter_fare_product_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_filter_fare_product_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FilterFareProductID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_filter_fare_product_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_filter_fare_products(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_filter_fare_products(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().FilterFareProducts(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+			return ec.marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_filter_fare_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareProduct(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FareTransferRule_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FareTransferRule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FareTransferRule_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.FareTransferRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FareTransferRule_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.FareTransferRule().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FareTransferRule_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FareTransferRule",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Feed_id(ctx context.Context, field graphql.CollectedField, obj *model.Feed) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -23974,6 +28627,534 @@ func (ec *executionContext) fieldContext_FeedVersion_location_groups(ctx context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_FeedVersion_location_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_fare_attributes(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_fare_attributes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().FareAttributes(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareAttribute) graphql.Marshaler {
+			return ec.marshalNFareAttribute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttributeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_fare_attributes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareAttribute(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_fare_attributes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_fare_rules(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_fare_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().FareRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareRule) graphql.Marshaler {
+			return ec.marshalNFareRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_fare_rules(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareRule(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_fare_rules_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_fare_media(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_fare_media(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().FareMedia(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareMedia) graphql.Marshaler {
+			return ec.marshalNFareMedia2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareMediaᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_fare_media(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareMedia(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_fare_media_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_fare_products(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_fare_products(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().FareProducts(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+			return ec.marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_fare_products(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareProduct(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_fare_products_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_fare_leg_rules(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_fare_leg_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().FareLegRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegRule) graphql.Marshaler {
+			return ec.marshalNFareLegRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_fare_leg_rules(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareLegRule(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_fare_leg_rules_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_fare_leg_join_rules(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_fare_leg_join_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().FareLegJoinRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareLegJoinRule) graphql.Marshaler {
+			return ec.marshalNFareLegJoinRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegJoinRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_fare_leg_join_rules(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareLegJoinRule(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_fare_leg_join_rules_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_fare_transfer_rules(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_fare_transfer_rules(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().FareTransferRules(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FareTransferRule) graphql.Marshaler {
+			return ec.marshalNFareTransferRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareTransferRuleᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_fare_transfer_rules(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FareTransferRule(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_fare_transfer_rules_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_rider_categories(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_rider_categories(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().RiderCategories(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.RiderCategory) graphql.Marshaler {
+			return ec.marshalNRiderCategory2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategoryᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_rider_categories(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RiderCategory(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_rider_categories_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_timeframes(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_timeframes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().Timeframes(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Timeframe) graphql.Marshaler {
+			return ec.marshalNTimeframe2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_timeframes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timeframe(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_timeframes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_areas(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_areas(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().Areas(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Area) graphql.Marshaler {
+			return ec.marshalNArea2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAreaᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_areas(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_areas_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_networks(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_networks(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().Networks(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Network) graphql.Marshaler {
+			return ec.marshalNNetwork2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetworkᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_networks(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Network(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_networks_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_route_networks(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_route_networks(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().RouteNetworks(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.RouteNetwork) graphql.Marshaler {
+			return ec.marshalNRouteNetwork2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteNetworkᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_route_networks(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteNetwork(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_route_networks_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -32850,6 +38031,153 @@ func (ec *executionContext) fieldContext_Mutation_pathway_delete(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Network_id(ctx context.Context, field graphql.CollectedField, obj *model.Network) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Network_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Network", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Network_network_id(ctx context.Context, field graphql.CollectedField, obj *model.Network) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Network_network_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.NetworkID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Network_network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Network", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Network_network_name(ctx context.Context, field graphql.CollectedField, obj *model.Network) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Network_network_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.NetworkName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Network_network_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Network", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Network_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Network) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Network_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Network_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Network", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Network_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Network) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Network_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Network_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Network", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Network_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Network) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Network_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Network().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Network_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Network",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Operator_id(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -35285,6 +40613,245 @@ func (ec *executionContext) fieldContext_RTVehicleDescriptor_license_plate(_ con
 	return graphql.NewScalarFieldContext("RTVehicleDescriptor", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _RiderCategory_id(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_rider_category_id(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_rider_category_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RiderCategoryID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_rider_category_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_rider_category_name(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_rider_category_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RiderCategoryName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_rider_category_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_is_default_fare_category(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_is_default_fare_category(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.IsDefaultFareCategory, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_is_default_fare_category(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_eligibility_url(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_eligibility_url(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EligibilityURL, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Url) graphql.Marshaler {
+			return ec.marshalOUrl2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐUrl(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_eligibility_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Url does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_min_age(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_min_age(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MinAge, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_min_age(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_max_age(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_max_age(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MaxAge, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
+			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_max_age(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RiderCategory", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RiderCategory_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.RiderCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RiderCategory_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RiderCategory().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RiderCategory_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RiderCategory",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Route_id(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -35628,6 +41195,73 @@ func (ec *executionContext) _Route_cemv_support(ctx context.Context, field graph
 }
 func (ec *executionContext) fieldContext_Route_cemv_support(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Route", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Route_network_id(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_network_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.NetworkID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Route_network_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Route", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Route_networks(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_networks(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Route().Networks(ctx, obj, fc.Args["limit"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Network) graphql.Marshaler {
+			return ec.marshalNNetwork2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetworkᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Route_networks(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Route",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Network(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Route_networks_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _Route_geometry(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
@@ -36721,6 +42355,171 @@ func (ec *executionContext) _RouteHeadway_departures(ctx context.Context, field 
 }
 func (ec *executionContext) fieldContext_RouteHeadway_departures(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RouteHeadway", field, true, true, errors.New("field of type Seconds does not have child fields"))
+}
+
+func (ec *executionContext) _RouteNetwork_id(ctx context.Context, field graphql.CollectedField, obj *model.RouteNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteNetwork_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteNetwork_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteNetwork", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteNetwork_network(ctx context.Context, field graphql.CollectedField, obj *model.RouteNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteNetwork_network(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteNetwork().Network(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Network) graphql.Marshaler {
+			return ec.marshalNNetwork2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetwork(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteNetwork_network(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteNetwork",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Network(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RouteNetwork_route(ctx context.Context, field graphql.CollectedField, obj *model.RouteNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteNetwork_route(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteNetwork().Route(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Route) graphql.Marshaler {
+			return ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteNetwork_route(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteNetwork",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Route(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RouteNetwork_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.RouteNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteNetwork_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteNetwork_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteNetwork", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RouteNetwork_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.RouteNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteNetwork_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteNetwork_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteNetwork", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RouteNetwork_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.RouteNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteNetwork_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteNetwork().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteNetwork_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteNetwork",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _RouteStop_id(ctx context.Context, field graphql.CollectedField, obj *model.RouteStop) (ret graphql.Marshaler) {
@@ -38682,6 +44481,50 @@ func (ec *executionContext) fieldContext_Stop_location_groups(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Stop_areas(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Stop_areas(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Stop().Areas(ctx, obj, fc.Args["limit"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Area) graphql.Marshaler {
+			return ec.marshalNArea2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAreaᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Stop_areas(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Stop",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Stop_areas_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Stop_level(ctx context.Context, field graphql.CollectedField, obj *model.Stop) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -39472,6 +45315,171 @@ func (ec *executionContext) _Stop_updated_at(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Stop_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Stop", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _StopArea_id(ctx context.Context, field graphql.CollectedField, obj *model.StopArea) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopArea_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_StopArea_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("StopArea", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _StopArea_area(ctx context.Context, field graphql.CollectedField, obj *model.StopArea) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopArea_area(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.StopArea().Area(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Area) graphql.Marshaler {
+			return ec.marshalNArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_StopArea_area(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StopArea",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Area(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StopArea_stop(ctx context.Context, field graphql.CollectedField, obj *model.StopArea) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopArea_stop(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.StopArea().Stop(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+			return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_StopArea_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StopArea",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StopArea_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.StopArea) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopArea_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_StopArea_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("StopArea", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _StopArea_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.StopArea) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopArea_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_StopArea_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("StopArea", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _StopArea_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.StopArea) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopArea_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.StopArea().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_StopArea_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StopArea",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _StopExternalReference_id(ctx context.Context, field graphql.CollectedField, obj *model.StopExternalReference) (ret graphql.Marshaler) {
@@ -41011,6 +47019,208 @@ func (ec *executionContext) fieldContext_Tenant_permissions(_ context.Context, f
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_Permissions(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Timeframe_id(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timeframe", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Timeframe_timeframe_group_id(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_timeframe_group_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TimeframeGroupID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
+			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_timeframe_group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timeframe", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Timeframe_start_time(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_start_time(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StartTime, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Seconds) graphql.Marshaler {
+			return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_start_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timeframe", field, false, false, errors.New("field of type Seconds does not have child fields"))
+}
+
+func (ec *executionContext) _Timeframe_end_time(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_end_time(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EndTime, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tt.Seconds) graphql.Marshaler {
+			return ec.marshalOSeconds2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐSeconds(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_end_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timeframe", field, false, false, errors.New("field of type Seconds does not have child fields"))
+}
+
+func (ec *executionContext) _Timeframe_service(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_service(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Timeframe().Service(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
+			return ec.marshalOCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_service(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Timeframe",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Calendar(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Timeframe_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timeframe", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Timeframe_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timeframe", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Timeframe_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Timeframe) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timeframe_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Timeframe().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timeframe_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Timeframe",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
 		},
 	}
 	return fc, nil
@@ -48794,6 +55004,134 @@ func (ec *executionContext) _Alert(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
+var areaImplementors = []string{"Area"}
+
+func (ec *executionContext) _Area(ctx context.Context, sel ast.SelectionSet, obj *model.Area) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, areaImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Area")
+		case "id":
+			out.Values[i] = ec._Area_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "area_id":
+			out.Values[i] = ec._Area_area_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "area_name":
+			out.Values[i] = ec._Area_area_name(ctx, field, obj)
+		case "stop_areas":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Area_stop_areas(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feed_version_sha1":
+			out.Values[i] = ec._Area_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Area_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Area_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var bookingRuleImplementors = []string{"BookingRule"}
 
 func (ec *executionContext) _BookingRule(ctx context.Context, sel ast.SelectionSet, obj *model.BookingRule) graphql.Marshaler {
@@ -50240,6 +56578,1272 @@ func (ec *executionContext) _EntityDeleteResult(ctx context.Context, sel ast.Sel
 	return out
 }
 
+var fareAttributeImplementors = []string{"FareAttribute"}
+
+func (ec *executionContext) _FareAttribute(ctx context.Context, sel ast.SelectionSet, obj *model.FareAttribute) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fareAttributeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FareAttribute")
+		case "id":
+			out.Values[i] = ec._FareAttribute_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "fare_id":
+			out.Values[i] = ec._FareAttribute_fare_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "price":
+			out.Values[i] = ec._FareAttribute_price(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "currency_type":
+			out.Values[i] = ec._FareAttribute_currency_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "payment_method":
+			out.Values[i] = ec._FareAttribute_payment_method(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "transfers":
+			out.Values[i] = ec._FareAttribute_transfers(ctx, field, obj)
+		case "transfer_duration":
+			out.Values[i] = ec._FareAttribute_transfer_duration(ctx, field, obj)
+		case "agency":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareAttribute_agency(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feed_version_sha1":
+			out.Values[i] = ec._FareAttribute_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._FareAttribute_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareAttribute_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var fareLegJoinRuleImplementors = []string{"FareLegJoinRule"}
+
+func (ec *executionContext) _FareLegJoinRule(ctx context.Context, sel ast.SelectionSet, obj *model.FareLegJoinRule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fareLegJoinRuleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FareLegJoinRule")
+		case "id":
+			out.Values[i] = ec._FareLegJoinRule_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "from_network_id":
+			out.Values[i] = ec._FareLegJoinRule_from_network_id(ctx, field, obj)
+		case "to_network_id":
+			out.Values[i] = ec._FareLegJoinRule_to_network_id(ctx, field, obj)
+		case "from_stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegJoinRule_from_stop(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "to_stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegJoinRule_to_stop(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feed_version_sha1":
+			out.Values[i] = ec._FareLegJoinRule_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._FareLegJoinRule_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegJoinRule_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var fareLegRuleImplementors = []string{"FareLegRule"}
+
+func (ec *executionContext) _FareLegRule(ctx context.Context, sel ast.SelectionSet, obj *model.FareLegRule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fareLegRuleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FareLegRule")
+		case "id":
+			out.Values[i] = ec._FareLegRule_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "leg_group_id":
+			out.Values[i] = ec._FareLegRule_leg_group_id(ctx, field, obj)
+		case "network_id":
+			out.Values[i] = ec._FareLegRule_network_id(ctx, field, obj)
+		case "from_area":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_from_area(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "to_area":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_to_area(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "from_timeframe_group_id":
+			out.Values[i] = ec._FareLegRule_from_timeframe_group_id(ctx, field, obj)
+		case "from_timeframes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_from_timeframes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "to_timeframe_group_id":
+			out.Values[i] = ec._FareLegRule_to_timeframe_group_id(ctx, field, obj)
+		case "to_timeframes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_to_timeframes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_product_id":
+			out.Values[i] = ec._FareLegRule_fare_product_id(ctx, field, obj)
+		case "fare_products":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_fare_products(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "rule_priority":
+			out.Values[i] = ec._FareLegRule_rule_priority(ctx, field, obj)
+		case "transfer_only":
+			out.Values[i] = ec._FareLegRule_transfer_only(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._FareLegRule_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._FareLegRule_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareLegRule_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var fareMediaImplementors = []string{"FareMedia"}
+
+func (ec *executionContext) _FareMedia(ctx context.Context, sel ast.SelectionSet, obj *model.FareMedia) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fareMediaImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FareMedia")
+		case "id":
+			out.Values[i] = ec._FareMedia_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "fare_media_id":
+			out.Values[i] = ec._FareMedia_fare_media_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "fare_media_name":
+			out.Values[i] = ec._FareMedia_fare_media_name(ctx, field, obj)
+		case "fare_media_type":
+			out.Values[i] = ec._FareMedia_fare_media_type(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._FareMedia_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._FareMedia_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareMedia_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var fareProductImplementors = []string{"FareProduct"}
+
+func (ec *executionContext) _FareProduct(ctx context.Context, sel ast.SelectionSet, obj *model.FareProduct) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fareProductImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FareProduct")
+		case "id":
+			out.Values[i] = ec._FareProduct_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "fare_product_id":
+			out.Values[i] = ec._FareProduct_fare_product_id(ctx, field, obj)
+		case "fare_product_name":
+			out.Values[i] = ec._FareProduct_fare_product_name(ctx, field, obj)
+		case "rider_category_id":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareProduct_rider_category_id(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "rider_category":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareProduct_rider_category(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_media":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareProduct_fare_media(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "amount":
+			out.Values[i] = ec._FareProduct_amount(ctx, field, obj)
+		case "currency":
+			out.Values[i] = ec._FareProduct_currency(ctx, field, obj)
+		case "duration_start":
+			out.Values[i] = ec._FareProduct_duration_start(ctx, field, obj)
+		case "duration_amount":
+			out.Values[i] = ec._FareProduct_duration_amount(ctx, field, obj)
+		case "duration_unit":
+			out.Values[i] = ec._FareProduct_duration_unit(ctx, field, obj)
+		case "duration_type":
+			out.Values[i] = ec._FareProduct_duration_type(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._FareProduct_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._FareProduct_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareProduct_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var fareRuleImplementors = []string{"FareRule"}
+
+func (ec *executionContext) _FareRule(ctx context.Context, sel ast.SelectionSet, obj *model.FareRule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fareRuleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FareRule")
+		case "id":
+			out.Values[i] = ec._FareRule_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "fare_attribute":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareRule_fare_attribute(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "route":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareRule_route(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "origin_id":
+			out.Values[i] = ec._FareRule_origin_id(ctx, field, obj)
+		case "destination_id":
+			out.Values[i] = ec._FareRule_destination_id(ctx, field, obj)
+		case "contains_id":
+			out.Values[i] = ec._FareRule_contains_id(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._FareRule_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._FareRule_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareRule_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var fareTransferRuleImplementors = []string{"FareTransferRule"}
+
+func (ec *executionContext) _FareTransferRule(ctx context.Context, sel ast.SelectionSet, obj *model.FareTransferRule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fareTransferRuleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FareTransferRule")
+		case "id":
+			out.Values[i] = ec._FareTransferRule_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "from_leg_group_id":
+			out.Values[i] = ec._FareTransferRule_from_leg_group_id(ctx, field, obj)
+		case "from_leg_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_from_leg_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "to_leg_group_id":
+			out.Values[i] = ec._FareTransferRule_to_leg_group_id(ctx, field, obj)
+		case "to_leg_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_to_leg_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "transfer_count":
+			out.Values[i] = ec._FareTransferRule_transfer_count(ctx, field, obj)
+		case "duration_limit":
+			out.Values[i] = ec._FareTransferRule_duration_limit(ctx, field, obj)
+		case "duration_limit_type":
+			out.Values[i] = ec._FareTransferRule_duration_limit_type(ctx, field, obj)
+		case "fare_transfer_type":
+			out.Values[i] = ec._FareTransferRule_fare_transfer_type(ctx, field, obj)
+		case "fare_product_id":
+			out.Values[i] = ec._FareTransferRule_fare_product_id(ctx, field, obj)
+		case "fare_products":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_fare_products(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "filter_fare_product_id":
+			out.Values[i] = ec._FareTransferRule_filter_fare_product_id(ctx, field, obj)
+		case "filter_fare_products":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_filter_fare_products(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feed_version_sha1":
+			out.Values[i] = ec._FareTransferRule_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._FareTransferRule_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FareTransferRule_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var feedImplementors = []string{"Feed"}
 
 func (ec *executionContext) _Feed(ctx context.Context, sel ast.SelectionSet, obj *model.Feed) graphql.Marshaler {
@@ -51509,6 +59113,438 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._FeedVersion_location_groups(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_attributes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_fare_attributes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_fare_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_media":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_fare_media(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_products":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_fare_products(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_leg_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_fare_leg_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_leg_join_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_fare_leg_join_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "fare_transfer_rules":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_fare_transfer_rules(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "rider_categories":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_rider_categories(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "timeframes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_timeframes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "areas":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_areas(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "networks":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_networks(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "route_networks":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_route_networks(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -55150,6 +63186,98 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
+var networkImplementors = []string{"Network"}
+
+func (ec *executionContext) _Network(ctx context.Context, sel ast.SelectionSet, obj *model.Network) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, networkImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Network")
+		case "id":
+			out.Values[i] = ec._Network_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "network_id":
+			out.Values[i] = ec._Network_network_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "network_name":
+			out.Values[i] = ec._Network_network_name(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._Network_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Network_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Network_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var operatorImplementors = []string{"Operator"}
 
 func (ec *executionContext) _Operator(ctx context.Context, sel ast.SelectionSet, obj *model.Operator) graphql.Marshaler {
@@ -56357,6 +64485,109 @@ func (ec *executionContext) _RTVehicleDescriptor(ctx context.Context, sel ast.Se
 	return out
 }
 
+var riderCategoryImplementors = []string{"RiderCategory"}
+
+func (ec *executionContext) _RiderCategory(ctx context.Context, sel ast.SelectionSet, obj *model.RiderCategory) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, riderCategoryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RiderCategory")
+		case "id":
+			out.Values[i] = ec._RiderCategory_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "rider_category_id":
+			out.Values[i] = ec._RiderCategory_rider_category_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "rider_category_name":
+			out.Values[i] = ec._RiderCategory_rider_category_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "is_default_fare_category":
+			out.Values[i] = ec._RiderCategory_is_default_fare_category(ctx, field, obj)
+		case "eligibility_url":
+			out.Values[i] = ec._RiderCategory_eligibility_url(ctx, field, obj)
+		case "min_age":
+			out.Values[i] = ec._RiderCategory_min_age(ctx, field, obj)
+		case "max_age":
+			out.Values[i] = ec._RiderCategory_max_age(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._RiderCategory_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._RiderCategory_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RiderCategory_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var routeImplementors = []string{"Route"}
 
 func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, obj *model.Route) graphql.Marshaler {
@@ -56441,6 +64672,44 @@ func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Route_continuous_drop_off(ctx, field, obj)
 		case "cemv_support":
 			out.Values[i] = ec._Route_cemv_support(ctx, field, obj)
+		case "network_id":
+			out.Values[i] = ec._Route_network_id(ctx, field, obj)
+		case "networks":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Route_networks(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "geometry":
 			field := field
 
@@ -57178,6 +65447,163 @@ func (ec *executionContext) _RouteHeadway(ctx context.Context, sel ast.Selection
 					}
 				}()
 				res = ec._RouteHeadway_departures(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var routeNetworkImplementors = []string{"RouteNetwork"}
+
+func (ec *executionContext) _RouteNetwork(ctx context.Context, sel ast.SelectionSet, obj *model.RouteNetwork) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, routeNetworkImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RouteNetwork")
+		case "id":
+			out.Values[i] = ec._RouteNetwork_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "network":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteNetwork_network(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "route":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteNetwork_route(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feed_version_sha1":
+			out.Values[i] = ec._RouteNetwork_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._RouteNetwork_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteNetwork_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -58414,6 +66840,42 @@ func (ec *executionContext) _Stop(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "areas":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Stop_areas(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "level":
 			field := field
 
@@ -59007,6 +67469,163 @@ func (ec *executionContext) _Stop(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Stop_created_at(ctx, field, obj)
 		case "updated_at":
 			out.Values[i] = ec._Stop_updated_at(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var stopAreaImplementors = []string{"StopArea"}
+
+func (ec *executionContext) _StopArea(ctx context.Context, sel ast.SelectionSet, obj *model.StopArea) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, stopAreaImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("StopArea")
+		case "id":
+			out.Values[i] = ec._StopArea_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "area":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StopArea_area(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StopArea_stop(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feed_version_sha1":
+			out.Values[i] = ec._StopArea_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._StopArea_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StopArea_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -59654,6 +68273,133 @@ func (ec *executionContext) _Tenant(ctx context.Context, sel ast.SelectionSet, o
 					}
 				}()
 				res = ec._Tenant_permissions(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var timeframeImplementors = []string{"Timeframe"}
+
+func (ec *executionContext) _Timeframe(ctx context.Context, sel ast.SelectionSet, obj *model.Timeframe) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, timeframeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Timeframe")
+		case "id":
+			out.Values[i] = ec._Timeframe_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "timeframe_group_id":
+			out.Values[i] = ec._Timeframe_timeframe_group_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "start_time":
+			out.Values[i] = ec._Timeframe_start_time(ctx, field, obj)
+		case "end_time":
+			out.Values[i] = ec._Timeframe_end_time(ctx, field, obj)
+		case "service":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Timeframe_service(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "feed_version_sha1":
+			out.Values[i] = ec._Timeframe_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Timeframe_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Timeframe_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -61411,6 +70157,36 @@ func (ec *executionContext) marshalNAlert2ᚖgithubᚗcomᚋinterlineᚑioᚋtra
 	return ec._Alert(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNArea2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx context.Context, sel ast.SelectionSet, v model.Area) graphql.Marshaler {
+	return ec._Area(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNArea2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAreaᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Area) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx context.Context, sel ast.SelectionSet, v *model.Area) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Area(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNBookingRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.BookingRule) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -61741,6 +70517,188 @@ func (ec *executionContext) marshalNEntityDeleteResult2ᚖgithubᚗcomᚋinterli
 		return graphql.Null
 	}
 	return ec._EntityDeleteResult(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFareAttribute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttributeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareAttribute) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFareAttribute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFareAttribute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx context.Context, sel ast.SelectionSet, v *model.FareAttribute) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FareAttribute(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFareLegJoinRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegJoinRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareLegJoinRule) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFareLegJoinRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegJoinRule(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFareLegJoinRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegJoinRule(ctx context.Context, sel ast.SelectionSet, v *model.FareLegJoinRule) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FareLegJoinRule(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFareLegRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareLegRule) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFareLegRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRule(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFareLegRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareLegRule(ctx context.Context, sel ast.SelectionSet, v *model.FareLegRule) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FareLegRule(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFareMedia2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareMediaᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareMedia) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFareMedia2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareMedia(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFareMedia2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareMedia(ctx context.Context, sel ast.SelectionSet, v *model.FareMedia) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FareMedia(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFareProduct2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProductᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareProduct) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFareProduct2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProduct(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFareProduct2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareProduct(ctx context.Context, sel ast.SelectionSet, v *model.FareProduct) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FareProduct(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFareRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareRule) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFareRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareRule(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFareRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareRule(ctx context.Context, sel ast.SelectionSet, v *model.FareRule) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FareRule(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFareTransferRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareTransferRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FareTransferRule) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFareTransferRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareTransferRule(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFareTransferRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareTransferRule(ctx context.Context, sel ast.SelectionSet, v *model.FareTransferRule) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FareTransferRule(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNFeed2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeed(ctx context.Context, sel ast.SelectionSet, v model.Feed) graphql.Marshaler {
@@ -62547,6 +71505,36 @@ func (ec *executionContext) marshalNMultiPolygon2githubᚗcomᚋinterlineᚑio�
 	return v
 }
 
+func (ec *executionContext) marshalNNetwork2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetwork(ctx context.Context, sel ast.SelectionSet, v model.Network) graphql.Marshaler {
+	return ec._Network(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNNetwork2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetworkᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Network) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNNetwork2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetwork(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNNetwork2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐNetwork(ctx context.Context, sel ast.SelectionSet, v *model.Network) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Network(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNOperator2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐOperatorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Operator) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -62752,6 +71740,32 @@ func (ec *executionContext) marshalNRTTranslation2ᚖgithubᚗcomᚋinterlineᚑ
 	return ec._RTTranslation(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRiderCategory2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategoryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RiderCategory) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRiderCategory2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategory(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNRiderCategory2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategory(ctx context.Context, sel ast.SelectionSet, v *model.RiderCategory) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RiderCategory(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNRoute2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx context.Context, sel ast.SelectionSet, v model.Route) graphql.Marshaler {
 	return ec._Route(ctx, sel, &v)
 }
@@ -62832,6 +71846,32 @@ func (ec *executionContext) marshalNRouteHeadway2ᚖgithubᚗcomᚋinterlineᚑi
 		return graphql.Null
 	}
 	return ec._RouteHeadway(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRouteNetwork2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteNetworkᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteNetwork) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRouteNetwork2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteNetwork(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNRouteNetwork2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteNetwork(ctx context.Context, sel ast.SelectionSet, v *model.RouteNetwork) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RouteNetwork(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteStop) graphql.Marshaler {
@@ -63072,6 +72112,32 @@ func (ec *executionContext) marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtran
 	return ec._Stop(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNStopArea2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopAreaᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.StopArea) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNStopArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopArea(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNStopArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopArea(ctx context.Context, sel ast.SelectionSet, v *model.StopArea) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._StopArea(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNStopObservation2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopObservation(ctx context.Context, sel ast.SelectionSet, v *model.StopObservation) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -63135,6 +72201,16 @@ func (ec *executionContext) marshalNStopTimeEvent2ᚖgithubᚗcomᚋinterlineᚑ
 		return graphql.Null
 	}
 	return ec._StopTimeEvent(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx context.Context, v any) (tt.Currency, error) {
+	var res tt.Currency
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx context.Context, sel ast.SelectionSet, v tt.Currency) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx context.Context, v any) (tt.String, error) {
@@ -63255,6 +72331,32 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNTimeframe2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Timeframe) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNTimeframe2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframe(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTimeframe2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTimeframe(ctx context.Context, sel ast.SelectionSet, v *model.Timeframe) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Timeframe(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNTimezone2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐTimezone(ctx context.Context, v any) (tt.Timezone, error) {
@@ -63621,6 +72723,13 @@ func (ec *executionContext) marshalOAgency2ᚕᚖgithubᚗcomᚋinterlineᚑio�
 	return ret
 }
 
+func (ec *executionContext) marshalOAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx context.Context, sel ast.SelectionSet, v *model.Agency) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Agency(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOAgencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgencyFilter(ctx context.Context, v any) (*model.AgencyFilter, error) {
 	if v == nil {
 		return nil, nil
@@ -63707,6 +72816,13 @@ func (ec *executionContext) marshalOAny2interface(ctx context.Context, sel ast.S
 	_ = ctx
 	res := graphql.MarshalAny(v)
 	return res
+}
+
+func (ec *executionContext) marshalOArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐArea(ctx context.Context, sel ast.SelectionSet, v *model.Area) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Area(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx context.Context, sel ast.SelectionSet, v *model.BookingRule) graphql.Marshaler {
@@ -64072,6 +73188,20 @@ func (ec *executionContext) marshalOEmail2githubᚗcomᚋinterlineᚑioᚋtransi
 	return v
 }
 
+func (ec *executionContext) marshalOFareAttribute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareAttribute(ctx context.Context, sel ast.SelectionSet, v *model.FareAttribute) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._FareAttribute(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOFareMedia2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFareMedia(ctx context.Context, sel ast.SelectionSet, v *model.FareMedia) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._FareMedia(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOFeature2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeature(ctx context.Context, v any) ([]*model.Feature, error) {
 	if v == nil {
 		return nil, nil
@@ -64307,6 +73437,16 @@ func (ec *executionContext) marshalOFeedVersionServiceWindow2ᚖgithubᚗcomᚋi
 		return graphql.Null
 	}
 	return ec._FeedVersionServiceWindow(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx context.Context, v any) (tt.CurrencyAmount, error) {
+	var res tt.CurrencyAmount
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrencyAmount(ctx context.Context, sel ast.SelectionSet, v tt.CurrencyAmount) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx context.Context, v any) (tt.Float, error) {
@@ -65212,6 +74352,13 @@ func (ec *executionContext) marshalORelativeDate2ᚖgithubᚗcomᚋinterlineᚑi
 	return v
 }
 
+func (ec *executionContext) marshalORiderCategory2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRiderCategory(ctx context.Context, sel ast.SelectionSet, v *model.RiderCategory) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._RiderCategory(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalORoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx context.Context, sel ast.SelectionSet, v *model.Route) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -65605,6 +74752,16 @@ func (ec *executionContext) unmarshalOStopTimeFilter2ᚖgithubᚗcomᚋinterline
 	}
 	res, err := ec.unmarshalInputStopTimeFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx context.Context, v any) (tt.Currency, error) {
+	var res tt.Currency
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐCurrency(ctx context.Context, sel ast.SelectionSet, v tt.Currency) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx context.Context, v any) (tt.String, error) {

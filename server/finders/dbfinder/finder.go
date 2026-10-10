@@ -215,8 +215,8 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 }
 
 // joinImported restricts a select over imported entity rows to feed versions whose import
-// completed. It is applied to the entity selects: agency, place, route, stop, trip, shape and
-// pathway.
+// completed. It is applied to the entity selects: agency, place, route, stop, trip, shape,
+// pathway and the fares entities.
 //
 // Excluded: an import still running (in_progress), and an import that failed and left rows
 // behind (success = false). Both columns are load-bearing and neither implies the other -- a

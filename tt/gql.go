@@ -48,6 +48,11 @@ func (r *Time) UnmarshalGQL(v any) error         { return unmarshalGql(r, v) }
 func (r *Timezone) UnmarshalGQL(v any) error     { return unmarshalGql(r, v) }
 func (r *Url) UnmarshalGQL(v any) error          { return unmarshalGql(r, v) }
 
+func (r Currency) MarshalGQL(w io.Writer)          { marshalGql(r, w) }
+func (r CurrencyAmount) MarshalGQL(w io.Writer)    { marshalGql(r, w) }
+func (r *Currency) UnmarshalGQL(v any) error       { return unmarshalGql(r, v) }
+func (r *CurrencyAmount) UnmarshalGQL(v any) error { return unmarshalGql(r, v) }
+
 type canUnmarshalJson interface {
 	Scan(any) error
 }

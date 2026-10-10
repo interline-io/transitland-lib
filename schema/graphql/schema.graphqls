@@ -486,6 +486,42 @@ type FeedVersion {
   
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
+
+  "GTFS Fares v1 records from this feed version's `fare_attributes.txt`, if imported"
+  fare_attributes(limit: Int, after: Int): [FareAttribute!]!
+
+  "GTFS Fares v1 records from this feed version's `fare_rules.txt`, if imported"
+  fare_rules(limit: Int, after: Int): [FareRule!]!
+
+  "GTFS Fares v2 records from this feed version's `fare_media.txt`, if imported"
+  fare_media(limit: Int, after: Int): [FareMedia!]!
+
+  "GTFS Fares v2 records from this feed version's `fare_products.txt`, if imported"
+  fare_products(limit: Int, after: Int): [FareProduct!]!
+
+  "GTFS Fares v2 records from this feed version's `fare_leg_rules.txt`, if imported"
+  fare_leg_rules(limit: Int, after: Int): [FareLegRule!]!
+
+  "GTFS Fares v2 records from this feed version's `fare_leg_join_rules.txt`, if imported"
+  fare_leg_join_rules(limit: Int, after: Int): [FareLegJoinRule!]!
+
+  "GTFS Fares v2 records from this feed version's `fare_transfer_rules.txt`, if imported"
+  fare_transfer_rules(limit: Int, after: Int): [FareTransferRule!]!
+
+  "GTFS Fares v2 records from this feed version's `rider_categories.txt`, if imported"
+  rider_categories(limit: Int, after: Int): [RiderCategory!]!
+
+  "GTFS Fares v2 records from this feed version's `timeframes.txt`, if imported"
+  timeframes(limit: Int, after: Int): [Timeframe!]!
+
+  "GTFS Fares v2 records from this feed version's `areas.txt`, if imported"
+  areas(limit: Int, after: Int): [Area!]!
+
+  "GTFS Fares v2 records from this feed version's `networks.txt`, if imported"
+  networks(limit: Int, after: Int): [Network!]!
+
+  "GTFS Fares v2 records from this feed version's `route_networks.txt`, if imported"
+  route_networks(limit: Int, after: Int): [RouteNetwork!]!
   
   "Records from this feed version's `feed_info.txt`"
   feed_infos(limit: Int): [FeedInfo!]!
@@ -782,6 +818,12 @@ type Route {
   "GTFS `routes.cemv_support`; whether riders can use a contactless EMV (cEMV) card or mobile device as fare media for trips on this route [0=no information, 1=supported, 2=not supported]; takes precedence over `agency.cemv_support`"
   cemv_support: Int
 
+  "GTFS `routes.network_id`; the fare network that includes this route, referenced by `fare_leg_rules.network_id`. Feeds that use `route_networks.txt` leave this empty; see `networks`"
+  network_id: String
+
+  "Fare networks from `route_networks.txt` that include this route; empty when the feed names networks in `routes.network_id` instead"
+  networks(limit: Int): [Network!]!
+
   "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`"
   geometry: Geometry @goField(forceResolver: true)
   
@@ -902,6 +944,9 @@ type Stop {
   
   "GTFS Flex location groups associated with this stop"
   location_groups(limit: Int): [LocationGroup!]!
+
+  "Fare areas from `stop_areas.txt` that include this stop"
+  areas(limit: Int): [Area!]!
   
   "Level within the station that this stop/platform belongs to"
   level: Level
@@ -1493,6 +1538,446 @@ type BookingRule {
   
   "GTFS `booking_rules.booking_url`; URL to the booking system or interface for this service"
   booking_url: Url
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_attributes.txt](https://gtfs.org/schedule/reference/#fare_attributestxt) file (Fares v1).
+"""
+type FareAttribute {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `fare_attributes.fare_id`"
+  fare_id: String!
+
+  "GTFS `fare_attributes.price`; fare price, in the unit specified by `currency_type`"
+  price: Float!
+
+  "GTFS `fare_attributes.currency_type`; ISO 4217 currency code"
+  currency_type: String!
+
+  "GTFS `fare_attributes.payment_method`; when the fare must be paid [0=on board, 1=before boarding]"
+  payment_method: Int!
+
+  "GTFS `fare_attributes.transfers`; number of transfers permitted [0=none, 1=one, 2=two]; null means unlimited transfers"
+  transfers: Int
+
+  "GTFS `fare_attributes.transfer_duration`; length of time in seconds before a transfer expires"
+  transfer_duration: Int
+
+  "GTFS `fare_attributes.agency_id`; agency for this fare, if specified"
+  agency: Agency
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_rules.txt](https://gtfs.org/schedule/reference/#fare_rulestxt) file (Fares v1).
+"""
+type FareRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `fare_rules.fare_id`; the fare this rule applies"
+  fare_attribute: FareAttribute
+
+  "GTFS `fare_rules.route_id`; route associated with this fare, if specified"
+  route: Route
+
+  "GTFS `fare_rules.origin_id`; origin zone, referencing `stops.zone_id`"
+  origin_id: String
+
+  "GTFS `fare_rules.destination_id`; destination zone, referencing `stops.zone_id`"
+  destination_id: String
+
+  "GTFS `fare_rules.contains_id`; a zone the itinerary passes through, referencing `stops.zone_id`"
+  contains_id: String
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_media.txt](https://gtfs.org/schedule/reference/#fare_mediatxt) file (Fares v2).
+"""
+type FareMedia {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `fare_media.fare_media_id`"
+  fare_media_id: String!
+
+  "GTFS `fare_media.fare_media_name`"
+  fare_media_name: String
+
+  "GTFS `fare_media.fare_media_type` [0=none, 1=physical paper ticket, 2=physical transit card, 3=cEMV, 4=mobile app]"
+  fare_media_type: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_products.txt](https://gtfs.org/schedule/reference/#fare_productstxt) file (Fares v2).
+"""
+type FareProduct {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `fare_products.fare_product_id`; several records may share a `fare_product_id` with different rider categories or fare media"
+  fare_product_id: String
+
+  "GTFS `fare_products.fare_product_name`"
+  fare_product_name: String
+
+  "GTFS `fare_products.rider_category_id`; empty means the product is eligible for any rider category"
+  rider_category_id: String
+
+  "Rider category named by `rider_category_id`; null when the product is eligible for any rider category"
+  rider_category: RiderCategory
+
+  "GTFS `fare_products.fare_media_id`; fare media that can be used for this product; null means unknown"
+  fare_media: FareMedia
+
+  "GTFS `fare_products.amount`; cost of the fare product; may be negative to represent a transfer discount"
+  amount: Float
+
+  "GTFS `fare_products.currency`; ISO 4217 currency code"
+  currency: String
+
+  "`fare_products.duration_start`; event that starts the product's validity period (experimental; not part of the GTFS spec)"
+  duration_start: Int
+
+  "`fare_products.duration_amount`; length of the product's validity period, in `duration_unit` (experimental; not part of the GTFS spec)"
+  duration_amount: Float
+
+  "`fare_products.duration_unit` [0=seconds, 1=minutes, 2=hours, 3=days, 4=weeks, 5=months, 6=years] (experimental; not part of the GTFS spec)"
+  duration_unit: Int
+
+  "`fare_products.duration_type`; how the validity period is measured (experimental; not part of the GTFS spec)"
+  duration_type: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_leg_rules.txt](https://gtfs.org/schedule/reference/#fare_leg_rulestxt) file (Fares v2).
+"""
+type FareLegRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `fare_leg_rules.leg_group_id`"
+  leg_group_id: String
+
+  "GTFS `fare_leg_rules.network_id`; references `routes.network_id` or `networks.network_id`"
+  network_id: String
+
+  "GTFS `fare_leg_rules.from_area_id`; departure area"
+  from_area: Area
+
+  "GTFS `fare_leg_rules.to_area_id`; arrival area"
+  to_area: Area
+
+  "GTFS `fare_leg_rules.from_timeframe_group_id`; references `timeframes.timeframe_group_id`"
+  from_timeframe_group_id: String
+
+  "Timeframes in the `from_timeframe_group_id` group; empty if the rule has no `from_timeframe_group_id`"
+  from_timeframes: [Timeframe!]!
+
+  "GTFS `fare_leg_rules.to_timeframe_group_id`; references `timeframes.timeframe_group_id`"
+  to_timeframe_group_id: String
+
+  "Timeframes in the `to_timeframe_group_id` group; empty if the rule has no `to_timeframe_group_id`"
+  to_timeframes: [Timeframe!]!
+
+  "GTFS `fare_leg_rules.fare_product_id`; references `fare_products.fare_product_id`"
+  fare_product_id: String
+
+  "Fare products with this rule's `fare_product_id`, one for each rider category and fare media"
+  fare_products: [FareProduct!]!
+
+  "GTFS `fare_leg_rules.rule_priority`; when several rules match a leg, those with the highest priority apply"
+  rule_priority: Int
+
+  "`fare_leg_rules.transfer_only` [0 or empty=any leg, 1=only a leg that follows a transfer, not the first leg of a journey] (experimental; not part of the GTFS spec)"
+  transfer_only: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_leg_join_rules.txt](https://gtfs.org/schedule/reference/#fare_leg_join_rulestxt) file (Fares v2).
+"""
+type FareLegJoinRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `fare_leg_join_rules.from_network_id`"
+  from_network_id: String
+
+  "GTFS `fare_leg_join_rules.to_network_id`"
+  to_network_id: String
+
+  "GTFS `fare_leg_join_rules.from_stop_id`"
+  from_stop: Stop
+
+  "GTFS `fare_leg_join_rules.to_stop_id`"
+  to_stop: Stop
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [fare_transfer_rules.txt](https://gtfs.org/schedule/reference/#fare_transfer_rulestxt) file (Fares v2).
+"""
+type FareTransferRule {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `fare_transfer_rules.from_leg_group_id`"
+  from_leg_group_id: String
+
+  "Fare leg rules in the `from_leg_group_id` group; empty if the rule has no `from_leg_group_id`"
+  from_leg_rules: [FareLegRule!]!
+
+  "GTFS `fare_transfer_rules.to_leg_group_id`"
+  to_leg_group_id: String
+
+  "Fare leg rules in the `to_leg_group_id` group; empty if the rule has no `to_leg_group_id`"
+  to_leg_rules: [FareLegRule!]!
+
+  "GTFS `fare_transfer_rules.transfer_count`; -1 means no limit"
+  transfer_count: Int
+
+  "GTFS `fare_transfer_rules.duration_limit`; in seconds"
+  duration_limit: Int
+
+  "GTFS `fare_transfer_rules.duration_limit_type` [0=departure to arrival, 1=departure to departure, 2=arrival to departure, 3=arrival to arrival]"
+  duration_limit_type: Int
+
+  "GTFS `fare_transfer_rules.fare_transfer_type` [0=A + AB, 1=A + AB + B, 2=AB]"
+  fare_transfer_type: Int
+
+  "GTFS `fare_transfer_rules.fare_product_id`; empty means the transfer costs nothing"
+  fare_product_id: String
+
+  "Fare products with this rule's `fare_product_id`; empty when the transfer costs nothing"
+  fare_products: [FareProduct!]!
+
+  "`fare_transfer_rules.filter_fare_product_id`; the rule applies only if the rider holds this fare product, bought in advance or for the previous leg (experimental; not part of the GTFS spec)"
+  filter_fare_product_id: String
+
+  "Fare products with this rule's `filter_fare_product_id` (experimental; not part of the GTFS spec)"
+  filter_fare_products: [FareProduct!]!
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [rider_categories.txt](https://gtfs.org/schedule/reference/#rider_categoriestxt) file (Fares v2).
+"""
+type RiderCategory {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `rider_categories.rider_category_id`"
+  rider_category_id: String!
+
+  "GTFS `rider_categories.rider_category_name`"
+  rider_category_name: String!
+
+  "GTFS `rider_categories.is_default_fare_category` [0=not default, 1=default]"
+  is_default_fare_category: Int
+
+  "GTFS `rider_categories.eligibility_url`"
+  eligibility_url: Url
+
+  "`rider_categories.min_age`; minimum age, inclusive (experimental; not part of the GTFS spec)"
+  min_age: Int
+
+  "`rider_categories.max_age`; maximum age, inclusive (experimental; not part of the GTFS spec)"
+  max_age: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [timeframes.txt](https://gtfs.org/schedule/reference/#timeframestxt) file (Fares v2).
+"""
+type Timeframe {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `timeframes.timeframe_group_id`"
+  timeframe_group_id: String!
+
+  "GTFS `timeframes.start_time`; empty means 00:00:00"
+  start_time: Seconds
+
+  "GTFS `timeframes.end_time`; empty means 24:00:00"
+  end_time: Seconds
+
+  "GTFS `timeframes.service_id`; dates on which this timeframe is in effect"
+  service: Calendar
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [areas.txt](https://gtfs.org/schedule/reference/#areastxt) file (Fares v2).
+"""
+type Area {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `areas.area_id`"
+  area_id: String!
+
+  "GTFS `areas.area_name`"
+  area_name: String
+
+  "Stops assigned to this area by `stop_areas.txt`"
+  stop_areas(limit: Int, after: Int): [StopArea!]!
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [stop_areas.txt](https://gtfs.org/schedule/reference/#stop_areastxt) file (Fares v2).
+"""
+type StopArea {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `stop_areas.area_id`"
+  area: Area!
+
+  "GTFS `stop_areas.stop_id`"
+  stop: Stop!
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [networks.txt](https://gtfs.org/schedule/reference/#networkstxt) file (Fares v2).
+"""
+type Network {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `networks.network_id`"
+  network_id: String!
+
+  "GTFS `networks.network_name`"
+  network_name: String
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [route_networks.txt](https://gtfs.org/schedule/reference/#route_networkstxt) file (Fares v2).
+"""
+type RouteNetwork {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `route_networks.network_id`"
+  network: Network!
+
+  "GTFS `route_networks.route_id`"
+  route: Route!
 
   "Feed version SHA1 associated with this entity"
   feed_version_sha1: String!

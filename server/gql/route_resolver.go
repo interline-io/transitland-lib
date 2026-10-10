@@ -66,6 +66,10 @@ func (r *routeResolver) RouteStops(ctx context.Context, obj *model.Route, limit 
 	return LoaderFor(ctx).RouteStopsByRouteIDs.Load(ctx, routeStopLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
+func (r *routeResolver) Networks(ctx context.Context, obj *model.Route, limit *int) ([]*model.Network, error) {
+	return LoaderFor(ctx).NetworksByRouteIDs.Load(ctx, networkLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
+}
+
 func (r *routeResolver) Headways(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteHeadway, error) {
 	return LoaderFor(ctx).RouteHeadwaysByRouteIDs.Load(ctx, routeHeadwayLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }

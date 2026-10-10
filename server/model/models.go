@@ -234,6 +234,86 @@ type BookingRule struct {
 	gtfs.BookingRule
 }
 
+type FareAttribute struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.FareAttribute
+}
+
+type FareRule struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.FareRule
+}
+
+type FareMedia struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.FareMedia
+}
+
+type FareProduct struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.FareProduct
+}
+
+type FareLegRule struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.FareLegRule
+}
+
+type FareLegJoinRule struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.FareLegJoinRule
+}
+
+type FareTransferRule struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.FareTransferRule
+}
+
+type RiderCategory struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.RiderCategory
+}
+
+type Timeframe struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Timeframe
+}
+
+type Area struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	WithStopID      tt.Int
+	gtfs.Area
+}
+
+type Network struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	WithRouteID     tt.Int
+	gtfs.Network
+}
+
+type RouteNetwork struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.RouteNetwork
+}
+
+type StopArea struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.StopArea
+}
+
 type LocationGroup struct {
 	FeedOnestopID   string
 	FeedVersionSHA1 string

@@ -30,6 +30,7 @@ models:
     model:
       - "github.com/99designs/gqlgen/graphql.String"
       - "github.com/interline-io/transitland-lib/tt.String"
+      - "github.com/interline-io/transitland-lib/tt.Currency"
   Time:
     model:
       - "github.com/99designs/gqlgen/graphql.Time"
@@ -44,6 +45,7 @@ models:
     model:
       - "github.com/99designs/gqlgen/graphql.Float"
       - "github.com/interline-io/transitland-lib/tt.Float"
+      - "github.com/interline-io/transitland-lib/tt.CurrencyAmount"
   Boolean:
     model:     
       - "github.com/99designs/gqlgen/graphql.Boolean"
@@ -108,12 +110,6 @@ models:
   Language:
     model: 
       - "github.com/interline-io/transitland-lib/tt.Language"      
-  Currency:
-    model: 
-      - "github.com/interline-io/transitland-lib/tt.Currency"      
-  CurrencyAmount:
-    model: 
-      - "github.com/interline-io/transitland-lib/tt.CurrencyAmount"      
   Timezone:
     model:
       - "github.com/interline-io/transitland-lib/tt.Timezone"

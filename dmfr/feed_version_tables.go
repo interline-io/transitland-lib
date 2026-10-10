@@ -87,6 +87,7 @@ func GetFeedVersionTables() FeedVersionTables {
 			"gtfs_feed_infos",
 			"gtfs_frequencies",
 			"gtfs_fare_rules",
+			"gtfs_fare_leg_join_rules",
 			"gtfs_attributions",
 			"gtfs_translations",
 			"gtfs_location_group_stops",
