@@ -148,26 +148,32 @@ func TestFeedUpdateOifs_GeneratedRowBesideAtlasRow(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDeleteHiddenOifs(t *testing.T) {
-	// A soft-deleted operator's row is removed, and the agency it covered gets a
-	// generated row in its place.
+func TestFeedUpdateOifs_HiddenOperatorRow(t *testing.T) {
+	// A soft-deleted operator's row in the rebuilt feed gives way to a generated
+	// row. Its row in a feed this sync doesn't rebuild stays.
 	ctx := context.Background()
 	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
 		feed := oifTestFeed(t, atx, "MB")
+		other := oifTestFeed(t, atx, "MB")
 		operator := dmfr.Operator{OnestopID: tt.NewString("o-gone"), Name: tt.NewString("Gone"), DeletedAt: tt.NewTime(time.Now())}
 		operator.ID = testdb.ShouldInsert(t, atx, &operator)
-		hidden := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feed.ID, ResolvedGtfsAgencyID: tt.NewString("MB"), ResolvedOnestopID: tt.NewString("o-gone")}
-		testdb.ShouldInsert(t, atx, &hidden)
+		for _, feedID := range []int{feed.ID, other.ID} {
+			hidden := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feedID, ResolvedGtfsAgencyID: tt.NewString("MB"), ResolvedOnestopID: tt.NewString("o-gone")}
+			testdb.ShouldInsert(t, atx, &hidden)
+		}
 
-		require.NoError(t, deleteHiddenOifs(ctx, atx))
-		_, err := feedUpdateOifs(ctx, atx, feed)
+		updated, err := feedUpdateOifs(ctx, atx, feed)
 		require.NoError(t, err)
+		assert.True(t, updated)
 		rows := []dmfr.OperatorAssociatedFeed{}
 		testdb.ShouldSelect(t, atx, &rows, "select * from current_operators_in_feed where feed_id = ?", feed.ID)
 		if assert.Len(t, rows, 1) {
 			assert.False(t, rows[0].OperatorID.Valid, "a generated row")
 			assert.Equal(t, "MB", rows[0].ResolvedGtfsAgencyID.Val)
 		}
+		count := 0
+		testdb.ShouldGet(t, atx, &count, "select count(*) from current_operators_in_feed where feed_id = ? and operator_id = ?", other.ID, operator.ID)
+		assert.Equal(t, 1, count, "the other feed's row stays")
 		return nil
 	})
 	require.NoError(t, err)

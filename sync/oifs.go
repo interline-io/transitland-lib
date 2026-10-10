@@ -182,24 +182,34 @@ func refreshOif(ctx context.Context, atx tldb.Adapter, id int, oif dmfr.Operator
 	return n > 0, err
 }
 
-// deleteHiddenOifs removes the rows of soft-deleted operators, which the finders
-// already hide, so none of them keeps an agency from its generated row.
-func deleteHiddenOifs(ctx context.Context, atx tldb.Adapter) error {
+// deleteHiddenOifs removes a feed's rows of soft-deleted operators, which the
+// finders already hide, and says whether there were any.
+func deleteHiddenOifs(ctx context.Context, atx tldb.Adapter, feedID int) (bool, error) {
 	q := atx.Sqrl().
 		Delete("current_operators_in_feed").
+		Where(sq.Eq{"feed_id": feedID}).
 		Where("operator_id in (select id from current_operators where deleted_at is not null)")
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
-		return err
+		return false, err
 	}
-	_, err = atx.DBX().ExecContext(ctx, qstr, qargs...)
-	return err
+	r, err := atx.DBX().ExecContext(ctx, qstr, qargs...)
+	if err != nil {
+		return false, err
+	}
+	n, err := r.RowsAffected()
+	return n > 0, err
 }
 
 func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
 	// Update OIFs that do not have an operator
-	updated := false
 	feedid := feed.ID
+	// Rows of soft-deleted operators go first, so none of them keeps an agency
+	// from its generated row.
+	updated, err := deleteHiddenOifs(ctx, atx, feedid)
+	if err != nil {
+		return false, err
+	}
 	oiflookup := map[oifmatch]int{}
 	oifmatches := map[int]bool{}
 	oifexisting := []dmfr.OperatorAssociatedFeed{}

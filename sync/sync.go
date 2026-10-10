@@ -131,11 +131,6 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 			log.For(ctx).Info().Msgf("Soft-deleted %d operators", sr.HiddenOperators)
 		}
 	}
-	// Rows of soft-deleted operators go before generated rows are rebuilt, so their
-	// agencies get generated rows back.
-	if err := deleteHiddenOifs(ctx, atx); err != nil {
-		sr.Errors = append(sr.Errors, err)
-	}
 	// Update any automatically generated agency-operator associations
 	if err := UpdateFeedGeneratedOperators(ctx, atx, sr.FeedIDs); err != nil {
 		sr.Errors = append(sr.Errors, err)
