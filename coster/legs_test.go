@@ -52,6 +52,34 @@ rail,,,rail_fare`,
 	}
 }
 
+func TestMatchLegRules_StopInSeveralAreas(t *testing.T) {
+	// An empty area field matches through any of a stop's areas that no rule lists.
+	c := newTestCoster(t, map[string]string{
+		"areas.txt": `
+area_id
+zone_x
+zone_y
+zone_z`,
+		"stop_areas.txt": `
+area_id,stop_id
+zone_x,a
+zone_z,a
+zone_y,b`,
+		"fare_products.txt": `
+fare_product_id,amount,currency
+zone_fare,5.00,USD
+rail_fare,4.00,USD`,
+		"fare_leg_rules.txt": `
+network_id,from_area_id,to_area_id,fare_product_id
+rail,zone_x,zone_y,zone_fare
+rail,,,rail_fare`,
+	})
+	// No rule lists zone_z, so the empty rule matches the departure from a.
+	assert.Equal(t, map[string]float64{"": 4.00}, fareAmounts(t, c, journey(leg("rail1", "a", "c", at(8, 0), at(8, 20)))))
+	// A rule lists zone_y, so only the zone rule matches the arrival at b.
+	assert.Equal(t, map[string]float64{"": 5.00}, fareAmounts(t, c, journey(leg("rail1", "a", "b", at(8, 0), at(8, 20)))))
+}
+
 func TestMatchLegRules_RulePriority(t *testing.T) {
 	// With rule_priority, an empty field matches any value, and the highest priority wins.
 	c := newTestCoster(t, map[string]string{
@@ -229,12 +257,12 @@ func TestFareLegs_JoinRules(t *testing.T) {
 from_network_id,to_network_id
 rail,rail`,
 		})
-		fares, err := c.Fares(inStation)
+		fare, err := c.LowestFare(inStation)
 		require.NoError(t, err)
-		require.Len(t, fares, 1)
-		assert.Equal(t, 4.50, fares[0].Amount)
-		require.Len(t, fares[0].FareLegs, 1)
-		assert.Equal(t, []int{0, 1}, fares[0].FareLegs[0].LegIndexes)
+		require.NotNil(t, fare)
+		assert.Equal(t, 4.50, fare.Amount)
+		require.Len(t, fare.FareLegs, 1)
+		assert.Equal(t, []int{0, 1}, fare.FareLegs[0].LegIndexes)
 		// Without stops in the rule, a transfer between stations isn't joined.
 		assert.Equal(t, map[string]float64{"": 4.00}, fareAmounts(t, c, betweenStops))
 	})

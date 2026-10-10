@@ -198,15 +198,11 @@ func matchID(field string, value string, listed map[string]bool) bool {
 }
 
 // matchAreas reports whether a rule's area field matches a stop's areas. An empty field
-// matches when none of the stop's areas are in listed.
+// matches a stop without areas, or a stop with any area not in listed: the spec filters
+// each of a stop's areas on its own.
 func matchAreas(field string, areas []string, listed map[string]bool) bool {
 	if field != "" {
 		return slices.Contains(areas, field)
 	}
-	for _, a := range areas {
-		if listed[a] {
-			return false
-		}
-	}
-	return true
+	return len(areas) == 0 || slices.ContainsFunc(areas, func(a string) bool { return !listed[a] })
 }
