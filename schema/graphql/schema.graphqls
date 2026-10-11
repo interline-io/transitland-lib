@@ -1063,6 +1063,15 @@ type Pathway {
   created_at: Time
   "Time this pathway record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -1091,6 +1100,15 @@ type Level {
   created_at: Time
   "Time this level record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """

@@ -66,13 +66,6 @@ type pathwayLoaderParam struct {
 	Where         *model.PathwayFilter
 }
 
-// pathwayGroup carries the batch-grouped query options of
-// pathwayLoaderParam, everything except the feed version key and limit.
-type pathwayGroup struct {
-	After *model.Cursor
-	Where *model.PathwayFilter
-}
-
 type stopTimeLoaderParam struct {
 	TripID          int
 	StopID          int
@@ -147,11 +140,11 @@ type agencyStopLoaderParam struct {
 	Where    *model.AgencyStopFilter
 }
 
-// agencyStopGroup carries the batch-grouped query options of
-// agencyStopLoaderParam, everything except the agency key and limit.
-type agencyStopGroup struct {
+// cursorGroup is the batch-grouping key of a loader whose finder takes an
+// after cursor and a filter, so requests that share both run as one query.
+type cursorGroup[W any] struct {
 	After *model.Cursor
-	Where *model.AgencyStopFilter
+	Where W
 }
 
 type levelLoaderParam struct {
@@ -160,13 +153,6 @@ type levelLoaderParam struct {
 	Limit           *int
 	After           *model.Cursor
 	Where           *model.LevelFilter
-}
-
-// levelGroup carries the batch-grouped query options of levelLoaderParam,
-// everything except the feed version key and limit.
-type levelGroup struct {
-	After *model.Cursor
-	Where *model.LevelFilter
 }
 
 type feedLoaderParam struct {

@@ -2,10 +2,12 @@ package gql
 
 import (
 	"context"
-	"strconv"
+	"slices"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 )
 
 // WMATA Rail provides a station-modeled GTFS feed with pathways and levels.
@@ -229,6 +231,12 @@ func TestFeedVersionResolver_Pathways(t *testing.T) {
 			expect: `{"feed_versions":[{"pathways":[]}]}`,
 		},
 		{
+			name:   "feed version fields",
+			query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { pathways(limit:1) { feed_version_sha1 feed_onestop_id feed_version { sha1 } } } }`,
+			vars:   hw{"sha1": wmataSha1},
+			expect: `{"feed_versions":[{"pathways":[{"feed_version_sha1":"148d00724546e1526d5d84d1f9d095df24f6517c","feed_onestop_id":"WMATA","feed_version":{"sha1":"148d00724546e1526d5d84d1f9d095df24f6517c"}}]}]}`,
+		},
+		{
 			name:   "feed version without pathways",
 			query:  q,
 			vars:   hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
@@ -260,60 +268,85 @@ func TestFeedVersionResolver_PathwaysAndLevels_Cursor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pathways, levels := pathwayGroups[0], levelGroups[0]
-	var pathwayIDs, levelIDs []string
-	for _, ent := range pathways {
-		pathwayIDs = append(pathwayIDs, strconv.Itoa(ent.ID))
+	var pathwayIDs, levelIDs []int
+	for _, ent := range pathwayGroups[0] {
+		pathwayIDs = append(pathwayIDs, ent.ID)
 	}
-	for _, ent := range levels {
-		levelIDs = append(levelIDs, strconv.Itoa(ent.ID))
+	for _, ent := range levelGroups[0] {
+		levelIDs = append(levelIDs, ent.ID)
 	}
+	if len(pathwayIDs) < 3 || len(levelIDs) < 3 {
+		t.Fatalf("got %d pathways and %d levels, need at least 3 of each", len(pathwayIDs), len(levelIDs))
+	}
+	// Paging with after relies on ascending ids, so expect that order whatever
+	// order the finder returned.
+	slices.Sort(pathwayIDs)
+	slices.Sort(levelIDs)
 
 	pathwaysQuery := `query($sha1:String!, $after:Int, $where:PathwayFilter) { feed_versions(where:{sha1:$sha1}) { pathways(limit:10000, after:$after, where:$where) { id } } }`
 	levelsQuery := `query($sha1:String!, $after:Int, $where:LevelFilter) { feed_versions(where:{sha1:$sha1}) { levels(limit:10000, after:$after, where:$where) { id } } }`
+	pathwaysSel := "feed_versions.0.pathways.#.id"
+	levelsSel := "feed_versions.0.levels.#.id"
 	testcases := []testcase{
 		{
-			name:         "pathways no cursor",
-			query:        pathwaysQuery,
-			vars:         hw{"sha1": wmataSha1},
-			selector:     "feed_versions.0.pathways.#.id",
-			selectExpect: pathwayIDs,
+			name:  "pathways no cursor",
+			query: pathwaysQuery,
+			vars:  hw{"sha1": wmataSha1},
+			f:     expectIDsInOrder(pathwaysSel, pathwayIDs),
 		},
 		{
-			name:         "pathways after first",
-			query:        pathwaysQuery,
-			vars:         hw{"sha1": wmataSha1, "after": pathways[0].ID},
-			selector:     "feed_versions.0.pathways.#.id",
-			selectExpect: pathwayIDs[1:],
+			name:  "pathways after first",
+			query: pathwaysQuery,
+			vars:  hw{"sha1": wmataSha1, "after": pathwayIDs[0]},
+			f:     expectIDsInOrder(pathwaysSel, pathwayIDs[1:]),
 		},
 		{
-			name:         "pathways by ids",
-			query:        pathwaysQuery,
-			vars:         hw{"sha1": wmataSha1, "where": hw{"ids": []int{pathways[2].ID, pathways[0].ID}}},
-			selector:     "feed_versions.0.pathways.#.id",
-			selectExpect: []string{pathwayIDs[0], pathwayIDs[2]},
+			name:  "pathways by ids",
+			query: pathwaysQuery,
+			vars:  hw{"sha1": wmataSha1, "where": hw{"ids": []int{pathwayIDs[2], pathwayIDs[0]}}},
+			f:     expectIDsInOrder(pathwaysSel, []int{pathwayIDs[0], pathwayIDs[2]}),
 		},
 		{
-			name:         "levels no cursor",
-			query:        levelsQuery,
-			vars:         hw{"sha1": wmataSha1},
-			selector:     "feed_versions.0.levels.#.id",
-			selectExpect: levelIDs,
+			name:  "pathways after first and by ids",
+			query: pathwaysQuery,
+			vars:  hw{"sha1": wmataSha1, "after": pathwayIDs[0], "where": hw{"ids": []int{pathwayIDs[0], pathwayIDs[2]}}},
+			f:     expectIDsInOrder(pathwaysSel, []int{pathwayIDs[2]}),
 		},
 		{
-			name:         "levels after first",
-			query:        levelsQuery,
-			vars:         hw{"sha1": wmataSha1, "after": levels[0].ID},
-			selector:     "feed_versions.0.levels.#.id",
-			selectExpect: levelIDs[1:],
+			name:  "levels no cursor",
+			query: levelsQuery,
+			vars:  hw{"sha1": wmataSha1},
+			f:     expectIDsInOrder(levelsSel, levelIDs),
 		},
 		{
-			name:         "levels by ids",
-			query:        levelsQuery,
-			vars:         hw{"sha1": wmataSha1, "where": hw{"ids": []int{levels[2].ID, levels[0].ID}}},
-			selector:     "feed_versions.0.levels.#.id",
-			selectExpect: []string{levelIDs[0], levelIDs[2]},
+			name:  "levels after first",
+			query: levelsQuery,
+			vars:  hw{"sha1": wmataSha1, "after": levelIDs[0]},
+			f:     expectIDsInOrder(levelsSel, levelIDs[1:]),
+		},
+		{
+			name:  "levels by ids",
+			query: levelsQuery,
+			vars:  hw{"sha1": wmataSha1, "where": hw{"ids": []int{levelIDs[2], levelIDs[0]}}},
+			f:     expectIDsInOrder(levelsSel, []int{levelIDs[0], levelIDs[2]}),
+		},
+		{
+			name:  "levels after first and by ids",
+			query: levelsQuery,
+			vars:  hw{"sha1": wmataSha1, "after": levelIDs[0], "where": hw{"ids": []int{levelIDs[0], levelIDs[2]}}},
+			f:     expectIDsInOrder(levelsSel, []int{levelIDs[2]}),
 		},
 	}
 	queryTestcases(t, c, testcases)
+}
+
+// expectIDsInOrder checks that selector returns exactly these ids, in this order.
+func expectIDsInOrder(selector string, ids []int) func(*testing.T, string) {
+	return func(t *testing.T, jj string) {
+		var got []int
+		for _, v := range gjson.Get(jj, selector).Array() {
+			got = append(got, int(v.Int()))
+		}
+		assert.Equal(t, ids, got)
+	}
 }

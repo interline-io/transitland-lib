@@ -191,13 +191,21 @@ func (f *Finder) LevelDelete(ctx context.Context, id int) error {
 	return deleteEnt(ctx, &ent)
 }
 
+// levelRow is a gtfs_levels row with the Transitland geometry and parent
+// station columns. model.Level adds feed fields that the table lacks.
+type levelRow struct {
+	Geometry      tt.MultiPolygon
+	ParentStation tt.Key
+	gtfs.Level
+}
+
 func createUpdateLevel(ctx context.Context, input model.LevelSetInput) (int, error) {
 	return createUpdateEnt(
 		ctx,
 		input.ID,
 		fvint(input.FeedVersion),
-		&model.Level{},
-		func(ent *model.Level) ([]string, error) {
+		&levelRow{},
+		func(ent *levelRow) ([]string, error) {
 			var cols []string
 			var err error
 			cols = scanCol(&ent.LevelID, input.LevelID, "level_id", cols, &err)

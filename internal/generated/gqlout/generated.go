@@ -943,14 +943,17 @@ type ComplexityRoot struct {
 	}
 
 	Level struct {
-		CreatedAt  func(childComplexity int) int
-		Geometry   func(childComplexity int) int
-		ID         func(childComplexity int) int
-		LevelID    func(childComplexity int) int
-		LevelIndex func(childComplexity int) int
-		LevelName  func(childComplexity int) int
-		Stops      func(childComplexity int) int
-		UpdatedAt  func(childComplexity int) int
+		CreatedAt       func(childComplexity int) int
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		Geometry        func(childComplexity int) int
+		ID              func(childComplexity int) int
+		LevelID         func(childComplexity int) int
+		LevelIndex      func(childComplexity int) int
+		LevelName       func(childComplexity int) int
+		Stops           func(childComplexity int) int
+		UpdatedAt       func(childComplexity int) int
 	}
 
 	Location struct {
@@ -1042,6 +1045,9 @@ type ComplexityRoot struct {
 
 	Pathway struct {
 		CreatedAt           func(childComplexity int) int
+		FeedOnestopID       func(childComplexity int) int
+		FeedVersion         func(childComplexity int) int
+		FeedVersionSHA1     func(childComplexity int) int
 		FromStop            func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		IsBidirectional     func(childComplexity int) int
@@ -1782,6 +1788,8 @@ type GroupResolver interface {
 }
 type LevelResolver interface {
 	Stops(ctx context.Context, obj *model.Level) ([]*model.Stop, error)
+
+	FeedVersion(ctx context.Context, obj *model.Level) (*model.FeedVersion, error)
 }
 type LocationResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Location) (*model.FeedVersion, error)
@@ -1823,6 +1831,8 @@ type OperatorResolver interface {
 type PathwayResolver interface {
 	FromStop(ctx context.Context, obj *model.Pathway) (*model.Stop, error)
 	ToStop(ctx context.Context, obj *model.Pathway) (*model.Stop, error)
+
+	FeedVersion(ctx context.Context, obj *model.Pathway) (*model.FeedVersion, error)
 }
 type PlaceResolver interface {
 	Count(ctx context.Context, obj *model.Place) (int, error)
@@ -6078,6 +6088,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Level.CreatedAt(childComplexity), true
+	case "Level.feed_onestop_id":
+		if e.ComplexityRoot.Level.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Level.FeedOnestopID(childComplexity), true
+	case "Level.feed_version":
+		if e.ComplexityRoot.Level.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Level.FeedVersion(childComplexity), true
+	case "Level.feed_version_sha1":
+		if e.ComplexityRoot.Level.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Level.FeedVersionSHA1(childComplexity), true
 	case "Level.geometry":
 		if e.ComplexityRoot.Level.Geometry == nil {
 			break
@@ -6613,6 +6641,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Pathway.CreatedAt(childComplexity), true
+	case "Pathway.feed_onestop_id":
+		if e.ComplexityRoot.Pathway.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Pathway.FeedOnestopID(childComplexity), true
+	case "Pathway.feed_version":
+		if e.ComplexityRoot.Pathway.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Pathway.FeedVersion(childComplexity), true
+	case "Pathway.feed_version_sha1":
+		if e.ComplexityRoot.Pathway.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Pathway.FeedVersionSHA1(childComplexity), true
 	case "Pathway.from_stop":
 		if e.ComplexityRoot.Pathway.FromStop == nil {
 			break
@@ -11572,6 +11618,15 @@ type Pathway {
   created_at: Time
   "Time this pathway record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -11600,6 +11655,15 @@ type Level {
   created_at: Time
   "Time this level record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -16143,6 +16207,12 @@ func (ec *executionContext) childFields_Level(ctx context.Context, field graphql
 		return ec.fieldContext_Level_created_at(ctx, field)
 	case "updated_at":
 		return ec.fieldContext_Level_updated_at(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_Level_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_Level_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_Level_feed_version(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 }
@@ -16305,6 +16375,12 @@ func (ec *executionContext) childFields_Pathway(ctx context.Context, field graph
 		return ec.fieldContext_Pathway_created_at(ctx, field)
 	case "updated_at":
 		return ec.fieldContext_Pathway_updated_at(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_Pathway_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_Pathway_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_Pathway_feed_version(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 }
@@ -36848,6 +36924,84 @@ func (ec *executionContext) fieldContext_Level_updated_at(_ context.Context, fie
 	return graphql.NewScalarFieldContext("Level", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _Level_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Level_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Level_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Level", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Level_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Level_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Level_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Level", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Level_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Level_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Level().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Level_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Level",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Location_id(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -39123,6 +39277,84 @@ func (ec *executionContext) _Pathway_updated_at(ctx context.Context, field graph
 }
 func (ec *executionContext) fieldContext_Pathway_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Pathway", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _Pathway_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Pathway_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Pathway_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Pathway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Pathway_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Pathway_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Pathway_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Pathway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Pathway_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Pathway_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Pathway().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Pathway_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pathway",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _PermissionRef_type(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
@@ -62881,6 +63113,52 @@ func (ec *executionContext) _Level(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Level_created_at(ctx, field, obj)
 		case "updated_at":
 			out.Values[i] = ec._Level_updated_at(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._Level_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Level_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Level_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -63891,6 +64169,52 @@ func (ec *executionContext) _Pathway(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Pathway_created_at(ctx, field, obj)
 		case "updated_at":
 			out.Values[i] = ec._Pathway_updated_at(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._Pathway_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Pathway_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pathway_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

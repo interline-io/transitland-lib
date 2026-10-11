@@ -21,6 +21,7 @@ func TestPermFilter_Negative(t *testing.T) {
 		}
 
 		const haFv = 6
+		const wmataFv = 7
 		segmentIDs := []int{1418704, 1418711}
 		routeIDsWithSegments := []int{34, 39}
 
@@ -98,6 +99,22 @@ func TestPermFilter_Negative(t *testing.T) {
 			assert.NoError(t, err)
 			if assert.Len(t, got, 1) {
 				assert.Empty(t, got[0], "expected no service levels for FV %d", haFv)
+			}
+		})
+
+		t.Run("PathwaysByFeedVersionIDs", func(t *testing.T) {
+			got, err := cfg.Finder.PathwaysByFeedVersionIDs(ctx, nil, nil, nil, []int{wmataFv})
+			assert.NoError(t, err)
+			if assert.Len(t, got, 1) {
+				assert.Empty(t, got[0], "expected no pathways for FV %d", wmataFv)
+			}
+		})
+
+		t.Run("LevelsByFeedVersionIDs", func(t *testing.T) {
+			got, err := cfg.Finder.LevelsByFeedVersionIDs(ctx, nil, nil, nil, []int{wmataFv})
+			assert.NoError(t, err)
+			if assert.Len(t, got, 1) {
+				assert.Empty(t, got[0], "expected no levels for FV %d", wmataFv)
 			}
 		})
 	})

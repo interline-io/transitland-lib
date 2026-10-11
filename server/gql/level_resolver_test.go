@@ -18,6 +18,12 @@ func TestLevelResolver(t *testing.T) {
 			expect: `{"feed_versions":[{"stops":[{"level":{"level_id":"C08_L1","level_index":-1,"level_name":"Mezzanine"}}]}]}`,
 		},
 		{
+			name:   "stop level feed version fields",
+			query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { stops(where:{stop_id:"NODE_C08_FG_PAID"}) { level { feed_version_sha1 feed_onestop_id feed_version { sha1 } } } } }`,
+			vars:   hw{"sha1": wmataSha1},
+			expect: `{"feed_versions":[{"stops":[{"level":{"feed_version_sha1":"148d00724546e1526d5d84d1f9d095df24f6517c","feed_onestop_id":"WMATA","feed_version":{"sha1":"148d00724546e1526d5d84d1f9d095df24f6517c"}}}]}]}`,
+		},
+		{
 			name:  "stops by level",
 			query: `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { levels(where:{level_id:"C08_L1"}) { stops { stop_id } } } }`,
 			vars:  hw{"sha1": wmataSha1},
@@ -66,6 +72,12 @@ func TestFeedVersionResolver_Levels(t *testing.T) {
 			query:  q,
 			vars:   hw{"sha1": wmataSha1, "where": hw{"level_id": "missing"}},
 			expect: `{"feed_versions":[{"levels":[]}]}`,
+		},
+		{
+			name:   "feed version fields",
+			query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { levels(limit:1) { feed_version_sha1 feed_onestop_id feed_version { sha1 } } } }`,
+			vars:   hw{"sha1": wmataSha1},
+			expect: `{"feed_versions":[{"levels":[{"feed_version_sha1":"148d00724546e1526d5d84d1f9d095df24f6517c","feed_onestop_id":"WMATA","feed_version":{"sha1":"148d00724546e1526d5d84d1f9d095df24f6517c"}}]}]}`,
 		},
 		{
 			name:   "feed version without levels",
