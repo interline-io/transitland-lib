@@ -32,10 +32,8 @@ type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 type ResolverRoot interface {
 	Agency() AgencyResolver
 	Area() AreaResolver
-	Attribution() AttributionResolver
 	BookingRule() BookingRuleResolver
 	Calendar() CalendarResolver
-	CalendarDate() CalendarDateResolver
 	CensusDataset() CensusDatasetResolver
 	CensusGeography() CensusGeographyResolver
 	CensusLayer() CensusLayerResolver
@@ -83,8 +81,6 @@ type ResolverRoot interface {
 	StopTime() StopTimeResolver
 	Tenant() TenantResolver
 	Timeframe() TimeframeResolver
-	Transfer() TransferResolver
-	Translation() TranslationResolver
 	Trip() TripResolver
 	ValidationReport() ValidationReportResolver
 	ValidationReportErrorGroup() ValidationReportErrorGroupResolver
@@ -157,24 +153,6 @@ type ComplexityRoot struct {
 		StopAreas       func(childComplexity int, limit *int, after *int) int
 	}
 
-	Attribution struct {
-		Agency           func(childComplexity int) int
-		AttributionEmail func(childComplexity int) int
-		AttributionID    func(childComplexity int) int
-		AttributionPhone func(childComplexity int) int
-		AttributionURL   func(childComplexity int) int
-		FeedOnestopID    func(childComplexity int) int
-		FeedVersion      func(childComplexity int) int
-		FeedVersionSHA1  func(childComplexity int) int
-		ID               func(childComplexity int) int
-		IsAuthority      func(childComplexity int) int
-		IsOperator       func(childComplexity int) int
-		IsProducer       func(childComplexity int) int
-		OrganizationName func(childComplexity int) int
-		Route            func(childComplexity int) int
-		Trip             func(childComplexity int) int
-	}
-
 	BookingRule struct {
 		BookingRuleID          func(childComplexity int) int
 		BookingType            func(childComplexity int) int
@@ -201,7 +179,6 @@ type ComplexityRoot struct {
 		AddedDates   func(childComplexity int, limit *int) int
 		EndDate      func(childComplexity int) int
 		Friday       func(childComplexity int) int
-		Generated    func(childComplexity int) int
 		ID           func(childComplexity int) int
 		Monday       func(childComplexity int) int
 		RemovedDates func(childComplexity int, limit *int) int
@@ -212,16 +189,6 @@ type ComplexityRoot struct {
 		Thursday     func(childComplexity int) int
 		Tuesday      func(childComplexity int) int
 		Wednesday    func(childComplexity int) int
-	}
-
-	CalendarDate struct {
-		Date            func(childComplexity int) int
-		ExceptionType   func(childComplexity int) int
-		FeedOnestopID   func(childComplexity int) int
-		FeedVersion     func(childComplexity int) int
-		FeedVersionSHA1 func(childComplexity int) int
-		ID              func(childComplexity int) int
-		Service         func(childComplexity int) int
 	}
 
 	CensusDataset struct {
@@ -523,10 +490,7 @@ type ComplexityRoot struct {
 	FeedVersion struct {
 		Agencies              func(childComplexity int, limit *int, where *model.AgencyFilter) int
 		Areas                 func(childComplexity int, limit *int, after *int) int
-		Attributions          func(childComplexity int, limit *int, after *int, where *model.AttributionFilter) int
 		BookingRules          func(childComplexity int, limit *int, where *model.BookingRuleFilter) int
-		CalendarDates         func(childComplexity int, limit *int, after *int, where *model.CalendarDateFilter) int
-		Calendars             func(childComplexity int, limit *int, after *int, where *model.CalendarFilter) int
 		CreatedBy             func(childComplexity int) int
 		Description           func(childComplexity int) int
 		EarliestCalendarDate  func(childComplexity int) int
@@ -543,12 +507,10 @@ type ComplexityRoot struct {
 		FetchedAt             func(childComplexity int) int
 		File                  func(childComplexity int) int
 		Files                 func(childComplexity int, limit *int) int
-		Frequencies           func(childComplexity int, limit *int, after *int, where *model.FrequencyFilter) int
 		Geometry              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LatestCalendarDate    func(childComplexity int) int
 		Levels                func(childComplexity int, limit *int, after *int, where *model.LevelFilter) int
-		LocationGroupStops    func(childComplexity int, limit *int, after *int, where *model.LocationGroupStopFilter) int
 		LocationGroups        func(childComplexity int, limit *int, where *model.LocationGroupFilter) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
@@ -564,11 +526,8 @@ type ComplexityRoot struct {
 		ServiceLevels         func(childComplexity int, limit *int, where *model.FeedVersionServiceLevelFilter) int
 		ServiceWindow         func(childComplexity int) int
 		Shapes                func(childComplexity int, limit *int, after *int, where *model.ShapeFilter) int
-		StopAreas             func(childComplexity int, limit *int, after *int, where *model.StopAreaFilter) int
 		Stops                 func(childComplexity int, limit *int, where *model.StopFilter) int
 		Timeframes            func(childComplexity int, limit *int, after *int) int
-		Transfers             func(childComplexity int, limit *int, after *int, where *model.TransferFilter) int
-		Translations          func(childComplexity int, limit *int, after *int, where *model.TranslationFilter) int
 		Trips                 func(childComplexity int, limit *int, where *model.TripFilter) int
 		URL                   func(childComplexity int) int
 		UpdatedBy             func(childComplexity int) int
@@ -1499,35 +1458,6 @@ type ComplexityRoot struct {
 		TimeframeGroupID func(childComplexity int) int
 	}
 
-	Transfer struct {
-		FeedOnestopID   func(childComplexity int) int
-		FeedVersion     func(childComplexity int) int
-		FeedVersionSHA1 func(childComplexity int) int
-		FromRoute       func(childComplexity int) int
-		FromStop        func(childComplexity int) int
-		FromTrip        func(childComplexity int) int
-		ID              func(childComplexity int) int
-		MinTransferTime func(childComplexity int) int
-		ToRoute         func(childComplexity int) int
-		ToStop          func(childComplexity int) int
-		ToTrip          func(childComplexity int) int
-		TransferType    func(childComplexity int) int
-	}
-
-	Translation struct {
-		FeedOnestopID   func(childComplexity int) int
-		FeedVersion     func(childComplexity int) int
-		FeedVersionSHA1 func(childComplexity int) int
-		FieldName       func(childComplexity int) int
-		FieldValue      func(childComplexity int) int
-		ID              func(childComplexity int) int
-		Language        func(childComplexity int) int
-		RecordID        func(childComplexity int) int
-		RecordSubID     func(childComplexity int) int
-		TableNameValue  func(childComplexity int) int
-		Translation     func(childComplexity int) int
-	}
-
 	Trip struct {
 		Alerts               func(childComplexity int, active *bool, limit *int) int
 		BikesAllowed         func(childComplexity int) int
@@ -1687,13 +1617,6 @@ type AreaResolver interface {
 
 	FeedVersion(ctx context.Context, obj *model.Area) (*model.FeedVersion, error)
 }
-type AttributionResolver interface {
-	Agency(ctx context.Context, obj *model.Attribution) (*model.Agency, error)
-	Route(ctx context.Context, obj *model.Attribution) (*model.Route, error)
-	Trip(ctx context.Context, obj *model.Attribution) (*model.Trip, error)
-
-	FeedVersion(ctx context.Context, obj *model.Attribution) (*model.FeedVersion, error)
-}
 type BookingRuleResolver interface {
 	PriorNoticeService(ctx context.Context, obj *model.BookingRule) (*model.Calendar, error)
 
@@ -1702,11 +1625,6 @@ type BookingRuleResolver interface {
 type CalendarResolver interface {
 	AddedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tt.Date, error)
 	RemovedDates(ctx context.Context, obj *model.Calendar, limit *int) ([]*tt.Date, error)
-}
-type CalendarDateResolver interface {
-	Service(ctx context.Context, obj *model.CalendarDate) (*model.Calendar, error)
-
-	FeedVersion(ctx context.Context, obj *model.CalendarDate) (*model.FeedVersion, error)
 }
 type CensusDatasetResolver interface {
 	Sources(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusSourceFilter) ([]*model.CensusSource, error)
@@ -1812,16 +1730,11 @@ type FeedVersionResolver interface {
 	Routes(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	Stops(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.StopFilter) ([]*model.Stop, error)
 	Trips(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.TripFilter) ([]*model.Trip, error)
-	Calendars(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.CalendarFilter) ([]*model.Calendar, error)
-	CalendarDates(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.CalendarDateFilter) ([]*model.CalendarDate, error)
-	Frequencies(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.FrequencyFilter) ([]*model.Frequency, error)
-	Transfers(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.TransferFilter) ([]*model.Transfer, error)
 	Pathways(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.PathwayFilter) ([]*model.Pathway, error)
 	Levels(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.LevelFilter) ([]*model.Level, error)
 	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
 	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.BookingRuleFilter) ([]*model.BookingRule, error)
 	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error)
-	LocationGroupStops(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.LocationGroupStopFilter) ([]*model.LocationGroupStop, error)
 	FareAttributes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareAttribute, error)
 	FareRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareRule, error)
 	FareMedia(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareMedia, error)
@@ -1832,12 +1745,9 @@ type FeedVersionResolver interface {
 	RiderCategories(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RiderCategory, error)
 	Timeframes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Timeframe, error)
 	Areas(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Area, error)
-	StopAreas(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.StopAreaFilter) ([]*model.StopArea, error)
 	Networks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Network, error)
 	RouteNetworks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RouteNetwork, error)
 	FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error)
-	Translations(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.TranslationFilter) ([]*model.Translation, error)
-	Attributions(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.AttributionFilter) ([]*model.Attribution, error)
 	ValidationReports(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.ValidationReportFilter) ([]*model.ValidationReport, error)
 	Segments(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.Segment, error)
 	Shapes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.ShapeFilter) ([]*model.Shape, error)
@@ -2054,21 +1964,6 @@ type TimeframeResolver interface {
 	Service(ctx context.Context, obj *model.Timeframe) (*model.Calendar, error)
 
 	FeedVersion(ctx context.Context, obj *model.Timeframe) (*model.FeedVersion, error)
-}
-type TransferResolver interface {
-	FromStop(ctx context.Context, obj *model.Transfer) (*model.Stop, error)
-	ToStop(ctx context.Context, obj *model.Transfer) (*model.Stop, error)
-	FromRoute(ctx context.Context, obj *model.Transfer) (*model.Route, error)
-	ToRoute(ctx context.Context, obj *model.Transfer) (*model.Route, error)
-	FromTrip(ctx context.Context, obj *model.Transfer) (*model.Trip, error)
-	ToTrip(ctx context.Context, obj *model.Transfer) (*model.Trip, error)
-
-	FeedVersion(ctx context.Context, obj *model.Transfer) (*model.FeedVersion, error)
-}
-type TranslationResolver interface {
-	Translation(ctx context.Context, obj *model.Translation) (*string, error)
-
-	FeedVersion(ctx context.Context, obj *model.Translation) (*model.FeedVersion, error)
 }
 type TripResolver interface {
 	Calendar(ctx context.Context, obj *model.Trip) (*model.Calendar, error)
@@ -2450,97 +2345,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Area.StopAreas(childComplexity, args["limit"].(*int), args["after"].(*int)), true
 
-	case "Attribution.agency":
-		if e.ComplexityRoot.Attribution.Agency == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.Agency(childComplexity), true
-	case "Attribution.attribution_email":
-		if e.ComplexityRoot.Attribution.AttributionEmail == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.AttributionEmail(childComplexity), true
-	case "Attribution.attribution_id":
-		if e.ComplexityRoot.Attribution.AttributionID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.AttributionID(childComplexity), true
-	case "Attribution.attribution_phone":
-		if e.ComplexityRoot.Attribution.AttributionPhone == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.AttributionPhone(childComplexity), true
-	case "Attribution.attribution_url":
-		if e.ComplexityRoot.Attribution.AttributionURL == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.AttributionURL(childComplexity), true
-	case "Attribution.feed_onestop_id":
-		if e.ComplexityRoot.Attribution.FeedOnestopID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.FeedOnestopID(childComplexity), true
-	case "Attribution.feed_version":
-		if e.ComplexityRoot.Attribution.FeedVersion == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.FeedVersion(childComplexity), true
-	case "Attribution.feed_version_sha1":
-		if e.ComplexityRoot.Attribution.FeedVersionSHA1 == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.FeedVersionSHA1(childComplexity), true
-	case "Attribution.id":
-		if e.ComplexityRoot.Attribution.ID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.ID(childComplexity), true
-	case "Attribution.is_authority":
-		if e.ComplexityRoot.Attribution.IsAuthority == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.IsAuthority(childComplexity), true
-	case "Attribution.is_operator":
-		if e.ComplexityRoot.Attribution.IsOperator == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.IsOperator(childComplexity), true
-	case "Attribution.is_producer":
-		if e.ComplexityRoot.Attribution.IsProducer == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.IsProducer(childComplexity), true
-	case "Attribution.organization_name":
-		if e.ComplexityRoot.Attribution.OrganizationName == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.OrganizationName(childComplexity), true
-	case "Attribution.route":
-		if e.ComplexityRoot.Attribution.Route == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.Route(childComplexity), true
-	case "Attribution.trip":
-		if e.ComplexityRoot.Attribution.Trip == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Attribution.Trip(childComplexity), true
-
 	case "BookingRule.booking_rule_id":
 		if e.ComplexityRoot.BookingRule.BookingRuleID == nil {
 			break
@@ -2679,12 +2483,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Calendar.Friday(childComplexity), true
-	case "Calendar.generated":
-		if e.ComplexityRoot.Calendar.Generated == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Calendar.Generated(childComplexity), true
 	case "Calendar.id":
 		if e.ComplexityRoot.Calendar.ID == nil {
 			break
@@ -2750,49 +2548,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Calendar.Wednesday(childComplexity), true
-
-	case "CalendarDate.date":
-		if e.ComplexityRoot.CalendarDate.Date == nil {
-			break
-		}
-
-		return e.ComplexityRoot.CalendarDate.Date(childComplexity), true
-	case "CalendarDate.exception_type":
-		if e.ComplexityRoot.CalendarDate.ExceptionType == nil {
-			break
-		}
-
-		return e.ComplexityRoot.CalendarDate.ExceptionType(childComplexity), true
-	case "CalendarDate.feed_onestop_id":
-		if e.ComplexityRoot.CalendarDate.FeedOnestopID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.CalendarDate.FeedOnestopID(childComplexity), true
-	case "CalendarDate.feed_version":
-		if e.ComplexityRoot.CalendarDate.FeedVersion == nil {
-			break
-		}
-
-		return e.ComplexityRoot.CalendarDate.FeedVersion(childComplexity), true
-	case "CalendarDate.feed_version_sha1":
-		if e.ComplexityRoot.CalendarDate.FeedVersionSHA1 == nil {
-			break
-		}
-
-		return e.ComplexityRoot.CalendarDate.FeedVersionSHA1(childComplexity), true
-	case "CalendarDate.id":
-		if e.ComplexityRoot.CalendarDate.ID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.CalendarDate.ID(childComplexity), true
-	case "CalendarDate.service":
-		if e.ComplexityRoot.CalendarDate.Service == nil {
-			break
-		}
-
-		return e.ComplexityRoot.CalendarDate.Service(childComplexity), true
 
 	case "CensusDataset.description":
 		if e.ComplexityRoot.CensusDataset.Description == nil {
@@ -4183,17 +3938,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Areas(childComplexity, args["limit"].(*int), args["after"].(*int)), true
-	case "FeedVersion.attributions":
-		if e.ComplexityRoot.FeedVersion.Attributions == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_attributions_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.Attributions(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.AttributionFilter)), true
 	case "FeedVersion.booking_rules":
 		if e.ComplexityRoot.FeedVersion.BookingRules == nil {
 			break
@@ -4205,28 +3949,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.BookingRules(childComplexity, args["limit"].(*int), args["where"].(*model.BookingRuleFilter)), true
-	case "FeedVersion.calendar_dates":
-		if e.ComplexityRoot.FeedVersion.CalendarDates == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_calendar_dates_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.CalendarDates(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.CalendarDateFilter)), true
-	case "FeedVersion.calendars":
-		if e.ComplexityRoot.FeedVersion.Calendars == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_calendars_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.Calendars(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.CalendarFilter)), true
 	case "FeedVersion.created_by":
 		if e.ComplexityRoot.FeedVersion.CreatedBy == nil {
 			break
@@ -4368,17 +4090,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Files(childComplexity, args["limit"].(*int)), true
-	case "FeedVersion.frequencies":
-		if e.ComplexityRoot.FeedVersion.Frequencies == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_frequencies_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.Frequencies(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.FrequencyFilter)), true
 	case "FeedVersion.geometry":
 		if e.ComplexityRoot.FeedVersion.Geometry == nil {
 			break
@@ -4408,17 +4119,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Levels(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.LevelFilter)), true
-	case "FeedVersion.location_group_stops":
-		if e.ComplexityRoot.FeedVersion.LocationGroupStops == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_location_group_stops_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.LocationGroupStops(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.LocationGroupStopFilter)), true
 	case "FeedVersion.location_groups":
 		if e.ComplexityRoot.FeedVersion.LocationGroups == nil {
 			break
@@ -4559,17 +4259,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Shapes(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.ShapeFilter)), true
-	case "FeedVersion.stop_areas":
-		if e.ComplexityRoot.FeedVersion.StopAreas == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_stop_areas_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.StopAreas(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.StopAreaFilter)), true
 	case "FeedVersion.stops":
 		if e.ComplexityRoot.FeedVersion.Stops == nil {
 			break
@@ -4592,28 +4281,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Timeframes(childComplexity, args["limit"].(*int), args["after"].(*int)), true
-	case "FeedVersion.transfers":
-		if e.ComplexityRoot.FeedVersion.Transfers == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_transfers_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.Transfers(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.TransferFilter)), true
-	case "FeedVersion.translations":
-		if e.ComplexityRoot.FeedVersion.Translations == nil {
-			break
-		}
-
-		args, err := ec.field_FeedVersion_translations_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.FeedVersion.Translations(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.TranslationFilter)), true
 	case "FeedVersion.trips":
 		if e.ComplexityRoot.FeedVersion.Trips == nil {
 			break
@@ -9072,146 +8739,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Timeframe.TimeframeGroupID(childComplexity), true
 
-	case "Transfer.feed_onestop_id":
-		if e.ComplexityRoot.Transfer.FeedOnestopID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.FeedOnestopID(childComplexity), true
-	case "Transfer.feed_version":
-		if e.ComplexityRoot.Transfer.FeedVersion == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.FeedVersion(childComplexity), true
-	case "Transfer.feed_version_sha1":
-		if e.ComplexityRoot.Transfer.FeedVersionSHA1 == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.FeedVersionSHA1(childComplexity), true
-	case "Transfer.from_route":
-		if e.ComplexityRoot.Transfer.FromRoute == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.FromRoute(childComplexity), true
-	case "Transfer.from_stop":
-		if e.ComplexityRoot.Transfer.FromStop == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.FromStop(childComplexity), true
-	case "Transfer.from_trip":
-		if e.ComplexityRoot.Transfer.FromTrip == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.FromTrip(childComplexity), true
-	case "Transfer.id":
-		if e.ComplexityRoot.Transfer.ID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.ID(childComplexity), true
-	case "Transfer.min_transfer_time":
-		if e.ComplexityRoot.Transfer.MinTransferTime == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.MinTransferTime(childComplexity), true
-	case "Transfer.to_route":
-		if e.ComplexityRoot.Transfer.ToRoute == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.ToRoute(childComplexity), true
-	case "Transfer.to_stop":
-		if e.ComplexityRoot.Transfer.ToStop == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.ToStop(childComplexity), true
-	case "Transfer.to_trip":
-		if e.ComplexityRoot.Transfer.ToTrip == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.ToTrip(childComplexity), true
-	case "Transfer.transfer_type":
-		if e.ComplexityRoot.Transfer.TransferType == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Transfer.TransferType(childComplexity), true
-
-	case "Translation.feed_onestop_id":
-		if e.ComplexityRoot.Translation.FeedOnestopID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.FeedOnestopID(childComplexity), true
-	case "Translation.feed_version":
-		if e.ComplexityRoot.Translation.FeedVersion == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.FeedVersion(childComplexity), true
-	case "Translation.feed_version_sha1":
-		if e.ComplexityRoot.Translation.FeedVersionSHA1 == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.FeedVersionSHA1(childComplexity), true
-	case "Translation.field_name":
-		if e.ComplexityRoot.Translation.FieldName == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.FieldName(childComplexity), true
-	case "Translation.field_value":
-		if e.ComplexityRoot.Translation.FieldValue == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.FieldValue(childComplexity), true
-	case "Translation.id":
-		if e.ComplexityRoot.Translation.ID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.ID(childComplexity), true
-	case "Translation.language":
-		if e.ComplexityRoot.Translation.Language == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.Language(childComplexity), true
-	case "Translation.record_id":
-		if e.ComplexityRoot.Translation.RecordID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.RecordID(childComplexity), true
-	case "Translation.record_sub_id":
-		if e.ComplexityRoot.Translation.RecordSubID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.RecordSubID(childComplexity), true
-	case "Translation.table_name":
-		if e.ComplexityRoot.Translation.TableNameValue == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.TableNameValue(childComplexity), true
-	case "Translation.translation":
-		if e.ComplexityRoot.Translation.Translation == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Translation.Translation(childComplexity), true
-
 	case "Trip.alerts":
 		if e.ComplexityRoot.Trip.Alerts == nil {
 			break
@@ -9942,11 +9469,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAgencyLocationFilter,
 		ec.unmarshalInputAgencyPlaceFilter,
 		ec.unmarshalInputAgencyStopFilter,
-		ec.unmarshalInputAttributionFilter,
 		ec.unmarshalInputBookingRuleFilter,
 		ec.unmarshalInputBoundingBox,
 		ec.unmarshalInputCalendarDateFilter,
-		ec.unmarshalInputCalendarFilter,
 		ec.unmarshalInputCensusDatasetFilter,
 		ec.unmarshalInputCensusDatasetGeographyFilter,
 		ec.unmarshalInputCensusDatasetGeographyLocationFilter,
@@ -9965,7 +9490,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputFeedVersionServiceLevelFilter,
 		ec.unmarshalInputFeedVersionSetInput,
 		ec.unmarshalInputFocusPoint,
-		ec.unmarshalInputFrequencyFilter,
 		ec.unmarshalInputGbfsBikeRequest,
 		ec.unmarshalInputGbfsDockRequest,
 		ec.unmarshalInputLevelFilter,
@@ -9973,7 +9497,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputLicenseFilter,
 		ec.unmarshalInputLocationFilter,
 		ec.unmarshalInputLocationGroupFilter,
-		ec.unmarshalInputLocationGroupStopFilter,
 		ec.unmarshalInputOperatorFilter,
 		ec.unmarshalInputPathwayFilter,
 		ec.unmarshalInputPathwaySetInput,
@@ -9986,7 +9509,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSegmentPatternFilter,
 		ec.unmarshalInputServiceCoversFilter,
 		ec.unmarshalInputShapeFilter,
-		ec.unmarshalInputStopAreaFilter,
 		ec.unmarshalInputStopBuffer,
 		ec.unmarshalInputStopExternalReferenceSetInput,
 		ec.unmarshalInputStopFilter,
@@ -9994,8 +9516,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputStopObservationFilter,
 		ec.unmarshalInputStopSetInput,
 		ec.unmarshalInputStopTimeFilter,
-		ec.unmarshalInputTransferFilter,
-		ec.unmarshalInputTranslationFilter,
 		ec.unmarshalInputTripFilter,
 		ec.unmarshalInputTripStopTimeFilter,
 		ec.unmarshalInputUserFilter,
@@ -11466,19 +10986,7 @@ type FeedVersion {
   
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
-
-  "Records from this feed version's ` + "`" + `calendar.txt` + "`" + `, plus a generated record for each service that only ` + "`" + `calendar_dates.txt` + "`" + ` defines, if imported"
-  calendars(limit: Int, after: Int, where: CalendarFilter): [Calendar!]!
-
-  "Records from this feed version's ` + "`" + `calendar_dates.txt` + "`" + `, if imported"
-  calendar_dates(limit: Int, after: Int, where: CalendarDateFilter): [CalendarDate!]!
-
-  "Records from this feed version's ` + "`" + `frequencies.txt` + "`" + `, if imported"
-  frequencies(limit: Int, after: Int, where: FrequencyFilter): [Frequency!]!
-
-  "Records from this feed version's ` + "`" + `transfers.txt` + "`" + `, if imported"
-  transfers(limit: Int, after: Int, where: TransferFilter): [Transfer!]!
-
+  
   "Records from this feed version's ` + "`" + `pathways.txt` + "`" + `, if imported"
   pathways(limit: Int, after: Int, where: PathwayFilter): [Pathway!]!
 
@@ -11493,9 +11001,6 @@ type FeedVersion {
   
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
-
-  "GTFS Flex records from this feed version's ` + "`" + `location_group_stops.txt` + "`" + `, if imported"
-  location_group_stops(limit: Int, after: Int, where: LocationGroupStopFilter): [LocationGroupStop!]!
 
   "GTFS Fares v1 records from this feed version's ` + "`" + `fare_attributes.txt` + "`" + `, if imported"
   fare_attributes(limit: Int, after: Int): [FareAttribute!]!
@@ -11527,9 +11032,6 @@ type FeedVersion {
   "GTFS Fares v2 records from this feed version's ` + "`" + `areas.txt` + "`" + `, if imported"
   areas(limit: Int, after: Int): [Area!]!
 
-  "GTFS Fares v2 records from this feed version's ` + "`" + `stop_areas.txt` + "`" + `, if imported"
-  stop_areas(limit: Int, after: Int, where: StopAreaFilter): [StopArea!]!
-
   "GTFS Fares v2 records from this feed version's ` + "`" + `networks.txt` + "`" + `, if imported"
   networks(limit: Int, after: Int): [Network!]!
 
@@ -11538,13 +11040,7 @@ type FeedVersion {
   
   "Records from this feed version's ` + "`" + `feed_info.txt` + "`" + `"
   feed_infos(limit: Int): [FeedInfo!]!
-
-  "Records from this feed version's ` + "`" + `translations.txt` + "`" + `, if imported"
-  translations(limit: Int, after: Int, where: TranslationFilter): [Translation!]!
-
-  "Records from this feed version's ` + "`" + `attributions.txt` + "`" + `, if imported"
-  attributions(limit: Int, after: Int, where: AttributionFilter): [Attribution!]!
-
+  
   "Validation reports associated with this feed version"
   validation_reports(limit: Int, where: ValidationReportFilter): [ValidationReport!]
   
@@ -12227,41 +11723,12 @@ type Calendar {
   
   "GTFS ` + "`" + `calendar.sunday` + "`" + ` [1=service runs on Sundays, 0=service does not run]"
   sunday: Int!
-
-  "True if this record was generated for a service that only ` + "`" + `calendar_dates.txt` + "`" + ` defines, rather than read from ` + "`" + `calendar.txt` + "`" + `"
-  generated: Boolean!
-
+  
   "Service-added dates derived from ` + "`" + `calendar_dates.txt` + "`" + ` records with exception_type=1"
   added_dates(limit: Int): [Date!]!
 
   "Service-removed dates derived from ` + "`" + `calendar_dates.txt` + "`" + ` records with exception_type=2"
   removed_dates(limit: Int): [Date!]!
-}
-
-"""
-Record from a static GTFS [calendar_dates.txt](https://gtfs.org/schedule/reference/#calendar_datestxt) file.
-"""
-type CalendarDate {
-  "Internal integer ID"
-  id: Int!
-
-  "GTFS ` + "`" + `calendar_dates.date` + "`" + `"
-  date: Date!
-
-  "GTFS ` + "`" + `calendar_dates.exception_type` + "`" + ` [1=service added, 2=service removed]"
-  exception_type: Int!
-
-  "GTFS ` + "`" + `calendar_dates.service_id` + "`" + `; the service whose dates this exception changes"
-  service: Calendar!
-
-  "Feed version SHA1 associated with this entity"
-  feed_version_sha1: String!
-
-  "Feed Onestop ID associated with this entity"
-  feed_onestop_id: String!
-
-  "Source feed version for this entity"
-  feed_version: FeedVersion!
 }
 
 """
@@ -12315,47 +11782,6 @@ type Frequency {
 
   "Trip this headway applies to. Expanding a frequency measures from the trip's first departure, which this reaches even when a filtered ` + "`" + `Trip.stop_times` + "`" + ` selection omits the first stop."
   trip: Trip!
-}
-
-"""
-Record from a static GTFS [transfers.txt](https://gtfs.org/schedule/reference/#transferstxt) file.
-"""
-type Transfer {
-  "Internal integer ID"
-  id: Int!
-
-  "GTFS ` + "`" + `transfers.from_stop_id` + "`" + `"
-  from_stop: Stop
-
-  "GTFS ` + "`" + `transfers.to_stop_id` + "`" + `"
-  to_stop: Stop
-
-  "GTFS ` + "`" + `transfers.from_route_id` + "`" + `"
-  from_route: Route
-
-  "GTFS ` + "`" + `transfers.to_route_id` + "`" + `"
-  to_route: Route
-
-  "GTFS ` + "`" + `transfers.from_trip_id` + "`" + `"
-  from_trip: Trip
-
-  "GTFS ` + "`" + `transfers.to_trip_id` + "`" + `"
-  to_trip: Trip
-
-  "GTFS ` + "`" + `transfers.transfer_type` + "`" + ` [0=recommended transfer point, 1=timed transfer point, 2=requires ` + "`" + `min_transfer_time` + "`" + `, 3=not possible, 4=in-seat transfer, 5=in-seat transfer not allowed]"
-  transfer_type: Int!
-
-  "GTFS ` + "`" + `transfers.min_transfer_time` + "`" + `; seconds a rider needs to make the transfer"
-  min_transfer_time: Int
-
-  "Feed version SHA1 associated with this entity"
-  feed_version_sha1: String!
-
-  "Feed Onestop ID associated with this entity"
-  feed_onestop_id: String!
-
-  "Source feed version for this entity"
-  feed_version: FeedVersion!
 }
 
 """
@@ -12536,96 +11962,6 @@ type FeedInfo {
   
   "GTFS ` + "`" + `feed_info.feed_contact_url` + "`" + `"
   feed_contact_url: Url
-}
-
-"""
-Record from a static GTFS [translations.txt](https://gtfs.org/schedule/reference/#translationstxt) file.
-A translation names its field by ` + "`" + `table_name` + "`" + ` and ` + "`" + `field_name` + "`" + `, and selects the values it replaces either by ` + "`" + `record_id` + "`" + ` (and ` + "`" + `record_sub_id` + "`" + `) or by ` + "`" + `field_value` + "`" + `.
-"""
-type Translation {
-  "Internal integer ID"
-  id: Int!
-
-  "GTFS ` + "`" + `translations.table_name` + "`" + `; the file that holds the translated field, without its ` + "`" + `.txt` + "`" + ` extension (e.g. ` + "`" + `stops` + "`" + `)"
-  table_name: String
-
-  "GTFS ` + "`" + `translations.field_name` + "`" + `"
-  field_name: String
-
-  "GTFS ` + "`" + `translations.language` + "`" + `"
-  language: Language
-
-  "GTFS ` + "`" + `translations.translation` + "`" + `"
-  translation: String
-
-  "GTFS ` + "`" + `translations.record_id` + "`" + `; GTFS id of the translated record"
-  record_id: String
-
-  "GTFS ` + "`" + `translations.record_sub_id` + "`" + `; second key of the translated record, for files whose records need two (e.g. ` + "`" + `stop_sequence` + "`" + ` in ` + "`" + `stop_times` + "`" + `)"
-  record_sub_id: String
-
-  "GTFS ` + "`" + `translations.field_value` + "`" + `; translates every occurrence of this value in the field"
-  field_value: String
-
-  "Feed version SHA1 associated with this entity"
-  feed_version_sha1: String!
-
-  "Feed Onestop ID associated with this entity"
-  feed_onestop_id: String!
-
-  "Source feed version for this entity"
-  feed_version: FeedVersion!
-}
-
-"""
-Record from a static GTFS [attributions.txt](https://gtfs.org/schedule/reference/#attributionstxt) file.
-An attribution with no agency, route or trip applies to the whole feed.
-"""
-type Attribution {
-  "Internal integer ID"
-  id: Int!
-
-  "GTFS ` + "`" + `attributions.attribution_id` + "`" + `"
-  attribution_id: String
-
-  "GTFS ` + "`" + `attributions.agency_id` + "`" + `; the agency that this attribution covers"
-  agency: Agency
-
-  "GTFS ` + "`" + `attributions.route_id` + "`" + `; the route that this attribution covers"
-  route: Route
-
-  "GTFS ` + "`" + `attributions.trip_id` + "`" + `; the trip that this attribution covers"
-  trip: Trip
-
-  "GTFS ` + "`" + `attributions.organization_name` + "`" + `"
-  organization_name: String!
-
-  "GTFS ` + "`" + `attributions.is_producer` + "`" + ` [0=not a producer, 1=producer of the data]"
-  is_producer: Int
-
-  "GTFS ` + "`" + `attributions.is_operator` + "`" + ` [0=not an operator, 1=operator of the service]"
-  is_operator: Int
-
-  "GTFS ` + "`" + `attributions.is_authority` + "`" + ` [0=not an authority, 1=authority responsible for the service]"
-  is_authority: Int
-
-  "GTFS ` + "`" + `attributions.attribution_url` + "`" + `"
-  attribution_url: Url
-
-  "GTFS ` + "`" + `attributions.attribution_email` + "`" + `"
-  attribution_email: Email
-
-  "GTFS ` + "`" + `attributions.attribution_phone` + "`" + `"
-  attribution_phone: String
-
-  "Feed version SHA1 associated with this entity"
-  feed_version_sha1: String!
-
-  "Feed Onestop ID associated with this entity"
-  feed_onestop_id: String!
-
-  "Source feed version for this entity"
-  feed_version: FeedVersion!
 }
 
 """
@@ -14338,40 +13674,6 @@ input LocationGroupFilter {
   location_group_id: String
 }
 
-"""Search options for location group stops"""
-input LocationGroupStopFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
-}
-
-"""Search options for stop areas"""
-input StopAreaFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
-}
-
-"""Search options for translations"""
-input TranslationFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
-  "Search for translations of fields in this file, without its ` + "`" + `.txt` + "`" + ` extension (e.g. ` + "`" + `stops` + "`" + `)"
-  table_name: String
-  "Search for translations of this field (e.g. ` + "`" + `stop_name` + "`" + `)"
-  field_name: String
-  "Search for translations into this language"
-  language: String
-  "Search for translations of the record with this GTFS id"
-  record_id: String
-}
-
-"""Search options for attributions"""
-input AttributionFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
-  "Search for an attribution with this GTFS attribution_id"
-  attribution_id: String
-}
-
 """Import status for a feed version"""
 enum ImportStatus {
   "Imported successfully"
@@ -14727,20 +14029,6 @@ input LevelFilter {
   level_id: String
 }
 
-"""Search options for transfers"""
-input TransferFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
-  "Search for transfers with this GTFS transfer_type"
-  transfer_type: Int
-}
-
-"""Search options for frequencies"""
-input FrequencyFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
-}
-
 """Search options for trips"""
 input TripFilter {
   "GTFS service date on which trips run. Lowest precedence: ignored if ` + "`" + `dates` + "`" + `, ` + "`" + `service_dates` + "`" + ` or ` + "`" + `relative_date` + "`" + ` is set"
@@ -14978,18 +14266,8 @@ input PlaceFilter {
   search: String
 }
 
-"""Search options for calendars"""
-input CalendarFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
-  "Search for a calendar with this GTFS service_id"
-  service_id: String
-}
-
 """Search options for calendar dates"""
 input CalendarDateFilter {
-  "Restrict to specific ids"
-  ids: [Int!]
   "Search for calendar date exceptions on this date"
   date: Date
   "Search for calendar date exceptions with this GTFS exception_type [1=service added, 2=service removed]"
@@ -15303,42 +14581,6 @@ func (ec *executionContext) childFields_Area(ctx context.Context, field graphql.
 	return nil, fmt.Errorf("no field named %q was found under type Area", field.Name)
 }
 
-func (ec *executionContext) childFields_Attribution(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "id":
-		return ec.fieldContext_Attribution_id(ctx, field)
-	case "attribution_id":
-		return ec.fieldContext_Attribution_attribution_id(ctx, field)
-	case "agency":
-		return ec.fieldContext_Attribution_agency(ctx, field)
-	case "route":
-		return ec.fieldContext_Attribution_route(ctx, field)
-	case "trip":
-		return ec.fieldContext_Attribution_trip(ctx, field)
-	case "organization_name":
-		return ec.fieldContext_Attribution_organization_name(ctx, field)
-	case "is_producer":
-		return ec.fieldContext_Attribution_is_producer(ctx, field)
-	case "is_operator":
-		return ec.fieldContext_Attribution_is_operator(ctx, field)
-	case "is_authority":
-		return ec.fieldContext_Attribution_is_authority(ctx, field)
-	case "attribution_url":
-		return ec.fieldContext_Attribution_attribution_url(ctx, field)
-	case "attribution_email":
-		return ec.fieldContext_Attribution_attribution_email(ctx, field)
-	case "attribution_phone":
-		return ec.fieldContext_Attribution_attribution_phone(ctx, field)
-	case "feed_version_sha1":
-		return ec.fieldContext_Attribution_feed_version_sha1(ctx, field)
-	case "feed_onestop_id":
-		return ec.fieldContext_Attribution_feed_onestop_id(ctx, field)
-	case "feed_version":
-		return ec.fieldContext_Attribution_feed_version(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type Attribution", field.Name)
-}
-
 func (ec *executionContext) childFields_BookingRule(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -15407,34 +14649,12 @@ func (ec *executionContext) childFields_Calendar(ctx context.Context, field grap
 		return ec.fieldContext_Calendar_saturday(ctx, field)
 	case "sunday":
 		return ec.fieldContext_Calendar_sunday(ctx, field)
-	case "generated":
-		return ec.fieldContext_Calendar_generated(ctx, field)
 	case "added_dates":
 		return ec.fieldContext_Calendar_added_dates(ctx, field)
 	case "removed_dates":
 		return ec.fieldContext_Calendar_removed_dates(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Calendar", field.Name)
-}
-
-func (ec *executionContext) childFields_CalendarDate(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "id":
-		return ec.fieldContext_CalendarDate_id(ctx, field)
-	case "date":
-		return ec.fieldContext_CalendarDate_date(ctx, field)
-	case "exception_type":
-		return ec.fieldContext_CalendarDate_exception_type(ctx, field)
-	case "service":
-		return ec.fieldContext_CalendarDate_service(ctx, field)
-	case "feed_version_sha1":
-		return ec.fieldContext_CalendarDate_feed_version_sha1(ctx, field)
-	case "feed_onestop_id":
-		return ec.fieldContext_CalendarDate_feed_onestop_id(ctx, field)
-	case "feed_version":
-		return ec.fieldContext_CalendarDate_feed_version(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type CalendarDate", field.Name)
 }
 
 func (ec *executionContext) childFields_CensusDataset(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -16075,14 +15295,6 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_stops(ctx, field)
 	case "trips":
 		return ec.fieldContext_FeedVersion_trips(ctx, field)
-	case "calendars":
-		return ec.fieldContext_FeedVersion_calendars(ctx, field)
-	case "calendar_dates":
-		return ec.fieldContext_FeedVersion_calendar_dates(ctx, field)
-	case "frequencies":
-		return ec.fieldContext_FeedVersion_frequencies(ctx, field)
-	case "transfers":
-		return ec.fieldContext_FeedVersion_transfers(ctx, field)
 	case "pathways":
 		return ec.fieldContext_FeedVersion_pathways(ctx, field)
 	case "levels":
@@ -16093,8 +15305,6 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_booking_rules(ctx, field)
 	case "location_groups":
 		return ec.fieldContext_FeedVersion_location_groups(ctx, field)
-	case "location_group_stops":
-		return ec.fieldContext_FeedVersion_location_group_stops(ctx, field)
 	case "fare_attributes":
 		return ec.fieldContext_FeedVersion_fare_attributes(ctx, field)
 	case "fare_rules":
@@ -16115,18 +15325,12 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_timeframes(ctx, field)
 	case "areas":
 		return ec.fieldContext_FeedVersion_areas(ctx, field)
-	case "stop_areas":
-		return ec.fieldContext_FeedVersion_stop_areas(ctx, field)
 	case "networks":
 		return ec.fieldContext_FeedVersion_networks(ctx, field)
 	case "route_networks":
 		return ec.fieldContext_FeedVersion_route_networks(ctx, field)
 	case "feed_infos":
 		return ec.fieldContext_FeedVersion_feed_infos(ctx, field)
-	case "translations":
-		return ec.fieldContext_FeedVersion_translations(ctx, field)
-	case "attributions":
-		return ec.fieldContext_FeedVersion_attributions(ctx, field)
 	case "validation_reports":
 		return ec.fieldContext_FeedVersion_validation_reports(ctx, field)
 	case "segments":
@@ -16991,18 +16195,6 @@ func (ec *executionContext) childFields_LocationGroup(ctx context.Context, field
 		return ec.fieldContext_LocationGroup_stop_times(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type LocationGroup", field.Name)
-}
-
-func (ec *executionContext) childFields_LocationGroupStop(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "id":
-		return ec.fieldContext_LocationGroupStop_id(ctx, field)
-	case "location_group":
-		return ec.fieldContext_LocationGroupStop_location_group(ctx, field)
-	case "stop":
-		return ec.fieldContext_LocationGroupStop_stop(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type LocationGroupStop", field.Name)
 }
 
 func (ec *executionContext) childFields_Me(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -17877,64 +17069,6 @@ func (ec *executionContext) childFields_Timeframe(ctx context.Context, field gra
 	return nil, fmt.Errorf("no field named %q was found under type Timeframe", field.Name)
 }
 
-func (ec *executionContext) childFields_Transfer(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "id":
-		return ec.fieldContext_Transfer_id(ctx, field)
-	case "from_stop":
-		return ec.fieldContext_Transfer_from_stop(ctx, field)
-	case "to_stop":
-		return ec.fieldContext_Transfer_to_stop(ctx, field)
-	case "from_route":
-		return ec.fieldContext_Transfer_from_route(ctx, field)
-	case "to_route":
-		return ec.fieldContext_Transfer_to_route(ctx, field)
-	case "from_trip":
-		return ec.fieldContext_Transfer_from_trip(ctx, field)
-	case "to_trip":
-		return ec.fieldContext_Transfer_to_trip(ctx, field)
-	case "transfer_type":
-		return ec.fieldContext_Transfer_transfer_type(ctx, field)
-	case "min_transfer_time":
-		return ec.fieldContext_Transfer_min_transfer_time(ctx, field)
-	case "feed_version_sha1":
-		return ec.fieldContext_Transfer_feed_version_sha1(ctx, field)
-	case "feed_onestop_id":
-		return ec.fieldContext_Transfer_feed_onestop_id(ctx, field)
-	case "feed_version":
-		return ec.fieldContext_Transfer_feed_version(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type Transfer", field.Name)
-}
-
-func (ec *executionContext) childFields_Translation(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "id":
-		return ec.fieldContext_Translation_id(ctx, field)
-	case "table_name":
-		return ec.fieldContext_Translation_table_name(ctx, field)
-	case "field_name":
-		return ec.fieldContext_Translation_field_name(ctx, field)
-	case "language":
-		return ec.fieldContext_Translation_language(ctx, field)
-	case "translation":
-		return ec.fieldContext_Translation_translation(ctx, field)
-	case "record_id":
-		return ec.fieldContext_Translation_record_id(ctx, field)
-	case "record_sub_id":
-		return ec.fieldContext_Translation_record_sub_id(ctx, field)
-	case "field_value":
-		return ec.fieldContext_Translation_field_value(ctx, field)
-	case "feed_version_sha1":
-		return ec.fieldContext_Translation_feed_version_sha1(ctx, field)
-	case "feed_onestop_id":
-		return ec.fieldContext_Translation_feed_onestop_id(ctx, field)
-	case "feed_version":
-		return ec.fieldContext_Translation_feed_version(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type Translation", field.Name)
-}
-
 func (ec *executionContext) childFields_Trip(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -18765,36 +17899,6 @@ func (ec *executionContext) field_FeedVersion_areas_args(ctx context.Context, ra
 	return args, nil
 }
 
-func (ec *executionContext) field_FeedVersion_attributions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.AttributionFilter, error) {
-			return ec.unmarshalOAttributionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAttributionFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
-	return args, nil
-}
-
 func (ec *executionContext) field_FeedVersion_booking_rules_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -18814,66 +17918,6 @@ func (ec *executionContext) field_FeedVersion_booking_rules_args(ctx context.Con
 		return nil, err
 	}
 	args["where"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_FeedVersion_calendar_dates_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.CalendarDateFilter, error) {
-			return ec.unmarshalOCalendarDateFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
-	return args, nil
-}
-
-func (ec *executionContext) field_FeedVersion_calendars_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.CalendarFilter, error) {
-			return ec.unmarshalOCalendarFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
 	return args, nil
 }
 
@@ -19059,36 +18103,6 @@ func (ec *executionContext) field_FeedVersion_files_args(ctx context.Context, ra
 	return args, nil
 }
 
-func (ec *executionContext) field_FeedVersion_frequencies_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.FrequencyFilter, error) {
-			return ec.unmarshalOFrequencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequencyFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
-	return args, nil
-}
-
 func (ec *executionContext) field_FeedVersion_levels_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -19111,36 +18125,6 @@ func (ec *executionContext) field_FeedVersion_levels_args(ctx context.Context, r
 	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.LevelFilter, error) {
 			return ec.unmarshalOLevelFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLevelFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
-	return args, nil
-}
-
-func (ec *executionContext) field_FeedVersion_location_group_stops_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.LocationGroupStopFilter, error) {
-			return ec.unmarshalOLocationGroupStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupStopFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -19377,36 +18361,6 @@ func (ec *executionContext) field_FeedVersion_shapes_args(ctx context.Context, r
 	return args, nil
 }
 
-func (ec *executionContext) field_FeedVersion_stop_areas_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.StopAreaFilter, error) {
-			return ec.unmarshalOStopAreaFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopAreaFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
-	return args, nil
-}
-
 func (ec *executionContext) field_FeedVersion_stops_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -19448,66 +18402,6 @@ func (ec *executionContext) field_FeedVersion_timeframes_args(ctx context.Contex
 		return nil, err
 	}
 	args["after"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_FeedVersion_transfers_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.TransferFilter, error) {
-			return ec.unmarshalOTransferFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTransferFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
-	return args, nil
-}
-
-func (ec *executionContext) field_FeedVersion_translations_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["limit"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
-		func(ctx context.Context, v any) (*model.TranslationFilter, error) {
-			return ec.unmarshalOTranslationFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTranslationFilter(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["where"] = arg2
 	return args, nil
 }
 
@@ -22710,387 +21604,6 @@ func (ec *executionContext) fieldContext_Area_feed_version(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Attribution_id(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_attribution_id(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_attribution_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AttributionID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_attribution_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_agency(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_agency(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Attribution().Agency(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Agency) graphql.Marshaler {
-			return ec.marshalOAgency2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAgency(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_agency(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Attribution",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Agency(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Attribution_route(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_route(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Attribution().Route(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Route) graphql.Marshaler {
-			return ec.marshalORoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_route(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Attribution",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Route(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Attribution_trip(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_trip(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Attribution().Trip(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Trip) graphql.Marshaler {
-			return ec.marshalOTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Attribution",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Trip(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Attribution_organization_name(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_organization_name(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.OrganizationName, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalNString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_organization_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_is_producer(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_is_producer(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.IsProducer, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_is_producer(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_is_operator(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_is_operator(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.IsOperator, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_is_operator(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_is_authority(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_is_authority(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.IsAuthority, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_is_authority(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_attribution_url(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_attribution_url(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AttributionURL, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Url) graphql.Marshaler {
-			return ec.marshalOUrl2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐUrl(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_attribution_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type Url does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_attribution_email(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_attribution_email(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AttributionEmail, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Email) graphql.Marshaler {
-			return ec.marshalOEmail2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐEmail(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_attribution_email(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type Email does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_attribution_phone(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_attribution_phone(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AttributionPhone, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_attribution_phone(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_feed_version_sha1(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedVersionSHA1, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_feed_onestop_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedOnestopID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Attribution", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Attribution_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Attribution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Attribution_feed_version(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Attribution().FeedVersion(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
-			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Attribution_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Attribution",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_FeedVersion(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _BookingRule_id(ctx context.Context, field graphql.CollectedField, obj *model.BookingRule) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -23799,29 +22312,6 @@ func (ec *executionContext) fieldContext_Calendar_sunday(_ context.Context, fiel
 	return graphql.NewScalarFieldContext("Calendar", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
-func (ec *executionContext) _Calendar_generated(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Calendar_generated(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Generated, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Bool) graphql.Marshaler {
-			return ec.marshalNBoolean2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐBool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Calendar_generated(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Calendar", field, false, false, errors.New("field of type Boolean does not have child fields"))
-}
-
 func (ec *executionContext) _Calendar_added_dates(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -23906,185 +22396,6 @@ func (ec *executionContext) fieldContext_Calendar_removed_dates(ctx context.Cont
 	if fc.Args, err = ec.field_Calendar_removed_dates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _CalendarDate_id(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_CalendarDate_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_CalendarDate_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("CalendarDate", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _CalendarDate_date(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_CalendarDate_date(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Date, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Date) graphql.Marshaler {
-			return ec.marshalNDate2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_CalendarDate_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("CalendarDate", field, false, false, errors.New("field of type Date does not have child fields"))
-}
-
-func (ec *executionContext) _CalendarDate_exception_type(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_CalendarDate_exception_type(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ExceptionType, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_CalendarDate_exception_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("CalendarDate", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _CalendarDate_service(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_CalendarDate_service(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.CalendarDate().Service(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
-			return ec.marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_CalendarDate_service(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "CalendarDate",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Calendar(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _CalendarDate_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_CalendarDate_feed_version_sha1(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedVersionSHA1, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_CalendarDate_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("CalendarDate", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _CalendarDate_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_CalendarDate_feed_onestop_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedOnestopID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_CalendarDate_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("CalendarDate", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _CalendarDate_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.CalendarDate) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_CalendarDate_feed_version(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.CalendarDate().FeedVersion(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
-			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_CalendarDate_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "CalendarDate",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_FeedVersion(ctx, field)
-		},
 	}
 	return fc, nil
 }
@@ -30299,182 +28610,6 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _FeedVersion_calendars(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_calendars(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Calendars(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.CalendarFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.Calendar) graphql.Marshaler {
-			return ec.marshalNCalendar2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_calendars(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Calendar(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_calendars_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FeedVersion_calendar_dates(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_calendar_dates(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().CalendarDates(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.CalendarDateFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.CalendarDate) graphql.Marshaler {
-			return ec.marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_calendar_dates(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_CalendarDate(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_calendar_dates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FeedVersion_frequencies(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_frequencies(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Frequencies(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.FrequencyFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.Frequency) graphql.Marshaler {
-			return ec.marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequencyᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_frequencies(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Frequency(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_frequencies_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FeedVersion_transfers(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_transfers(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Transfers(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.TransferFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.Transfer) graphql.Marshaler {
-			return ec.marshalNTransfer2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTransferᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_transfers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Transfer(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_transfers_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _FeedVersion_pathways(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -30689,50 +28824,6 @@ func (ec *executionContext) fieldContext_FeedVersion_location_groups(ctx context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_FeedVersion_location_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FeedVersion_location_group_stops(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_location_group_stops(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().LocationGroupStops(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.LocationGroupStopFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.LocationGroupStop) graphql.Marshaler {
-			return ec.marshalNLocationGroupStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupStopᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_location_group_stops(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_LocationGroupStop(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_location_group_stops_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -31179,50 +29270,6 @@ func (ec *executionContext) fieldContext_FeedVersion_areas(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _FeedVersion_stop_areas(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_stop_areas(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().StopAreas(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.StopAreaFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.StopArea) graphql.Marshaler {
-			return ec.marshalNStopArea2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopAreaᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_stop_areas(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_StopArea(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_stop_areas_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _FeedVersion_networks(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -31349,94 +29396,6 @@ func (ec *executionContext) fieldContext_FeedVersion_feed_infos(ctx context.Cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_FeedVersion_feed_infos_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FeedVersion_translations(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_translations(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Translations(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.TranslationFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.Translation) graphql.Marshaler {
-			return ec.marshalNTranslation2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTranslationᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_translations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Translation(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_translations_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FeedVersion_attributions(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_FeedVersion_attributions(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.FeedVersion().Attributions(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.AttributionFilter))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.Attribution) graphql.Marshaler {
-			return ec.marshalNAttribution2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAttributionᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_FeedVersion_attributions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FeedVersion",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Attribution(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_FeedVersion_attributions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -49464,607 +47423,6 @@ func (ec *executionContext) fieldContext_Timeframe_feed_version(_ context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Transfer_id(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Transfer", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Transfer_from_stop(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_from_stop(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Transfer().FromStop(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
-			return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_from_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Transfer",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Stop(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Transfer_to_stop(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_to_stop(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Transfer().ToStop(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
-			return ec.marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_to_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Transfer",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Stop(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Transfer_from_route(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_from_route(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Transfer().FromRoute(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Route) graphql.Marshaler {
-			return ec.marshalORoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_from_route(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Transfer",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Route(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Transfer_to_route(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_to_route(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Transfer().ToRoute(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Route) graphql.Marshaler {
-			return ec.marshalORoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_to_route(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Transfer",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Route(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Transfer_from_trip(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_from_trip(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Transfer().FromTrip(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Trip) graphql.Marshaler {
-			return ec.marshalOTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_from_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Transfer",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Trip(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Transfer_to_trip(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_to_trip(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Transfer().ToTrip(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Trip) graphql.Marshaler {
-			return ec.marshalOTrip2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_to_trip(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Transfer",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Trip(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Transfer_transfer_type(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_transfer_type(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.TransferType, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalNInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_transfer_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Transfer", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Transfer_min_transfer_time(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_min_transfer_time(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.MinTransferTime, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_min_transfer_time(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Transfer", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Transfer_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_feed_version_sha1(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedVersionSHA1, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Transfer", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Transfer_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_feed_onestop_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedOnestopID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Transfer", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Transfer_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Transfer) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Transfer_feed_version(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Transfer().FeedVersion(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
-			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Transfer_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Transfer",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_FeedVersion(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Translation_id(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_table_name(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_table_name(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.TableNameValue, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_table_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_field_name(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_field_name(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FieldName, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_field_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_language(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_language(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Language, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Language) graphql.Marshaler {
-			return ec.marshalOLanguage2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐLanguage(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_language(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type Language does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_translation(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_translation(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Translation().Translation(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOString2ᚖstring(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_translation(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, true, true, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_record_id(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_record_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.RecordID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_record_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_record_sub_id(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_record_sub_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.RecordSubID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_record_sub_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_field_value(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_field_value(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FieldValue, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.String) graphql.Marshaler {
-			return ec.marshalOString2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐString(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_field_value(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_feed_version_sha1(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedVersionSHA1, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_feed_onestop_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.FeedOnestopID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Translation", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _Translation_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Translation) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Translation_feed_version(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Translation().FeedVersion(ctx, obj)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
-			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Translation_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Translation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_FeedVersion(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Trip_id(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -54262,43 +51620,6 @@ func (ec *executionContext) unmarshalInputAgencyStopFilter(ctx context.Context, 
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputAttributionFilter(ctx context.Context, obj any) (model.AttributionFilter, error) {
-	var it model.AttributionFilter
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"ids", "attribution_id"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
-		case "attribution_id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("attribution_id"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AttributionID = data
-		}
-	}
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputBookingRuleFilter(ctx context.Context, obj any) (model.BookingRuleFilter, error) {
 	var it model.BookingRuleFilter
 	if obj == nil {
@@ -54398,20 +51719,13 @@ func (ec *executionContext) unmarshalInputCalendarDateFilter(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"ids", "date", "exception_type"}
+	fieldsInOrder := [...]string{"date", "exception_type"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
 		case "date":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("date"))
 			data, err := ec.unmarshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, v)
@@ -54426,43 +51740,6 @@ func (ec *executionContext) unmarshalInputCalendarDateFilter(ctx context.Context
 				return it, err
 			}
 			it.ExceptionType = data
-		}
-	}
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputCalendarFilter(ctx context.Context, obj any) (model.CalendarFilter, error) {
-	var it model.CalendarFilter
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"ids", "service_id"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
-		case "service_id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_id"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ServiceID = data
 		}
 	}
 	return it, nil
@@ -55365,36 +52642,6 @@ func (ec *executionContext) unmarshalInputFocusPoint(ctx context.Context, obj an
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputFrequencyFilter(ctx context.Context, obj any) (model.FrequencyFilter, error) {
-	var it model.FrequencyFilter
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"ids"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
-		}
-	}
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputGbfsBikeRequest(ctx context.Context, obj any) (model.GbfsBikeRequest, error) {
 	var it model.GbfsBikeRequest
 	if obj == nil {
@@ -55691,36 +52938,6 @@ func (ec *executionContext) unmarshalInputLocationGroupFilter(ctx context.Contex
 				return it, err
 			}
 			it.LocationGroupID = data
-		}
-	}
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputLocationGroupStopFilter(ctx context.Context, obj any) (model.LocationGroupStopFilter, error) {
-	var it model.LocationGroupStopFilter
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"ids"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
 		}
 	}
 	return it, nil
@@ -56555,36 +53772,6 @@ func (ec *executionContext) unmarshalInputShapeFilter(ctx context.Context, obj a
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputStopAreaFilter(ctx context.Context, obj any) (model.StopAreaFilter, error) {
-	var it model.StopAreaFilter
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"ids"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
-		}
-	}
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputStopBuffer(ctx context.Context, obj any) (model.StopBuffer, error) {
 	var it model.StopBuffer
 	if obj == nil {
@@ -57182,101 +54369,6 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 				return it, err
 			}
 			it.ExcludeLast = data
-		}
-	}
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputTransferFilter(ctx context.Context, obj any) (model.TransferFilter, error) {
-	var it model.TransferFilter
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"ids", "transfer_type"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
-		case "transfer_type":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("transfer_type"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TransferType = data
-		}
-	}
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputTranslationFilter(ctx context.Context, obj any) (model.TranslationFilter, error) {
-	var it model.TranslationFilter
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"ids", "table_name", "field_name", "language", "record_id"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "ids":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ids = data
-		case "table_name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("table_name"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TableName = data
-		case "field_name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field_name"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FieldName = data
-		case "language":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("language"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Language = data
-		case "record_id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("record_id"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.RecordID = data
 		}
 	}
 	return it, nil
@@ -58288,209 +55380,6 @@ func (ec *executionContext) _Area(ctx context.Context, sel ast.SelectionSet, obj
 	return out
 }
 
-var attributionImplementors = []string{"Attribution"}
-
-func (ec *executionContext) _Attribution(ctx context.Context, sel ast.SelectionSet, obj *model.Attribution) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, attributionImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Attribution")
-		case "id":
-			out.Values[i] = ec._Attribution_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "attribution_id":
-			out.Values[i] = ec._Attribution_attribution_id(ctx, field, obj)
-		case "agency":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Attribution_agency(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "route":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Attribution_route(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "trip":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Attribution_trip(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "organization_name":
-			out.Values[i] = ec._Attribution_organization_name(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "is_producer":
-			out.Values[i] = ec._Attribution_is_producer(ctx, field, obj)
-		case "is_operator":
-			out.Values[i] = ec._Attribution_is_operator(ctx, field, obj)
-		case "is_authority":
-			out.Values[i] = ec._Attribution_is_authority(ctx, field, obj)
-		case "attribution_url":
-			out.Values[i] = ec._Attribution_attribution_url(ctx, field, obj)
-		case "attribution_email":
-			out.Values[i] = ec._Attribution_attribution_email(ctx, field, obj)
-		case "attribution_phone":
-			out.Values[i] = ec._Attribution_attribution_phone(ctx, field, obj)
-		case "feed_version_sha1":
-			out.Values[i] = ec._Attribution_feed_version_sha1(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_onestop_id":
-			out.Values[i] = ec._Attribution_feed_onestop_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_version":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Attribution_feed_version(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
-
-	for label, dfs := range deferred {
-		ec.ProcessDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var bookingRuleImplementors = []string{"BookingRule"}
 
 func (ec *executionContext) _BookingRule(ctx context.Context, sel ast.SelectionSet, obj *model.BookingRule) graphql.Marshaler {
@@ -58709,11 +55598,6 @@ func (ec *executionContext) _Calendar(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "generated":
-			out.Values[i] = ec._Calendar_generated(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "added_dates":
 			field := field
 
@@ -58760,137 +55644,6 @@ func (ec *executionContext) _Calendar(ctx context.Context, sel ast.SelectionSet,
 					}
 				}()
 				res = ec._Calendar_removed_dates(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
-
-	for label, dfs := range deferred {
-		ec.ProcessDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var calendarDateImplementors = []string{"CalendarDate"}
-
-func (ec *executionContext) _CalendarDate(ctx context.Context, sel ast.SelectionSet, obj *model.CalendarDate) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, calendarDateImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("CalendarDate")
-		case "id":
-			out.Values[i] = ec._CalendarDate_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "date":
-			out.Values[i] = ec._CalendarDate_date(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "exception_type":
-			out.Values[i] = ec._CalendarDate_exception_type(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "service":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._CalendarDate_service(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "feed_version_sha1":
-			out.Values[i] = ec._CalendarDate_feed_version_sha1(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_onestop_id":
-			out.Values[i] = ec._CalendarDate_feed_onestop_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_version":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._CalendarDate_feed_version(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -62526,150 +59279,6 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "calendars":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_calendars(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "calendar_dates":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_calendar_dates(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "frequencies":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_frequencies(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "transfers":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_transfers(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "pathways":
 			field := field
 
@@ -62824,42 +59433,6 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._FeedVersion_location_groups(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "location_group_stops":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_location_group_stops(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -63246,42 +59819,6 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "stop_areas":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_stop_areas(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "networks":
 			field := field
 
@@ -63364,78 +59901,6 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 					}
 				}()
 				res = ec._FeedVersion_feed_infos(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "translations":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_translations(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "attributions":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FeedVersion_attributions(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -72301,426 +68766,6 @@ func (ec *executionContext) _Timeframe(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
-var transferImplementors = []string{"Transfer"}
-
-func (ec *executionContext) _Transfer(ctx context.Context, sel ast.SelectionSet, obj *model.Transfer) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, transferImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Transfer")
-		case "id":
-			out.Values[i] = ec._Transfer_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "from_stop":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Transfer_from_stop(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "to_stop":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Transfer_to_stop(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "from_route":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Transfer_from_route(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "to_route":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Transfer_to_route(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "from_trip":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Transfer_from_trip(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "to_trip":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Transfer_to_trip(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "transfer_type":
-			out.Values[i] = ec._Transfer_transfer_type(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "min_transfer_time":
-			out.Values[i] = ec._Transfer_min_transfer_time(ctx, field, obj)
-		case "feed_version_sha1":
-			out.Values[i] = ec._Transfer_feed_version_sha1(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_onestop_id":
-			out.Values[i] = ec._Transfer_feed_onestop_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_version":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Transfer_feed_version(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
-
-	for label, dfs := range deferred {
-		ec.ProcessDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var translationImplementors = []string{"Translation"}
-
-func (ec *executionContext) _Translation(ctx context.Context, sel ast.SelectionSet, obj *model.Translation) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, translationImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Translation")
-		case "id":
-			out.Values[i] = ec._Translation_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "table_name":
-			out.Values[i] = ec._Translation_table_name(ctx, field, obj)
-		case "field_name":
-			out.Values[i] = ec._Translation_field_name(ctx, field, obj)
-		case "language":
-			out.Values[i] = ec._Translation_language(ctx, field, obj)
-		case "translation":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Translation_translation(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "record_id":
-			out.Values[i] = ec._Translation_record_id(ctx, field, obj)
-		case "record_sub_id":
-			out.Values[i] = ec._Translation_record_sub_id(ctx, field, obj)
-		case "field_value":
-			out.Values[i] = ec._Translation_field_value(ctx, field, obj)
-		case "feed_version_sha1":
-			out.Values[i] = ec._Translation_feed_version_sha1(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_onestop_id":
-			out.Values[i] = ec._Translation_feed_onestop_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "feed_version":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Translation_feed_version(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
-
-	for label, dfs := range deferred {
-		ec.ProcessDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var tripImplementors = []string{"Trip"}
 
 func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj *model.Trip) graphql.Marshaler {
@@ -74462,32 +70507,6 @@ func (ec *executionContext) marshalNArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtran
 	return ec._Area(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNAttribution2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAttributionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Attribution) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNAttribution2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAttribution(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNAttribution2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAttribution(ctx context.Context, sel ast.SelectionSet, v *model.Attribution) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Attribution(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalNBookingRule2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.BookingRule) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -74530,16 +70549,6 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNBoolean2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐBool(ctx context.Context, v any) (tt.Bool, error) {
-	var res tt.Bool
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNBoolean2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐBool(ctx context.Context, sel ast.SelectionSet, v tt.Bool) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) unmarshalNBoundingBox2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBoundingBox(ctx context.Context, v any) (*model.BoundingBox, error) {
 	res, err := ec.unmarshalInputBoundingBox(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
@@ -74547,22 +70556,6 @@ func (ec *executionContext) unmarshalNBoundingBox2ᚖgithubᚗcomᚋinterlineᚑ
 
 func (ec *executionContext) marshalNCalendar2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v model.Calendar) graphql.Marshaler {
 	return ec._Calendar(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNCalendar2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Calendar) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
@@ -74573,32 +70566,6 @@ func (ec *executionContext) marshalNCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 		return graphql.Null
 	}
 	return ec._Calendar(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNCalendarDate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CalendarDate) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNCalendarDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDate(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNCalendarDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDate(ctx context.Context, sel ast.SelectionSet, v *model.CalendarDate) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._CalendarDate(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNCensusDataset2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusDataset(ctx context.Context, sel ast.SelectionSet, v *model.CensusDataset) graphql.Marshaler {
@@ -75824,32 +71791,6 @@ func (ec *executionContext) marshalNLocationGroup2ᚖgithubᚗcomᚋinterlineᚑ
 	return ec._LocationGroup(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNLocationGroupStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.LocationGroupStop) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNLocationGroupStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupStop(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNLocationGroupStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupStop(ctx context.Context, sel ast.SelectionSet, v *model.LocationGroupStop) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._LocationGroupStop(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNMap2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMap(ctx context.Context, v any) (tt.Map, error) {
 	var res tt.Map
 	err := res.UnmarshalGQL(v)
@@ -76748,58 +72689,6 @@ func (ec *executionContext) marshalNTimezone2githubᚗcomᚋinterlineᚑioᚋtra
 	return v
 }
 
-func (ec *executionContext) marshalNTransfer2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTransferᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Transfer) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNTransfer2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTransfer(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTransfer2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTransfer(ctx context.Context, sel ast.SelectionSet, v *model.Transfer) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Transfer(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNTranslation2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTranslationᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Translation) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNTranslation2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTranslation(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTranslation2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTranslation(ctx context.Context, sel ast.SelectionSet, v *model.Translation) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Translation(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalNTrip2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTrip(ctx context.Context, sel ast.SelectionSet, v model.Trip) graphql.Marshaler {
 	return ec._Trip(ctx, sel, &v)
 }
@@ -77256,14 +73145,6 @@ func (ec *executionContext) marshalOArea2ᚖgithubᚗcomᚋinterlineᚑioᚋtran
 	return ec._Area(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOAttributionFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐAttributionFilter(ctx context.Context, v any) (*model.AttributionFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputAttributionFilter(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) marshalOBookingRule2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBookingRule(ctx context.Context, sel ast.SelectionSet, v *model.BookingRule) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -77342,22 +73223,6 @@ func (ec *executionContext) marshalOCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋ
 		return graphql.Null
 	}
 	return ec._Calendar(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOCalendarDateFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarDateFilter(ctx context.Context, v any) (*model.CalendarDateFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputCalendarDateFilter(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOCalendarFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendarFilter(ctx context.Context, v any) (*model.CalendarFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputCalendarFilter(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOCensusDataset2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCensusDatasetᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CensusDataset) graphql.Marshaler {
@@ -77937,14 +73802,6 @@ func (ec *executionContext) unmarshalOFocusPoint2ᚖgithubᚗcomᚋinterlineᚑi
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputFocusPoint(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOFrequencyFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequencyFilter(ctx context.Context, v any) (*model.FrequencyFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputFrequencyFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -78592,14 +74449,6 @@ func (ec *executionContext) unmarshalOLocationGroupFilter2ᚖgithubᚗcomᚋinte
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOLocationGroupStopFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLocationGroupStopFilter(ctx context.Context, v any) (*model.LocationGroupStopFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputLocationGroupStopFilter(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalOMap2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMap(ctx context.Context, v any) (*tt.Map, error) {
 	if v == nil {
 		return nil, nil
@@ -79145,14 +74994,6 @@ func (ec *executionContext) marshalOStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtran
 	return ec._Stop(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOStopAreaFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopAreaFilter(ctx context.Context, v any) (*model.StopAreaFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputStopAreaFilter(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalOStopBuffer2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopBuffer(ctx context.Context, v any) (*model.StopBuffer, error) {
 	if v == nil {
 		return nil, nil
@@ -79426,22 +75267,6 @@ func (ec *executionContext) unmarshalOTimezone2githubᚗcomᚋinterlineᚑioᚋt
 
 func (ec *executionContext) marshalOTimezone2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐTimezone(ctx context.Context, sel ast.SelectionSet, v tt.Timezone) graphql.Marshaler {
 	return v
-}
-
-func (ec *executionContext) unmarshalOTransferFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTransferFilter(ctx context.Context, v any) (*model.TransferFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputTransferFilter(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOTranslationFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTranslationFilter(ctx context.Context, v any) (*model.TranslationFilter, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputTranslationFilter(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOTrip2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐTripᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Trip) graphql.Marshaler {

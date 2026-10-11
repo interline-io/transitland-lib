@@ -544,33 +544,3 @@ func TestTripResolver_SafeDuration(t *testing.T) {
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)
 }
-
-func TestFeedVersionResolver_Frequencies(t *testing.T) {
-	exSha1 := "43e2278aa272879c79460582152b04e7487f0493"
-	q := `query($sha1:String!) {
-		feed_versions(where:{sha1:$sha1}) {
-			frequencies { start_time end_time headway_secs trip { trip_id } }
-		}
-	}`
-	testcases := []testcase{
-		{
-			name:  "every frequency in the feed version",
-			query: q,
-			vars:  hw{"sha1": exSha1},
-			sel: []testcaseSelector{
-				{selector: "feed_versions.0.frequencies.#.headway_secs", expectCount: 11},
-				{selector: "feed_versions.0.frequencies.#.trip.trip_id", expectUnique: []string{"STBA", "CITY1", "CITY2"}},
-				{selector: `feed_versions.0.frequencies.#(trip.trip_id=="STBA")#.start_time`, expect: []string{"06:00:00"}},
-				{selector: `feed_versions.0.frequencies.#(trip.trip_id=="STBA")#.end_time`, expect: []string{"22:00:00"}},
-			},
-		},
-		{
-			name:   "feed version without frequencies",
-			query:  q,
-			vars:   hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
-			expect: `{"feed_versions":[{"frequencies":[]}]}`,
-		},
-	}
-	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
-}

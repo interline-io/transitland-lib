@@ -40,15 +40,3 @@ func (r *calendarResolver) RemovedDates(ctx context.Context, obj *model.Calendar
 	}
 	return ret, nil
 }
-
-// CALENDAR DATE
-
-type calendarDateResolver struct{ *Resolver }
-
-func (r *calendarDateResolver) FeedVersion(ctx context.Context, obj *model.CalendarDate) (*model.FeedVersion, error) {
-	return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
-}
-
-func (r *calendarDateResolver) Service(ctx context.Context, obj *model.CalendarDate) (*model.Calendar, error) {
-	return LoaderFor(ctx).CalendarsByIDs.Load(ctx, obj.ServiceID.Int())()
-}

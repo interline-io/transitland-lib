@@ -14,22 +14,6 @@ type fareLoaderParam struct {
 	After         *model.Cursor
 }
 
-// feedVersionTableParam selects a feed version's records from one GTFS table,
-// with a filter of type W.
-type feedVersionTableParam[W comparable] struct {
-	FeedVersionID int
-	Limit         *int
-	After         *model.Cursor
-	Where         W
-}
-
-// feedVersionTableGroup carries the batch-grouped query options of
-// feedVersionTableParam, everything except the feed version key and limit.
-type feedVersionTableGroup[W any] struct {
-	After *model.Cursor
-	Where W
-}
-
 type stopAreaLoaderParam struct {
 	AreaID int
 	Limit  *int
@@ -78,7 +62,15 @@ type pathwayLoaderParam struct {
 	FromStopID    int
 	ToStopID      int
 	Limit         *int
+	After         *model.Cursor
 	Where         *model.PathwayFilter
+}
+
+// pathwayGroup carries the batch-grouped query options of
+// pathwayLoaderParam, everything except the feed version key and limit.
+type pathwayGroup struct {
+	After *model.Cursor
+	Where *model.PathwayFilter
 }
 
 type stopTimeLoaderParam struct {
@@ -163,8 +155,18 @@ type agencyStopGroup struct {
 }
 
 type levelLoaderParam struct {
+	FeedVersionID   int
 	ParentStationID int
 	Limit           *int
+	After           *model.Cursor
+	Where           *model.LevelFilter
+}
+
+// levelGroup carries the batch-grouped query options of levelLoaderParam,
+// everything except the feed version key and limit.
+type levelGroup struct {
+	After *model.Cursor
+	Where *model.LevelFilter
 }
 
 type feedLoaderParam struct {

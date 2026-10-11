@@ -61,32 +61,6 @@ func (f *Finder) LocationGroupsByStopIDs(ctx context.Context, limit *int, keys [
 	return arrangeGroup(keys, ents, func(ent *model.LocationGroup) int { return lgToStop[ent.ID] }), err
 }
 
-func (f *Finder) LocationGroupStopsByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.LocationGroupStopFilter, keys []int) ([][]*model.LocationGroupStop, error) {
-	var ents []*model.LocationGroupStop
-	q := lateralWrap(locationGroupStopSelect(limit, after, where), "feed_versions", "id", "gtfs_location_group_stops", "feed_version_id", keys)
-	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.LocationGroupStop) int { return ent.FeedVersionID }), err
-}
-
-func locationGroupStopSelect(limit *int, after *model.Cursor, where *model.LocationGroupStopFilter) sq.SelectBuilder {
-	q := sq.StatementBuilder.Select(
-		"gtfs_location_group_stops.id",
-		"gtfs_location_group_stops.feed_version_id",
-		"gtfs_location_group_stops.location_group_id",
-		"gtfs_location_group_stops.stop_id",
-	).From("gtfs_location_group_stops").
-		Join("feed_versions ON feed_versions.id = gtfs_location_group_stops.feed_version_id")
-	if after != nil && after.Valid && after.ID > 0 {
-		q = q.Where(sq.Gt{"gtfs_location_group_stops.id": after.ID})
-	}
-	if where != nil {
-		if len(where.Ids) > 0 {
-			q = q.Where(In("gtfs_location_group_stops.id", where.Ids))
-		}
-	}
-	return joinImported(q).OrderBy("gtfs_location_group_stops.id ASC").Limit(finderCheckLimit(limit))
-}
-
 func locationGroupSelect(limit *int, _ *model.Cursor, ids []int, where *model.LocationGroupFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_location_groups.id",

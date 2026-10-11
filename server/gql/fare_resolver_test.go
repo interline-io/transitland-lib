@@ -356,21 +356,3 @@ func TestFareResolver_Cursor(t *testing.T) {
 	}
 	queryTestcases(t, c, testcases)
 }
-
-func TestFeedVersionResolver_StopAreas(t *testing.T) {
-	ctSha1 := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
-	testcases := []testcase{
-		{
-			name:  "every stop area in the feed version",
-			query: `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { stop_areas { area { area_id } stop { stop_id } feed_version_sha1 } } }`,
-			vars:  hw{"sha1": ctSha1},
-			sel: []testcaseSelector{
-				{selector: `feed_versions.0.stop_areas.#(area.area_id=="zone1")#.stop.stop_id`, expect: []string{"70011", "70012"}},
-				{selector: `feed_versions.0.stop_areas.#(area.area_id=="zone4")#.stop.stop_id`, expect: []string{"70261", "70262"}},
-				{selector: "feed_versions.0.stop_areas.#.feed_version_sha1", expectUnique: []string{ctSha1}},
-			},
-		},
-	}
-	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
-}

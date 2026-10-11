@@ -1,7 +1,11 @@
 package gql
 
 import (
+	"context"
+	"strconv"
 	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
 )
 
 // WMATA Rail provides a station-modeled GTFS feed with pathways and levels.
@@ -229,6 +233,86 @@ func TestFeedVersionResolver_Pathways(t *testing.T) {
 			query:  q,
 			vars:   hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
 			expect: `{"feed_versions":[{"pathways":[]}]}`,
+		},
+	}
+	queryTestcases(t, c, testcases)
+}
+
+// TestFeedVersionResolver_PathwaysAndLevels_Cursor exercises keyset (after)
+// pagination and selection by id, mirroring TestFeedVersionResolver_Shapes_Cursor.
+func TestFeedVersionResolver_PathwaysAndLevels_Cursor(t *testing.T) {
+	c, cfg := newTestClient(t)
+	ctx := model.WithConfig(context.Background(), cfg)
+
+	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
+	fvs, err := cfg.Finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &wmataSha1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fvs) == 0 {
+		t.Fatal("wmata feed version not found")
+	}
+	pathwayGroups, err := cfg.Finder.PathwaysByFeedVersionIDs(ctx, nil, nil, nil, []int{fvs[0].ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	levelGroups, err := cfg.Finder.LevelsByFeedVersionIDs(ctx, nil, nil, nil, []int{fvs[0].ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pathways, levels := pathwayGroups[0], levelGroups[0]
+	var pathwayIDs, levelIDs []string
+	for _, ent := range pathways {
+		pathwayIDs = append(pathwayIDs, strconv.Itoa(ent.ID))
+	}
+	for _, ent := range levels {
+		levelIDs = append(levelIDs, strconv.Itoa(ent.ID))
+	}
+
+	pathwaysQuery := `query($sha1:String!, $after:Int, $where:PathwayFilter) { feed_versions(where:{sha1:$sha1}) { pathways(limit:10000, after:$after, where:$where) { id } } }`
+	levelsQuery := `query($sha1:String!, $after:Int, $where:LevelFilter) { feed_versions(where:{sha1:$sha1}) { levels(limit:10000, after:$after, where:$where) { id } } }`
+	testcases := []testcase{
+		{
+			name:         "pathways no cursor",
+			query:        pathwaysQuery,
+			vars:         hw{"sha1": wmataSha1},
+			selector:     "feed_versions.0.pathways.#.id",
+			selectExpect: pathwayIDs,
+		},
+		{
+			name:         "pathways after first",
+			query:        pathwaysQuery,
+			vars:         hw{"sha1": wmataSha1, "after": pathways[0].ID},
+			selector:     "feed_versions.0.pathways.#.id",
+			selectExpect: pathwayIDs[1:],
+		},
+		{
+			name:         "pathways by ids",
+			query:        pathwaysQuery,
+			vars:         hw{"sha1": wmataSha1, "where": hw{"ids": []int{pathways[2].ID, pathways[0].ID}}},
+			selector:     "feed_versions.0.pathways.#.id",
+			selectExpect: []string{pathwayIDs[0], pathwayIDs[2]},
+		},
+		{
+			name:         "levels no cursor",
+			query:        levelsQuery,
+			vars:         hw{"sha1": wmataSha1},
+			selector:     "feed_versions.0.levels.#.id",
+			selectExpect: levelIDs,
+		},
+		{
+			name:         "levels after first",
+			query:        levelsQuery,
+			vars:         hw{"sha1": wmataSha1, "after": levels[0].ID},
+			selector:     "feed_versions.0.levels.#.id",
+			selectExpect: levelIDs[1:],
+		},
+		{
+			name:         "levels by ids",
+			query:        levelsQuery,
+			vars:         hw{"sha1": wmataSha1, "where": hw{"ids": []int{levels[2].ID, levels[0].ID}}},
+			selector:     "feed_versions.0.levels.#.id",
+			selectExpect: []string{levelIDs[0], levelIDs[2]},
 		},
 	}
 	queryTestcases(t, c, testcases)

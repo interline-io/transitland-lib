@@ -75,35 +75,6 @@ func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []in
 	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.TripID.Int() }), err
 }
 
-func (f *Finder) FrequenciesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.FrequencyFilter, keys []int) ([][]*model.Frequency, error) {
-	var ents []*model.Frequency
-	q := lateralWrap(frequencySelect(limit, after, where), "feed_versions", "id", "gtfs_frequencies", "feed_version_id", keys)
-	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.FeedVersionID }), err
-}
-
-func frequencySelect(limit *int, after *model.Cursor, where *model.FrequencyFilter) sq.SelectBuilder {
-	q := sq.StatementBuilder.Select(
-		"gtfs_frequencies.id",
-		"gtfs_frequencies.feed_version_id",
-		"gtfs_frequencies.trip_id",
-		"gtfs_frequencies.start_time",
-		"gtfs_frequencies.end_time",
-		"gtfs_frequencies.headway_secs",
-		"gtfs_frequencies.exact_times",
-	).From("gtfs_frequencies").
-		Join("feed_versions ON feed_versions.id = gtfs_frequencies.feed_version_id")
-	if after != nil && after.Valid && after.ID > 0 {
-		q = q.Where(sq.Gt{"gtfs_frequencies.id": after.ID})
-	}
-	if where != nil {
-		if len(where.Ids) > 0 {
-			q = q.Where(In("gtfs_frequencies.id", where.Ids))
-		}
-	}
-	return joinImported(q).OrderBy("gtfs_frequencies.id ASC").Limit(finderCheckLimit(limit))
-}
-
 // Replaces a date outside the feed version's service window with the same
 // weekday in its fallback week.
 func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
