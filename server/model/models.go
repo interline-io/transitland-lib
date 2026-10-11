@@ -191,8 +191,10 @@ type Shape struct {
 }
 
 type Level struct {
-	Geometry      tt.MultiPolygon
-	ParentStation tt.Key
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	Geometry        tt.MultiPolygon
+	ParentStation   tt.Key
 	gtfs.Level
 }
 
@@ -201,6 +203,8 @@ type FeedInfo struct {
 }
 
 type Pathway struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
 	gtfs.Pathway
 }
 

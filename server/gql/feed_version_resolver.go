@@ -32,6 +32,14 @@ func (r *feedVersionResolver) Trips(ctx context.Context, obj *model.FeedVersion,
 	return LoaderFor(ctx).TripsByFeedVersionIDs.Load(ctx, tripLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
+func (r *feedVersionResolver) Pathways(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.PathwayFilter) ([]*model.Pathway, error) {
+	return LoaderFor(ctx).PathwaysByFeedVersionIDs.Load(ctx, pathwayLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_PATHWAY_MAXLIMIT), After: checkCursor(after), Where: where})()
+}
+
+func (r *feedVersionResolver) Levels(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.LevelFilter) ([]*model.Level, error) {
+	return LoaderFor(ctx).LevelsByFeedVersionIDs.Load(ctx, levelLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_PATHWAY_MAXLIMIT), After: checkCursor(after), Where: where})()
+}
+
 func (r *feedVersionResolver) Feed(ctx context.Context, obj *model.FeedVersion) (*model.Feed, error) {
 	return LoaderFor(ctx).FeedsByIDs.Load(ctx, obj.FeedID)()
 }

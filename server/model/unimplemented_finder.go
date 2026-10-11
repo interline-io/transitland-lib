@@ -296,6 +296,9 @@ func (UnimplementedFinder) FlexStopTimesByTripIDs(context.Context, *int, *TripSt
 func (UnimplementedFinder) FrequenciesByTripIDs(context.Context, *int, []int) ([][]*Frequency, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) LevelsByFeedVersionIDs(context.Context, *int, *Cursor, *LevelFilter, []int) ([][]*Level, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) LevelsByIDs(_ context.Context, ids []int) ([]*Level, []error) {
 	return notImplBatch[*Level](ids)
 }
@@ -324,6 +327,9 @@ func (UnimplementedFinder) OperatorsByCOIFs(_ context.Context, ids []int) ([]*Op
 	return notImplBatch[*Operator](ids)
 }
 func (UnimplementedFinder) OperatorsByFeedIDs(context.Context, *int, *OperatorFilter, []int) ([][]*Operator, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) PathwaysByFeedVersionIDs(context.Context, *int, *Cursor, *PathwayFilter, []int) ([][]*Pathway, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) PathwaysByFromStopIDs(context.Context, *int, *PathwayFilter, []int) ([][]*Pathway, error) {

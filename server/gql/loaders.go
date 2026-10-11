@@ -87,6 +87,7 @@ type Loaders struct {
 	FlexStopTimesByLocationIDs                                    *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
 	FlexStopTimesByLocationGroupIDs                               *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
 	FrequenciesByTripIDs                                          *dataloader.Loader[frequencyLoaderParam, []*model.Frequency]
+	LevelsByFeedVersionIDs                                        *dataloader.Loader[levelLoaderParam, []*model.Level]
 	LevelsByIDs                                                   *dataloader.Loader[int, *model.Level]
 	LevelsByParentStationIDs                                      *dataloader.Loader[levelLoaderParam, []*model.Level]
 	LocationGroupsByFeedVersionIDs                                *dataloader.Loader[locationGroupLoaderParam, []*model.LocationGroup]
@@ -98,6 +99,7 @@ type Loaders struct {
 	OperatorsByAgencyIDs                                          *dataloader.Loader[int, []*model.Operator]
 	OperatorsByCOIFs                                              *dataloader.Loader[int, *model.Operator]
 	OperatorsByFeedIDs                                            *dataloader.Loader[operatorLoaderParam, []*model.Operator]
+	PathwaysByFeedVersionIDs                                      *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]
 	PathwaysByFromStopIDs                                         *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]
 	PathwaysByIDs                                                 *dataloader.Loader[int, *model.Pathway]
 	PathwaysByToStopID                                            *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]
@@ -401,6 +403,12 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 
+		LevelsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			cursorGroupAdapter(dbf.LevelsByFeedVersionIDs),
+			func(p levelLoaderParam) (int, cursorGroup[*model.LevelFilter], *int) {
+				return p.FeedVersionID, cursorGroup[*model.LevelFilter]{After: p.After, Where: p.Where}, p.Limit
+			},
+		),
 		LevelsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.LevelsByIDs),
 		LevelsByParentStationIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.LevelsByParentStationIDs),
@@ -439,6 +447,12 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		OperatorsByFeedIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.OperatorsByFeedIDs,
 			func(p operatorLoaderParam) (int, *model.OperatorFilter, *int) {
 				return p.FeedID, p.Where, p.Limit
+			},
+		),
+		PathwaysByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			cursorGroupAdapter(dbf.PathwaysByFeedVersionIDs),
+			func(p pathwayLoaderParam) (int, cursorGroup[*model.PathwayFilter], *int) {
+				return p.FeedVersionID, cursorGroup[*model.PathwayFilter]{After: p.After, Where: p.Where}, p.Limit
 			},
 		),
 		PathwaysByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.PathwaysByIDs),
@@ -525,11 +539,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		),
 		StopPlacesByStopID: withWaitAndCapacity(waitTime, batchSize, dbf.StopPlacesByStopID),
 		StopsByAgencyIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			func(ctx context.Context, limit *int, group agencyStopGroup, keys []int) ([][]*model.Stop, error) {
-				return dbf.StopsByAgencyIDs(ctx, limit, group.After, group.Where, keys)
-			},
-			func(p agencyStopLoaderParam) (int, agencyStopGroup, *int) {
-				return p.AgencyID, agencyStopGroup{After: p.After, Where: p.Where}, p.Limit
+			cursorGroupAdapter(dbf.StopsByAgencyIDs),
+			func(p agencyStopLoaderParam) (int, cursorGroup[*model.AgencyStopFilter], *int) {
+				return p.AgencyID, cursorGroup[*model.AgencyStopFilter]{After: p.After, Where: p.Where}, p.Limit
 			},
 		),
 		StopsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopsByFeedVersionIDs,
@@ -706,6 +718,18 @@ func paramGroupAdapter[
 ](inner func(context.Context, *int, []K) ([][]T, error)) func(context.Context, *int, bool, []K) ([][]T, error) {
 	return func(ctx context.Context, limit *int, where bool, keys []K) ([][]T, error) {
 		return inner(ctx, limit, keys)
+	}
+}
+
+// cursorGroupAdapter adapts a finder that takes an after cursor and a filter
+// to a grouped loader keyed by cursorGroup.
+func cursorGroupAdapter[
+	K comparable,
+	W any,
+	T any,
+](inner func(context.Context, *int, *model.Cursor, W, []K) ([][]T, error)) func(context.Context, *int, cursorGroup[W], []K) ([][]T, error) {
+	return func(ctx context.Context, limit *int, group cursorGroup[W], keys []K) ([][]T, error) {
+		return inner(ctx, limit, group.After, group.Where, keys)
 	}
 }
 

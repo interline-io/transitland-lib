@@ -29,6 +29,9 @@ const (
 	// A regional feed can have tens of thousands of fare products and
 	// stop_areas; clients fetch a feed version's fares in one request.
 	RESOLVER_FARE_MAXLIMIT = 100_000
+	// A station-modeled feed can have thousands of pathways; clients can
+	// fetch a feed version's pathways and levels in one request.
+	RESOLVER_PATHWAY_MAXLIMIT = 100_000
 )
 
 // RESOLVER_MAXLIMIT is the API limit maximum

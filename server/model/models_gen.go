@@ -780,6 +780,14 @@ type LegTrip struct {
 	Route *LegRoute `json:"route"`
 }
 
+// Search options for levels
+type LevelFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for a level with this GTFS level_id
+	LevelID *string `json:"level_id,omitempty"`
+}
+
 // Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`
 type LevelSetInput struct {
 	// Integer ID of the level to update; omit when creating a new level
@@ -886,6 +894,10 @@ type OperatorFilter struct {
 
 // Search options for pathways
 type PathwayFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for a pathway with this GTFS pathway_id
+	PathwayID *string `json:"pathway_id,omitempty"`
 	// Search for pathways with this GTFS pathway_mode
 	PathwayMode *int `json:"pathway_mode,omitempty"`
 }

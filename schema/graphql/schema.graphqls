@@ -478,6 +478,12 @@ type FeedVersion {
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
   
+  "Records from this feed version's `pathways.txt`, if imported"
+  pathways(limit: Int, after: Int, where: PathwayFilter): [Pathway!]!
+
+  "Records from this feed version's `levels.txt`, if imported"
+  levels(limit: Int, after: Int, where: LevelFilter): [Level!]!
+
   "GTFS Flex locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
   
@@ -1057,6 +1063,15 @@ type Pathway {
   created_at: Time
   "Time this pathway record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -1085,6 +1100,15 @@ type Level {
   created_at: Time
   "Time this level record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -3498,8 +3522,20 @@ input StopObservationFilter {
 
 """Search options for pathways"""
 input PathwayFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a pathway with this GTFS pathway_id"
+  pathway_id: String
   "Search for pathways with this GTFS pathway_mode"
   pathway_mode: Int
+}
+
+"""Search options for levels"""
+input LevelFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a level with this GTFS level_id"
+  level_id: String
 }
 
 """Search options for trips"""

@@ -510,10 +510,12 @@ type ComplexityRoot struct {
 		Geometry              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LatestCalendarDate    func(childComplexity int) int
+		Levels                func(childComplexity int, limit *int, after *int, where *model.LevelFilter) int
 		LocationGroups        func(childComplexity int, limit *int, where *model.LocationGroupFilter) int
 		Locations             func(childComplexity int, limit *int, where *model.LocationFilter) int
 		Name                  func(childComplexity int) int
 		Networks              func(childComplexity int, limit *int, after *int) int
+		Pathways              func(childComplexity int, limit *int, after *int, where *model.PathwayFilter) int
 		Permissions           func(childComplexity int) int
 		RiderCategories       func(childComplexity int, limit *int, after *int) int
 		RouteNetworks         func(childComplexity int, limit *int, after *int) int
@@ -941,14 +943,17 @@ type ComplexityRoot struct {
 	}
 
 	Level struct {
-		CreatedAt  func(childComplexity int) int
-		Geometry   func(childComplexity int) int
-		ID         func(childComplexity int) int
-		LevelID    func(childComplexity int) int
-		LevelIndex func(childComplexity int) int
-		LevelName  func(childComplexity int) int
-		Stops      func(childComplexity int) int
-		UpdatedAt  func(childComplexity int) int
+		CreatedAt       func(childComplexity int) int
+		FeedOnestopID   func(childComplexity int) int
+		FeedVersion     func(childComplexity int) int
+		FeedVersionSHA1 func(childComplexity int) int
+		Geometry        func(childComplexity int) int
+		ID              func(childComplexity int) int
+		LevelID         func(childComplexity int) int
+		LevelIndex      func(childComplexity int) int
+		LevelName       func(childComplexity int) int
+		Stops           func(childComplexity int) int
+		UpdatedAt       func(childComplexity int) int
 	}
 
 	Location struct {
@@ -1040,6 +1045,9 @@ type ComplexityRoot struct {
 
 	Pathway struct {
 		CreatedAt           func(childComplexity int) int
+		FeedOnestopID       func(childComplexity int) int
+		FeedVersion         func(childComplexity int) int
+		FeedVersionSHA1     func(childComplexity int) int
 		FromStop            func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		IsBidirectional     func(childComplexity int) int
@@ -1728,6 +1736,8 @@ type FeedVersionResolver interface {
 	Routes(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	Stops(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.StopFilter) ([]*model.Stop, error)
 	Trips(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.TripFilter) ([]*model.Trip, error)
+	Pathways(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.PathwayFilter) ([]*model.Pathway, error)
+	Levels(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.LevelFilter) ([]*model.Level, error)
 	Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error)
 	BookingRules(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.BookingRuleFilter) ([]*model.BookingRule, error)
 	LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error)
@@ -1778,6 +1788,8 @@ type GroupResolver interface {
 }
 type LevelResolver interface {
 	Stops(ctx context.Context, obj *model.Level) ([]*model.Stop, error)
+
+	FeedVersion(ctx context.Context, obj *model.Level) (*model.FeedVersion, error)
 }
 type LocationResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Location) (*model.FeedVersion, error)
@@ -1819,6 +1831,8 @@ type OperatorResolver interface {
 type PathwayResolver interface {
 	FromStop(ctx context.Context, obj *model.Pathway) (*model.Stop, error)
 	ToStop(ctx context.Context, obj *model.Pathway) (*model.Stop, error)
+
+	FeedVersion(ctx context.Context, obj *model.Pathway) (*model.FeedVersion, error)
 }
 type PlaceResolver interface {
 	Count(ctx context.Context, obj *model.Place) (int, error)
@@ -4104,6 +4118,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.LatestCalendarDate(childComplexity), true
+	case "FeedVersion.levels":
+		if e.ComplexityRoot.FeedVersion.Levels == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_levels_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.Levels(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.LevelFilter)), true
 	case "FeedVersion.location_groups":
 		if e.ComplexityRoot.FeedVersion.LocationGroups == nil {
 			break
@@ -4143,6 +4168,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Networks(childComplexity, args["limit"].(*int), args["after"].(*int)), true
+	case "FeedVersion.pathways":
+		if e.ComplexityRoot.FeedVersion.Pathways == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_pathways_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.Pathways(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.PathwayFilter)), true
 	case "FeedVersion.permissions":
 		if e.ComplexityRoot.FeedVersion.Permissions == nil {
 			break
@@ -6052,6 +6088,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Level.CreatedAt(childComplexity), true
+	case "Level.feed_onestop_id":
+		if e.ComplexityRoot.Level.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Level.FeedOnestopID(childComplexity), true
+	case "Level.feed_version":
+		if e.ComplexityRoot.Level.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Level.FeedVersion(childComplexity), true
+	case "Level.feed_version_sha1":
+		if e.ComplexityRoot.Level.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Level.FeedVersionSHA1(childComplexity), true
 	case "Level.geometry":
 		if e.ComplexityRoot.Level.Geometry == nil {
 			break
@@ -6587,6 +6641,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Pathway.CreatedAt(childComplexity), true
+	case "Pathway.feed_onestop_id":
+		if e.ComplexityRoot.Pathway.FeedOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Pathway.FeedOnestopID(childComplexity), true
+	case "Pathway.feed_version":
+		if e.ComplexityRoot.Pathway.FeedVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Pathway.FeedVersion(childComplexity), true
+	case "Pathway.feed_version_sha1":
+		if e.ComplexityRoot.Pathway.FeedVersionSHA1 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Pathway.FeedVersionSHA1(childComplexity), true
 	case "Pathway.from_stop":
 		if e.ComplexityRoot.Pathway.FromStop == nil {
 			break
@@ -9466,6 +9538,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputFocusPoint,
 		ec.unmarshalInputGbfsBikeRequest,
 		ec.unmarshalInputGbfsDockRequest,
+		ec.unmarshalInputLevelFilter,
 		ec.unmarshalInputLevelSetInput,
 		ec.unmarshalInputLicenseFilter,
 		ec.unmarshalInputLocationFilter,
@@ -10960,6 +11033,12 @@ type FeedVersion {
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
   
+  "Records from this feed version's ` + "`" + `pathways.txt` + "`" + `, if imported"
+  pathways(limit: Int, after: Int, where: PathwayFilter): [Pathway!]!
+
+  "Records from this feed version's ` + "`" + `levels.txt` + "`" + `, if imported"
+  levels(limit: Int, after: Int, where: LevelFilter): [Level!]!
+
   "GTFS Flex locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
   
@@ -11539,6 +11618,15 @@ type Pathway {
   created_at: Time
   "Time this pathway record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -11567,6 +11655,15 @@ type Level {
   created_at: Time
   "Time this level record was last updated (import time, or the last edit if edited since)"
   updated_at: Time
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -13980,8 +14077,20 @@ input StopObservationFilter {
 
 """Search options for pathways"""
 input PathwayFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a pathway with this GTFS pathway_id"
+  pathway_id: String
   "Search for pathways with this GTFS pathway_mode"
   pathway_mode: Int
+}
+
+"""Search options for levels"""
+input LevelFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a level with this GTFS level_id"
+  level_id: String
 }
 
 """Search options for trips"""
@@ -15250,6 +15359,10 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_stops(ctx, field)
 	case "trips":
 		return ec.fieldContext_FeedVersion_trips(ctx, field)
+	case "pathways":
+		return ec.fieldContext_FeedVersion_pathways(ctx, field)
+	case "levels":
+		return ec.fieldContext_FeedVersion_levels(ctx, field)
 	case "locations":
 		return ec.fieldContext_FeedVersion_locations(ctx, field)
 	case "booking_rules":
@@ -16094,6 +16207,12 @@ func (ec *executionContext) childFields_Level(ctx context.Context, field graphql
 		return ec.fieldContext_Level_created_at(ctx, field)
 	case "updated_at":
 		return ec.fieldContext_Level_updated_at(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_Level_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_Level_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_Level_feed_version(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Level", field.Name)
 }
@@ -16256,6 +16375,12 @@ func (ec *executionContext) childFields_Pathway(ctx context.Context, field graph
 		return ec.fieldContext_Pathway_created_at(ctx, field)
 	case "updated_at":
 		return ec.fieldContext_Pathway_updated_at(ctx, field)
+	case "feed_version_sha1":
+		return ec.fieldContext_Pathway_feed_version_sha1(ctx, field)
+	case "feed_onestop_id":
+		return ec.fieldContext_Pathway_feed_onestop_id(ctx, field)
+	case "feed_version":
+		return ec.fieldContext_Pathway_feed_version(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Pathway", field.Name)
 }
@@ -18054,6 +18179,36 @@ func (ec *executionContext) field_FeedVersion_files_args(ctx context.Context, ra
 	return args, nil
 }
 
+func (ec *executionContext) field_FeedVersion_levels_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.LevelFilter, error) {
+			return ec.unmarshalOLevelFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLevelFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg2
+	return args, nil
+}
+
 func (ec *executionContext) field_FeedVersion_location_groups_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -18117,6 +18272,36 @@ func (ec *executionContext) field_FeedVersion_networks_args(ctx context.Context,
 		return nil, err
 	}
 	args["after"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_pathways_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.PathwayFilter, error) {
+			return ec.unmarshalOPathwayFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathwayFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg2
 	return args, nil
 }
 
@@ -28501,6 +28686,94 @@ func (ec *executionContext) fieldContext_FeedVersion_trips(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _FeedVersion_pathways(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_pathways(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().Pathways(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.PathwayFilter))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Pathway) graphql.Marshaler {
+			return ec.marshalNPathway2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathwayᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_pathways(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Pathway(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_pathways_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _FeedVersion_levels(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_levels(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().Levels(ctx, obj, fc.Args["limit"].(*int), fc.Args["after"].(*int), fc.Args["where"].(*model.LevelFilter))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Level) graphql.Marshaler {
+			return ec.marshalNLevel2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLevelᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_levels(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Level(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_levels_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FeedVersion_locations(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -36651,6 +36924,84 @@ func (ec *executionContext) fieldContext_Level_updated_at(_ context.Context, fie
 	return graphql.NewScalarFieldContext("Level", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _Level_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Level_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Level_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Level", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Level_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Level_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Level_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Level", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Level_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Level) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Level_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Level().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Level_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Level",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Location_id(ctx context.Context, field graphql.CollectedField, obj *model.Location) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -38926,6 +39277,84 @@ func (ec *executionContext) _Pathway_updated_at(ctx context.Context, field graph
 }
 func (ec *executionContext) fieldContext_Pathway_updated_at(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Pathway", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _Pathway_feed_version_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Pathway_feed_version_sha1(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedVersionSHA1, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Pathway_feed_version_sha1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Pathway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Pathway_feed_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Pathway_feed_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Pathway_feed_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Pathway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Pathway_feed_version(ctx context.Context, field graphql.CollectedField, obj *model.Pathway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Pathway_feed_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Pathway().FeedVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FeedVersion) graphql.Marshaler {
+			return ec.marshalNFeedVersion2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Pathway_feed_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Pathway",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _PermissionRef_type(ctx context.Context, field graphql.CollectedField, obj *model.PermissionRef) (ret graphql.Marshaler) {
@@ -52505,6 +52934,43 @@ func (ec *executionContext) unmarshalInputGbfsDockRequest(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputLevelFilter(ctx context.Context, obj any) (model.LevelFilter, error) {
+	var it model.LevelFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"ids", "level_id"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
+		case "level_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("level_id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LevelID = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputLevelSetInput(ctx context.Context, obj any) (model.LevelSetInput, error) {
 	var it model.LevelSetInput
 	if obj == nil {
@@ -52855,13 +53321,27 @@ func (ec *executionContext) unmarshalInputPathwayFilter(ctx context.Context, obj
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"pathway_mode"}
+	fieldsInOrder := [...]string{"ids", "pathway_id", "pathway_mode"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
+		case "ids":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ids = data
+		case "pathway_id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pathway_id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PathwayID = data
 		case "pathway_mode":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pathway_mode"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
@@ -59031,6 +59511,78 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "pathways":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_pathways(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "levels":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_levels(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "locations":
 			field := field
 
@@ -62561,6 +63113,52 @@ func (ec *executionContext) _Level(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Level_created_at(ctx, field, obj)
 		case "updated_at":
 			out.Values[i] = ec._Level_updated_at(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._Level_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Level_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Level_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -63571,6 +64169,52 @@ func (ec *executionContext) _Pathway(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Pathway_created_at(ctx, field, obj)
 		case "updated_at":
 			out.Values[i] = ec._Pathway_updated_at(ctx, field, obj)
+		case "feed_version_sha1":
+			out.Values[i] = ec._Pathway_feed_version_sha1(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_onestop_id":
+			out.Values[i] = ec._Pathway_feed_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "feed_version":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pathway_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -74043,6 +74687,14 @@ func (ec *executionContext) marshalOLevel2ᚖgithubᚗcomᚋinterlineᚑioᚋtra
 	return ec._Level(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOLevelFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLevelFilter(ctx context.Context, v any) (*model.LevelFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputLevelFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalOLevelSetInput2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐLevelSetInput(ctx context.Context, v any) (*model.LevelSetInput, error) {
 	if v == nil {
 		return nil, nil
@@ -74184,6 +74836,14 @@ func (ec *executionContext) unmarshalOOperatorFilter2ᚖgithubᚗcomᚋinterline
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputOperatorFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOPathwayFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐPathwayFilter(ctx context.Context, v any) (*model.PathwayFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPathwayFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
