@@ -51,6 +51,47 @@ func (f *Finder) LevelsByParentStationIDs(ctx context.Context, limit *int, keys 
 	return arrangeGroup(keys, ents, func(ent *model.Level) int { return ent.ParentStation.Int() }), err
 }
 
+func (f *Finder) LevelsByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.LevelFilter, keys []int) ([][]*model.Level, error) {
+	var ents []*model.Level
+	q := lateralWrap(levelSelect(limit, after, where), "feed_versions", "id", "gtfs_levels", "feed_version_id", keys)
+	err := dbutil.Select(ctx, f.db, q, &ents)
+	return arrangeGroup(keys, ents, func(ent *model.Level) int { return ent.FeedVersionID }), err
+}
+
+func levelSelect(limit *int, after *model.Cursor, where *model.LevelFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.Select(
+		"gtfs_levels.id",
+		"gtfs_levels.feed_version_id",
+		"gtfs_levels.level_id",
+		"gtfs_levels.level_index",
+		"gtfs_levels.level_name",
+		"gtfs_levels.parent_station",
+		"gtfs_levels.geometry",
+		"gtfs_levels.created_at",
+		"gtfs_levels.updated_at",
+	).From("gtfs_levels").
+		Join("feed_versions ON feed_versions.id = gtfs_levels.feed_version_id")
+	if after != nil && after.Valid && after.ID > 0 {
+		q = q.Where(sq.Gt{"gtfs_levels.id": after.ID})
+	}
+	if where != nil {
+		if len(where.Ids) > 0 {
+			q = q.Where(In("gtfs_levels.id", where.Ids))
+		}
+		if where.LevelID != nil {
+			q = q.Where(sq.Eq{"gtfs_levels.level_id": *where.LevelID})
+		}
+	}
+	return joinImported(q).OrderBy("gtfs_levels.id ASC").Limit(finderCheckLimit(limit))
+}
+
+func (f *Finder) PathwaysByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.PathwayFilter, keys []int) ([][]*model.Pathway, error) {
+	var ents []*model.Pathway
+	q := lateralWrap(pathwaySelect(limit, after, nil, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_pathways", "feed_version_id", keys)
+	err := dbutil.Select(ctx, f.db, q, &ents)
+	return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FeedVersionID }), err
+}
+
 func (f *Finder) PathwaysByFromStopIDs(ctx context.Context, limit *int, where *model.PathwayFilter, keys []int) ([][]*model.Pathway, error) {
 	var ents []*model.Pathway
 	err := dbutil.Select(ctx,
@@ -112,6 +153,12 @@ func pathwaySelect(limit *int, after *model.Cursor, ids []int, permFilter *model
 		OrderBy("gtfs_pathways.id")
 
 	if where != nil {
+		if len(where.Ids) > 0 {
+			q = q.Where(In("gtfs_pathways.id", where.Ids))
+		}
+		if where.PathwayID != nil {
+			q = q.Where(sq.Eq{"gtfs_pathways.pathway_id": *where.PathwayID})
+		}
 		if where.PathwayMode != nil {
 			q = q.Where(sq.Eq{"pathway_mode": where.PathwayMode})
 		}

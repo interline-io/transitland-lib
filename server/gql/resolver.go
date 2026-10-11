@@ -29,6 +29,9 @@ const (
 	// A regional feed can have tens of thousands of fare products and
 	// stop_areas; clients fetch a feed version's fares in one request.
 	RESOLVER_FARE_MAXLIMIT = 100_000
+	// A large feed can have tens of thousands of pathways, calendar dates,
+	// transfers or translations; clients can fetch each table in one request.
+	RESOLVER_GTFS_TABLE_MAXLIMIT = 100_000
 )
 
 // RESOLVER_MAXLIMIT is the API limit maximum
@@ -307,6 +310,20 @@ func (r *Resolver) Level() gqlout.LevelResolver {
 func (r *Resolver) Calendar() gqlout.CalendarResolver {
 	return &calendarResolver{r}
 }
+
+// CalendarDate .
+func (r *Resolver) CalendarDate() gqlout.CalendarDateResolver {
+	return &calendarDateResolver{r}
+}
+
+// Transfer .
+func (r *Resolver) Transfer() gqlout.TransferResolver { return &transferResolver{r} }
+
+// Translation .
+func (r *Resolver) Translation() gqlout.TranslationResolver { return &translationResolver{r} }
+
+// Attribution .
+func (r *Resolver) Attribution() gqlout.AttributionResolver { return &attributionResolver{r} }
 
 // CensusGeography .
 func (r *Resolver) CensusGeography() gqlout.CensusGeographyResolver {

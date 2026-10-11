@@ -477,7 +477,25 @@ type FeedVersion {
   
   "Trips associated with this feed version, if imported"
   trips(limit: Int, where: TripFilter): [Trip!]!
-  
+
+  "Records from this feed version's `calendar.txt`, plus a generated record for each service that only `calendar_dates.txt` defines, if imported"
+  calendars(limit: Int, after: Int, where: CalendarFilter): [Calendar!]!
+
+  "Records from this feed version's `calendar_dates.txt`, if imported"
+  calendar_dates(limit: Int, after: Int, where: CalendarDateFilter): [CalendarDate!]!
+
+  "Records from this feed version's `frequencies.txt`, if imported"
+  frequencies(limit: Int, after: Int, where: FrequencyFilter): [Frequency!]!
+
+  "Records from this feed version's `transfers.txt`, if imported"
+  transfers(limit: Int, after: Int, where: TransferFilter): [Transfer!]!
+
+  "Records from this feed version's `pathways.txt`, if imported"
+  pathways(limit: Int, after: Int, where: PathwayFilter): [Pathway!]!
+
+  "Records from this feed version's `levels.txt`, if imported"
+  levels(limit: Int, after: Int, where: LevelFilter): [Level!]!
+
   "GTFS Flex locations associated with this feed version, if imported"
   locations(limit: Int, where: LocationFilter): [Location!]!
   
@@ -486,6 +504,9 @@ type FeedVersion {
   
   "GTFS Flex location groups associated with this feed version, if imported"
   location_groups(limit: Int, where: LocationGroupFilter): [LocationGroup!]!
+
+  "GTFS Flex records from this feed version's `location_group_stops.txt`, if imported"
+  location_group_stops(limit: Int, after: Int, where: LocationGroupStopFilter): [LocationGroupStop!]!
 
   "GTFS Fares v1 records from this feed version's `fare_attributes.txt`, if imported"
   fare_attributes(limit: Int, after: Int): [FareAttribute!]!
@@ -517,6 +538,9 @@ type FeedVersion {
   "GTFS Fares v2 records from this feed version's `areas.txt`, if imported"
   areas(limit: Int, after: Int): [Area!]!
 
+  "GTFS Fares v2 records from this feed version's `stop_areas.txt`, if imported"
+  stop_areas(limit: Int, after: Int, where: StopAreaFilter): [StopArea!]!
+
   "GTFS Fares v2 records from this feed version's `networks.txt`, if imported"
   networks(limit: Int, after: Int): [Network!]!
 
@@ -525,7 +549,13 @@ type FeedVersion {
   
   "Records from this feed version's `feed_info.txt`"
   feed_infos(limit: Int): [FeedInfo!]!
-  
+
+  "Records from this feed version's `translations.txt`, if imported"
+  translations(limit: Int, after: Int, where: TranslationFilter): [Translation!]!
+
+  "Records from this feed version's `attributions.txt`, if imported"
+  attributions(limit: Int, after: Int, where: AttributionFilter): [Attribution!]!
+
   "Validation reports associated with this feed version"
   validation_reports(limit: Int, where: ValidationReportFilter): [ValidationReport!]
   
@@ -1208,12 +1238,41 @@ type Calendar {
   
   "GTFS `calendar.sunday` [1=service runs on Sundays, 0=service does not run]"
   sunday: Int!
-  
+
+  "True if this record was generated for a service that only `calendar_dates.txt` defines, rather than read from `calendar.txt`"
+  generated: Boolean!
+
   "Service-added dates derived from `calendar_dates.txt` records with exception_type=1"
   added_dates(limit: Int): [Date!]!
 
   "Service-removed dates derived from `calendar_dates.txt` records with exception_type=2"
   removed_dates(limit: Int): [Date!]!
+}
+
+"""
+Record from a static GTFS [calendar_dates.txt](https://gtfs.org/schedule/reference/#calendar_datestxt) file.
+"""
+type CalendarDate {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `calendar_dates.date`"
+  date: Date!
+
+  "GTFS `calendar_dates.exception_type` [1=service added, 2=service removed]"
+  exception_type: Int!
+
+  "GTFS `calendar_dates.service_id`; the service whose dates this exception changes"
+  service: Calendar!
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -1267,6 +1326,47 @@ type Frequency {
 
   "Trip this headway applies to. Expanding a frequency measures from the trip's first departure, which this reaches even when a filtered `Trip.stop_times` selection omits the first stop."
   trip: Trip!
+}
+
+"""
+Record from a static GTFS [transfers.txt](https://gtfs.org/schedule/reference/#transferstxt) file.
+"""
+type Transfer {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `transfers.from_stop_id`"
+  from_stop: Stop
+
+  "GTFS `transfers.to_stop_id`"
+  to_stop: Stop
+
+  "GTFS `transfers.from_route_id`"
+  from_route: Route
+
+  "GTFS `transfers.to_route_id`"
+  to_route: Route
+
+  "GTFS `transfers.from_trip_id`"
+  from_trip: Trip
+
+  "GTFS `transfers.to_trip_id`"
+  to_trip: Trip
+
+  "GTFS `transfers.transfer_type` [0=recommended transfer point, 1=timed transfer point, 2=requires `min_transfer_time`, 3=not possible, 4=in-seat transfer, 5=in-seat transfer not allowed]"
+  transfer_type: Int!
+
+  "GTFS `transfers.min_transfer_time`; seconds a rider needs to make the transfer"
+  min_transfer_time: Int
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -1447,6 +1547,96 @@ type FeedInfo {
   
   "GTFS `feed_info.feed_contact_url`"
   feed_contact_url: Url
+}
+
+"""
+Record from a static GTFS [translations.txt](https://gtfs.org/schedule/reference/#translationstxt) file.
+A translation names its field by `table_name` and `field_name`, and selects the values it replaces either by `record_id` (and `record_sub_id`) or by `field_value`.
+"""
+type Translation {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `translations.table_name`; the file that holds the translated field, without its `.txt` extension (e.g. `stops`)"
+  table_name: String
+
+  "GTFS `translations.field_name`"
+  field_name: String
+
+  "GTFS `translations.language`"
+  language: Language
+
+  "GTFS `translations.translation`"
+  translation: String
+
+  "GTFS `translations.record_id`; GTFS id of the translated record"
+  record_id: String
+
+  "GTFS `translations.record_sub_id`; second key of the translated record, for files whose records need two (e.g. `stop_sequence` in `stop_times`)"
+  record_sub_id: String
+
+  "GTFS `translations.field_value`; translates every occurrence of this value in the field"
+  field_value: String
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
+}
+
+"""
+Record from a static GTFS [attributions.txt](https://gtfs.org/schedule/reference/#attributionstxt) file.
+An attribution with no agency, route or trip applies to the whole feed.
+"""
+type Attribution {
+  "Internal integer ID"
+  id: Int!
+
+  "GTFS `attributions.attribution_id`"
+  attribution_id: String
+
+  "GTFS `attributions.agency_id`; the agency that this attribution covers"
+  agency: Agency
+
+  "GTFS `attributions.route_id`; the route that this attribution covers"
+  route: Route
+
+  "GTFS `attributions.trip_id`; the trip that this attribution covers"
+  trip: Trip
+
+  "GTFS `attributions.organization_name`"
+  organization_name: String!
+
+  "GTFS `attributions.is_producer` [0=not a producer, 1=producer of the data]"
+  is_producer: Int
+
+  "GTFS `attributions.is_operator` [0=not an operator, 1=operator of the service]"
+  is_operator: Int
+
+  "GTFS `attributions.is_authority` [0=not an authority, 1=authority responsible for the service]"
+  is_authority: Int
+
+  "GTFS `attributions.attribution_url`"
+  attribution_url: Url
+
+  "GTFS `attributions.attribution_email`"
+  attribution_email: Email
+
+  "GTFS `attributions.attribution_phone`"
+  attribution_phone: String
+
+  "Feed version SHA1 associated with this entity"
+  feed_version_sha1: String!
+
+  "Feed Onestop ID associated with this entity"
+  feed_onestop_id: String!
+
+  "Source feed version for this entity"
+  feed_version: FeedVersion!
 }
 
 """
@@ -3159,6 +3349,40 @@ input LocationGroupFilter {
   location_group_id: String
 }
 
+"""Search options for location group stops"""
+input LocationGroupStopFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+}
+
+"""Search options for stop areas"""
+input StopAreaFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+}
+
+"""Search options for translations"""
+input TranslationFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for translations of fields in this file, without its `.txt` extension (e.g. `stops`)"
+  table_name: String
+  "Search for translations of this field (e.g. `stop_name`)"
+  field_name: String
+  "Search for translations into this language"
+  language: String
+  "Search for translations of the record with this GTFS id"
+  record_id: String
+}
+
+"""Search options for attributions"""
+input AttributionFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for an attribution with this GTFS attribution_id"
+  attribution_id: String
+}
+
 """Import status for a feed version"""
 enum ImportStatus {
   "Imported successfully"
@@ -3498,8 +3722,34 @@ input StopObservationFilter {
 
 """Search options for pathways"""
 input PathwayFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a pathway with this GTFS pathway_id"
+  pathway_id: String
   "Search for pathways with this GTFS pathway_mode"
   pathway_mode: Int
+}
+
+"""Search options for levels"""
+input LevelFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a level with this GTFS level_id"
+  level_id: String
+}
+
+"""Search options for transfers"""
+input TransferFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for transfers with this GTFS transfer_type"
+  transfer_type: Int
+}
+
+"""Search options for frequencies"""
+input FrequencyFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
 }
 
 """Search options for trips"""
@@ -3739,8 +3989,18 @@ input PlaceFilter {
   search: String
 }
 
+"""Search options for calendars"""
+input CalendarFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
+  "Search for a calendar with this GTFS service_id"
+  service_id: String
+}
+
 """Search options for calendar dates"""
 input CalendarDateFilter {
+  "Restrict to specific ids"
+  ids: [Int!]
   "Search for calendar date exceptions on this date"
   date: Date
   "Search for calendar date exceptions with this GTFS exception_type [1=service added, 2=service removed]"

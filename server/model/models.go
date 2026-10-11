@@ -183,7 +183,16 @@ type Frequency struct {
 }
 
 type CalendarDate struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
 	gtfs.CalendarDate
+}
+
+// Transfer is a transfers.txt record.
+type Transfer struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Transfer
 }
 
 type Shape struct {
@@ -198,6 +207,20 @@ type Level struct {
 
 type FeedInfo struct {
 	gtfs.FeedInfo
+}
+
+// Translation is a translations.txt record.
+type Translation struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Translation
+}
+
+// Attribution is an attributions.txt record.
+type Attribution struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Attribution
 }
 
 type Pathway struct {

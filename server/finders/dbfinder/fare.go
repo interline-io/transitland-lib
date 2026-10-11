@@ -477,12 +477,19 @@ func routeNetworkSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 
 func (f *Finder) StopAreasByAreaIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.StopArea, error) {
 	var ents []*model.StopArea
-	q := lateralWrap(stopAreaSelect(limit, after), "gtfs_areas", "id", "gtfs_stop_areas", "area_id", keys)
+	q := lateralWrap(stopAreaSelect(limit, after, nil), "gtfs_areas", "id", "gtfs_stop_areas", "area_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.StopArea) int { return ent.AreaID.Int() }), err
 }
 
-func stopAreaSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
+func (f *Finder) StopAreasByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.StopAreaFilter, keys []int) ([][]*model.StopArea, error) {
+	var ents []*model.StopArea
+	q := lateralWrap(stopAreaSelect(limit, after, where), "feed_versions", "id", "gtfs_stop_areas", "feed_version_id", keys)
+	err := dbutil.Select(ctx, f.db, q, &ents)
+	return arrangeGroup(keys, ents, func(ent *model.StopArea) int { return ent.FeedVersionID }), err
+}
+
+func stopAreaSelect(limit *int, after *model.Cursor, where *model.StopAreaFilter) sq.SelectBuilder {
 	q := sq.StatementBuilder.Select(
 		"gtfs_stop_areas.id",
 		"gtfs_stop_areas.feed_version_id",
@@ -495,6 +502,11 @@ func stopAreaSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_stop_areas.id": after.ID})
+	}
+	if where != nil {
+		if len(where.Ids) > 0 {
+			q = q.Where(In("gtfs_stop_areas.id", where.Ids))
+		}
 	}
 	return joinImported(q).OrderBy("gtfs_stop_areas.id ASC").Limit(finderCheckLimit(limit))
 }

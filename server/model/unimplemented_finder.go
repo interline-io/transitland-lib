@@ -118,6 +118,9 @@ func (UnimplementedFinder) AgenciesByOnestopIDs(context.Context, *int, *AgencyFi
 func (UnimplementedFinder) AgencyPlacesByAgencyIDs(context.Context, *int, *AgencyPlaceFilter, []int) ([][]*AgencyPlace, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) AttributionsByFeedVersionIDs(context.Context, *int, *Cursor, *AttributionFilter, []int) ([][]*Attribution, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) BookingRulesByFeedVersionIDs(context.Context, *int, *BookingRuleFilter, []int) ([][]*BookingRule, error) {
 	return nil, notImplErr()
 }
@@ -195,7 +198,16 @@ func (UnimplementedFinder) RouteNetworksByFeedVersionIDs(context.Context, *int, 
 func (UnimplementedFinder) StopAreasByAreaIDs(context.Context, *int, *Cursor, []int) ([][]*StopArea, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) StopAreasByFeedVersionIDs(context.Context, *int, *Cursor, *StopAreaFilter, []int) ([][]*StopArea, error) {
+	return nil, notImplErr()
+}
 
+func (UnimplementedFinder) CalendarDatesByFeedVersionIDs(context.Context, *int, *Cursor, *CalendarDateFilter, []int) ([][]*CalendarDate, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) CalendarsByFeedVersionIDs(context.Context, *int, *Cursor, *CalendarFilter, []int) ([][]*Calendar, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error) {
 	return nil, notImplErr()
 }
@@ -293,7 +305,13 @@ func (UnimplementedFinder) FlexStopTimesByLocationGroupIDs(context.Context, *int
 func (UnimplementedFinder) FlexStopTimesByTripIDs(context.Context, *int, *TripStopTimeFilter, []FVPair) ([][]*FlexStopTime, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) FrequenciesByFeedVersionIDs(context.Context, *int, *Cursor, *FrequencyFilter, []int) ([][]*Frequency, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) FrequenciesByTripIDs(context.Context, *int, []int) ([][]*Frequency, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) LevelsByFeedVersionIDs(context.Context, *int, *Cursor, *LevelFilter, []int) ([][]*Level, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) LevelsByIDs(_ context.Context, ids []int) ([]*Level, []error) {
@@ -311,6 +329,9 @@ func (UnimplementedFinder) LocationGroupsByIDs(_ context.Context, ids []int) ([]
 func (UnimplementedFinder) LocationGroupsByStopIDs(context.Context, *int, []int) ([][]*LocationGroup, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) LocationGroupStopsByFeedVersionIDs(context.Context, *int, *Cursor, *LocationGroupStopFilter, []int) ([][]*LocationGroupStop, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) LocationsByFeedVersionIDs(context.Context, *int, *LocationFilter, []int) ([][]*Location, error) {
 	return nil, notImplErr()
 }
@@ -324,6 +345,9 @@ func (UnimplementedFinder) OperatorsByCOIFs(_ context.Context, ids []int) ([]*Op
 	return notImplBatch[*Operator](ids)
 }
 func (UnimplementedFinder) OperatorsByFeedIDs(context.Context, *int, *OperatorFilter, []int) ([][]*Operator, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) PathwaysByFeedVersionIDs(context.Context, *int, *Cursor, *PathwayFilter, []int) ([][]*Pathway, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) PathwaysByFromStopIDs(context.Context, *int, *PathwayFilter, []int) ([][]*Pathway, error) {
@@ -427,6 +451,12 @@ func (UnimplementedFinder) StopTimesByTripIDs(context.Context, *int, *TripStopTi
 }
 func (UnimplementedFinder) TargetStopsByStopIDs(_ context.Context, ids []int) ([]*Stop, []error) {
 	return notImplBatch[*Stop](ids)
+}
+func (UnimplementedFinder) TransfersByFeedVersionIDs(context.Context, *int, *Cursor, *TransferFilter, []int) ([][]*Transfer, error) {
+	return nil, notImplErr()
+}
+func (UnimplementedFinder) TranslationsByFeedVersionIDs(context.Context, *int, *Cursor, *TranslationFilter, []int) ([][]*Translation, error) {
+	return nil, notImplErr()
 }
 func (UnimplementedFinder) TripsByFeedVersionIDs(context.Context, *int, *TripFilter, []int) ([][]*Trip, error) {
 	return nil, notImplErr()

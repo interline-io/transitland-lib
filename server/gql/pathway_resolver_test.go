@@ -173,3 +173,63 @@ func TestPathwayResolver(t *testing.T) {
 	}
 	queryTestcases(t, c, testcases)
 }
+
+func TestFeedVersionResolver_Pathways(t *testing.T) {
+	c, _ := newTestClient(t)
+	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
+	q := `query($sha1:String!, $limit:Int, $where:PathwayFilter) {
+		feed_versions(where:{sha1:$sha1}) {
+			pathways(limit:$limit, where:$where) {
+				pathway_id pathway_mode is_bidirectional traversal_time
+				from_stop { stop_id }
+				to_stop { stop_id }
+			}
+		}
+	}`
+	testcases := []testcase{
+		{
+			name:              "every pathway in the feed version",
+			query:             q,
+			vars:              hw{"sha1": wmataSha1, "limit": 10_000},
+			selector:          "feed_versions.0.pathways.#.pathway_id",
+			selectExpectCount: 2958,
+		},
+		{
+			name:              "default limit",
+			query:             q,
+			vars:              hw{"sha1": wmataSha1},
+			selector:          "feed_versions.0.pathways.#.pathway_id",
+			selectExpectCount: 100,
+		},
+		{
+			name:   "pathway_id",
+			query:  q,
+			vars:   hw{"sha1": wmataSha1, "where": hw{"pathway_id": "C08_137121"}},
+			expect: `{"feed_versions":[{"pathways":[{"pathway_id":"C08_137121","pathway_mode":7,"is_bidirectional":0,"traversal_time":5,"from_stop":{"stop_id":"NODE_C08_FG_PAID"},"to_stop":{"stop_id":"NODE_C08_FG_UNPAID"}}]}]}`,
+		},
+		{
+			name:  "pathway_mode",
+			query: q,
+			vars:  hw{"sha1": wmataSha1, "limit": 10_000, "where": hw{"pathway_mode": 5}},
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.pathways.#.pathway_id", expectCount: 212},
+				{selector: "feed_versions.0.pathways.#.pathway_mode", expectUnique: []string{"5"}},
+				{selector: `feed_versions.0.pathways.#(pathway_id%"C08_*")#.pathway_id`, expect: []string{"C08_137116", "C08_137123", "C08_137126"}},
+			},
+		},
+		{
+			// Filter fields combine with AND; C08_137121 is an exit gate, not an elevator.
+			name:   "pathway_id and pathway_mode",
+			query:  q,
+			vars:   hw{"sha1": wmataSha1, "where": hw{"pathway_id": "C08_137121", "pathway_mode": 5}},
+			expect: `{"feed_versions":[{"pathways":[]}]}`,
+		},
+		{
+			name:   "feed version without pathways",
+			query:  q,
+			vars:   hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+			expect: `{"feed_versions":[{"pathways":[]}]}`,
+		},
+	}
+	queryTestcases(t, c, testcases)
+}

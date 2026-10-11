@@ -129,6 +129,14 @@ type Alert struct {
 	InformedEntity []*RTEntitySelector `json:"informed_entity,omitempty"`
 }
 
+// Search options for attributions
+type AttributionFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for an attribution with this GTFS attribution_id
+	AttributionID *string `json:"attribution_id,omitempty"`
+}
+
 // Search options for GTFS Flex booking rules
 type BookingRuleFilter struct {
 	// Restrict to specific ids
@@ -151,10 +159,20 @@ type BoundingBox struct {
 
 // Search options for calendar dates
 type CalendarDateFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
 	// Search for calendar date exceptions on this date
 	Date *tt.Date `json:"date,omitempty"`
 	// Search for calendar date exceptions with this GTFS exception_type [1=service added, 2=service removed]
 	ExceptionType *int `json:"exception_type,omitempty"`
+}
+
+// Search options for calendars
+type CalendarFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for a calendar with this GTFS service_id
+	ServiceID *string `json:"service_id,omitempty"`
 }
 
 // A named collection of geographic and/or statistical data from a single source.
@@ -662,6 +680,12 @@ type FocusPoint struct {
 	Lon float64 `json:"lon"`
 }
 
+// Search options for frequencies
+type FrequencyFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+}
+
 // Request parameters for querying nearby free-floating bikes/scooters.
 type GbfsBikeRequest struct {
 	// Search for vehicles within this radius of a point
@@ -780,6 +804,14 @@ type LegTrip struct {
 	Route *LegRoute `json:"route"`
 }
 
+// Search options for levels
+type LevelFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for a level with this GTFS level_id
+	LevelID *string `json:"level_id,omitempty"`
+}
+
 // Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`
 type LevelSetInput struct {
 	// Integer ID of the level to update; omit when creating a new level
@@ -826,6 +858,12 @@ type LocationGroupFilter struct {
 	Ids []int `json:"ids,omitempty"`
 	// Search for location groups with this location_group_id
 	LocationGroupID *string `json:"location_group_id,omitempty"`
+}
+
+// Search options for location group stops
+type LocationGroupStopFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
 }
 
 // Current user metadata
@@ -886,6 +924,10 @@ type OperatorFilter struct {
 
 // Search options for pathways
 type PathwayFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for a pathway with this GTFS pathway_id
+	PathwayID *string `json:"pathway_id,omitempty"`
 	// Search for pathways with this GTFS pathway_mode
 	PathwayMode *int `json:"pathway_mode,omitempty"`
 }
@@ -1329,6 +1371,12 @@ type Step struct {
 	GeometryOffset int `json:"geometry_offset"`
 }
 
+// Search options for stop areas
+type StopAreaFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+}
+
 // A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer
 type StopBuffer struct {
 	// Stop integer IDs to buffer around
@@ -1580,6 +1628,28 @@ type Tenant struct {
 	Groups []*Group `json:"groups"`
 	// Authorization permissions for this tenant
 	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Search options for transfers
+type TransferFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for transfers with this GTFS transfer_type
+	TransferType *int `json:"transfer_type,omitempty"`
+}
+
+// Search options for translations
+type TranslationFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for translations of fields in this file, without its `.txt` extension (e.g. `stops`)
+	TableName *string `json:"table_name,omitempty"`
+	// Search for translations of this field (e.g. `stop_name`)
+	FieldName *string `json:"field_name,omitempty"`
+	// Search for translations into this language
+	Language *string `json:"language,omitempty"`
+	// Search for translations of the record with this GTFS id
+	RecordID *string `json:"record_id,omitempty"`
 }
 
 // Search options for trips
