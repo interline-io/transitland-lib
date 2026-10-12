@@ -51,6 +51,7 @@ func (f *Finder) LevelsByParentStationIDs(ctx context.Context, limit *int, keys 
 	return arrangeGroup(keys, ents, func(ent *model.Level) int { return ent.ParentStation.Int() }), err
 }
 
+// LevelsByFeedVersionIDs returns the levels of each feed version.
 func (f *Finder) LevelsByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.LevelFilter, keys []int) ([][]*model.Level, error) {
 	var ents []*model.Level
 	q := lateralWrap(levelSelect(limit, after, nil, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_levels", "feed_version_id", keys)
@@ -93,6 +94,7 @@ func levelSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.P
 	return q.OrderBy("gtfs_levels.id ASC").Limit(finderCheckLimit(limit))
 }
 
+// PathwaysByFeedVersionIDs returns the pathways of each feed version.
 func (f *Finder) PathwaysByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.PathwayFilter, keys []int) ([][]*model.Pathway, error) {
 	var ents []*model.Pathway
 	q := lateralWrap(pathwaySelect(limit, after, nil, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_pathways", "feed_version_id", keys)

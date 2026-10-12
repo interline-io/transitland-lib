@@ -7,13 +7,6 @@ import (
 // This file contains parameters that can be passed to methods for finding/selecting/grouping entities
 // These are distinct from WHERE graphql input filters, which are available to users.
 
-// fareLoaderParam selects the fares entities (Fares v1 and v2) of a feed version.
-type fareLoaderParam struct {
-	FeedVersionID int
-	Limit         *int
-	After         *model.Cursor
-}
-
 type stopAreaLoaderParam struct {
 	AreaID int
 	Limit  *int
@@ -62,7 +55,6 @@ type pathwayLoaderParam struct {
 	FromStopID    int
 	ToStopID      int
 	Limit         *int
-	After         *model.Cursor
 	Where         *model.PathwayFilter
 }
 
@@ -147,12 +139,18 @@ type cursorGroup[W any] struct {
 	Where W
 }
 
+// feedVersionTableParam selects a page of a feed version's records from one
+// GTFS table, with a filter of type W.
+type feedVersionTableParam[W comparable] struct {
+	FeedVersionID int
+	Limit         *int
+	After         *model.Cursor
+	Where         W
+}
+
 type levelLoaderParam struct {
-	FeedVersionID   int
 	ParentStationID int
 	Limit           *int
-	After           *model.Cursor
-	Where           *model.LevelFilter
 }
 
 type feedLoaderParam struct {

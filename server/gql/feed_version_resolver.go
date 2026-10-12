@@ -33,11 +33,19 @@ func (r *feedVersionResolver) Trips(ctx context.Context, obj *model.FeedVersion,
 }
 
 func (r *feedVersionResolver) Pathways(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.PathwayFilter) ([]*model.Pathway, error) {
-	return LoaderFor(ctx).PathwaysByFeedVersionIDs.Load(ctx, pathwayLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_PATHWAY_MAXLIMIT), After: checkCursor(after), Where: where})()
+	return LoaderFor(ctx).PathwaysByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.PathwayFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
 }
 
 func (r *feedVersionResolver) Levels(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.LevelFilter) ([]*model.Level, error) {
-	return LoaderFor(ctx).LevelsByFeedVersionIDs.Load(ctx, levelLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_PATHWAY_MAXLIMIT), After: checkCursor(after), Where: where})()
+	return LoaderFor(ctx).LevelsByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.LevelFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
+}
+
+func (r *feedVersionResolver) Frequencies(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.FrequencyFilter) ([]*model.Frequency, error) {
+	return LoaderFor(ctx).FrequenciesByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.FrequencyFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
+}
+
+func (r *feedVersionResolver) Transfers(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.TransferFilter) ([]*model.Transfer, error) {
+	return LoaderFor(ctx).TransfersByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.TransferFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
 }
 
 func (r *feedVersionResolver) Feed(ctx context.Context, obj *model.FeedVersion) (*model.Feed, error) {
@@ -69,6 +77,14 @@ func (r *feedVersionResolver) FeedInfos(ctx context.Context, obj *model.FeedVers
 	return LoaderFor(ctx).FeedInfosByFeedVersionIDs.Load(ctx, feedInfoLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
 
+func (r *feedVersionResolver) Translations(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.TranslationFilter) ([]*model.Translation, error) {
+	return LoaderFor(ctx).TranslationsByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.TranslationFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
+}
+
+func (r *feedVersionResolver) Attributions(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.AttributionFilter) ([]*model.Attribution, error) {
+	return LoaderFor(ctx).AttributionsByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.AttributionFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
+}
+
 func (r *feedVersionResolver) Locations(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationFilter) ([]*model.Location, error) {
 	return LoaderFor(ctx).LocationsByFeedVersionIDs.Load(ctx, locationLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_LOCATION_MAXLIMIT), Where: where})()
 }
@@ -78,55 +94,63 @@ func (r *feedVersionResolver) BookingRules(ctx context.Context, obj *model.FeedV
 }
 
 func (r *feedVersionResolver) FareAttributes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareAttribute, error) {
-	return LoaderFor(ctx).FareAttributesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).FareAttributesByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) FareRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareRule, error) {
-	return LoaderFor(ctx).FareRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).FareRulesByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) FareMedia(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareMedia, error) {
-	return LoaderFor(ctx).FareMediaByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).FareMediaByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) FareProducts(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareProduct, error) {
-	return LoaderFor(ctx).FareProductsByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).FareProductsByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) FareLegRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareLegRule, error) {
-	return LoaderFor(ctx).FareLegRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).FareLegRulesByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) FareLegJoinRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareLegJoinRule, error) {
-	return LoaderFor(ctx).FareLegJoinRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).FareLegJoinRulesByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) FareTransferRules(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.FareTransferRule, error) {
-	return LoaderFor(ctx).FareTransferRulesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).FareTransferRulesByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) RiderCategories(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RiderCategory, error) {
-	return LoaderFor(ctx).RiderCategoriesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).RiderCategoriesByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) Timeframes(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Timeframe, error) {
-	return LoaderFor(ctx).TimeframesByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).TimeframesByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) Areas(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Area, error) {
-	return LoaderFor(ctx).AreasByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).AreasByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
+}
+
+func (r *feedVersionResolver) StopAreas(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.StopAreaFilter) ([]*model.StopArea, error) {
+	return LoaderFor(ctx).StopAreasByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.StopAreaFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
 }
 
 func (r *feedVersionResolver) Networks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.Network, error) {
-	return LoaderFor(ctx).NetworksByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).NetworksByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) RouteNetworks(ctx context.Context, obj *model.FeedVersion, limit *int, after *int) ([]*model.RouteNetwork, error) {
-	return LoaderFor(ctx).RouteNetworksByFeedVersionIDs.Load(ctx, fareLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_FARE_MAXLIMIT), After: checkCursor(after)})()
+	return LoaderFor(ctx).RouteNetworksByFeedVersionIDs.Load(ctx, feedVersionTableParam[bool]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after)})()
 }
 
 func (r *feedVersionResolver) LocationGroups(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.LocationGroupFilter) ([]*model.LocationGroup, error) {
 	return LoaderFor(ctx).LocationGroupsByFeedVersionIDs.Load(ctx, locationGroupLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
+}
+
+func (r *feedVersionResolver) LocationGroupStops(ctx context.Context, obj *model.FeedVersion, limit *int, after *int, where *model.LocationGroupStopFilter) ([]*model.LocationGroupStop, error) {
+	return LoaderFor(ctx).LocationGroupStopsByFeedVersionIDs.Load(ctx, feedVersionTableParam[*model.LocationGroupStopFilter]{FeedVersionID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT), After: checkCursor(after), Where: where})()
 }
 
 // FEED VALIDATION REPORT

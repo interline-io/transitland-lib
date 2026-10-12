@@ -1,8 +1,11 @@
 package gql
 
 import (
+	"fmt"
+	"slices"
 	"testing"
 
+	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -793,4 +796,51 @@ func TestFeedVersionResolver_License(t *testing.T) {
 	}
 	c, _ := newTestClient(t)
 	queryTestcases(t, c, testcases)
+}
+
+// TestFeedVersionResolver_TableCursors pages through each GTFS table list with
+// `after`, and selects records from it with `where: {ids}`.
+func TestFeedVersionResolver_TableCursors(t *testing.T) {
+	c, _ := newTestClient(t)
+	ctSha1 := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
+	tcs := []struct {
+		field string
+		sha1  string
+	}{
+		{"frequencies", "43e2278aa272879c79460582152b04e7487f0493"},
+		{"transfers", "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+		{"location_group_stops", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"},
+		{"stop_areas", ctSha1},
+		{"translations", ctSha1},
+		{"attributions", ctSha1},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.field, func(t *testing.T) {
+			q := fmt.Sprintf(`query($sha1: String!, $after: Int, $ids: [Int!]) { feed_versions(where: {sha1: $sha1}) { %s(limit: 100000, after: $after, where: {ids: $ids}) { id } } }`, tc.field)
+			queryIDs := func(vars hw) []int64 {
+				var resp map[string]any
+				opts := []client.Option{}
+				for k, v := range vars {
+					opts = append(opts, client.Var(k, v))
+				}
+				if err := c.Post(q, &resp, opts...); err != nil {
+					t.Fatal(err)
+				}
+				var ids []int64
+				for _, v := range gjson.Get(toJson(resp), fmt.Sprintf("feed_versions.0.%s.#.id", tc.field)).Array() {
+					ids = append(ids, v.Int())
+				}
+				return ids
+			}
+			ids := queryIDs(hw{"sha1": tc.sha1})
+			if len(ids) < 3 {
+				t.Fatalf("got %d records, need at least 3", len(ids))
+			}
+			// Paging with after relies on ascending ids.
+			assert.True(t, slices.IsSorted(ids), "ids are not in ascending order: %v", ids)
+			assert.Equal(t, ids[1:], queryIDs(hw{"sha1": tc.sha1, "after": ids[0]}))
+			assert.Equal(t, []int64{ids[0], ids[2]}, queryIDs(hw{"sha1": tc.sha1, "ids": []int64{ids[2], ids[0]}}))
+			assert.Equal(t, []int64{ids[2]}, queryIDs(hw{"sha1": tc.sha1, "after": ids[0], "ids": []int64{ids[0], ids[2]}}))
+		})
+	}
 }

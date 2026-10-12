@@ -8,6 +8,10 @@ import (
 
 type locationGroupStopResolver struct{ *Resolver }
 
+func (r *locationGroupStopResolver) FeedVersion(ctx context.Context, obj *model.LocationGroupStop) (*model.FeedVersion, error) {
+	return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
+}
+
 func (r *locationGroupStopResolver) LocationGroup(ctx context.Context, obj *model.LocationGroupStop) (*model.LocationGroup, error) {
 	return LoaderFor(ctx).LocationGroupsByIDs.Load(ctx, obj.LocationGroupID.Int())()
 }
