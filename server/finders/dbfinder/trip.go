@@ -63,7 +63,7 @@ func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []in
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			quickSelect("gtfs_frequencies", limit, nil, nil),
+			frequencySelect(limit, nil, f.PermFilter(ctx), nil),
 			"gtfs_trips",
 			"id",
 			"gtfs_frequencies",
@@ -73,6 +73,41 @@ func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []in
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.TripID.Int() }), err
+}
+
+// FrequenciesByFeedVersionIDs returns the frequencies of each feed version.
+func (f *Finder) FrequenciesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, where *model.FrequencyFilter, keys []int) ([][]*model.Frequency, error) {
+	var ents []*model.Frequency
+	q := lateralWrap(frequencySelect(limit, after, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_frequencies", "feed_version_id", keys)
+	err := dbutil.Select(ctx, f.db, q, &ents)
+	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.FeedVersionID }), err
+}
+
+func frequencySelect(limit *int, after *model.Cursor, permFilter *model.PermFilter, where *model.FrequencyFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.Select(
+		"gtfs_frequencies.id",
+		"gtfs_frequencies.feed_version_id",
+		"gtfs_frequencies.trip_id",
+		"gtfs_frequencies.start_time",
+		"gtfs_frequencies.end_time",
+		"gtfs_frequencies.headway_secs",
+		"gtfs_frequencies.exact_times",
+		"feed_versions.sha1 AS feed_version_sha1",
+		"current_feeds.onestop_id AS feed_onestop_id",
+	).From("gtfs_frequencies").
+		Join("feed_versions ON feed_versions.id = gtfs_frequencies.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	if after != nil && after.Valid && after.ID > 0 {
+		q = q.Where(sq.Gt{"gtfs_frequencies.id": after.ID})
+	}
+	if where != nil {
+		if len(where.Ids) > 0 {
+			q = q.Where(In("gtfs_frequencies.id", where.Ids))
+		}
+	}
+	q = joinImported(q)
+	q = pfJoinCheckFv(q, permFilter)
+	return q.OrderBy("gtfs_frequencies.id ASC").Limit(finderCheckLimit(limit))
 }
 
 // Replaces a date outside the feed version's service window with the same

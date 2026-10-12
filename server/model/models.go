@@ -179,7 +179,16 @@ type Stop struct {
 }
 
 type Frequency struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
 	gtfs.Frequency
+}
+
+// Transfer is a transfers.txt record.
+type Transfer struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Transfer
 }
 
 type CalendarDate struct {
@@ -200,6 +209,26 @@ type Level struct {
 
 type FeedInfo struct {
 	gtfs.FeedInfo
+}
+
+// Translation is a translations.txt record.
+type Translation struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Translation
+}
+
+// TranslationValue returns the translations.translation column, which the
+// embedded gtfs.Translation shadows.
+func (t *Translation) TranslationValue() tt.String {
+	return t.Translation.Translation
+}
+
+// Attribution is an attributions.txt record.
+type Attribution struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
+	gtfs.Attribution
 }
 
 type Pathway struct {
@@ -325,6 +354,8 @@ type LocationGroup struct {
 }
 
 type LocationGroupStop struct {
+	FeedOnestopID   string
+	FeedVersionSHA1 string
 	gtfs.LocationGroupStop
 }
 

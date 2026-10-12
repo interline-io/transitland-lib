@@ -133,6 +133,15 @@ models:
         fieldName: FeedID
       permissions:
         resolver: true
+  # gtfs.Translation names its table_name column TableNameValue, since TableName
+  # is an entity interface method, and model.Translation exposes the translation
+  # column, which the embedded gtfs.Translation shadows, as TranslationValue.
+  Translation:
+    fields:
+      table_name:
+        fieldName: TableNameValue
+      translation:
+        fieldName: TranslationValue
   FeedVersion:
     fields:
       permissions:

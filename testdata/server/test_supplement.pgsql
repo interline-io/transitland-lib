@@ -151,6 +151,41 @@ insert into gtfs_fare_leg_join_rules(feed_version_id, from_network_id, to_networ
     select ct_fv.id, local_net, express_net, stop_70261, stop_70262 from ct_fv, ct_ref;
 
 drop table ct_ref;
+
+-- GTFS translations, attributions and transfers for CT. No test feed includes
+-- translations or attributions, or transfers between routes or trips, so add a
+-- small synthetic set to the active CT feed version. As the importer does,
+-- attribution and transfer references hold the referenced row's internal id; a
+-- translation's record_id holds the GTFS id.
+insert into gtfs_translations(feed_version_id, table_name, field_name, language, translation, record_id, record_sub_id, field_value)
+    select id, 'stops', 'stop_name', 'es', 'Estación Caltrain de San Francisco', '70011', null, null from ct_fv
+    union all select id, 'stops', 'stop_name', 'fr', 'Gare Caltrain de San Francisco', '70011', null, null from ct_fv
+    union all select id, 'stops', 'stop_name', 'es', 'Estación Caltrain de San José Diridon', null, null, 'San Jose Diridon Caltrain' from ct_fv
+    union all select id, 'routes', 'route_long_name', 'es', 'Servicio local', 'Lo-130', null, null from ct_fv;
+
+create temporary table ct_ref as
+    select
+        (select a.id from gtfs_agencies a join ct_fv on ct_fv.id = a.feed_version_id where a.agency_id = 'caltrain-ca-us') as agency,
+        (select r.id from gtfs_routes r join ct_fv on ct_fv.id = r.feed_version_id where r.route_id = 'Lo-130') as route_lo130,
+        (select r.id from gtfs_routes r join ct_fv on ct_fv.id = r.feed_version_id where r.route_id = 'Bu-130') as route_bu130,
+        (select t.id from gtfs_trips t join ct_fv on ct_fv.id = t.feed_version_id where t.trip_id = '101') as trip_101,
+        (select t.id from gtfs_trips t join ct_fv on ct_fv.id = t.feed_version_id where t.trip_id = '102') as trip_102,
+        (select s.id from gtfs_stops s join ct_fv on ct_fv.id = s.feed_version_id where s.stop_id = '70011') as stop_70011,
+        (select s.id from gtfs_stops s join ct_fv on ct_fv.id = s.feed_version_id where s.stop_id = '70012') as stop_70012;
+
+insert into gtfs_attributions(feed_version_id, attribution_id, organization_name, agency_id, route_id, trip_id, is_producer, is_operator, is_authority, attribution_url, attribution_email, attribution_phone)
+    select ct_fv.id, 'producer', 'Example Data Producer', null::bigint, null::bigint, null::bigint, 1, 0, 0, 'https://example.com/gtfs', 'gtfs@example.com', null from ct_fv
+    union all select ct_fv.id, 'operator', 'Caltrain', agency, null, null, 0, 1, 0, null, null, '555-0100' from ct_fv, ct_ref
+    union all select ct_fv.id, 'authority', 'Example Transit Authority', null, route_bu130, null, 0, 0, 1, 'https://example.com/authority', null, null from ct_fv, ct_ref
+    union all select ct_fv.id, 'trip_operator', 'Caltrain', null, null, trip_101, 0, 1, 0, null, null, null from ct_fv, ct_ref;
+
+-- A timed transfer from the local to the Baby Bullet at San Francisco, and an
+-- in-seat transfer where trip 101 continues as trip 102.
+insert into gtfs_transfers(feed_version_id, from_stop_id, to_stop_id, from_route_id, to_route_id, from_trip_id, to_trip_id, transfer_type, min_transfer_time)
+    select ct_fv.id, stop_70011, stop_70012, route_lo130, route_bu130, null::bigint, null::bigint, 1, null::int from ct_fv, ct_ref
+    union all select ct_fv.id, null, null, null, null, trip_101, trip_102, 4, null from ct_fv, ct_ref;
+
+drop table ct_ref;
 drop table ct_fv;
 
 -- unactivate feed

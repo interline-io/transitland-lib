@@ -119,6 +119,10 @@ func (r *tripResolver) Alerts(ctx context.Context, obj *model.Trip, active *bool
 
 type frequencyResolver struct{ *Resolver }
 
+func (r *frequencyResolver) FeedVersion(ctx context.Context, obj *model.Frequency) (*model.FeedVersion, error) {
+	return LoaderFor(ctx).FeedVersionsByIDs.Load(ctx, obj.FeedVersionID)()
+}
+
 func (r *frequencyResolver) Trip(ctx context.Context, obj *model.Frequency) (*model.Trip, error) {
 	return LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
 }

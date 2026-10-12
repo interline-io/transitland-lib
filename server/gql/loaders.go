@@ -29,6 +29,7 @@ type Loaders struct {
 	AgenciesByIDs                                                 *dataloader.Loader[int, *model.Agency]
 	AgenciesByOnestopIDs                                          *dataloader.Loader[agencyLoaderParam, []*model.Agency]
 	AgencyPlacesByAgencyIDs                                       *dataloader.Loader[agencyPlaceLoaderParam, []*model.AgencyPlace]
+	AttributionsByFeedVersionIDs                                  *dataloader.Loader[feedVersionTableParam[*model.AttributionFilter], []*model.Attribution]
 	BookingRulesByFeedVersionIDs                                  *dataloader.Loader[bookingRuleLoaderParam, []*model.BookingRule]
 	BookingRulesByIDs                                             *dataloader.Loader[int, *model.BookingRule]
 	CalendarDatesByServiceIDs                                     *dataloader.Loader[calendarDateLoaderParam, []*model.CalendarDate]
@@ -47,29 +48,30 @@ type Loaders struct {
 	CensusLayersByIDs                                             *dataloader.Loader[int, *model.CensusLayer]
 	CensusTableByIDs                                              *dataloader.Loader[int, *model.CensusTable]
 	CensusValuesByGeographyIDs                                    *dataloader.Loader[censusValueLoaderParam, []*model.CensusValue]
-	FareAttributesByFeedVersionIDs                                *dataloader.Loader[fareLoaderParam, []*model.FareAttribute]
+	FareAttributesByFeedVersionIDs                                *dataloader.Loader[feedVersionTableParam[bool], []*model.FareAttribute]
 	FareAttributesByIDs                                           *dataloader.Loader[int, *model.FareAttribute]
-	FareRulesByFeedVersionIDs                                     *dataloader.Loader[fareLoaderParam, []*model.FareRule]
-	FareMediaByFeedVersionIDs                                     *dataloader.Loader[fareLoaderParam, []*model.FareMedia]
+	FareRulesByFeedVersionIDs                                     *dataloader.Loader[feedVersionTableParam[bool], []*model.FareRule]
+	FareMediaByFeedVersionIDs                                     *dataloader.Loader[feedVersionTableParam[bool], []*model.FareMedia]
 	FareMediaByIDs                                                *dataloader.Loader[int, *model.FareMedia]
-	FareProductsByFeedVersionIDs                                  *dataloader.Loader[fareLoaderParam, []*model.FareProduct]
+	FareProductsByFeedVersionIDs                                  *dataloader.Loader[feedVersionTableParam[bool], []*model.FareProduct]
 	FareProductsByFeedVersionFareProductIDs                       *dataloader.Loader[model.FVEntityID, []*model.FareProduct]
-	FareLegRulesByFeedVersionIDs                                  *dataloader.Loader[fareLoaderParam, []*model.FareLegRule]
+	FareLegRulesByFeedVersionIDs                                  *dataloader.Loader[feedVersionTableParam[bool], []*model.FareLegRule]
 	FareLegRulesByFeedVersionLegGroupIDs                          *dataloader.Loader[model.FVEntityID, []*model.FareLegRule]
-	FareLegJoinRulesByFeedVersionIDs                              *dataloader.Loader[fareLoaderParam, []*model.FareLegJoinRule]
-	FareTransferRulesByFeedVersionIDs                             *dataloader.Loader[fareLoaderParam, []*model.FareTransferRule]
-	RiderCategoriesByFeedVersionIDs                               *dataloader.Loader[fareLoaderParam, []*model.RiderCategory]
+	FareLegJoinRulesByFeedVersionIDs                              *dataloader.Loader[feedVersionTableParam[bool], []*model.FareLegJoinRule]
+	FareTransferRulesByFeedVersionIDs                             *dataloader.Loader[feedVersionTableParam[bool], []*model.FareTransferRule]
+	RiderCategoriesByFeedVersionIDs                               *dataloader.Loader[feedVersionTableParam[bool], []*model.RiderCategory]
 	RiderCategoriesByFeedVersionRiderCategoryIDs                  *dataloader.Loader[model.FVEntityID, *model.RiderCategory]
-	TimeframesByFeedVersionIDs                                    *dataloader.Loader[fareLoaderParam, []*model.Timeframe]
+	TimeframesByFeedVersionIDs                                    *dataloader.Loader[feedVersionTableParam[bool], []*model.Timeframe]
 	TimeframesByFeedVersionTimeframeGroupIDs                      *dataloader.Loader[model.FVEntityID, []*model.Timeframe]
-	AreasByFeedVersionIDs                                         *dataloader.Loader[fareLoaderParam, []*model.Area]
+	AreasByFeedVersionIDs                                         *dataloader.Loader[feedVersionTableParam[bool], []*model.Area]
 	AreasByIDs                                                    *dataloader.Loader[int, *model.Area]
 	AreasByStopIDs                                                *dataloader.Loader[areaLoaderParam, []*model.Area]
-	NetworksByFeedVersionIDs                                      *dataloader.Loader[fareLoaderParam, []*model.Network]
+	NetworksByFeedVersionIDs                                      *dataloader.Loader[feedVersionTableParam[bool], []*model.Network]
 	NetworksByIDs                                                 *dataloader.Loader[int, *model.Network]
 	NetworksByRouteIDs                                            *dataloader.Loader[networkLoaderParam, []*model.Network]
-	RouteNetworksByFeedVersionIDs                                 *dataloader.Loader[fareLoaderParam, []*model.RouteNetwork]
+	RouteNetworksByFeedVersionIDs                                 *dataloader.Loader[feedVersionTableParam[bool], []*model.RouteNetwork]
 	StopAreasByAreaIDs                                            *dataloader.Loader[stopAreaLoaderParam, []*model.StopArea]
+	StopAreasByFeedVersionIDs                                     *dataloader.Loader[feedVersionTableParam[*model.StopAreaFilter], []*model.StopArea]
 	FeedFetchesByFeedIDs                                          *dataloader.Loader[feedFetchLoaderParam, []*model.FeedFetch]
 	FeedInfosByFeedVersionIDs                                     *dataloader.Loader[feedInfoLoaderParam, []*model.FeedInfo]
 	FeedsByIDs                                                    *dataloader.Loader[int, *model.Feed]
@@ -86,20 +88,22 @@ type Loaders struct {
 	FlexStopTimesByStopIDs                                        *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
 	FlexStopTimesByLocationIDs                                    *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
 	FlexStopTimesByLocationGroupIDs                               *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
+	FrequenciesByFeedVersionIDs                                   *dataloader.Loader[feedVersionTableParam[*model.FrequencyFilter], []*model.Frequency]
 	FrequenciesByTripIDs                                          *dataloader.Loader[frequencyLoaderParam, []*model.Frequency]
-	LevelsByFeedVersionIDs                                        *dataloader.Loader[levelLoaderParam, []*model.Level]
+	LevelsByFeedVersionIDs                                        *dataloader.Loader[feedVersionTableParam[*model.LevelFilter], []*model.Level]
 	LevelsByIDs                                                   *dataloader.Loader[int, *model.Level]
 	LevelsByParentStationIDs                                      *dataloader.Loader[levelLoaderParam, []*model.Level]
 	LocationGroupsByFeedVersionIDs                                *dataloader.Loader[locationGroupLoaderParam, []*model.LocationGroup]
 	LocationGroupsByIDs                                           *dataloader.Loader[int, *model.LocationGroup]
 	LocationGroupsByStopIDs                                       *dataloader.Loader[locationGroupsByStopLoaderParam, []*model.LocationGroup]
+	LocationGroupStopsByFeedVersionIDs                            *dataloader.Loader[feedVersionTableParam[*model.LocationGroupStopFilter], []*model.LocationGroupStop]
 	StopsByLocationGroupIDs                                       *dataloader.Loader[stopsByLocationGroupLoaderParam, []*model.Stop]
 	LocationsByFeedVersionIDs                                     *dataloader.Loader[locationLoaderParam, []*model.Location]
 	LocationsByIDs                                                *dataloader.Loader[int, *model.Location]
 	OperatorsByAgencyIDs                                          *dataloader.Loader[int, []*model.Operator]
 	OperatorsByCOIFs                                              *dataloader.Loader[int, *model.Operator]
 	OperatorsByFeedIDs                                            *dataloader.Loader[operatorLoaderParam, []*model.Operator]
-	PathwaysByFeedVersionIDs                                      *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]
+	PathwaysByFeedVersionIDs                                      *dataloader.Loader[feedVersionTableParam[*model.PathwayFilter], []*model.Pathway]
 	PathwaysByFromStopIDs                                         *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]
 	PathwaysByIDs                                                 *dataloader.Loader[int, *model.Pathway]
 	PathwaysByToStopID                                            *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]
@@ -133,6 +137,8 @@ type Loaders struct {
 	StopTimesByStopIDs                                            *dataloader.Loader[stopTimeLoaderParam, []*model.StopTime]
 	StopTimesByTripIDs                                            *dataloader.Loader[tripStopTimeLoaderParam, []*model.StopTime]
 	TargetStopsByStopIDs                                          *dataloader.Loader[int, *model.Stop]
+	TransfersByFeedVersionIDs                                     *dataloader.Loader[feedVersionTableParam[*model.TransferFilter], []*model.Transfer]
+	TranslationsByFeedVersionIDs                                  *dataloader.Loader[feedVersionTableParam[*model.TranslationFilter], []*model.Translation]
 	TripsByFeedVersionIDs                                         *dataloader.Loader[tripLoaderParam, []*model.Trip]
 	TripsByFeedVersionTripIDs                                     *dataloader.Loader[model.FVEntityID, *model.Trip]
 	TripsByIDs                                                    *dataloader.Loader[int, *model.Trip]
@@ -155,9 +161,6 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		stopTimeBatchSize = maxBatch
 	}
 
-	fareParamKey := func(p fareLoaderParam) (int, *model.Cursor, *int) {
-		return p.FeedVersionID, p.After, p.Limit
-	}
 	loaders := &Loaders{
 		AgenciesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.AgenciesByFeedVersionIDs,
 			func(p agencyLoaderParam) (int, *model.AgencyFilter, *int) {
@@ -179,6 +182,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.AgencyID, p.Where, p.Limit
 			},
 		),
+		AttributionsByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, dbf.AttributionsByFeedVersionIDs),
 		BookingRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.BookingRulesByFeedVersionIDs,
 			func(p bookingRuleLoaderParam) (int, *model.BookingRuleFilter, *int) {
@@ -263,80 +267,45 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		// GTFS Fares v1 and v2
-		FareAttributesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.FareAttributesByFeedVersionIDs,
-			fareParamKey,
-		),
-		FareAttributesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareAttributesByIDs),
-		FareRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.FareRulesByFeedVersionIDs,
-			fareParamKey,
-		),
-		FareMediaByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.FareMediaByFeedVersionIDs,
-			fareParamKey,
-		),
-		FareMediaByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareMediaByIDs),
-		FareProductsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.FareProductsByFeedVersionIDs,
-			fareParamKey,
-		),
-		FareProductsByFeedVersionFareProductIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareProductsByFeedVersionFareProductIDs),
-		FareLegRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.FareLegRulesByFeedVersionIDs,
-			fareParamKey,
-		),
-		FareLegRulesByFeedVersionLegGroupIDs: withWaitAndCapacity(waitTime, batchSize, dbf.FareLegRulesByFeedVersionLegGroupIDs),
-		FareLegJoinRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.FareLegJoinRulesByFeedVersionIDs,
-			fareParamKey,
-		),
-		FareTransferRulesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.FareTransferRulesByFeedVersionIDs,
-			fareParamKey,
-		),
-		RiderCategoriesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.RiderCategoriesByFeedVersionIDs,
-			fareParamKey,
-		),
+		FareAttributesByFeedVersionIDs:               withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.FareAttributesByFeedVersionIDs)),
+		FareAttributesByIDs:                          withWaitAndCapacity(waitTime, batchSize, dbf.FareAttributesByIDs),
+		FareRulesByFeedVersionIDs:                    withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.FareRulesByFeedVersionIDs)),
+		FareMediaByFeedVersionIDs:                    withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.FareMediaByFeedVersionIDs)),
+		FareMediaByIDs:                               withWaitAndCapacity(waitTime, batchSize, dbf.FareMediaByIDs),
+		FareProductsByFeedVersionIDs:                 withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.FareProductsByFeedVersionIDs)),
+		FareProductsByFeedVersionFareProductIDs:      withWaitAndCapacity(waitTime, batchSize, dbf.FareProductsByFeedVersionFareProductIDs),
+		FareLegRulesByFeedVersionIDs:                 withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.FareLegRulesByFeedVersionIDs)),
+		FareLegRulesByFeedVersionLegGroupIDs:         withWaitAndCapacity(waitTime, batchSize, dbf.FareLegRulesByFeedVersionLegGroupIDs),
+		FareLegJoinRulesByFeedVersionIDs:             withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.FareLegJoinRulesByFeedVersionIDs)),
+		FareTransferRulesByFeedVersionIDs:            withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.FareTransferRulesByFeedVersionIDs)),
+		RiderCategoriesByFeedVersionIDs:              withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.RiderCategoriesByFeedVersionIDs)),
 		RiderCategoriesByFeedVersionRiderCategoryIDs: withWaitAndCapacity(waitTime, batchSize, dbf.RiderCategoriesByFeedVersionRiderCategoryIDs),
-		TimeframesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.TimeframesByFeedVersionIDs,
-			fareParamKey,
-		),
-		TimeframesByFeedVersionTimeframeGroupIDs: withWaitAndCapacity(waitTime, batchSize, dbf.TimeframesByFeedVersionTimeframeGroupIDs),
-		AreasByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.AreasByFeedVersionIDs,
-			fareParamKey,
-		),
-		AreasByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.AreasByIDs),
+		TimeframesByFeedVersionIDs:                   withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.TimeframesByFeedVersionIDs)),
+		TimeframesByFeedVersionTimeframeGroupIDs:     withWaitAndCapacity(waitTime, batchSize, dbf.TimeframesByFeedVersionTimeframeGroupIDs),
+		AreasByFeedVersionIDs:                        withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.AreasByFeedVersionIDs)),
+		AreasByIDs:                                   withWaitAndCapacity(waitTime, batchSize, dbf.AreasByIDs),
 		AreasByStopIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.AreasByStopIDs),
 			func(p areaLoaderParam) (int, bool, *int) {
 				return p.StopID, false, p.Limit
 			},
 		),
-		NetworksByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.NetworksByFeedVersionIDs,
-			fareParamKey,
-		),
-		NetworksByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.NetworksByIDs),
+		NetworksByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.NetworksByFeedVersionIDs)),
+		NetworksByIDs:            withWaitAndCapacity(waitTime, batchSize, dbf.NetworksByIDs),
 		NetworksByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.NetworksByRouteIDs),
 			func(p networkLoaderParam) (int, bool, *int) {
 				return p.RouteID, false, p.Limit
 			},
 		),
-		RouteNetworksByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			dbf.RouteNetworksByFeedVersionIDs,
-			fareParamKey,
-		),
+		RouteNetworksByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, cursorOnlyAdapter(dbf.RouteNetworksByFeedVersionIDs)),
 		StopAreasByAreaIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			dbf.StopAreasByAreaIDs,
 			func(p stopAreaLoaderParam) (int, *model.Cursor, *int) {
 				return p.AreaID, p.After, p.Limit
 			},
 		),
+		StopAreasByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, dbf.StopAreasByFeedVersionIDs),
 		FeedFetchesByFeedIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.FeedFetchesByFeedIDs,
 			func(p feedFetchLoaderParam) (int, *model.FeedFetchFilter, *int) {
 				return p.FeedID, p.Where, p.Limit
@@ -396,6 +365,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.LocationGroupID}, p.Where, p.Limit
 			},
 		),
+		FrequenciesByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, dbf.FrequenciesByFeedVersionIDs),
 		FrequenciesByTripIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.FrequenciesByTripIDs),
 			func(p frequencyLoaderParam) (int, bool, *int) {
@@ -403,13 +373,8 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 
-		LevelsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			cursorGroupAdapter(dbf.LevelsByFeedVersionIDs),
-			func(p levelLoaderParam) (int, cursorGroup[*model.LevelFilter], *int) {
-				return p.FeedVersionID, cursorGroup[*model.LevelFilter]{After: p.After, Where: p.Where}, p.Limit
-			},
-		),
-		LevelsByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.LevelsByIDs),
+		LevelsByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, dbf.LevelsByFeedVersionIDs),
+		LevelsByIDs:            withWaitAndCapacity(waitTime, batchSize, dbf.LevelsByIDs),
 		LevelsByParentStationIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.LevelsByParentStationIDs),
 			func(p levelLoaderParam) (int, bool, *int) {
@@ -429,6 +394,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.StopID, false, p.Limit
 			},
 		),
+		LocationGroupStopsByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, dbf.LocationGroupStopsByFeedVersionIDs),
 		StopsByLocationGroupIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			paramGroupAdapter(dbf.StopsByLocationGroupIDs),
 			func(p stopsByLocationGroupLoaderParam) (int, bool, *int) {
@@ -449,13 +415,8 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return p.FeedID, p.Where, p.Limit
 			},
 		),
-		PathwaysByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			cursorGroupAdapter(dbf.PathwaysByFeedVersionIDs),
-			func(p pathwayLoaderParam) (int, cursorGroup[*model.PathwayFilter], *int) {
-				return p.FeedVersionID, cursorGroup[*model.PathwayFilter]{After: p.After, Where: p.Where}, p.Limit
-			},
-		),
-		PathwaysByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.PathwaysByIDs),
+		PathwaysByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, dbf.PathwaysByFeedVersionIDs),
+		PathwaysByIDs:            withWaitAndCapacity(waitTime, batchSize, dbf.PathwaysByIDs),
 		PathwaysByFromStopIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.PathwaysByFromStopIDs,
 			func(p pathwayLoaderParam) (int, *model.PathwayFilter, *int) {
 				return p.FromStopID, p.Where, p.Limit
@@ -576,7 +537,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.TripID}, p.Where, p.Limit
 			},
 		),
-		TargetStopsByStopIDs: withWaitAndCapacity(waitTime, batchSize, dbf.TargetStopsByStopIDs),
+		TargetStopsByStopIDs:         withWaitAndCapacity(waitTime, batchSize, dbf.TargetStopsByStopIDs),
+		TransfersByFeedVersionIDs:    withFeedVersionTable(waitTime, batchSize, dbf.TransfersByFeedVersionIDs),
+		TranslationsByFeedVersionIDs: withFeedVersionTable(waitTime, batchSize, dbf.TranslationsByFeedVersionIDs),
 		TripsByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.TripsByFeedVersionIDs,
 			func(p tripLoaderParam) (int, *model.TripFilter, *int) {
 				return p.FeedVersionID, p.Where, p.Limit
@@ -731,6 +694,29 @@ func cursorGroupAdapter[
 	return func(ctx context.Context, limit *int, group cursorGroup[W], keys []K) ([][]T, error) {
 		return inner(ctx, limit, group.After, group.Where, keys)
 	}
+}
+
+// cursorOnlyAdapter adapts a finder that takes an after cursor but no filter to
+// withFeedVersionTable, using bool for the unused filter as paramGroupAdapter does.
+func cursorOnlyAdapter[T any](inner func(context.Context, *int, *model.Cursor, []int) ([][]T, error)) func(context.Context, *int, *model.Cursor, bool, []int) ([][]T, error) {
+	return func(ctx context.Context, limit *int, after *model.Cursor, _ bool, keys []int) ([][]T, error) {
+		return inner(ctx, limit, after, keys)
+	}
+}
+
+// withFeedVersionTable batches a finder that pages a feed version's records from
+// one GTFS table, grouping requests that share a cursor and a filter.
+func withFeedVersionTable[T any, W comparable](
+	d time.Duration,
+	size int,
+	queryFunc func(context.Context, *int, *model.Cursor, W, []int) ([][]T, error),
+) *dataloader.Loader[feedVersionTableParam[W], []T] {
+	return withWaitAndCapacityGroup(d, size,
+		cursorGroupAdapter(queryFunc),
+		func(p feedVersionTableParam[W]) (int, cursorGroup[W], *int) {
+			return p.FeedVersionID, cursorGroup[W]{After: p.After, Where: p.Where}, p.Limit
+		},
+	)
 }
 
 func paramGroupQuery[

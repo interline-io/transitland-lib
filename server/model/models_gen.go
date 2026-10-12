@@ -129,6 +129,14 @@ type Alert struct {
 	InformedEntity []*RTEntitySelector `json:"informed_entity,omitempty"`
 }
 
+// Search options for attributions
+type AttributionFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for an attribution with this GTFS attribution_id
+	AttributionID *string `json:"attribution_id,omitempty"`
+}
+
 // Search options for GTFS Flex booking rules
 type BookingRuleFilter struct {
 	// Restrict to specific ids
@@ -662,6 +670,12 @@ type FocusPoint struct {
 	Lon float64 `json:"lon"`
 }
 
+// Search options for frequencies
+type FrequencyFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+}
+
 // Request parameters for querying nearby free-floating bikes/scooters.
 type GbfsBikeRequest struct {
 	// Search for vehicles within this radius of a point
@@ -834,6 +848,12 @@ type LocationGroupFilter struct {
 	Ids []int `json:"ids,omitempty"`
 	// Search for location groups with this location_group_id
 	LocationGroupID *string `json:"location_group_id,omitempty"`
+}
+
+// Search options for location group stops
+type LocationGroupStopFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
 }
 
 // Current user metadata
@@ -1341,6 +1361,12 @@ type Step struct {
 	GeometryOffset int `json:"geometry_offset"`
 }
 
+// Search options for stop areas
+type StopAreaFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+}
+
 // A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer
 type StopBuffer struct {
 	// Stop integer IDs to buffer around
@@ -1592,6 +1618,28 @@ type Tenant struct {
 	Groups []*Group `json:"groups"`
 	// Authorization permissions for this tenant
 	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Search options for transfers
+type TransferFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for transfers with this GTFS transfer_type
+	TransferType *int `json:"transfer_type,omitempty"`
+}
+
+// Search options for translations
+type TranslationFilter struct {
+	// Restrict to specific ids
+	Ids []int `json:"ids,omitempty"`
+	// Search for translations of fields in this file, without its `.txt` extension (e.g. `stops`)
+	TableName *string `json:"table_name,omitempty"`
+	// Search for translations of this field (e.g. `stop_name`)
+	FieldName *string `json:"field_name,omitempty"`
+	// Search for translations into this language, ignoring case
+	Language *string `json:"language,omitempty"`
+	// Search for translations with this `record_id`; this excludes translations that select values by `field_value`
+	RecordID *string `json:"record_id,omitempty"`
 }
 
 // Search options for trips
