@@ -18,7 +18,7 @@ type legOption struct {
 	product      *gtfs.FareProduct
 	amount       decimal.Decimal // the product row's amount
 	fareMediaID  string          // the product row's fare medium, empty when it names none
-	transferOnly bool            // the rule prices the fare leg only through a transfer into it
+	transferOnly bool            // the rule prices the fare leg only when a transfer reaches the leg
 }
 
 // transferOption is a transfer rule that applies to a transfer, with the product row the
@@ -132,7 +132,7 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 	}
 	search(partial{})
 	if best == nil {
-		// Some fare leg has only transfer_only rules, and no transfer reaches it.
+		// Some fare leg matches only transfer_only rules, and no transfer reaches that leg.
 		return nil, nil
 	}
 	fare := &Fare{Amount: best.amount, Currency: best.fareLegs[0].Product.Currency.Val}

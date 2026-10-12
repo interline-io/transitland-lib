@@ -69,7 +69,7 @@ type FareLeg struct {
 // Coster calculates fares for journeys on one feed.
 type Coster struct {
 	// UseTransferOnly honors the proposed transfer_only extension: a fare leg rule with
-	// transfer_only=1 prices a fare leg only through a transfer into it.
+	// transfer_only=1 prices a fare leg only when a transfer reaches the leg.
 	UseTransferOnly bool
 	// UseFilterFareProductID honors the proposed filter_fare_product_id extension: a transfer
 	// rule with a filter applies only to riders who hold the filter's fare product.
