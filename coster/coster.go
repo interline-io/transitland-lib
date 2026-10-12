@@ -2,9 +2,9 @@
 //
 // It follows the adopted specification, including effective fare legs from
 // fare_leg_join_rules.txt, rule_priority, timeframes, and chained transfers. It ignores
-// extensions outside the adopted spec, such as transfer_only, except for two: fare products
-// with the draft duration fields are passes, which never price a trip, and a Coster can
-// honor filter_fare_product_id. It is based on an earlier internal implementation.
+// extensions outside the adopted spec unless a Coster flag turns one on: transfer_only,
+// filter_fare_product_id, or the draft fare product duration fields. It is based on an
+// earlier internal implementation.
 package coster
 
 import (
@@ -68,9 +68,19 @@ type FareLeg struct {
 
 // Coster calculates fares for journeys on one feed.
 type Coster struct {
+	// UseTransferOnly honors the proposed transfer_only extension: a fare leg rule with
+	// transfer_only=1 prices a fare leg only through a transfer into it.
+	UseTransferOnly bool
 	// UseFilterFareProductID honors the proposed filter_fare_product_id extension: a transfer
 	// rule with a filter applies only to riders who hold the filter's fare product.
 	UseFilterFareProductID bool
+	// UseFareProductDurations honors the draft fare product duration fields: a product row
+	// with a duration is a pass, which never prices a trip.
+	UseFareProductDurations bool
+	// EmptyFieldsPerLegGroup scopes empty-field matching in fare_leg_rules.txt to each leg
+	// group: an empty network or area field excludes only the values that rules in its leg
+	// group list, not every value in the file. It has no effect with rule_priority.
+	EmptyFieldsPerLegGroup bool
 
 	stopParents     map[string]string // parent_station by stop_id, empty for stops without one
 	stopTimezones   map[string]string // stop_timezone by stop_id, for stops without a parent
@@ -89,10 +99,10 @@ type Coster struct {
 	// The spec bases empty-field matching on whether the rule_priority column exists.
 	// Parsed entities don't show columns, so any rule that sets rule_priority counts.
 	rulePriority bool
-	// Values each column lists, for matching empty fields
-	listedNetworks   map[string]bool
-	listedFromAreas  map[string]bool
-	listedToAreas    map[string]bool
+	// Values that fare leg rules list, in the file and in each leg group, and values that
+	// each transfer rule column lists, for matching empty fields
+	listed           listedValues
+	groupListed      map[string]listedValues
 	listedFromGroups map[string]bool
 	listedToGroups   map[string]bool
 }
@@ -213,7 +223,7 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	rows := c.products[id]
 	for i := range rows {
 		p := &rows[i]
-		if p.DurationAmount.Valid {
+		if c.UseFareProductDurations && p.DurationAmount.Valid {
 			// A row with the draft duration fields is a pass, which never prices a trip.
 			continue
 		}

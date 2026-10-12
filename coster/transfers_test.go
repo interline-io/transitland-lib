@@ -371,3 +371,48 @@ func TestTransferOptions_FilterFareProductID(t *testing.T) {
 		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, holder))
 	})
 }
+
+// transferOnlyFeed prices bus as transferFeed does, and rail with the given leg rules. Its
+// free_fare product costs nothing.
+func transferOnlyFeed(railRules []gtfs.FareLegRule, transfers ...gtfs.FareTransferRule) *direct.Reader {
+	feed := transferFeed(transfers...)
+	feed.FareProductList = append(feed.FareProductList, fareProduct("free_fare", 0.00, "", ""))
+	feed.FareLegRuleList = append([]gtfs.FareLegRule{legRule("bus", "bus", "bus_fare")}, railRules...)
+	return feed
+}
+
+func TestTransferOptions_TransferOnly(t *testing.T) {
+	// Rail is free only through a transfer, like MBTA's free subway rule. Both rail rules
+	// share a leg group and fare medium.
+	freeRail := legRule("rail", "rail", "free_fare")
+	freeRail.TransferOnly = tt.NewInt(1)
+	bothRail := []gtfs.FareLegRule{legRule("rail", "rail", "rail_fare"), freeRail}
+	railOnly := journey(leg("rail1", "b", "c", at(8, 30), at(8, 50)))
+	busToRail := journey(
+		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
+		leg("rail1", "b", "c", at(8, 30), at(8, 50)),
+	)
+	t.Run("ignored by default", func(t *testing.T) {
+		c := newTestCoster(t, transferOnlyFeed(bothRail))
+		assert.Equal(t, map[string]float64{"": 0.00}, fareAmounts(t, c, railOnly))
+	})
+	tcs := []struct {
+		name      string
+		railRules []gtfs.FareLegRule
+		transfers []gtfs.FareTransferRule
+		journey   Journey
+		want      map[string]float64
+	}{
+		{"never starts a fare", bothRail, nil, railOnly, map[string]float64{"": 4.00}},
+		{"needs a transfer into the fare leg", bothRail, nil, busToRail, map[string]float64{"": 6.00}},
+		{"prices a fare leg that a transfer reaches", bothRail, []gtfs.FareTransferRule{transferRule("bus", "rail", 1, "")}, busToRail, map[string]float64{"": 2.00}},
+		{"no fare without a transfer or another rule", []gtfs.FareLegRule{freeRail}, nil, railOnly, map[string]float64{}},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newTestCoster(t, transferOnlyFeed(tc.railRules, tc.transfers...))
+			c.UseTransferOnly = true
+			assert.Equal(t, tc.want, fareAmounts(t, c, tc.journey))
+		})
+	}
+}

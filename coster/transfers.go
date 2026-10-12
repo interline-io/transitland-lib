@@ -14,10 +14,11 @@ import (
 
 // legOption is a leg rule matched to a fare leg, with the product row the rider would buy.
 type legOption struct {
-	rule        *gtfs.FareLegRule
-	product     *gtfs.FareProduct
-	amount      decimal.Decimal // the product row's amount
-	fareMediaID string          // the product row's fare medium, empty when it names none
+	rule         *gtfs.FareLegRule
+	product      *gtfs.FareProduct
+	amount       decimal.Decimal // the product row's amount
+	fareMediaID  string          // the product row's fare medium, empty when it names none
+	transferOnly bool            // the rule prices the fare leg only through a transfer into it
 }
 
 // transferOption is a transfer rule that applies to a transfer, with the product row the
@@ -57,19 +58,30 @@ func (p partial) next(fl FareLeg, t *transferOption) partial {
 // fare media on each fare leg, and returns the lowest fare. It returns nil when some fare leg
 // has no fare for the rider.
 func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r rider) (*Fare, error) {
+	// Transfers depend only on a fare leg's leg group and fare medium, and transfer_only
+	// decides whether the fare leg needs one, so the cheapest product for each combination
+	// prices the fare leg at least as low as any other.
+	type optionKey struct {
+		legGroupID, fareMediaID string
+		transferOnly            bool
+	}
 	options := make([][]legOption, len(fareLegs))
 	for i := range fareLegs {
-		// Transfers depend only on a fare leg's leg group and fare medium, so the cheapest
-		// product for each pair prices the fare leg at least as low as any other.
-		cheapest := map[[2]string]int{}
+		cheapest := map[optionKey]int{}
 		for _, rule := range rules[i] {
 			for _, mediaID := range r.fareMediaIDs {
 				p := c.product(rule.FareProductID.Val, r, mediaID)
 				if p == nil {
 					continue
 				}
-				opt := legOption{rule: rule, product: p, amount: decimal.NewFromFloat(p.Amount.Val), fareMediaID: p.FareMediaID.Val}
-				key := [2]string{rule.LegGroupID.Val, opt.fareMediaID}
+				opt := legOption{
+					rule:         rule,
+					product:      p,
+					amount:       decimal.NewFromFloat(p.Amount.Val),
+					fareMediaID:  p.FareMediaID.Val,
+					transferOnly: c.UseTransferOnly && rule.TransferOnly.Val == 1,
+				}
+				key := optionKey{rule.LegGroupID.Val, opt.fareMediaID, opt.transferOnly}
 				if j, ok := cheapest[key]; !ok {
 					cheapest[key] = len(options[i])
 					options[i] = append(options[i], opt)
@@ -99,8 +111,12 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 				transfers = c.transferOptions(fareLegs, p, opt, r)
 			}
 			// A matching transfer rule must price the transfer. Without one, this fare leg
-			// starts a new sub-journey and costs its own product.
+			// starts a new sub-journey and costs its own product, unless its rule is
+			// transfer_only.
 			if len(transfers) == 0 {
+				if opt.transferOnly {
+					continue
+				}
 				fl.Amount, fl.FareMediaID = opt.amount, opt.fareMediaID
 				search(p.next(fl, nil))
 				continue
@@ -115,6 +131,10 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 		}
 	}
 	search(partial{})
+	if best == nil {
+		// Some fare leg has only transfer_only rules, and no transfer reaches it.
+		return nil, nil
+	}
 	fare := &Fare{Amount: best.amount, Currency: best.fareLegs[0].Product.Currency.Val}
 	for k, fl := range best.fareLegs {
 		for _, p := range []*gtfs.FareProduct{fl.Product, fl.TransferProduct} {

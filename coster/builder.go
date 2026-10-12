@@ -72,9 +72,8 @@ func NewBuilder() *Builder {
 		timeframes:       map[string][]gtfs.Timeframe{},
 		products:         map[string][]gtfs.FareProduct{},
 		riderCategories:  map[string]gtfs.RiderCategory{},
-		listedNetworks:   map[string]bool{},
-		listedFromAreas:  map[string]bool{},
-		listedToAreas:    map[string]bool{},
+		listed:           newListedValues(),
+		groupListed:      map[string]listedValues{},
 		listedFromGroups: map[string]bool{},
 		listedToGroups:   map[string]bool{},
 	}}
@@ -159,9 +158,13 @@ func (b *Builder) add(id string, ent tt.Entity) error {
 	case *gtfs.FareLegRule:
 		c.legRules = append(c.legRules, *v)
 		c.rulePriority = c.rulePriority || v.RulePriority.Valid
-		addListed(c.listedNetworks, v.NetworkID.Val)
-		addListed(c.listedFromAreas, v.FromAreaID.Val)
-		addListed(c.listedToAreas, v.ToAreaID.Val)
+		c.listed.add(v)
+		group, ok := c.groupListed[v.LegGroupID.Val]
+		if !ok {
+			group = newListedValues()
+			c.groupListed[v.LegGroupID.Val] = group
+		}
+		group.add(v)
 	case *gtfs.FareLegJoinRule:
 		c.joinRules = append(c.joinRules, *v)
 	case *gtfs.FareTransferRule:

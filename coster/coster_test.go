@@ -307,7 +307,6 @@ func TestLowestFare_FareMedia(t *testing.T) {
 }
 
 func TestLowestFare_Passes(t *testing.T) {
-	// A product with the draft duration fields is a pass, which never prices a trip.
 	feed := baseFeed()
 	feed.FareProductList = []gtfs.FareProduct{
 		fareProduct("bus_fare", 2.00, "", ""),
@@ -319,17 +318,27 @@ func TestLowestFare_Passes(t *testing.T) {
 		legRule("", "bus", "bus_pass"),
 		legRule("", "rail", "rail_pass"),
 	}
+	bus := journey(leg("bus1", "a", "b", at(8, 0), at(8, 20)))
+	rail := journey(leg("rail1", "a", "b", at(8, 0), at(8, 20)))
+	t.Run("priced like any product by default", func(t *testing.T) {
+		c := newTestCoster(t, feed)
+		assert.Equal(t, map[string]float64{"": 1.00}, fareAmounts(t, c, bus))
+		assert.Equal(t, map[string]float64{"": 5.00}, fareAmounts(t, c, rail))
+	})
+	// With the draft duration fields honored, a product with a duration is a pass, which
+	// never prices a trip.
 	c := newTestCoster(t, feed)
+	c.UseFareProductDurations = true
 	t.Run("single ride even when a pass costs less", func(t *testing.T) {
-		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, journey(leg("bus1", "a", "b", at(8, 0), at(8, 20)))))
+		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, bus))
 	})
 	t.Run("no fare when only a pass covers the leg", func(t *testing.T) {
-		fare, err := c.LowestFare(journey(leg("rail1", "a", "b", at(8, 0), at(8, 20))))
+		fare, err := c.LowestFare(rail)
 		require.NoError(t, err)
 		assert.Nil(t, fare)
 	})
 	t.Run("not even when the rider holds the pass", func(t *testing.T) {
-		j := journey(leg("bus1", "a", "b", at(8, 0), at(8, 20)))
+		j := bus
 		j.FareProductIDs = []string{"bus_pass"}
 		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, j))
 	})

@@ -85,21 +85,43 @@ func (c *Coster) joins(a Leg, aNetwork string, b Leg, bNetwork string) bool {
 	return false
 }
 
+// listedValues holds the values that fare leg rules list in each column, for matching
+// empty fields.
+type listedValues struct {
+	networks, fromAreas, toAreas map[string]bool
+}
+
+// newListedValues returns an empty listedValues.
+func newListedValues() listedValues {
+	return listedValues{networks: map[string]bool{}, fromAreas: map[string]bool{}, toAreas: map[string]bool{}}
+}
+
+// add records a rule's non-empty values.
+func (l listedValues) add(rule *gtfs.FareLegRule) {
+	addListed(l.networks, rule.NetworkID.Val)
+	addListed(l.fromAreas, rule.FromAreaID.Val)
+	addListed(l.toAreas, rule.ToAreaID.Val)
+}
+
 // matchLegRules returns the fare leg rules that match a fare leg.
 func (c *Coster) matchLegRules(fl fareLeg) ([]*gtfs.FareLegRule, error) {
-	// Without rule_priority, an empty field matches only values that no rule lists.
-	// With it, an empty field matches any value.
-	networks, fromAreas, toAreas := c.listedNetworks, c.listedFromAreas, c.listedToAreas
-	if c.rulePriority {
-		networks, fromAreas, toAreas = nil, nil, nil
-	}
 	legFromAreas, legToAreas := c.areas(fl.fromStop), c.areas(fl.toStop)
 	var ret []*gtfs.FareLegRule
 	for i := range c.legRules {
 		rule := &c.legRules[i]
-		if !matchID(rule.NetworkID.Val, fl.network, networks) ||
-			!matchAreas(rule.FromAreaID.Val, legFromAreas, fromAreas) ||
-			!matchAreas(rule.ToAreaID.Val, legToAreas, toAreas) {
+		// Without rule_priority, an empty field matches only values that no rule lists: in
+		// the file, or in the rule's leg group with EmptyFieldsPerLegGroup. With it, an empty
+		// field matches any value.
+		listed := c.listed
+		if c.EmptyFieldsPerLegGroup {
+			listed = c.groupListed[rule.LegGroupID.Val]
+		}
+		if c.rulePriority {
+			listed = listedValues{}
+		}
+		if !matchID(rule.NetworkID.Val, fl.network, listed.networks) ||
+			!matchAreas(rule.FromAreaID.Val, legFromAreas, listed.fromAreas) ||
+			!matchAreas(rule.ToAreaID.Val, legToAreas, listed.toAreas) {
 			continue
 		}
 		fromOK, err := c.inTimeframe(rule.FromTimeframeGroupID.Val, fl.fromStop, fl.departure)

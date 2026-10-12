@@ -50,6 +50,58 @@ func TestMatchLegRules_EmptyFields(t *testing.T) {
 	}
 }
 
+func TestMatchLegRules_EmptyFieldsPerLegGroup(t *testing.T) {
+	// With EmptyFieldsPerLegGroup, an empty field excludes only the values that rules in its
+	// own leg group list.
+	t.Run("areas", func(t *testing.T) {
+		// The ticket group lists zone1, and the card group lists no areas. The ferry group
+		// lists zone1 itself, so its empty rule can't match zone1 either way.
+		feed := baseFeed()
+		feed.AreaList = areas("zone1")
+		feed.StopAreaList = []gtfs.StopArea{stopArea("zone1", "a")}
+		feed.FareProductList = []gtfs.FareProduct{
+			fareProduct("card_fare", 2.00, "", ""),
+			fareProduct("ticket_fare", 3.00, "", ""),
+			fareProduct("ferry_fare", 1.00, "", ""),
+			fareProduct("ferry_zone_fare", 5.00, "", ""),
+		}
+		ticketRule := areaRule("rail", "zone1", "", "ticket_fare")
+		ticketRule.LegGroupID = str("ticket")
+		ferryZoneRule := areaRule("ferry", "zone1", "", "ferry_zone_fare")
+		ferryZoneRule.LegGroupID = str("ferry")
+		feed.FareLegRuleList = []gtfs.FareLegRule{
+			legRule("card", "rail", "card_fare"),
+			ticketRule,
+			legRule("ferry", "ferry", "ferry_fare"),
+			ferryZoneRule,
+		}
+		c := newTestCoster(t, feed)
+		rail := journey(leg("rail1", "a", "c", at(8, 0), at(8, 20)))
+		ferry := journey(leg("ferry", "a", "c", at(8, 0), at(8, 20)))
+		assert.Equal(t, map[string]float64{"": 3.00}, fareAmounts(t, c, rail))
+		assert.Equal(t, map[string]float64{"": 5.00}, fareAmounts(t, c, ferry))
+		c.EmptyFieldsPerLegGroup = true
+		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, rail))
+		assert.Equal(t, map[string]float64{"": 5.00}, fareAmounts(t, c, ferry))
+	})
+	t.Run("networks", func(t *testing.T) {
+		// The youth rule covers any network, though the rail group lists rail.
+		feed := baseFeed()
+		feed.RiderCategoryList = []gtfs.RiderCategory{category("adult", true), category("youth", false)}
+		feed.FareProductList = []gtfs.FareProduct{
+			fareProduct("rail_fare", 4.00, "adult", ""),
+			fareProduct("youth_fare", 0.00, "youth", ""),
+		}
+		feed.FareLegRuleList = []gtfs.FareLegRule{legRule("rail", "rail", "rail_fare"), legRule("youth", "", "youth_fare")}
+		c := newTestCoster(t, feed)
+		j := journey(leg("rail1", "c", "d", at(8, 0), at(8, 20)))
+		j.RiderCategoryIDs = []string{"youth"}
+		assert.Equal(t, map[string]float64{}, fareAmounts(t, c, j))
+		c.EmptyFieldsPerLegGroup = true
+		assert.Equal(t, map[string]float64{"": 0.00}, fareAmounts(t, c, j))
+	})
+}
+
 func TestMatchLegRules_StopInSeveralAreas(t *testing.T) {
 	// An empty area field matches through any of a stop's areas that no rule lists.
 	feed := baseFeed()
