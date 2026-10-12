@@ -32,7 +32,7 @@ func (c *Coster) fareLegs(legs []Leg) ([]fareLeg, error) {
 			return nil, fmt.Errorf("leg %d: unknown route %q", i, leg.RouteID)
 		}
 		for _, id := range []string{leg.FromStopID, leg.ToStopID} {
-			if _, ok := c.stops[id]; !ok {
+			if _, ok := c.stopParents[id]; !ok {
 				return nil, fmt.Errorf("leg %d: unknown stop %q", i, id)
 			}
 		}
@@ -163,7 +163,7 @@ func (c *Coster) areas(stopID string) []string {
 		if a := c.stopAreas[stopID]; len(a) > 0 {
 			return a
 		}
-		if stopID = c.stops[stopID].ParentStation.Val; stopID == "" {
+		if stopID = c.stopParents[stopID]; stopID == "" {
 			break
 		}
 	}
@@ -174,7 +174,7 @@ func (c *Coster) areas(stopID string) []string {
 func (c *Coster) station(stopID string) string {
 	// A boarding area is two levels below its station.
 	for range 2 {
-		parent := c.stops[stopID].ParentStation.Val
+		parent := c.stopParents[stopID]
 		if parent == "" {
 			break
 		}

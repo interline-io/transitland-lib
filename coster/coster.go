@@ -72,7 +72,8 @@ type Coster struct {
 	// rule with a filter applies only to riders who hold the filter's fare product.
 	UseFilterFareProductID bool
 
-	stops           map[string]gtfs.Stop
+	stopParents     map[string]string // parent_station by stop_id, empty for stops without one
+	stopTimezones   map[string]string // stop_timezone by stop_id, for stops without a parent
 	stopAreas       map[string][]string
 	routeNetworks   map[string]string // network_id by route_id, empty for routes without one
 	agencyTimezone  string
@@ -234,7 +235,7 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 func (c *Coster) location(stopID string) (*time.Location, error) {
 	name := c.agencyTimezone
 	// The spec gives a stop in a station the station's timezone instead of its own.
-	if tz := c.stops[c.station(stopID)].StopTimezone.Val; tz != "" {
+	if tz := c.stopTimezones[c.station(stopID)]; tz != "" {
 		name = tz
 	}
 	loc, ok := c.locations[name]

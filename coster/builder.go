@@ -3,6 +3,7 @@ package coster
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -62,7 +63,8 @@ type Builder struct {
 // NewBuilder returns an empty Builder.
 func NewBuilder() *Builder {
 	return &Builder{c: &Coster{
-		stops:            map[string]gtfs.Stop{},
+		stopParents:      map[string]string{},
+		stopTimezones:    map[string]string{},
 		stopAreas:        map[string][]string{},
 		routeNetworks:    map[string]string{},
 		locations:        map[string]*time.Location{},
@@ -87,13 +89,10 @@ func (b *Builder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) erro
 // the Coster.
 func (b *Builder) Coster() (*Coster, error) {
 	c := b.c
-	// Load each timezone once, so fare calculations only read shared state. A stop in a
-	// station takes the station's timezone, so only stops without a parent count.
+	// Load each timezone once, so fare calculations only read shared state.
 	names := []string{c.agencyTimezone}
-	for _, stop := range c.stops {
-		if stop.ParentStation.Val == "" {
-			names = append(names, stop.StopTimezone.Val)
-		}
+	for _, tz := range c.stopTimezones {
+		names = append(names, tz)
 	}
 	for _, name := range names {
 		if _, ok := c.locations[name]; ok || name == "" {
@@ -122,11 +121,20 @@ func (b *Builder) add(id string, ent tt.Entity) error {
 			c.agencyTimezone = v.AgencyTimezone.Val
 		}
 	case *gtfs.Stop:
-		c.stops[id] = *v
+		// Keep only the fields that fares use, cloned: a csv reader's fields share one
+		// string per row, so a kept field would keep the whole row in memory.
+		id = strings.Clone(id)
+		c.stopParents[id] = strings.Clone(v.ParentStation.Val)
+		// A stop in a station takes the station's timezone, so only stops without a parent
+		// need their own.
+		if v.ParentStation.Val == "" && v.StopTimezone.Val != "" {
+			c.stopTimezones[id] = strings.Clone(v.StopTimezone.Val)
+		}
 	case *gtfs.StopArea:
 		c.stopAreas[v.StopID.Val] = append(c.stopAreas[v.StopID.Val], v.AreaID.Val)
 	case *gtfs.Route:
-		c.routeNetworks[id] = v.NetworkID.Val
+		// Cloned, as for stops, so a route doesn't keep its routes.txt row in memory.
+		c.routeNetworks[strings.Clone(id)] = strings.Clone(v.NetworkID.Val)
 	case *gtfs.RouteNetwork:
 		c.routeNetworks[v.RouteID.Val] = v.NetworkID.Val
 	case *gtfs.Calendar:
