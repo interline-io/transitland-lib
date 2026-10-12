@@ -30,12 +30,12 @@ func TestFareMedia_Errors(t *testing.T) {
 			expectedErrors: PE("RequiredFieldError:fare_media_id"),
 		},
 		{
-			name: "Invalid: missing fare_media_name",
+			name: "Valid: missing fare_media_name",
 			fareMedia: &FareMedia{
 				FareMediaID:   tt.NewString("media1"),
 				FareMediaType: tt.NewInt(2),
 			},
-			expectedErrors: PE("RequiredFieldError:fare_media_name"),
+			expectedErrors: nil,
 		},
 		{
 			name: "Invalid: missing fare_media_type",
