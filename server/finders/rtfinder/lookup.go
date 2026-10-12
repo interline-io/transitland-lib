@@ -85,10 +85,11 @@ const (
 
 	// When a trip runs on its service day: from its first departure to its last
 	// arrival, or for a frequency-based trip, from its first start to its last
-	// start plus one run's length. The last start is the one departures expand
-	// a frequency to, end_time included. A trip's stop times are stored once per
-	// journey pattern, on the pattern's first trip, and shifted by each other
-	// trip's offset. Zero for a trip with no timed stop times, or none at all.
+	// start plus one run's length. A frequency starts a run every headway_secs
+	// from start_time, up to but not including end_time. A trip's stop times are
+	// stored once per journey pattern, on the pattern's first trip, and shifted
+	// by each other trip's offset. Zero for a trip with no timed stop times, or
+	// none at all.
 	tripSpanQuery = `
 	select
 		coalesce(fr.first_start, st.first_departure, 0) as first_departure,
@@ -104,9 +105,9 @@ const (
 	) st, (
 		select
 			min(start_time) as first_start,
-			max(start_time + (end_time - start_time) / nullif(headway_secs, 0) * headway_secs) as last_start
+			max(start_time + (end_time - 1 - start_time) / nullif(headway_secs, 0) * headway_secs) as last_start
 		from gtfs_frequencies
-		where trip_id = $1
+		where trip_id = $1 and end_time > start_time
 	) fr`
 )
 

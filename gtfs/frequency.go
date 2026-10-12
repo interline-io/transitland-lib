@@ -27,16 +27,22 @@ func (ent *Frequency) TableName() string {
 	return "gtfs_frequencies"
 }
 
-// RepeatCount returns the number of times this trip will be repeated.
-func (ent *Frequency) RepeatCount() int {
+// Starts returns the times this frequency's trips leave the first stop: every
+// headway_secs from start_time, up to but not including end_time.
+func (ent *Frequency) Starts() []int {
 	if ent.HeadwaySecs.Val <= 0 {
-		return 0
+		return nil
 	}
-	count := 0
-	for t := ent.StartTime.Int(); t <= ent.EndTime.Int(); t += ent.HeadwaySecs.Int() {
-		count++
+	var ret []int
+	for t := ent.StartTime.Int(); t < ent.EndTime.Int(); t += ent.HeadwaySecs.Int() {
+		ret = append(ret, t)
 	}
-	return count
+	return ret
+}
+
+// RepeatCount returns the number of trips this frequency runs.
+func (ent *Frequency) RepeatCount() int {
+	return len(ent.Starts())
 }
 
 // Errors for this Entity.

@@ -9,6 +9,7 @@ import (
 )
 
 type tripInfo struct {
+	UsesFrequency   bool
 	FrequencyStarts []int
 	ServiceID       string
 	StartTime       tt.Seconds
@@ -45,13 +46,11 @@ func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 		}
 		fi.tripInfo[v.TripID.Val] = ti
 	case *gtfs.Frequency:
-		if v.HeadwaySecs.Val > 0 {
-			a := fi.tripInfo[v.TripID.Val]
-			for s := v.StartTime.Int(); s < v.EndTime.Int(); s += v.HeadwaySecs.Int() {
-				a.FrequencyStarts = append(a.FrequencyStarts, s)
-			}
-			fi.tripInfo[v.TripID.Val] = a
-		}
+		// A trip in frequencies.txt runs only at its frequencies' starts
+		a := fi.tripInfo[v.TripID.Val]
+		a.UsesFrequency = true
+		a.FrequencyStarts = append(a.FrequencyStarts, v.Starts()...)
+		fi.tripInfo[v.TripID.Val] = a
 	}
 	return nil
 }
@@ -98,7 +97,7 @@ func (fi *ScheduleChecker) ActiveTrips(now time.Time) []string {
 
 			// Might be scheduled
 			found := false
-			if len(v.FrequencyStarts) == 0 && nowWt.Int() >= v.StartTime.Int() && nowWt.Int() <= v.EndTime.Int() {
+			if !v.UsesFrequency && nowWt.Int() >= v.StartTime.Int() && nowWt.Int() <= v.EndTime.Int() {
 				// Check non-frequency based trips
 				// log.For(ctx).Debug().
 				// 	Str("date", now.Format("2006-02-03")).

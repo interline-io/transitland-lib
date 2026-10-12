@@ -269,11 +269,17 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		Join("active_services gc on gc.id = gtfs_trips.service_id").
 		Join("gtfs_trips base_trip ON base_trip.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = base_trip.feed_version_id").
 		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
-		JoinClause(`left join lateral (
+		// The trip's runs. A trip in frequencies.txt runs once per start: every
+		// headway_secs from start_time, up to but not including end_time. Any other
+		// trip runs once, at its own times, with a null freq_start.
+		JoinClause(`join lateral (
 			select
-				generate_series(start_time, end_time, headway_secs) freq_start
+				generate_series(start_time, end_time - 1, headway_secs) freq_start
 			from gtfs_frequencies
 			where gtfs_frequencies.trip_id = gtfs_trips.id
+			union all
+			select null
+			where not exists (select 1 from gtfs_frequencies where gtfs_frequencies.trip_id = gtfs_trips.id)
 			) freq on true`).
 		JoinClause(`join lateral (
 			select 
@@ -283,16 +289,18 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 			from gtfs_stop_times sts2 
 			where sts2.trip_id = base_trip.id and sts2.feed_version_id = base_trip.feed_version_id
 			) trip_stop_sequence on true`).
+		// A frequency run shifts the pattern's stop times to begin at its start;
+		// any other trip shifts them by its offset in the pattern.
 		JoinClause(`join lateral (
 			select 
 				sts.*,
-				sts.arrival_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
+				sts.arrival_time + coalesce(
+					freq.freq_start - trip_stop_sequence.first_departure_time,
+					gtfs_trips.journey_pattern_offset
 				) AS arrival_time_freq,
-				sts.departure_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
+				sts.departure_time + coalesce(
+					freq.freq_start - trip_stop_sequence.first_departure_time,
+					gtfs_trips.journey_pattern_offset
 				) AS departure_time_freq
 			from gtfs_stop_times sts
 			where sts.trip_id = base_trip.id and sts.feed_version_id = base_trip.feed_version_id		
@@ -424,11 +432,17 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		From("at_entity sts").
 		Join("gtfs_trips ON gtfs_trips.feed_version_id = ? AND gtfs_trips.journey_pattern_id = sts.base_trip_gtfs_id::text", fvid).
 		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
-		JoinClause(`left join lateral (
+		// The trip's runs. A trip in frequencies.txt runs once per start: every
+		// headway_secs from start_time, up to but not including end_time. Any other
+		// trip runs once, at its own times, with a null freq_start.
+		JoinClause(`join lateral (
 			select
-				generate_series(start_time, end_time, headway_secs) freq_start
+				generate_series(start_time, end_time - 1, headway_secs) freq_start
 			from gtfs_frequencies
 			where gtfs_frequencies.trip_id = gtfs_trips.id
+			union all
+			select null
+			where not exists (select 1 from gtfs_frequencies where gtfs_frequencies.trip_id = gtfs_trips.id)
 			) freq on true`).
 		JoinClause(`join lateral (
 			select
@@ -438,15 +452,17 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 			from gtfs_stop_times sts2
 			where sts2.trip_id = sts.trip_id and sts2.feed_version_id = ?
 			) trip_stop_sequence on true`, fvid).
+		// A frequency run shifts the pattern's stop times to begin at its start;
+		// any other trip shifts them by its offset in the pattern.
 		JoinClause(`join lateral (
 			select
-				sts.arrival_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
+				sts.arrival_time + coalesce(
+					freq.freq_start - trip_stop_sequence.first_departure_time,
+					gtfs_trips.journey_pattern_offset
 				) AS arrival_time_freq,
-				sts.departure_time + gtfs_trips.journey_pattern_offset + coalesce(
-					- trip_stop_sequence.first_departure_time + freq.freq_start,
-					0
+				sts.departure_time + coalesce(
+					freq.freq_start - trip_stop_sequence.first_departure_time,
+					gtfs_trips.journey_pattern_offset
 				) AS departure_time_freq
 			) sts_freq on true`).
 		// A pattern's trips share a service_id, so checking the base trip covers them all.

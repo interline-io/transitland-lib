@@ -8,6 +8,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testpath"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/stretchr/testify/assert"
 )
@@ -119,4 +120,34 @@ func TestScheduleChecker(t *testing.T) {
 		})
 	}
 
+}
+
+// A trip in frequencies.txt runs only at its frequencies' starts, and no run
+// starts at a frequency's end_time.
+func TestScheduleChecker_Frequencies(t *testing.T) {
+	ex := NewScheduleChecker()
+	cpOpts := copier.Options{}
+	cpOpts.AddExtension(ex)
+	if _, err := copier.CopyWithOptions(context.Background(), testreader.NewFrequencyTestFeed(), &empty.Writer{}, cpOpts); err != nil {
+		t.Fatal(err)
+	}
+	tz, _ := time.LoadLocation("America/Los_Angeles")
+	tcs := []struct {
+		name string
+		when time.Time
+		exp  []string
+	}{
+		{"regular trip", time.Date(2024, 1, 3, 5, 5, 0, 0, tz), []string{"regular"}},
+		{"frequency run", time.Date(2024, 1, 3, 7, 35, 0, 0, tz), []string{"offset"}},
+		{"no run at end_time", time.Date(2024, 1, 3, 8, 5, 0, 0, tz), []string{}},
+		{"periods that meet", time.Date(2024, 1, 3, 11, 5, 0, 0, tz), []string{"meet"}},
+		{"no run at the last end_time", time.Date(2024, 1, 3, 12, 5, 0, 0, tz), []string{}},
+		{"no run in an empty period", time.Date(2024, 1, 3, 13, 5, 0, 0, tz), []string{}},
+		{"no run at the template's times", time.Date(2024, 1, 3, 14, 5, 0, 0, tz), []string{}},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.ElementsMatch(t, tc.exp, ex.ActiveTrips(tc.when))
+		})
+	}
 }
