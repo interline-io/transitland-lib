@@ -388,18 +388,21 @@ func (f *Finder) matchStopTimeUpdate(ctx context.Context, rtTrips []*pb.TripUpda
 	}
 	// Attempt to match on stop id
 	for _, rtTrip := range rtTrips {
-		// If no match on stop sequence, match on stop_id if stop is not visited twice
-		check := map[string]int{}
-		for _, ste := range rtTrip.StopTimeUpdate {
-			check[ste.GetStopId()] += 1
-		}
 		// Get GTFS stop id for comparing with RT
 		sid, ok := f.lookup.GetGtfsStopID(ctx, st.StopID.Int())
 		if !ok {
 			continue
 		}
-		// Skip if this stop is visited twice and no stop sequence is matched (above)
-		if check[sid] > 1 {
+		// If no match on stop sequence, match on stop_id if stop is not visited
+		// twice. Only this stop's visits are counted, as this runs for every
+		// stop time without an update of its own.
+		visits := 0
+		for _, ste := range rtTrip.StopTimeUpdate {
+			if ste.GetStopId() == sid {
+				visits++
+			}
+		}
+		if visits > 1 {
 			return nil, true
 		}
 		var lastDelay *int32
