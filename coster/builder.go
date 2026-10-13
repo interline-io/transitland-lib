@@ -150,13 +150,17 @@ func (b *Builder) add(id string, ent tt.Entity) error {
 	case *gtfs.Timeframe:
 		c.timeframes[v.TimeframeGroupID.Val] = append(c.timeframes[v.TimeframeGroupID.Val], *v)
 	case *gtfs.FareProduct:
-		c.products[v.FareProductID.Val] = append(c.products[v.FareProductID.Val], *v)
+		p := *v
+		dropSlices(&p.BaseEntity)
+		c.products[p.FareProductID.Val] = append(c.products[p.FareProductID.Val], p)
 	case *gtfs.FareMedia:
 		c.fareMediaIDs = append(c.fareMediaIDs, id)
 	case *gtfs.RiderCategory:
 		c.riderCategories[v.RiderCategoryID.Val] = *v
 	case *gtfs.FareLegRule:
-		c.legRules = append(c.legRules, *v)
+		rule := *v
+		dropSlices(&rule.BaseEntity)
+		c.legRules = append(c.legRules, rule)
 		c.rulePriority = c.rulePriority || v.RulePriority.Valid
 		c.listed.add(v)
 		group, ok := c.groupListed[v.LegGroupID.Val]
@@ -168,11 +172,19 @@ func (b *Builder) add(id string, ent tt.Entity) error {
 	case *gtfs.FareLegJoinRule:
 		c.joinRules = append(c.joinRules, *v)
 	case *gtfs.FareTransferRule:
-		c.transferRules = append(c.transferRules, *v)
+		rule := *v
+		dropSlices(&rule.BaseEntity)
+		c.transferRules = append(c.transferRules, rule)
 		addListed(c.listedFromGroups, v.FromLegGroupID.Val)
 		addListed(c.listedToGroups, v.ToLegGroupID.Val)
 	}
 	return nil
+}
+
+// dropSlices clears an entity's extra columns and load errors, which the coster never reads,
+// so the copies that fares return share no slices with the coster.
+func dropSlices(base *tt.BaseEntity) {
+	base.ExtraEntity, base.ErrorEntity = tt.ExtraEntity{}, tt.ErrorEntity{}
 }
 
 // addListed records a non-empty column value.

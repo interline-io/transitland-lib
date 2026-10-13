@@ -121,7 +121,8 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 				search(p.next(fl, nil))
 				continue
 			}
-			// A fare leg whose product names no medium takes the transfer chain's medium.
+			// A fare leg whose product names no medium takes the medium of the fare leg it
+			// transfers from.
 			fl.FareMediaID = cmp.Or(opt.fareMediaID, p.fareMediaID)
 			for _, t := range transfers {
 				fl.TransferRule, fl.TransferProduct = t.rule, t.product
@@ -143,7 +144,8 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 				return nil, fmt.Errorf("fare mixes currencies %s and %s", fare.Currency, p.Currency.Val)
 			}
 		}
-		// Give the caller copies of the Coster's entities, which other fares share.
+		// Give the caller copies of the Coster's entities, which other fares share. The builder
+		// stores them without slices, so these copies share nothing with the Coster.
 		fl.LegRule, fl.Product = clone(fl.LegRule), clone(fl.Product)
 		fl.TransferRule, fl.TransferProduct = clone(fl.TransferRule), clone(fl.TransferProduct)
 		fl.HeldProductIDs = c.heldProductIDs(rules[k], r)

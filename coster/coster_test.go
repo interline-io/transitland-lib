@@ -1,6 +1,7 @@
 package coster
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -404,6 +405,11 @@ func TestLowestFare_HeldProducts(t *testing.T) {
 func TestLowestFare_FareLegs(t *testing.T) {
 	feed := transferFeed()
 	feed.FareTransferRuleList = []gtfs.FareTransferRule{transferRule("bus", "rail", 0, "ab")}
+	// Extra columns and a load error, which the Coster drops.
+	feed.FareProductList[0].SetExtra("note", "bus")
+	feed.FareProductList[0].AddError(errors.New("bad row"))
+	feed.FareLegRuleList[0].SetExtra("note", "bus")
+	feed.FareTransferRuleList[0].SetExtra("note", "bus to rail")
 	c := newTestCoster(t, feed)
 	j := journey(
 		leg("bus1", "a", "b", at(8, 0), at(8, 20)),
@@ -434,6 +440,12 @@ func TestLowestFare_FareLegs(t *testing.T) {
 	t.Run("fares hold copies of the Coster's entities", func(t *testing.T) {
 		first.Product.Amount.Val = 0
 		assert.Equal(t, map[string]float64{"": 2.50}, fareAmounts(t, c, j))
+	})
+	t.Run("the copies share no slices with the Coster", func(t *testing.T) {
+		assert.Empty(t, first.Product.LoadErrors())
+		assert.Empty(t, first.Product.ExtraKeys())
+		assert.Empty(t, first.LegRule.ExtraKeys())
+		assert.Empty(t, second.TransferRule.ExtraKeys())
 	})
 }
 

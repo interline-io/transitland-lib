@@ -316,7 +316,7 @@ func TestTransferOptions_UnknownMedium(t *testing.T) {
 		assert.NotNil(t, fare.FareLegs[1].TransferRule)
 		assert.Equal(t, []string{"", ""}, []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID})
 	})
-	t.Run("a fare leg whose product names no medium takes the transfer chain's medium", func(t *testing.T) {
+	t.Run("a fare leg whose product names no medium takes the medium of the fare leg it transfers from", func(t *testing.T) {
 		// Card-only ferry, a free card transfer to a bus that names no medium, then cash-only
 		// rail with a free transfer from the bus. The bus continues the card chain.
 		feed := baseFeed()
