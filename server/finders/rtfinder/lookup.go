@@ -20,7 +20,8 @@ type Lookup interface {
 	// GetFeedVersionRTFeeds returns the onestop_ids of the feeds that may hold
 	// a feed version's realtime data.
 	GetFeedVersionRTFeeds(ctx context.Context, fvid int) ([]string, bool)
-	// FeedVersionTimezone returns a feed version's timezone.
+	// FeedVersionTimezone returns a feed version's timezone, never nil when it
+	// returns true.
 	FeedVersionTimezone(ctx context.Context, fvid int) (*time.Location, bool)
 	// GetTripSpan returns when a trip runs on its service day: zero for a trip
 	// that isn't found, or has no timed stop times.

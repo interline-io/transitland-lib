@@ -84,8 +84,11 @@ func (f *Source) processMessage(ctx context.Context, rtmsg *pb.FeedMessage) erro
 			if v.Timestamp == nil && hasDefaultTimestamp {
 				v.Timestamp = &defaultTimestamp
 			}
-			tid := v.GetTrip().GetTripId()
-			a[tid] = append(a[tid], v)
+			// Matching ignores an update that names no trip_id, such as an
+			// ADDED trip without one.
+			if tid := v.GetTrip().GetTripId(); tid != "" {
+				a[tid] = append(a[tid], v)
+			}
 		}
 		if v := ent.Alert; v != nil {
 			alerts = append(alerts, alertEntity{ID: ent.GetId(), Alert: v})

@@ -48,26 +48,50 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	return slices.ContainsFunc(r.dates, func(d tt.Date) bool { return sameDay(d, run) })
 }
 
+// Run names one run of a trip: a trip on one service date.
+type Run struct {
+	FeedVersionID int
+	TripID        string // GTFS trip_id
+	// The service date. Unlike a model.Trip without run dates, a Run without
+	// one matches no update.
+	Date tt.Date
+	// When the trip runs on its service day, which places an update without a
+	// start_date on the trip's current run. A zero span places it on today's.
+	Span TripSpan
+}
+
+// runsOf returns a run given by value as the runs to match.
+func (f *Finder) runsOf(ctx context.Context, run Run) tripRuns {
+	span := func() (TripSpan, bool) { return run.Span, true }
+	return tripRuns{
+		dates:   []tt.Date{run.Date},
+		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, run.FeedVersionID, span) }),
+	}
+}
+
 // tripRunsOf returns a trip's runs: the requested ones, or its current run.
 func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
+	span := func() (TripSpan, bool) { return f.lookup.GetTripSpan(ctx, t.FeedVersionID, t.ID) }
 	return tripRuns{
 		dates:   t.RunDates,
-		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, t.ID) }),
+		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, span) }),
 		none:    t.NoRealtime,
 	}
 }
 
-// currentRun returns the service date of a trip's current run.
-func (f *Finder) currentRun(ctx context.Context, fvid int, tripId int) (tt.Date, bool) {
+// currentRun returns the service date of a trip's current run, from when the
+// trip runs on its service day. span is called only once the feed version's
+// timezone is known.
+func (f *Finder) currentRun(ctx context.Context, fvid int, span func() (TripSpan, bool)) (tt.Date, bool) {
 	loc, ok := f.lookup.FeedVersionTimezone(ctx, fvid)
 	if !ok {
 		return tt.Date{}, false
 	}
-	span, ok := f.lookup.GetTripSpan(ctx, fvid, tripId)
+	s, ok := span()
 	if !ok {
 		return tt.Date{}, false
 	}
-	return currentRunDate(f.Clock.Now(), loc, span), true
+	return currentRunDate(f.Clock.Now(), loc, s), true
 }
 
 // currentRunDate returns the service date of a trip's current run: the run going
