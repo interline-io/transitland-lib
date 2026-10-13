@@ -60,7 +60,8 @@ type FareLeg struct {
 	TransferProduct *gtfs.FareProduct      // the transfer rule's product, if it names one
 	Amount          decimal.Decimal
 	// FareMediaID is the fare medium used to pay. A fare leg whose product names no medium
-	// takes the medium of the fare leg it transfers from, and is empty when that's unknown.
+	// takes the previous fare leg's medium when a transfer joins them, and is empty when that
+	// medium is unknown.
 	FareMediaID string
 	// HeldProductIDs lists products the rider holds, such as passes, that may cover this
 	// fare leg. Amount is still the full fare.

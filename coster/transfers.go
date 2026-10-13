@@ -121,8 +121,7 @@ func (c *Coster) lowestFare(fareLegs []fareLeg, rules [][]*gtfs.FareLegRule, r r
 				search(p.next(fl, nil))
 				continue
 			}
-			// A fare leg whose product names no medium takes the medium of the fare leg it
-			// transfers from.
+			// A fare leg whose product names no medium takes the previous fare leg's medium.
 			fl.FareMediaID = cmp.Or(opt.fareMediaID, p.fareMediaID)
 			for _, t := range transfers {
 				fl.TransferRule, fl.TransferProduct = t.rule, t.product
