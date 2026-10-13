@@ -50,8 +50,8 @@ func TestMatchLegRules_EmptyFields(t *testing.T) {
 	}
 }
 
-func TestMatchLegRules_EmptyFieldsPerLegGroup(t *testing.T) {
-	// With EmptyFieldsPerLegGroup, an empty field excludes only the values that rules in its
+func TestMatchLegRules_UseEmptyFieldsPerLegGroup(t *testing.T) {
+	// With UseEmptyFieldsPerLegGroup, an empty field excludes only the values that rules in its
 	// own leg group list.
 	t.Run("areas", func(t *testing.T) {
 		// The ticket group lists zone1, and the card group lists no areas. The ferry group
@@ -80,7 +80,7 @@ func TestMatchLegRules_EmptyFieldsPerLegGroup(t *testing.T) {
 		ferry := journey(leg("ferry", "a", "c", at(8, 0), at(8, 20)))
 		assert.Equal(t, map[string]float64{"": 3.00}, fareAmounts(t, c, rail))
 		assert.Equal(t, map[string]float64{"": 5.00}, fareAmounts(t, c, ferry))
-		c.EmptyFieldsPerLegGroup = true
+		c.UseEmptyFieldsPerLegGroup = true
 		assert.Equal(t, map[string]float64{"": 2.00}, fareAmounts(t, c, rail))
 		assert.Equal(t, map[string]float64{"": 5.00}, fareAmounts(t, c, ferry))
 	})
@@ -97,7 +97,7 @@ func TestMatchLegRules_EmptyFieldsPerLegGroup(t *testing.T) {
 		j := journey(leg("rail1", "c", "d", at(8, 0), at(8, 20)))
 		j.RiderCategoryIDs = []string{"youth"}
 		assert.Equal(t, map[string]float64{}, fareAmounts(t, c, j))
-		c.EmptyFieldsPerLegGroup = true
+		c.UseEmptyFieldsPerLegGroup = true
 		assert.Equal(t, map[string]float64{"": 0.00}, fareAmounts(t, c, j))
 	})
 }

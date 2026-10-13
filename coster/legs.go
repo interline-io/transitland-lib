@@ -110,10 +110,10 @@ func (c *Coster) matchLegRules(fl fareLeg) ([]*gtfs.FareLegRule, error) {
 	for i := range c.legRules {
 		rule := &c.legRules[i]
 		// Without rule_priority, an empty field matches only values that no rule lists: in
-		// the file, or in the rule's leg group with EmptyFieldsPerLegGroup. With it, an empty
+		// the file, or in the rule's leg group with UseEmptyFieldsPerLegGroup. With it, an empty
 		// field matches any value.
 		listed := c.listed
-		if c.EmptyFieldsPerLegGroup {
+		if c.UseEmptyFieldsPerLegGroup {
 			listed = c.groupListed[rule.LegGroupID.Val]
 		}
 		if c.rulePriority {

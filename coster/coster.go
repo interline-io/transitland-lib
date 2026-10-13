@@ -1,10 +1,11 @@
 // Package coster calculates journey fares from GTFS Fares v2 data.
 //
 // It follows the adopted specification, including effective fare legs from
-// fare_leg_join_rules.txt, rule_priority, timeframes, and chained transfers. It ignores
-// extensions outside the adopted spec, such as transfer_only and filter_fare_product_id,
-// unless a Coster flag enables them, and it never prices fare products with the draft
-// duration fields, which mark passes. It is based on an earlier internal implementation.
+// fare_leg_join_rules.txt, rule_priority, timeframes, and chained transfers. By default it
+// reads the spec strictly: extensions outside the adopted spec, such as transfer_only,
+// filter_fare_product_id and the draft fare product duration fields, and readings beyond the
+// spec text apply only when a Coster flag enables them. It is based on an earlier internal
+// implementation.
 package coster
 
 import (
@@ -74,10 +75,17 @@ type Coster struct {
 	// UseFilterFareProductID honors the proposed filter_fare_product_id extension: a transfer
 	// rule with a filter applies only to riders who hold the filter's fare product.
 	UseFilterFareProductID bool
-	// EmptyFieldsPerLegGroup scopes empty-field matching in fare_leg_rules.txt to each leg
+	// UseFareProductDurations honors the draft fare product duration fields: a product row
+	// with a duration is a pass, which never prices a trip.
+	UseFareProductDurations bool
+	// UseEmptyFieldsPerLegGroup scopes empty-field matching in fare_leg_rules.txt to each leg
 	// group: an empty network or area field excludes only the values that rules in its leg
 	// group list, not every value in the file. It has no effect with rule_priority.
-	EmptyFieldsPerLegGroup bool
+	UseEmptyFieldsPerLegGroup bool
+	// UseSameMediumTransfers applies a transfer rule only when the fare legs it joins use the
+	// same fare medium, as when a transfer credit lives on the card that paid for the earlier
+	// leg. The spec doesn't restrict the fare media of the legs a transfer joins.
+	UseSameMediumTransfers bool
 
 	stopParents     map[string]string // parent_station by stop_id, empty for stops without one
 	stopTimezones   map[string]string // stop_timezone by stop_id, for stops without a parent
@@ -105,8 +113,7 @@ type Coster struct {
 }
 
 // LowestFare returns the lowest fare for a journey. Each fare leg can use any of the rider's
-// fare media, but a transfer stays on one medium. It returns nil when some fare leg has no
-// fare for the rider.
+// fare media. It returns nil when some fare leg has no fare for the rider.
 func (c *Coster) LowestFare(journey Journey) (*Fare, error) {
 	categories, err := c.riderCategorySet(journey.RiderCategoryIDs)
 	if err != nil {
@@ -220,7 +227,7 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	rows := c.products[id]
 	for i := range rows {
 		p := &rows[i]
-		if p.DurationAmount.Valid {
+		if c.UseFareProductDurations && p.DurationAmount.Valid {
 			// A row with the draft duration fields is a pass, which never prices a trip.
 			continue
 		}

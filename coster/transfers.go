@@ -170,13 +170,14 @@ func (c *Coster) transferOptions(fareLegs []fareLeg, p partial, next legOption, 
 		// Only legs in leg groups can transfer.
 		return nil
 	}
-	if p.fareMediaID != "" && next.fareMediaID != "" && p.fareMediaID != next.fareMediaID {
-		// A transfer stays on the fare medium that paid for the previous fare leg. A product
+	if c.UseSameMediumTransfers && p.fareMediaID != "" && next.fareMediaID != "" && p.fareMediaID != next.fareMediaID {
+		// The transfer stays on the fare medium that paid for the previous fare leg. A product
 		// that names no medium works with any medium.
 		return nil
 	}
-	// The transfer's product must be sold on the fare legs' medium. When neither medium is
-	// known, only a product row that names no medium applies.
+	// The transfer's product must be sold on the next fare leg's medium, or the previous fare
+	// leg's when the next names none. When neither medium is known, only a product row that
+	// names no medium applies.
 	mediaID := cmp.Or(next.fareMediaID, p.fareMediaID)
 	// Consecutive transfers within one leg group form a run: transfer_count counts its
 	// transfers, and duration_limit is measured from its first fare leg.

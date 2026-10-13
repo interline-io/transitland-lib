@@ -247,7 +247,7 @@ func mediaFeed(rules ...gtfs.FareTransferRule) *direct.Reader {
 }
 
 func TestTransferOptions_MixedMedia(t *testing.T) {
-	t.Run("each fare leg uses a fare medium it sells, and no transfer crosses media", func(t *testing.T) {
+	t.Run("each fare leg uses a fare medium it sells", func(t *testing.T) {
 		c := newTestCoster(t, mediaFeed(transferRule("rail", "ferry", 0, "free_transfer")))
 		j := journey(
 			leg("rail1", "a", "b", at(8, 0), at(8, 20)),
@@ -255,24 +255,40 @@ func TestTransferOptions_MixedMedia(t *testing.T) {
 		)
 		// No single fare medium prices both legs.
 		assert.Equal(t, map[string]float64{}, fareAmounts(t, c, j))
+		// The free transfer applies across fare media.
 		fare, err := c.LowestFare(j)
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 4.00, fare.Amount.InexactFloat64())
+		assert.Equal(t, []string{"cash", "card"}, []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID})
+		assert.NotNil(t, fare.FareLegs[1].TransferRule)
+		// With UseSameMediumTransfers, no transfer crosses fare media.
+		c.UseSameMediumTransfers = true
+		fare, err = c.LowestFare(j)
 		require.NoError(t, err)
 		require.NotNil(t, fare)
 		assert.Equal(t, 4.00+6.00, fare.Amount.InexactFloat64())
 		assert.Equal(t, "cash", fare.FareLegs[0].Product.FareMediaID.Val)
 		assert.Equal(t, "card", fare.FareLegs[1].Product.FareMediaID.Val)
-		assert.Equal(t, "cash", fare.FareLegs[0].FareMediaID)
-		assert.Equal(t, "card", fare.FareLegs[1].FareMediaID)
+		assert.Equal(t, []string{"cash", "card"}, []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID})
 		assert.Nil(t, fare.FareLegs[1].TransferRule)
 	})
-	t.Run("a transfer on one fare medium beats mixing media", func(t *testing.T) {
+	t.Run("a transfer product sold on one fare medium", func(t *testing.T) {
 		c := newTestCoster(t, mediaFeed(countRule("bus", -1, 0, "card_transfer")))
 		j := journey(
 			leg("bus1", "a", "b", at(8, 0), at(8, 20)),
 			leg("bus2", "b", "c", at(8, 30), at(8, 50)),
 		)
-		// Cash is cheaper for each ride, but only card gets the free transfer.
+		// Cash is cheaper for each ride, and only card sells the free transfer, so the second
+		// leg pays on card.
 		fare, err := c.LowestFare(j)
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 2.00, fare.Amount.InexactFloat64())
+		assert.Equal(t, []string{"cash", "card"}, []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID})
+		// With UseSameMediumTransfers, only a trip paid on card throughout gets the transfer.
+		c.UseSameMediumTransfers = true
+		fare, err = c.LowestFare(j)
 		require.NoError(t, err)
 		require.NotNil(t, fare)
 		assert.Equal(t, 2.50, fare.Amount.InexactFloat64())
@@ -302,8 +318,7 @@ func TestTransferOptions_UnknownMedium(t *testing.T) {
 	})
 	t.Run("a fare leg whose product names no medium takes the transfer chain's medium", func(t *testing.T) {
 		// Card-only ferry, a free card transfer to a bus that names no medium, then cash-only
-		// rail with a free transfer from the bus. The bus continues the card chain, so the
-		// cash rail can't.
+		// rail with a free transfer from the bus. The bus continues the card chain.
 		feed := baseFeed()
 		feed.FareMediaList = []gtfs.FareMedia{medium("cash", 0), medium("card", 2)}
 		feed.FareProductList = []gtfs.FareProduct{
@@ -322,15 +337,30 @@ func TestTransferOptions_UnknownMedium(t *testing.T) {
 			transferRule("ferry", "bus", 0, "card_transfer"),
 			transferRule("bus", "rail", 0, "free_transfer"),
 		}
-		fare, err := newTestCoster(t, feed).LowestFare(journey(
+		c := newTestCoster(t, feed)
+		j := journey(
 			leg("ferry", "a", "b", at(8, 0), at(8, 20)),
 			leg("bus1", "b", "c", at(8, 30), at(8, 50)),
 			leg("rail1", "c", "d", at(9, 0), at(9, 20)),
-		))
+		)
+		media := func(fare *Fare) []string {
+			return []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID, fare.FareLegs[2].FareMediaID}
+		}
+		// The free transfer from the bus reaches the cash rail.
+		fare, err := c.LowestFare(j)
+		require.NoError(t, err)
+		require.NotNil(t, fare)
+		assert.Equal(t, 6.00, fare.Amount.InexactFloat64())
+		assert.Equal(t, []string{"card", "card", "cash"}, media(fare))
+		assert.NotNil(t, fare.FareLegs[1].TransferRule)
+		assert.NotNil(t, fare.FareLegs[2].TransferRule)
+		// With UseSameMediumTransfers, the cash rail can't continue the card chain.
+		c.UseSameMediumTransfers = true
+		fare, err = c.LowestFare(j)
 		require.NoError(t, err)
 		require.NotNil(t, fare)
 		assert.Equal(t, 6.00+4.00, fare.Amount.InexactFloat64())
-		assert.Equal(t, []string{"card", "card", "cash"}, []string{fare.FareLegs[0].FareMediaID, fare.FareLegs[1].FareMediaID, fare.FareLegs[2].FareMediaID})
+		assert.Equal(t, []string{"card", "card", "cash"}, media(fare))
 		assert.NotNil(t, fare.FareLegs[1].TransferRule)
 		assert.Nil(t, fare.FareLegs[2].TransferRule)
 	})
