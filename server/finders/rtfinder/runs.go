@@ -48,22 +48,43 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	return slices.ContainsFunc(r.dates, func(d tt.Date) bool { return sameDay(d, run) })
 }
 
-// tripRunsOf returns a trip's runs: the requested ones, or its current run.
-func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
+// Run names one run of a trip: a trip on one service date.
+type Run struct {
+	FeedVersionID int
+	TripID        string  // GTFS trip_id
+	Date          tt.Date // service date
+	// When the trip runs on its service day, which places an update without a
+	// start_date on the trip's current run.
+	Span TripSpan
+}
+
+// runsOf returns a run given by value as the runs to match.
+func (f *Finder) runsOf(ctx context.Context, run Run) tripRuns {
 	return tripRuns{
-		dates:   t.RunDates,
-		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, t.ID) }),
-		none:    t.NoRealtime,
+		dates:   []tt.Date{run.Date},
+		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, run.FeedVersionID, run.Span) }),
 	}
 }
 
-// currentRun returns the service date of a trip's current run.
-func (f *Finder) currentRun(ctx context.Context, fvid int, tripId int) (tt.Date, bool) {
-	loc, ok := f.lookup.FeedVersionTimezone(ctx, fvid)
-	if !ok {
-		return tt.Date{}, false
+// tripRunsOf returns a trip's runs: the requested ones, or its current run.
+func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
+	return tripRuns{
+		dates: t.RunDates,
+		current: sync.OnceValues(func() (tt.Date, bool) {
+			span, ok := f.lookup.GetTripSpan(ctx, t.FeedVersionID, t.ID)
+			if !ok {
+				return tt.Date{}, false
+			}
+			return f.currentRun(ctx, t.FeedVersionID, span)
+		}),
+		none: t.NoRealtime,
 	}
-	span, ok := f.lookup.GetTripSpan(ctx, fvid, tripId)
+}
+
+// currentRun returns the service date of a trip's current run, from when the
+// trip runs on its service day.
+func (f *Finder) currentRun(ctx context.Context, fvid int, span TripSpan) (tt.Date, bool) {
+	loc, ok := f.lookup.FeedVersionTimezone(ctx, fvid)
 	if !ok {
 		return tt.Date{}, false
 	}

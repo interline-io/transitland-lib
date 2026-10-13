@@ -42,12 +42,6 @@ func NewFinder(store kvcache.Store, lookup Lookup) *Finder {
 	}
 }
 
-// WithLookup returns a Finder that shares f's realtime data and asks lookup
-// about static GTFS data. Close only the Finder that NewFinder returned.
-func (f *Finder) WithLookup(lookup Lookup) *Finder {
-	return &Finder{Clock: f.Clock, cache: f.cache, lookup: lookup}
-}
-
 func (f *Finder) Close() error {
 	return f.cache.Close()
 }
@@ -67,22 +61,27 @@ func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Locat
 // FindTrip returns the trip update on a trip's runs: the requested ones,
 // or its current run.
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
-	if found := f.runUpdates(ctx, t); len(found) > 0 {
+	if found := f.tripUpdates(ctx, t); len(found) > 0 {
 		return found[0]
 	}
 	return nil
 }
 
-// runUpdates returns the trip updates on a trip's runs, one from each realtime
-// feed. A feed should send one update per run; where it sends several, the last
-// wins.
-func (f *Finder) runUpdates(ctx context.Context, t *model.Trip) []*pb.TripUpdate {
-	runs := f.tripRunsOf(ctx, t)
+// tripUpdates returns the trip updates on a trip's runs, one from each realtime
+// feed.
+func (f *Finder) tripUpdates(ctx context.Context, t *model.Trip) []*pb.TripUpdate {
+	return f.runUpdates(ctx, t.FeedVersionID, t.TripID.Val, f.tripRunsOf(ctx, t))
+}
+
+// runUpdates returns the trip updates naming a trip_id on its runs, one from
+// each of the feed version's realtime feeds. A feed should send one update per
+// run; where it sends several, the last wins.
+func (f *Finder) runUpdates(ctx context.Context, fvid int, tripId string, runs tripRuns) []*pb.TripUpdate {
 	var ret []*pb.TripUpdate
-	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
+	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, fvid)
 	for _, topic := range topics {
 		var found *pb.TripUpdate
-		for _, a := range f.getTrips(ctx, topic, t.TripID.Val) {
+		for _, a := range f.getTrips(ctx, topic, tripId) {
 			if runs.describes(a.GetTrip()) {
 				found = a
 			}
@@ -358,7 +357,7 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 // FindStopTimeUpdate returns the update for a stop time on a trip's runs: the
 // requested ones, or its current run.
 func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
-	return f.matchStopTimeUpdate(ctx, f.runUpdates(ctx, t), t, st)
+	return matchStop(ctx, f.tripUpdates(ctx, t), st.StopSequence.Int(), f.gtfsStopID(ctx, st))
 }
 
 // FindStopTimeUpdates returns the updates for a trip's stop times, in their
@@ -367,24 +366,67 @@ func (f *Finder) FindStopTimeUpdates(ctx context.Context, t *model.Trip, sts []*
 	if len(sts) == 0 {
 		return nil
 	}
-	rtTrips := f.runUpdates(ctx, t)
+	rtTrips := f.tripUpdates(ctx, t)
 	ret := make([]*model.RTStopTimeUpdate, len(sts))
 	for i, st := range sts {
-		ret[i], _ = f.matchStopTimeUpdate(ctx, rtTrips, t, st)
+		ret[i], _ = matchStop(ctx, rtTrips, st.StopSequence.Int(), f.gtfsStopID(ctx, st))
 	}
 	return ret
 }
 
-// matchStopTimeUpdate returns the update for a stop time from the trip updates
-// on its trip's runs, one from each realtime feed.
-func (f *Finder) matchStopTimeUpdate(ctx context.Context, rtTrips []*pb.TripUpdate, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
-	seq := st.StopSequence.Int()
+// gtfsStopID returns a function that looks up a stop time's GTFS stop_id.
+func (f *Finder) gtfsStopID(ctx context.Context, st *model.StopTime) func() (string, bool) {
+	return func() (string, bool) { return f.lookup.GetGtfsStopID(ctx, st.StopID.Int()) }
+}
+
+// RunUpdate is the realtime data on one run of a trip: the trip updates on the
+// run, one from each realtime feed that has one.
+type RunUpdate struct {
+	updates []*pb.TripUpdate
+}
+
+// FindRunUpdate returns the trip updates on a run, or nil when no realtime feed
+// has one.
+func (f *Finder) FindRunUpdate(ctx context.Context, run Run) *RunUpdate {
+	updates := f.runUpdates(ctx, run.FeedVersionID, run.TripID, f.runsOf(ctx, run))
+	if len(updates) == 0 {
+		return nil
+	}
+	return &RunUpdate{updates: updates}
+}
+
+// TripUpdate returns the first realtime feed's trip update on the run.
+func (u *RunUpdate) TripUpdate() *pb.TripUpdate {
+	return u.updates[0]
+}
+
+// StopRef names one of a run's stop times. Without a StopID, it matches only
+// by stop_sequence.
+type StopRef struct {
+	StopSequence int
+	StopID       string // GTFS stop_id
+}
+
+// MatchStops returns the updates for a run's stop times, in their order: nil
+// for a stop time without one.
+func (u *RunUpdate) MatchStops(ctx context.Context, stops []StopRef) []*model.RTStopTimeUpdate {
+	ret := make([]*model.RTStopTimeUpdate, len(stops))
+	for i, st := range stops {
+		ret[i], _ = matchStop(ctx, u.updates, st.StopSequence, func() (string, bool) { return st.StopID, st.StopID != "" })
+	}
+	return ret
+}
+
+// matchStop returns the update for the stop time at stop_sequence seq from the
+// trip updates on its run, one from each realtime feed. stopId returns the
+// stop's GTFS stop_id, and is called only when no update names seq.
+func matchStop(ctx context.Context, rtTrips []*pb.TripUpdate, seq int, stopId func() (string, bool)) (*model.RTStopTimeUpdate, bool) {
 	// Attempt to match on stop sequence
 	for _, rtTrip := range rtTrips {
 		for _, ste := range rtTrip.StopTimeUpdate {
 			if int(ste.GetStopSequence()) == seq {
 				log.TraceCheck(func() {
-					log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Int("seq", seq).Msg("found stop time update on trip_id/stop_sequence")
+					log.For(ctx).Trace().Str("trip_id", rtTrip.GetTrip().GetTripId()).Int("seq", seq).Msg("found stop time update on trip_id/stop_sequence")
 				})
 				return &model.RTStopTimeUpdate{TripUpdate: rtTrip, StopTimeUpdate: ste}, true
 			}
@@ -395,7 +437,7 @@ func (f *Finder) matchStopTimeUpdate(ctx context.Context, rtTrips []*pb.TripUpda
 	if len(rtTrips) == 0 {
 		return nil, false
 	}
-	sid, ok := f.lookup.GetGtfsStopID(ctx, st.StopID.Int())
+	sid, ok := stopId()
 	if !ok {
 		return nil, false
 	}
@@ -421,7 +463,7 @@ func (f *Finder) matchStopTimeUpdate(ctx context.Context, rtTrips []*pb.TripUpda
 		}
 		if sid == ste.GetStopId() {
 			log.TraceCheck(func() {
-				log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Str("stop_id", sid).Msg("found stop time update on trip_id/stop_id")
+				log.For(ctx).Trace().Str("trip_id", rtTrip.GetTrip().GetTripId()).Str("stop_id", sid).Msg("found stop time update on trip_id/stop_id")
 			})
 			return &model.RTStopTimeUpdate{TripUpdate: rtTrip, StopTimeUpdate: ste, LastDelay: copyPtr(lastDelay)}, true
 		}
