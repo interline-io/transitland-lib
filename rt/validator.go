@@ -84,9 +84,12 @@ func (fi *Validator) Validate(ent tt.Entity) []error {
 			RouteID:     v.RouteID.Val,
 		}
 	case *gtfs.Frequency:
-		a := fi.tripInfo[v.TripID.Val]
-		a.UsesFrequency = true
-		fi.tripInfo[v.TripID.Val] = a
+		// Imports drop a row with errors, so it doesn't make its trip frequency-based
+		if len(tt.CheckErrors(v)) == 0 {
+			a := fi.tripInfo[v.TripID.Val]
+			a.UsesFrequency = true
+			fi.tripInfo[v.TripID.Val] = a
+		}
 	}
 
 	// Validate with schedule checker

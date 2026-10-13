@@ -8,10 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/tt"
+	sq "github.com/irees/squirrel"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -105,6 +108,52 @@ func TestStopDeparturesMaterializedSelect(t *testing.T) {
 	assert.Greater(t, rowCounts["stop"], 0, "stop departures compared")
 	assert.Greater(t, rowCounts["location"], 0, "location departures compared")
 	assert.Greater(t, rowCounts["location group"], 0, "location group departures compared")
+}
+
+// Both departures queries run a trip in frequencies.txt once per start: every
+// headway_secs from start_time, up to but not including end_time.
+func TestStopDeparturesSelect_Frequencies(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	ctx := context.Background()
+	tx, err := testutil.MustOpenTestDB(t).Beginx()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback() })
+	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+
+	// The trips share one journey pattern, each at its own offset, which frequency runs ignore
+	var patterns int
+	require.NoError(t, tx.Get(&patterns, "select count(distinct journey_pattern_id) from gtfs_trips where feed_version_id = $1", fvid))
+	require.Equal(t, 1, patterns, "the trips share one journey pattern")
+	var stopID int
+	require.NoError(t, tx.Get(&stopID, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop1"))
+
+	date := tt.NewDate(time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC))
+	expect := map[string][]string{
+		"regular": {"05:00:00"},
+		"offset":  {"07:00:00", "07:30:00"},
+		"meet":    {"10:00:00", "10:30:00", "11:00:00", "11:30:00"},
+	}
+	queries := map[string]func() sq.SelectBuilder{
+		"departures": func() sq.SelectBuilder {
+			return stopDeparturesSelect(fvid, []int{stopID}, stopTimeEntityStop, &model.StopTimeFilter{ServiceDate: &date})
+		},
+		"materialized departures": func() sq.SelectBuilder {
+			return stopDeparturesMaterializedSelect(fvid, []int{stopID}, stopTimeEntityStop, &model.StopTimeFilter{ServiceDate: &date})
+		},
+	}
+	for name, q := range queries {
+		t.Run(name, func(t *testing.T) {
+			var sts []*model.StopTime
+			require.NoError(t, dbutil.Select(ctx, tx, q(), &sts))
+			got := map[string][]string{}
+			for _, st := range sts {
+				got[st.GtfsTripID] = append(got[st.GtfsTripID], st.DepartureTime.String())
+			}
+			assert.Equal(t, expect, got)
+		})
+	}
 }
 
 // firstStopTimeDiff describes the first row where two sorted results differ.

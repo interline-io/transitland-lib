@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
@@ -107,6 +109,37 @@ func testFinder(t *testing.T, lookup Lookup, ftype string, msg *pb.FeedMessage) 
 		t.Fatal(err)
 	}
 	return f
+}
+
+// A frequency-based trip runs from its first start to its last start plus one
+// run, and no run starts at a frequency's end_time.
+func TestPostgresLookup_GetTripSpan(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	tx, err := testutil.MustOpenTestDB(t).Beginx()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	lookup := NewPostgresLookup(tx)
+	for _, tc := range []struct {
+		tripID string
+		expect TripSpan
+	}{
+		{"regular", TripSpan{FirstDeparture: 5 * 3600, LastArrival: 5*3600 + 600}},
+		{"offset", TripSpan{FirstDeparture: 7 * 3600, LastArrival: 7*3600 + 1800 + 600}},
+		{"meet", TripSpan{FirstDeparture: 10 * 3600, LastArrival: 11*3600 + 1800 + 600}},
+	} {
+		t.Run(tc.tripID, func(t *testing.T) {
+			tripID := 0
+			if err := sqlx.Get(tx, &tripID, "select id from gtfs_trips where feed_version_id = $1 and trip_id = $2", fvid, tc.tripID); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tc.expect, lookup.GetTripSpan(context.Background(), fvid, tripID))
+		})
+	}
 }
 
 func TestPostgresLookup_GetGtfsStopID(t *testing.T) {

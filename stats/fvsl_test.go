@@ -97,6 +97,24 @@ func TestNewFeedVersionServiceLevelsFromReader(t *testing.T) {
 	}
 }
 
+// Service levels count a frequency's runs: every headway_secs from start_time,
+// up to but not including end_time.
+func TestNewFeedVersionServiceLevelsFromReader_Frequencies(t *testing.T) {
+	results, err := NewFeedVersionServiceLevelsFromReader(testreader.NewFrequencyTestFeed())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("got %d service levels, expected 1", len(results))
+	}
+	a := results[0]
+	assert.Equal(t, "2024-01-01", a.StartDate.String())
+	assert.Equal(t, "2024-01-07", a.EndDate.String())
+	// Seven 10-minute runs a day: regular once, offset twice and meet four times
+	day := 7 * 600
+	assert.Equal(t, []int{day, day, day, day, day, day, day}, []int{a.Monday, a.Tuesday, a.Wednesday, a.Thursday, a.Friday, a.Saturday, a.Sunday})
+}
+
 func TestServiceLevelDefaultWeek(t *testing.T) {
 
 	fvsls := []dmfr.FeedVersionServiceLevel{
