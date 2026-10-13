@@ -71,12 +71,17 @@ func (f *Finder) runsOf(ctx context.Context, run Run) tripRuns {
 
 // tripRunsOf returns a trip's runs: the requested ones, or its current run.
 func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
-	span := func() (TripSpan, bool) { return f.lookup.GetTripSpan(ctx, t.FeedVersionID, t.ID) }
 	return tripRuns{
 		dates:   t.RunDates,
-		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, span) }),
+		current: sync.OnceValues(func() (tt.Date, bool) { return f.CurrentRun(ctx, t) }),
 		none:    t.NoRealtime,
 	}
+}
+
+// CurrentRun returns the service date of a trip's current run.
+func (f *Finder) CurrentRun(ctx context.Context, t *model.Trip) (tt.Date, bool) {
+	span := func() (TripSpan, bool) { return f.lookup.GetTripSpan(ctx, t.FeedVersionID, t.ID) }
+	return f.currentRun(ctx, t.FeedVersionID, span)
 }
 
 // currentRun returns the service date of a trip's current run, from when the

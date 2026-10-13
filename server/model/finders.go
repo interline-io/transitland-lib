@@ -205,6 +205,9 @@ type RTFinder interface {
 	GetAddedTripsForStop(context.Context, *Stop) []*pb.TripUpdate
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
 	FindStopTimeUpdates(context.Context, *Trip, []*StopTime) []*RTStopTimeUpdate
+	// CurrentRun returns the service date of a trip's current run, the run that
+	// realtime data naming no date describes.
+	CurrentRun(context.Context, *Trip) (tt.Date, bool)
 	// lookup cache methods
 	StopTimezone(context.Context, int, string) (*time.Location, bool)
 	FeedVersionTimezone(context.Context, int) (*time.Location, bool)

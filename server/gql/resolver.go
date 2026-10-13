@@ -133,6 +133,17 @@ func wantsRTStopTimeUpdate(ctx context.Context) bool {
 	return false
 }
 
+// wantsStopTimeDate reports whether a query reads a stop time's dates.
+func wantsStopTimeDate(ctx context.Context) bool {
+	for _, field := range graphql.CollectFieldsCtx(ctx, nil) {
+		switch field.Name {
+		case "service_date", "date":
+			return true
+		}
+	}
+	return false
+}
+
 func convertScheduleRelationship(sr string) *model.ScheduleRelationship {
 	var msr model.ScheduleRelationship
 	switch sr {

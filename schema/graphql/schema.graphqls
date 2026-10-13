@@ -1171,10 +1171,13 @@ type Trip {
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
 
+  "GTFS service date of the run this trip stands for: the date it was found on, or for a trip found without one, its current run. Null for a trip found on several dates, which `service_dates` lists, and for one that stands for no run, such as a route pattern's `representative_trip`. Under `use_service_window`, the requested date"
+  service_date: Date
+
   """
   Every GTFS service date matched by a `dates` or `service_dates` query, reported as the date that was asked for rather than where `use_service_window` relocated it. All of a trip's stop times run on these dates; a departure's wall calendar date is `service_date + floor(departure_time / 86400)`.
 
-  Under `service_dates` these are exactly the dates requested. Under `dates` they remain service dates and can fall before the requested range, so a caller wanting only the calendar days it asked for must apply the formula per stop time rather than read this list directly.
+  Under `service_dates` these are exactly the dates requested. Under `dates` they remain service dates and can fall before the requested range, so a caller wanting only the calendar days it asked for must apply the formula per stop time rather than read this list directly. A trip found on one date reports it in `service_date` too.
   """
   service_dates: [Date!]
 
@@ -1423,10 +1426,10 @@ type StopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under `use_service_window`, the requested date"
+  "GTFS service date for this scheduled stop time, on a departure or on a trip that stands for one run; under `use_service_window`, the requested date"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "Calendar date for this scheduled stop time, on a departure or on a trip that stands for one run"
   date: Date
 
   "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics"
@@ -1497,10 +1500,10 @@ type FlexStopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under `use_service_window`, the requested date"
+  "GTFS service date for this scheduled stop time, on a departure or on a trip that stands for one run; under `use_service_window`, the requested date"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "Calendar date for this scheduled stop time, on a departure or on a trip that stands for one run"
   date: Date
 
   "Real-time status of the parent trip. `STATIC` means no GTFS-RT data was matched. See `ScheduleRelationship` for per-value semantics"

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TRIP
@@ -35,6 +36,31 @@ func (r *tripResolver) Calendar(ctx context.Context, obj *model.Trip) (*model.Ca
 	return LoaderFor(ctx).CalendarsByIDs.Load(ctx, obj.ServiceID.Int())()
 }
 
+func (r *tripResolver) ServiceDate(ctx context.Context, obj *model.Trip) (*tt.Date, error) {
+	if d := tripRunDate(ctx, obj); d.Valid {
+		return &d, nil
+	}
+	return nil, nil
+}
+
+// tripRunDate returns the service date of the run a trip stands for: the one
+// date it was found on, or without one, its current run. Invalid for a trip
+// found on several dates, or one that stands for no run.
+func tripRunDate(ctx context.Context, trip *model.Trip) tt.Date {
+	if trip.NoRealtime {
+		return tt.Date{}
+	}
+	switch len(trip.RunDates) {
+	case 0:
+		if d, ok := model.ForContext(ctx).RTFinder.CurrentRun(ctx, trip); ok {
+			return d
+		}
+	case 1:
+		return trip.RunDates[0]
+	}
+	return tt.Date{}
+}
+
 func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.StopTime, error) {
 	loaded, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
@@ -42,11 +68,13 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})()
+	// A trip found without a date takes a lookup to find its current run, so only
+	// a query that reads a stop time's date, or the times built from it, pays.
 	wantsRT := wantsRTStopTimeUpdate(ctx)
-	if !wantsRT && len(obj.RunDates) != 1 {
+	if !wantsRT && len(obj.RunDates) != 1 && !wantsStopTimeDate(ctx) {
 		return loaded, err
 	}
-	sts := runStopTimes(obj, loaded)
+	sts := runStopTimes(loaded, tripRunDate(ctx, obj))
 	if wantsRT {
 		for i, ste := range model.ForContext(ctx).RTFinder.FindStopTimeUpdates(ctx, obj, sts) {
 			sts[i].RTStopTimeUpdate = ste
@@ -56,14 +84,14 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 }
 
 // runStopTimes returns copies of a trip's stop times, on its run's service date
-// when the trip is one run. Copies, as the loader shares them across every run of
-// the trip in a request, and each run has its own date and realtime data.
-func runStopTimes(trip *model.Trip, loaded []*model.StopTime) []*model.StopTime {
+// where it has one. Copies, as the loader shares them across every run of the
+// trip in a request, and each run has its own date and realtime data.
+func runStopTimes(loaded []*model.StopTime, serviceDate tt.Date) []*model.StopTime {
 	sts := make([]*model.StopTime, 0, len(loaded))
 	for _, st := range loaded {
 		c := *st
-		if len(trip.RunDates) == 1 {
-			c.SetServiceDate(trip.RunDates[0])
+		if serviceDate.Valid {
+			c.SetServiceDate(serviceDate)
 		}
 		sts = append(sts, &c)
 	}
@@ -77,10 +105,10 @@ func (r *tripResolver) FlexStopTimes(ctx context.Context, obj *model.Trip, limit
 		Limit:         resolverCheckLimit(limit),
 		Where:         where,
 	})()
-	if len(obj.RunDates) != 1 {
+	if len(obj.RunDates) != 1 && !wantsStopTimeDate(ctx) {
 		return loaded, err
 	}
-	return runStopTimes(obj, loaded), err
+	return runStopTimes(loaded, tripRunDate(ctx, obj)), err
 }
 
 func (r *tripResolver) Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error) {

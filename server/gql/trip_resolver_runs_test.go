@@ -218,12 +218,12 @@ func TestTripRT_Runs_FallbackScheduledTime(t *testing.T) {
 }
 
 // A trip found by its service date is that run, as the trip viewer finds one;
-// found without a date, it is its current run.
+// found without a date, it is its current run, stop times and all.
 func TestTripRT_Runs_Trips(t *testing.T) {
 	const query = `query($where: TripFilter!) {
 		trips(where: $where) {
 			trip_id
-			stop_times { stop_sequence schedule_relationship departure { estimated_delay } }
+			stop_times { stop_sequence service_date schedule_relationship departure { estimated_delay } }
 			alerts { header_text { text } }
 			vehicle_position { vehicle { label } }
 		}
@@ -231,8 +231,8 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 	tcs := []struct {
 		name  string
 		where hw
-		// At FTVL. A trip found without a date has no date for a delay-only
-		// estimate, but its stop times still carry the update.
+		// At FTVL.
+		serviceDate  string
 		delay        *int64
 		relationship string
 		alerts       []string
@@ -241,6 +241,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "today's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-30"},
+			serviceDate:  "2018-05-30",
 			delay:        ptr(int64(60)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 30", "Current run"},
@@ -249,6 +250,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "tomorrow's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-31"},
+			serviceDate:  "2018-05-31",
 			delay:        ptr(int64(300)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 31"},
@@ -256,11 +258,15 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "next week's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-06-05"},
+			serviceDate:  "2018-06-05",
 			relationship: "STATIC",
 		},
 		{
+			// On today's date, so its delay-only update gives an estimate.
 			name:         "no date, so the current run",
 			where:        hw{"trip_id": "1031527WKDY"},
+			serviceDate:  "2018-05-30",
+			delay:        ptr(int64(60)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 30", "Current run"},
 			vehicle:      "May 30 train",
@@ -280,6 +286,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 				}
 				for _, st := range trip.Get("stop_times").Array() {
 					if st.Get("stop_sequence").Int() == 12 {
+						assert.Equal(t, tc.serviceDate, st.Get("service_date").String(), "service_date at FTVL")
 						assert.Equal(t, tc.delay, optionalInt(st.Get("departure.estimated_delay")), "estimated_delay at FTVL")
 						assert.Equal(t, tc.relationship, st.Get("schedule_relationship").String(), "schedule_relationship at FTVL")
 					}
@@ -353,4 +360,122 @@ func TestTripRT_Runs_PatternTrips(t *testing.T) {
 			assert.True(t, found, "expected trip 1031527WKDY among the patterns' trips")
 		},
 	})
+}
+
+// A trip's service_date is the run it stands for: the date it was found on,
+// including the date a vehicle names, or without one, its current run.
+func TestTripRT_Runs_ServiceDate(t *testing.T) {
+	const vehicles = `query {
+		agencies(where: {onestop_id: "o-9q9-bayarearapidtransit"}) {
+			vehicle_positions { vehicle { label } trip { trip_id service_date } }
+		}
+	}`
+	const trips = `query($where: TripFilter!) {
+		trips(where: $where) { trip_id service_date }
+	}`
+	const routeTrips = `query($where: TripFilter!) {
+		routes(where: {feed_onestop_id: "BA", route_id: "05"}) {
+			trips(where: $where) { trip_id service_date }
+		}
+	}`
+	const departures = `query($where: StopTimeFilter!) {
+		stops(where: {stop_id: "FTVL"}) {
+			stop_times(where: $where) { trip { trip_id service_date } }
+		}
+	}`
+	const patterns = `query {
+		routes(where: {feed_onestop_id: "BA", route_id: "05"}) {
+			patterns { representative_trip { trip_id service_date } }
+		}
+	}`
+	vehicleTrip := func(label string) string {
+		return `agencies.0.vehicle_positions.#(vehicle.label=="` + label + `").trip`
+	}
+	tcs := []struct {
+		name    string
+		whenUtc string
+		query   string
+		vars    hw
+		// The service_date of the trip at each path, or "" for null.
+		expect map[string]string
+	}{
+		{
+			// The next afternoon, when May 31's run is current: a vehicle naming
+			// May 30 is still on May 30's run.
+			name:    "vehicles",
+			whenUtc: "2018-05-31T23:00:00Z",
+			query:   vehicles,
+			expect: map[string]string{
+				vehicleTrip("May 30 train"):  "2018-05-30",
+				vehicleTrip("Undated train"): "2018-05-31",
+			},
+		},
+		{
+			name:    "trip found on a date",
+			whenUtc: rtFixtureWhenUtc,
+			query:   trips,
+			vars:    hw{"where": hw{"trip_id": "1031527WKDY", "service_date": "2018-05-31"}},
+			expect:  map[string]string{"trips.0": "2018-05-31"},
+		},
+		{
+			// At ten past midnight the previous service date's run, which arrives
+			// at 24:31, is still going.
+			name:    "trip found without a date, after midnight",
+			whenUtc: "2018-05-31T07:10:00Z",
+			query:   trips,
+			vars:    hw{"where": hw{"trip_id": "5172328WKDY"}},
+			expect:  map[string]string{"trips.0": "2018-05-30"},
+		},
+		{
+			name:    "trip found on several dates",
+			whenUtc: rtFixtureWhenUtc,
+			query:   trips,
+			vars:    hw{"where": hw{"trip_id": "1031527WKDY", "service_dates": []string{"2018-05-30", "2018-05-31"}}},
+			expect:  map[string]string{"trips.0": ""},
+		},
+		{
+			// Answered from the fallback week, and reported as the date asked for.
+			name:    "trip found in the fallback week",
+			whenUtc: "2030-05-28T23:00:00Z",
+			query:   routeTrips,
+			vars:    hw{"where": hw{"trip_id": "1031527WKDY", "service_date": "2030-05-28", "use_service_window": true}},
+			expect:  map[string]string{"routes.0.trips.0": "2030-05-28"},
+		},
+		{
+			name:    "a departure's trip",
+			whenUtc: rtFixtureWhenUtc,
+			query:   departures,
+			vars:    hw{"where": hw{"service_date": "2018-05-31", "start_time": 57600, "end_time": 57900}},
+			expect:  map[string]string{`stops.0.stop_times.#(trip.trip_id=="1031527WKDY").trip`: "2018-05-31"},
+		},
+		{
+			name:    "a pattern's representative trip",
+			whenUtc: rtFixtureWhenUtc,
+			query:   patterns,
+			expect:  map[string]string{"routes.0.patterns.0.representative_trip": ""},
+		},
+	}
+	for _, tc := range tcs {
+		testRt(t, rtTestCase{
+			name:    tc.name,
+			query:   tc.query,
+			vars:    tc.vars,
+			rtfiles: runsRTFiles,
+			whenUtc: tc.whenUtc,
+			cb: func(t *testing.T, jj string) {
+				for path, want := range tc.expect {
+					trip := gjson.Get(jj, path)
+					if !assert.True(t, trip.Get("trip_id").Exists(), "expected a trip at %s", path) {
+						continue
+					}
+					got := trip.Get("service_date")
+					if want == "" {
+						assert.Equal(t, gjson.Null, got.Type, "%s service_date", path)
+						continue
+					}
+					assert.Equal(t, want, got.String(), "%s service_date", path)
+				}
+			},
+		})
+	}
 }

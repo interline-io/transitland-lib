@@ -1541,6 +1541,7 @@ type ComplexityRoot struct {
 		SafeDurationFactor   func(childComplexity int) int
 		SafeDurationOffset   func(childComplexity int) int
 		ScheduleRelationship func(childComplexity int) int
+		ServiceDate          func(childComplexity int) int
 		ServiceDates         func(childComplexity int) int
 		Shape                func(childComplexity int) int
 		StopPatternID        func(childComplexity int) int
@@ -2068,6 +2069,8 @@ type TranslationResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Translation) (*model.FeedVersion, error)
 }
 type TripResolver interface {
+	ServiceDate(ctx context.Context, obj *model.Trip) (*tt.Date, error)
+
 	Calendar(ctx context.Context, obj *model.Trip) (*model.Calendar, error)
 	Route(ctx context.Context, obj *model.Trip) (*model.Route, error)
 	Shape(ctx context.Context, obj *model.Trip) (*model.Shape, error)
@@ -9309,6 +9312,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Trip.ScheduleRelationship(childComplexity), true
+	case "Trip.service_date":
+		if e.ComplexityRoot.Trip.ServiceDate == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Trip.ServiceDate(childComplexity), true
 	case "Trip.service_dates":
 		if e.ComplexityRoot.Trip.ServiceDates == nil {
 			break
@@ -12157,10 +12166,13 @@ type Trip {
   "Calculated stop pattern ID; an integer scoped to the feed version"
   stop_pattern_id: Int!
 
+  "GTFS service date of the run this trip stands for: the date it was found on, or for a trip found without one, its current run. Null for a trip found on several dates, which ` + "`" + `service_dates` + "`" + ` lists, and for one that stands for no run, such as a route pattern's ` + "`" + `representative_trip` + "`" + `. Under ` + "`" + `use_service_window` + "`" + `, the requested date"
+  service_date: Date
+
   """
   Every GTFS service date matched by a ` + "`" + `dates` + "`" + ` or ` + "`" + `service_dates` + "`" + ` query, reported as the date that was asked for rather than where ` + "`" + `use_service_window` + "`" + ` relocated it. All of a trip's stop times run on these dates; a departure's wall calendar date is ` + "`" + `service_date + floor(departure_time / 86400)` + "`" + `.
 
-  Under ` + "`" + `service_dates` + "`" + ` these are exactly the dates requested. Under ` + "`" + `dates` + "`" + ` they remain service dates and can fall before the requested range, so a caller wanting only the calendar days it asked for must apply the formula per stop time rather than read this list directly.
+  Under ` + "`" + `service_dates` + "`" + ` these are exactly the dates requested. Under ` + "`" + `dates` + "`" + ` they remain service dates and can fall before the requested range, so a caller wanting only the calendar days it asked for must apply the formula per stop time rather than read this list directly. A trip found on one date reports it in ` + "`" + `service_date` + "`" + ` too.
   """
   service_dates: [Date!]
 
@@ -12409,10 +12421,10 @@ type StopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under ` + "`" + `use_service_window` + "`" + `, the requested date"
+  "GTFS service date for this scheduled stop time, on a departure or on a trip that stands for one run; under ` + "`" + `use_service_window` + "`" + `, the requested date"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "Calendar date for this scheduled stop time, on a departure or on a trip that stands for one run"
   date: Date
 
   "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
@@ -12483,10 +12495,10 @@ type FlexStopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under ` + "`" + `use_service_window` + "`" + `, the requested date"
+  "GTFS service date for this scheduled stop time, on a departure or on a trip that stands for one run; under ` + "`" + `use_service_window` + "`" + `, the requested date"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "Calendar date for this scheduled stop time, on a departure or on a trip that stands for one run"
   date: Date
 
   "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
@@ -17949,6 +17961,8 @@ func (ec *executionContext) childFields_Trip(ctx context.Context, field graphql.
 		return ec.fieldContext_Trip_safe_duration_offset(ctx, field)
 	case "stop_pattern_id":
 		return ec.fieldContext_Trip_stop_pattern_id(ctx, field)
+	case "service_date":
+		return ec.fieldContext_Trip_service_date(ctx, field)
 	case "service_dates":
 		return ec.fieldContext_Trip_service_dates(ctx, field)
 	case "calendar":
@@ -50291,6 +50305,29 @@ func (ec *executionContext) fieldContext_Trip_stop_pattern_id(_ context.Context,
 	return graphql.NewScalarFieldContext("Trip", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _Trip_service_date(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Trip_service_date(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Trip().ServiceDate(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *tt.Date) graphql.Marshaler {
+			return ec.marshalODate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDate(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Trip_service_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Trip", field, true, true, errors.New("field of type Date does not have child fields"))
+}
+
 func (ec *executionContext) _Trip_service_dates(ctx context.Context, field graphql.CollectedField, obj *model.Trip) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -72616,6 +72653,39 @@ func (ec *executionContext) _Trip(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "service_date":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Trip_service_date(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "service_dates":
 			out.Values[i] = ec._Trip_service_dates(ctx, field, obj)
 		case "calendar":

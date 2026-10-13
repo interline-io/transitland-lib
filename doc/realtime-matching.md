@@ -39,17 +39,17 @@ A trip found any other way, for example by `trip_id` alone, is its current run.
 
 A route pattern's `representative_trip`, and its `trips` when the pattern has no `service_date`, stand for the pattern rather than any run. They carry no realtime data.
 
+`Trip.service_date` reports the run's service date: the date the trip was found on, or its current run's. It is null for a trip found on several dates, and for one that stands for no run. A date that a vehicle or trip update names isn't checked against the schedule, and neither is a current run's, so the schedule may not run the trip on that date.
+
 ## What each field returns
 
 These fields return only the realtime data on the trip's run:
 
 - `StopTime.arrival`, `departure` and `schedule_relationship`: the trip update for the stop time's run.
-- `Trip.stop_times`: on a trip that is one run, stop times on that run's service date, with that run's trip update.
+- `Trip.stop_times`: on a trip that is one run, its current run included, stop times on that run's service date, with that run's trip update.
 - `Trip.alerts`: alerts whose selector names this trip and its run.
 - `Trip.vehicle_position`: a vehicle running this trip's run.
 - `Trip.schedule_relationship` and `Trip.timestamp`: from the trip update for the trip's run.
-
-A trip found without a date has no service date for its stop times, so a trip update that gives only delays, not times, produces no estimates on its `stop_times`.
 
 ## Dates under use_service_window
 
