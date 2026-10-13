@@ -2,7 +2,6 @@ package rtfinder
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -357,20 +356,94 @@ func TestFindAlertsForStop_Lookups(t *testing.T) {
 	assert.EqualValues(t, 2, db.agencyQueries.Load(), "recovered")
 }
 
+// unexpectedLookup fails the test on any lookup. A test's Lookup embeds it and
+// answers the lookups the test expects.
+type unexpectedLookup struct {
+	t *testing.T
+}
+
+func (l unexpectedLookup) unexpected(name string) {
+	l.t.Errorf("unexpected lookup: %s", name)
+}
+
+func (l unexpectedLookup) GetFeedVersionRTFeeds(context.Context, int) ([]string, bool) {
+	l.unexpected("GetFeedVersionRTFeeds")
+	return nil, false
+}
+
+func (l unexpectedLookup) FeedVersionTimezone(context.Context, int) (*time.Location, bool) {
+	l.unexpected("FeedVersionTimezone")
+	return nil, false
+}
+
+func (l unexpectedLookup) GetTripSpan(context.Context, int, int) (TripSpan, bool) {
+	l.unexpected("GetTripSpan")
+	return TripSpan{}, false
+}
+
+func (l unexpectedLookup) GetGtfsStopID(context.Context, int) (string, bool) {
+	l.unexpected("GetGtfsStopID")
+	return "", false
+}
+
+func (l unexpectedLookup) StopTimezone(context.Context, int, string) (*time.Location, bool) {
+	l.unexpected("StopTimezone")
+	return nil, false
+}
+
+func (l unexpectedLookup) GetGtfsAgencyID(context.Context, int) (string, bool) {
+	l.unexpected("GetGtfsAgencyID")
+	return "", false
+}
+
+func (l unexpectedLookup) GetRoute(context.Context, int) (GtfsRoute, bool) {
+	l.unexpected("GetRoute")
+	return GtfsRoute{}, false
+}
+
+func (l unexpectedLookup) GetFeedVersionRoute(context.Context, int, string) (GtfsRoute, bool) {
+	l.unexpected("GetFeedVersionRoute")
+	return GtfsRoute{}, false
+}
+
+func (l unexpectedLookup) GetFeedVersionAgencyIDs(context.Context, int) ([]string, bool) {
+	l.unexpected("GetFeedVersionAgencyIDs")
+	return nil, false
+}
+
+func (l unexpectedLookup) GetFeedVersionRouteTypes(context.Context, int) ([]int, bool) {
+	l.unexpected("GetFeedVersionRouteTypes")
+	return nil, false
+}
+
+func (l unexpectedLookup) GetTripRouteIDs(context.Context, int, []string) (map[string]string, bool) {
+	l.unexpected("GetTripRouteIDs")
+	return nil, false
+}
+
+func (l unexpectedLookup) GetAgencyRouteIDs(context.Context, int) (map[string]bool, bool) {
+	l.unexpected("GetAgencyRouteIDs")
+	return nil, false
+}
+
+func (l unexpectedLookup) GetFeedOperatorCount(context.Context, string) (int, bool) {
+	l.unexpected("GetFeedOperatorCount")
+	return 0, false
+}
+
 // tripRouteLookup resolves trips to routes for feed version 1, counting its
-// calls and failing while fail is set. Any other lookup panics on the nil
-// Lookup it embeds.
+// calls and failing while fail is set.
 type tripRouteLookup struct {
-	Lookup
+	unexpectedLookup
 	routes map[string]string
 	calls  atomic.Int64
 	fail   atomic.Bool
 }
 
-func (l *tripRouteLookup) GetTripRouteIDs(_ context.Context, fvid int, tripIds []string) (map[string]string, error) {
+func (l *tripRouteLookup) GetTripRouteIDs(_ context.Context, fvid int, tripIds []string) (map[string]string, bool) {
 	l.calls.Add(1)
 	if l.fail.Load() {
-		return nil, errors.New("test failure")
+		return nil, false
 	}
 	ret := map[string]string{}
 	for _, tid := range tripIds {
@@ -378,11 +451,11 @@ func (l *tripRouteLookup) GetTripRouteIDs(_ context.Context, fvid int, tripIds [
 			ret[tid] = rid
 		}
 	}
-	return ret, nil
+	return ret, true
 }
 
 func TestFinder_tripRouteIDs(t *testing.T) {
-	lookup := &tripRouteLookup{routes: map[string]string{"1031527WKDY": "05"}}
+	lookup := &tripRouteLookup{unexpectedLookup: unexpectedLookup{t}, routes: map[string]string{"1031527WKDY": "05"}}
 	f := &Finder{lookup: lookup}
 	ctx := context.Background()
 	newSource := func(tripIds ...string) *Source {
@@ -437,10 +510,9 @@ func TestFinder_tripRouteIDs(t *testing.T) {
 }
 
 // tripUpdateLookup answers the lookups that trip update matching makes, from
-// fixed values for feed version 1. Any other lookup panics on the nil Lookup
-// it embeds.
+// fixed values for feed version 1.
 type tripUpdateLookup struct {
-	Lookup
+	unexpectedLookup
 	tz      *time.Location
 	spans   map[int]TripSpan // by trip id
 	stopIds map[int]string   // GTFS stop_ids by stop id
@@ -457,8 +529,8 @@ func (l tripUpdateLookup) FeedVersionTimezone(_ context.Context, fvid int) (*tim
 	return l.tz, fvid == 1
 }
 
-func (l tripUpdateLookup) GetTripSpan(_ context.Context, _ int, tripId int) TripSpan {
-	return l.spans[tripId]
+func (l tripUpdateLookup) GetTripSpan(_ context.Context, _ int, tripId int) (TripSpan, bool) {
+	return l.spans[tripId], true
 }
 
 func (l tripUpdateLookup) GetGtfsStopID(_ context.Context, id int) (string, bool) {
@@ -481,9 +553,10 @@ func testLookupFinder(t *testing.T) *Finder {
 		t.Fatal(err)
 	}
 	lookup := tripUpdateLookup{
-		tz:      loc,
-		spans:   map[int]TripSpan{2: {FirstDeparture: 23*3600 + 40*60, LastArrival: 24*3600 + 31*60}}, // 23:40 to 24:31
-		stopIds: map[int]string{testFtvl: "FTVL", testLake: "LAKE"},
+		unexpectedLookup: unexpectedLookup{t},
+		tz:               loc,
+		spans:            map[int]TripSpan{2: {FirstDeparture: 23*3600 + 40*60, LastArrival: 24*3600 + 31*60}}, // 23:40 to 24:31
+		stopIds:          map[int]string{testFtvl: "FTVL", testLake: "LAKE"},
 	}
 	f := testFinder(t, lookup, "realtime_trip_updates", testReadRT(t, "BA-runs-trip-updates.json"))
 	f.Clock = &clock.Mock{T: time.Date(2018, 5, 31, 0, 10, 0, 0, loc)}
@@ -538,41 +611,108 @@ func TestFinder_TripUpdatesFromLookup(t *testing.T) {
 	}
 }
 
-// FindStopTimeUpdates answers for each stop time what FindStopTimeUpdate does.
-func TestFinder_FindStopTimeUpdates(t *testing.T) {
+// A Finder from WithLookup reads the realtime data held by the Finder it came
+// from, and asks its own lookup about stops.
+func TestFinder_WithLookup(t *testing.T) {
 	f := testLookupFinder(t)
-	ctx := context.Background()
-	// Matched by stop_sequence, by stop_id, and on the trip but at no stop.
-	sts := []*model.StopTime{testStopTime(testFtvl, 12), testStopTime(testFtvl, 99), testStopTime(testLake, 5)}
-	tcs := []struct {
-		name    string
-		trip    *model.Trip
-		found   int // stop times with an update on the trip
-		atStops int // of those, matched to a stop time update
-	}{
-		{"dated run", testRun(1, "1031527WKDY", 30), 3, 2},
-		{"current run", testRun(2, "5172328WKDY", 30), 3, 2},
-		{"run without an update", testRun(2, "5172328WKDY", 31), 0, 0},
+	lookup := tripUpdateLookup{
+		unexpectedLookup: unexpectedLookup{t},
+		stopIds:          map[int]string{testLake: "FTVL"},
 	}
-	for _, tc := range tcs {
+	derived := f.WithLookup(lookup)
+	ctx := context.Background()
+	// No stop_sequence matches 99, so each Finder matches by its lookup's stop_id.
+	trip, st := testRun(1, "1031527WKDY", 30), testStopTime(testLake, 99)
+	if ste, ok := derived.FindStopTimeUpdate(ctx, trip, st); assert.True(t, ok) && assert.NotNil(t, ste.StopTimeUpdate) {
+		assert.Equal(t, "FTVL", ste.StopTimeUpdate.GetStopId())
+		assert.Equal(t, int32(60), ste.StopTimeUpdate.GetDeparture().GetDelay())
+	}
+	if ste, ok := f.FindStopTimeUpdate(ctx, trip, st); assert.True(t, ok) {
+		assert.Nil(t, ste.StopTimeUpdate, "LAKE isn't in the update")
+	}
+}
+
+// FindStopTimeUpdates matches each of a trip's stop times to its stop time
+// update, by stop_sequence or by a stop_id the update names once.
+func TestFinder_FindStopTimeUpdates(t *testing.T) {
+	departs := func(delay int32) *pb.TripUpdate_StopTimeEvent {
+		return &pb.TripUpdate_StopTimeEvent{Delay: proto.Int32(delay)}
+	}
+	// The first stop named by stop_sequence and the rest by stop_id alone, on a
+	// loop that visits LOOP twice.
+	stus := []*pb.TripUpdate_StopTimeUpdate{
+		{StopSequence: proto.Uint32(1), StopId: proto.String("A"), Departure: departs(60)},
+		{StopId: proto.String("B"), Departure: departs(120)},
+		{StopId: proto.String("LOOP"), Departure: departs(180)},
+		{StopId: proto.String("LOOP"), Departure: departs(240)},
+	}
+	msg := &pb.FeedMessage{
+		Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
+		Entity: []*pb.FeedEntity{{
+			Id: proto.String("loop"),
+			TripUpdate: &pb.TripUpdate{
+				Trip:           &pb.TripDescriptor{TripId: proto.String("loop"), StartDate: proto.String("20180531")},
+				StopTimeUpdate: stus,
+			},
+		}},
+	}
+	// GTFS stop_ids by stop id. Stop 5 is one the lookup can't find.
+	lookup := tripUpdateLookup{
+		unexpectedLookup: unexpectedLookup{t},
+		stopIds:          map[int]string{1: "A", 2: "B", 3: "LOOP", 4: "E"},
+	}
+	f := testFinder(t, lookup, "realtime_trip_updates", msg)
+	ctx := context.Background()
+	sts := []*model.StopTime{
+		testStopTime(1, 1),
+		testStopTime(2, 2),
+		testStopTime(3, 3),
+		testStopTime(3, 4),
+		testStopTime(4, 5),
+		testStopTime(5, 6),
+	}
+	tcs := []struct {
+		name      string
+		found     bool  // matched to the trip update
+		stu       int   // index of the matched stop time update, or -1 for none
+		lastDelay int32 // zero for none
+	}{
+		{"by stop_sequence", true, 0, 0},
+		{"by stop_id", true, 1, 120},
+		{"first visit to a stop named twice", false, -1, 0},
+		{"second visit to a stop named twice", false, -1, 0},
+		{"stop not in the update", true, -1, 240},
+		{"stop the lookup can't find", false, -1, 0},
+	}
+	got := f.FindStopTimeUpdates(ctx, testRun(1, "loop", 31), sts)
+	if !assert.Len(t, got, len(tcs)) {
+		return
+	}
+	for i, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			got := f.FindStopTimeUpdates(ctx, tc.trip, sts)
-			if !assert.Len(t, got, len(sts)) {
+			ste := got[i]
+			if !tc.found {
+				assert.Nil(t, ste)
 				return
 			}
-			found, atStops := 0, 0
-			for i, st := range sts {
-				expect, _ := f.FindStopTimeUpdate(ctx, tc.trip, st)
-				assert.Equal(t, expect, got[i], "stop time %d", i)
-				if got[i] != nil {
-					found++
-					if got[i].StopTimeUpdate != nil {
-						atStops++
-					}
-				}
+			if !assert.NotNil(t, ste) {
+				return
 			}
-			assert.Equal(t, tc.found, found)
-			assert.Equal(t, tc.atStops, atStops)
+			assert.Equal(t, "loop", ste.TripUpdate.GetTrip().GetTripId())
+			if tc.stu < 0 {
+				assert.Nil(t, ste.StopTimeUpdate)
+			} else {
+				assert.True(t, proto.Equal(stus[tc.stu], ste.StopTimeUpdate), "stop time update %d", tc.stu)
+			}
+			if tc.lastDelay == 0 {
+				assert.Nil(t, ste.LastDelay)
+			} else if assert.NotNil(t, ste.LastDelay) {
+				assert.Equal(t, tc.lastDelay, *ste.LastDelay)
+			}
 		})
+	}
+	// A run without an update matches none of its stop times.
+	for i, ste := range f.FindStopTimeUpdates(ctx, testRun(1, "loop", 30), sts) {
+		assert.Nil(t, ste, "stop time %d", i)
 	}
 }

@@ -21,13 +21,13 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// countingDB counts the trip, feed version agency and route lookups run
+// countingDB counts the trip, feed version agency and single-row lookups run
 // through it, and fails the trip and agency lookups while fail is set.
 type countingDB struct {
 	tldb.Ext
 	tripQueries   atomic.Int64
 	agencyQueries atomic.Int64
-	routeQueries  atomic.Int64
+	rowQueries    atomic.Int64
 	fail          atomic.Bool
 }
 
@@ -48,9 +48,7 @@ func (db *countingDB) QueryxContext(ctx context.Context, query string, args ...a
 }
 
 func (db *countingDB) QueryRowxContext(ctx context.Context, query string, args ...any) *sqlx.Row {
-	if query == feedVersionRouteQuery || query == routeQuery {
-		db.routeQueries.Add(1)
-	}
+	db.rowQueries.Add(1)
 	return db.Ext.QueryRowxContext(ctx, query, args...)
 }
 
@@ -137,9 +135,15 @@ func TestPostgresLookup_GetTripSpan(t *testing.T) {
 			if err := sqlx.Get(tx, &tripID, "select id from gtfs_trips where feed_version_id = $1 and trip_id = $2", fvid, tc.tripID); err != nil {
 				t.Fatal(err)
 			}
-			assert.Equal(t, tc.expect, lookup.GetTripSpan(context.Background(), fvid, tripID))
+			span, ok := lookup.GetTripSpan(context.Background(), fvid, tripID)
+			assert.True(t, ok)
+			assert.Equal(t, tc.expect, span)
 		})
 	}
+	// A trip that isn't found, such as one added in real time, has a zero span.
+	span, ok := lookup.GetTripSpan(context.Background(), fvid, -1)
+	assert.True(t, ok)
+	assert.Zero(t, span)
 }
 
 // GetTripRouteIDs resolves the feed version's own trips, and no others.
@@ -150,12 +154,12 @@ func TestPostgresLookup_GetTripRouteIDs(t *testing.T) {
 	db := testutil.MustOpenTestDB(t)
 	lookup := NewPostgresLookup(db)
 	ctx := context.Background()
-	got, err := lookup.GetTripRouteIDs(ctx, testBartFeedVersion(t, db), []string{"1031527WKDY", "no-such-trip"})
-	if assert.NoError(t, err) {
+	got, ok := lookup.GetTripRouteIDs(ctx, testBartFeedVersion(t, db), []string{"1031527WKDY", "no-such-trip"})
+	if assert.True(t, ok) {
 		assert.Equal(t, map[string]string{"1031527WKDY": "05"}, got)
 	}
-	got, err = lookup.GetTripRouteIDs(ctx, -1, []string{"1031527WKDY"})
-	if assert.NoError(t, err) {
+	got, ok = lookup.GetTripRouteIDs(ctx, -1, []string{"1031527WKDY"})
+	if assert.True(t, ok) {
 		assert.Empty(t, got)
 	}
 }
@@ -164,29 +168,33 @@ func TestPostgresLookup_GetGtfsStopID(t *testing.T) {
 	if a, ok := testutil.CheckTestDB(); !ok {
 		t.Skip(a)
 	}
-	db := testutil.MustOpenTestDB(t)
-	stop := testStop(t, db, testBartFeedVersion(t, db), "FTVL")
+	raw := testutil.MustOpenTestDB(t)
+	db := &countingDB{Ext: raw}
+	stop := testStop(t, raw, testBartFeedVersion(t, raw), "FTVL")
 	lookup := NewPostgresLookup(db)
 	ctx := context.Background()
 	sid, ok := lookup.GetGtfsStopID(ctx, stop.ID)
 	assert.True(t, ok)
 	assert.Equal(t, "FTVL", sid)
-	// A failed lookup is not cached, where its empty stop_id would match a stop
-	// time update naming no stop.
+	// A stop that isn't there is looked up once, and remembered as missing,
+	// not as an empty stop_id that would match a stop time update naming no
+	// stop.
 	for range 2 {
 		_, ok := lookup.GetGtfsStopID(ctx, -1)
 		assert.False(t, ok)
 	}
+	assert.EqualValues(t, 2, db.rowQueries.Load())
 }
 
 func TestPostgresLookup_GetGtfsAgencyID(t *testing.T) {
 	if a, ok := testutil.CheckTestDB(); !ok {
 		t.Skip(a)
 	}
-	db := testutil.MustOpenTestDB(t)
+	raw := testutil.MustOpenTestDB(t)
+	db := &countingDB{Ext: raw}
 	id := 0
 	q := `select id from gtfs_agencies where feed_version_id = $1 and agency_id = $2`
-	if err := sqlx.Get(db, &id, q, testBartFeedVersion(t, db), "BART"); err != nil {
+	if err := sqlx.Get(raw, &id, q, testBartFeedVersion(t, raw), "BART"); err != nil {
 		t.Fatal(err)
 	}
 	lookup := NewPostgresLookup(db)
@@ -194,12 +202,16 @@ func TestPostgresLookup_GetGtfsAgencyID(t *testing.T) {
 	aid, ok := lookup.GetGtfsAgencyID(ctx, id)
 	assert.True(t, ok)
 	assert.Equal(t, "BART", aid)
-	// A failed lookup is not cached, where its empty agency_id would match any
-	// agency.
+	// An agency that isn't there is looked up once, and remembered as missing,
+	// not as an empty agency_id that would match any agency.
 	for range 2 {
 		_, ok := lookup.GetGtfsAgencyID(ctx, -1)
 		assert.False(t, ok)
 	}
+	assert.EqualValues(t, 2, db.rowQueries.Load())
+	routeIds, ok := lookup.GetAgencyRouteIDs(ctx, id)
+	assert.True(t, ok)
+	assert.True(t, routeIds["05"])
 }
 
 func TestPostgresLookup_GetFeedVersionRoute(t *testing.T) {
@@ -228,7 +240,7 @@ func TestPostgresLookup_GetFeedVersionRoute(t *testing.T) {
 		_, ok = lookup.GetRoute(ctx, -1)
 		assert.False(t, ok)
 	}
-	assert.EqualValues(t, 4, db.routeQueries.Load())
+	assert.EqualValues(t, 4, db.rowQueries.Load())
 }
 
 func TestPostgresLookup_GetFeedVersionAgencyIDs(t *testing.T) {

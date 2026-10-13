@@ -63,7 +63,11 @@ func (f *Finder) currentRun(ctx context.Context, fvid int, tripId int) (tt.Date,
 	if !ok {
 		return tt.Date{}, false
 	}
-	return currentRunDate(f.Clock.Now(), loc, f.lookup.GetTripSpan(ctx, fvid, tripId)), true
+	span, ok := f.lookup.GetTripSpan(ctx, fvid, tripId)
+	if !ok {
+		return tt.Date{}, false
+	}
+	return currentRunDate(f.Clock.Now(), loc, span), true
 }
 
 // currentRunDate returns the service date of a trip's current run: the run going

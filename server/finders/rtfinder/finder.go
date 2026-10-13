@@ -42,6 +42,12 @@ func NewFinder(store kvcache.Store, lookup Lookup) *Finder {
 	}
 }
 
+// WithLookup returns a Finder that shares f's realtime data and asks lookup
+// about static GTFS data. Close only the Finder that NewFinder returned.
+func (f *Finder) WithLookup(lookup Lookup) *Finder {
+	return &Finder{Clock: f.Clock, cache: f.cache, lookup: lookup}
+}
+
 func (f *Finder) Close() error {
 	return f.cache.Close()
 }
@@ -356,9 +362,11 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 }
 
 // FindStopTimeUpdates returns the updates for a trip's stop times, in their
-// order: nil for a stop time without one. The trip's runs are resolved once for
-// all of them.
+// order: nil for a stop time without one.
 func (f *Finder) FindStopTimeUpdates(ctx context.Context, t *model.Trip, sts []*model.StopTime) []*model.RTStopTimeUpdate {
+	if len(sts) == 0 {
+		return nil
+	}
 	rtTrips := f.runUpdates(ctx, t)
 	ret := make([]*model.RTStopTimeUpdate, len(sts))
 	for i, st := range sts {
@@ -494,10 +502,13 @@ func (f *Finder) tripRouteIDs(ctx context.Context, src *Source, fvid int) map[st
 		return nil
 	}
 	src.tripRoutesOnce.Do(func() {
-		src.tripRoutes = kvcache.NewRefreshCache(nil, "triproutes", func(ctx context.Context, fvid int) (map[string]string, error) {
-			return f.lookup.GetTripRouteIDs(ctx, fvid, src.unroutedTripIds)
+		src.tripRoutes = newRefreshCache("triproutes", func(ctx context.Context, fvid int) (map[string]string, error) {
+			ret, ok := f.lookup.GetTripRouteIDs(ctx, fvid, src.unroutedTripIds)
+			if !ok {
+				return nil, errLookupFailed
+			}
+			return ret, nil
 		})
-		src.tripRoutes.RefreshTimeout = lookupTimeout
 	})
 	// A failed lookup is not cached: its trips match no route until a later
 	// call succeeds.

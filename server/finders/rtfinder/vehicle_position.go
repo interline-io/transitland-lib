@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -42,14 +41,17 @@ const (
 func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Agency, limit *int, where *model.VehiclePositionFilter) []*model.VehiclePosition {
 	// Each lookup is deferred and run at most once: most agencies a bounding
 	// box resolves to have no vehicle inside it and never need any of them.
-	routeIds := sync.OnceValue(func() set.Set[string] { return set.New(f.lookup.GetAgencyRouteIDs(ctx, a.ID)...) })
+	routeIds := sync.OnceValue(func() map[string]bool {
+		ret, _ := f.lookup.GetAgencyRouteIDs(ctx, a.ID)
+		return ret
+	})
 	singleAgency := sync.OnceValue(func() bool {
 		agencyIds, ok := f.lookup.GetFeedVersionAgencyIDs(ctx, a.FeedVersionID)
 		return ok && len(agencyIds) == 1
 	})
 	exclusive := map[string]bool{}
 	match := func(topic string, _ *Source, v *pb.VehiclePosition) vpMatch {
-		if routeIds().Contains(v.GetTrip().GetRouteId()) {
+		if routeIds()[v.GetTrip().GetRouteId()] {
 			return vpMatchByEntityID
 		}
 		if !singleAgency() {
