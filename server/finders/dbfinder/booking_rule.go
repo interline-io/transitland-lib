@@ -19,7 +19,7 @@ func (f *Finder) BookingRulesByIDs(ctx context.Context, ids []int) ([]*model.Boo
 	var ents []*model.BookingRule
 	q := bookingRuleSelect(nil, nil, ids, nil)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.BookingRule) int { return ent.ID }), nil
 }

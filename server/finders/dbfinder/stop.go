@@ -80,7 +80,7 @@ func (f *Finder) StopExternalReferencesByStopIDs(ctx context.Context, ids []int)
 	var ents []*model.StopExternalReference
 	q := sq.StatementBuilder.Select("*").From("tl_stop_external_references").Where(In("stop_id", ids))
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.StopExternalReference) int { return ent.StopID.Int() }), nil
 }
@@ -236,7 +236,7 @@ func (f *Finder) TargetStopsByStopIDs(ctx context.Context, ids []int) ([]*model.
 		q,
 		&qents,
 	); err != nil {
-		return nil, logExtendErr(ctx, 0, err)
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	group := map[int]*model.Stop{}
 	for _, ent := range qents {
@@ -303,39 +303,11 @@ func (f *Finder) StopsByLevelIDs(ctx context.Context, limit *int, where *model.S
 
 func (f *Finder) StopsByLocationGroupIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Stop, error) {
 	var ents []*model.Stop
-	err := dbutil.Select(ctx,
-		f.db,
-		lateralWrap(
-			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), nil).
-				Join("gtfs_location_group_stops ON gtfs_location_group_stops.stop_id = gtfs_stops.id"),
-			"gtfs_location_groups",
-			"id",
-			"gtfs_location_group_stops",
-			"location_group_id",
-			keys,
-		),
-		&ents,
-	)
-	// Group results by location_group_id through the join table
-	// We need to query the join table to get the mapping
-	type stopWithLocationGroup struct {
-		StopID          int `db:"stop_id"`
-		LocationGroupID int `db:"location_group_id"`
-	}
-	var mappings []stopWithLocationGroup
-	mappingQuery := sq.StatementBuilder.
-		Select("stop_id", "location_group_id").
-		From("gtfs_location_group_stops").
-		Where(In("location_group_id", keys))
-	_ = dbutil.Select(ctx, f.db, mappingQuery, &mappings)
-
-	// Build stop_id -> location_group_id map
-	stopToGroup := make(map[int]int)
-	for _, m := range mappings {
-		stopToGroup[m.StopID] = m.LocationGroupID
-	}
-
-	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return stopToGroup[ent.ID] }), err
+	q := stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), nil).
+		Join("gtfs_location_group_stops ON gtfs_location_group_stops.stop_id = gtfs_stops.id").
+		Column("gtfs_location_group_stops.location_group_id AS with_location_group_id")
+	err := dbutil.Select(ctx, f.db, lateralWrap(q, "gtfs_location_groups", "id", "gtfs_location_group_stops", "location_group_id", keys), &ents)
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithLocationGroupID.Int() }), err
 }
 
 func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {

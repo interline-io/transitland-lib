@@ -19,46 +19,18 @@ func (f *Finder) LocationGroupsByIDs(ctx context.Context, ids []int) ([]*model.L
 	var ents []*model.LocationGroup
 	q := locationGroupSelect(nil, nil, ids, nil)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.LocationGroup) int { return ent.ID }), nil
 }
 
 func (f *Finder) LocationGroupsByStopIDs(ctx context.Context, limit *int, keys []int) ([][]*model.LocationGroup, error) {
 	var ents []*model.LocationGroup
-	err := dbutil.Select(ctx,
-		f.db,
-		lateralWrap(
-			locationGroupSelect(limit, nil, nil, nil).
-				Join("gtfs_location_group_stops ON gtfs_location_group_stops.location_group_id = gtfs_location_groups.id"),
-			"gtfs_stops",
-			"id",
-			"gtfs_location_group_stops",
-			"stop_id",
-			keys,
-		),
-		&ents,
-	)
-	// Group results by stop_id through the join table
-	// We need to query the join table to get the mapping
-	type locationGroupWithStop struct {
-		LocationGroupID int `db:"location_group_id"`
-		StopID          int `db:"stop_id"`
-	}
-	var mappings []locationGroupWithStop
-	mappingQuery := sq.StatementBuilder.
-		Select("location_group_id", "stop_id").
-		From("gtfs_location_group_stops").
-		Where(In("stop_id", keys))
-	_ = dbutil.Select(ctx, f.db, mappingQuery, &mappings)
-
-	// Build location_group_id -> stop_id map
-	lgToStop := make(map[int]int)
-	for _, m := range mappings {
-		lgToStop[m.LocationGroupID] = m.StopID
-	}
-
-	return arrangeGroup(keys, ents, func(ent *model.LocationGroup) int { return lgToStop[ent.ID] }), err
+	q := locationGroupSelect(limit, nil, nil, nil).
+		Join("gtfs_location_group_stops ON gtfs_location_group_stops.location_group_id = gtfs_location_groups.id").
+		Column("gtfs_location_group_stops.stop_id AS with_stop_id")
+	err := dbutil.Select(ctx, f.db, lateralWrap(q, "gtfs_stops", "id", "gtfs_location_group_stops", "stop_id", keys), &ents)
+	return arrangeGroup(keys, ents, func(ent *model.LocationGroup) int { return ent.WithStopID.Int() }), err
 }
 
 // LocationGroupStopsByFeedVersionIDs returns the location group stops of each feed version.

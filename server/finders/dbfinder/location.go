@@ -19,7 +19,7 @@ func (f *Finder) LocationsByIDs(ctx context.Context, ids []int) ([]*model.Locati
 	var ents []*model.Location
 	q := locationSelect(nil, nil, ids, nil)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Location) int { return ent.ID }), nil
 }

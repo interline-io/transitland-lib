@@ -19,7 +19,7 @@ func (f *Finder) FareAttributesByIDs(ctx context.Context, ids []int) ([]*model.F
 	var ents []*model.FareAttribute
 	q := fareAttributeSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FareAttribute) int { return ent.ID }), nil
 }
@@ -87,7 +87,7 @@ func (f *Finder) FareMediaByIDs(ctx context.Context, ids []int) ([]*model.FareMe
 	var ents []*model.FareMedia
 	q := fareMediaSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FareMedia) int { return ent.ID }), nil
 }
@@ -372,7 +372,7 @@ func (f *Finder) AreasByIDs(ctx context.Context, ids []int) ([]*model.Area, []er
 	var ents []*model.Area
 	q := areaSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Area) int { return ent.ID }), nil
 }
@@ -417,7 +417,7 @@ func (f *Finder) NetworksByIDs(ctx context.Context, ids []int) ([]*model.Network
 	var ents []*model.Network
 	q := networkSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Network) int { return ent.ID }), nil
 }

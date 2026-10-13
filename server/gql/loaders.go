@@ -652,8 +652,10 @@ func unwrapResult[
 ) func(context.Context, []ParamT) []*dataloader.Result[T] {
 	x := func(ctx context.Context, ps []ParamT) []*dataloader.Result[T] {
 		a, errs := cb(ctx, ps)
-		if len(a) != len(ps) {
-			log.For(ctx).Trace().Msgf("error in dataloader, result len %d did not match param length %d", len(a), len(ps))
+		// A failed batch returns an error for each key and no results. Any other
+		// mismatch is a finder bug.
+		if len(a) != len(ps) && len(errs) != len(ps) {
+			log.For(ctx).Error().Msgf("error in dataloader, result len %d did not match param length %d", len(a), len(ps))
 			return nil
 		}
 		ret := make([]*dataloader.Result[T], len(ps))

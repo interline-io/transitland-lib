@@ -80,7 +80,7 @@ func (f *Finder) RouteAttributesByRouteIDs(ctx context.Context, ids []int) ([]*m
 	var ents []*model.RouteAttribute
 	q := sq.StatementBuilder.Select("*").From("ext_plus_route_attributes").Where(In("route_id", ids))
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, logExtendErr(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.RouteAttribute) int { return ent.RouteID }), nil
 }

@@ -168,13 +168,14 @@ func (st *StopTime) SetServiceDate(d tt.Date) {
 }
 
 type Stop struct {
-	FeedOnestopID   string
-	FeedVersionSHA1 string
-	OnestopID       *string
-	SearchRank      *string
-	WithinFeatures  tt.Strings
-	WithRouteID     tt.Int
-	WithAgencyID    tt.Int
+	FeedOnestopID       string
+	FeedVersionSHA1     string
+	OnestopID           *string
+	SearchRank          *string
+	WithinFeatures      tt.Strings
+	WithRouteID         tt.Int
+	WithAgencyID        tt.Int
+	WithLocationGroupID tt.Int
 	gtfs.Stop
 }
 
@@ -350,6 +351,7 @@ type StopArea struct {
 type LocationGroup struct {
 	FeedOnestopID   string
 	FeedVersionSHA1 string
+	WithStopID      tt.Int
 	gtfs.LocationGroup
 }
 

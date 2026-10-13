@@ -252,6 +252,62 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 	})
 }
 
+func TestPathwayUpdate_ToStop(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		finder := cfg.Finder
+		ctx := model.WithConfig(context.Background(), cfg)
+		// BART, from the standard test fixtures.
+		sha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
+		fvs, err := finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &sha1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(fvs) != 1 {
+			t.Fatalf("expected the bart test feed version, got %d", len(fvs))
+		}
+		fv := model.FeedVersionInput{ID: toPtr(fvs[0].ID)}
+		newStop := func(name string) int {
+			t.Helper()
+			id, err := finder.StopCreate(ctx, model.StopSetInput{
+				FeedVersion: &fv,
+				StopID:      toPtr(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())),
+				StopName:    toPtr(name),
+				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return id
+		}
+		fromStopID, toStopID, newToStopID := newStop("from"), newStop("to"), newStop("new-to")
+		eid, err := finder.PathwayCreate(ctx, model.PathwaySetInput{
+			FeedVersion:     &fv,
+			PathwayID:       toPtr(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
+			PathwayMode:     toPtr(1),
+			IsBidirectional: toPtr(0),
+			FromStop:        &model.StopSetInput{ID: &fromStopID},
+			ToStop:          &model.StopSetInput{ID: &toStopID},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := finder.PathwayUpdate(ctx, model.PathwaySetInput{
+			ID:     toPtr(eid),
+			ToStop: &model.StopSetInput{ID: &newToStopID},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		checkEnt := gtfs.Pathway{}
+		checkEnt.ID = eid
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
+		if err := atx.Find(ctx, &checkEnt); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, newToStopID, checkEnt.ToStopID.Int(), "to_stop should change")
+		assert.Equal(t, fromStopID, checkEnt.FromStopID.Int(), "from_stop should not change")
+	})
+}
+
 func TestLevelUpdate_BumpsUpdatedAt(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder

@@ -162,7 +162,7 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 				cols = scanCol(&ent.FromStopID, v.ID, "", cols, &err)
 			}
 			if v := input.ToStop; v != nil {
-				cols = append(cols, "from_stop_id")
+				cols = append(cols, "to_stop_id")
 				cols = scanCol(&ent.ToStopID, v.ID, "", cols, &err)
 			}
 			return cols, err

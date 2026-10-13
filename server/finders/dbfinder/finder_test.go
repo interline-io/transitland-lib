@@ -5,9 +5,82 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// A keyed finder that fails returns an error for each key, which its dataloader
+// hands to that key's caller.
+func TestFinder_KeyedErrors(t *testing.T) {
+	ctx := context.Background()
+	// Every query fails on a finished transaction.
+	tx, err := testutil.MustOpenTestDB(t).Beginx()
+	require.NoError(t, err)
+	require.NoError(t, tx.Rollback())
+	f := NewFinder(tx)
+
+	// No query reaches the database, so the keys are arbitrary.
+	ids := []int{1, 2, 3}
+	fvKeys := []model.FVEntityID{{FeedVersionID: 1, EntityID: "a"}, {FeedVersionID: 1, EntityID: "b"}, {FeedVersionID: 2, EntityID: "a"}}
+	places := []model.StopPlaceParam{{ID: 1}, {ID: 2}, {ID: 3}}
+	errsOf := func(_ any, errs []error) []error { return errs }
+	tcs := []struct {
+		name string
+		errs []error
+	}{
+		{"AgenciesByIDs", errsOf(f.AgenciesByIDs(ctx, ids))},
+		{"AreasByIDs", errsOf(f.AreasByIDs(ctx, ids))},
+		{"BookingRulesByIDs", errsOf(f.BookingRulesByIDs(ctx, ids))},
+		{"CalendarsByIDs", errsOf(f.CalendarsByIDs(ctx, ids))},
+		{"CensusDatasetLayersByDatasetIDs", errsOf(f.CensusDatasetLayersByDatasetIDs(ctx, ids))},
+		{"CensusLayersByIDs", errsOf(f.CensusLayersByIDs(ctx, ids))},
+		{"CensusSourceLayersBySourceIDs", errsOf(f.CensusSourceLayersBySourceIDs(ctx, ids))},
+		{"CensusSourcesByIDs", errsOf(f.CensusSourcesByIDs(ctx, ids))},
+		{"CensusTableByIDs", errsOf(f.CensusTableByIDs(ctx, ids))},
+		{"FareAttributesByIDs", errsOf(f.FareAttributesByIDs(ctx, ids))},
+		{"FareLegRulesByFeedVersionLegGroupIDs", errsOf(f.FareLegRulesByFeedVersionLegGroupIDs(ctx, fvKeys))},
+		{"FareMediaByIDs", errsOf(f.FareMediaByIDs(ctx, ids))},
+		{"FareProductsByFeedVersionFareProductIDs", errsOf(f.FareProductsByFeedVersionFareProductIDs(ctx, fvKeys))},
+		{"FeedStatesByFeedIDs", errsOf(f.FeedStatesByFeedIDs(ctx, ids))},
+		{"FeedVersionGeometryByIDs", errsOf(f.FeedVersionGeometryByIDs(ctx, ids))},
+		{"FeedVersionGtfsImportByFeedVersionIDs", errsOf(f.FeedVersionGtfsImportByFeedVersionIDs(ctx, ids))},
+		{"FeedVersionServiceWindowByFeedVersionIDs", errsOf(f.FeedVersionServiceWindowByFeedVersionIDs(ctx, ids))},
+		{"FeedVersionsByIDs", errsOf(f.FeedVersionsByIDs(ctx, ids))},
+		{"FeedsByIDs", errsOf(f.FeedsByIDs(ctx, ids))},
+		{"LevelsByIDs", errsOf(f.LevelsByIDs(ctx, ids))},
+		{"LocationGroupsByIDs", errsOf(f.LocationGroupsByIDs(ctx, ids))},
+		{"LocationsByIDs", errsOf(f.LocationsByIDs(ctx, ids))},
+		{"NetworksByIDs", errsOf(f.NetworksByIDs(ctx, ids))},
+		{"OperatorsByAgencyIDs", errsOf(f.OperatorsByAgencyIDs(ctx, ids))},
+		{"OperatorsByCOIFs", errsOf(f.OperatorsByCOIFs(ctx, ids))},
+		{"PathwaysByIDs", errsOf(f.PathwaysByIDs(ctx, ids))},
+		{"RiderCategoriesByFeedVersionRiderCategoryIDs", errsOf(f.RiderCategoriesByFeedVersionRiderCategoryIDs(ctx, fvKeys))},
+		{"RouteAttributesByRouteIDs", errsOf(f.RouteAttributesByRouteIDs(ctx, ids))},
+		{"RouteTypesByAgencyIDs", errsOf(f.RouteTypesByAgencyIDs(ctx, ids))},
+		{"RoutesByFeedVersionRouteIDs", errsOf(f.RoutesByFeedVersionRouteIDs(ctx, fvKeys))},
+		{"RoutesByIDs", errsOf(f.RoutesByIDs(ctx, ids))},
+		{"SegmentsByIDs", errsOf(f.SegmentsByIDs(ctx, ids))},
+		{"ShapesByIDs", errsOf(f.ShapesByIDs(ctx, ids))},
+		{"StopExternalReferencesByStopIDs", errsOf(f.StopExternalReferencesByStopIDs(ctx, ids))},
+		{"StopPlacesByStopID", errsOf(f.StopPlacesByStopID(ctx, places))},
+		{"StopsByFeedVersionStopIDs", errsOf(f.StopsByFeedVersionStopIDs(ctx, fvKeys))},
+		{"StopsByIDs", errsOf(f.StopsByIDs(ctx, ids))},
+		{"TargetStopsByStopIDs", errsOf(f.TargetStopsByStopIDs(ctx, ids))},
+		{"TimeframesByFeedVersionTimeframeGroupIDs", errsOf(f.TimeframesByFeedVersionTimeframeGroupIDs(ctx, fvKeys))},
+		{"TripsByFeedVersionTripIDs", errsOf(f.TripsByFeedVersionTripIDs(ctx, fvKeys))},
+		{"TripsByIDs", errsOf(f.TripsByIDs(ctx, ids))},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Len(t, tc.errs, len(ids))
+			for _, err := range tc.errs {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
 
 func TestFinder_FindFeedVersionServiceWindow(t *testing.T) {
 	ctx := context.Background()
