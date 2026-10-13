@@ -483,11 +483,10 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 			continue
 		}
 		// TODO: index more efficiently
-		// One added trip per trip_id, the last in the feed, and none without a
-		// trip_id, which has no trip to show.
-		for tid, trips := range a.tripUpdates {
+		// One added trip per trip_id, the last in the feed.
+		for _, trips := range a.tripUpdates {
 			trip := trips[len(trips)-1]
-			if tid != "" && trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
+			if trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
 				ret = append(ret, trip)
 			}
 		}

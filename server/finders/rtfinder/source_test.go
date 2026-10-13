@@ -37,3 +37,26 @@ func TestSourceProcessMessage_UnroutedTripIds(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{"A1", "A2", "V1"}, src.unroutedTripIds)
 }
+
+// A Source keeps each trip_id's updates, one for each run, and drops an update
+// that names no trip_id.
+func TestSourceProcessMessage_TripUpdates(t *testing.T) {
+	update := func(id string, td *pb.TripDescriptor) *pb.FeedEntity {
+		return &pb.FeedEntity{Id: proto.String(id), TripUpdate: &pb.TripUpdate{Trip: td}}
+	}
+	msg := &pb.FeedMessage{Entity: []*pb.FeedEntity{
+		update("t1-today", &pb.TripDescriptor{TripId: proto.String("T1"), StartDate: proto.String("20180531")}),
+		update("t1-yesterday", &pb.TripDescriptor{TripId: proto.String("T1"), StartDate: proto.String("20180530")}),
+		update("added", &pb.TripDescriptor{RouteId: proto.String("05"), ScheduleRelationship: pb.TripDescriptor_ADDED.Enum()}),
+	}}
+	src, err := NewSource("f-rt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := src.processMessage(context.Background(), msg); err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, src.GetTrips("T1"), 2)
+	assert.Empty(t, src.GetTrips(""))
+	assert.Len(t, src.tripUpdates, 1)
+}
