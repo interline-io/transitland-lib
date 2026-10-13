@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
@@ -108,6 +109,37 @@ func testFinder(t *testing.T, db tldb.Ext, ftype string, msg *pb.FeedMessage) *F
 		t.Fatal(err)
 	}
 	return f
+}
+
+// A frequency-based trip runs from its first start to its last start plus one
+// run, and no run starts at a frequency's end_time.
+func TestLookupCache_GetTripSpan(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	tx, err := testutil.MustOpenTestDB(t).Beginx()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+	fvid := testutil.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	lc := newLookupCache(tx)
+	for _, tc := range []struct {
+		tripID string
+		expect tripSpan
+	}{
+		{"regular", tripSpan{FirstDeparture: 5 * 3600, LastArrival: 5*3600 + 600}},
+		{"offset", tripSpan{FirstDeparture: 7 * 3600, LastArrival: 7*3600 + 1800 + 600}},
+		{"meet", tripSpan{FirstDeparture: 10 * 3600, LastArrival: 11*3600 + 1800 + 600}},
+	} {
+		t.Run(tc.tripID, func(t *testing.T) {
+			tripID := 0
+			if err := sqlx.Get(tx, &tripID, "select id from gtfs_trips where feed_version_id = $1 and trip_id = $2", fvid, tc.tripID); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tc.expect, lc.GetTripSpan(context.Background(), fvid, tripID))
+		})
+	}
 }
 
 func TestLookupCache_GetTripRouteIDs(t *testing.T) {
