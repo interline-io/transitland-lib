@@ -2,9 +2,9 @@
 //
 // It follows the adopted specification, including effective fare legs from
 // fare_leg_join_rules.txt, rule_priority, timeframes, and chained transfers. It ignores
-// extensions outside the adopted spec unless a Coster flag turns one on: transfer_only,
-// filter_fare_product_id, or the draft fare product duration fields. It is based on an
-// earlier internal implementation.
+// extensions outside the adopted spec, such as transfer_only and filter_fare_product_id,
+// unless a Coster flag enables them, and it never prices fare products with the draft
+// duration fields, which mark passes. It is based on an earlier internal implementation.
 package coster
 
 import (
@@ -74,9 +74,6 @@ type Coster struct {
 	// UseFilterFareProductID honors the proposed filter_fare_product_id extension: a transfer
 	// rule with a filter applies only to riders who hold the filter's fare product.
 	UseFilterFareProductID bool
-	// UseFareProductDurations honors the draft fare product duration fields: a product row
-	// with a duration is a pass, which never prices a trip.
-	UseFareProductDurations bool
 	// EmptyFieldsPerLegGroup scopes empty-field matching in fare_leg_rules.txt to each leg
 	// group: an empty network or area field excludes only the values that rules in its leg
 	// group list, not every value in the file. It has no effect with rule_priority.
@@ -223,7 +220,7 @@ func (c *Coster) product(id string, r rider, mediaID string) *gtfs.FareProduct {
 	rows := c.products[id]
 	for i := range rows {
 		p := &rows[i]
-		if c.UseFareProductDurations && p.DurationAmount.Valid {
+		if p.DurationAmount.Valid {
 			// A row with the draft duration fields is a pass, which never prices a trip.
 			continue
 		}
