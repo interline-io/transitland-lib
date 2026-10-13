@@ -150,7 +150,7 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	dbf.Clock = cl
 
 	// Setup RT
-	rtf := rtfinder.NewFinder(kvcache.NewMemoryStore(), db)
+	rtf := rtfinder.NewFinder(kvcache.NewMemoryStore(), rtfinder.NewPostgresLookup(db))
 	rtf.Clock = cl
 	for _, rtj := range opts.RTJsons {
 		fn := testdata.Path("server", "rt", rtj.Fname)

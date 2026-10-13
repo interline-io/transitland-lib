@@ -42,9 +42,9 @@ const (
 func (f *Finder) FindVehiclePositionsForAgency(ctx context.Context, a *model.Agency, limit *int, where *model.VehiclePositionFilter) []*model.VehiclePosition {
 	// Each lookup is deferred and run at most once: most agencies a bounding
 	// box resolves to have no vehicle inside it and never need any of them.
-	routeIds := sync.OnceValue(func() set.Set[string] { return f.lc.GetAgencyRouteIDs(ctx, a.ID) })
+	routeIds := sync.OnceValue(func() set.Set[string] { return set.New(f.lookup.GetAgencyRouteIDs(ctx, a.ID)...) })
 	singleAgency := sync.OnceValue(func() bool {
-		agencyIds, ok := f.lc.GetFeedVersionAgencyIDs(ctx, a.FeedVersionID)
+		agencyIds, ok := f.lookup.GetFeedVersionAgencyIDs(ctx, a.FeedVersionID)
 		return ok && len(agencyIds) == 1
 	})
 	exclusive := map[string]bool{}
@@ -82,7 +82,7 @@ func (f *Finder) FindVehiclePositionsForRoute(ctx context.Context, r *model.Rout
 	match := func(topic string, src *Source, v *pb.VehiclePosition) vpMatch {
 		lookup, ok := tripRoutes[topic]
 		if !ok {
-			lookup = sync.OnceValue(func() map[string]string { return f.lc.GetTripRouteIDs(ctx, src, r.FeedVersionID) })
+			lookup = sync.OnceValue(func() map[string]string { return f.tripRouteIDs(ctx, src, r.FeedVersionID) })
 			tripRoutes[topic] = lookup
 		}
 		if !tripOnRoute(v.GetTrip(), routeId, lookup) {
@@ -117,7 +117,7 @@ func (f *Finder) FindVehiclePositionForTrip(ctx context.Context, t *model.Trip, 
 
 // feedIsExclusive reports whether a realtime feed serves a single operator.
 func (f *Finder) feedIsExclusive(ctx context.Context, topic string) bool {
-	operatorCount, ok := f.lc.GetFeedOperatorCount(ctx, topic)
+	operatorCount, ok := f.lookup.GetFeedOperatorCount(ctx, topic)
 	return ok && operatorCount <= 1
 }
 
@@ -129,7 +129,7 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *mode
 		bbox = ptr(tlxy.BoundingBox(*where.Bbox))
 	}
 	var ret []*model.VehiclePosition
-	topics, _ := f.lc.GetFeedVersionRTFeeds(ctx, fvid)
+	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, fvid)
 	for _, topic := range topics {
 		src, ok := f.cache.GetSource(ctx, getTopicKey(topic, vehiclePositionTopicKey))
 		if !ok || src == nil {

@@ -4,10 +4,13 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
@@ -128,27 +131,27 @@ func TestTripAgrees(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			looked := false
-			route := func() (gtfsRoute, bool) {
+			route := func() (GtfsRoute, bool) {
 				looked = true
-				return gtfsRoute{RouteID: "05", RouteType: 1, AgencyID: "BART"}, true
+				return GtfsRoute{RouteID: "05", RouteType: 1, AgencyID: "BART"}, true
 			}
 			assert.Equal(t, tc.expect, tripAgrees(tc.s, route))
 			assert.Equal(t, tc.lookup, looked, "route lookup")
 		})
 	}
 	// Without the trip's route, a selector giving an agency, route or mode can't agree.
-	assert.False(t, tripAgrees(&pb.EntitySelector{AgencyId: proto.String("BART"), Trip: testTrip("T05", "")}, func() (gtfsRoute, bool) { return gtfsRoute{}, false }))
+	assert.False(t, tripAgrees(&pb.EntitySelector{AgencyId: proto.String("BART"), Trip: testTrip("T05", "")}, func() (GtfsRoute, bool) { return GtfsRoute{}, false }))
 }
 
 func TestStopAgrees(t *testing.T) {
 	fv := feedVersionRefs{
 		agencyIds:  func() ([]string, bool) { return []string{"BART"}, true },
 		routeTypes: func() ([]int, bool) { return []int{1}, true },
-		route: func(routeId string) (gtfsRoute, bool) {
+		route: func(routeId string) (GtfsRoute, bool) {
 			if routeId == "05" {
-				return gtfsRoute{RouteID: "05", RouteType: 1, AgencyID: "BART"}, true
+				return GtfsRoute{RouteID: "05", RouteType: 1, AgencyID: "BART"}, true
 			}
-			return gtfsRoute{}, false
+			return GtfsRoute{}, false
 		},
 	}
 	stop := func(s *pb.EntitySelector) *pb.EntitySelector {
@@ -272,7 +275,7 @@ func TestFindAlertsForRoute_TripLookup(t *testing.T) {
 	}
 	t.Run("concurrent routes", func(t *testing.T) {
 		db := &countingDB{Ext: raw}
-		f := testFinder(t, db, "realtime_alerts", msg)
+		f := testFinder(t, NewPostgresLookup(db), "realtime_alerts", msg)
 		found := map[string][]string{}
 		var lock sync.Mutex
 		run := func() {
@@ -301,7 +304,7 @@ func TestFindAlertsForRoute_TripLookup(t *testing.T) {
 		// Trip alerts are left out, and so is the lookup that places them. A trip
 		// descriptor naming only the route is about the route.
 		db := &countingDB{Ext: raw}
-		f := testFinder(t, db, "realtime_alerts", msg)
+		f := testFinder(t, NewPostgresLookup(db), "realtime_alerts", msg)
 		assert.Equal(t, []string{"Route 05 by trip descriptor"}, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil, false, false)))
 		assert.EqualValues(t, 0, db.tripQueries.Load())
 	})
@@ -310,7 +313,7 @@ func TestFindAlertsForRoute_TripLookup(t *testing.T) {
 		// share one lookup per call; a canceled call starts none.
 		db := &countingDB{Ext: raw}
 		db.fail.Store(true)
-		f := testFinder(t, db, "realtime_alerts", msg)
+		f := testFinder(t, NewPostgresLookup(db), "realtime_alerts", msg)
 		assert.NotContains(t, headers(f.FindAlertsForRoute(ctx, routes["05"], nil, nil, false, true)), "Trip 1031527WKDY")
 		assert.EqualValues(t, 1, db.tripQueries.Load(), "failing")
 		canceled, cancel := context.WithCancel(ctx)
@@ -342,7 +345,7 @@ func TestFindAlertsForStop_Lookups(t *testing.T) {
 	}
 	db := &countingDB{Ext: raw}
 	db.fail.Store(true)
-	f := testFinder(t, db, "realtime_alerts", msg)
+	f := testFinder(t, NewPostgresLookup(db), "realtime_alerts", msg)
 	found := headers(f.FindAlertsForStop(ctx, stop, nil, nil))
 	assert.Contains(t, found, "Route 05 at Fruitvale")
 	assert.NotContains(t, found, "BART at Fruitvale")
@@ -350,4 +353,148 @@ func TestFindAlertsForStop_Lookups(t *testing.T) {
 	db.fail.Store(false)
 	assert.Contains(t, headers(f.FindAlertsForStop(ctx, stop, nil, nil)), "BART at Fruitvale")
 	assert.EqualValues(t, 2, db.agencyQueries.Load(), "recovered")
+}
+
+func TestFinder_tripRouteIDs(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	raw := testutil.MustOpenTestDB(t)
+	fvid := testBartFeedVersion(t, raw)
+	db := &countingDB{Ext: raw}
+	f := &Finder{lookup: NewPostgresLookup(db)}
+	ctx := context.Background()
+	newSource := func(tripIds ...string) *Source {
+		msg := &pb.FeedMessage{}
+		for _, tid := range tripIds {
+			msg.Entity = append(msg.Entity, &pb.FeedEntity{Alert: &pb.Alert{InformedEntity: []*pb.EntitySelector{{Trip: testTrip(tid, "")}}}})
+		}
+		src, err := NewSource("BA")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := src.processMessage(ctx, msg); err != nil {
+			t.Fatal(err)
+		}
+		return src
+	}
+	expect := map[string]string{"1031527WKDY": "05"}
+
+	// Concurrent callers share one query, which resolves only the feed
+	// version's own trips.
+	src := newSource("1031527WKDY", "no-such-trip")
+	var wg sync.WaitGroup
+	for range 100 {
+		wg.Go(func() {
+			assert.Equal(t, expect, f.tripRouteIDs(ctx, src, fvid))
+		})
+	}
+	wg.Wait()
+	assert.EqualValues(t, 1, db.tripQueries.Load(), "concurrent callers")
+
+	// Another feed version resolves the same message on its own.
+	assert.Empty(t, f.tripRouteIDs(ctx, src, -1))
+	assert.EqualValues(t, 2, db.tripQueries.Load(), "other feed version")
+
+	// A message naming every trip's route needs no query.
+	assert.Nil(t, f.tripRouteIDs(ctx, newSource(), fvid))
+	assert.EqualValues(t, 2, db.tripQueries.Load(), "nothing unrouted")
+
+	// A caller that has gone away is served what is held, but starts no lookup.
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	assert.Equal(t, expect, f.tripRouteIDs(canceled, src, fvid))
+	assert.Nil(t, f.tripRouteIDs(canceled, newSource("1031527WKDY"), fvid))
+	assert.EqualValues(t, 2, db.tripQueries.Load(), "canceled")
+
+	// A failed lookup is not cached.
+	src = newSource("1031527WKDY")
+	db.fail.Store(true)
+	assert.Nil(t, f.tripRouteIDs(ctx, src, fvid))
+	db.fail.Store(false)
+	assert.Equal(t, expect, f.tripRouteIDs(ctx, src, fvid))
+	assert.EqualValues(t, 4, db.tripQueries.Load(), "retry after failure")
+}
+
+// tripUpdateLookup answers the lookups that matching trip updates needs from
+// fixed values, for feed version 1. The nil Lookup it embeds leaves the others
+// unimplemented, so trip update matching that reaches one fails the test.
+type tripUpdateLookup struct {
+	Lookup
+	tz      *time.Location
+	spans   map[int]TripSpan // by trip id
+	stopIds map[int]string   // GTFS stop_ids by stop id
+}
+
+func (l tripUpdateLookup) GetFeedVersionRTFeeds(_ context.Context, fvid int) ([]string, bool) {
+	if fvid != 1 {
+		return nil, false
+	}
+	return []string{"BA"}, true
+}
+
+func (l tripUpdateLookup) FeedVersionTimezone(_ context.Context, fvid int) (*time.Location, bool) {
+	return l.tz, fvid == 1
+}
+
+func (l tripUpdateLookup) GetTripSpan(_ context.Context, _ int, tripId int) TripSpan {
+	return l.spans[tripId]
+}
+
+func (l tripUpdateLookup) GetGtfsStopID(_ context.Context, id int) (string, bool) {
+	sid, ok := l.stopIds[id]
+	return sid, ok
+}
+
+// A Finder matches trip updates to runs and stops without a database, asking
+// its Lookup about the static feed.
+func TestFinder_TripUpdatesFromLookup(t *testing.T) {
+	loc, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const ftvl = 100
+	lookup := tripUpdateLookup{
+		tz:      loc,
+		spans:   map[int]TripSpan{2: {FirstDeparture: 23*3600 + 40*60, LastArrival: 24*3600 + 31*60}}, // 23:40 to 24:31
+		stopIds: map[int]string{ftvl: "FTVL"},
+	}
+	f := testFinder(t, lookup, "realtime_trip_updates", testReadRT(t, "BA-runs-trip-updates.json"))
+	// Ten past midnight, while trip 2's run from the day before is still going.
+	f.Clock = &clock.Mock{T: time.Date(2018, 5, 31, 0, 10, 0, 0, loc)}
+	trip := func(id int, tripId string, day int) *model.Trip {
+		ret := &model.Trip{}
+		ret.ID = id
+		ret.FeedVersionID = 1
+		ret.TripID.Set(tripId)
+		ret.RunDates = []tt.Date{tt.NewDate(time.Date(2018, 5, day, 0, 0, 0, 0, time.UTC))}
+		return ret
+	}
+	tcs := []struct {
+		name  string
+		trip  *model.Trip
+		seq   int
+		delay int32 // of the update matched at FTVL; zero when none matches
+	}{
+		{"run by start_date", trip(1, "1031527WKDY", 31), 12, 300},
+		{"stop by stop_id", trip(1, "1031527WKDY", 30), 99, 60},
+		{"current run, from the trip's span", trip(2, "5172328WKDY", 30), 12, 180},
+		{"current run not requested", trip(2, "5172328WKDY", 31), 12, 0},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			st := &model.StopTime{}
+			st.StopID.SetInt(ftvl)
+			st.StopSequence = tt.NewInt(tc.seq)
+			ste, ok := f.FindStopTimeUpdate(context.Background(), tc.trip, st)
+			if tc.delay == 0 {
+				assert.False(t, ok)
+				return
+			}
+			if assert.True(t, ok) && assert.NotNil(t, ste.StopTimeUpdate) {
+				assert.Equal(t, "FTVL", ste.StopTimeUpdate.GetStopId())
+				assert.Equal(t, tc.delay, ste.StopTimeUpdate.GetDeparture().GetDelay())
+			}
+		})
+	}
 }
