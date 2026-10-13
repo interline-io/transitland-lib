@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -119,7 +120,7 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	tx, err := testutil.MustOpenTestDB(t).Beginx()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = tx.Rollback() })
-	fvid := testutil.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
 
 	// The trips share one journey pattern, each at its own offset, which frequency runs ignore
 	var patterns int

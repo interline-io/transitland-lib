@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/rt"
 	"github.com/interline-io/transitland-lib/rt/pb"
@@ -122,7 +123,7 @@ func TestLookupCache_GetTripSpan(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = tx.Rollback() })
-	fvid := testutil.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
 	lc := newLookupCache(tx)
 	for _, tc := range []struct {
 		tripID string
