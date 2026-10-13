@@ -11,7 +11,7 @@ import (
 func (f *Finder) FindOperators(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.OperatorFilter) ([]*model.Operator, error) {
 	var ents []*model.Operator
 	if err := dbutil.Select(ctx, f.db, operatorSelect(limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -24,7 +24,7 @@ func (f *Finder) OperatorsByCOIFs(ctx context.Context, ids []int) ([]*model.Oper
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Operator) int { return ent.ID }), nil
 }
@@ -37,7 +37,7 @@ func (f *Finder) OperatorsByAgencyIDs(ctx context.Context, ids []int) ([][]*mode
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeGroup(ids, ents, func(ent *model.Operator) int { return ent.AgencyID }), nil
 }
@@ -58,7 +58,7 @@ func (f *Finder) OperatorsByFeedIDs(ctx context.Context, limit *int, where *mode
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Operator) int { return ent.FeedID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Operator) int { return ent.FeedID }), queryErr(ctx, err)
 }
 
 func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBuilder {

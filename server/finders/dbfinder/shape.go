@@ -13,7 +13,7 @@ import (
 func (f *Finder) FindShapesByFeedVersion(ctx context.Context, fvid int, limit *int, after *model.Cursor, where *model.ShapeFilter) ([]*model.Shape, error) {
 	var ents []*model.Shape
 	if err := dbutil.Select(ctx, f.db, shapeSelect(limit, after, fvid, f.PermFilter(ctx), where), &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }

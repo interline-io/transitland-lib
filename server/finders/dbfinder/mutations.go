@@ -64,14 +64,10 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 				cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			}
 			if v := input.Parent; v != nil {
-				ent.ParentStation.Scan(nil)
-				cols = append(cols, "parent_station")
-				cols = scanCol(&ent.ParentStation, v.ID, "", cols, &err)
+				cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
 			}
 			if v := input.Level; v != nil {
-				ent.LevelID.Scan(nil)
-				cols = append(cols, "level_id")
-				cols = scanCol(&ent.LevelID, v.ID, "", cols, &err)
+				cols = scanRef(&ent.LevelID, v.ID, "level_id", cols, &err)
 			}
 			// Set some defaults
 			ent.LocationType.OrSet(0)
@@ -158,10 +154,10 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 			cols = scanCol(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols, &err)
 			cols = scanCol(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols, &err)
 			if v := input.FromStop; v != nil {
-				cols = scanCol(&ent.FromStopID, v.ID, "from_stop_id", cols, &err)
+				cols = scanRef(&ent.FromStopID, v.ID, "from_stop_id", cols, &err)
 			}
 			if v := input.ToStop; v != nil {
-				cols = scanCol(&ent.ToStopID, v.ID, "to_stop_id", cols, &err)
+				cols = scanRef(&ent.ToStopID, v.ID, "to_stop_id", cols, &err)
 			}
 			return cols, err
 		})
@@ -211,8 +207,7 @@ func createUpdateLevel(ctx context.Context, input model.LevelSetInput) (int, err
 			cols = scanCol(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
 			cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			if v := input.Parent; v != nil {
-				cols = append(cols, "parent_station")
-				cols = scanCol(&ent.ParentStation, v.ID, "", cols, &err)
+				cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
 			}
 			return cols, err
 		})
@@ -233,9 +228,7 @@ type canScan interface {
 }
 
 // scanCol assigns inval into val (via val.Scan) and appends colname to cols
-// when inval is non-nil and colname is non-empty. (An empty colname is used at
-// sites that pre-append the column name explicitly and only want scanCol's
-// Scan side effect.) Any Scan error is reported through errp, which must be
+// when inval is non-nil. Any Scan error is reported through errp, which must be
 // non-nil; once *errp is set, subsequent scanCol calls short-circuit so
 // callers can chain several and inspect a single error at the end.
 func scanCol[T any, PT *T](val canScan, inval PT, colname string, cols []string, errp *error) []string {
@@ -247,11 +240,26 @@ func scanCol[T any, PT *T](val canScan, inval PT, colname string, cols []string,
 			*errp = fmt.Errorf("scan %s: %w", colname, err)
 			return cols
 		}
-		if colname != "" {
-			cols = append(cols, colname)
-		}
+		cols = append(cols, colname)
 	}
 	return cols
+}
+
+// scanRef sets a reference column to id, or clears it when id is nil, and
+// appends colname to cols. Errors are reported through errp, as with scanCol.
+func scanRef(val canScan, id *int, colname string, cols []string, errp *error) []string {
+	if *errp != nil {
+		return cols
+	}
+	var v any
+	if id != nil {
+		v = *id
+	}
+	if err := val.Scan(v); err != nil {
+		*errp = fmt.Errorf("scan %s: %w", colname, err)
+		return cols
+	}
+	return append(cols, colname)
 }
 
 type hasTableName interface {

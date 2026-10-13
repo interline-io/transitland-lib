@@ -2,88 +2,126 @@ package dbfinder
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"reflect"
 	"testing"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vektah/gqlparser/v2/ast"
 )
 
-// A keyed finder that fails returns an error for each key, which its dataloader
-// hands to that key's caller.
+// Each keyed finder in model.Finder fails every key of a failed batch: with a
+// generic database error when its query fails, or with the context's error when
+// the request is canceled.
 func TestFinder_KeyedErrors(t *testing.T) {
+	db := testutil.MustOpenTestDB(t)
+	// Every query fails on a finished transaction.
+	tx, err := db.Beginx()
+	require.NoError(t, err)
+	require.NoError(t, tx.Rollback())
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	tcs := []struct {
+		name   string
+		ctx    context.Context
+		f      *Finder
+		expect string
+	}{
+		{"query failed", context.Background(), NewFinder(tx), "database error"},
+		{"request canceled", canceled, NewFinder(db), context.Canceled.Error()},
+	}
+	methods := finderMethods(isKeyedFinder)
+	require.NotEmpty(t, methods, "expected keyed finders in model.Finder")
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, m := range methods {
+				t.Run(m.Name, func(t *testing.T) {
+					errs, _ := callFinder(tc.ctx, tc.f, m)[1].Interface().([]error)
+					require.Len(t, errs, finderTestKeys)
+					for _, err := range errs {
+						assert.EqualError(t, err, tc.expect)
+					}
+				})
+			}
+		})
+	}
+}
+
+// No grouped finder in model.Finder returns the database's own error.
+func TestFinder_GroupedErrors(t *testing.T) {
 	ctx := context.Background()
 	// Every query fails on a finished transaction.
 	tx, err := testutil.MustOpenTestDB(t).Beginx()
 	require.NoError(t, err)
 	require.NoError(t, tx.Rollback())
 	f := NewFinder(tx)
-
-	// No query reaches the database, so the keys are arbitrary.
-	ids := []int{1, 2, 3}
-	fvKeys := []model.FVEntityID{{FeedVersionID: 1, EntityID: "a"}, {FeedVersionID: 1, EntityID: "b"}, {FeedVersionID: 2, EntityID: "a"}}
-	places := []model.StopPlaceParam{{ID: 1}, {ID: 2}, {ID: 3}}
-	errsOf := func(_ any, errs []error) []error { return errs }
-	tcs := []struct {
-		name string
-		errs []error
-	}{
-		{"AgenciesByIDs", errsOf(f.AgenciesByIDs(ctx, ids))},
-		{"AreasByIDs", errsOf(f.AreasByIDs(ctx, ids))},
-		{"BookingRulesByIDs", errsOf(f.BookingRulesByIDs(ctx, ids))},
-		{"CalendarsByIDs", errsOf(f.CalendarsByIDs(ctx, ids))},
-		{"CensusDatasetLayersByDatasetIDs", errsOf(f.CensusDatasetLayersByDatasetIDs(ctx, ids))},
-		{"CensusLayersByIDs", errsOf(f.CensusLayersByIDs(ctx, ids))},
-		{"CensusSourceLayersBySourceIDs", errsOf(f.CensusSourceLayersBySourceIDs(ctx, ids))},
-		{"CensusSourcesByIDs", errsOf(f.CensusSourcesByIDs(ctx, ids))},
-		{"CensusTableByIDs", errsOf(f.CensusTableByIDs(ctx, ids))},
-		{"FareAttributesByIDs", errsOf(f.FareAttributesByIDs(ctx, ids))},
-		{"FareLegRulesByFeedVersionLegGroupIDs", errsOf(f.FareLegRulesByFeedVersionLegGroupIDs(ctx, fvKeys))},
-		{"FareMediaByIDs", errsOf(f.FareMediaByIDs(ctx, ids))},
-		{"FareProductsByFeedVersionFareProductIDs", errsOf(f.FareProductsByFeedVersionFareProductIDs(ctx, fvKeys))},
-		{"FeedStatesByFeedIDs", errsOf(f.FeedStatesByFeedIDs(ctx, ids))},
-		{"FeedVersionGeometryByIDs", errsOf(f.FeedVersionGeometryByIDs(ctx, ids))},
-		{"FeedVersionGtfsImportByFeedVersionIDs", errsOf(f.FeedVersionGtfsImportByFeedVersionIDs(ctx, ids))},
-		{"FeedVersionServiceWindowByFeedVersionIDs", errsOf(f.FeedVersionServiceWindowByFeedVersionIDs(ctx, ids))},
-		{"FeedVersionsByIDs", errsOf(f.FeedVersionsByIDs(ctx, ids))},
-		{"FeedsByIDs", errsOf(f.FeedsByIDs(ctx, ids))},
-		{"LevelsByIDs", errsOf(f.LevelsByIDs(ctx, ids))},
-		{"LocationGroupsByIDs", errsOf(f.LocationGroupsByIDs(ctx, ids))},
-		{"LocationsByIDs", errsOf(f.LocationsByIDs(ctx, ids))},
-		{"NetworksByIDs", errsOf(f.NetworksByIDs(ctx, ids))},
-		{"OperatorsByAgencyIDs", errsOf(f.OperatorsByAgencyIDs(ctx, ids))},
-		{"OperatorsByCOIFs", errsOf(f.OperatorsByCOIFs(ctx, ids))},
-		{"PathwaysByIDs", errsOf(f.PathwaysByIDs(ctx, ids))},
-		{"RiderCategoriesByFeedVersionRiderCategoryIDs", errsOf(f.RiderCategoriesByFeedVersionRiderCategoryIDs(ctx, fvKeys))},
-		{"RouteAttributesByRouteIDs", errsOf(f.RouteAttributesByRouteIDs(ctx, ids))},
-		{"RouteTypesByAgencyIDs", errsOf(f.RouteTypesByAgencyIDs(ctx, ids))},
-		{"RoutesByFeedVersionRouteIDs", errsOf(f.RoutesByFeedVersionRouteIDs(ctx, fvKeys))},
-		{"RoutesByIDs", errsOf(f.RoutesByIDs(ctx, ids))},
-		{"SegmentsByIDs", errsOf(f.SegmentsByIDs(ctx, ids))},
-		{"ShapesByIDs", errsOf(f.ShapesByIDs(ctx, ids))},
-		{"StopExternalReferencesByStopIDs", errsOf(f.StopExternalReferencesByStopIDs(ctx, ids))},
-		{"StopPlacesByStopID", errsOf(f.StopPlacesByStopID(ctx, places))},
-		{"StopsByFeedVersionStopIDs", errsOf(f.StopsByFeedVersionStopIDs(ctx, fvKeys))},
-		{"StopsByIDs", errsOf(f.StopsByIDs(ctx, ids))},
-		{"TargetStopsByStopIDs", errsOf(f.TargetStopsByStopIDs(ctx, ids))},
-		{"TimeframesByFeedVersionTimeframeGroupIDs", errsOf(f.TimeframesByFeedVersionTimeframeGroupIDs(ctx, fvKeys))},
-		{"TripsByFeedVersionTripIDs", errsOf(f.TripsByFeedVersionTripIDs(ctx, fvKeys))},
-		{"TripsByIDs", errsOf(f.TripsByIDs(ctx, ids))},
-	}
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			require.Len(t, tc.errs, len(ids))
-			for _, err := range tc.errs {
-				assert.Error(t, err)
-			}
+	methods := finderMethods(isGroupedFinder)
+	require.NotEmpty(t, methods, "expected grouped finders in model.Finder")
+	for _, m := range methods {
+		t.Run(m.Name, func(t *testing.T) {
+			err, _ := callFinder(ctx, f, m)[1].Interface().(error)
+			require.Error(t, err)
+			assert.NotErrorIs(t, err, sql.ErrTxDone)
 		})
 	}
 }
 
-func Test_logExtendErr(t *testing.T) {
+// finderTestKeys is how many keys callFinder passes.
+const finderTestKeys = 3
+
+var (
+	contextType = reflect.TypeFor[context.Context]()
+	errorType   = reflect.TypeFor[error]()
+	errorsType  = reflect.TypeFor[[]error]()
+)
+
+// finderMethods returns the model.Finder methods whose signatures match.
+func finderMethods(match func(reflect.Type) bool) []reflect.Method {
+	var ret []reflect.Method
+	ft := reflect.TypeFor[model.Finder]()
+	for i := range ft.NumMethod() {
+		if m := ft.Method(i); match(m.Type) {
+			ret = append(ret, m)
+		}
+	}
+	return ret
+}
+
+// isKeyedFinder matches func(ctx, []K) ([]T, []error).
+func isKeyedFinder(mt reflect.Type) bool {
+	return mt.NumIn() == 2 && mt.In(0) == contextType && mt.In(1).Kind() == reflect.Slice &&
+		mt.NumOut() == 2 && mt.Out(0).Kind() == reflect.Slice && mt.Out(1) == errorsType
+}
+
+// isGroupedFinder matches func(ctx, ..., []K) ([][]T, error).
+func isGroupedFinder(mt reflect.Type) bool {
+	n := mt.NumIn()
+	return n >= 2 && mt.In(0) == contextType && mt.In(n-1).Kind() == reflect.Slice &&
+		mt.NumOut() == 2 && mt.Out(0).Kind() == reflect.Slice && mt.Out(0).Elem().Kind() == reflect.Slice && mt.Out(1) == errorType
+}
+
+// callFinder calls a finder method with finderTestKeys zero-valued keys, and zero
+// values for its other arguments.
+func callFinder(ctx context.Context, f model.Finder, m reflect.Method) []reflect.Value {
+	// The census geography finders read the fields a GraphQL query selects.
+	ctx = graphql.WithOperationContext(ctx, &graphql.OperationContext{})
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{}}})
+	args := make([]reflect.Value, m.Type.NumIn())
+	args[0] = reflect.ValueOf(ctx)
+	for i := 1; i < len(args)-1; i++ {
+		args[i] = reflect.Zero(m.Type.In(i))
+	}
+	args[len(args)-1] = reflect.MakeSlice(m.Type.In(len(args)-1), finderTestKeys, finderTestKeys)
+	return reflect.ValueOf(f).MethodByName(m.Name).Call(args)
+}
+
+func Test_queryErrs(t *testing.T) {
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
 	tcs := []struct {
@@ -96,13 +134,16 @@ func Test_logExtendErr(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			errs := logExtendErr(tc.ctx, 3, errors.New("connection reset"))
+			errs := queryErrs(tc.ctx, 3, errors.New("connection reset"))
 			require.Len(t, errs, 3)
 			for _, err := range errs {
 				assert.EqualError(t, err, tc.expect)
 			}
 		})
 	}
+	t.Run("no error", func(t *testing.T) {
+		assert.NoError(t, queryErr(context.Background(), nil))
+	})
 }
 
 func TestFinder_FindFeedVersionServiceWindow(t *testing.T) {

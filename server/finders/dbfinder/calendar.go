@@ -15,7 +15,7 @@ func (f *Finder) CalendarsByIDs(ctx context.Context, ids []int) ([]*model.Calend
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Calendar) int { return ent.ID }), nil
 }
@@ -34,5 +34,5 @@ func (f *Finder) CalendarDatesByServiceIDs(ctx context.Context, limit *int, wher
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CalendarDate) int { return ent.ServiceID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.CalendarDate) int { return ent.ServiceID.Int() }), queryErr(ctx, err)
 }

@@ -40,12 +40,12 @@ func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor,
 			currentWhere.OnestopIds = osids
 			var current []*model.Stop
 			if err := dbutil.Select(ctx, f.db, stopSelect(nil, nil, nil, useActive, f.PermFilter(ctx), &currentWhere), &current); err != nil {
-				return nil, logErr(ctx, err)
+				return nil, queryErr(ctx, err)
 			}
 			var err error
 			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Stop) (int, *string) { return ent.ID, ent.OnestopID }, previousStopIDsSelect)
 			if err != nil {
-				return nil, logErr(ctx, err)
+				return nil, queryErr(ctx, err)
 			}
 			if len(ids) == 0 {
 				return nil, nil
@@ -55,7 +55,7 @@ func (f *Finder) FindStops(ctx context.Context, limit *int, after *model.Cursor,
 	}
 	q := stopSelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -80,7 +80,7 @@ func (f *Finder) StopExternalReferencesByStopIDs(ctx context.Context, ids []int)
 	var ents []*model.StopExternalReference
 	q := sq.StatementBuilder.Select("*").From("tl_stop_external_references").Where(In("stop_id", ids))
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.StopExternalReference) int { return ent.StopID.Int() }), nil
 }
@@ -101,13 +101,13 @@ func (f *Finder) StopObservationsByStopIDs(ctx context.Context, limit *int, wher
 	}
 	var ents []*model.StopObservation
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.StopObservation) int { return ent.StopID }), err
+	return arrangeGroup(keys, ents, func(ent *model.StopObservation) int { return ent.StopID }), queryErr(ctx, err)
 }
 
 func (f *Finder) StopsByIDs(ctx context.Context, ids []int) ([]*model.Stop, []error) {
 	ents, err := f.FindStops(ctx, nil, nil, ids, nil)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Stop) int { return ent.ID }), nil
 }
@@ -121,7 +121,7 @@ func (f *Finder) StopsByRouteIDs(ctx context.Context, limit *int, where *model.S
 		qso,
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithRouteID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithRouteID.Int() }), queryErr(ctx, err)
 }
 
 // StopsByAgencyIDs returns the stops each agency's routes serve: the served
@@ -168,7 +168,7 @@ func (f *Finder) StopsByAgencyIDs(ctx context.Context, limit *int, after *model.
 		Where(In("out.id", keys))
 	var ents []*model.Stop
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithAgencyID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithAgencyID.Int() }), queryErr(ctx, err)
 }
 
 // agencyRouteStopSelect selects from the tl_route_stops rows of the agency
@@ -213,7 +213,7 @@ func (f *Finder) StopsByParentStopIDs(ctx context.Context, limit *int, where *mo
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.ParentStation.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.ParentStation.Int() }), queryErr(ctx, err)
 }
 
 func (f *Finder) TargetStopsByStopIDs(ctx context.Context, ids []int) ([]*model.Stop, []error) {
@@ -236,7 +236,7 @@ func (f *Finder) TargetStopsByStopIDs(ctx context.Context, ids []int) ([]*model.
 		q,
 		&qents,
 	); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	group := map[int]*model.Stop{}
 	for _, ent := range qents {
@@ -258,7 +258,7 @@ func (f *Finder) StopsByFeedVersionStopIDs(ctx context.Context, keys []model.FVE
 			Where(In("gtfs_stops.stop_id", stopIds))
 		var group []*model.Stop
 		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		ents = append(ents, group...)
 	}
@@ -281,7 +281,7 @@ func (f *Finder) StopsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) StopsByLevelIDs(ctx context.Context, limit *int, where *model.StopFilter, keys []int) ([][]*model.Stop, error) {
@@ -298,7 +298,7 @@ func (f *Finder) StopsByLevelIDs(ctx context.Context, limit *int, where *model.S
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.LevelID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.LevelID.Int() }), queryErr(ctx, err)
 }
 
 func (f *Finder) StopsByLocationGroupIDs(ctx context.Context, limit *int, keys []int) ([][]*model.Stop, error) {
@@ -307,7 +307,7 @@ func (f *Finder) StopsByLocationGroupIDs(ctx context.Context, limit *int, keys [
 		Join("gtfs_location_group_stops ON gtfs_location_group_stops.stop_id = gtfs_stops.id").
 		Column("gtfs_location_group_stops.location_group_id AS with_location_group_id")
 	err := dbutil.Select(ctx, f.db, lateralWrap(q, "gtfs_location_groups", "id", "gtfs_location_group_stops", "location_group_id", keys), &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithLocationGroupID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithLocationGroupID.Int() }), queryErr(ctx, err)
 }
 
 func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
@@ -329,7 +329,7 @@ func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlac
 		}
 		q := sq.Select("gtfs_stops.id", "gtfs_stops.geometry").From("gtfs_stops").Where(sq.Eq{"id": geomLookup})
 		if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-			return nil, logExtendErr(ctx, len(params), err)
+			return nil, queryErrs(ctx, len(params), err)
 		}
 		lk := map[int]tlxy.Point{}
 		for _, ent := range ents {
@@ -377,7 +377,7 @@ func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.
 		Join("gtfs_stops on ST_Intersects(gtfs_stops.geometry, ne.geometry)").
 		Where(In("gtfs_stops.id", ids))
 	if err := dbutil.Select(ctx, f.db, detailedQuery, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeMap(ids, ents, func(ent result) (int, *model.StopPlace) { return ent.StopID, &ent.StopPlace }), nil
 }

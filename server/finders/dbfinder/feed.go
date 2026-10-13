@@ -13,7 +13,7 @@ import (
 func (f *Finder) FindFeeds(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.FeedFilter) ([]*model.Feed, error) {
 	var ents []*model.Feed
 	if err := dbutil.Select(ctx, f.db, feedSelect(ctx, limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -21,7 +21,7 @@ func (f *Finder) FindFeeds(ctx context.Context, limit *int, after *model.Cursor,
 func (f *Finder) FeedsByIDs(ctx context.Context, ids []int) ([]*model.Feed, []error) {
 	ents, err := f.FindFeeds(ctx, nil, nil, ids, nil)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Feed) int { return ent.ID }), nil
 }
@@ -34,7 +34,7 @@ func (f *Finder) FeedStatesByFeedIDs(ctx context.Context, ids []int) ([]*model.F
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FeedState) int { return ent.FeedID }), nil
 }
@@ -56,7 +56,7 @@ func (f *Finder) FeedFetchesByFeedIDs(ctx context.Context, limit *int, where *mo
 		lateralWrap(q, "current_feeds", "id", "feed_fetches", "feed_id", keys),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.FeedFetch) int { return ent.FeedID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FeedFetch) int { return ent.FeedID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FeedsByOperatorOnestopIDs(ctx context.Context, limit *int, where *model.FeedFilter, keys []string) ([][]*model.Feed, error) {
@@ -71,7 +71,7 @@ func (f *Finder) FeedsByOperatorOnestopIDs(ctx context.Context, limit *int, wher
 		q,
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Feed) string { return ent.WithOperatorOnestopID.Val }), err
+	return arrangeGroup(keys, ents, func(ent *model.Feed) string { return ent.WithOperatorOnestopID.Val }), queryErr(ctx, err)
 }
 
 func feedSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedFilter) sq.SelectBuilder {

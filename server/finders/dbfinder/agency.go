@@ -19,7 +19,7 @@ func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Curs
 	}
 	q := agencySelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -28,7 +28,7 @@ func (f *Finder) AgenciesByIDs(ctx context.Context, ids []int) ([]*model.Agency,
 	var ents []*model.Agency
 	ents, err := f.FindAgencies(ctx, nil, nil, ids, nil)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Agency) int { return ent.ID }), nil
 }
@@ -64,7 +64,7 @@ func (f *Finder) AgencyPlacesByAgencyIDs(ctx context.Context, limit *int, where 
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.AgencyPlace) int { return ent.AgencyID }), err
+	return arrangeGroup(keys, ents, func(ent *model.AgencyPlace) int { return ent.AgencyID }), queryErr(ctx, err)
 }
 
 func (f *Finder) AgenciesByFeedVersionIDs(ctx context.Context, limit *int, where *model.AgencyFilter, keys []int) ([][]*model.Agency, error) {
@@ -81,7 +81,7 @@ func (f *Finder) AgenciesByFeedVersionIDs(ctx context.Context, limit *int, where
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Agency) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Agency) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *model.AgencyFilter, keys []string) ([][]*model.Agency, error) {
@@ -93,14 +93,14 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 		agencySelect(nil, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor, ids []int, level *model.PlaceAggregationLevel, where *model.PlaceFilter, geom model.PlaceGeometrySelect) ([]*model.Place, error) {
 	var ents []*model.Place
 	q := placeSelect(limit, after, ids, level, f.PermFilter(ctx), where, geom)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, err
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }

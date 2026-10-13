@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ func TestWithWaitAndCapacity_Errors(t *testing.T) {
 	t.Run("failed batch", func(t *testing.T) {
 		// A failed batch returns no results and an error for each key. Capacity 2
 		// flushes on the second load, so the two keys run in one batch.
-		loader := withWaitAndCapacity(time.Hour, 2, func(_ context.Context, keys []int) ([]string, []error) {
+		loader := withWaitAndCapacity(time.Second, 2, func(_ context.Context, keys []int) ([]string, []error) {
 			errs := make([]error, len(keys))
 			for i, key := range keys {
 				errs[i] = fmt.Errorf("key %d failed", key)
@@ -36,4 +37,28 @@ func TestWithWaitAndCapacity_Errors(t *testing.T) {
 		_, err := loader.Load(ctx, 1)()
 		assert.Error(t, err)
 	})
+}
+
+func Test_batchShapeOK(t *testing.T) {
+	err := errors.New("failed")
+	tcs := []struct {
+		name    string
+		results int
+		errs    []error
+		ok      bool
+	}{
+		{"results", 3, nil, true},
+		{"results with an error for each key", 3, []error{nil, err, nil}, true},
+		{"failed batch", 0, []error{err, err, err}, true},
+		{"no results and no errors", 0, nil, false},
+		{"failed batch with a nil error", 0, []error{err, nil, err}, false},
+		{"too few results", 2, []error{err, err, err}, false},
+		{"results with one error", 3, []error{err}, false},
+		{"too many results", 4, nil, false},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.ok, batchShapeOK(3, tc.results, tc.errs))
+		})
+	}
 }

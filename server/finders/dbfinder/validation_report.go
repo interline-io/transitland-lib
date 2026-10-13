@@ -50,7 +50,7 @@ func (f *Finder) ValidationReportsByFeedVersionIDs(ctx context.Context, limit *i
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.ValidationReport) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.ValidationReport) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) ValidationReportErrorGroupsByValidationReportIDs(ctx context.Context, limit *int, keys []int) ([][]*model.ValidationReportErrorGroup, error) {
@@ -67,7 +67,7 @@ func (f *Finder) ValidationReportErrorGroupsByValidationReportIDs(ctx context.Co
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.ValidationReportErrorGroup) int { return ent.ValidationReportID }), err
+	return arrangeGroup(keys, ents, func(ent *model.ValidationReportErrorGroup) int { return ent.ValidationReportID }), queryErr(ctx, err)
 }
 
 func (f *Finder) ValidationReportErrorExemplarsByValidationReportErrorGroupIDs(ctx context.Context, limit *int, keys []int) ([][]*model.ValidationReportError, error) {
@@ -84,5 +84,5 @@ func (f *Finder) ValidationReportErrorExemplarsByValidationReportErrorGroupIDs(c
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.ValidationReportError) int { return ent.ValidationReportErrorGroupID }), err
+	return arrangeGroup(keys, ents, func(ent *model.ValidationReportError) int { return ent.ValidationReportErrorGroupID }), queryErr(ctx, err)
 }

@@ -12,14 +12,14 @@ func (f *Finder) FareAttributesByFeedVersionIDs(ctx context.Context, limit *int,
 	var ents []*model.FareAttribute
 	q := lateralWrap(fareAttributeSelect(limit, after, nil), "feed_versions", "id", "gtfs_fare_attributes", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.FareAttribute) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FareAttribute) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FareAttributesByIDs(ctx context.Context, ids []int) ([]*model.FareAttribute, []error) {
 	var ents []*model.FareAttribute
 	q := fareAttributeSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FareAttribute) int { return ent.ID }), nil
 }
@@ -53,7 +53,7 @@ func (f *Finder) FareRulesByFeedVersionIDs(ctx context.Context, limit *int, afte
 	var ents []*model.FareRule
 	q := lateralWrap(fareRuleSelect(limit, after), "feed_versions", "id", "gtfs_fare_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.FareRule) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FareRule) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func fareRuleSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
@@ -80,14 +80,14 @@ func (f *Finder) FareMediaByFeedVersionIDs(ctx context.Context, limit *int, afte
 	var ents []*model.FareMedia
 	q := lateralWrap(fareMediaSelect(limit, after, nil), "feed_versions", "id", "gtfs_fare_media", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.FareMedia) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FareMedia) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FareMediaByIDs(ctx context.Context, ids []int) ([]*model.FareMedia, []error) {
 	var ents []*model.FareMedia
 	q := fareMediaSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FareMedia) int { return ent.ID }), nil
 }
@@ -117,7 +117,7 @@ func (f *Finder) FareProductsByFeedVersionIDs(ctx context.Context, limit *int, a
 	var ents []*model.FareProduct
 	q := lateralWrap(fareProductSelect(limit, after), "feed_versions", "id", "gtfs_fare_products", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.FareProduct) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FareProduct) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FareProductsByFeedVersionFareProductIDs(ctx context.Context, keys []model.FVEntityID) ([][]*model.FareProduct, []error) {
@@ -128,7 +128,7 @@ func (f *Finder) FareProductsByFeedVersionFareProductIDs(ctx context.Context, ke
 			Where(In("gtfs_fare_products.fare_product_id", ids))
 		var group []*model.FareProduct
 		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		ents = append(ents, group...)
 	}
@@ -166,7 +166,7 @@ func (f *Finder) FareLegRulesByFeedVersionIDs(ctx context.Context, limit *int, a
 	var ents []*model.FareLegRule
 	q := lateralWrap(fareLegRuleSelect(limit, after), "feed_versions", "id", "gtfs_fare_leg_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.FareLegRule) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FareLegRule) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FareLegRulesByFeedVersionLegGroupIDs(ctx context.Context, keys []model.FVEntityID) ([][]*model.FareLegRule, []error) {
@@ -177,7 +177,7 @@ func (f *Finder) FareLegRulesByFeedVersionLegGroupIDs(ctx context.Context, keys 
 			Where(In("gtfs_fare_leg_rules.leg_group_id", ids))
 		var group []*model.FareLegRule
 		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		ents = append(ents, group...)
 	}
@@ -218,7 +218,7 @@ func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *in
 	var ents []*model.FareLegJoinRule
 	q := lateralWrap(fareLegJoinRuleSelect(limit, after), "feed_versions", "id", "gtfs_fare_leg_join_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.FareLegJoinRule) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FareLegJoinRule) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func fareLegJoinRuleSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
@@ -247,7 +247,7 @@ func (f *Finder) FareTransferRulesByFeedVersionIDs(ctx context.Context, limit *i
 	var ents []*model.FareTransferRule
 	q := lateralWrap(fareTransferRuleSelect(limit, after), "feed_versions", "id", "gtfs_fare_transfer_rules", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.FareTransferRule) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FareTransferRule) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func fareTransferRuleSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
@@ -277,7 +277,7 @@ func (f *Finder) RiderCategoriesByFeedVersionIDs(ctx context.Context, limit *int
 	var ents []*model.RiderCategory
 	q := lateralWrap(riderCategorySelect(limit, after), "feed_versions", "id", "gtfs_rider_categories", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.RiderCategory) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.RiderCategory) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) RiderCategoriesByFeedVersionRiderCategoryIDs(ctx context.Context, keys []model.FVEntityID) ([]*model.RiderCategory, []error) {
@@ -288,7 +288,7 @@ func (f *Finder) RiderCategoriesByFeedVersionRiderCategoryIDs(ctx context.Contex
 			Where(In("gtfs_rider_categories.rider_category_id", ids))
 		var group []*model.RiderCategory
 		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		ents = append(ents, group...)
 	}
@@ -322,7 +322,7 @@ func (f *Finder) TimeframesByFeedVersionIDs(ctx context.Context, limit *int, aft
 	var ents []*model.Timeframe
 	q := lateralWrap(timeframeSelect(limit, after), "feed_versions", "id", "gtfs_timeframes", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Timeframe) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Timeframe) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) TimeframesByFeedVersionTimeframeGroupIDs(ctx context.Context, keys []model.FVEntityID) ([][]*model.Timeframe, []error) {
@@ -333,7 +333,7 @@ func (f *Finder) TimeframesByFeedVersionTimeframeGroupIDs(ctx context.Context, k
 			Where(In("gtfs_timeframes.timeframe_group_id", ids))
 		var group []*model.Timeframe
 		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		ents = append(ents, group...)
 	}
@@ -365,14 +365,14 @@ func (f *Finder) AreasByFeedVersionIDs(ctx context.Context, limit *int, after *m
 	var ents []*model.Area
 	q := lateralWrap(areaSelect(limit, after, nil), "feed_versions", "id", "gtfs_areas", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Area) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Area) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) AreasByIDs(ctx context.Context, ids []int) ([]*model.Area, []error) {
 	var ents []*model.Area
 	q := areaSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Area) int { return ent.ID }), nil
 }
@@ -383,7 +383,7 @@ func (f *Finder) AreasByStopIDs(ctx context.Context, limit *int, keys []int) ([]
 		Join("gtfs_stop_areas ON gtfs_stop_areas.area_id = gtfs_areas.id").
 		Column("gtfs_stop_areas.stop_id AS with_stop_id")
 	err := dbutil.Select(ctx, f.db, lateralWrap(q, "gtfs_stops", "id", "gtfs_stop_areas", "stop_id", keys), &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Area) int { return ent.WithStopID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Area) int { return ent.WithStopID.Int() }), queryErr(ctx, err)
 }
 
 func areaSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
@@ -410,14 +410,14 @@ func (f *Finder) NetworksByFeedVersionIDs(ctx context.Context, limit *int, after
 	var ents []*model.Network
 	q := lateralWrap(networkSelect(limit, after, nil), "feed_versions", "id", "gtfs_networks", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Network) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Network) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) NetworksByIDs(ctx context.Context, ids []int) ([]*model.Network, []error) {
 	var ents []*model.Network
 	q := networkSelect(nil, nil, ids)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Network) int { return ent.ID }), nil
 }
@@ -428,7 +428,7 @@ func (f *Finder) NetworksByRouteIDs(ctx context.Context, limit *int, keys []int)
 		Join("gtfs_route_networks ON gtfs_route_networks.network_id = gtfs_networks.id").
 		Column("gtfs_route_networks.route_id AS with_route_id")
 	err := dbutil.Select(ctx, f.db, lateralWrap(q, "gtfs_routes", "id", "gtfs_route_networks", "route_id", keys), &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Network) int { return ent.WithRouteID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Network) int { return ent.WithRouteID.Int() }), queryErr(ctx, err)
 }
 
 func networkSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
@@ -455,7 +455,7 @@ func (f *Finder) RouteNetworksByFeedVersionIDs(ctx context.Context, limit *int, 
 	var ents []*model.RouteNetwork
 	q := lateralWrap(routeNetworkSelect(limit, after), "feed_versions", "id", "gtfs_route_networks", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.RouteNetwork) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.RouteNetwork) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func routeNetworkSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
@@ -479,7 +479,7 @@ func (f *Finder) StopAreasByAreaIDs(ctx context.Context, limit *int, after *mode
 	var ents []*model.StopArea
 	q := lateralWrap(stopAreaSelect(limit, after, f.PermFilter(ctx), nil), "gtfs_areas", "id", "gtfs_stop_areas", "area_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.StopArea) int { return ent.AreaID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.StopArea) int { return ent.AreaID.Int() }), queryErr(ctx, err)
 }
 
 // StopAreasByFeedVersionIDs returns the stop areas of each feed version.
@@ -487,7 +487,7 @@ func (f *Finder) StopAreasByFeedVersionIDs(ctx context.Context, limit *int, afte
 	var ents []*model.StopArea
 	q := lateralWrap(stopAreaSelect(limit, after, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_stop_areas", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.StopArea) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.StopArea) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func stopAreaSelect(limit *int, after *model.Cursor, permFilter *model.PermFilter, where *model.StopAreaFilter) sq.SelectBuilder {

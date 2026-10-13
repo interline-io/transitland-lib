@@ -252,7 +252,8 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 	})
 }
 
-func TestPathwayUpdate_ToStop(t *testing.T) {
+// Updating one end of a pathway changes that end and leaves the other.
+func TestPathwayUpdate_Stops(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
@@ -279,7 +280,7 @@ func TestPathwayUpdate_ToStop(t *testing.T) {
 			}
 			return id
 		}
-		fromStopID, toStopID, newToStopID := newStop("from"), newStop("to"), newStop("new-to")
+		fromStopID, toStopID := newStop("from"), newStop("to")
 		eid, err := finder.PathwayCreate(ctx, model.PathwaySetInput{
 			FeedVersion:     &fv,
 			PathwayID:       toPtr(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
@@ -291,20 +292,30 @@ func TestPathwayUpdate_ToStop(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := finder.PathwayUpdate(ctx, model.PathwaySetInput{
-			ID:     toPtr(eid),
-			ToStop: &model.StopSetInput{ID: &newToStopID},
-		}); err != nil {
-			t.Fatal(err)
+		update := func(input model.PathwaySetInput) gtfs.Pathway {
+			t.Helper()
+			input.ID = toPtr(eid)
+			if _, err := finder.PathwayUpdate(ctx, input); err != nil {
+				t.Fatal(err)
+			}
+			checkEnt := gtfs.Pathway{}
+			checkEnt.ID = eid
+			atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
+			if err := atx.Find(ctx, &checkEnt); err != nil {
+				t.Fatal(err)
+			}
+			return checkEnt
 		}
-		checkEnt := gtfs.Pathway{}
-		checkEnt.ID = eid
-		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
-		if err := atx.Find(ctx, &checkEnt); err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, newToStopID, checkEnt.ToStopID.Int(), "to_stop should change")
+
+		toStopID = newStop("new-to")
+		checkEnt := update(model.PathwaySetInput{ToStop: &model.StopSetInput{ID: &toStopID}})
+		assert.Equal(t, toStopID, checkEnt.ToStopID.Int(), "to_stop should change")
 		assert.Equal(t, fromStopID, checkEnt.FromStopID.Int(), "from_stop should not change")
+
+		fromStopID = newStop("new-from")
+		checkEnt = update(model.PathwaySetInput{FromStop: &model.StopSetInput{ID: &fromStopID}})
+		assert.Equal(t, fromStopID, checkEnt.FromStopID.Int(), "from_stop should change")
+		assert.Equal(t, toStopID, checkEnt.ToStopID.Int(), "to_stop should not change")
 	})
 }
 
@@ -345,6 +356,62 @@ func TestLevelUpdate_BumpsUpdatedAt(t *testing.T) {
 		assert.True(t, afterUpdate.UpdatedAt.After(afterCreate.UpdatedAt),
 			"updated_at should advance on level update (was %s, now %s)",
 			afterCreate.UpdatedAt, afterUpdate.UpdatedAt)
+	})
+}
+
+// A level's parent station is set by parent {id}, and cleared by parent {}, as a stop's is.
+func TestLevelUpdate_Parent(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		finder := cfg.Finder
+		ctx := model.WithConfig(context.Background(), cfg)
+		// BART, from the standard test fixtures.
+		sha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
+		fvs, err := finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &sha1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(fvs) != 1 {
+			t.Fatalf("expected the bart test feed version, got %d", len(fvs))
+		}
+		fv := model.FeedVersionInput{ID: toPtr(fvs[0].ID)}
+		stationID, err := finder.StopCreate(ctx, model.StopSetInput{
+			FeedVersion:  &fv,
+			StopID:       toPtr(fmt.Sprintf("station-%d", time.Now().UnixNano())),
+			StopName:     toPtr("station"),
+			LocationType: toPtr(1),
+			Geometry:     toPtr(tt.NewPoint(-122.271604, 37.803664)),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		eid, err := finder.LevelCreate(ctx, model.LevelSetInput{
+			FeedVersion: &fv,
+			LevelID:     toPtr(fmt.Sprintf("L-%d", time.Now().UnixNano())),
+			LevelIndex:  toPtr(0.0),
+			Parent:      &model.StopSetInput{ID: &stationID},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		parent := func() tt.Key {
+			t.Helper()
+			levels, errs := finder.LevelsByIDs(ctx, []int{eid})
+			if len(errs) > 0 && errs[0] != nil {
+				t.Fatal(errs[0])
+			}
+			if len(levels) != 1 || levels[0] == nil {
+				t.Fatalf("expected level %d", eid)
+			}
+			return levels[0].ParentStation
+		}
+		assert.Equal(t, stationID, parent().Int(), "parent {id} should set the parent station")
+		if _, err := finder.LevelUpdate(ctx, model.LevelSetInput{
+			ID:     toPtr(eid),
+			Parent: &model.StopSetInput{},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		assert.False(t, parent().Valid, "parent {} should clear the parent station")
 	})
 }
 

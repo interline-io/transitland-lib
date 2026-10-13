@@ -12,14 +12,14 @@ func (f *Finder) BookingRulesByFeedVersionIDs(ctx context.Context, limit *int, w
 	var ents []*model.BookingRule
 	q := bookingRuleSelect(limit, nil, nil, where).Where(In("gtfs_booking_rules.feed_version_id", keys))
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.BookingRule) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.BookingRule) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) BookingRulesByIDs(ctx context.Context, ids []int) ([]*model.BookingRule, []error) {
 	var ents []*model.BookingRule
 	q := bookingRuleSelect(nil, nil, ids, nil)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.BookingRule) int { return ent.ID }), nil
 }

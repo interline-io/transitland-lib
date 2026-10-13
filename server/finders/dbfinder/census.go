@@ -15,7 +15,7 @@ func (f *Finder) FindCensusDatasets(ctx context.Context, limit *int, after *mode
 	var ents []*model.CensusDataset
 	q := censusDatasetSelect(limit, after, ids, where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -28,7 +28,7 @@ func (f *Finder) CensusTableByIDs(ctx context.Context, ids []int) ([]*model.Cens
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.CensusTable) int { return ent.ID }), nil
 }
@@ -41,7 +41,7 @@ func (f *Finder) CensusLayersByIDs(ctx context.Context, ids []int) ([]*model.Cen
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.CensusLayer) int { return ent.ID }), nil
 }
@@ -54,7 +54,7 @@ func (f *Finder) CensusSourcesByIDs(ctx context.Context, ids []int) ([]*model.Ce
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.CensusSource) int { return ent.ID }), nil
 }
@@ -89,7 +89,7 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		var ents []*model.CensusGeography
 		pw := forStopids(entityIds)
 		if err := dbutil.Select(ctx, f.db, censusDatasetGeographySelect(limit, pw, fields), &ents); err != nil {
-			return nil, logErr(ctx, err)
+			return nil, queryErr(ctx, err)
 		}
 		entityGeogs = append(entityGeogs, ents...)
 	} else {
@@ -100,12 +100,12 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		for _, entityId := range entityIds {
 			stopIds, err := getBufferStopIds(ctx, f.db, entityType, entityId)
 			if err != nil {
-				return nil, logErr(ctx, err)
+				return nil, queryErr(ctx, err)
 			}
 			var ents []*model.CensusGeography
 			pw := forStopids(stopIds)
 			if err := dbutil.Select(ctx, f.db, censusDatasetGeographySelect(limit, pw, fields), &ents); err != nil {
-				return nil, logErr(ctx, err)
+				return nil, queryErr(ctx, err)
 			}
 			for _, ent := range ents {
 				ent.MatchEntityID = entityId
@@ -125,7 +125,7 @@ func (f *Finder) CensusValuesByGeographyIDs(ctx context.Context, limit *int, dat
 		censusValueSelect(limit, datasetName, tableNames, keys),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CensusValue) string { return ent.Geoid }), err
+	return arrangeGroup(keys, ents, func(ent *model.CensusValue) string { return ent.Geoid }), queryErr(ctx, err)
 }
 
 func (f *Finder) CensusSourcesByDatasetIDs(ctx context.Context, limit *int, where *model.CensusSourceFilter, keys []int) ([][]*model.CensusSource, error) {
@@ -143,7 +143,7 @@ func (f *Finder) CensusSourcesByDatasetIDs(ctx context.Context, limit *int, wher
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CensusSource) int { return ent.DatasetID }), err
+	return arrangeGroup(keys, ents, func(ent *model.CensusSource) int { return ent.DatasetID }), queryErr(ctx, err)
 }
 
 func (f *Finder) CensusDatasetLayersByDatasetIDs(ctx context.Context, keys []int) ([][]*model.CensusLayer, []error) {
@@ -161,7 +161,7 @@ func (f *Finder) CensusDatasetLayersByDatasetIDs(ctx context.Context, keys []int
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(keys), err)
+		return nil, queryErrs(ctx, len(keys), err)
 	}
 	return arrangeGroup(keys, ents, func(ent *model.CensusLayer) int { return ent.DatasetID }), nil
 }
@@ -187,7 +187,7 @@ func (f *Finder) CensusSourceLayersBySourceIDs(ctx context.Context, keys []int) 
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(keys), err)
+		return nil, queryErrs(ctx, len(keys), err)
 	}
 	grouped := arrangeGroup(keys, ents, func(ent *qent) int { return ent.SourceID })
 	var ret [][]*model.CensusLayer
@@ -221,7 +221,7 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 		q = q.Where(sq.ILike{"tlct.table_name": dbutil.EscapeLike(*where.Search, true, true)})
 	}
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	grouped := arrangeGroup(keys, ents, func(ent *qent) int { return ent.SourceID })
 	var ret [][]*model.CensusTable
@@ -246,7 +246,7 @@ func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, 
 		q,
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.DatasetID }), err
+	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.DatasetID }), queryErr(ctx, err)
 }
 
 func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, where *model.CensusSourceGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
@@ -270,7 +270,7 @@ func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, wh
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.LayerID }), err
+	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.LayerID }), queryErr(ctx, err)
 }
 
 func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, where *model.CensusSourceGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
@@ -294,7 +294,7 @@ func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, w
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.SourceID }), err
+	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.SourceID }), queryErr(ctx, err)
 }
 
 func (f *Finder) CensusFieldsByTableIDs(ctx context.Context, limit *int, keys []int) ([][]*model.CensusField, error) {
@@ -311,7 +311,7 @@ func (f *Finder) CensusFieldsByTableIDs(ctx context.Context, limit *int, keys []
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CensusField) int { return ent.TableID }), err
+	return arrangeGroup(keys, ents, func(ent *model.CensusField) int { return ent.TableID }), queryErr(ctx, err)
 }
 
 func (f *Finder) CensusTablesByDatasetIDs(ctx context.Context, limit *int, where *model.CensusTableFilter, keys []int) ([][]*model.CensusTable, error) {
@@ -329,7 +329,7 @@ func (f *Finder) CensusTablesByDatasetIDs(ctx context.Context, limit *int, where
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.CensusTable) int { return ent.DatasetID }), err
+	return arrangeGroup(keys, ents, func(ent *model.CensusTable) int { return ent.DatasetID }), queryErr(ctx, err)
 }
 
 // FindCensusValuesByDatasetID finds census values by dataset ID with optional filters.
@@ -339,7 +339,7 @@ func (f *Finder) FindCensusValuesByDatasetID(ctx context.Context, limit *int, af
 	var ents []*model.CensusValue
 	q := censusValueFilterSelect(limit, after, datasetID, where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }

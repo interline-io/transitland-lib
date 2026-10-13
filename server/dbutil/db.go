@@ -84,9 +84,9 @@ func Select(ctx context.Context, db sqlx.ExtContext, q sq.SelectBuilder, dest in
 		err = sqlx.SelectContext(ctx, db, dest, qstr, qargs...)
 	}
 	if ctx.Err() == context.Canceled {
-		log.Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query canceled")
+		log.For(ctx).Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query canceled")
 	} else if err != nil {
-		log.Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query failed")
+		log.For(ctx).Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query failed")
 	}
 	return err
 }
@@ -99,9 +99,9 @@ func Get(ctx context.Context, db sqlx.ExtContext, q sq.SelectBuilder, dest inter
 		err = sqlx.GetContext(ctx, db, dest, qstr, qargs...)
 	}
 	if ctx.Err() == context.Canceled {
-		log.Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query canceled")
+		log.For(ctx).Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query canceled")
 	} else if err != nil {
-		log.Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query failed")
+		log.For(ctx).Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("query failed")
 	}
 	return err
 }
@@ -114,9 +114,9 @@ func Update(ctx context.Context, db sqlx.ExtContext, q sq.UpdateBuilder) error {
 		_, err = db.ExecContext(ctx, qstr, qargs...)
 	}
 	if ctx.Err() == context.Canceled {
-		log.Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update canceled")
+		log.For(ctx).Trace().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update canceled")
 	} else if err != nil {
-		log.Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update failed")
+		log.For(ctx).Error().Err(err).Str("query", qstr).Interface("args", qargs).Msg("update failed")
 	}
 	return err
 }

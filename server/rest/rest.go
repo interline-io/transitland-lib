@@ -456,8 +456,11 @@ func makeRequest(ctx context.Context, graphqlHandler http.Handler, ent apiHandle
 	query, vars := ent.Query(ctx)
 	response, err := makeGraphQLRequest(ctx, graphqlHandler, query, vars)
 	if err != nil {
-		vjson, _ := json.Marshal(vars)
-		log.For(ctx).Error().Err(err).Str("query", query).Str("vars", string(vjson)).Msg("graphql request failed")
+		// A client that hung up is not a failure.
+		if ctx.Err() != context.Canceled {
+			vjson, _ := json.Marshal(vars)
+			log.For(ctx).Error().Err(err).Str("query", query).Str("vars", string(vjson)).Msg("graphql request failed")
+		}
 		return nil, err
 	}
 
