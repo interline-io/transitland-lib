@@ -6,6 +6,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -18,7 +19,7 @@ import (
 
 // Each keyed finder in model.Finder fails every key of a failed batch: with a
 // generic database error when its query fails, or with the context's error when
-// the request is canceled.
+// the request is canceled or times out.
 func TestFinder_KeyedErrors(t *testing.T) {
 	db := testutil.MustOpenTestDB(t)
 	// Every query fails on a finished transaction.
@@ -27,6 +28,8 @@ func TestFinder_KeyedErrors(t *testing.T) {
 	require.NoError(t, tx.Rollback())
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
+	timedOut, cancelTimedOut := context.WithDeadline(context.Background(), time.Unix(0, 0))
+	defer cancelTimedOut()
 	tcs := []struct {
 		name   string
 		ctx    context.Context
@@ -35,6 +38,7 @@ func TestFinder_KeyedErrors(t *testing.T) {
 	}{
 		{"query failed", context.Background(), NewFinder(tx), "database error"},
 		{"request canceled", canceled, NewFinder(db), context.Canceled.Error()},
+		{"request timed out", timedOut, NewFinder(db), context.DeadlineExceeded.Error()},
 	}
 	methods := finderMethods(isKeyedFinder)
 	require.NotEmpty(t, methods, "expected keyed finders in model.Finder")
@@ -124,6 +128,8 @@ func callFinder(ctx context.Context, f model.Finder, m reflect.Method) []reflect
 func Test_queryErrs(t *testing.T) {
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
+	timedOut, cancelTimedOut := context.WithDeadline(context.Background(), time.Unix(0, 0))
+	defer cancelTimedOut()
 	tcs := []struct {
 		name   string
 		ctx    context.Context
@@ -131,6 +137,7 @@ func Test_queryErrs(t *testing.T) {
 	}{
 		{"query failed", context.Background(), "database error"},
 		{"request canceled", canceled, context.Canceled.Error()},
+		{"request timed out", timedOut, context.DeadlineExceeded.Error()},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {

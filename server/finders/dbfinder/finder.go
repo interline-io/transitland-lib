@@ -81,15 +81,16 @@ func (f *Finder) PermFilter(ctx context.Context) *model.PermFilter {
 // Helpers
 
 // queryErr is the error a finder returns for a failed query: the context's error
-// when the request was canceled, otherwise a generic database error. It returns nil for nil.
+// when the request was canceled or timed out, otherwise a generic database error.
+// It returns nil for nil.
 //
 // dbutil logs the underlying error, so its text stays out of API responses.
 func queryErr(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	if ctx.Err() == context.Canceled {
-		return ctx.Err()
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ctxErr
 	}
 	return errors.New("database error")
 }
