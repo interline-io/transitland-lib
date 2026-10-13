@@ -349,12 +349,34 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 	return nil, false
 }
 
+// FindStopTimeUpdate returns the update for a stop time on a trip's runs: the
+// requested ones, or its current run.
 func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
-	seq := st.StopSequence.Int()
-	// Resolve the trip in each RT feed once. Both passes below ask every topic
-	// the same question, and a feed version can be associated with dozens of RT
-	// feeds, so answering twice is most of the work.
+	return f.matchStopTimeUpdate(ctx, f.runUpdates(ctx, t), t, st)
+}
+
+// FindStopTimeUpdates returns the updates for a trip's stop times, in their
+// order: nil for a stop time without one. The trip's runs are resolved once for
+// all of them.
+func (f *Finder) FindStopTimeUpdates(ctx context.Context, t *model.Trip, sts []*model.StopTime) []*model.RTStopTimeUpdate {
+	ret := make([]*model.RTStopTimeUpdate, len(sts))
 	rtTrips := f.runUpdates(ctx, t)
+	if len(rtTrips) == 0 {
+		return ret
+	}
+	for i, st := range sts {
+		ret[i], _ = f.matchStopTimeUpdate(ctx, rtTrips, t, st)
+	}
+	return ret
+}
+
+// matchStopTimeUpdate returns the update for a stop time from the trip updates
+// on its trip's runs, one from each realtime feed.
+func (f *Finder) matchStopTimeUpdate(ctx context.Context, rtTrips []*pb.TripUpdate, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
+	seq := st.StopSequence.Int()
+	// The trip's runs are resolved once by the caller: both passes below ask
+	// every feed the same question, and a feed version can be associated with
+	// dozens of realtime feeds, so answering twice is most of the work.
 	// Attempt to match on stop sequence
 	for _, rtTrip := range rtTrips {
 		for _, ste := range rtTrip.StopTimeUpdate {

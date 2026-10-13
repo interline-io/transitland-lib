@@ -204,6 +204,7 @@ type RTFinder interface {
 	FindVehiclePositionForTrip(context.Context, *Trip, *VehiclePositionFilter) *VehiclePosition
 	GetAddedTripsForStop(context.Context, *Stop) []*pb.TripUpdate
 	FindStopTimeUpdate(context.Context, *Trip, *StopTime) (*RTStopTimeUpdate, bool)
+	FindStopTimeUpdates(context.Context, *Trip, []*StopTime) []*RTStopTimeUpdate
 	// lookup cache methods
 	StopTimezone(context.Context, int, string) (*time.Location, bool)
 	FeedVersionTimezone(context.Context, int) (*time.Location, bool)
