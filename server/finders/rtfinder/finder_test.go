@@ -2,7 +2,9 @@ package rtfinder
 
 import (
 	"context"
+	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -355,14 +357,33 @@ func TestFindAlertsForStop_Lookups(t *testing.T) {
 	assert.EqualValues(t, 2, db.agencyQueries.Load(), "recovered")
 }
 
-func TestFinder_tripRouteIDs(t *testing.T) {
-	if a, ok := testutil.CheckTestDB(); !ok {
-		t.Skip(a)
+// tripRouteLookup resolves trips to routes for feed version 1, counting its
+// calls and failing while fail is set. Any other lookup panics on the nil
+// Lookup it embeds.
+type tripRouteLookup struct {
+	Lookup
+	routes map[string]string
+	calls  atomic.Int64
+	fail   atomic.Bool
+}
+
+func (l *tripRouteLookup) GetTripRouteIDs(_ context.Context, fvid int, tripIds []string) (map[string]string, error) {
+	l.calls.Add(1)
+	if l.fail.Load() {
+		return nil, errors.New("test failure")
 	}
-	raw := testutil.MustOpenTestDB(t)
-	fvid := testBartFeedVersion(t, raw)
-	db := &countingDB{Ext: raw}
-	f := &Finder{lookup: NewPostgresLookup(db)}
+	ret := map[string]string{}
+	for _, tid := range tripIds {
+		if rid, ok := l.routes[tid]; ok && fvid == 1 {
+			ret[tid] = rid
+		}
+	}
+	return ret, nil
+}
+
+func TestFinder_tripRouteIDs(t *testing.T) {
+	lookup := &tripRouteLookup{routes: map[string]string{"1031527WKDY": "05"}}
+	f := &Finder{lookup: lookup}
 	ctx := context.Background()
 	newSource := func(tripIds ...string) *Source {
 		msg := &pb.FeedMessage{}
@@ -380,45 +401,44 @@ func TestFinder_tripRouteIDs(t *testing.T) {
 	}
 	expect := map[string]string{"1031527WKDY": "05"}
 
-	// Concurrent callers share one query, which resolves only the feed
-	// version's own trips.
+	// Concurrent callers share one lookup.
 	src := newSource("1031527WKDY", "no-such-trip")
 	var wg sync.WaitGroup
 	for range 100 {
 		wg.Go(func() {
-			assert.Equal(t, expect, f.tripRouteIDs(ctx, src, fvid))
+			assert.Equal(t, expect, f.tripRouteIDs(ctx, src, 1))
 		})
 	}
 	wg.Wait()
-	assert.EqualValues(t, 1, db.tripQueries.Load(), "concurrent callers")
+	assert.EqualValues(t, 1, lookup.calls.Load(), "concurrent callers")
 
 	// Another feed version resolves the same message on its own.
-	assert.Empty(t, f.tripRouteIDs(ctx, src, -1))
-	assert.EqualValues(t, 2, db.tripQueries.Load(), "other feed version")
+	assert.Empty(t, f.tripRouteIDs(ctx, src, 2))
+	assert.EqualValues(t, 2, lookup.calls.Load(), "other feed version")
 
-	// A message naming every trip's route needs no query.
-	assert.Nil(t, f.tripRouteIDs(ctx, newSource(), fvid))
-	assert.EqualValues(t, 2, db.tripQueries.Load(), "nothing unrouted")
+	// A message naming every trip's route needs no lookup.
+	assert.Nil(t, f.tripRouteIDs(ctx, newSource(), 1))
+	assert.EqualValues(t, 2, lookup.calls.Load(), "nothing unrouted")
 
 	// A caller that has gone away is served what is held, but starts no lookup.
 	canceled, cancel := context.WithCancel(ctx)
 	cancel()
-	assert.Equal(t, expect, f.tripRouteIDs(canceled, src, fvid))
-	assert.Nil(t, f.tripRouteIDs(canceled, newSource("1031527WKDY"), fvid))
-	assert.EqualValues(t, 2, db.tripQueries.Load(), "canceled")
+	assert.Equal(t, expect, f.tripRouteIDs(canceled, src, 1))
+	assert.Nil(t, f.tripRouteIDs(canceled, newSource("1031527WKDY"), 1))
+	assert.EqualValues(t, 2, lookup.calls.Load(), "canceled")
 
 	// A failed lookup is not cached.
 	src = newSource("1031527WKDY")
-	db.fail.Store(true)
-	assert.Nil(t, f.tripRouteIDs(ctx, src, fvid))
-	db.fail.Store(false)
-	assert.Equal(t, expect, f.tripRouteIDs(ctx, src, fvid))
-	assert.EqualValues(t, 4, db.tripQueries.Load(), "retry after failure")
+	lookup.fail.Store(true)
+	assert.Nil(t, f.tripRouteIDs(ctx, src, 1))
+	lookup.fail.Store(false)
+	assert.Equal(t, expect, f.tripRouteIDs(ctx, src, 1))
+	assert.EqualValues(t, 4, lookup.calls.Load(), "retry after failure")
 }
 
-// tripUpdateLookup answers the lookups that matching trip updates needs from
-// fixed values, for feed version 1. The nil Lookup it embeds leaves the others
-// unimplemented, so trip update matching that reaches one fails the test.
+// tripUpdateLookup answers the lookups that trip update matching makes, from
+// fixed values for feed version 1. Any other lookup panics on the nil Lookup
+// it embeds.
 type tripUpdateLookup struct {
 	Lookup
 	tz      *time.Location

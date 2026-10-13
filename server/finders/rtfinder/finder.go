@@ -33,7 +33,7 @@ type Finder struct {
 
 // NewFinder returns an RTFinder backed by store for RT payload storage and
 // cross-process distribution (via the store's pub/sub capability, if any).
-// Its questions about static GTFS data go to lookup.
+// It asks lookup about static GTFS data.
 func NewFinder(store kvcache.Store, lookup Lookup) *Finder {
 	return &Finder{
 		Clock:  &clock.Real{},
@@ -359,11 +359,8 @@ func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *mode
 // order: nil for a stop time without one. The trip's runs are resolved once for
 // all of them.
 func (f *Finder) FindStopTimeUpdates(ctx context.Context, t *model.Trip, sts []*model.StopTime) []*model.RTStopTimeUpdate {
-	ret := make([]*model.RTStopTimeUpdate, len(sts))
 	rtTrips := f.runUpdates(ctx, t)
-	if len(rtTrips) == 0 {
-		return ret
-	}
+	ret := make([]*model.RTStopTimeUpdate, len(sts))
 	for i, st := range sts {
 		ret[i], _ = f.matchStopTimeUpdate(ctx, rtTrips, t, st)
 	}
@@ -374,55 +371,55 @@ func (f *Finder) FindStopTimeUpdates(ctx context.Context, t *model.Trip, sts []*
 // on its trip's runs, one from each realtime feed.
 func (f *Finder) matchStopTimeUpdate(ctx context.Context, rtTrips []*pb.TripUpdate, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
 	seq := st.StopSequence.Int()
-	// The trip's runs are resolved once by the caller: both passes below ask
-	// every feed the same question, and a feed version can be associated with
-	// dozens of realtime feeds, so answering twice is most of the work.
 	// Attempt to match on stop sequence
 	for _, rtTrip := range rtTrips {
 		for _, ste := range rtTrip.StopTimeUpdate {
 			if int(ste.GetStopSequence()) == seq {
-				log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Int("seq", seq).Msgf("found stop time update on trip_id/stop_sequence")
+				log.TraceCheck(func() {
+					log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Int("seq", seq).Msg("found stop time update on trip_id/stop_sequence")
+				})
 				return &model.RTStopTimeUpdate{TripUpdate: rtTrip, StopTimeUpdate: ste}, true
 			}
 		}
 	}
-	// Attempt to match on stop id
-	for _, rtTrip := range rtTrips {
-		// Get GTFS stop id for comparing with RT
-		sid, ok := f.lookup.GetGtfsStopID(ctx, st.StopID.Int())
-		if !ok {
-			continue
-		}
-		// If no match on stop sequence, match on stop_id if stop is not visited
-		// twice. Only this stop's visits are counted, as this runs for every
-		// stop time without an update of its own.
-		visits := 0
-		for _, ste := range rtTrip.StopTimeUpdate {
-			if ste.GetStopId() == sid {
-				visits++
-			}
-		}
-		if visits > 1 {
-			return nil, true
-		}
-		var lastDelay *int32
-		for _, ste := range rtTrip.StopTimeUpdate {
-			if ste.Arrival != nil && ste.Arrival.Delay != nil {
-				lastDelay = ste.Arrival.Delay
-			}
-			if ste.Departure != nil && ste.Departure.Delay != nil {
-				lastDelay = ste.Departure.Delay
-			}
-			if sid == ste.GetStopId() {
-				log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Str("stop_id", sid).Msgf("found stop time update on trip_id/stop_id")
-				return &model.RTStopTimeUpdate{TripUpdate: rtTrip, StopTimeUpdate: ste, LastDelay: copyPtr(lastDelay)}, true
-			}
-		}
-		// Matched on trip, but no match on stop sequence or stop_id
-		return &model.RTStopTimeUpdate{TripUpdate: rtTrip, LastDelay: copyPtr(lastDelay)}, true
+	// Attempt to match on stop id, in the first feed's update. The GTFS stop id
+	// is looked up only now, as most stop times match on stop sequence.
+	if len(rtTrips) == 0 {
+		return nil, false
 	}
-	// log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Int("seq", seq).Msgf("no stop time update found")
-	return nil, false
+	sid, ok := f.lookup.GetGtfsStopID(ctx, st.StopID.Int())
+	if !ok {
+		return nil, false
+	}
+	rtTrip := rtTrips[0]
+	// Without a stop_sequence match, the stop_id identifies the stop time only
+	// if the update visits the stop once.
+	visits := 0
+	for _, ste := range rtTrip.StopTimeUpdate {
+		if ste.GetStopId() == sid {
+			visits++
+		}
+	}
+	if visits > 1 {
+		return nil, true
+	}
+	var lastDelay *int32
+	for _, ste := range rtTrip.StopTimeUpdate {
+		if ste.Arrival != nil && ste.Arrival.Delay != nil {
+			lastDelay = ste.Arrival.Delay
+		}
+		if ste.Departure != nil && ste.Departure.Delay != nil {
+			lastDelay = ste.Departure.Delay
+		}
+		if sid == ste.GetStopId() {
+			log.TraceCheck(func() {
+				log.For(ctx).Trace().Str("trip_id", t.TripID.Val).Str("stop_id", sid).Msg("found stop time update on trip_id/stop_id")
+			})
+			return &model.RTStopTimeUpdate{TripUpdate: rtTrip, StopTimeUpdate: ste, LastDelay: copyPtr(lastDelay)}, true
+		}
+	}
+	// Matched on trip, but no match on stop sequence or stop_id
+	return &model.RTStopTimeUpdate{TripUpdate: rtTrip, LastDelay: copyPtr(lastDelay)}, true
 }
 
 // TODO: put this method on consumer and wrap, as with GetTrips
@@ -489,9 +486,9 @@ func (f *Finder) getTrips(ctx context.Context, topic string, tid string) []*pb.T
 	return a.GetTrips(tid)
 }
 
-// tripRouteIDs returns the GTFS route_ids, by trip_id, of the trips a realtime
-// message names without a route_id, within a feed version. Each feed version's
-// answer is held for as long as the message is current.
+// tripRouteIDs maps the trip_ids a realtime message names without a route_id
+// to their GTFS route_ids in a feed version. It holds each feed version's
+// answer for as long as the message is current.
 func (f *Finder) tripRouteIDs(ctx context.Context, src *Source, fvid int) map[string]string {
 	if len(src.unroutedTripIds) == 0 {
 		return nil

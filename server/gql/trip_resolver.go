@@ -49,9 +49,7 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 	sts := runStopTimes(obj, loaded)
 	if wantsRT {
 		for i, ste := range model.ForContext(ctx).RTFinder.FindStopTimeUpdates(ctx, obj, sts) {
-			if ste != nil {
-				sts[i].RTStopTimeUpdate = ste
-			}
+			sts[i].RTStopTimeUpdate = ste
 		}
 	}
 	return sts, err

@@ -142,6 +142,24 @@ func TestPostgresLookup_GetTripSpan(t *testing.T) {
 	}
 }
 
+// GetTripRouteIDs resolves the feed version's own trips, and no others.
+func TestPostgresLookup_GetTripRouteIDs(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	db := testutil.MustOpenTestDB(t)
+	lookup := NewPostgresLookup(db)
+	ctx := context.Background()
+	got, err := lookup.GetTripRouteIDs(ctx, testBartFeedVersion(t, db), []string{"1031527WKDY", "no-such-trip"})
+	if assert.NoError(t, err) {
+		assert.Equal(t, map[string]string{"1031527WKDY": "05"}, got)
+	}
+	got, err = lookup.GetTripRouteIDs(ctx, -1, []string{"1031527WKDY"})
+	if assert.NoError(t, err) {
+		assert.Empty(t, got)
+	}
+}
+
 func TestPostgresLookup_GetGtfsStopID(t *testing.T) {
 	if a, ok := testutil.CheckTestDB(); !ok {
 		t.Skip(a)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/interline-io/log"
@@ -172,10 +171,10 @@ type PostgresLookup struct {
 	fvRouteCache           *kvcache.Cache[feedVersionRouteKey, GtfsRoute] // routes by GTFS route_id within a feed version
 	routeCache             *kvcache.Cache[int, GtfsRoute]                 // routes by database id
 	tripSpanCache          *kvcache.Cache[model.FVPair, TripSpan]         // when trips run, by database id
-	feedOperatorCountCache *simpleCache[string, int]
-	agencyRouteIdCache     *simpleCache[int, []string]
-	gtfsStopIdCache        *simpleCache[int, string]
-	gtfsAgencyIdCache      *simpleCache[int, string]
+	gtfsStopIdCache        *kvcache.Cache[int, string]                    // GTFS stop_ids by stop id
+	gtfsAgencyIdCache      *kvcache.Cache[int, string]                    // GTFS agency_ids by agency id
+	feedOperatorCountCache *kvcache.Cache[string, int]                    // operator counts by feed onestop_id
+	agencyRouteIdCache     *kvcache.Cache[int, []string]                  // GTFS route_ids by agency id
 	tzCache                *tzcache.Cache[int]
 }
 
@@ -184,91 +183,92 @@ var _ Lookup = (*PostgresLookup)(nil)
 // NewPostgresLookup returns a Lookup over the Transitland database.
 func NewPostgresLookup(db tldb.Ext) *PostgresLookup {
 	f := &PostgresLookup{
-		db:                     db,
-		tzCache:                tzcache.NewCache[int](),
-		feedOperatorCountCache: newSimpleCache[string, int](),
-		agencyRouteIdCache:     newSimpleCache[int, []string](),
-		gtfsStopIdCache:        newSimpleCache[int, string](),
-		gtfsAgencyIdCache:      newSimpleCache[int, string](),
+		db:      db,
+		tzCache: tzcache.NewCache[int](),
 	}
-	f.rtFeedsCache = kvcache.NewRefreshCache(nil, "rtfeeds", f.queryFeedVersionRTFeeds)
-	f.rtFeedsCache.RefreshTimeout = lookupTimeout
-	f.stopTzCache = kvcache.NewRefreshCache(nil, "stoptz", f.queryStopTimezone)
-	f.stopTzCache.RefreshTimeout = lookupTimeout
-	f.fvTzCache = kvcache.NewRefreshCache(nil, "fvtz", f.queryFeedVersionTimezone)
-	f.fvTzCache.RefreshTimeout = lookupTimeout
-	f.fvAgencyCache = kvcache.NewRefreshCache(nil, "fvagencies", f.queryFeedVersionAgencyIDs)
-	f.fvAgencyCache.RefreshTimeout = lookupTimeout
-	f.fvRouteTypeCache = kvcache.NewRefreshCache(nil, "fvroutetypes", f.queryFeedVersionRouteTypes)
-	f.fvRouteTypeCache.RefreshTimeout = lookupTimeout
+	f.rtFeedsCache = newRefreshCache("rtfeeds", f.queryFeedVersionRTFeeds)
+	f.stopTzCache = newRefreshCache("stoptz", f.queryStopTimezone)
+	f.fvTzCache = newRefreshCache("fvtz", f.queryFeedVersionTimezone)
+	f.fvAgencyCache = newRefreshCache("fvagencies", f.queryFeedVersionAgencyIDs)
+	f.fvRouteTypeCache = newRefreshCache("fvroutetypes", f.queryFeedVersionRouteTypes)
 	// A route that isn't there is remembered as missing, as feed versions don't change.
-	f.fvRouteCache = kvcache.NewRefreshCache(nil, "fvroutes", f.queryFeedVersionRoute)
-	f.fvRouteCache.RefreshTimeout = lookupTimeout
+	f.fvRouteCache = newRefreshCache("fvroutes", f.queryFeedVersionRoute)
 	f.fvRouteCache.NegativeTTL = f.fvRouteCache.Expires
-	f.routeCache = kvcache.NewRefreshCache(nil, "routes", f.queryRoute)
-	f.routeCache.RefreshTimeout = lookupTimeout
+	f.routeCache = newRefreshCache("routes", f.queryRoute)
 	f.routeCache.NegativeTTL = f.routeCache.Expires
-	f.tripSpanCache = kvcache.NewRefreshCache(nil, "tripspans", f.queryTripSpan)
-	f.tripSpanCache.RefreshTimeout = lookupTimeout
+	f.tripSpanCache = newRefreshCache("tripspans", f.queryTripSpan)
+	f.gtfsStopIdCache = newRefreshCache("gtfsstopids", f.queryGtfsStopID)
+	f.gtfsAgencyIdCache = newRefreshCache("gtfsagencyids", f.queryGtfsAgencyID)
+	f.feedOperatorCountCache = newRefreshCache("feedoperatorcounts", f.queryFeedOperatorCount)
+	f.agencyRouteIdCache = newRefreshCache("agencyrouteids", f.queryAgencyRouteIDs)
 	return f
+}
+
+// newRefreshCache returns a local cache that loads each key with fn, bounded
+// by lookupTimeout. A failed load isn't cached.
+func newRefreshCache[K comparable, V any](topic string, fn func(context.Context, K) (V, error)) *kvcache.Cache[K, V] {
+	c := kvcache.NewRefreshCache(nil, topic, fn)
+	c.RefreshTimeout = lookupTimeout
+	return c
 }
 
 // GetGtfsStopID returns the GTFS stop_id of a stop by database id.
 func (f *PostgresLookup) GetGtfsStopID(ctx context.Context, id int) (string, bool) {
-	if a, ok := f.gtfsStopIdCache.Get(id); ok {
-		return a, ok
-	}
+	return getUnlessGone(ctx, f.gtfsStopIdCache, id)
+}
+
+func (f *PostgresLookup) queryGtfsStopID(ctx context.Context, id int) (string, error) {
 	eid := ""
-	if err := sqlx.Get(f.db, &eid, gtfsStopIdQuery, id); err != nil {
+	if err := sqlx.GetContext(ctx, f.db, &eid, gtfsStopIdQuery, id); err != nil {
 		log.For(ctx).Error().Err(err).Int("stop_id", id).Msg("rtfinder: stop id lookup failed")
-		return "", false
+		return "", err
 	}
-	f.gtfsStopIdCache.Set(id, eid)
-	return eid, true
+	return eid, nil
 }
 
 // GetGtfsAgencyID returns the GTFS agency_id of an agency by database id.
 func (f *PostgresLookup) GetGtfsAgencyID(ctx context.Context, id int) (string, bool) {
-	if a, ok := f.gtfsAgencyIdCache.Get(id); ok {
-		return a, ok
-	}
+	return getUnlessGone(ctx, f.gtfsAgencyIdCache, id)
+}
+
+func (f *PostgresLookup) queryGtfsAgencyID(ctx context.Context, id int) (string, error) {
 	eid := ""
-	if err := sqlx.Get(f.db, &eid, gtfsAgencyIdQuery, id); err != nil {
+	if err := sqlx.GetContext(ctx, f.db, &eid, gtfsAgencyIdQuery, id); err != nil {
 		log.For(ctx).Error().Err(err).Int("agency_id", id).Msg("rtfinder: agency id lookup failed")
-		return "", false
+		return "", err
 	}
-	f.gtfsAgencyIdCache.Set(id, eid)
-	return eid, true
+	return eid, nil
 }
 
 // GetFeedOperatorCount returns the number of operators a feed is associated
 // with. A feed serving more than one operator is a shared feed, whose contents
 // cannot be attributed to any single one of them.
 func (f *PostgresLookup) GetFeedOperatorCount(ctx context.Context, onestopId string) (int, bool) {
-	if a, ok := f.feedOperatorCountCache.Get(onestopId); ok {
-		return a, true
-	}
+	return getUnlessGone(ctx, f.feedOperatorCountCache, onestopId)
+}
+
+func (f *PostgresLookup) queryFeedOperatorCount(ctx context.Context, onestopId string) (int, error) {
 	count := 0
-	if err := sqlx.Get(f.db, &count, feedOperatorCountQuery, onestopId); err != nil {
+	if err := sqlx.GetContext(ctx, f.db, &count, feedOperatorCountQuery, onestopId); err != nil {
 		log.For(ctx).Error().Err(err).Str("feed_onestop_id", onestopId).Msg("rtfinder: feed operator count lookup failed")
-		return 0, false
+		return 0, err
 	}
-	f.feedOperatorCountCache.Set(onestopId, count)
-	return count, true
+	return count, nil
 }
 
 // GetAgencyRouteIDs returns the GTFS route_ids operated by an agency.
 func (f *PostgresLookup) GetAgencyRouteIDs(ctx context.Context, id int) []string {
-	if a, ok := f.agencyRouteIdCache.Get(id); ok {
-		return a
-	}
-	var routeIds []string
-	if err := sqlx.Select(f.db, &routeIds, agencyRouteIdsQuery, id); err != nil {
-		log.For(ctx).Error().Err(err).Int("agency_id", id).Msg("rtfinder: agency route id lookup failed")
-		return nil
-	}
-	f.agencyRouteIdCache.Set(id, routeIds)
+	routeIds, _ := getUnlessGone(ctx, f.agencyRouteIdCache, id)
 	return routeIds
+}
+
+func (f *PostgresLookup) queryAgencyRouteIDs(ctx context.Context, id int) ([]string, error) {
+	var routeIds []string
+	if err := sqlx.SelectContext(ctx, f.db, &routeIds, agencyRouteIdsQuery, id); err != nil {
+		log.For(ctx).Error().Err(err).Int("agency_id", id).Msg("rtfinder: agency route id lookup failed")
+		return nil, err
+	}
+	return routeIds, nil
 }
 
 // GetFeedVersionAgencyIDs returns the GTFS agency_ids of a feed version's agencies.
@@ -369,8 +369,9 @@ func getUnlessGone[K comparable, V any](ctx context.Context, c *kvcache.Cache[K,
 }
 
 // GetTripRouteIDs returns the GTFS route_ids of trips, by trip_id, within a
-// feed version. Uncached: the Finder holds each answer with its message.
+// feed version.
 func (f *PostgresLookup) GetTripRouteIDs(ctx context.Context, fvid int, tripIds []string) (map[string]string, error) {
+	// Not cached: each realtime message names its own trip_ids.
 	var rows []struct {
 		TripID  string `db:"trip_id"`
 		RouteID string `db:"route_id"`
@@ -452,31 +453,4 @@ func (f *PostgresLookup) queryFeedVersionTimezone(ctx context.Context, fvid int)
 		return "", err
 	}
 	return tz, nil
-}
-
-type simpleCache[K comparable, V any] struct {
-	lock   sync.Mutex
-	values map[K]V
-}
-
-func (c *simpleCache[K, V]) Get(key K) (V, bool) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	a, ok := c.values[key]
-	return a, ok
-}
-
-func (c *simpleCache[K, V]) Set(key K, value V) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.values == nil {
-		c.values = map[K]V{}
-	}
-	c.values[key] = value
-}
-
-func newSimpleCache[K comparable, V any]() *simpleCache[K, V] {
-	return &simpleCache[K, V]{
-		values: map[K]V{},
-	}
 }
