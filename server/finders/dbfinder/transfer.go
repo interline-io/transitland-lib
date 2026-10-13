@@ -13,7 +13,7 @@ func (f *Finder) TransfersByFeedVersionIDs(ctx context.Context, limit *int, afte
 	var ents []*model.Transfer
 	q := lateralWrap(transferSelect(limit, after, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_transfers", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Transfer) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Transfer) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func transferSelect(limit *int, after *model.Cursor, permFilter *model.PermFilter, where *model.TransferFilter) sq.SelectBuilder {

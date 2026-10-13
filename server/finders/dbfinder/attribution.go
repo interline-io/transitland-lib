@@ -13,7 +13,7 @@ func (f *Finder) AttributionsByFeedVersionIDs(ctx context.Context, limit *int, a
 	var ents []*model.Attribution
 	q := lateralWrap(attributionSelect(limit, after, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_attributions", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Attribution) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Attribution) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func attributionSelect(limit *int, after *model.Cursor, permFilter *model.PermFilter, where *model.AttributionFilter) sq.SelectBuilder {

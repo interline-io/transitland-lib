@@ -80,22 +80,27 @@ func (f *Finder) PermFilter(ctx context.Context) *model.PermFilter {
 
 // Helpers
 
-func logErr(ctx context.Context, err error) error {
-	if ctx.Err() == context.Canceled {
+// queryErr is the error a finder returns for a failed query: the context's error
+// when the request was canceled or timed out, otherwise a generic database error.
+// It returns nil for nil.
+//
+// dbutil logs the underlying error, so its text stays out of API responses.
+func queryErr(ctx context.Context, err error) error {
+	if err == nil {
 		return nil
 	}
-	log.For(ctx).Error().Err(err).Msg("query failed")
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ctxErr
+	}
 	return errors.New("database error")
 }
 
-func logExtendErr(ctx context.Context, size int, err error) []error {
+// queryErrs is queryErr repeated for each key of a keyed finder's failed batch.
+func queryErrs(ctx context.Context, size int, err error) []error {
+	err = queryErr(ctx, err)
 	errs := make([]error, size)
-	if ctx.Err() == context.Canceled {
-		return errs
-	}
-	log.For(ctx).Error().Err(err).Msg("query failed")
-	for i := 0; i < len(errs); i++ {
-		errs[i] = errors.New("database error")
+	for i := range errs {
+		errs[i] = err
 	}
 	return errs
 }

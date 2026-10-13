@@ -16,7 +16,7 @@ import (
 func (f *Finder) FindFeedVersions(ctx context.Context, limit *int, after *model.Cursor, ids []int, where *model.FeedVersionFilter) ([]*model.FeedVersion, error) {
 	var ents []*model.FeedVersion
 	if err := dbutil.Select(ctx, f.db, feedVersionSelect(ctx, limit, after, ids, f.PermFilter(ctx), where), &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -24,7 +24,7 @@ func (f *Finder) FindFeedVersions(ctx context.Context, limit *int, after *model.
 func (f *Finder) FeedVersionsByIDs(ctx context.Context, ids []int) ([]*model.FeedVersion, []error) {
 	ents, err := f.FindFeedVersions(ctx, nil, nil, ids, nil)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FeedVersion) int { return ent.ID }), nil
 }
@@ -37,7 +37,7 @@ func (f *Finder) FeedVersionGtfsImportByFeedVersionIDs(ctx context.Context, ids 
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FeedVersionGtfsImport) int { return ent.FeedVersionID }), nil
 }
@@ -50,7 +50,7 @@ func (f *Finder) FeedVersionServiceWindowByFeedVersionIDs(ctx context.Context, i
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.FeedVersionServiceWindow) int { return ent.FeedVersionID }), nil
 }
@@ -61,7 +61,7 @@ func (f *Finder) FeedVersionGeometryByIDs(ctx context.Context, ids []int) ([]*tt
 	}
 	qents := []*feedVersionGeometry{}
 	if err := dbutil.Select(ctx, f.db, feedVersionGeometrySelect(ids), &qents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	group := map[int]*tt.Polygon{}
 	for _, ent := range qents {
@@ -88,7 +88,7 @@ func (f *Finder) FeedVersionFileInfosByFeedVersionIDs(ctx context.Context, limit
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.FeedVersionFileInfo) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FeedVersionFileInfo) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FeedVersionsByFeedIDs(ctx context.Context, limit *int, where *model.FeedVersionFilter, keys []int) ([][]*model.FeedVersion, error) {
@@ -105,7 +105,7 @@ func (f *Finder) FeedVersionsByFeedIDs(ctx context.Context, limit *int, where *m
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.FeedVersion) int { return ent.FeedID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FeedVersion) int { return ent.FeedID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FeedVersionServiceLevelsByFeedVersionIDs(ctx context.Context, limit *int, where *model.FeedVersionServiceLevelFilter, keys []int) ([][]*model.FeedVersionServiceLevel, error) {
@@ -122,7 +122,7 @@ func (f *Finder) FeedVersionServiceLevelsByFeedVersionIDs(ctx context.Context, l
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.FeedVersionServiceLevel) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FeedVersionServiceLevel) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) FindFeedVersionServiceWindow(ctx context.Context, fvid int) (*model.ServiceWindow, error) {
@@ -159,7 +159,7 @@ func (f *Finder) FeedInfosByFeedVersionIDs(ctx context.Context, limit *int, keys
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.FeedInfo) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.FeedInfo) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func feedVersionSelect(ctx context.Context, limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.FeedVersionFilter) sq.SelectBuilder {

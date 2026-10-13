@@ -24,7 +24,7 @@ func (f *Finder) FindTrips(ctx context.Context, limit *int, after *model.Cursor,
 		return nil, err
 	}
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	expandTripServiceDates(ents, tripDates)
 	return ents, nil
@@ -33,7 +33,7 @@ func (f *Finder) FindTrips(ctx context.Context, limit *int, after *model.Cursor,
 func (f *Finder) TripsByIDs(ctx context.Context, ids []int) ([]*model.Trip, []error) {
 	ents, err := f.FindTrips(ctx, nil, nil, ids, nil)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Trip) int { return ent.ID }), nil
 }
@@ -44,12 +44,12 @@ func (f *Finder) TripsByFeedVersionTripIDs(ctx context.Context, keys []model.FVE
 	for fvid, tripIds := range groupFVEntityIDs(keys) {
 		q, _, err := tripSelect(nil, nil, nil, false, f.PermFilter(ctx), nil, nil)
 		if err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		q = q.Where(sq.Eq{"gtfs_trips.feed_version_id": fvid}).Where(In("gtfs_trips.trip_id", tripIds))
 		var group []*model.Trip
 		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		ents = append(ents, group...)
 	}
@@ -72,7 +72,7 @@ func (f *Finder) FrequenciesByTripIDs(ctx context.Context, limit *int, keys []in
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.TripID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.TripID.Int() }), queryErr(ctx, err)
 }
 
 // FrequenciesByFeedVersionIDs returns the frequencies of each feed version.
@@ -80,7 +80,7 @@ func (f *Finder) FrequenciesByFeedVersionIDs(ctx context.Context, limit *int, af
 	var ents []*model.Frequency
 	q := lateralWrap(frequencySelect(limit, after, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_frequencies", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Frequency) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func frequencySelect(limit *int, after *model.Cursor, permFilter *model.PermFilter, where *model.FrequencyFilter) sq.SelectBuilder {
@@ -293,7 +293,7 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 			),
 			&q,
 		); err != nil {
-			return nil, err
+			return nil, queryErr(ctx, err)
 		}
 		// Per feed version: each resolves the requested dates against its own
 		// service window.
@@ -334,7 +334,7 @@ func (f *Finder) TripsByShapeIDs(ctx context.Context, limit *int, where *model.T
 			),
 			&q,
 		); err != nil {
-			return nil, err
+			return nil, queryErr(ctx, err)
 		}
 		expandTripServiceDates(q, tripDates)
 		ents = append(ents, q...)
@@ -369,7 +369,7 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 			&q,
 		)
 		if err != nil {
-			return nil, err
+			return nil, queryErr(ctx, err)
 		}
 		expandTripServiceDates(q, tripDates)
 		ents = append(ents, q...)

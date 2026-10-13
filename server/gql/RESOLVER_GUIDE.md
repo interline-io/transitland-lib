@@ -144,21 +144,21 @@ func (f *Finder) PathwaysByFeedVersionIDs(ctx context.Context, limit *int, after
     var ents []*model.Pathway
     q := lateralWrap(pathwaySelect(limit, after, nil, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_pathways", "feed_version_id", keys)
     err := dbutil.Select(ctx, f.db, q, &ents)
-    return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FeedVersionID }), err
+    return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) PathwaysByFromStopIDs(ctx context.Context, limit *int, where *model.PathwayFilter, keys []int) ([][]*model.Pathway, error) {
     var ents []*model.Pathway
     q := lateralWrap(pathwaySelect(limit, nil, nil, f.PermFilter(ctx), where), "gtfs_stops", "id", "gtfs_pathways", "from_stop_id", keys)
     err := dbutil.Select(ctx, f.db, q, &ents)
-    return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FromStopID.Int() }), err
+    return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FromStopID.Int() }), queryErr(ctx, err)
 }
 
 func (f *Finder) PathwaysByIDs(ctx context.Context, ids []int) ([]*model.Pathway, []error) {
     var ents []*model.Pathway
     q := pathwaySelect(nil, nil, ids, f.PermFilter(ctx), nil)
     if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-        return nil, logExtendErr(ctx, len(ids), err)
+        return nil, queryErrs(ctx, len(ids), err)
     }
     return arrangeBy(ids, ents, func(ent *model.Pathway) int { return ent.ID }), nil
 }
@@ -208,6 +208,7 @@ Each select follows the same rules:
 **Helper Functions**:
 - `arrangeGroup()`: Groups results by parent ID, preserving input order
 - `arrangeBy()`: Orders results by requested IDs, filling nil for missing entities
+- `queryErr()`, `queryErrs()`: Wrap a failed query's error for the finder to return, keeping the database's error text out of API responses
 
 ### Step 6: Implement the Resolver
 
@@ -571,7 +572,7 @@ func (f *Finder) TransfersByFeedVersionIDs(ctx context.Context, limit *int, afte
     var ents []*model.Transfer
     q := lateralWrap(transferSelect(limit, after, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_transfers", "feed_version_id", keys)
     err := dbutil.Select(ctx, f.db, q, &ents)
-    return arrangeGroup(keys, ents, func(ent *model.Transfer) int { return ent.FeedVersionID }), err
+    return arrangeGroup(keys, ents, func(ent *model.Transfer) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func transferSelect(limit *int, after *model.Cursor, permFilter *model.PermFilter, where *model.TransferFilter) sq.SelectBuilder {

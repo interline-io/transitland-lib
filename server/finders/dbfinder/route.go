@@ -31,12 +31,12 @@ func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor
 			currentWhere.OnestopIds = osids
 			var current []*model.Route
 			if err := dbutil.Select(ctx, f.db, routeSelect(nil, nil, nil, useActive, f.PermFilter(ctx), &currentWhere), &current); err != nil {
-				return nil, logErr(ctx, err)
+				return nil, queryErr(ctx, err)
 			}
 			var err error
 			ids, err = activeIDsByOnestopID(ctx, f.db, osids, current, func(ent *model.Route) (int, *string) { return ent.ID, ent.OnestopID }, previousRouteIDsSelect)
 			if err != nil {
-				return nil, logErr(ctx, err)
+				return nil, queryErr(ctx, err)
 			}
 			if len(ids) == 0 {
 				return nil, nil
@@ -46,7 +46,7 @@ func (f *Finder) FindRoutes(ctx context.Context, limit *int, after *model.Cursor
 	}
 	q := routeSelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -71,7 +71,7 @@ func (f *Finder) RouteStopBuffer(ctx context.Context, limit *int, radius *float6
 	var ents []*model.RouteStopBuffer
 	q := routeStopBufferSelect(limit, radius, routeId)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logErr(ctx, err)
+		return nil, queryErr(ctx, err)
 	}
 	return ents, nil
 }
@@ -80,7 +80,7 @@ func (f *Finder) RouteAttributesByRouteIDs(ctx context.Context, ids []int) ([]*m
 	var ents []*model.RouteAttribute
 	q := sq.StatementBuilder.Select("*").From("ext_plus_route_attributes").Where(In("route_id", ids))
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.RouteAttribute) int { return ent.RouteID }), nil
 }
@@ -108,7 +108,7 @@ func (f *Finder) RouteTypesByAgencyIDs(ctx context.Context, ids []int) ([][]int,
 		OrderBy("gtfs_routes.agency_id", "gtfs_routes.route_type")
 	q = pfJoinCheckFv(q, f.PermFilter(ctx))
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	grouped := arrangeGroup(ids, ents, func(ent agencyRouteType) int { return ent.AgencyID })
 	ret := make([][]int, len(grouped))
@@ -125,7 +125,7 @@ func (f *Finder) RouteTypesByAgencyIDs(ctx context.Context, ids []int) ([][]int,
 func (f *Finder) RoutesByIDs(ctx context.Context, ids []int) ([]*model.Route, []error) {
 	ents, err := f.FindRoutes(ctx, nil, nil, ids, nil)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Route) int { return ent.ID }), nil
 }
@@ -144,7 +144,7 @@ func (f *Finder) RouteStopsByStopIDs(ctx context.Context, limit *int, keys []int
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.RouteStop) int { return ent.StopID }), err
+	return arrangeGroup(keys, ents, func(ent *model.RouteStop) int { return ent.StopID }), queryErr(ctx, err)
 }
 
 func (f *Finder) RouteHeadwaysByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteHeadway, error) {
@@ -161,7 +161,7 @@ func (f *Finder) RouteHeadwaysByRouteIDs(ctx context.Context, limit *int, keys [
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.RouteHeadway) int { return ent.RouteID }), err
+	return arrangeGroup(keys, ents, func(ent *model.RouteHeadway) int { return ent.RouteID }), queryErr(ctx, err)
 }
 
 // RouteStopPatternsByRouteIDs aggregates each route's trips into its distinct stop
@@ -211,7 +211,7 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 		}
 		var groupEnts []*model.RouteStopPattern
 		if err := dbutil.Select(ctx, f.db, q, &groupEnts); err != nil {
-			return nil, err
+			return nil, queryErr(ctx, err)
 		}
 		for _, ent := range groupEnts {
 			ent.ServiceDate = askedDate
@@ -244,7 +244,7 @@ func (f *Finder) RouteGeometriesByRouteIDs(ctx context.Context, limit *int, keys
 		Where(In("tl_route_representative_shapes.route_id", keys)).
 		GroupBy("tl_route_representative_shapes.route_id")
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.RouteGeometry) int { return ent.RouteID }), err
+	return arrangeGroup(keys, ents, func(ent *model.RouteGeometry) int { return ent.RouteID }), queryErr(ctx, err)
 }
 
 func (f *Finder) RoutesByAgencyIDs(ctx context.Context, limit *int, where *model.RouteFilter, keys []int) ([][]*model.Route, error) {
@@ -261,7 +261,7 @@ func (f *Finder) RoutesByAgencyIDs(ctx context.Context, limit *int, where *model
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Route) int { return ent.AgencyID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Route) int { return ent.AgencyID.Int() }), queryErr(ctx, err)
 }
 
 // RoutesByFeedVersionRouteIDs looks up routes by GTFS route_id within a feed version.
@@ -273,7 +273,7 @@ func (f *Finder) RoutesByFeedVersionRouteIDs(ctx context.Context, keys []model.F
 			Where(In("gtfs_routes.route_id", routeIds))
 		var group []*model.Route
 		if err := dbutil.Select(ctx, f.db, q, &group); err != nil {
-			return nil, logExtendErr(ctx, len(keys), err)
+			return nil, queryErrs(ctx, len(keys), err)
 		}
 		ents = append(ents, group...)
 	}
@@ -296,7 +296,7 @@ func (f *Finder) RoutesByFeedVersionIDs(ctx context.Context, limit *int, where *
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Route) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Route) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) RouteStopsByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteStop, error) {
@@ -313,7 +313,7 @@ func (f *Finder) RouteStopsByRouteIDs(ctx context.Context, limit *int, keys []in
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.RouteStop) int { return ent.RouteID }), err
+	return arrangeGroup(keys, ents, func(ent *model.RouteStop) int { return ent.RouteID }), queryErr(ctx, err)
 }
 
 func (f *Finder) ShapesByIDs(ctx context.Context, ids []int) ([]*model.Shape, []error) {
@@ -324,7 +324,7 @@ func (f *Finder) ShapesByIDs(ctx context.Context, ids []int) ([]*model.Shape, []
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Shape) int { return ent.ID }), nil
 }

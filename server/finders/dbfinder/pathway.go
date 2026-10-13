@@ -16,7 +16,7 @@ func (f *Finder) LevelsByIDs(ctx context.Context, ids []int) ([]*model.Level, []
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Level) int { return ent.ID }), nil
 }
@@ -29,7 +29,7 @@ func (f *Finder) PathwaysByIDs(ctx context.Context, ids []int) ([]*model.Pathway
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Pathway) int { return ent.ID }), nil
 }
@@ -48,7 +48,7 @@ func (f *Finder) LevelsByParentStationIDs(ctx context.Context, limit *int, keys 
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Level) int { return ent.ParentStation.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Level) int { return ent.ParentStation.Int() }), queryErr(ctx, err)
 }
 
 // LevelsByFeedVersionIDs returns the levels of each feed version.
@@ -56,7 +56,7 @@ func (f *Finder) LevelsByFeedVersionIDs(ctx context.Context, limit *int, after *
 	var ents []*model.Level
 	q := lateralWrap(levelSelect(limit, after, nil, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_levels", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Level) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Level) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func levelSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.LevelFilter) sq.SelectBuilder {
@@ -99,7 +99,7 @@ func (f *Finder) PathwaysByFeedVersionIDs(ctx context.Context, limit *int, after
 	var ents []*model.Pathway
 	q := lateralWrap(pathwaySelect(limit, after, nil, f.PermFilter(ctx), where), "feed_versions", "id", "gtfs_pathways", "feed_version_id", keys)
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) PathwaysByFromStopIDs(ctx context.Context, limit *int, where *model.PathwayFilter, keys []int) ([][]*model.Pathway, error) {
@@ -116,7 +116,7 @@ func (f *Finder) PathwaysByFromStopIDs(ctx context.Context, limit *int, where *m
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FromStopID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.FromStopID.Int() }), queryErr(ctx, err)
 }
 
 func (f *Finder) PathwaysByToStopIDs(ctx context.Context, limit *int, where *model.PathwayFilter, keys []int) ([][]*model.Pathway, error) {
@@ -133,7 +133,7 @@ func (f *Finder) PathwaysByToStopIDs(ctx context.Context, limit *int, where *mod
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.ToStopID.Int() }), err
+	return arrangeGroup(keys, ents, func(ent *model.Pathway) int { return ent.ToStopID.Int() }), queryErr(ctx, err)
 }
 
 func pathwaySelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter, where *model.PathwayFilter) sq.SelectBuilder {

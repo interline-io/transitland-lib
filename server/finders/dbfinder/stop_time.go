@@ -19,7 +19,7 @@ func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *mode
 	)
 	return arrangeGroup(keys, ents, func(ent *model.StopTime) model.FVPair {
 		return model.FVPair{FeedVersionID: ent.FeedVersionID, EntityID: ent.TripID.Int()}
-	}), err
+	}), queryErr(ctx, err)
 }
 
 func (f *Finder) StopTimesByStopIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.StopTime, error) {
@@ -110,7 +110,7 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 			}
 			// Run query
 			if err := dbutil.Select(ctx, f.db, q, &sts); err != nil {
-				return nil, err
+				return nil, queryErr(ctx, err)
 			}
 			// Report the requested service date
 			if day.report != nil {

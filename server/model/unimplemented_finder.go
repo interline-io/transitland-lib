@@ -21,19 +21,15 @@ type UnimplementedFinder struct{}
 
 var _ Finder = UnimplementedFinder{}
 
-// notImplBatch is the stub return for a batched ("...ByIDs") loader: a result
-// and error slice sized to the keys, with ErrNotImplemented at every index. The
-// dataloader adapter requires len(results)==len(keys) (see server/gql/loaders.go
-// unwrapResult), so a per-key error surfaces an unimplemented loader clearly
-// rather than as an opaque length-mismatch or a misleading "not found".
+// notImplBatch is the stub return for a batched ("...ByIDs") loader: no results,
+// and ErrNotImplemented for every key, the shape of a failed batch.
 func notImplBatch[T any, K any](keys []K) ([]T, []error) {
 	err := finderUnimpl(2)
-	data := make([]T, len(keys))
 	errs := make([]error, len(keys))
 	for i := range errs {
 		errs[i] = err
 	}
-	return data, errs
+	return nil, errs
 }
 
 // notImplErr is the not-implemented return for a non-batched stub.

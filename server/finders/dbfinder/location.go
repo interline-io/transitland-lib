@@ -12,14 +12,14 @@ func (f *Finder) LocationsByFeedVersionIDs(ctx context.Context, limit *int, wher
 	var ents []*model.Location
 	q := locationSelect(limit, nil, nil, where).Where(In("gtfs_locations.feed_version_id", keys))
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.Location) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Location) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) LocationsByIDs(ctx context.Context, ids []int) ([]*model.Location, []error) {
 	var ents []*model.Location
 	q := locationSelect(nil, nil, ids, nil)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
-		return nil, []error{err}
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Location) int { return ent.ID }), nil
 }

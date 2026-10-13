@@ -34,7 +34,7 @@ func (f *Finder) SegmentsByFeedVersionIDs(ctx context.Context, limit *int, where
 		q,
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Segment) int { return ent.FeedVersionID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Segment) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
 func (f *Finder) SegmentsByIDs(ctx context.Context, ids []int) ([]*model.Segment, []error) {
@@ -45,7 +45,7 @@ func (f *Finder) SegmentsByIDs(ctx context.Context, ids []int) ([]*model.Segment
 		&ents,
 	)
 	if err != nil {
-		return nil, logExtendErr(ctx, len(ids), err)
+		return nil, queryErrs(ctx, len(ids), err)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Segment) int { return ent.ID }), nil
 }
@@ -77,7 +77,7 @@ func (f *Finder) SegmentsByRouteIDs(ctx context.Context, limit *int, where *mode
 		q,
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.Segment) int { return ent.WithRouteID }), err
+	return arrangeGroup(keys, ents, func(ent *model.Segment) int { return ent.WithRouteID }), queryErr(ctx, err)
 }
 
 func (f *Finder) SegmentPatternsByRouteIDs(ctx context.Context, limit *int, where *model.SegmentPatternFilter, keys []int) ([][]*model.SegmentPattern, error) {
@@ -94,7 +94,7 @@ func (f *Finder) SegmentPatternsByRouteIDs(ctx context.Context, limit *int, wher
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.SegmentPattern) int { return ent.RouteID }), err
+	return arrangeGroup(keys, ents, func(ent *model.SegmentPattern) int { return ent.RouteID }), queryErr(ctx, err)
 }
 
 func (f *Finder) SegmentPatternsBySegmentIDs(ctx context.Context, limit *int, where *model.SegmentPatternFilter, keys []int) ([][]*model.SegmentPattern, error) {
@@ -111,7 +111,7 @@ func (f *Finder) SegmentPatternsBySegmentIDs(ctx context.Context, limit *int, wh
 		),
 		&ents,
 	)
-	return arrangeGroup(keys, ents, func(ent *model.SegmentPattern) int { return ent.SegmentID }), err
+	return arrangeGroup(keys, ents, func(ent *model.SegmentPattern) int { return ent.SegmentID }), queryErr(ctx, err)
 }
 
 func segmentSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.PermFilter) sq.SelectBuilder {

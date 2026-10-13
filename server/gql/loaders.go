@@ -4,6 +4,7 @@ package gql
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -652,8 +653,8 @@ func unwrapResult[
 ) func(context.Context, []ParamT) []*dataloader.Result[T] {
 	x := func(ctx context.Context, ps []ParamT) []*dataloader.Result[T] {
 		a, errs := cb(ctx, ps)
-		if len(a) != len(ps) {
-			log.For(ctx).Trace().Msgf("error in dataloader, result len %d did not match param length %d", len(a), len(ps))
+		if !batchShapeOK(len(ps), len(a), errs) {
+			log.For(ctx).Error().Err(errors.Join(errs...)).Msgf("finder bug: %T answered %d keys with %d results and %d errors", a, len(ps), len(a), len(errs))
 			return nil
 		}
 		ret := make([]*dataloader.Result[T], len(ps))
@@ -671,6 +672,28 @@ func unwrapResult[
 		return ret
 	}
 	return x
+}
+
+// batchShapeOK reports whether a finder answered n keys with a result for each key,
+// optionally with an error for each key, or failed the batch with no results and
+// a non-nil error for every key.
+func batchShapeOK(n int, results int, errs []error) bool {
+	if len(errs) != 0 && len(errs) != n {
+		return false
+	}
+	if results == n {
+		return true
+	}
+	if results != 0 || len(errs) != n {
+		return false
+	}
+	// A nil error here would leave its key with neither a result nor an error.
+	for _, err := range errs {
+		if err == nil {
+			return false
+		}
+	}
+	return true
 }
 
 ////////////
