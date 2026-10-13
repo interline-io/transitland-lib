@@ -61,15 +61,15 @@ func (f *Finder) FeedVersionTimezone(ctx context.Context, fvid int) (*time.Locat
 // FindTrip returns the trip update on a trip's runs: the requested ones,
 // or its current run.
 func (f *Finder) FindTrip(ctx context.Context, t *model.Trip) *pb.TripUpdate {
-	if found := f.tripUpdates(ctx, t); len(found) > 0 {
+	if found := f.modelTripUpdates(ctx, t); len(found) > 0 {
 		return found[0]
 	}
 	return nil
 }
 
-// tripUpdates returns the trip updates on a trip's runs, one from each realtime
-// feed.
-func (f *Finder) tripUpdates(ctx context.Context, t *model.Trip) []*pb.TripUpdate {
+// modelTripUpdates returns the trip updates on a model.Trip's runs, one from
+// each realtime feed.
+func (f *Finder) modelTripUpdates(ctx context.Context, t *model.Trip) []*pb.TripUpdate {
 	return f.runUpdates(ctx, t.FeedVersionID, t.TripID.Val, f.tripRunsOf(ctx, t))
 }
 
@@ -357,7 +357,7 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 // FindStopTimeUpdate returns the update for a stop time on a trip's runs: the
 // requested ones, or its current run.
 func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
-	return matchStop(ctx, f.tripUpdates(ctx, t), st.StopSequence.Int(), f.gtfsStopID(ctx, st))
+	return matchStop(ctx, f.modelTripUpdates(ctx, t), st.StopSequence.Int(), f.gtfsStopID(ctx, st))
 }
 
 // FindStopTimeUpdates returns the updates for a trip's stop times, in their
@@ -366,7 +366,7 @@ func (f *Finder) FindStopTimeUpdates(ctx context.Context, t *model.Trip, sts []*
 	if len(sts) == 0 {
 		return nil
 	}
-	rtTrips := f.tripUpdates(ctx, t)
+	rtTrips := f.modelTripUpdates(ctx, t)
 	ret := make([]*model.RTStopTimeUpdate, len(sts))
 	for i, st := range sts {
 		ret[i], _ = matchStop(ctx, rtTrips, st.StopSequence.Int(), f.gtfsStopID(ctx, st))

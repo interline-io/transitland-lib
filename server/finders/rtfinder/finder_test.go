@@ -532,8 +532,9 @@ func (l feedVersionLookup) FeedVersionTimezone(_ context.Context, fvid int) (*ti
 // and stop times makes.
 type tripUpdateLookup struct {
 	feedVersionLookup
-	spans   map[int]TripSpan // by trip id
-	stopIds map[int]string   // GTFS stop_ids by stop id
+	spans         map[int]TripSpan // by trip id
+	stopIds       map[int]string   // GTFS stop_ids by stop id
+	stopIdLookups *atomic.Int64    // counts GetGtfsStopID calls, when set
 }
 
 func (l tripUpdateLookup) GetTripSpan(_ context.Context, _ int, tripId int) (TripSpan, bool) {
@@ -541,6 +542,9 @@ func (l tripUpdateLookup) GetTripSpan(_ context.Context, _ int, tripId int) (Tri
 }
 
 func (l tripUpdateLookup) GetGtfsStopID(_ context.Context, id int) (string, bool) {
+	if l.stopIdLookups != nil {
+		l.stopIdLookups.Add(1)
+	}
 	sid, ok := l.stopIds[id]
 	return sid, ok
 }
@@ -645,17 +649,18 @@ func TestFinder_FindRunUpdate(t *testing.T) {
 	tcs := []struct {
 		name  string
 		run   Run
-		delay int32 // of the update matched at FTVL; zero when the run has none
+		found bool  // the run has an update
+		delay int32 // of the update matched at FTVL
 	}{
-		{"run by start_date", Run{FeedVersionID: 1, TripID: "1031527WKDY", Date: testDate(31)}, 300},
-		{"current run, from the run's span", Run{FeedVersionID: 1, TripID: "5172328WKDY", Date: testDate(30), Span: testRunSpan}, 180},
-		{"current run not requested", Run{FeedVersionID: 1, TripID: "5172328WKDY", Date: testDate(31), Span: testRunSpan}, 0},
-		{"feed version without realtime feeds", Run{FeedVersionID: 2, TripID: "1031527WKDY", Date: testDate(31)}, 0},
+		{"run by start_date", Run{FeedVersionID: 1, TripID: "1031527WKDY", Date: testDate(31)}, true, 300},
+		{"current run, from the run's span", Run{FeedVersionID: 1, TripID: "5172328WKDY", Date: testDate(30), Span: testRunSpan}, true, 180},
+		{"current run not requested", Run{FeedVersionID: 1, TripID: "5172328WKDY", Date: testDate(31), Span: testRunSpan}, false, 0},
+		{"feed version without realtime feeds", Run{FeedVersionID: 2, TripID: "1031527WKDY", Date: testDate(31)}, false, 0},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			ru := f.FindRunUpdate(ctx, tc.run)
-			if tc.delay == 0 {
+			if !tc.found {
 				assert.Nil(t, ru)
 				return
 			}
@@ -700,9 +705,11 @@ func TestFinder_MatchStops(t *testing.T) {
 	// Matching the trip's stop times asks the lookup for GTFS stop_ids by stop
 	// id, and stop 5 is one it can't find. Matching by value is given the
 	// stop_ids, with none for the last stop.
+	stopIdLookups := &atomic.Int64{}
 	lookupFinder := testFinder(t, tripUpdateLookup{
 		feedVersionLookup: feedVersionLookup{unexpectedLookup: unexpectedLookup{t}},
 		stopIds:           map[int]string{1: "A", 2: "B", 3: "LOOP", 4: "E"},
+		stopIdLookups:     stopIdLookups,
 	}, "realtime_trip_updates", msg)
 	sts := []*model.StopTime{testStopTime(1, 1), testStopTime(2, 2), testStopTime(3, 3), testStopTime(3, 4), testStopTime(4, 5), testStopTime(5, 6)}
 	valueFinder := testFinder(t, feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}, "realtime_trip_updates", msg)
@@ -770,4 +777,7 @@ func TestFinder_MatchStops(t *testing.T) {
 			}
 		})
 	}
+	// Matching the trip's stop times looked up the stop_id of the five that no
+	// update names by stop_sequence, and none for the run without an update.
+	assert.EqualValues(t, 5, stopIdLookups.Load())
 }
