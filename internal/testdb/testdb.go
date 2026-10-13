@@ -7,11 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/adapters"
+	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tldb/sqlite"
 	"github.com/interline-io/transitland-lib/tt"
+	"github.com/jmoiron/sqlx"
 )
 
 func MustOpenWriter(dburl string, create bool) *tldb.Writer {
@@ -188,3 +191,23 @@ func CreateTestFeedVersion(atx tldb.Adapter, file string) dmfr.FeedVersion {
 }
 
 var testFeedSeq atomic.Int64
+
+// CopyTestFeed copies a feed into a new feed version within tx, deduplicating
+// journey patterns as the server's imports do, and returns the feed version's id.
+func CopyTestFeed(t testing.TB, tx *sqlx.Tx, reader adapters.Reader) int {
+	t.Helper()
+	atx := postgres.NewPostgresAdapterFromDBX(tx)
+	fv := CreateTestFeedVersion(atx, "")
+	writer := &tldb.Writer{Adapter: atx, FeedVersionID: fv.ID}
+	result, err := copier.CopyWithOptions(context.Background(), reader, writer, copier.Options{DeduplicateJourneyPatterns: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for fn, n := range result.SkipEntityErrorCount {
+		t.Fatalf("skipped %d %s entities with errors", n, fn)
+	}
+	for fn, n := range result.SkipEntityReferenceCount {
+		t.Fatalf("skipped %d %s entities with reference errors", n, fn)
+	}
+	return fv.ID
+}

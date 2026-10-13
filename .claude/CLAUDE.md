@@ -132,6 +132,19 @@ _ "github.com/interline-io/transitland-lib/tldb/sqlite"
 _ "github.com/interline-io/transitland-lib/ext/filters"
 ```
 
+### Keep SQLite opt-in
+
+`github.com/mattn/go-sqlite3` is a cgo package that compiles in its own copy of SQLite, so a binary that also links another SQLite build, such as `crawshaw.io/sqlite`, fails to link with duplicate `sqlite3_*` symbols. Linking SQLite is the importer's choice, made with the blank `tldb/sqlite` import. A stray import has broken downstream test builds more than once.
+
+- Outside `_test.go` files, no package that other modules can import (anything outside `internal/` and `cmd/`) may reach `go-sqlite3`, except the driver itself, `tldb/sqlite`. That rules out importing `tldb/sqlite` or `internal/testdb`, directly or through another package.
+- Test helpers that other modules import from their tests, such as `server/testutil`, are ordinary packages: everything they import is compiled into each test binary that imports them. A helper that needs `internal/testdb` belongs in `internal/testdb` or another internal package.
+- `_test.go` files are exempt, since only their own package's tests compile them.
+- Check before adding an import to a shared package. This command lists every package that links SQLite; outside `internal/` and `cmd/`, only `tldb/sqlite` may appear.
+
+```sh
+go list -f '{{.ImportPath}} {{join .Deps " "}}' ./... | awk '/mattn\/go-sqlite3/ {print $1}'
+```
+
 ### GTFS Specification References
 
 This library tracks specific commits of the upstream GTFS specs, defined in `version.go`:
