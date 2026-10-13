@@ -47,8 +47,11 @@ func (ent *Frequency) RepeatCount() int {
 
 // Errors for this Entity.
 func (ent *Frequency) ConditionalErrors() (errs []error) {
+	// A period that ends at or before its start holds no runs, so the row is
+	// rejected and its trip runs at its own stop times instead. Missing times are
+	// reported by the required check; 00:00:00 is a valid time, not a missing one.
 	st, et := ent.StartTime.Int(), ent.EndTime.Int()
-	if st != 0 && et != 0 && st > et {
+	if ent.StartTime.Valid && ent.EndTime.Valid && et <= st {
 		errs = append(errs, causes.NewInvalidFieldError("end_time", fmt.Sprintf("%d", et), fmt.Errorf("end_time '%d' must come after start_time '%d'", et, st)))
 	}
 	return errs

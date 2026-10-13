@@ -13,13 +13,11 @@ type FrequencyDurationCheck struct{}
 func (e *FrequencyDurationCheck) Validate(ent tt.Entity) []error {
 	if v, ok := ent.(*gtfs.Frequency); ok {
 		var errs []error
+		// A period that ends at or before its start is an error, which the
+		// frequency reports itself.
 		st, et := v.StartTime.Int(), v.EndTime.Int()
-		if st != 0 && et != 0 {
-			if st == et {
-				errs = append(errs, causes.NewValidationWarning("end_time", "end_time is equal to start_time"))
-			} else if et > st && (et-st) < v.HeadwaySecs.Int() {
-				errs = append(errs, causes.NewValidationWarning("end_time", "end_time is less than start_time + headway_secs"))
-			}
+		if v.StartTime.Valid && v.EndTime.Valid && et > st && et-st < v.HeadwaySecs.Int() {
+			errs = append(errs, causes.NewValidationWarning("end_time", "end_time is less than start_time + headway_secs"))
 		}
 		return errs
 	}

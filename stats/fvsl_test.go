@@ -110,7 +110,7 @@ func TestNewFeedVersionServiceLevelsFromReader_Frequencies(t *testing.T) {
 	a := results[0]
 	assert.Equal(t, "2024-01-01", a.StartDate.String())
 	assert.Equal(t, "2024-01-07", a.EndDate.String())
-	// Seven 10-minute runs a day: regular once, offset twice, meet four times, and empty never
+	// Seven 10-minute runs a day: regular once, offset twice and meet four times
 	day := 7 * 600
 	assert.Equal(t, []int{day, day, day, day, day, day, day}, []int{a.Monday, a.Tuesday, a.Wednesday, a.Thursday, a.Friday, a.Saturday, a.Sunday})
 }

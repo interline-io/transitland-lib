@@ -130,7 +130,6 @@ func TestLookupCache_GetTripSpan(t *testing.T) {
 	}{
 		{"regular", tripSpan{FirstDeparture: 5 * 3600, LastArrival: 5*3600 + 600}},
 		{"offset", tripSpan{FirstDeparture: 7 * 3600, LastArrival: 7*3600 + 1800 + 600}},
-		// The empty period at 12:30:00 starts no run
 		{"meet", tripSpan{FirstDeparture: 10 * 3600, LastArrival: 11*3600 + 1800 + 600}},
 	} {
 		t.Run(tc.tripID, func(t *testing.T) {

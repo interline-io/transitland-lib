@@ -46,7 +46,12 @@ func (fi *ScheduleChecker) Validate(ent tt.Entity) []error {
 		}
 		fi.tripInfo[v.TripID.Val] = ti
 	case *gtfs.Frequency:
-		// A trip in frequencies.txt runs only at its frequencies' starts
+		// A trip in frequencies.txt runs only at its frequencies' starts. Imports
+		// drop a row with errors, so it doesn't count here either, even when the
+		// copier keeps it (the validator does).
+		if len(tt.CheckErrors(v)) > 0 {
+			break
+		}
 		a := fi.tripInfo[v.TripID.Val]
 		a.UsesFrequency = true
 		a.FrequencyStarts = append(a.FrequencyStarts, v.Starts()...)

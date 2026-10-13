@@ -9,7 +9,7 @@ Every realtime message describes exactly one run.
 - **A message that names a `start_date`** in its trip descriptor describes the run on that date.
 - **A message that names none** describes the trip's **current run**: the run going now, or failing that, the nearest of yesterday's, today's and tomorrow's.
 
-A run lasts from its trip's first scheduled departure to its last scheduled arrival. A frequency-based trip runs from its first start to its last start plus one trip's length, counting a start at `end_time` as departures do. Times count in the agency's timezone from noon minus twelve hours on the service date, as GTFS defines them.
+A run lasts from its trip's first scheduled departure to its last scheduled arrival. A frequency-based trip runs from its first start to its last start plus one trip's length, with a start every `headway_secs` from `start_time`, up to but not including `end_time`. Times count in the agency's timezone from noon minus twelve hours on the service date, as GTFS defines them.
 
 A run that has just ended stays current until another run is nearer, so a train running late keeps its updates after its scheduled end. A trip whose span isn't known, such as a trip added in real time, is on today's run.
 

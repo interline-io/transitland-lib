@@ -43,6 +43,28 @@ func TestFrequency_Errors(t *testing.T) {
 			expectedErrors: PE("InvalidFieldError:end_time"),
 		},
 		{
+			name: "end_time equal to start_time",
+			entity: newFrequency(func(f *Frequency) {
+				f.EndTime = tt.NewSeconds(3600) // 01:00:00
+			}),
+			expectedErrors: PE("InvalidFieldError:end_time"),
+		},
+		{
+			name: "end_time 00:00:00 before start_time",
+			entity: newFrequency(func(f *Frequency) {
+				f.StartTime = tt.NewSeconds(82800) // 23:00:00
+				f.EndTime = tt.NewSeconds(0)
+			}),
+			expectedErrors: PE("InvalidFieldError:end_time"),
+		},
+		{
+			name: "start_time 00:00:00",
+			entity: newFrequency(func(f *Frequency) {
+				f.StartTime = tt.NewSeconds(0)
+			}),
+			expectedErrors: nil,
+		},
+		{
 			name: "Missing headway_secs",
 			entity: newFrequency(func(f *Frequency) {
 				f.HeadwaySecs = tt.Int{}

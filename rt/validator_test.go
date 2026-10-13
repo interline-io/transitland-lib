@@ -10,9 +10,14 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/empty"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/set"
 	"github.com/interline-io/transitland-lib/internal/testpath"
+	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tt"
+	"github.com/stretchr/testify/assert"
 )
 
 // NewValidatorFromReader returns a Validator with data from a Reader.
@@ -74,6 +79,42 @@ func TestValidateTripUpdate(t *testing.T) {
 	errs := fi.ValidateTripUpdate(trip, msg)
 	for _, err := range errs {
 		_ = err
+	}
+}
+
+// A frequency that fails validation doesn't make its trip frequency-based, so an
+// update for that trip needs no start_date or start_time.
+func TestValidator_RejectedFrequency(t *testing.T) {
+	// A period that ends where it starts, which validation rejects
+	reader := testreader.NewFrequencyTestFeed()
+	reader.FrequencyList = append(reader.FrequencyList, gtfs.Frequency{
+		TripID:      tt.NewString("regular"),
+		StartTime:   tt.NewSeconds(5 * 3600),
+		EndTime:     tt.NewSeconds(5 * 3600),
+		HeadwaySecs: tt.NewInt(600),
+	})
+	fi := NewValidator()
+	// Keep rows with errors, as the static validator does
+	cpOpts := copier.Options{AllowEntityErrors: true}
+	cpOpts.AddExtension(fi)
+	if _, err := copier.CopyWithOptions(context.Background(), reader, &empty.Writer{}, cpOpts); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		tripID        string
+		frequencyTrip bool
+	}{
+		{"regular", false},
+		{"offset", true},
+	} {
+		t.Run(tc.tripID, func(t *testing.T) {
+			td := &pb.TripDescriptor{TripId: &tc.tripID}
+			found := false
+			for _, err := range fi.validateTripDescriptor(td, &pb.TripUpdate{Trip: td}) {
+				found = found || strings.Contains(err.Error(), "frequency based trips")
+			}
+			assert.Equal(t, tc.frequencyTrip, found)
+		})
 	}
 }
 
