@@ -175,7 +175,7 @@ type Stop struct {
 	WithinFeatures      tt.Strings
 	WithRouteID         tt.Int
 	WithAgencyID        tt.Int
-	WithLocationGroupID tt.Int
+	WithLocationGroupID tt.Int // internal: grouping key set by StopsByLocationGroupIDs
 	gtfs.Stop
 }
 
@@ -351,7 +351,7 @@ type StopArea struct {
 type LocationGroup struct {
 	FeedOnestopID   string
 	FeedVersionSHA1 string
-	WithStopID      tt.Int
+	WithStopID      tt.Int // internal: grouping key set by LocationGroupsByStopIDs
 	gtfs.LocationGroup
 }
 

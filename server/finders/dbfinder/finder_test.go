@@ -2,6 +2,7 @@ package dbfinder
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -77,6 +78,28 @@ func TestFinder_KeyedErrors(t *testing.T) {
 			require.Len(t, tc.errs, len(ids))
 			for _, err := range tc.errs {
 				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func Test_logExtendErr(t *testing.T) {
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	tcs := []struct {
+		name   string
+		ctx    context.Context
+		expect string
+	}{
+		{"query failed", context.Background(), "database error"},
+		{"request canceled", canceled, context.Canceled.Error()},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			errs := logExtendErr(tc.ctx, 3, errors.New("connection reset"))
+			require.Len(t, errs, 3)
+			for _, err := range errs {
+				assert.EqualError(t, err, tc.expect)
 			}
 		})
 	}

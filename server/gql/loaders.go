@@ -4,6 +4,7 @@ package gql
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -655,7 +656,7 @@ func unwrapResult[
 		// A failed batch returns an error for each key and no results. Any other
 		// mismatch is a finder bug.
 		if len(a) != len(ps) && len(errs) != len(ps) {
-			log.For(ctx).Error().Msgf("error in dataloader, result len %d did not match param length %d", len(a), len(ps))
+			log.For(ctx).Error().Err(errors.Join(errs...)).Msgf("error in dataloader, %T result len %d did not match param length %d", a, len(a), len(ps))
 			return nil
 		}
 		ret := make([]*dataloader.Result[T], len(ps))

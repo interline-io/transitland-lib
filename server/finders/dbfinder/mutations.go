@@ -158,12 +158,10 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 			cols = scanCol(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols, &err)
 			cols = scanCol(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols, &err)
 			if v := input.FromStop; v != nil {
-				cols = append(cols, "from_stop_id")
-				cols = scanCol(&ent.FromStopID, v.ID, "", cols, &err)
+				cols = scanCol(&ent.FromStopID, v.ID, "from_stop_id", cols, &err)
 			}
 			if v := input.ToStop; v != nil {
-				cols = append(cols, "to_stop_id")
-				cols = scanCol(&ent.ToStopID, v.ID, "", cols, &err)
+				cols = scanCol(&ent.ToStopID, v.ID, "to_stop_id", cols, &err)
 			}
 			return cols, err
 		})

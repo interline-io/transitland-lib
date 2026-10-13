@@ -89,13 +89,16 @@ func logErr(ctx context.Context, err error) error {
 }
 
 func logExtendErr(ctx context.Context, size int, err error) []error {
-	errs := make([]error, size)
 	if ctx.Err() == context.Canceled {
-		return errs
+		// Not logged, but each key still fails.
+		err = ctx.Err()
+	} else {
+		log.For(ctx).Error().Err(err).Msg("query failed")
+		err = errors.New("database error")
 	}
-	log.For(ctx).Error().Err(err).Msg("query failed")
-	for i := 0; i < len(errs); i++ {
-		errs[i] = errors.New("database error")
+	errs := make([]error, size)
+	for i := range errs {
+		errs[i] = err
 	}
 	return errs
 }
