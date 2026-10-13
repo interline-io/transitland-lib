@@ -372,8 +372,9 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 }
 
 // stopDeparturesMaterializedSelect is stopDeparturesSelect planned from a
-// materialized CTE of the entities' stop_times. It checks service on each
-// pattern's base trip, so relies on a pattern's trips sharing a service_id.
+// materialized CTE of the entities' stop_times. It checks service and route on
+// each pattern's base trip, so relies on a pattern's trips sharing a service_id
+// and a route_id.
 func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, where *model.StopTimeFilter) sq.SelectBuilder {
 	// Where must already be set for local service date and timezone
 	serviceDate := time.Now()
@@ -387,7 +388,7 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 	// starts from them. Postgres treats those ids and feed_version_id as independent filters;
 	// given feed_version_id or the service check here, it starts from the whole feed version.
 	atEntity := sq.StatementBuilder.
-		Select("base_trip.trip_id AS base_trip_gtfs_id", "base_trip.service_id AS base_trip_service_id", "sts.*").
+		Select("base_trip.trip_id AS base_trip_gtfs_id", "base_trip.service_id AS base_trip_service_id", "base_trip.route_id AS base_trip_route_id", "sts.*").
 		From("gtfs_stop_times sts").
 		Join("gtfs_trips base_trip ON base_trip.id = sts.trip_id")
 	if len(entityIDs) > 0 {
@@ -431,7 +432,6 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		WithCTE(sq.CTE{Alias: "at_entity", Materialized: true, Expression: atEntity}).
 		From("at_entity sts").
 		Join("gtfs_trips ON gtfs_trips.feed_version_id = ? AND gtfs_trips.journey_pattern_id = sts.base_trip_gtfs_id::text", fvid).
-		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
 		// The trip's runs. A trip in frequencies.txt runs once per start: every
 		// headway_secs from start_time, up to but not including end_time. Any other
 		// trip runs once, at its own times, with a null freq_start.
@@ -477,6 +477,11 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 			q = q.Where("sts.stop_sequence < trip_stop_sequence.stop_sequence_max")
 		}
 		if len(where.RouteOnestopIds) > 0 {
+			// The requested routes' ids in this feed version.
+			requestedRoutes := sq.StatementBuilder.
+				Select("gtfs_routes.id").
+				From("gtfs_routes").
+				Where(sq.Eq{"gtfs_routes.feed_version_id": fvid})
 			if where.AllowPreviousRouteOnestopIds != nil && *where.AllowPreviousRouteOnestopIds {
 				// Use CTE for route lookup optimization
 				sub := sq.StatementBuilder.
@@ -491,17 +496,21 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 					Alias:        "route_lookup",
 					Expression:   sub,
 				}
-				q = q.
-					WithCTE(routeLookupCte).
-					Join("gtfs_routes on gtfs_routes.id = gtfs_trips.route_id and gtfs_routes.feed_version_id = gtfs_trips.feed_version_id").
+				q = q.WithCTE(routeLookupCte)
+				requestedRoutes = requestedRoutes.
+					Join("feed_versions on feed_versions.id = gtfs_routes.feed_version_id").
 					Join("route_lookup tlros on tlros.entity_id = gtfs_routes.route_id and tlros.feed_id = feed_versions.feed_id")
 			} else {
-				q = q.
-					Join("gtfs_routes on gtfs_routes.id = gtfs_trips.route_id").
-					Join("feed_version_route_onestop_ids on feed_version_route_onestop_ids.entity_id = gtfs_routes.route_id and feed_version_route_onestop_ids.feed_version_id = gtfs_trips.feed_version_id").
+				requestedRoutes = requestedRoutes.
+					Join("feed_version_route_onestop_ids on feed_version_route_onestop_ids.entity_id = gtfs_routes.route_id and feed_version_route_onestop_ids.feed_version_id = gtfs_routes.feed_version_id").
 					Where(In("feed_version_route_onestop_ids.onestop_id", where.RouteOnestopIds))
-
 			}
+			// Checked on the base trip, like service, so the routes filter the stop times
+			// rather than drive the plan. Postgres expects about one trip per route, and a
+			// plan driven by the routes rescans the stop times for every trip.
+			q = q.
+				WithCTE(sq.CTE{Alias: "requested_routes", Materialized: true, Expression: requestedRoutes}).
+				Where("sts.base_trip_route_id = ANY(ARRAY(SELECT id FROM requested_routes))")
 		}
 		// Accept either Start/End or StartTime/EndTime
 		if where.Start != nil && where.Start.Valid {
