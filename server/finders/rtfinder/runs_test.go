@@ -64,13 +64,13 @@ func TestCurrentRunDate(t *testing.T) {
 		}
 		return v
 	}
-	dayRun := tripSpan{FirstDeparture: 8 * 3600, LastArrival: 9 * 3600}                // 08:00 to 09:00
-	earlyRun := tripSpan{FirstDeparture: 10 * 60, LastArrival: 50 * 60}                // 00:10 to 00:50
-	lateRun := tripSpan{FirstDeparture: 23*3600 + 40*60, LastArrival: 24*3600 + 31*60} // 23:40 to 24:31
+	dayRun := TripSpan{FirstDeparture: 8 * 3600, LastArrival: 9 * 3600}                // 08:00 to 09:00
+	earlyRun := TripSpan{FirstDeparture: 10 * 60, LastArrival: 50 * 60}                // 00:10 to 00:50
+	lateRun := TripSpan{FirstDeparture: 23*3600 + 40*60, LastArrival: 24*3600 + 31*60} // 23:40 to 24:31
 	tcs := []struct {
 		name   string
 		now    string
-		span   tripSpan
+		span   TripSpan
 		expect string
 	}{
 		{"the run going now", "2018-05-31 08:30", dayRun, "2018-05-31"},
@@ -80,7 +80,7 @@ func TestCurrentRunDate(t *testing.T) {
 		{"after midnight, yesterday's run while it is still going", "2018-05-31 00:10", lateRun, "2018-05-30"},
 		{"after midnight, yesterday's run just after it ends", "2018-05-31 00:45", lateRun, "2018-05-30"},
 		{"in the evening, today's run once it is nearest", "2018-05-31 18:00", lateRun, "2018-05-31"},
-		{"a trip whose span isn't known, today's run", "2018-05-31 23:50", tripSpan{}, "2018-05-31"},
+		{"a trip whose span isn't known, today's run", "2018-05-31 23:50", TripSpan{}, "2018-05-31"},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {

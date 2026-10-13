@@ -154,7 +154,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		rtStore = kvcache.NewMemoryStore()
 		gbfsStore = kvcache.NewMemoryStore()
 	}
-	rtf := rtfinder.NewFinder(rtStore, db)
+	rtf := rtfinder.NewFinder(rtStore, rtfinder.NewPostgresLookup(db))
 	defer rtf.Close()
 	var rtFinder model.RTFinder = rtf
 	var gbfsFinder model.GbfsFinder = gbfsfinder.NewFinder(gbfsStore)

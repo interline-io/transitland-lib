@@ -59,17 +59,21 @@ func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
 
 // currentRun returns the service date of a trip's current run.
 func (f *Finder) currentRun(ctx context.Context, fvid int, tripId int) (tt.Date, bool) {
-	loc, ok := f.lc.FeedVersionTimezone(ctx, fvid)
+	loc, ok := f.lookup.FeedVersionTimezone(ctx, fvid)
 	if !ok {
 		return tt.Date{}, false
 	}
-	return currentRunDate(f.Clock.Now(), loc, f.lc.GetTripSpan(ctx, fvid, tripId)), true
+	span, ok := f.lookup.GetTripSpan(ctx, fvid, tripId)
+	if !ok {
+		return tt.Date{}, false
+	}
+	return currentRunDate(f.Clock.Now(), loc, span), true
 }
 
 // currentRunDate returns the service date of a trip's current run: the run going
 // now, or failing that, the nearest of yesterday's, today's and tomorrow's. A trip
 // whose span isn't known, such as one added in real time, is on today's.
-func currentRunDate(now time.Time, loc *time.Location, span tripSpan) tt.Date {
+func currentRunDate(now time.Time, loc *time.Location, span TripSpan) tt.Date {
 	local := now.In(loc)
 	today := tt.NewDate(time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC))
 	if span.LastArrival == 0 {

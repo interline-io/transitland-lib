@@ -142,7 +142,7 @@ func TestFindVehiclePositionsForRoute_TripLookup(t *testing.T) {
 	ctx := context.Background()
 	t.Run("concurrent routes", func(t *testing.T) {
 		db := &countingDB{Ext: raw}
-		f := testFinder(t, db, vehiclePositionTopicKey, testReadRT(t, "BA-vehicle-positions.json"))
+		f := testFinder(t, NewPostgresLookup(db), vehiclePositionTopicKey, testReadRT(t, "BA-vehicle-positions.json"))
 		found := map[string][]string{}
 		var lock sync.Mutex
 		run := func() {
@@ -183,7 +183,7 @@ func TestFindVehiclePositionsForRoute_TripLookup(t *testing.T) {
 		}
 		db := &countingDB{Ext: raw}
 		db.fail.Store(true)
-		f := testFinder(t, db, vehiclePositionTopicKey, msg)
+		f := testFinder(t, NewPostgresLookup(db), vehiclePositionTopicKey, msg)
 		assert.Empty(t, f.FindVehiclePositionsForRoute(ctx, routes["05"], nil, nil))
 		assert.EqualValues(t, 1, db.tripQueries.Load())
 	})
