@@ -38,7 +38,7 @@ func (r *flexStopTimeResolver) LocationGroup(ctx context.Context, obj *model.Fle
 
 func (r *flexStopTimeResolver) Trip(ctx context.Context, obj *model.FlexStopTime) (*model.Trip, error) {
 	trip, err := LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
-	return tripRun(trip, obj.ServiceDate), err
+	return tripRun(trip, obj.ServiceDate, obj.RunStart), err
 }
 
 func (r *flexStopTimeResolver) Arrival(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error) {

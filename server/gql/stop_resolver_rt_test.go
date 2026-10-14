@@ -325,6 +325,56 @@ func TestStopRT_SkippedAndNoData(t *testing.T) {
 	})
 }
 
+// An update naming a start_time describes that instance of a frequency-based
+// trip alone, and its estimates count from the instance's own times.
+func TestStopRT_FrequencyInstances(t *testing.T) {
+	// The example feed's version isn't its feed's active one, so the stop is
+	// found by the version's sha1.
+	const query = `query($stf: StopTimeFilter) {
+		stops(where: {feed_version_sha1: "43e2278aa272879c79460582152b04e7487f0493", stop_id: "STAGECOACH"}) {
+			stop_times(where: $stf) {
+				schedule_relationship
+				trip { trip_id schedule_relationship }
+				departure { scheduled estimated_delay }
+			}
+		}
+	}`
+	testRt(t, rtTestCase{
+		name:    "frequency instances",
+		query:   query,
+		vars:    hw{"stf": hw{"date": "2007-01-02", "start": "08:00:00", "end": "08:59:00"}},
+		rtfiles: []testconfig.RTJsonFile{{Feed: "EX", Ftype: "realtime_trip_updates", Fname: "EX-frequency.json"}},
+		whenUtc: "2007-01-02T16:05:00Z",
+		cb: func(t *testing.T, jj string) {
+			instances := 0
+			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
+				if st.Get("trip.trip_id").String() != "CITY1" {
+					continue
+				}
+				instances++
+				start := st.Get("departure.scheduled").String()
+				rel, tripRel := st.Get("schedule_relationship").String(), st.Get("trip.schedule_relationship").String()
+				delay := optionalInt(st.Get("departure.estimated_delay"))
+				switch start {
+				case "08:10:00":
+					assert.Equal(t, "CANCELED", rel, start)
+					assert.Equal(t, "CANCELED", tripRel, start)
+					assert.Nil(t, delay, start)
+				case "08:30:00":
+					assert.Equal(t, "SCHEDULED", rel, start)
+					assert.Equal(t, "SCHEDULED", tripRel, start)
+					assert.Equal(t, ptr(int64(60)), delay, start)
+				default:
+					assert.Equal(t, "STATIC", rel, start)
+					assert.Equal(t, "STATIC", tripRel, start)
+					assert.Nil(t, delay, start)
+				}
+			}
+			assert.Equal(t, 6, instances, "instances of CITY1 from 08:00 to 08:59")
+		},
+	})
+}
+
 func TestStopRT_NoRT(t *testing.T) {
 	tc := rtTestCase{
 		name:    "no rt matches for trip 2211533WKDY",

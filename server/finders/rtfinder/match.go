@@ -99,7 +99,13 @@ func (f *Finder) matchTrip(ctx context.Context, t *model.Trip) tripMatch {
 		log.For(ctx).Debug().Int("feed_version_id", t.FeedVersionID).Int("trip_id", t.ID).Msg("rtfinder: trip stops not found; its trip update applies without estimates")
 		return tripMatch{tu: tu}
 	}
-	return tripMatch{tu: tu, stops: stops, matched: MatchStops(tu, f.runStart(ctx, t), stops)}
+	base := f.runStart(ctx, t)
+	// An instance of a frequency-based trip runs the trip's stop times shifted
+	// to begin at its own start.
+	if base != 0 && t.RunStart.Valid && len(stops) > 0 && stops[0].Departure.Valid {
+		base += t.RunStart.Val - stops[0].Departure.Val
+	}
+	return tripMatch{tu: tu, stops: stops, matched: MatchStops(tu, base, stops)}
 }
 
 // runStart returns the instant a trip's run's stop times count from, or 0

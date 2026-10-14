@@ -186,7 +186,7 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 				return nil, err
 			}
 			if trip != nil {
-				trips = append(trips, tripRun(trip, patternDate(obj)))
+				trips = append(trips, tripRun(trip, patternDate(obj), tt.Seconds{}))
 			}
 		}
 		return trips, nil
@@ -245,7 +245,7 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 			return nil, err
 		}
 		if trip != nil && len(sts) > 0 && !isFlex(sts) {
-			cols = append(cols, column{trip: tripRun(trip, patternDate(obj)), sts: sts})
+			cols = append(cols, column{trip: tripRun(trip, patternDate(obj), tt.Seconds{}), sts: sts})
 		}
 	}
 	if len(cols) == 0 {
