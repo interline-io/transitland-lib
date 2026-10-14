@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/rt"
+	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/azchecker"
 	"github.com/interline-io/transitland-lib/server/auth/fga"
@@ -86,13 +87,16 @@ type RTJsonFile struct {
 	Feed  string
 	Ftype string
 	Fname string
+	// How long before the test's time the fixture was fetched; zero for a
+	// fixture fetched then.
+	Age time.Duration
 }
 
 func DefaultRTJson() []RTJsonFile {
 	return []RTJsonFile{
-		{"BA", "realtime_trip_updates", "BA.json"},
-		{"BA", "realtime_alerts", "BA-alerts.json"},
-		{"CT", "realtime_trip_updates", "CT.json"},
+		{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA.json"},
+		{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
+		{Feed: "CT", Ftype: "realtime_trip_updates", Fname: "CT.json"},
 	}
 }
 
@@ -152,12 +156,18 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	// Setup RT
 	rtf := rtfinder.NewFinder(kvcache.NewMemoryStore(), rtfinder.NewPostgresLookup(db))
 	rtf.Clock = cl
+	// Each fixture is served as a live feed's payload: fetched Age before the
+	// test's time, with its header stamped then.
 	for _, rtj := range opts.RTJsons {
 		fn := testdata.Path("server", "rt", rtj.Fname)
 		msg, err := rt.ReadFile(fn)
 		if err != nil {
 			t.Fatal(err)
 		}
+		if msg.Header == nil {
+			msg.Header = &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}
+		}
+		msg.Header.Timestamp = proto.Uint64(uint64(when.Add(-rtj.Age).Unix()))
 		key := fmt.Sprintf("rtdata:%s:%s", rtj.Feed, rtj.Ftype)
 		rtdata, err := proto.Marshal(msg)
 		if err != nil {

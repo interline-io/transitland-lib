@@ -78,7 +78,8 @@ func feedDownloadRtHelper(graphqlHandler http.Handler, w http.ResponseWriter, r 
 
 	// Check if we have data
 	rtf := model.ForContext(ctx).RTFinder
-	rtMsg, ok := rtf.GetMessage(ctx, d.FeedOnestopID, rtType)
+	// Served however old: a download is a copy of the feed, not a match.
+	rtMsg, _, ok := rtf.GetMessage(ctx, d.FeedOnestopID, rtType)
 	if ok && rtMsg != nil {
 		found = true
 	}
