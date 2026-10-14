@@ -2,11 +2,14 @@ package dbfinder
 
 import (
 	"context"
+	"errors"
+	"math"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tlxy"
 	sq "github.com/irees/squirrel"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -87,8 +90,11 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		// loop-then-tag pass.
 		fields.perStopAttribution = true
 		var ents []*model.CensusGeography
-		pw := forStopids(entityIds)
-		if err := dbutil.Select(ctx, f.db, censusDatasetGeographySelect(limit, pw, fields), &ents); err != nil {
+		q, err := censusDatasetGeographySelect(limit, forStopids(entityIds), fields)
+		if err != nil {
+			return nil, err
+		}
+		if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 			return nil, queryErr(ctx, err)
 		}
 		entityGeogs = append(entityGeogs, ents...)
@@ -103,8 +109,11 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 				return nil, queryErr(ctx, err)
 			}
 			var ents []*model.CensusGeography
-			pw := forStopids(stopIds)
-			if err := dbutil.Select(ctx, f.db, censusDatasetGeographySelect(limit, pw, fields), &ents); err != nil {
+			q, err := censusDatasetGeographySelect(limit, forStopids(stopIds), fields)
+			if err != nil {
+				return nil, err
+			}
+			if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 				return nil, queryErr(ctx, err)
 			}
 			for _, ent := range ents {
@@ -240,10 +249,13 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 
 func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
 	var ents []*model.CensusGeography
-	q := censusDatasetGeographySelect(limit, p, getCensusGeographySelectFields(ctx)).Where(sq.Eq{"tlcd.id": keys})
-	err := dbutil.Select(ctx,
+	q, err := censusDatasetGeographySelect(limit, p, getCensusGeographySelectFields(ctx))
+	if err != nil {
+		return nil, err
+	}
+	err = dbutil.Select(ctx,
 		f.db,
-		q,
+		q.Where(sq.Eq{"tlcd.id": keys}),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.DatasetID }), queryErr(ctx, err)
@@ -257,8 +269,11 @@ func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, wh
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q := censusDatasetGeographySelect(limit, w, getCensusGeographySelectFields(ctx))
-	err := dbutil.Select(ctx,
+	q, err := censusDatasetGeographySelect(limit, w, getCensusGeographySelectFields(ctx))
+	if err != nil {
+		return nil, err
+	}
+	err = dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
 			q,
@@ -281,8 +296,11 @@ func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, w
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q := censusDatasetGeographySelect(limit, w, getCensusGeographySelectFields(ctx))
-	err := dbutil.Select(ctx,
+	q, err := censusDatasetGeographySelect(limit, w, getCensusGeographySelectFields(ctx))
+	if err != nil {
+		return nil, err
+	}
+	err = dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
 			q,
@@ -409,7 +427,24 @@ func containsField(ctx context.Context, fieldName string) bool {
 	return false
 }
 
-func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeographyFilter, fields censusGeographySelectFields) sq.SelectBuilder {
+// censusClipMaxVertices is the most vertices in a piece of a subdivided search
+// area, ST_Subdivide's default. A `within` polygon this small is intersected
+// whole.
+const censusClipMaxVertices = 256
+
+// censusSegmentDegrees is the longest edge, in degrees, kept by census area
+// measurements and search areas.
+//
+// An edge is a straight line in lon/lat, which bends in the equal-area
+// projection areas are measured in, and which the geography index reads as a
+// great circle. Edges this short keep both within centimeters of the line.
+const censusSegmentDegrees = 0.01
+
+// errCensusAntimeridian reports a census search area that crosses the
+// antimeridian, which planar intersections can't represent.
+var errCensusAntimeridian = errors.New("census geography search areas that cross the antimeridian are not supported")
+
+func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeographyFilter, fields censusGeographySelectFields) (sq.SelectBuilder, error) {
 	// Include matched entity column
 	cols := []string{
 		"tlcg.id",
@@ -431,9 +466,6 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 	if fields.geometry {
 		cols = append(cols, "tlcg.geometry as geometry")
 	}
-	if fields.geometryArea {
-		cols = append(cols, "ST_Area(tlcg.geometry) as geometry_area")
-	}
 
 	orderBy := sq.Expr("tlcg.id")
 
@@ -445,12 +477,20 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		Join("tl_census_datasets tlcd on tlcd.id = tlcl.dataset_id").
 		Join("tl_census_sources tlcs on tlcs.id = tlcg.source_id").
 		Limit(finderCheckLimit(limit))
+	if fields.geometryArea {
+		// Measured like intersection_area, so a geography inside the search area
+		// reports the same value for both.
+		q = q.Column("ST_Area(ST_Transform(ST_Segmentize(tlcg.geometry::geometry, ?), 6933)) as geometry_area", censusSegmentDegrees)
+	}
 
 	if where != nil && where.Location != nil {
 		qBufferUse := false
 		var qBuffer sq.SelectBuilder
 		qPointsUse := false
 		var qPoints sq.SelectBuilder
+		// Set for search areas that can be too large to intersect whole: a stop
+		// union, and a `within` polygon past censusClipMaxVertices.
+		subdivide := false
 
 		loc := where.Location
 		withinClip := loc.Within != nil && loc.Within.Valid
@@ -459,6 +499,9 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		if stopBufferClip {
 			// Clamp ceiling of 1600m ~ 1 mile, a common US analysis radius.
 			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_600)
+		}
+		if err := checkCensusAntimeridian(loc, stopBufferClip); err != nil {
+			return q, err
 		}
 
 		// Single-row clip-geometry builders (column `buffer`), shared between the
@@ -469,8 +512,11 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Column("ST_MakeEnvelope(?,?,?,?,4326) as buffer", loc.Bbox.MinLon, loc.Bbox.MinLat, loc.Bbox.MaxLon, loc.Bbox.MaxLat)
 		}
 		withinClipSelect := func() sq.SelectBuilder {
+			// Repair a self-intersecting polygon, which would otherwise fail or
+			// invert the search, then densify its long edges.
 			jj, _ := geojson.Marshal(loc.Within.Val)
-			return sq.StatementBuilder.Select().Column("ST_GeomFromGeoJSON(?) as buffer", string(jj))
+			return sq.StatementBuilder.Select().
+				Column("ST_Segmentize(ST_CollectionExtract(ST_MakeValid(ST_GeomFromGeoJSON(?)), 3), ?) as buffer", string(jj), censusSegmentDegrees)
 		}
 		stopUnionClipSelect := func() sq.SelectBuilder {
 			return sq.StatementBuilder.Select().
@@ -501,6 +547,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			// branches use. Without this case the chain below would honor only
 			// the query area and ignore the buffer.
 			qBufferUse = true
+			subdivide = true
 			q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
 			q = q.WithCTE(sq.CTE{Alias: "clip_stops", Materialized: true, Expression: stopUnionClipSelect()})
 			qBuffer = sq.StatementBuilder.Select().
@@ -513,6 +560,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			qBuffer = bboxClipSelect().Column("0 as match_entity_id")
 		} else if withinClip && !stopBufferClip {
 			qBufferUse = true
+			subdivide = len(loc.Within.Val.FlatCoords())/loc.Within.Val.Stride() > censusClipMaxVertices
 			qBuffer = withinClipSelect().Column("0 as match_entity_id")
 		} else if loc.Near != nil && !stopBufferClip {
 			// Guarded like the branches above so a stop_buffer isn't discarded
@@ -525,10 +573,16 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Column("0 as match_entity_id")
 		} else if stopBufferClip {
 			if stopBufferRadius == 0 {
+				// Per-stop attribution keeps a row per stop. Otherwise every stop
+				// shares one id, so the GROUP BY below lists a geography once.
 				qPointsUse = true
-				qPoints = sq.StatementBuilder.Select().
-					Column("gtfs_stops.geometry as buffer").
-					Column("gtfs_stops.id as match_entity_id").
+				qPoints = sq.StatementBuilder.Select().Column("gtfs_stops.geometry as buffer")
+				if fields.perStopAttribution {
+					qPoints = qPoints.Column("gtfs_stops.id as match_entity_id")
+				} else {
+					qPoints = qPoints.Column("0 as match_entity_id")
+				}
+				qPoints = qPoints.
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 				if areaClip {
@@ -551,33 +605,26 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 					From("gtfs_stops").
 					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 			} else {
-				// Default: union over the input stop set, one polygon. Used
-				// by routes/agencies (which want the union over their stops)
-				// and by top-level aggregation queries.
+				// Default: union over the input stop set. Used by
+				// routes/agencies (which want the union over their stops) and
+				// by top-level aggregation queries.
 				qBufferUse = true
-				qBuffer = sq.StatementBuilder.Select().
-					Column("0 as match_entity_id").
-					Column("buffer").
-					From("buffer_outer")
-				q = q.WithCTE(sq.CTE{
-					Alias:        "buffer_outer",
-					Materialized: true,
-					Expression:   stopUnionClipSelect(),
-				})
+				subdivide = true
+				qBuffer = stopUnionClipSelect().Column("0 as match_entity_id")
 			}
 		}
 		if qBufferUse {
-			// Subdivide the clip, so each geography is intersected with the few
-			// small pieces near it rather than the whole clip. The GROUP BY below
-			// sums the pieces back into one row per geography.
-			//
-			// ST_Subdivide splits multipolygons itself, so the stop union isn't
-			// dumped first, and per-stop buffers are already small. Each
-			// set-returning function multiplies the planner's row estimate by
-			// 1,000, enough to make Postgres JIT-compile small queries.
-			if !fields.perStopAttribution {
+			if subdivide {
+				// Cut the search area into small pieces, so each geography is
+				// intersected with just the union of the pieces it touches.
+				//
+				// A bbox, a near circle and per-stop buffers are never cut.
+				// ST_Subdivide's planner estimate is 1,000 rows per input row,
+				// which multiplied across per-stop buffers or batched loaders
+				// makes Postgres JIT-compile otherwise fast queries.
 				qBuffer = sq.StatementBuilder.
-					Select("clip.match_entity_id", "ST_Subdivide(clip.buffer) as buffer").
+					Select("clip.match_entity_id").
+					Column("ST_Segmentize(ST_Subdivide(ST_CollectionExtract(clip.buffer, 3), ?), ?) as buffer", censusClipMaxVertices, censusSegmentDegrees).
 					FromSelect(qBuffer, "clip")
 			}
 			q = q.WithCTE(sq.CTE{
@@ -586,15 +633,28 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Expression:   qBuffer,
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
-				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)")).
-				GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_entity_id")
-			// Intersect in planar lon/lat, then measure on the spheroid. The
-			// geography ST_Intersection reprojects both inputs on every row.
-			if fields.intersectionArea {
-				q = q.Column("sum(ST_Area(ST_Intersection(tlcg.geometry::geometry, buffer.buffer)::geography)) as intersection_area")
-			}
-			if fields.intersectionGeometry {
-				q = q.Column("ST_Union(ST_Intersection(tlcg.geometry::geometry, buffer.buffer)) as intersection_geometry")
+				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
+			// Intersect in lon/lat, then measure the result like geometry_area:
+			// densified, in the equal-area projection EPSG:6933.
+			//
+			// Geography functions would reproject the search area on every row,
+			// and would read a long edge along a parallel, such as a bbox side,
+			// as a great circle.
+			if subdivide {
+				q = q.GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_entity_id")
+				if fields.intersectionArea {
+					q = q.Column("ST_Area(ST_Transform(ST_Segmentize(ST_Intersection(tlcg.geometry::geometry, ST_Union(buffer.buffer)), ?), 6933)) as intersection_area", censusSegmentDegrees)
+				}
+				if fields.intersectionGeometry {
+					q = q.Column("ST_Intersection(tlcg.geometry::geometry, ST_Union(buffer.buffer)) as intersection_geometry")
+				}
+			} else {
+				if fields.intersectionArea {
+					q = q.Column("ST_Area(ST_Transform(ST_Segmentize(ST_Intersection(tlcg.geometry::geometry, buffer.buffer), ?), 6933)) as intersection_area", censusSegmentDegrees)
+				}
+				if fields.intersectionGeometry {
+					q = q.Column("ST_Intersection(tlcg.geometry::geometry, buffer.buffer) as intersection_geometry")
+				}
 			}
 			if fields.perStopAttribution {
 				q = q.Column("buffer.match_entity_id")
@@ -608,7 +668,8 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
 				Column("buffer.match_entity_id").
-				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
+				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)")).
+				GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_entity_id")
 		}
 		// Pin layer_id as a scalar so the composite (layer_id, geometry) GiST
 		// index can serve the spatial join. Only safe when both dataset and
@@ -643,7 +704,40 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 	}
 
 	q = q.OrderByClause(orderBy)
-	return q
+	return q, nil
+}
+
+// checkCensusAntimeridian returns errCensusAntimeridian when the search area
+// that takes effect crosses the antimeridian. Stop buffers aren't checked,
+// since a stop would have to lie within 1,600 m of the antimeridian.
+func checkCensusAntimeridian(loc *model.CensusDatasetGeographyLocationFilter, stopBufferClip bool) error {
+	switch {
+	case loc.Bbox != nil:
+		b := loc.Bbox
+		if b.MinLon < -180 || b.MaxLon > 180 || b.MinLon > b.MaxLon {
+			return errCensusAntimeridian
+		}
+	case loc.Within != nil && loc.Within.Valid:
+		// A polygon wider than 180° of longitude was drawn across the
+		// antimeridian with wrapped coordinates.
+		b := loc.Within.Val.Bounds()
+		if b.Min(0) < -180 || b.Max(0) > 180 || b.Max(0)-b.Min(0) > 180 {
+			return errCensusAntimeridian
+		}
+	case loc.Near != nil && !stopBufferClip:
+		// The circle's half width in longitude, on a sphere. A circle that
+		// reaches a pole spans every longitude.
+		d := checkFloat(&loc.Near.Radius, 0, 1_000_000) / tlxy.EarthRadiusMeters
+		lat := loc.Near.Lat * math.Pi / 180
+		if math.Abs(lat)+d >= math.Pi/2 {
+			return errCensusAntimeridian
+		}
+		halfWidth := math.Asin(math.Sin(d)/math.Cos(lat)) * 180 / math.Pi
+		if math.Abs(loc.Near.Lon)+halfWidth > 180 {
+			return errCensusAntimeridian
+		}
+	}
+	return nil
 }
 
 func getBufferStopIds(ctx context.Context, db tldb.Ext, entityType string, entityId int) ([]int, error) {
