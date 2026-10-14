@@ -2,6 +2,14 @@
 
 Synthetic RT data for a selection of trips from the BA test feed on 2018-05-30, with a delay of 30 seconds
 
+# BA-added-unknown-route.json
+
+A copy of BA-added.json in which added trip "-123" names route "99", which the BART feed doesn't have.
+
+# BA-vehicle-copies.json
+
+Vehicles on 2022-09-01 like BA-vehicle-positions.json's first: one running scheduled trip "3210613WKDY", one running a DUPLICATED copy of it, one running an ADDED copy of it, and one running trip "-123", added in real time on route "01".
+
 # BA-added.json
 
 Trip "1011630WKDY" is normal but with 31 second delay

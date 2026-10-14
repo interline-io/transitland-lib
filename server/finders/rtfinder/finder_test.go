@@ -847,7 +847,7 @@ func TestFinder_PayloadAge(t *testing.T) {
 		{"over an hour ahead of the clock", stamped, -61 * time.Minute, false},
 		{"without a header timestamp", nil, 61 * time.Minute, true},
 	}
-	trip, addedTrip := testRun(1, "T", 31), testRun(2, "A", 31)
+	trip := testRun(1, "T", 31)
 	stop, agency, route := &model.Stop{}, &model.Agency{}, &model.Route{}
 	stop.FeedVersionID = 1
 	stop.StopID.Set("S1")
@@ -866,8 +866,6 @@ func TestFinder_PayloadAge(t *testing.T) {
 			// Trip updates.
 			assert.Equal(t, tc.current, f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)}) != nil, "FindRunUpdate")
 			assert.Len(t, f.GetAddedTripsForStop(ctx, stop), count(tc.current), "GetAddedTripsForStop")
-			_, err := f.MakeTrip(ctx, addedTrip)
-			assert.Equal(t, tc.current, err == nil, "MakeTrip")
 			// Vehicle positions.
 			assert.Equal(t, tc.current, f.FindVehiclePositionForTrip(ctx, trip, nil) != nil, "FindVehiclePositionForTrip")
 			assert.Len(t, f.FindVehiclePositionsForAgency(ctx, agency, nil, nil), count(tc.current), "FindVehiclePositionsForAgency")
@@ -880,5 +878,122 @@ func TestFinder_PayloadAge(t *testing.T) {
 				assert.Equal(t, !tc.current, stale, "GetMessage reports the payload stale")
 			}
 		})
+	}
+}
+
+// A stop time update matches by stop_sequence only when it names one.
+func TestFinder_MatchStops_StopSequence(t *testing.T) {
+	departs := func(delay int32) *pb.TripUpdate_StopTimeEvent {
+		return &pb.TripUpdate_StopTimeEvent{Delay: proto.Int32(delay)}
+	}
+	ctx := context.Background()
+	tcs := []struct {
+		name  string
+		stus  []*pb.TripUpdate_StopTimeUpdate
+		stops []StopRef
+		match []int // index of each stop's matched stop time update, or -1 for none
+	}{
+		{
+			name: "an update without a stop_sequence doesn't match stop_sequence 0",
+			stus: []*pb.TripUpdate_StopTimeUpdate{
+				{StopId: proto.String("C"), Departure: departs(60)},
+				{StopId: proto.String("D"), Departure: departs(90)},
+			},
+			stops: []StopRef{{StopSequence: 0, StopID: "A"}, {StopSequence: 1, StopID: "C"}},
+			match: []int{-1, 0},
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			msg := &pb.FeedMessage{
+				Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
+				Entity: []*pb.FeedEntity{{Id: proto.String("t"), TripUpdate: &pb.TripUpdate{
+					Trip:           &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531")},
+					StopTimeUpdate: tc.stus,
+				}}},
+			}
+			f := testFinder(t, feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}, "realtime_trip_updates", msg)
+			ru := f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)})
+			if !assert.NotNil(t, ru) {
+				return
+			}
+			got := ru.MatchStops(ctx, tc.stops)
+			for i, want := range tc.match {
+				if !assert.NotNil(t, got[i], "stop %d", i) {
+					continue
+				}
+				if want < 0 {
+					assert.Nil(t, got[i].StopTimeUpdate, "stop %d", i)
+				} else {
+					assert.True(t, proto.Equal(tc.stus[want], got[i].StopTimeUpdate), "stop %d", i)
+				}
+			}
+		})
+	}
+}
+
+// A copy of a trip, sent as DUPLICATED or as ADDED naming the scheduled trip,
+// leaves the scheduled trip's own trip update and vehicle in place, and a trip
+// added in real time takes only ADDED data.
+func TestFinder_CopiesOfATrip(t *testing.T) {
+	ctx := context.Background()
+	lookup := feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}
+	td := func(rel pb.TripDescriptor_ScheduleRelationship) *pb.TripDescriptor {
+		return &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531"), ScheduleRelationship: rel.Enum()}
+	}
+	header := &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}
+	for _, rel := range []pb.TripDescriptor_ScheduleRelationship{pb.TripDescriptor_DUPLICATED, pb.TripDescriptor_ADDED} {
+		t.Run(rel.String(), func(t *testing.T) {
+			// The copy comes last, and its vehicle reported last.
+			updates := testFinder(t, lookup, "realtime_trip_updates", &pb.FeedMessage{Header: header, Entity: []*pb.FeedEntity{
+				{Id: proto.String("own"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_SCHEDULED)}},
+				{Id: proto.String("copy"), TripUpdate: &pb.TripUpdate{Trip: td(rel)}},
+			}})
+			vehicles := testFinder(t, lookup, vehiclePositionTopicKey, &pb.FeedMessage{Header: header, Entity: []*pb.FeedEntity{
+				{Id: proto.String("own"), Vehicle: &pb.VehiclePosition{Trip: td(pb.TripDescriptor_SCHEDULED), Timestamp: proto.Uint64(100)}},
+				{Id: proto.String("copy"), Vehicle: &pb.VehiclePosition{Trip: td(rel), Timestamp: proto.Uint64(200)}},
+			}})
+			if ru := updates.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)}); assert.NotNil(t, ru) {
+				assert.Equal(t, pb.TripDescriptor_SCHEDULED, ru.TripUpdate().GetTrip().GetScheduleRelationship(), "trip update")
+			}
+			if vp := vehicles.FindVehiclePositionForTrip(ctx, testRun(1, "T", 31), nil); assert.NotNil(t, vp) {
+				assert.Equal(t, "own", vp.ID, "vehicle")
+			}
+		})
+	}
+	t.Run("trip added in real time", func(t *testing.T) {
+		// Its vehicle names it without repeating ADDED, as vehicle feeds tend to.
+		f := testFinder(t, lookup, vehiclePositionTopicKey, &pb.FeedMessage{Header: header, Entity: []*pb.FeedEntity{
+			{Id: proto.String("added"), Vehicle: &pb.VehiclePosition{Trip: &pb.TripDescriptor{TripId: proto.String("N"), StartDate: proto.String("20180531")}}},
+		}})
+		added := testRun(0, "N", 31)
+		added.AddedInRealtime = true
+		if vp := f.FindVehiclePositionForTrip(ctx, added, nil); assert.NotNil(t, vp) {
+			assert.Equal(t, "added", vp.ID)
+		}
+	})
+}
+
+// GetAddedTripsForStop lists an added trip from its trip_id's last ADDED
+// update, even when an update with another relationship comes after it.
+func TestFinder_GetAddedTripsForStop(t *testing.T) {
+	ctx := context.Background()
+	td := func(rel pb.TripDescriptor_ScheduleRelationship) *pb.TripDescriptor {
+		return &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531"), ScheduleRelationship: rel.Enum()}
+	}
+	at := []*pb.TripUpdate_StopTimeUpdate{{StopId: proto.String("S1")}}
+	f := testFinder(t, feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}, "realtime_trip_updates", &pb.FeedMessage{
+		Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
+		Entity: []*pb.FeedEntity{
+			{Id: proto.String("added"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_ADDED), StopTimeUpdate: at}},
+			{Id: proto.String("scheduled"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_SCHEDULED), StopTimeUpdate: at}},
+		},
+	})
+	stop := &model.Stop{}
+	stop.FeedVersionID = 1
+	stop.StopID.Set("S1")
+	got := f.GetAddedTripsForStop(ctx, stop)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, pb.TripDescriptor_ADDED, got[0].GetTrip().GetScheduleRelationship())
 	}
 }

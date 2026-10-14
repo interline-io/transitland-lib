@@ -31,6 +31,12 @@ For example, for an undated message:
 
 If a feed sends several updates for the same run, the last one wins.
 
+A `DUPLICATED` message names the trip it copies but describes a new run, so it never describes one of that trip's runs, whether it's a trip update, a vehicle position or an alert. Neither does an `ADDED` message that names a scheduled trip, the form duplicates took before `DUPLICATED` existed. An `ADDED` message describes only a trip added in real time, which every other message naming its `trip_id` describes too, since alerts and vehicle positions rarely repeat `ADDED`. A vehicle running a copy of a trip has no trip until copies are shown as runs of their own, and a vehicle running a trip added in real time has that trip.
+
+## Which stop time an update describes
+
+A stop time update that names a `stop_sequence` describes the trip's stop time with that `stop_sequence`. If no update names a stop time's `stop_sequence`, one that names its `stop_id` describes it, as long as the trip update names that stop only once. When the trip update names the stop more than once, as on a loop, the stop time gets no realtime data, and neither does a stop time whose `stop_id` can't be looked up. A stop time that the trip update doesn't name still has the trip update, with the last delay it gives.
+
 ## Which run a trip stands for
 
 A trip found on a date is the run on that date. That includes:
@@ -79,5 +85,5 @@ The spec requires an alert's trip selector to resolve to a single trip instance.
 
 - Delays aren't yet carried forward to later stops the way the spec describes, and the per-stop `SKIPPED` and `NO_DATA` relationships are ignored.
 - Scheduled times in API responses use the stop's timezone and midnight instead of the agency's timezone and noon minus twelve hours.
-- `NEW` and `DUPLICATED` trips, and trips identified without a `trip_id`, aren't matched. Frequency-based trips aren't matched by `start_time`.
-- Trips added in real time are listed at a stop whatever date and time window the query asks for.
+- `NEW` and `DUPLICATED` trips aren't shown as runs of their own, and trips identified without a `trip_id` aren't matched. Frequency-based trips aren't matched by `start_time`.
+- Trips added in real time are listed at a stop whatever date and time window the query asks for, and only on a route the feed version has.

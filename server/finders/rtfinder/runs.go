@@ -27,6 +27,8 @@ type tripRuns struct {
 	// Set for a trip that stands for no run, such as a pattern's representative
 	// trip, which no message describes.
 	none bool
+	// Set for a trip added in real time, which ADDED messages describe.
+	added bool
 }
 
 // describes reports whether a message with this trip descriptor describes one
@@ -34,6 +36,17 @@ type tripRuns struct {
 func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	if r.none {
 		return false
+	}
+	// A DUPLICATED message names the trip it copies but describes a new run.
+	// An ADDED message describes only a trip added in real time: naming a
+	// scheduled trip, it's the form duplicates took before DUPLICATED.
+	switch td.GetScheduleRelationship() {
+	case pb.TripDescriptor_DUPLICATED:
+		return false
+	case pb.TripDescriptor_ADDED:
+		if !r.added {
+			return false
+		}
 	}
 	run, ok := descriptorDate(td)
 	if !ok {
@@ -48,7 +61,7 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	return slices.ContainsFunc(r.dates, func(d tt.Date) bool { return sameDay(d, run) })
 }
 
-// Run names one run of a trip: a trip on one service date.
+// Run names one run of a scheduled trip: the trip on one service date.
 type Run struct {
 	FeedVersionID int
 	TripID        string // GTFS trip_id
@@ -76,6 +89,7 @@ func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
 		dates:   t.RunDates,
 		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, span) }),
 		none:    t.NoRealtime,
+		added:   t.AddedInRealtime,
 	}
 }
 

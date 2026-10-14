@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
@@ -52,19 +53,48 @@ func rtRouteID(td *model.RTTripDescriptor) string {
 }
 
 func (r *vehiclePositionResolver) Trip(ctx context.Context, obj *model.VehiclePosition) (*model.Trip, error) {
-	tripId := rtTripID(obj.TripDescriptor)
+	td := obj.TripDescriptor
+	tripId := rtTripID(td)
 	if tripId == "" {
+		return nil, nil
+	}
+	// A DUPLICATED vehicle runs a new copy of the trip it names, which has no
+	// trip of its own yet.
+	rel := ""
+	if td.ScheduleRelationship != nil {
+		rel = *td.ScheduleRelationship
+	}
+	if rel == pb.TripDescriptor_DUPLICATED.String() {
 		return nil, nil
 	}
 	trip, err := LoaderFor(ctx).TripsByFeedVersionTripIDs.Load(ctx, model.FVEntityID{
 		FeedVersionID: obj.FeedVersionID,
 		EntityID:      tripId,
 	})()
-	// The run the vehicle names; one naming none is the trip's current run.
-	if obj.TripDescriptor != nil && obj.TripDescriptor.StartDate != nil {
-		return tripRun(trip, *obj.TripDescriptor.StartDate), err
+	if err != nil {
+		return nil, err
 	}
-	return trip, err
+	if rel == pb.TripDescriptor_ADDED.String() {
+		// Naming a scheduled trip, an ADDED vehicle runs a copy of it, the form
+		// duplicates took before DUPLICATED. Otherwise its trip was added in real
+		// time, and is on the route the vehicle names.
+		if trip != nil {
+			return nil, nil
+		}
+		ptd := &pb.TripDescriptor{TripId: td.TripID, RouteId: td.RouteID}
+		if td.DirectionID != nil {
+			ptd.DirectionId = ptr(uint32(*td.DirectionID))
+		}
+		if trip, err = model.ForContext(ctx).RTFinder.MakeTrip(ctx, obj.FeedVersionID, ptd); err != nil {
+			log.For(ctx).Debug().Err(err).Str("trip_id", tripId).Str("route_id", rtRouteID(td)).Msg("added vehicle's trip left out: route not in feed version")
+			return nil, nil
+		}
+	}
+	// The run the vehicle names; one naming none is the trip's current run.
+	if td.StartDate != nil {
+		return tripRun(trip, *td.StartDate), nil
+	}
+	return trip, nil
 }
 
 func (r *vehiclePositionResolver) Route(ctx context.Context, obj *model.VehiclePosition) (*model.Route, error) {

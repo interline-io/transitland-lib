@@ -1,0 +1,125 @@
+{
+  "header": {
+    "gtfsRealtimeVersion": "2.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": "1661990400"
+  },
+  "entity": [
+    {
+      "id": "scheduled",
+      "vehicle": {
+        "trip": {
+          "tripId": "3210613WKDY",
+          "routeId": "01",
+          "directionId": 0,
+          "startDate": "20220901",
+          "scheduleRelationship": "SCHEDULED"
+        },
+        "vehicle": {
+          "id": "scheduled",
+          "label": "scheduled"
+        },
+        "position": {
+          "latitude": 37.80377,
+          "longitude": -122.27145,
+          "bearing": 45.0,
+          "speed": 12.5
+        },
+        "currentStopSequence": 4,
+        "stopId": "12TH",
+        "currentStatus": "STOPPED_AT",
+        "congestionLevel": "RUNNING_SMOOTHLY",
+        "occupancyStatus": "FEW_SEATS_AVAILABLE",
+        "occupancyPercentage": 40,
+        "timestamp": "1661990340"
+      }
+    },
+    {
+      "id": "duplicated",
+      "vehicle": {
+        "trip": {
+          "tripId": "3210613WKDY",
+          "routeId": "01",
+          "directionId": 0,
+          "startDate": "20220901",
+          "scheduleRelationship": "DUPLICATED"
+        },
+        "vehicle": {
+          "id": "duplicated",
+          "label": "duplicated"
+        },
+        "position": {
+          "latitude": 37.80377,
+          "longitude": -122.27145,
+          "bearing": 45.0,
+          "speed": 12.5
+        },
+        "currentStopSequence": 4,
+        "stopId": "12TH",
+        "currentStatus": "STOPPED_AT",
+        "congestionLevel": "RUNNING_SMOOTHLY",
+        "occupancyStatus": "FEW_SEATS_AVAILABLE",
+        "occupancyPercentage": 40,
+        "timestamp": "1661990340"
+      }
+    },
+    {
+      "id": "added-copy",
+      "vehicle": {
+        "trip": {
+          "tripId": "3210613WKDY",
+          "routeId": "01",
+          "directionId": 0,
+          "startDate": "20220901",
+          "scheduleRelationship": "ADDED"
+        },
+        "vehicle": {
+          "id": "added-copy",
+          "label": "added-copy"
+        },
+        "position": {
+          "latitude": 37.80377,
+          "longitude": -122.27145,
+          "bearing": 45.0,
+          "speed": 12.5
+        },
+        "currentStopSequence": 4,
+        "stopId": "12TH",
+        "currentStatus": "STOPPED_AT",
+        "congestionLevel": "RUNNING_SMOOTHLY",
+        "occupancyStatus": "FEW_SEATS_AVAILABLE",
+        "occupancyPercentage": 40,
+        "timestamp": "1661990340"
+      }
+    },
+    {
+      "id": "added",
+      "vehicle": {
+        "trip": {
+          "tripId": "-123",
+          "routeId": "01",
+          "directionId": 0,
+          "startDate": "20220901",
+          "scheduleRelationship": "ADDED"
+        },
+        "vehicle": {
+          "id": "added",
+          "label": "added"
+        },
+        "position": {
+          "latitude": 37.80377,
+          "longitude": -122.27145,
+          "bearing": 45.0,
+          "speed": 12.5
+        },
+        "currentStopSequence": 4,
+        "stopId": "12TH",
+        "currentStatus": "STOPPED_AT",
+        "congestionLevel": "RUNNING_SMOOTHLY",
+        "occupancyStatus": "FEW_SEATS_AVAILABLE",
+        "occupancyPercentage": 40,
+        "timestamp": "1661990340"
+      }
+    }
+  ]
+}
