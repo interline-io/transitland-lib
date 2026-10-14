@@ -172,18 +172,12 @@ func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *
 		Join("gtfs_stop_times sts ON sts.trip_id = t2.id AND sts.feed_version_id = t2.feed_version_id").
 		OrderBy("sts.stop_sequence, sts.arrival_time")
 
-	if where != nil {
-		if where.Start != nil {
-			q = q.Where(sq.GtOrEq{"sts.departure_time + gtfs_trips.journey_pattern_offset": where.Start.Int()})
-		}
-		if where.End != nil {
-			q = q.Where(sq.LtOrEq{"sts.arrival_time + gtfs_trips.journey_pattern_offset": where.End.Int()})
-		}
-		// Without this a route crossing a small query area returns every stop
-		// on the route.
-		if len(where.StopIds) > 0 {
-			q = q.Where(In("sts.stop_id", where.StopIds))
-		}
+	// Only the filter's stops apply here. Its time window applies to a run's
+	// own times, which an instance of a frequency-based trip shifts, so the
+	// resolver applies it. Without the stops, a route crossing a small query
+	// area returns every stop on the route.
+	if where != nil && len(where.StopIds) > 0 {
+		q = q.Where(In("sts.stop_id", where.StopIds))
 	}
 	if len(pairs) > 0 {
 		eids, fvids := pairKeys(pairs)
