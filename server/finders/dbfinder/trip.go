@@ -288,6 +288,8 @@ func (f *Finder) TripsByRouteIDs(ctx context.Context, limit *int, where *model.T
 		if err != nil {
 			return nil, err
 		}
+		// Always in the route's feed version; see lateralWrap.
+		inner = inner.Where("gtfs_trips.feed_version_id = out.feed_version_id")
 		var q []*model.Trip
 		if err := dbutil.Select(ctx,
 			f.db,
@@ -329,6 +331,8 @@ func (f *Finder) TripsByShapeIDs(ctx context.Context, limit *int, where *model.T
 		if err != nil {
 			return nil, err
 		}
+		// Always in the shape's feed version; see lateralWrap.
+		inner = inner.Where("gtfs_trips.feed_version_id = out.feed_version_id")
 		var q []*model.Trip
 		if err := dbutil.Select(ctx,
 			f.db,

@@ -204,7 +204,9 @@ func (f *Finder) StopsByParentStopIDs(ctx context.Context, limit *int, where *mo
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
+			// Always in the parent's feed version; see lateralWrap.
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where).
+				Where("gtfs_stops.feed_version_id = out.feed_version_id"),
 			"gtfs_stops",
 			"id",
 			"gtfs_stops",
@@ -289,7 +291,9 @@ func (f *Finder) StopsByLevelIDs(ctx context.Context, limit *int, where *model.S
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
+			// Always in the level's feed version; see lateralWrap.
+			stopSelect(limit, nil, nil, nil, f.PermFilter(ctx), where).
+				Where("gtfs_stops.feed_version_id = out.feed_version_id"),
 			"gtfs_levels",
 			"id",
 			"gtfs_stops",

@@ -322,6 +322,12 @@ func tsTableQuery(table string, s string) (rank sq.Sqlizer, wc sq.Sqlizer) {
 	return rank, wc
 }
 
+// lateralWrap selects q's rows for each outer row in outerIds, matched on
+// innerTable.innerKey = out.outerKey; q can refer to the outer row as out.
+//
+// Where the inner rows always share the outer row's feed version, q should say
+// so with innerTable.feed_version_id = out.feed_version_id. Without it, a select
+// ordered by feed version under a small limit can walk every feed version.
 func lateralWrap(q sq.SelectBuilder, outerTable string, outerKey string, innerTable string, innerKey string, outerIds []int) sq.SelectBuilder {
 	outerTable = az09(outerTable)
 	outerKey = az09(outerKey)
