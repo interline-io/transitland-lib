@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TRIP
@@ -39,29 +40,67 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 	loaded, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
-		Limit:         resolverCheckLimit(limit),
-		Where:         where,
+		Limit:         ptr(RESOLVER_MAXLIMIT),
+		Where:         tripStopTimeLoadFilter(where),
 	})()
-	wantsRT := wantsRTStopTimeUpdate(ctx)
-	if !wantsRT && len(obj.RunDates) != 1 {
-		return loaded, err
+	if err != nil {
+		return nil, err
 	}
-	sts := runStopTimes(obj, loaded)
-	if wantsRT {
+	sts := windowStopTimes(runStopTimes(obj, loaded), where, resolverCheckLimit(limit))
+	if wantsRTStopTimeUpdate(ctx) {
 		for i, ste := range model.ForContext(ctx).RTFinder.FindStopTimeUpdates(ctx, obj, sts) {
 			sts[i].RTStopTimeUpdate = ste
 		}
 	}
-	return sts, err
+	return sts, nil
+}
+
+// tripStopTimeLoadFilter returns the part of a trip's stop time filter that
+// the loader applies, its stops. The time window and the caller's limit apply
+// once the run's times are known, so every run of a trip, whatever its window
+// or limit, loads the whole trip from one query, capped only by the API's
+// maximum.
+func tripStopTimeLoadFilter(where *model.TripStopTimeFilter) *model.TripStopTimeFilter {
+	if where == nil || len(where.StopIds) == 0 {
+		return nil
+	}
+	return &model.TripStopTimeFilter{StopIds: where.StopIds}
+}
+
+// windowStopTimes returns up to limit of the stop times within a filter's time
+// window: departing at or after its start, and arriving at or before its end,
+// by the run's own times.
+func windowStopTimes(sts []*model.StopTime, where *model.TripStopTimeFilter, limit *int) []*model.StopTime {
+	ret := make([]*model.StopTime, 0, len(sts))
+	for _, st := range sts {
+		if limit != nil && len(ret) >= *limit {
+			break
+		}
+		if where != nil && where.Start != nil && (!st.DepartureTime.Valid || st.DepartureTime.Val < where.Start.Val) {
+			continue
+		}
+		if where != nil && where.End != nil && (!st.ArrivalTime.Valid || st.ArrivalTime.Val > where.End.Val) {
+			continue
+		}
+		ret = append(ret, st)
+	}
+	return ret
 }
 
 // runStopTimes returns copies of a trip's stop times, on its run's service date
-// when the trip is one run. Copies, as the loader shares them across every run of
-// the trip in a request, and each run has its own date and realtime data.
+// when the trip is one run, and shifted to the run's own start when the trip
+// is an instance of a frequency-based trip. Copies, as the loader shares them
+// across every run of the trip in a request, and each run has its own date,
+// times and realtime data.
 func runStopTimes(trip *model.Trip, loaded []*model.StopTime) []*model.StopTime {
 	sts := make([]*model.StopTime, 0, len(loaded))
 	for _, st := range loaded {
 		c := *st
+		if trip.RunOffset.Valid {
+			c.ArrivalTime = shifted(c.ArrivalTime, trip.RunOffset.Val)
+			c.DepartureTime = shifted(c.DepartureTime, trip.RunOffset.Val)
+			c.RunStart, c.RunOffset = trip.RunStart, trip.RunOffset
+		}
 		if len(trip.RunDates) == 1 {
 			c.SetServiceDate(trip.RunDates[0])
 		}
@@ -70,17 +109,26 @@ func runStopTimes(trip *model.Trip, loaded []*model.StopTime) []*model.StopTime 
 	return sts
 }
 
+// shifted returns a scheduled time moved by offset seconds, or an unknown time
+// unchanged.
+func shifted(t tt.Seconds, offset int64) tt.Seconds {
+	if t.Valid {
+		t.Val += offset
+	}
+	return t
+}
+
 func (r *tripResolver) FlexStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error) {
 	loaded, err := LoaderFor(ctx).FlexStopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
-		Limit:         resolverCheckLimit(limit),
-		Where:         where,
+		Limit:         ptr(RESOLVER_MAXLIMIT),
+		Where:         tripStopTimeLoadFilter(where),
 	})()
-	if len(obj.RunDates) != 1 {
-		return loaded, err
+	if err != nil {
+		return nil, err
 	}
-	return runStopTimes(obj, loaded), err
+	return windowStopTimes(runStopTimes(obj, loaded), where, resolverCheckLimit(limit)), nil
 }
 
 func (r *tripResolver) Frequencies(ctx context.Context, obj *model.Trip, limit *int) ([]*model.Frequency, error) {

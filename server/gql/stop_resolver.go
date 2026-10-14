@@ -127,7 +127,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 			ft.ID = st.TripID.Int()
 			ft.FeedVersionID = obj.FeedVersionID
 			ft.TripID.Set(st.GtfsTripID)
-			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, tripRun(&ft, st.ServiceDate), st); ok {
+			if ste, ok := model.ForContext(ctx).RTFinder.FindStopTimeUpdate(ctx, tripRun(&ft, st.ServiceDate, st.RunStart, st.RunOffset), st); ok {
 				st.RTStopTimeUpdate = ste
 			}
 		}
@@ -145,7 +145,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 		}
 		// The run the trip update names; one naming none is the current run.
 		if d, err := tt.ParseDate(rtTrip.GetTrip().GetStartDate()); err == nil {
-			trip = tripRun(trip, d)
+			trip = tripRun(trip, d, tt.Seconds{}, tt.Int{})
 		}
 		for _, stu := range rtTrip.StopTimeUpdate {
 			if stu.GetStopId() != obj.StopID.Val {

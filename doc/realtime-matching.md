@@ -1,6 +1,6 @@
 # Matching realtime data to trips
 
-Transitland attaches GTFS Realtime data (trip updates, vehicle positions and service alerts) to the trips it describes. A trip can run on many days, so realtime data is matched to a **run**: one trip on one service date. This page describes how a message is matched to a run, and which run's data each API field returns.
+Transitland attaches GTFS Realtime data (trip updates, vehicle positions and service alerts) to the trips it describes. A trip can run on many days, so realtime data is matched to a **run**: one trip on one service date, or for a frequency-based trip, one **instance** of it, the trip starting at one of its start times on that date. This page describes how a message is matched to a run, and which run's data each API field returns.
 
 ## Payloads too old to match
 
@@ -10,10 +10,11 @@ Service alerts aren't held to this, since an alert carries its own active period
 
 ## Which run a message describes
 
-Every realtime message describes exactly one run.
+Every realtime message describes one run, except that a message about a frequency-based trip which names no `start_time` describes all of the trip's instances on the date.
 
 - **A message that names a `start_date`** in its trip descriptor describes the run on that date.
 - **A message that names none** describes the trip's **current run**: the run going now, or failing that, the nearest of yesterday's, today's and tomorrow's.
+- **A message about a frequency-based trip** describes the instance starting at its `start_time`, which the spec requires it to name. One that names none describes every instance on the date, since nothing else tells them apart.
 
 A run lasts from its trip's first scheduled departure to its last scheduled arrival. A frequency-based trip runs from its first start to its last start plus one trip's length, with a start every `headway_secs` from `start_time`, up to but not including `end_time`. Times count in the agency's timezone from noon minus twelve hours on the service date, as GTFS defines them.
 
@@ -53,13 +54,13 @@ The GraphQL API's `StopTime.arrival` and `departure` report these estimates. `St
 
 A trip found on a date is the run on that date. That includes:
 
-- the trip of a stop time with a `service_date`, as in departures
+- the trip of a stop time with a `service_date`, as in departures; a departure of a frequency-based trip is the instance starting then, and the trip's `stop_times` are the instance's
 - trips from `trips`, `Route.trips`, `FeedVersion.trips` or `Shape.trips` queried by `service_date`, `service_dates` or `dates`, and from all but the top-level `trips` queried by `relative_date`
 - a route pattern's `trips` and `timetable` when the pattern has a `service_date`
 - a vehicle position's trip, on the `start_date` the vehicle names
 - a trip added in real time, on the `start_date` its trip update names
 
-A trip found any other way, for example by `trip_id` alone, is its current run.
+A trip found any other way, for example by `trip_id` alone, is its current run. A frequency-based trip found that way stands for all of its instances that day, which any instance's message describes.
 
 A route pattern's `representative_trip`, and its `trips` when the pattern has no `service_date`, stand for the pattern rather than any run. They carry no realtime data.
 
@@ -98,5 +99,7 @@ The spec requires an alert's trip selector to resolve to a single trip instance.
 ## Not yet handled
 
 - A run described by several realtime feeds takes the first feed's trip update for everything.
-- `NEW` and `DUPLICATED` trips aren't shown as runs of their own, and trips identified without a `trip_id` aren't matched. Frequency-based trips aren't matched by `start_time`.
+- `NEW` and `DUPLICATED` trips aren't shown as runs of their own, and trips identified without a `trip_id` aren't matched.
+- An instance of a frequency-based trip is matched by its exact start, every `headway_secs` from the frequency's `start_time`. A feed with `exact_times` 0 may name the vehicle's actual first departure instead, which matches no instance.
+- A vehicle position's trip stands for every instance of a frequency-based trip that day; the vehicle's `start_time` isn't used.
 - Trips added in real time are listed at a stop whatever date and time window the query asks for, and only on a route the feed version has.

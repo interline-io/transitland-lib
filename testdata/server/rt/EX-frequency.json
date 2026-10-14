@@ -1,0 +1,39 @@
+{
+    "header": {
+        "gtfs_realtime_version": "2.0",
+        "incrementality": 0,
+        "timestamp": 1167753600
+    },
+    "entity": [
+        {
+            "id": "canceled",
+            "trip_update": {
+                "trip": {
+                    "trip_id": "CITY1",
+                    "start_date": "20070102",
+                    "start_time": "08:10:00",
+                    "schedule_relationship": 3
+                }
+            }
+        },
+        {
+            "id": "late",
+            "trip_update": {
+                "trip": {
+                    "trip_id": "CITY1",
+                    "start_date": "20070102",
+                    "start_time": "08:30:00",
+                    "schedule_relationship": 0
+                },
+                "stop_time_update": [
+                    {
+                        "stop_sequence": 1,
+                        "departure": {
+                            "delay": 60
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -38,3 +38,7 @@ Realtime data naming particular runs of trips at Fruitvale ("FTVL"), each delay-
 # BA-skipped.json
 
 Trips at Fruitvale ("FTVL") on 2018-05-30: "1031527WKDY" skips it after a 30 second delay at Lake Merritt, "1131530WKDY" has no data for it after a 31 second delay at Coliseum, and "2211533WKDY" has a 32 second delay at Coliseum and nothing after.
+
+# EX-frequency.json
+
+Trip "CITY1" of the example feed runs every ten minutes from 08:00 on 2007-01-02. Its 08:10 instance is canceled, and its 08:30 instance leaves its first stop a minute late.

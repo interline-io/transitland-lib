@@ -6,6 +6,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 const (
@@ -92,7 +93,7 @@ func (r *vehiclePositionResolver) Trip(ctx context.Context, obj *model.VehiclePo
 	}
 	// The run the vehicle names; one naming none is the trip's current run.
 	if td.StartDate != nil {
-		return tripRun(trip, *td.StartDate), nil
+		return tripRun(trip, *td.StartDate, tt.Seconds{}, tt.Int{}), nil
 	}
 	return trip, nil
 }

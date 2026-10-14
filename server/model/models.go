@@ -108,6 +108,12 @@ type Trip struct {
 	// relocated into a fallback week. Realtime data is matched to these runs;
 	// with none, to the trip's current run.
 	RunDates []tt.Date
+	// internal: the start of the requested run of a frequency-based trip, in
+	// seconds into its service day, which realtime data naming a start_time
+	// has to match, and the seconds the run's times are shifted from the
+	// trip's stop times. Both invalid for any other run.
+	RunStart  tt.Seconds
+	RunOffset tt.Int
 	// internal: set for a trip that stands for no run, such as a pattern's
 	// representative trip, which realtime data never matches.
 	NoRealtime bool
@@ -181,6 +187,8 @@ type StopTime struct {
 	ServiceDate      tt.Date
 	Date             tt.Date
 	GtfsTripID       string            // internal: the trip's GTFS trip_id, for matching realtime
+	RunStart         tt.Seconds        `db:"run_start"`  // internal: the start of the run, for an instance of a frequency-based trip
+	RunOffset        tt.Int            `db:"run_offset"` // internal: the seconds the run's times are shifted from the trip's stop times, for such an instance
 	RTTrip           *Trip             // internal: the trip of a stop time added in real time
 	RTStopTimeUpdate *RTStopTimeUpdate // internal
 	gtfs.StopTime

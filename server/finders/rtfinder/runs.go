@@ -14,6 +14,8 @@ import (
 // Realtime data is matched to runs of trips. A run is one trip on one service
 // date, and every realtime message describes exactly one run: the run on its
 // trip descriptor's start_date, or where it names none, the trip's current run.
+// A frequency-based trip runs several times a day, and a message describes the
+// instance starting at its trip descriptor's start_time.
 //
 // The current run is the one going now, or failing that, the nearest of
 // yesterday's, today's and tomorrow's.
@@ -22,6 +24,9 @@ import (
 type tripRuns struct {
 	// The requested runs. None means the trip's current run.
 	dates []tt.Date
+	// The start of the requested run of a frequency-based trip, which a
+	// message naming a start_time has to match. Invalid for any other run.
+	start tt.Seconds
 	// The trip's current run, looked up only when needed.
 	current func() (tt.Date, bool)
 	// Set for a trip that stands for no run, such as a pattern's representative
@@ -48,6 +53,15 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 			return false
 		}
 	}
+	// An instance of a frequency-based trip is described by a message whose
+	// start_time is its start. One naming no start_time describes every
+	// instance, since nothing else tells them apart.
+	if r.start.Valid && td.GetStartTime() != "" {
+		start, err := tt.StringToSeconds(td.GetStartTime())
+		if err != nil || start != r.start.Val {
+			return false
+		}
+	}
 	run, ok := descriptorDate(td)
 	if !ok {
 		if run, ok = r.current(); !ok {
@@ -68,6 +82,10 @@ type Run struct {
 	// The service date. Unlike a model.Trip without run dates, a Run without
 	// one matches no update.
 	Date tt.Date
+	// The start of an instance of a frequency-based trip, in seconds into the
+	// service day, which an update naming a start_time has to match. Invalid
+	// for any other trip.
+	Start tt.Seconds
 	// When the trip runs on its service day, which places an update without a
 	// start_date on the trip's current run. A zero span places it on today's.
 	Span TripSpan
@@ -78,6 +96,7 @@ func (f *Finder) runsOf(ctx context.Context, run Run) tripRuns {
 	span := func() (TripSpan, bool) { return run.Span, true }
 	return tripRuns{
 		dates:   []tt.Date{run.Date},
+		start:   run.Start,
 		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, run.FeedVersionID, span) }),
 	}
 }
@@ -87,6 +106,7 @@ func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
 	span := func() (TripSpan, bool) { return f.lookup.GetTripSpan(ctx, t.FeedVersionID, t.ID) }
 	return tripRuns{
 		dates:   t.RunDates,
+		start:   t.RunStart,
 		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, span) }),
 		none:    t.NoRealtime,
 		added:   t.AddedInRealtime,

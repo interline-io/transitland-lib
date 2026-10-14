@@ -325,6 +325,77 @@ func TestStopRT_SkippedAndNoData(t *testing.T) {
 	})
 }
 
+// An update naming a start_time describes that instance of a frequency-based
+// trip alone, and the instance's stop times, at the stop and on its trip, are
+// its own times with estimates counted from them.
+func TestStopRT_FrequencyInstances(t *testing.T) {
+	// The example feed's version isn't its feed's active one, so the stop is
+	// found by the version's sha1.
+	const query = `query($stf: StopTimeFilter) {
+		stops(where: {feed_version_sha1: "43e2278aa272879c79460582152b04e7487f0493", stop_id: "STAGECOACH"}) {
+			stop_times(where: $stf) {
+				schedule_relationship
+				trip {
+					trip_id
+					schedule_relationship
+					stop_times { stop_sequence schedule_relationship departure { scheduled estimated_delay } }
+					later: stop_times(where: {start: "08:33:00"}) { stop_sequence departure { scheduled } }
+				}
+				departure { scheduled estimated_delay }
+			}
+		}
+	}`
+	testRt(t, rtTestCase{
+		name:    "frequency instances",
+		query:   query,
+		vars:    hw{"stf": hw{"date": "2007-01-02", "start": "08:00:00", "end": "08:59:00"}},
+		rtfiles: []testconfig.RTJsonFile{{Feed: "EX", Ftype: "realtime_trip_updates", Fname: "EX-frequency.json"}},
+		whenUtc: "2007-01-02T16:05:00Z",
+		cb: func(t *testing.T, jj string) {
+			instances := 0
+			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
+				if st.Get("trip.trip_id").String() != "CITY1" {
+					continue
+				}
+				instances++
+				start := st.Get("departure.scheduled").String()
+				rel, tripRel := st.Get("schedule_relationship").String(), st.Get("trip.schedule_relationship").String()
+				delay := optionalInt(st.Get("departure.estimated_delay"))
+				// The trip's own stop times are the instance's, so its first stop
+				// is this departure.
+				first := st.Get("trip.stop_times.0")
+				assert.Equal(t, start, first.Get("departure.scheduled").String(), "%s trip.stop_times.0 scheduled", start)
+				assert.Equal(t, rel, first.Get("schedule_relationship").String(), "%s trip.stop_times.0 schedule_relationship", start)
+				assert.Equal(t, delay, optionalInt(first.Get("departure.estimated_delay")), "%s trip.stop_times.0 estimated_delay", start)
+				switch start {
+				case "08:10:00":
+					assert.Equal(t, "CANCELED", rel, start)
+					assert.Equal(t, "CANCELED", tripRel, start)
+					assert.Nil(t, delay, start)
+				case "08:30:00":
+					assert.Equal(t, "SCHEDULED", rel, start)
+					assert.Equal(t, "SCHEDULED", tripRel, start)
+					assert.Equal(t, ptr(int64(60)), delay, start)
+					// The delay carries along the instance.
+					assert.Equal(t, ptr(int64(60)), optionalInt(st.Get("trip.stop_times.4.departure.estimated_delay")), "last stop")
+					// A time window applies to the instance's own times: its stops
+					// from 08:33 on are the last four, which the template visits
+					// from 06:07.
+					if later := st.Get("trip.later").Array(); assert.Len(t, later, 4, "stops from 08:33") {
+						assert.Equal(t, int64(2), later[0].Get("stop_sequence").Int())
+						assert.Equal(t, "08:37:00", later[0].Get("departure.scheduled").String())
+					}
+				default:
+					assert.Equal(t, "STATIC", rel, start)
+					assert.Equal(t, "STATIC", tripRel, start)
+					assert.Nil(t, delay, start)
+				}
+			}
+			assert.Equal(t, 6, instances, "instances of CITY1 from 08:00 to 08:59")
+		},
+	})
+}
+
 func TestStopRT_NoRT(t *testing.T) {
 	tc := rtTestCase{
 		name:    "no rt matches for trip 2211533WKDY",

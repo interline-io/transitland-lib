@@ -51,6 +51,29 @@ func TestTripRuns(t *testing.T) {
 		assert.True(t, runs("2018-05-30", "2018-05-31").describes(dated("2018-05-31")))
 	})
 
+	t.Run("an instance of a frequency-based trip", func(t *testing.T) {
+		at := func(start string) *pb.TripDescriptor {
+			td := dated("20180531")
+			td.StartTime = ptr(start)
+			return td
+		}
+		instance := runs("2018-05-30", "2018-05-31")
+		instance.start = tt.NewSeconds(8*3600 + 10*60)
+		// Described by a message naming its start, or none.
+		assert.True(t, instance.describes(at("08:10:00")))
+		assert.True(t, instance.describes(dated("20180531")))
+		// Not by one naming another instance's start, or an unreadable one.
+		assert.False(t, instance.describes(at("08:20:00")))
+		assert.False(t, instance.describes(at("soon")))
+		// Any other run ignores a start_time.
+		assert.True(t, runs("2018-05-30", "2018-05-31").describes(at("08:20:00")))
+		// An instance asked for without a date is the current run's instance.
+		current := runs("2018-05-30")
+		current.start = instance.start
+		assert.True(t, current.describes(&pb.TripDescriptor{TripId: ptr("t"), StartTime: ptr("08:10:00")}))
+		assert.False(t, current.describes(&pb.TripDescriptor{TripId: ptr("t"), StartTime: ptr("08:20:00")}))
+	})
+
 	as := func(rel pb.TripDescriptor_ScheduleRelationship) *pb.TripDescriptor {
 		td := dated("20180531")
 		td.ScheduleRelationship = rel.Enum()

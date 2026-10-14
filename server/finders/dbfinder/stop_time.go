@@ -172,18 +172,12 @@ func stopTimeSelect(pairs []model.FVPair, entityType stopTimeEntityType, where *
 		Join("gtfs_stop_times sts ON sts.trip_id = t2.id AND sts.feed_version_id = t2.feed_version_id").
 		OrderBy("sts.stop_sequence, sts.arrival_time")
 
-	if where != nil {
-		if where.Start != nil {
-			q = q.Where(sq.GtOrEq{"sts.departure_time + gtfs_trips.journey_pattern_offset": where.Start.Int()})
-		}
-		if where.End != nil {
-			q = q.Where(sq.LtOrEq{"sts.arrival_time + gtfs_trips.journey_pattern_offset": where.End.Int()})
-		}
-		// Without this a route crossing a small query area returns every stop
-		// on the route.
-		if len(where.StopIds) > 0 {
-			q = q.Where(In("sts.stop_id", where.StopIds))
-		}
+	// Only the filter's stops apply here. Its time window applies to a run's
+	// own times, which an instance of a frequency-based trip shifts, so the
+	// resolver applies it. Without the stops, a route crossing a small query
+	// area returns every stop on the route.
+	if where != nil && len(where.StopIds) > 0 {
+		q = q.Where(In("sts.stop_id", where.StopIds))
 	}
 	if len(pairs) > 0 {
 		eids, fvids := pairKeys(pairs)
@@ -255,6 +249,11 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		"sts.location_group_id",
 		"sts.arrival_time_freq AS arrival_time",
 		"sts.departure_time_freq AS departure_time",
+		// The instance's start, and its shift from the trip's own stop times,
+		// which include the trip's pattern offset where the run's times below
+		// count from the pattern's representative.
+		"freq.freq_start AS run_start",
+		"freq.freq_start - trip_stop_sequence.first_departure_time - gtfs_trips.journey_pattern_offset AS run_offset",
 		"sts.stop_sequence",
 		"sts.shape_dist_traveled",
 		"sts.pickup_type",
@@ -422,6 +421,11 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		"sts.location_group_id",
 		"sts_freq.arrival_time_freq AS arrival_time",
 		"sts_freq.departure_time_freq AS departure_time",
+		// The instance's start, and its shift from the trip's own stop times,
+		// which include the trip's pattern offset where the run's times below
+		// count from the pattern's representative.
+		"freq.freq_start AS run_start",
+		"freq.freq_start - trip_stop_sequence.first_departure_time - gtfs_trips.journey_pattern_offset AS run_offset",
 		"sts.stop_sequence",
 		"sts.shape_dist_traveled",
 		"sts.pickup_type",

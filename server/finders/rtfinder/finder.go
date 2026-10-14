@@ -74,8 +74,10 @@ func (f *Finder) modelTripUpdates(ctx context.Context, t *model.Trip) []*pb.Trip
 }
 
 // runUpdates returns the trip updates naming a trip_id on its runs, one from
-// each of the feed version's realtime feeds. A feed should send one update per
-// run; where it sends several, the last wins.
+// each of the feed version's realtime feeds. A frequency-based trip has an
+// update per instance, each describing its own run. Where a feed sends several
+// updates describing a run, the last wins, so a frequency-based trip asked for
+// without a start takes its last instance's.
 func (f *Finder) runUpdates(ctx context.Context, fvid int, tripId string, runs tripRuns) []*pb.TripUpdate {
 	var ret []*pb.TripUpdate
 	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, fvid)
