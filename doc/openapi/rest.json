@@ -15185,7 +15185,7 @@
                                   "x-order": 930
                                 },
                                 "departures": {
-                                  "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available",
+                                  "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available. Frequencies with `headway_secs` under 60 are not expanded.",
                                   "items": {
                                     "properties": {
                                       "arrival": {
@@ -16862,7 +16862,7 @@
                             "x-order": 931
                           },
                           "departures": {
-                            "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available",
+                            "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available. Frequencies with `headway_secs` under 60 are not expanded.",
                             "items": {
                               "properties": {
                                 "arrival": {
@@ -19135,7 +19135,7 @@
                                       "x-order": 1459
                                     },
                                     "departures": {
-                                      "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available",
+                                      "description": "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available. Frequencies with `headway_secs` under 60 are not expanded.",
                                       "items": {
                                         "properties": {
                                           "arrival": {

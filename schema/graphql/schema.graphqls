@@ -1002,10 +1002,10 @@ type Stop {
   "Raw scheduled stop times for this stop, without date/time filtering"
   stop_times(limit: Int, where: StopTimeFilter): [StopTime!]!
 
-  "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available"
+  "Scheduled departures from this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available. Frequencies with `headway_secs` under 60 are not expanded."
   departures(limit: Int, where: StopTimeFilter): [StopTime!]!
 
-  "Scheduled arrivals at this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available"
+  "Scheduled arrivals at this stop, filtered by date/time window and enriched with GTFS-RT estimated times where available. Frequencies with `headway_secs` under 60 are not expanded."
   arrivals(limit: Int, where: StopTimeFilter): [StopTime!]!
   
   "Internal search ranking weight; not intended for client use"
@@ -1290,6 +1290,8 @@ input ShapeFilter {
 
 """
 Record from a static GTFS [frequencies.txt](https://gtfs.org/schedule/reference/#frequenciestxt) file.
+
+Frequencies with `headway_secs` under 60 are not expanded into departures.
 """
 type Frequency {
   "Internal integer ID"
