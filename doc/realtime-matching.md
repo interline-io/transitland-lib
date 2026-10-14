@@ -54,10 +54,10 @@ The GraphQL API's `StopTime.arrival` and `departure` report these estimates. `St
 
 A trip found on a date is the run on that date. That includes:
 
-- the trip of a stop time with a `service_date`, as in departures; a departure of a frequency-based trip is the instance starting then
+- the trip of a stop time with a `service_date`, as in departures; a departure of a frequency-based trip is the instance starting then, and the trip's `stop_times` are the instance's
 - trips from `trips`, `Route.trips`, `FeedVersion.trips` or `Shape.trips` queried by `service_date`, `service_dates` or `dates`, and from all but the top-level `trips` queried by `relative_date`
 - a route pattern's `trips` and `timetable` when the pattern has a `service_date`
-- a vehicle position's trip, on the `start_date` the vehicle names, and for a frequency-based trip, the instance at its `start_time`
+- a vehicle position's trip, on the `start_date` the vehicle names
 - a trip added in real time, on the `start_date` its trip update names
 
 A trip found any other way, for example by `trip_id` alone, is its current run. A frequency-based trip found that way stands for all of its instances that day, which any instance's message describes.
@@ -101,4 +101,5 @@ The spec requires an alert's trip selector to resolve to a single trip instance.
 - A run described by several realtime feeds takes the first feed's trip update for everything.
 - `NEW` and `DUPLICATED` trips aren't shown as runs of their own, and trips identified without a `trip_id` aren't matched.
 - An instance of a frequency-based trip is matched by its exact start, every `headway_secs` from the frequency's `start_time`. A feed with `exact_times` 0 may name the vehicle's actual first departure instead, which matches no instance.
+- A vehicle position's trip stands for every instance of a frequency-based trip that day; the vehicle's `start_time` isn't used.
 - Trips added in real time are listed at a stop whatever date and time window the query asks for, and only on a route the feed version has.

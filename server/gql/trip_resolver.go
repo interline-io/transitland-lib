@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // TRIP
@@ -56,18 +57,34 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 }
 
 // runStopTimes returns copies of a trip's stop times, on its run's service date
-// when the trip is one run. Copies, as the loader shares them across every run of
-// the trip in a request, and each run has its own date and realtime data.
+// when the trip is one run, and shifted to the run's own start when the trip
+// is an instance of a frequency-based trip. Copies, as the loader shares them
+// across every run of the trip in a request, and each run has its own date,
+// times and realtime data.
 func runStopTimes(trip *model.Trip, loaded []*model.StopTime) []*model.StopTime {
 	sts := make([]*model.StopTime, 0, len(loaded))
 	for _, st := range loaded {
 		c := *st
+		if trip.RunOffset.Valid {
+			c.ArrivalTime = shifted(c.ArrivalTime, trip.RunOffset.Val)
+			c.DepartureTime = shifted(c.DepartureTime, trip.RunOffset.Val)
+			c.RunStart, c.RunOffset = trip.RunStart, trip.RunOffset
+		}
 		if len(trip.RunDates) == 1 {
 			c.SetServiceDate(trip.RunDates[0])
 		}
 		sts = append(sts, &c)
 	}
 	return sts
+}
+
+// shifted returns a scheduled time moved by offset seconds, or an unknown time
+// unchanged.
+func shifted(t tt.Seconds, offset int64) tt.Seconds {
+	if t.Valid {
+		t.Val += offset
+	}
+	return t
 }
 
 func (r *tripResolver) FlexStopTimes(ctx context.Context, obj *model.Trip, limit *int, where *model.TripStopTimeFilter) ([]*model.FlexStopTime, error) {

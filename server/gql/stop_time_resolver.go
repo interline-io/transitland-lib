@@ -67,20 +67,24 @@ func (r *stopTimeResolver) Trip(ctx context.Context, obj *model.StopTime) (*mode
 		return obj.RTTrip, nil
 	}
 	trip, err := LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
-	return tripRun(trip, obj.ServiceDate, obj.RunStart), err
+	return tripRun(trip, obj.ServiceDate, obj.RunStart, obj.RunOffset), err
 }
 
-// tripRun returns a trip as its run on a service date, starting at start for
-// an instance of a frequency-based trip, so its realtime data is matched to
-// that run; without a date, the trip unchanged. A copy, as the loader shares
-// one trip across every request.
-func tripRun(trip *model.Trip, serviceDate tt.Date, start tt.Seconds) *model.Trip {
-	if trip == nil || !serviceDate.Valid {
+// tripRun returns a trip as its run on a service date, and for an instance of
+// a frequency-based trip, the instance starting at start and shifted by
+// offset, so its realtime data is matched to that run. Without a date, the
+// run is the trip's current one. A copy, as the loader shares one trip across
+// every request.
+func tripRun(trip *model.Trip, serviceDate tt.Date, start tt.Seconds, offset tt.Int) *model.Trip {
+	if trip == nil || (!serviceDate.Valid && !start.Valid) {
 		return trip
 	}
 	run := *trip
-	run.RunDates = []tt.Date{serviceDate}
+	if serviceDate.Valid {
+		run.RunDates = []tt.Date{serviceDate}
+	}
 	run.RunStart = start
+	run.RunOffset = offset
 	return &run
 }
 

@@ -67,6 +67,11 @@ func TestTripRuns(t *testing.T) {
 		assert.False(t, instance.describes(at("soon")))
 		// Any other run ignores a start_time.
 		assert.True(t, runs("2018-05-30", "2018-05-31").describes(at("08:20:00")))
+		// An instance asked for without a date is the current run's instance.
+		current := runs("2018-05-30")
+		current.start = instance.start
+		assert.True(t, current.describes(&pb.TripDescriptor{TripId: ptr("t"), StartTime: ptr("08:10:00")}))
+		assert.False(t, current.describes(&pb.TripDescriptor{TripId: ptr("t"), StartTime: ptr("08:20:00")}))
 	})
 
 	as := func(rel pb.TripDescriptor_ScheduleRelationship) *pb.TripDescriptor {

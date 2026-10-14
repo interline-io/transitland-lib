@@ -102,8 +102,8 @@ func (f *Finder) matchTrip(ctx context.Context, t *model.Trip) tripMatch {
 	base := f.runStart(ctx, t)
 	// An instance of a frequency-based trip runs the trip's stop times shifted
 	// to begin at its own start.
-	if base != 0 && t.RunStart.Valid && len(stops) > 0 && stops[0].Departure.Valid {
-		base += t.RunStart.Val - stops[0].Departure.Val
+	if base != 0 && t.RunOffset.Valid {
+		base += t.RunOffset.Val
 	}
 	return tripMatch{tu: tu, stops: stops, matched: MatchStops(tu, base, stops)}
 }
