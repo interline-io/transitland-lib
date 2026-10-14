@@ -93,6 +93,20 @@ func TestFrequency_Errors(t *testing.T) {
 			expectedErrors: PE("InvalidFieldError:headway_secs"),
 		},
 		{
+			name: "headway_secs under a minute",
+			entity: newFrequency(func(f *Frequency) {
+				f.HeadwaySecs = tt.NewInt(59)
+			}),
+			expectedErrors: PE("InvalidFieldError:headway_secs"),
+		},
+		{
+			name: "headway_secs of a minute",
+			entity: newFrequency(func(f *Frequency) {
+				f.HeadwaySecs = tt.NewInt(60)
+			}),
+			expectedErrors: nil,
+		},
+		{
 			name: "Invalid exact_times",
 			entity: newFrequency(func(f *Frequency) {
 				f.ExactTimes = tt.NewInt(2)

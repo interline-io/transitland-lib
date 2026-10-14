@@ -91,8 +91,8 @@ func TestStopDeparturesMaterializedSelect(t *testing.T) {
 				}
 				for _, filter := range filters {
 					var want, got []*model.StopTime
-					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesSelect(fvid, entityIDs, et.entityType, filter.where()), &want))
-					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesMaterializedSelect(fvid, entityIDs, et.entityType, filter.where()), &got))
+					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesSelect(fvid, entityIDs, et.entityType, nil, filter.where()), &want))
+					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesMaterializedSelect(fvid, entityIDs, et.entityType, nil, filter.where()), &got))
 					sortStopTimes(want)
 					sortStopTimes(got)
 					// Not assert.Equal: diffing thousands of rows takes minutes
@@ -137,10 +137,10 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	}
 	queries := map[string]func() sq.SelectBuilder{
 		"departures": func() sq.SelectBuilder {
-			return stopDeparturesSelect(fvid, []int{stopID}, stopTimeEntityStop, &model.StopTimeFilter{ServiceDate: &date})
+			return stopDeparturesSelect(fvid, []int{stopID}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date})
 		},
 		"materialized departures": func() sq.SelectBuilder {
-			return stopDeparturesMaterializedSelect(fvid, []int{stopID}, stopTimeEntityStop, &model.StopTimeFilter{ServiceDate: &date})
+			return stopDeparturesMaterializedSelect(fvid, []int{stopID}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date})
 		},
 	}
 	for name, q := range queries {
@@ -152,6 +152,54 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 				got[st.GtfsTripID] = append(got[st.GtfsTripID], st.DepartureTime.String())
 			}
 			assert.Equal(t, expect, got)
+		})
+	}
+}
+
+// Both departures queries keep each entity's first limit stop times, in order,
+// when one query asks for several entities.
+func TestStopDeparturesSelect_Limit(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	ctx := context.Background()
+	tx, err := testutil.MustOpenTestDB(t).Beginx()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback() })
+	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	var stop1, stop2 int
+	require.NoError(t, tx.Get(&stop1, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop1"))
+	require.NoError(t, tx.Get(&stop2, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop2"))
+
+	date := tt.NewDate(time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC))
+	queries := map[string]func(limit *int) sq.SelectBuilder{
+		"departures": func(limit *int) sq.SelectBuilder {
+			return stopDeparturesSelect(fvid, []int{stop1, stop2}, stopTimeEntityStop, limit, &model.StopTimeFilter{ServiceDate: &date})
+		},
+		"materialized departures": func(limit *int) sq.SelectBuilder {
+			return stopDeparturesMaterializedSelect(fvid, []int{stop1, stop2}, stopTimeEntityStop, limit, &model.StopTimeFilter{ServiceDate: &date})
+		},
+	}
+	departureTimes := func(t *testing.T, q sq.SelectBuilder) map[int][]string {
+		var sts []*model.StopTime
+		require.NoError(t, dbutil.Select(ctx, tx, q, &sts))
+		ret := map[int][]string{}
+		for _, st := range sts {
+			ret[st.StopID.Int()] = append(ret[st.StopID.Int()], st.DepartureTime.String())
+		}
+		return ret
+	}
+	for name, q := range queries {
+		t.Run(name, func(t *testing.T) {
+			// Without a limit, each stop has seven stop times that day
+			all := departureTimes(t, q(nil))
+			require.Len(t, all[stop1], 7)
+			require.Len(t, all[stop2], 7)
+			expect := map[int][]string{
+				stop1: {"05:00:00", "07:00:00", "07:30:00"},
+				stop2: {"05:10:00", "07:10:00", "07:40:00"},
+			}
+			assert.Equal(t, expect, departureTimes(t, q(ptr(3))))
 		})
 	}
 }
