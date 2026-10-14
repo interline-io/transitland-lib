@@ -155,7 +155,7 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 	if feedUrl != "" {
 		opts.FeedURL = feedUrl
 	}
-	feeds, result, err := gbfs.Fetch(
+	feed, result, err := gbfs.Fetch(
 		ctx,
 		cfg.Adapter,
 		opts,
@@ -167,14 +167,10 @@ func GbfsFetch(ctx context.Context, feedId string, feedUrl string) error {
 		return result.FetchError
 	}
 
-	// Save to cache
-	for _, feed := range feeds {
-		if feed.SystemInformation != nil {
-			key := fmt.Sprintf("%s:%s", feedId, feed.SystemInformation.Language.Val)
-			cfg.GbfsFinder.AddData(ctx, key, feed)
-		}
+	if feed == nil {
+		return nil
 	}
-	return nil
+	return cfg.GbfsFinder.AddData(ctx, feedId, *feed)
 }
 
 func fetchCheckFeed(ctx context.Context, feedId string) (*model.Feed, error) {

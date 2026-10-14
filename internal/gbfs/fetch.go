@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/interline-io/log"
@@ -22,7 +24,11 @@ type Result struct {
 	fetch.Result
 }
 
-func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) ([]GbfsFeed, Result, error) {
+// Fetch fetches one system from a GBFS discovery file: the first language, in
+// order, whose files fetch with a system_information. A feed publishes the same
+// system in each language, and the order keeps the choice stable between
+// fetches. It returns nil if no language fetched.
+func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) (*GbfsFeed, Result, error) {
 	result := Result{}
 	if opts.FetchedAt.IsZero() {
 		opts.FetchedAt = time.Now().UTC()
@@ -52,13 +58,15 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) ([]GbfsFeed, Res
 	}
 
 	// Fetch additional data
-	var feeds []GbfsFeed
-	for _, sflang := range systemFile.Data {
+	var feed *GbfsFeed
+	for _, lang := range slices.Sorted(maps.Keys(systemFile.Data)) {
+		sflang := systemFile.Data[lang]
 		if sflang == nil {
 			continue
 		}
-		if feed, err := fetchAll(ctx, *sflang, reqOpts...); err == nil {
-			feeds = append(feeds, feed)
+		if f, err := fetchAll(ctx, *sflang, reqOpts...); err == nil && f.SystemInformation != nil {
+			feed = &f
+			break
 		}
 	}
 
@@ -87,7 +95,7 @@ func Fetch(ctx context.Context, atx tldb.Adapter, opts Options) ([]GbfsFeed, Res
 		}
 	}
 
-	return feeds, result, nil
+	return feed, result, nil
 }
 
 func fetchAll(ctx context.Context, sf SystemFeeds, reqOpts ...request.RequestOption) (GbfsFeed, error) {
