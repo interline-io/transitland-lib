@@ -85,7 +85,7 @@ type Run struct {
 	// The start of an instance of a frequency-based trip, in seconds into the
 	// service day, which an update naming a start_time has to match. Invalid
 	// for any other trip.
-	StartTime tt.Seconds
+	Start tt.Seconds
 	// When the trip runs on its service day, which places an update without a
 	// start_date on the trip's current run. A zero span places it on today's.
 	Span TripSpan
@@ -96,7 +96,7 @@ func (f *Finder) runsOf(ctx context.Context, run Run) tripRuns {
 	span := func() (TripSpan, bool) { return run.Span, true }
 	return tripRuns{
 		dates:   []tt.Date{run.Date},
-		start:   run.StartTime,
+		start:   run.Start,
 		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, run.FeedVersionID, span) }),
 	}
 }
