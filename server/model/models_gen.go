@@ -1255,7 +1255,7 @@ type RouteStopPattern struct {
 type RouteStopPatternFilter struct {
 	// GTFS service date. Restricts the patterns returned to those a trip operates on that date, counts them over that date alone, and picks `representative_trip` from it. Ignored if `relative_date` is set
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
-	// Calendar date relative to today; see `RelativeDate`. Takes precedence over `service_date`
+	// GTFS service date relative to today in the feed version's timezone; see `RelativeDate`. Takes precedence over `service_date`
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
@@ -1582,7 +1582,7 @@ type StopTimeEvent struct {
 type StopTimeFilter struct {
 	// Calendar date for which to return stop times
 	Date *tt.Date `json:"date,omitempty"`
-	// Calendar date relative to today (e.g. `MONDAY`, `NEXT_FRIDAY`); see `RelativeDate` for semantics
+	// Calendar date relative to today in the feed version's timezone (e.g. `MONDAY`, `NEXT_FRIDAY`); see `RelativeDate` for semantics
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
 	// GTFS service date (which may differ from the calendar date for trips that cross midnight)
 	ServiceDate *tt.Date `json:"service_date,omitempty"`
@@ -1650,9 +1650,9 @@ type TripFilter struct {
 	ServiceDates []*tt.Date `json:"service_dates,omitempty"`
 	// Several wall calendar dates, which need not be contiguous. Unlike `service_dates`, a trip departing after midnight is matched for the calendar date it departs on, so each requested date also matches the service date before it — and `Trip.service_dates` can therefore name a day earlier than any requested here. Departures more than 48 hours into their service date are not reached. Takes precedence over `service_date`, `service_dates` and `relative_date`.
 	Dates []*tt.Date `json:"dates,omitempty"`
-	// Calendar date relative to today; see `RelativeDate`. Ignored if `dates` or `service_dates` is set
+	// GTFS service date relative to today in the feed version's timezone; see `RelativeDate`. Ignored if `dates` or `service_dates` is set. Not applied by the top-level `trips` query; use `Route.trips`, `FeedVersion.trips` or `Shape.trips`
 	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
-	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. Not applied by the top-level `trips` query; use `Route.trips` or `FeedVersion.trips`
+	// If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead. Not applied by the top-level `trips` query; use `Route.trips`, `FeedVersion.trips` or `Shape.trips`
 	UseServiceWindow *bool `json:"use_service_window,omitempty"`
 	// Search for trips with this GTFS trip_id
 	TripID *string `json:"trip_id,omitempty"`
@@ -2399,6 +2399,10 @@ type RelativeDate string
 const (
 	// The current date
 	RelativeDateToday RelativeDate = "TODAY"
+	// The day before the current date
+	RelativeDateYesterday RelativeDate = "YESTERDAY"
+	// The day after the current date
+	RelativeDateTomorrow RelativeDate = "TOMORROW"
 	// Next Monday, or today if it is currently Monday
 	RelativeDateMonday RelativeDate = "MONDAY"
 	// Next Tuesday, or today if it is currently Tuesday
@@ -2431,6 +2435,8 @@ const (
 
 var AllRelativeDate = []RelativeDate{
 	RelativeDateToday,
+	RelativeDateYesterday,
+	RelativeDateTomorrow,
 	RelativeDateMonday,
 	RelativeDateTuesday,
 	RelativeDateWednesday,
@@ -2449,7 +2455,7 @@ var AllRelativeDate = []RelativeDate{
 
 func (e RelativeDate) IsValid() bool {
 	switch e {
-	case RelativeDateToday, RelativeDateMonday, RelativeDateTuesday, RelativeDateWednesday, RelativeDateThursday, RelativeDateFriday, RelativeDateSaturday, RelativeDateSunday, RelativeDateNextMonday, RelativeDateNextTuesday, RelativeDateNextWednesday, RelativeDateNextThursday, RelativeDateNextFriday, RelativeDateNextSaturday, RelativeDateNextSunday:
+	case RelativeDateToday, RelativeDateYesterday, RelativeDateTomorrow, RelativeDateMonday, RelativeDateTuesday, RelativeDateWednesday, RelativeDateThursday, RelativeDateFriday, RelativeDateSaturday, RelativeDateSunday, RelativeDateNextMonday, RelativeDateNextTuesday, RelativeDateNextWednesday, RelativeDateNextThursday, RelativeDateNextFriday, RelativeDateNextSaturday, RelativeDateNextSunday:
 		return true
 	}
 	return false

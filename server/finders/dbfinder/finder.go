@@ -169,12 +169,14 @@ func kebabize(a string) string {
 	return strings.ReplaceAll(strings.ToLower(a), "_", "-")
 }
 
+// tzTruncate returns the date of s as noon in loc. Noon, since a DST change can
+// skip local midnight but never noon.
 func tzTruncate(s time.Time, loc *time.Location) *tt.Date {
 	if loc == nil {
 		log.Error().Msg("tzTruncate: loc is nil, set to UTC")
 		loc = time.UTC
 	}
-	return ptr(tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, loc)))
+	return ptr(tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 12, 0, 0, 0, loc)))
 }
 
 func checkFloat(v *float64, min float64, max float64) float64 {

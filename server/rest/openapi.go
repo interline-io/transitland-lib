@@ -239,8 +239,8 @@ var ParameterComponents = oa.ParametersMap{
 		Value: &param{
 			Name:        "relative_date",
 			In:          "query",
-			Description: `Search for departures on a relative date label, e.g. TODAY, TUESDAY, NEXT_WEDNESDAY`,
-			Schema:      newSRVal("string", "", []any{"TODAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY", "NEXT_MONDAY", "NEXT_TUESDAY", "NEXT_WEDNESDAY", "NEXT_THURSDAY", "NEXT_FRIDAY", "NEXT_SATURDAY", "NEXT_SUNDAY"}),
+			Description: `Search for departures on a relative date label, e.g. TODAY, TOMORROW, TUESDAY, NEXT_WEDNESDAY`,
+			Schema:      newSRVal("string", "", []any{"TODAY", "YESTERDAY", "TOMORROW", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY", "NEXT_MONDAY", "NEXT_TUESDAY", "NEXT_WEDNESDAY", "NEXT_THURSDAY", "NEXT_FRIDAY", "NEXT_SATURDAY", "NEXT_SUNDAY"}),
 		},
 	},
 	"searchParam": &pref{
