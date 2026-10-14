@@ -26,26 +26,32 @@ func (dc MockClock) Now() time.Time {
 	return dc.T
 }
 
-// RelativeDate gets a date reltive to the provided time; currentTime should have timezone set.
+// RelativeDate returns the date a label names relative to currentTime, at noon in
+// currentTime's location; currentTime should have its timezone set.
+//
+// At noon because a DST change can skip local midnight but never noon. GTFS
+// measures a service day's times from noon less 12 hours for the same reason.
 func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, error) {
 	// Current date
 	clNow := currentTime
 	clDay := clNow.Day()
 	clYear := clNow.Year()
 	clMonth := clNow.Month()
-	clHour := clNow.Hour()
-	clMin := clNow.Minute()
-	clSec := clNow.Second()
 	clLoc := clNow.Location()
 
 	// Parse date or use special label
 	dowOffset := -1
 	nextFlag := false
+	dayOffset := 0
 	switch relativeDateLabel {
 	case "today":
 		// default
 	case "":
 		// equiv to "today"
+	case "yesterday":
+		dayOffset = -1
+	case "tomorrow":
+		dayOffset = 1
 	case "sunday":
 		dowOffset = 0
 	case "monday":
@@ -93,7 +99,7 @@ func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, e
 	}
 
 	// Construct time from parsed components
-	baseTime := time.Date(clYear, clMonth, clDay, clHour, clMin, clSec, 0, clLoc)
+	baseTime := time.Date(clYear, clMonth, clDay+dayOffset, 12, 0, 0, 0, clLoc)
 
 	// Check the next 7 days to get the correct weekday
 	if dowOffset >= 0 {

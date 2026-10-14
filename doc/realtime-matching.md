@@ -36,7 +36,7 @@ If a feed sends several updates for the same run, the last one wins.
 A trip found on a date is the run on that date. That includes:
 
 - the trip of a stop time with a `service_date`, as in departures
-- trips from `trips`, `Route.trips` or `FeedVersion.trips` queried by `service_date`, `service_dates` or `dates`
+- trips from `trips`, `Route.trips`, `FeedVersion.trips` or `Shape.trips` queried by `service_date`, `service_dates` or `dates`, and from all but the top-level `trips` queried by `relative_date`
 - a route pattern's `trips` and `timetable` when the pattern has a `service_date`
 - a vehicle position's trip, on the `start_date` the vehicle names
 - a trip added in real time, on the `start_date` its trip update names
@@ -67,7 +67,7 @@ With `use_service_window`, a date outside the feed version's service window is a
 
 Realtime data is then matched to the run on the requested date. On a feed whose schedule has lapsed, today's departures still carry today's realtime data.
 
-The top-level `trips` query doesn't apply `use_service_window`, because it spans feed versions with different windows. Use `Route.trips` or `FeedVersion.trips` instead.
+The top-level `trips` query doesn't apply `use_service_window` or `relative_date`, because it spans feed versions with different windows and timezones. Use `Route.trips`, `FeedVersion.trips` or `Shape.trips` instead.
 
 ## Relation to the GTFS Realtime spec
 
