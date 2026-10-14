@@ -40,7 +40,7 @@ func NewFeedVersionServiceWindowBuilder() *FeedVersionServiceWindowBuilder {
 	return &FeedVersionServiceWindowBuilder{}
 }
 
-func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
+func (pp *FeedVersionServiceWindowBuilder) AfterWrite(eid string, ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		if tz, ok := tt.IsValidTimezone(v.AgencyTimezone.Val); ok {

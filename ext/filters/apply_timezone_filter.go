@@ -36,7 +36,7 @@ type ApplyTimezoneFilter struct {
 	timezone string
 }
 
-func (e *ApplyTimezoneFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *ApplyTimezoneFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		v.AgencyTimezone.Set(e.timezone)

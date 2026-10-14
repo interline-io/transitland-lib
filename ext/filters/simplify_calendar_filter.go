@@ -9,7 +9,7 @@ import (
 type SimplifyCalendarFilter struct {
 }
 
-func (e *SimplifyCalendarFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *SimplifyCalendarFilter) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	v, ok := ent.(*gtfs.Calendar)
 	if !ok {
 		return nil

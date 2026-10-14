@@ -32,7 +32,7 @@ func (ext Ext) Entities() []tt.Entity {
 	}
 }
 
-func (ext *Ext) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (ext *Ext) Filter(ent tt.Entity, _ *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		ext.defaultAgency = v.AgencyID.Val
