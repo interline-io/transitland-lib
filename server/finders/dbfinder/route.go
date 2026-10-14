@@ -252,7 +252,9 @@ func (f *Finder) RoutesByAgencyIDs(ctx context.Context, limit *int, where *model
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			routeSelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
+			// Always in the agency's feed version; see lateralWrap.
+			routeSelect(limit, nil, nil, nil, f.PermFilter(ctx), where).
+				Where("gtfs_routes.feed_version_id = out.feed_version_id"),
 			"gtfs_agencies",
 			"id",
 			"gtfs_routes",
