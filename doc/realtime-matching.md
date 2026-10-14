@@ -31,6 +31,12 @@ For example, for an undated message:
 
 If a feed sends several updates for the same run, the last one wins.
 
+A `DUPLICATED` update names the trip it copies but describes a new run, so it's never matched to one of that trip's runs. Neither is an `ADDED` update that names a scheduled trip, the form duplicates took before `DUPLICATED` existed. A trip added in real time still matches its own `ADDED` updates.
+
+## Which stop time an update describes
+
+A stop time update that names a `stop_sequence` describes the trip's stop time with that `stop_sequence`. One that names only a `stop_id` describes the stop time at that stop, as long as the trip update names the stop only once; on a loop that visits the stop twice, neither visit matches. A stop time that no stop time update describes still has the trip update, with the last delay it gives.
+
 ## Which run a trip stands for
 
 A trip found on a date is the run on that date. That includes:
@@ -79,5 +85,5 @@ The spec requires an alert's trip selector to resolve to a single trip instance.
 
 - Delays aren't yet carried forward to later stops the way the spec describes, and the per-stop `SKIPPED` and `NO_DATA` relationships are ignored.
 - Scheduled times in API responses use the stop's timezone and midnight instead of the agency's timezone and noon minus twelve hours.
-- `NEW` and `DUPLICATED` trips, and trips identified without a `trip_id`, aren't matched. Frequency-based trips aren't matched by `start_time`.
-- Trips added in real time are listed at a stop whatever date and time window the query asks for.
+- `NEW` and `DUPLICATED` trips aren't shown as runs of their own, and trips identified without a `trip_id` aren't matched. Frequency-based trips aren't matched by `start_time`.
+- Trips added in real time are listed at a stop whatever date and time window the query asks for, and only on a route the feed version has.
