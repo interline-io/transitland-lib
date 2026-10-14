@@ -12277,7 +12277,7 @@ input ShapeFilter {
 """
 Record from a static GTFS [frequencies.txt](https://gtfs.org/schedule/reference/#frequenciestxt) file.
 
-Frequencies with ` + "`" + `headway_secs` + "`" + ` under 60 are not expanded: imports reject them as invalid, and a trip left with no frequencies runs once, at its own stop times.
+Frequencies with ` + "`" + `headway_secs` + "`" + ` under 60 are not expanded into departures.
 """
 type Frequency {
   "Internal integer ID"

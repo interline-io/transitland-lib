@@ -10,6 +10,11 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
+// minExpandedHeadwaySecs is the shortest frequency headway that departures queries
+// expand into runs. GTFS allows any positive headway; this protects the queries from
+// feeds whose sub-minute headways would expand into millions of departures.
+const minExpandedHeadwaySecs = 60
+
 func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *model.TripStopTimeFilter, keys []model.FVPair) ([][]*model.StopTime, error) {
 	var ents []*model.StopTime
 	err := dbutil.Select(ctx,
@@ -274,16 +279,17 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
 		// The trip's runs. A trip in frequencies.txt runs once per start: every
 		// headway_secs from start_time, up to but not including end_time. Any other
-		// trip runs once, at its own times, with a null freq_start.
+		// trip runs once, at its own times, with a null freq_start. A frequency under
+		// minExpandedHeadwaySecs isn't expanded, so it adds no runs.
 		JoinClause(`join lateral (
 			select
 				generate_series(start_time, end_time - 1, headway_secs) freq_start
 			from gtfs_frequencies
-			where gtfs_frequencies.trip_id = gtfs_trips.id
+			where gtfs_frequencies.trip_id = gtfs_trips.id and gtfs_frequencies.headway_secs >= ?
 			union all
 			select null
 			where not exists (select 1 from gtfs_frequencies where gtfs_frequencies.trip_id = gtfs_trips.id)
-			) freq on true`).
+			) freq on true`, minExpandedHeadwaySecs).
 		JoinClause(`join lateral (
 			select 
 				min(sts2.departure_time) first_departure_time,
@@ -439,16 +445,17 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		Join("gtfs_trips ON gtfs_trips.feed_version_id = ? AND gtfs_trips.journey_pattern_id = sts.base_trip_gtfs_id::text", fvid).
 		// The trip's runs. A trip in frequencies.txt runs once per start: every
 		// headway_secs from start_time, up to but not including end_time. Any other
-		// trip runs once, at its own times, with a null freq_start.
+		// trip runs once, at its own times, with a null freq_start. A frequency under
+		// minExpandedHeadwaySecs isn't expanded, so it adds no runs.
 		JoinClause(`join lateral (
 			select
 				generate_series(start_time, end_time - 1, headway_secs) freq_start
 			from gtfs_frequencies
-			where gtfs_frequencies.trip_id = gtfs_trips.id
+			where gtfs_frequencies.trip_id = gtfs_trips.id and gtfs_frequencies.headway_secs >= ?
 			union all
 			select null
 			where not exists (select 1 from gtfs_frequencies where gtfs_frequencies.trip_id = gtfs_trips.id)
-			) freq on true`).
+			) freq on true`, minExpandedHeadwaySecs).
 		JoinClause(`join lateral (
 			select
 				min(sts2.departure_time) first_departure_time,

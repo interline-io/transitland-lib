@@ -9,10 +9,8 @@ import (
 
 // Frequency frequencies.txt
 type Frequency struct {
-	TripID tt.String `csv:",required" target:"trips.txt" standardized_sort:"1"`
-	// Stricter than GTFS, which allows any positive headway. A headway under a
-	// minute is almost always a data error, and expands into a flood of departures.
-	HeadwaySecs tt.Int     `csv:",required" range:"60,"`
+	TripID      tt.String  `csv:",required" target:"trips.txt" standardized_sort:"1"`
+	HeadwaySecs tt.Int     `csv:",required" range:"1,"`
 	StartTime   tt.Seconds `csv:",required" standardized_sort:"2"`
 	EndTime     tt.Seconds `csv:",required"`
 	ExactTimes  tt.Int     `enum:"0,1"`

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -111,7 +112,8 @@ func TestStopDeparturesMaterializedSelect(t *testing.T) {
 }
 
 // Both departures queries run a trip in frequencies.txt once per start: every
-// headway_secs from start_time, up to but not including end_time.
+// headway_secs from start_time, up to but not including end_time. Neither
+// expands a frequency under minExpandedHeadwaySecs.
 func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	if a, ok := testutil.CheckTestDB(); !ok {
 		t.Skip(a)
@@ -120,7 +122,18 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	tx, err := testutil.MustOpenTestDB(t).Beginx()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = tx.Rollback() })
-	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	// A trip every 30 seconds from 12:00:00 to 13:00:00, on the same pattern as the others
+	feed := testreader.NewFrequencyTestFeed()
+	feed.TripList = append(feed.TripList, gtfs.Trip{TripID: tt.NewString("rapid"), RouteID: tt.NewKey("route1"), ServiceID: tt.NewKey("service1")})
+	feed.StopTimeList = append(feed.StopTimeList,
+		gtfs.StopTime{TripID: tt.NewString("rapid"), StopID: tt.NewKey("stop1"), StopSequence: tt.NewInt(1), ArrivalTime: tt.NewSeconds(12 * 3600), DepartureTime: tt.NewSeconds(12 * 3600)},
+		gtfs.StopTime{TripID: tt.NewString("rapid"), StopID: tt.NewKey("stop2"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(12*3600 + 600), DepartureTime: tt.NewSeconds(12*3600 + 600)},
+	)
+	feed.FrequencyList = append(feed.FrequencyList, gtfs.Frequency{TripID: tt.NewString("rapid"), StartTime: tt.NewSeconds(12 * 3600), EndTime: tt.NewSeconds(13 * 3600), HeadwaySecs: tt.NewInt(30)})
+	fvid := testdb.CopyTestFeed(t, tx, feed)
+	var subMinute int
+	require.NoError(t, tx.Get(&subMinute, "select count(*) from gtfs_frequencies where feed_version_id = $1 and headway_secs < $2", fvid, minExpandedHeadwaySecs))
+	require.Equal(t, 1, subMinute, "the import keeps the sub-minute frequency")
 
 	// The trips share one journey pattern, each at its own offset, which frequency runs ignore
 	var patterns int
@@ -130,6 +143,7 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	require.NoError(t, tx.Get(&stopID, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop1"))
 
 	date := tt.NewDate(time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC))
+	// No departures for rapid, whose only frequency is under a minute
 	expect := map[string][]string{
 		"regular": {"05:00:00"},
 		"offset":  {"07:00:00", "07:30:00"},
