@@ -64,12 +64,11 @@ func TestTripRuns(t *testing.T) {
 		assert.False(t, r.describes(as(pb.TripDescriptor_ADDED)))
 	})
 
-	t.Run("only an ADDED message describes a trip added in real time", func(t *testing.T) {
+	t.Run("every message but a DUPLICATED one describes a trip added in real time", func(t *testing.T) {
 		r := runs("2018-05-30", "2018-05-31")
 		r.added = true
 		assert.True(t, r.describes(as(pb.TripDescriptor_ADDED)))
-		assert.False(t, r.describes(dated("20180531")))
-		assert.False(t, r.describes(as(pb.TripDescriptor_SCHEDULED)))
+		assert.True(t, r.describes(dated("20180531")), "a relationship left unset, as alerts and vehicles leave it")
 		assert.False(t, r.describes(as(pb.TripDescriptor_DUPLICATED)))
 	})
 }

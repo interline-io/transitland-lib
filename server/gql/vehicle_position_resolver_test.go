@@ -458,3 +458,29 @@ func TestVehiclePositions_MultiAgencyFeedVersion(t *testing.T) {
 		)
 	})
 }
+
+// A vehicle's trip: its scheduled trip, none for a copy of a scheduled trip,
+// whether DUPLICATED or ADDED naming it, and the trip it adds otherwise.
+func TestVehiclePositionResolver_TripCopies(t *testing.T) {
+	testRt(t, rtTestCase{
+		name: "vehicle trips",
+		query: `query {
+			agencies(where: {onestop_id: "o-9q9-bayarearapidtransit"}) {
+				vehicle_positions { id trip { trip_id route { route_id } } }
+			}
+		}`,
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_vehicle_positions", Fname: "BA-vehicle-copies.json"}},
+		cb: func(t *testing.T, jj string) {
+			trips := map[string]string{}
+			for _, v := range gjson.Get(jj, "agencies.0.vehicle_positions").Array() {
+				trips[v.Get("id").String()] = v.Get("trip.trip_id").String() + "/" + v.Get("trip.route.route_id").String()
+			}
+			assert.Equal(t, map[string]string{
+				"scheduled":  "3210613WKDY/01",
+				"duplicated": "/",
+				"added-copy": "/",
+				"added":      "-123/01",
+			}, trips)
+		},
+	})
+}

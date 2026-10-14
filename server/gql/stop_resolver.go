@@ -137,7 +137,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 	for _, rtTrip := range model.ForContext(ctx).RTFinder.GetAddedTripsForStop(ctx, obj) {
 		// Each added trip is built once, from the update in hand. One on a route
 		// the feed version doesn't have has no trip to show, so it's left out.
-		trip, err := model.ForContext(ctx).RTFinder.MakeTrip(ctx, obj.FeedVersionID, rtTrip)
+		trip, err := model.ForContext(ctx).RTFinder.MakeTrip(ctx, obj.FeedVersionID, rtTrip.GetTrip())
 		if err != nil {
 			log.For(ctx).Debug().Err(err).Str("trip_id", rtTrip.GetTrip().GetTripId()).Str("route_id", rtTrip.GetTrip().GetRouteId()).Msg("added trip left out: route not in feed version")
 			continue

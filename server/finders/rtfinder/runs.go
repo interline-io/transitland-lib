@@ -27,7 +27,7 @@ type tripRuns struct {
 	// Set for a trip that stands for no run, such as a pattern's representative
 	// trip, which no message describes.
 	none bool
-	// Set for a trip added in real time, which only ADDED messages describe.
+	// Set for a trip added in real time, which ADDED messages describe.
 	added bool
 }
 
@@ -37,17 +37,16 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	if r.none {
 		return false
 	}
-	// A DUPLICATED message names the trip it copies but describes a new run, as
-	// does an ADDED message naming a scheduled trip, the form duplicates took
-	// before DUPLICATED. Only ADDED messages describe a trip added in real
-	// time, so a scheduled trip sharing its trip_id can't lend it data.
-	switch rel := td.GetScheduleRelationship(); {
-	case rel == pb.TripDescriptor_DUPLICATED:
+	// A DUPLICATED message names the trip it copies but describes a new run.
+	// An ADDED message describes only a trip added in real time: naming a
+	// scheduled trip, it's the form duplicates took before DUPLICATED.
+	switch td.GetScheduleRelationship() {
+	case pb.TripDescriptor_DUPLICATED:
 		return false
-	case r.added && rel != pb.TripDescriptor_ADDED:
-		return false
-	case !r.added && rel == pb.TripDescriptor_ADDED:
-		return false
+	case pb.TripDescriptor_ADDED:
+		if !r.added {
+			return false
+		}
 	}
 	run, ok := descriptorDate(td)
 	if !ok {

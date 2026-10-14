@@ -519,22 +519,27 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 			continue
 		}
 		// TODO: index more efficiently
-		// One added trip per trip_id, the last in the feed.
+		// One added trip per trip_id, from its last ADDED update in the feed:
+		// an update with another relationship describes another trip.
 		for _, trips := range a.tripUpdates {
-			trip := trips[len(trips)-1]
-			if trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
-				ret = append(ret, trip)
+			var added *pb.TripUpdate
+			for _, tu := range trips {
+				if tu.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED {
+					added = tu
+				}
+			}
+			if added != nil && slices.ContainsFunc(added.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
+				ret = append(ret, added)
 			}
 		}
 	}
 	return ret
 }
 
-// MakeTrip returns the trip a trip update adds in real time to a feed version,
-// on the route its descriptor names, or an error when the feed version has no
-// such route.
-func (f *Finder) MakeTrip(ctx context.Context, fvid int, tu *pb.TripUpdate) (*model.Trip, error) {
-	td := tu.GetTrip()
+// MakeTrip returns the trip a realtime message adds to a feed version, by its
+// trip descriptor, on the route the descriptor names. It fails when the feed
+// version has no such route.
+func (f *Finder) MakeTrip(ctx context.Context, fvid int, td *pb.TripDescriptor) (*model.Trip, error) {
 	r, ok := f.lookup.GetFeedVersionRoute(ctx, fvid, td.GetRouteId())
 	if !ok {
 		return nil, errors.New("not found")

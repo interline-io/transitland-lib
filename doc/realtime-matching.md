@@ -31,7 +31,7 @@ For example, for an undated message:
 
 If a feed sends several updates for the same run, the last one wins.
 
-A `DUPLICATED` message names the trip it copies but describes a new run, so it never describes one of that trip's runs, whether it's a trip update, a vehicle position or an alert. Neither does an `ADDED` message that names a scheduled trip, the form duplicates took before `DUPLICATED` existed. Only `ADDED` messages describe a trip added in real time.
+A `DUPLICATED` message names the trip it copies but describes a new run, so it never describes one of that trip's runs, whether it's a trip update, a vehicle position or an alert. Neither does an `ADDED` message that names a scheduled trip, the form duplicates took before `DUPLICATED` existed. An `ADDED` message describes only a trip added in real time, which every other message naming its `trip_id` describes too, since alerts and vehicle positions rarely repeat `ADDED`. A vehicle running a copy of a trip has no trip until copies are shown as runs of their own, and a vehicle running a trip added in real time has that trip.
 
 ## Which stop time an update describes
 
