@@ -89,6 +89,15 @@ func testStop(t *testing.T, db tldb.Ext, fvid int, stopId string) *model.Stop {
 	return stop
 }
 
+// testTripID returns the id of a feed version's trip by GTFS trip_id.
+func testTripID(t *testing.T, db tldb.Ext, fvid int, tripId string) int {
+	id := 0
+	if err := sqlx.Get(db, &id, "select id from gtfs_trips where feed_version_id = $1 and trip_id = $2", fvid, tripId); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 // testReadRT reads an RT fixture from testdata/server/rt.
 func testReadRT(t *testing.T, fname string) *pb.FeedMessage {
 	msg, err := rt.ReadFile(testdata.Path("server", "rt", fname))
@@ -147,11 +156,7 @@ func TestPostgresLookup_GetTripSpan(t *testing.T) {
 		{"meet", TripSpan{FirstDeparture: 10 * 3600, LastArrival: 11*3600 + 1800 + 600}},
 	} {
 		t.Run(tc.tripID, func(t *testing.T) {
-			tripID := 0
-			if err := sqlx.Get(tx, &tripID, "select id from gtfs_trips where feed_version_id = $1 and trip_id = $2", fvid, tc.tripID); err != nil {
-				t.Fatal(err)
-			}
-			span, ok := lookup.GetTripSpan(context.Background(), fvid, tripID)
+			span, ok := lookup.GetTripSpan(context.Background(), fvid, testTripID(t, tx, fvid, tc.tripID))
 			assert.True(t, ok)
 			assert.Equal(t, tc.expect, span)
 		})
@@ -189,10 +194,7 @@ func TestPostgresLookup_GetTripStops(t *testing.T) {
 	raw := testutil.MustOpenTestDB(t)
 	db := &countingDB{Ext: raw}
 	fvid := testBartFeedVersion(t, raw)
-	tripID := 0
-	if err := sqlx.Get(raw, &tripID, "select id from gtfs_trips where feed_version_id = $1 and trip_id = $2", fvid, "1031527WKDY"); err != nil {
-		t.Fatal(err)
-	}
+	tripID := testTripID(t, raw, fvid, "1031527WKDY")
 	lookup := NewPostgresLookup(db)
 	ctx := context.Background()
 	stops, ok := lookup.GetTripStops(ctx, fvid, tripID)

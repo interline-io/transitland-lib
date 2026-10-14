@@ -73,44 +73,52 @@ func tripRun(trip *model.Trip, serviceDate tt.Date) *model.Trip {
 }
 
 func (r *stopTimeResolver) Arrival(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error) {
-	stopLoc, agencyLoc, err := stopTimeLocations(ctx, obj.StopID.Int(), obj.FeedVersionID)
-	if err != nil {
-		return nil, err
-	}
 	var ste *pb.TripUpdate_StopTimeEvent
 	var estimated int64
 	if u := obj.RTStopTimeUpdate; u != nil {
 		ste, estimated = u.ArrivalEvent(), u.EstimatedArrival
 	}
-	return stopTimeEvent(ste, estimated, obj.ArrivalTime, obj.ServiceDate, agencyLoc, stopLoc), nil
+	return stopTimeEventAt(ctx, obj, ste, estimated, obj.ArrivalTime)
 }
 
 func (r *stopTimeResolver) Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error) {
-	stopLoc, agencyLoc, err := stopTimeLocations(ctx, obj.StopID.Int(), obj.FeedVersionID)
-	if err != nil {
-		return nil, err
-	}
 	var ste *pb.TripUpdate_StopTimeEvent
 	var estimated int64
 	if u := obj.RTStopTimeUpdate; u != nil {
 		ste, estimated = u.DepartureEvent(), u.EstimatedDeparture
 	}
-	return stopTimeEvent(ste, estimated, obj.DepartureTime, obj.ServiceDate, agencyLoc, stopLoc), nil
+	return stopTimeEventAt(ctx, obj, ste, estimated, obj.DepartureTime)
 }
 
-// stopTimeLocations returns a stop's timezone, which a stop time's local times
-// are shown in, and its feed version's agency timezone, which its scheduled
-// times count in; the stop's when the agency's isn't known.
-func stopTimeLocations(ctx context.Context, stopId int, fvid int) (stopLoc *time.Location, agencyLoc *time.Location, err error) {
-	stopLoc, ok := model.ForContext(ctx).RTFinder.StopTimezone(ctx, stopId, "")
-	if stopLoc == nil || !ok {
-		return nil, nil, errors.New("timezone not available for stop")
+// stopTimeEventAt reports one of a stop time's scheduled times, with the
+// estimate from its realtime event, in the stop time's timezones.
+func stopTimeEventAt(ctx context.Context, obj *model.StopTime, ste *pb.TripUpdate_StopTimeEvent, estimated int64, sched tt.Seconds) (*model.StopTimeEvent, error) {
+	stopLoc, agencyLoc, ok := stopTimeLocations(ctx, obj.StopID, obj.FeedVersionID)
+	if !ok {
+		return nil, errors.New("timezone not available for stop")
 	}
-	agencyLoc, ok = model.ForContext(ctx).RTFinder.FeedVersionTimezone(ctx, fvid)
-	if agencyLoc == nil || !ok {
+	return stopTimeEvent(ste, estimated, sched, obj.ServiceDate, agencyLoc, stopLoc), nil
+}
+
+// stopTimeLocations returns the timezone a stop time's local times are shown
+// in, its stop's, and the agency timezone its scheduled times count in.
+// Without a stop, as at a flex location, both are the agency's; without the
+// agency's, both are the stop's.
+func stopTimeLocations(ctx context.Context, stopId tt.Key, fvid int) (stopLoc *time.Location, agencyLoc *time.Location, ok bool) {
+	rtf := model.ForContext(ctx).RTFinder
+	agencyLoc, agencyOK := rtf.FeedVersionTimezone(ctx, fvid)
+	agencyOK = agencyOK && agencyLoc != nil
+	if !stopId.Valid {
+		return agencyLoc, agencyLoc, agencyOK
+	}
+	stopLoc, ok = rtf.StopTimezone(ctx, stopId.Int(), "")
+	if stopLoc == nil || !ok {
+		return nil, nil, false
+	}
+	if !agencyOK {
 		agencyLoc = stopLoc
 	}
-	return stopLoc, agencyLoc, nil
+	return stopLoc, agencyLoc, true
 }
 
 // stopTimeEvent reports a stop time's scheduled time and its estimate, if
@@ -132,23 +140,23 @@ func stopTimeEvent(ste *pb.TripUpdate_StopTimeEvent, estimated int64, sched tt.S
 		estUtc := time.Unix(estimated, 0).UTC()
 		estLocal := estUtc.In(stopLoc)
 		a.EstimatedUtc = &estUtc
-		a.EstimatedUnix = ptr(int(estUtc.Unix()))
+		a.EstimatedUnix = ptr(int(estimated))
 		a.EstimatedLocal = &estLocal
-		// Delay of the estimate against the schedule, within a day; anything
-		// more is a bad prediction.
-		if a.ScheduledUtc != nil {
-			estDelay := int(estimated - a.ScheduledUtc.Unix())
-			if estDelay > -(24*3600) && estDelay < (24*3600) {
-				a.EstimatedDelay = ptr(estDelay)
+		if a.ScheduledUnix != nil {
+			// Against the schedule, within a day; anything more is a bad prediction.
+			delay := int(estimated) - *a.ScheduledUnix
+			if delay > -(24*3600) && delay < 24*3600 {
+				a.EstimatedDelay = ptr(delay)
+			}
+			// As a time of day, an estimate given as a delay is the scheduled
+			// time shifted by it.
+			if ste == nil || ste.Time == nil {
+				a.Estimated = ptr(tt.NewSeconds(int(sched.Val) + delay))
 			}
 		}
-		// As a time of day: the local clock time of an estimate given as a time,
-		// or the scheduled time shifted by the delay of one given or carried as a
-		// delay.
-		if (ste != nil && ste.Time != nil) || a.ScheduledUtc == nil {
+		if a.Estimated == nil {
+			// An estimate given as a time, or without a schedule, is a clock time.
 			a.Estimated = ptr(tt.NewSeconds(estLocal.Hour()*3600 + estLocal.Minute()*60 + estLocal.Second()))
-		} else {
-			a.Estimated = ptr(tt.NewSeconds(int(sched.Val) + int(estimated-a.ScheduledUtc.Unix())))
 		}
 	}
 	// Only pass through actual message time, delay, uncertainty

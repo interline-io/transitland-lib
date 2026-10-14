@@ -546,21 +546,13 @@ func (l tripUpdateLookup) GetTripStops(_ context.Context, _ int, tripId int) ([]
 	return stops, ok
 }
 
-// testTripStops returns a trip's stop times for tests: stops in order, one a
-// minute from first, with an arrival and departure each.
-func testTripStops(first int, stopIds ...string) []StopRef {
-	ret := make([]StopRef, len(stopIds))
-	for i, sid := range stopIds {
-		ret[i] = StopRef{StopSequence: i + 1, StopID: sid, Arrival: tt.NewSeconds(first + i*60), Departure: tt.NewSeconds(first + i*60)}
-	}
-	return ret
-}
-
-// The stop times of trips 1 and 2, 1031527WKDY and 5172328WKDY, which
+// The stops of trips 1 and 2, 1031527WKDY and 5172328WKDY, which
 // BA-runs-trip-updates.json names at Fruitvale, their stop_sequence 12.
+var testBartStops = []string{"DALY", "BALB", "GLEN", "24TH", "16TH", "CIVC", "POWL", "MONT", "EMBR", "WOAK", "LAKE", "FTVL", "COLS"}
+
 var testTripStopTimes = map[int][]StopRef{
-	1: testTripStops(16*3600, "DALY", "BALB", "GLEN", "24TH", "16TH", "CIVC", "POWL", "MONT", "EMBR", "WOAK", "LAKE", "FTVL", "COLS"),
-	2: testTripStops(23*3600+40*60, "DALY", "BALB", "GLEN", "24TH", "16TH", "CIVC", "POWL", "MONT", "EMBR", "WOAK", "LAKE", "FTVL", "COLS"),
+	1: testTripStops(16*3600, testBartStops...),
+	2: testTripStops(23*3600+40*60, testBartStops...),
 }
 
 // testRunSpan is when trip 5172328WKDY runs on its service day: 23:40 to 24:31.
@@ -663,16 +655,16 @@ func TestFinder_FindRunUpdate(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			ru := f.FindRunUpdate(ctx, tc.run)
+			tu := f.FindRunUpdate(ctx, tc.run)
 			if !tc.found {
-				assert.Nil(t, ru)
+				assert.Nil(t, tu)
 				return
 			}
-			if !assert.NotNil(t, ru) {
+			if !assert.NotNil(t, tu) {
 				return
 			}
-			assert.Equal(t, tc.run.TripID, ru.TripUpdate().GetTrip().GetTripId())
-			got := ru.MatchStops(ctx, 0, []StopRef{{StopSequence: 12, StopID: "FTVL"}})
+			assert.Equal(t, tc.run.TripID, tu.GetTrip().GetTripId())
+			got := MatchStops(tu, 0, []StopRef{{StopSequence: 12, StopID: "FTVL"}})
 			if assert.Len(t, got, 1) && assert.NotNil(t, got[0]) && assert.NotNil(t, got[0].StopTimeUpdate) {
 				assert.Equal(t, tc.delay, got[0].StopTimeUpdate.GetDeparture().GetDelay())
 			}
@@ -800,8 +792,8 @@ func TestFinder_CopiesOfATrip(t *testing.T) {
 				{Id: proto.String("own"), Vehicle: &pb.VehiclePosition{Trip: td(pb.TripDescriptor_SCHEDULED), Timestamp: proto.Uint64(100)}},
 				{Id: proto.String("copy"), Vehicle: &pb.VehiclePosition{Trip: td(rel), Timestamp: proto.Uint64(200)}},
 			}})
-			if ru := updates.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)}); assert.NotNil(t, ru) {
-				assert.Equal(t, pb.TripDescriptor_SCHEDULED, ru.TripUpdate().GetTrip().GetScheduleRelationship(), "trip update")
+			if tu := updates.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)}); assert.NotNil(t, tu) {
+				assert.Equal(t, pb.TripDescriptor_SCHEDULED, tu.GetTrip().GetScheduleRelationship(), "trip update")
 			}
 			if vp := vehicles.FindVehiclePositionForTrip(ctx, testRun(1, "T", 31), nil); assert.NotNil(t, vp) {
 				assert.Equal(t, "own", vp.ID, "vehicle")

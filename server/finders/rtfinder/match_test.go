@@ -11,12 +11,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Test stop times: a run starting at testBase whose stops are ten minutes
-// apart, dwelling a minute at each.
-const testBase int64 = 1_000_000
-
-func testStopRef(seq int, stopId string) StopRef {
-	return StopRef{StopSequence: seq, StopID: stopId, Arrival: tt.NewSeconds(seq*600 - 60), Departure: tt.NewSeconds(seq * 600)}
+// testTripStops returns a trip's stop times for tests: the stops in order,
+// ten minutes apart from first, dwelling a minute at each.
+func testTripStops(first int, stopIds ...string) []StopRef {
+	ret := make([]StopRef, len(stopIds))
+	for i, sid := range stopIds {
+		departure := first + i*600
+		ret[i] = StopRef{StopSequence: i + 1, StopID: sid, Arrival: tt.NewSeconds(departure - 60), Departure: tt.NewSeconds(departure)}
+	}
+	return ret
 }
 
 func delayOf(d int32) *pb.TripUpdate_StopTimeEvent {
@@ -57,9 +60,9 @@ func withRelationship(s *pb.TripUpdate_StopTimeUpdate, rel pb.TripUpdate_StopTim
 
 // Stop time updates are placed on a run's stop times in order along the trip,
 // by stop_sequence or by stop_id.
-func TestMatchRun_Placement(t *testing.T) {
+func TestMatchStops_Placement(t *testing.T) {
 	// A loop visiting B twice, with a last stop whose stop_id isn't known.
-	stops := []StopRef{testStopRef(1, "A"), testStopRef(2, "B"), testStopRef(3, "C"), testStopRef(4, "B"), testStopRef(5, "D"), testStopRef(6, "")}
+	stops := testTripStops(600, "A", "B", "C", "B", "D", "")
 	tcs := []struct {
 		name   string
 		stus   []*pb.TripUpdate_StopTimeUpdate
@@ -79,7 +82,7 @@ func TestMatchRun_Placement(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			tu := &pb.TripUpdate{Trip: &pb.TripDescriptor{TripId: proto.String("T")}, StopTimeUpdate: tc.stus}
-			got := matchRun(context.Background(), tu, testBase, stops)
+			got := MatchStops(tu, testBase, stops)
 			if !assert.Len(t, got, len(stops)) {
 				return
 			}
@@ -98,110 +101,91 @@ func TestMatchRun_Placement(t *testing.T) {
 	}
 	// An update without a stop_sequence doesn't name stop_sequence 0.
 	t.Run("stop_sequence 0 by stop_id only", func(t *testing.T) {
-		stops := []StopRef{testStopRef(0, "A"), testStopRef(1, "B")}
+		stops := []StopRef{{StopSequence: 0, StopID: "A"}, {StopSequence: 1, StopID: "B"}}
 		tu := &pb.TripUpdate{StopTimeUpdate: []*pb.TripUpdate_StopTimeUpdate{stu(0, "B")}}
-		got := matchRun(context.Background(), tu, testBase, stops)
+		got := MatchStops(tu, testBase, stops)
 		assert.Nil(t, got[0].StopTimeUpdate)
 		assert.Same(t, tu.StopTimeUpdate[0], got[1].StopTimeUpdate)
 	})
 }
 
+// The instant the test stop times count from.
+const testBase int64 = 1_000_000
+
 // A stop time's estimates come from its own stop time update, or else from
 // the delay carried from earlier stops.
-func TestMatchRun_Estimates(t *testing.T) {
-	stops := []StopRef{testStopRef(1, "A"), testStopRef(2, "B"), testStopRef(3, "C"), testStopRef(4, "D"), testStopRef(5, "E")}
-	// late returns the estimates of stop time i delayed by d, or none for a
-	// negative d.
+func TestMatchStops_Estimates(t *testing.T) {
+	stops := testTripStops(600, "A", "B", "C", "D", "E")
 	type est struct{ arr, dep int64 }
+	none := est{}
+	// late returns stop time i's estimates delayed by d.
 	late := func(i int, d int64) est {
-		if d < 0 {
-			return est{}
-		}
 		return est{testBase + stops[i].Arrival.Val + d, testBase + stops[i].Departure.Val + d}
 	}
-	none := est{}
-	depA := testBase + stops[0].Departure.Val
-	arrA := testBase + stops[0].Arrival.Val
+	arrA, depA := testBase+stops[0].Arrival.Val, testBase+stops[0].Departure.Val
 	tcs := []struct {
 		name  string
 		delay *int32 // the trip's delay
-		base  int64
 		stus  []*pb.TripUpdate_StopTimeUpdate
 		want  []est
 	}{
 		{
 			name: "the nearest earlier delay carries, not the last",
-			base: testBase,
 			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), delayOf(60)), withDeparture(stu(3, ""), delayOf(300))},
 			want: []est{late(0, 60), late(1, 60), late(2, 300), late(3, 300), late(4, 300)},
 		},
 		{
 			name:  "the trip's delay applies until the first update",
 			delay: proto.Int32(120),
-			base:  testBase,
 			stus:  []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(3, ""), delayOf(300))},
 			want:  []est{late(0, 120), late(1, 120), late(2, 300), late(3, 300), late(4, 300)},
 		},
 		{
 			name:  "NO_DATA ends the carry",
 			delay: proto.Int32(120),
-			base:  testBase,
 			stus:  []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(2, ""), delayOf(60)), withRelationship(stu(3, ""), pb.TripUpdate_StopTimeUpdate_NO_DATA)},
 			want:  []est{late(0, 120), late(1, 60), none, none, none},
 		},
 		{
 			name: "SKIPPED passes the carried delay on",
-			base: testBase,
 			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), delayOf(60)), withRelationship(stu(2, ""), pb.TripUpdate_StopTimeUpdate_SKIPPED)},
 			want: []est{late(0, 60), none, late(2, 60), late(3, 60), late(4, 60)},
 		},
 		{
 			name: "a time carries the delay it implies",
-			base: testBase,
 			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), timeOf(depA+180))},
 			want: []est{{depA + 180, depA + 180}, late(1, 180), late(2, 180), late(3, 180), late(4, 180)},
 		},
 		{
 			name: "an arrival stands in for a missing departure",
-			base: testBase,
 			stus: []*pb.TripUpdate_StopTimeUpdate{withArrival(stu(1, ""), timeOf(arrA+240))},
 			want: []est{{arrA + 240, arrA + 240}, late(1, 240), late(2, 240), late(3, 240), late(4, 240)},
 		},
 		{
 			name: "a departure delay carries over an arrival delay",
-			base: testBase,
 			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(withArrival(stu(1, ""), delayOf(30)), delayOf(90))},
 			want: []est{{arrA + 30, depA + 90}, late(1, 90), late(2, 90), late(3, 90), late(4, 90)},
 		},
 		{
 			name: "a time outranks a delay on the same event",
-			base: testBase,
 			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), &pb.TripUpdate_StopTimeEvent{Time: proto.Int64(depA + 100), Delay: proto.Int32(60)})},
 			want: []est{{depA + 100, depA + 100}, late(1, 60), late(2, 60), late(3, 60), late(4, 60)},
 		},
 		{
 			name:  "an update without events takes the carried delay",
 			delay: proto.Int32(100),
-			base:  testBase,
 			stus:  []*pb.TripUpdate_StopTimeUpdate{stu(2, "")},
 			want:  []est{late(0, 100), late(1, 100), late(2, 100), late(3, 100), late(4, 100)},
 		},
 		{
-			name: "without a date, times pass through and delays estimate nothing",
-			base: 0,
-			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), delayOf(60)), withDeparture(stu(2, ""), timeOf(5000))},
-			want: []est{none, {5000, 5000}, none, none, none},
-		},
-		{
 			name: "no update, no estimates",
-			base: testBase,
 			want: []est{none, none, none, none, none},
 		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			tu := &pb.TripUpdate{Trip: &pb.TripDescriptor{TripId: proto.String("T")}, Delay: tc.delay, StopTimeUpdate: tc.stus}
-			got := matchRun(context.Background(), tu, tc.base, stops)
+			got := MatchStops(tu, testBase, stops)
 			if !assert.Len(t, got, len(stops)) {
 				return
 			}
@@ -210,20 +194,27 @@ func TestMatchRun_Estimates(t *testing.T) {
 			}
 		})
 	}
+	t.Run("without a date, times pass through and delays estimate nothing", func(t *testing.T) {
+		tu := &pb.TripUpdate{StopTimeUpdate: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), delayOf(60)), withDeparture(stu(2, ""), timeOf(5000))}}
+		got := MatchStops(tu, 0, stops)
+		for i, want := range []est{none, {5000, 5000}, none, none, none} {
+			assert.Equal(t, want, est{got[i].EstimatedArrival, got[i].EstimatedDeparture}, "stop time %d", i)
+		}
+	})
 	// A stop time without a scheduled time gets no estimate from a delay, and
 	// the delay carries past it.
 	t.Run("a stop time without a scheduled time", func(t *testing.T) {
-		untimed := []StopRef{testStopRef(1, "A"), {StopSequence: 2, StopID: "B"}, testStopRef(3, "C")}
+		untimed := []StopRef{stops[0], {StopSequence: 2, StopID: "B"}, stops[2]}
 		tu := &pb.TripUpdate{StopTimeUpdate: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), delayOf(60))}}
-		got := matchRun(context.Background(), tu, testBase, untimed)
-		assert.Equal(t, est{}, est{got[1].EstimatedArrival, got[1].EstimatedDeparture}, "untimed stop")
-		assert.Equal(t, est{testBase + untimed[2].Arrival.Val + 60, testBase + untimed[2].Departure.Val + 60}, est{got[2].EstimatedArrival, got[2].EstimatedDeparture}, "the stop after")
+		got := MatchStops(tu, testBase, untimed)
+		assert.Equal(t, none, est{got[1].EstimatedArrival, got[1].EstimatedDeparture}, "untimed stop")
+		assert.Equal(t, late(2, 60), est{got[2].EstimatedArrival, got[2].EstimatedDeparture}, "the stop after")
 	})
 }
 
-// A RunUpdate matches its first feed's trip update to stop times given by
-// value, and FindStopTimeUpdates matches a trip's, asking the Lookup for them
-// so that a caller holding only some of them still gets the carried delay.
+// A run's trip update is matched to stop times given by value, and
+// FindStopTimeUpdates matches a trip's, asking the Lookup for them so that a
+// caller holding only some of them still gets the carried delay.
 func TestFinder_MatchStops(t *testing.T) {
 	ctx := context.Background()
 	loc := testLosAngeles(t)
@@ -240,19 +231,18 @@ func TestFinder_MatchStops(t *testing.T) {
 	stops := testTripStops(10*3600, "A", "B", "C", "D")
 	dayStart := tt.ServiceDayStart(testDate(31), loc).Unix()
 
-	t.Run("MatchStops", func(t *testing.T) {
+	t.Run("by value", func(t *testing.T) {
 		f := testFinder(t, feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}, "realtime_trip_updates", msg)
-		ru := f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)})
-		if !assert.NotNil(t, ru) {
+		tu := f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)})
+		if !assert.NotNil(t, tu) {
 			return
 		}
-		got := ru.MatchStops(ctx, dayStart, stops)
+		got := MatchStops(tu, dayStart, stops)
 		if assert.Len(t, got, 4) {
 			assert.Zero(t, got[0].EstimatedDeparture, "before the first update")
 			assert.Equal(t, dayStart+stops[1].Departure.Val+60, got[1].EstimatedDeparture, "the update's stop")
 			assert.Equal(t, dayStart+stops[3].Departure.Val+60, got[3].EstimatedDeparture, "carried")
 		}
-		assert.Nil(t, f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(30)}), "a run without an update")
 	})
 	t.Run("FindStopTimeUpdates", func(t *testing.T) {
 		lookup := tripUpdateLookup{
@@ -271,12 +261,10 @@ func TestFinder_MatchStops(t *testing.T) {
 		if assert.Len(t, got, 1) {
 			assert.Nil(t, got[0])
 		}
-		// A trip whose stop times the Lookup doesn't have isn't matched.
-		_, ok := f.FindStopTimeUpdate(ctx, testRun(8, "T", 31), testStopTime(1))
+		_, ok := f.FindStopTimeUpdate(ctx, testRun(7, "T", 31), testStopTime(9))
 		assert.False(t, ok)
-		// A run without an update.
-		for _, r := range f.FindStopTimeUpdates(ctx, testRun(7, "T", 30), []*model.StopTime{testStopTime(1)}) {
-			assert.Nil(t, r)
-		}
+		// A trip whose stop times the Lookup doesn't have isn't matched.
+		_, ok = f.FindStopTimeUpdate(ctx, testRun(8, "T", 31), testStopTime(1))
+		assert.False(t, ok)
 	})
 }
