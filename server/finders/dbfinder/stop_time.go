@@ -10,6 +10,11 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
+// minExpandedHeadwaySecs is the shortest frequency headway that departures queries
+// expand into runs. GTFS allows any positive headway; this protects the queries from
+// feeds whose sub-minute headways would expand into millions of departures.
+const minExpandedHeadwaySecs = 60
+
 func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *model.TripStopTimeFilter, keys []model.FVPair) ([][]*model.StopTime, error) {
 	var ents []*model.StopTime
 	err := dbutil.Select(ctx,
@@ -23,7 +28,7 @@ func (f *Finder) StopTimesByTripIDs(ctx context.Context, limit *int, where *mode
 }
 
 func (f *Finder) StopTimesByStopIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.StopTime, error) {
-	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityStop, where, keys)
+	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityStop, limit, where, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +52,7 @@ func (f *Finder) FlexStopTimesByStopIDs(ctx context.Context, limit *int, where *
 // FlexStopTimesByLocationIDs returns flex stop times for the given location IDs.
 // Used by the Location resolver to get stop_times for flex service areas.
 func (f *Finder) FlexStopTimesByLocationIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
-	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityLocation, where, keys)
+	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityLocation, limit, where, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +64,7 @@ func (f *Finder) FlexStopTimesByLocationIDs(ctx context.Context, limit *int, whe
 // FlexStopTimesByLocationGroupIDs returns flex stop times for the given location group IDs.
 // Used by the LocationGroup resolver to get stop_times for flex service location groups.
 func (f *Finder) FlexStopTimesByLocationGroupIDs(ctx context.Context, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([][]*model.FlexStopTime, error) {
-	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityLocationGroup, where, keys)
+	ents, err := f.stopTimesByEntityIDs(ctx, stopTimeEntityLocationGroup, limit, where, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +75,7 @@ func (f *Finder) FlexStopTimesByLocationGroupIDs(ctx context.Context, limit *int
 
 // stopTimesByEntityIDs is the internal method that fetches stop_times for any entity type.
 // Public methods call this and arrange results by the appropriate grouping key.
-func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEntityType, where *model.StopTimeFilter, keys []model.FVPair) ([]*model.StopTime, error) {
+func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEntityType, limit *int, where *model.StopTimeFilter, keys []model.FVPair) ([]*model.StopTime, error) {
 	pairGroups := map[int][]model.FVPair{}
 	for _, v := range keys {
 		pairGroups[v.FeedVersionID] = append(pairGroups[v.FeedVersionID], v)
@@ -100,9 +105,9 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 					entityKeys = append(entityKeys, k.EntityID)
 				}
 				if model.ForContext(ctx).UseMaterializedDepartures {
-					q = stopDeparturesMaterializedSelect(fvid, entityKeys, entityType, w)
+					q = stopDeparturesMaterializedSelect(fvid, entityKeys, entityType, limit, w)
 				} else {
-					q = stopDeparturesSelect(fvid, entityKeys, entityType, w)
+					q = stopDeparturesSelect(fvid, entityKeys, entityType, limit, w)
 				}
 			} else {
 				// Otherwise get all stop_times for entity
@@ -229,9 +234,9 @@ func activeServicesCTE(fvid int, serviceDate time.Time) sq.CTE {
 	}
 }
 
-// stopDeparturesSelect returns stop_times for a specific date.
+// stopDeparturesSelect returns each entity's first limit stop_times on a specific date.
 // Filters by the entity IDs based on entityType (stop_id, location_id, or location_group_id).
-func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, where *model.StopTimeFilter) sq.SelectBuilder {
+func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, limit *int, where *model.StopTimeFilter) sq.SelectBuilder {
 	// Where must already be set for local service date and timezone
 	serviceDate := time.Now()
 	if where != nil && where.ServiceDate != nil {
@@ -263,6 +268,9 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		"sts.end_pickup_drop_off_window",
 		"sts.pickup_booking_rule_id",
 		"sts.drop_off_booking_rule_id",
+		// Each entity's departures in order, for firstDepartures. A stop time
+		// names exactly one stop, location or location group.
+		"row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts.departure_time_freq, gtfs_trips.id) AS entity_rank",
 	).
 		WithCTE(activeServicesCTE(fvid, serviceDate)).
 		From("gtfs_trips").
@@ -271,16 +279,17 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		Join("feed_versions on feed_versions.id = gtfs_trips.feed_version_id").
 		// The trip's runs. A trip in frequencies.txt runs once per start: every
 		// headway_secs from start_time, up to but not including end_time. Any other
-		// trip runs once, at its own times, with a null freq_start.
+		// trip runs once, at its own times, with a null freq_start. A frequency under
+		// minExpandedHeadwaySecs isn't expanded, so it adds no runs.
 		JoinClause(`join lateral (
 			select
 				generate_series(start_time, end_time - 1, headway_secs) freq_start
 			from gtfs_frequencies
-			where gtfs_frequencies.trip_id = gtfs_trips.id
+			where gtfs_frequencies.trip_id = gtfs_trips.id and gtfs_frequencies.headway_secs >= ?
 			union all
 			select null
 			where not exists (select 1 from gtfs_frequencies where gtfs_frequencies.trip_id = gtfs_trips.id)
-			) freq on true`).
+			) freq on true`, minExpandedHeadwaySecs).
 		JoinClause(`join lateral (
 			select 
 				min(sts2.departure_time) first_departure_time,
@@ -305,8 +314,7 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 			from gtfs_stop_times sts
 			where sts.trip_id = base_trip.id and sts.feed_version_id = base_trip.feed_version_id		
 			) sts on true`).
-		Where(sq.Eq{"sts.feed_version_id": fvid}).
-		OrderBy("sts.departure_time_freq", "sts.trip_id") // base + offset
+		Where(sq.Eq{"sts.feed_version_id": fvid})
 
 	// Filter by entity type
 	if len(entityIDs) > 0 {
@@ -368,14 +376,14 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 			q = q.Where(sq.LtOrEq{"sts.departure_time_freq": *where.EndTime})
 		}
 	}
-	return q
+	return firstDepartures(q, limit)
 }
 
 // stopDeparturesMaterializedSelect is stopDeparturesSelect planned from a
 // materialized CTE of the entities' stop_times. It checks service and route on
 // each pattern's base trip, so relies on a pattern's trips sharing a service_id
 // and a route_id.
-func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, where *model.StopTimeFilter) sq.SelectBuilder {
+func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stopTimeEntityType, limit *int, where *model.StopTimeFilter) sq.SelectBuilder {
 	// Where must already be set for local service date and timezone
 	serviceDate := time.Now()
 	if where != nil && where.ServiceDate != nil {
@@ -427,6 +435,9 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		"sts.end_pickup_drop_off_window",
 		"sts.pickup_booking_rule_id",
 		"sts.drop_off_booking_rule_id",
+		// Each entity's departures in order, for firstDepartures. A stop time
+		// names exactly one stop, location or location group.
+		"row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts_freq.departure_time_freq, gtfs_trips.id) AS entity_rank",
 	).
 		WithCTE(activeServicesCTE(fvid, serviceDate)).
 		WithCTE(sq.CTE{Alias: "at_entity", Materialized: true, Expression: atEntity}).
@@ -434,16 +445,17 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		Join("gtfs_trips ON gtfs_trips.feed_version_id = ? AND gtfs_trips.journey_pattern_id = sts.base_trip_gtfs_id::text", fvid).
 		// The trip's runs. A trip in frequencies.txt runs once per start: every
 		// headway_secs from start_time, up to but not including end_time. Any other
-		// trip runs once, at its own times, with a null freq_start.
+		// trip runs once, at its own times, with a null freq_start. A frequency under
+		// minExpandedHeadwaySecs isn't expanded, so it adds no runs.
 		JoinClause(`join lateral (
 			select
 				generate_series(start_time, end_time - 1, headway_secs) freq_start
 			from gtfs_frequencies
-			where gtfs_frequencies.trip_id = gtfs_trips.id
+			where gtfs_frequencies.trip_id = gtfs_trips.id and gtfs_frequencies.headway_secs >= ?
 			union all
 			select null
 			where not exists (select 1 from gtfs_frequencies where gtfs_frequencies.trip_id = gtfs_trips.id)
-			) freq on true`).
+			) freq on true`, minExpandedHeadwaySecs).
 		JoinClause(`join lateral (
 			select
 				min(sts2.departure_time) first_departure_time,
@@ -466,8 +478,7 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 				) AS departure_time_freq
 			) sts_freq on true`).
 		// A pattern's trips share a service_id, so checking the base trip covers them all.
-		Where("sts.base_trip_service_id = ANY(ARRAY(SELECT id FROM active_services))").
-		OrderBy("sts_freq.departure_time_freq", "sts.trip_id")
+		Where("sts.base_trip_service_id = ANY(ARRAY(SELECT id FROM active_services))")
 
 	if where != nil {
 		if where.ExcludeFirst != nil && *where.ExcludeFirst {
@@ -526,7 +537,18 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 			q = q.Where(sq.LtOrEq{"sts_freq.departure_time_freq": *where.EndTime})
 		}
 	}
-	return q
+	return firstDepartures(q, limit)
+}
+
+// firstDepartures keeps each entity's first limit rows of a departures query,
+// numbered by its entity_rank column, so frequency runs past the limit never
+// leave the database.
+func firstDepartures(q sq.SelectBuilder, limit *int) sq.SelectBuilder {
+	return sq.StatementBuilder.
+		Select("departures.*").
+		FromSelect(q, "departures").
+		Where(sq.LtOrEq{"departures.entity_rank": finderCheckLimit(limit)}).
+		OrderBy("departures.departure_time", "departures.trip_id")
 }
 
 // serviceDayQuery is one service day's share of a stop time filter: the filter

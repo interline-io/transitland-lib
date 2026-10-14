@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -91,8 +92,8 @@ func TestStopDeparturesMaterializedSelect(t *testing.T) {
 				}
 				for _, filter := range filters {
 					var want, got []*model.StopTime
-					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesSelect(fvid, entityIDs, et.entityType, filter.where()), &want))
-					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesMaterializedSelect(fvid, entityIDs, et.entityType, filter.where()), &got))
+					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesSelect(fvid, entityIDs, et.entityType, nil, filter.where()), &want))
+					require.NoError(t, dbutil.Select(ctx, db, stopDeparturesMaterializedSelect(fvid, entityIDs, et.entityType, nil, filter.where()), &got))
 					sortStopTimes(want)
 					sortStopTimes(got)
 					// Not assert.Equal: diffing thousands of rows takes minutes
@@ -111,7 +112,8 @@ func TestStopDeparturesMaterializedSelect(t *testing.T) {
 }
 
 // Both departures queries run a trip in frequencies.txt once per start: every
-// headway_secs from start_time, up to but not including end_time.
+// headway_secs from start_time, up to but not including end_time. Neither
+// expands a frequency under minExpandedHeadwaySecs.
 func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	if a, ok := testutil.CheckTestDB(); !ok {
 		t.Skip(a)
@@ -120,7 +122,18 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	tx, err := testutil.MustOpenTestDB(t).Beginx()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = tx.Rollback() })
-	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	// A trip every 30 seconds from 12:00:00 to 13:00:00, on the same pattern as the others
+	feed := testreader.NewFrequencyTestFeed()
+	feed.TripList = append(feed.TripList, gtfs.Trip{TripID: tt.NewString("rapid"), RouteID: tt.NewKey("route1"), ServiceID: tt.NewKey("service1")})
+	feed.StopTimeList = append(feed.StopTimeList,
+		gtfs.StopTime{TripID: tt.NewString("rapid"), StopID: tt.NewKey("stop1"), StopSequence: tt.NewInt(1), ArrivalTime: tt.NewSeconds(12 * 3600), DepartureTime: tt.NewSeconds(12 * 3600)},
+		gtfs.StopTime{TripID: tt.NewString("rapid"), StopID: tt.NewKey("stop2"), StopSequence: tt.NewInt(2), ArrivalTime: tt.NewSeconds(12*3600 + 600), DepartureTime: tt.NewSeconds(12*3600 + 600)},
+	)
+	feed.FrequencyList = append(feed.FrequencyList, gtfs.Frequency{TripID: tt.NewString("rapid"), StartTime: tt.NewSeconds(12 * 3600), EndTime: tt.NewSeconds(13 * 3600), HeadwaySecs: tt.NewInt(30)})
+	fvid := testdb.CopyTestFeed(t, tx, feed)
+	var subMinute int
+	require.NoError(t, tx.Get(&subMinute, "select count(*) from gtfs_frequencies where feed_version_id = $1 and headway_secs < $2", fvid, minExpandedHeadwaySecs))
+	require.Equal(t, 1, subMinute, "the import keeps the sub-minute frequency")
 
 	// The trips share one journey pattern, each at its own offset, which frequency runs ignore
 	var patterns int
@@ -130,6 +143,7 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	require.NoError(t, tx.Get(&stopID, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop1"))
 
 	date := tt.NewDate(time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC))
+	// No departures for rapid, whose only frequency is under a minute
 	expect := map[string][]string{
 		"regular": {"05:00:00"},
 		"offset":  {"07:00:00", "07:30:00"},
@@ -137,10 +151,10 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 	}
 	queries := map[string]func() sq.SelectBuilder{
 		"departures": func() sq.SelectBuilder {
-			return stopDeparturesSelect(fvid, []int{stopID}, stopTimeEntityStop, &model.StopTimeFilter{ServiceDate: &date})
+			return stopDeparturesSelect(fvid, []int{stopID}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date})
 		},
 		"materialized departures": func() sq.SelectBuilder {
-			return stopDeparturesMaterializedSelect(fvid, []int{stopID}, stopTimeEntityStop, &model.StopTimeFilter{ServiceDate: &date})
+			return stopDeparturesMaterializedSelect(fvid, []int{stopID}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date})
 		},
 	}
 	for name, q := range queries {
@@ -152,6 +166,54 @@ func TestStopDeparturesSelect_Frequencies(t *testing.T) {
 				got[st.GtfsTripID] = append(got[st.GtfsTripID], st.DepartureTime.String())
 			}
 			assert.Equal(t, expect, got)
+		})
+	}
+}
+
+// Both departures queries keep each entity's first limit stop times, in order,
+// when one query asks for several entities.
+func TestStopDeparturesSelect_Limit(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	ctx := context.Background()
+	tx, err := testutil.MustOpenTestDB(t).Beginx()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback() })
+	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	var stop1, stop2 int
+	require.NoError(t, tx.Get(&stop1, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop1"))
+	require.NoError(t, tx.Get(&stop2, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop2"))
+
+	date := tt.NewDate(time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC))
+	queries := map[string]func(limit *int) sq.SelectBuilder{
+		"departures": func(limit *int) sq.SelectBuilder {
+			return stopDeparturesSelect(fvid, []int{stop1, stop2}, stopTimeEntityStop, limit, &model.StopTimeFilter{ServiceDate: &date})
+		},
+		"materialized departures": func(limit *int) sq.SelectBuilder {
+			return stopDeparturesMaterializedSelect(fvid, []int{stop1, stop2}, stopTimeEntityStop, limit, &model.StopTimeFilter{ServiceDate: &date})
+		},
+	}
+	departureTimes := func(t *testing.T, q sq.SelectBuilder) map[int][]string {
+		var sts []*model.StopTime
+		require.NoError(t, dbutil.Select(ctx, tx, q, &sts))
+		ret := map[int][]string{}
+		for _, st := range sts {
+			ret[st.StopID.Int()] = append(ret[st.StopID.Int()], st.DepartureTime.String())
+		}
+		return ret
+	}
+	for name, q := range queries {
+		t.Run(name, func(t *testing.T) {
+			// Without a limit, each stop has seven stop times that day
+			all := departureTimes(t, q(nil))
+			require.Len(t, all[stop1], 7)
+			require.Len(t, all[stop2], 7)
+			expect := map[int][]string{
+				stop1: {"05:00:00", "07:00:00", "07:30:00"},
+				stop2: {"05:10:00", "07:10:00", "07:40:00"},
+			}
+			assert.Equal(t, expect, departureTimes(t, q(ptr(3))))
 		})
 	}
 }

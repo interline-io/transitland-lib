@@ -156,6 +156,8 @@ func (f *Finder) findAlerts(ctx context.Context, fvid int, limit *int, active *b
 	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, fvid)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
+		// Read even when stale: an alert carries its own active periods, and
+		// many feeds serve alerts from files that never update the header.
 		src, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
 		if !ok || src == nil {
 			continue
@@ -345,13 +347,47 @@ func stopAgrees(s *pb.EntitySelector, fv feedVersionRefs) bool {
 	return true
 }
 
-func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) (*pb.FeedMessage, bool) {
-	tk := getTopicKey(topic, topicKey)
-	a, ok := f.cache.GetSource(ctx, tk)
-	if a != nil && ok {
-		return a.msg, ok
+// GetMessage returns a feed's held payload however old, and whether it's
+// stale: too far from now to match trip updates and vehicle positions.
+func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) (msg *pb.FeedMessage, stale bool, ok bool) {
+	src, ok := f.cache.GetSource(ctx, getTopicKey(topic, topicKey))
+	if !ok || src == nil {
+		return nil, false, false
 	}
-	return nil, false
+	return src.msg, f.stale(src), true
+}
+
+// maxPayloadAge is how far a payload's header timestamp can be from the
+// Finder's clock before the payload is stale. Live feeds are a few minutes old
+// at most, while feeds that have stopped updating are hours old.
+const maxPayloadAge = time.Hour
+
+// stale reports whether a payload's header timestamp is more than
+// maxPayloadAge from the Finder's clock. A header that far ahead of the clock
+// is stale too, as from a producer stamping milliseconds or with a skewed
+// clock. A payload without a header timestamp isn't stale.
+func (f *Finder) stale(src *Source) bool {
+	ts := src.GetTimestamp()
+	if ts == 0 {
+		return false
+	}
+	age := f.Clock.Now().Sub(time.Unix(int64(ts), 0))
+	return age > maxPayloadAge || age < -maxPayloadAge
+}
+
+// currentSource returns a feed's held payload, or nothing when it's stale.
+func (f *Finder) currentSource(ctx context.Context, topicKey string) (*Source, bool) {
+	src, ok := f.cache.GetSource(ctx, topicKey)
+	if !ok || src == nil {
+		return nil, false
+	}
+	if f.stale(src) {
+		log.TraceCheck(func() {
+			log.For(ctx).Trace().Str("topic", topicKey).Uint64("header_timestamp", src.GetTimestamp()).Msg("rtfinder: payload too old to match")
+		})
+		return nil, false
+	}
+	return src, true
 }
 
 // FindStopTimeUpdate returns the update for a stop time on a trip's runs: the
@@ -478,7 +514,7 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 	var ret []*pb.TripUpdate
 	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	for _, topic := range topics {
-		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
+		a, ok := f.currentSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
 		if !ok {
 			continue
 		}
@@ -528,7 +564,7 @@ func (f *Finder) getTrips(ctx context.Context, topic string, tid string) []*pb.T
 	if tid == "" {
 		return nil
 	}
-	a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
+	a, ok := f.currentSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
 	if !ok {
 		return nil
 	}

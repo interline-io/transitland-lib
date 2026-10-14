@@ -6,7 +6,9 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/rt"
@@ -95,10 +97,23 @@ func testReadRT(t *testing.T, fname string) *pb.FeedMessage {
 	return msg
 }
 
-// testFinder returns a Finder over lookup holding msg as BART's ftype feed.
+// testFinder returns a Finder over lookup holding msg as BART's ftype feed,
+// fetched now.
 func testFinder(t *testing.T, lookup Lookup, ftype string, msg *pb.FeedMessage) *Finder {
 	f := NewFinder(kvcache.NewMemoryStore(), lookup)
+	return testFinderAt(t, f, time.Now(), ftype, msg)
+}
+
+// testFinderAt sets f's clock to now and adds msg as BART's ftype feed, as a
+// live feed's payload fetched then, with its header stamped then.
+func testFinderAt(t *testing.T, f *Finder, now time.Time, ftype string, msg *pb.FeedMessage) *Finder {
 	t.Cleanup(func() { f.Close() })
+	f.Clock = &clock.Mock{T: now}
+	msg = proto.Clone(msg).(*pb.FeedMessage)
+	if msg.Header == nil {
+		msg.Header = &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}
+	}
+	msg.Header.Timestamp = proto.Uint64(uint64(now.Unix()))
 	data, err := proto.Marshal(msg)
 	if err != nil {
 		t.Fatal(err)

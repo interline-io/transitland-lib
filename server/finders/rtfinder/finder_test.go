@@ -9,6 +9,7 @@ import (
 
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/rt/pb"
+	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/tt"
@@ -570,9 +571,8 @@ func testLosAngeles(t *testing.T) *time.Location {
 // updates, at ten past midnight on 2018-05-31: while trip 5172328WKDY's run
 // from the day before is still going.
 func testRunsFinder(t *testing.T, lookup Lookup, loc *time.Location) *Finder {
-	f := testFinder(t, lookup, "realtime_trip_updates", testReadRT(t, "BA-runs-trip-updates.json"))
-	f.Clock = &clock.Mock{T: time.Date(2018, 5, 31, 0, 10, 0, 0, loc)}
-	return f
+	now := time.Date(2018, 5, 31, 0, 10, 0, 0, loc)
+	return testFinderAt(t, NewFinder(kvcache.NewMemoryStore(), lookup), now, "realtime_trip_updates", testReadRT(t, "BA-runs-trip-updates.json"))
 }
 
 // testLookupFinder returns a testRunsFinder over a tripUpdateLookup, where
@@ -780,4 +780,105 @@ func TestFinder_MatchStops(t *testing.T) {
 	// Matching the trip's stop times looked up the stop_id of the five that no
 	// update names by stop_sequence, and none for the run without an update.
 	assert.EqualValues(t, 5, stopIdLookups.Load())
+}
+
+// payloadAgeLookup answers the lookups that TestFinder_PayloadAge's matching
+// paths make: feed version 1's realtime feeds, its route R, and agency 5's
+// routes.
+type payloadAgeLookup struct {
+	feedVersionLookup
+}
+
+func (l payloadAgeLookup) GetFeedVersionRoute(_ context.Context, fvid int, routeId string) (GtfsRoute, bool) {
+	return GtfsRoute{ID: 10, RouteID: "R", AgencyID: "AG"}, fvid == 1 && routeId == "R"
+}
+
+func (l payloadAgeLookup) GetAgencyRouteIDs(_ context.Context, id int) (map[string]bool, bool) {
+	return map[string]bool{"R": true}, id == 5
+}
+
+// Matching trip updates and vehicle positions ignores a payload whose header
+// timestamp is more than an hour from now, behind or ahead. Alerts and
+// GetMessage still read the stale payload, and GetMessage reports the age.
+func TestFinder_PayloadAge(t *testing.T) {
+	ctx := context.Background()
+	fetched := time.Date(2018, 5, 31, 12, 0, 0, 0, time.UTC)
+	td := &pb.TripDescriptor{TripId: proto.String("T"), RouteId: proto.String("R"), StartDate: proto.String("20180531")}
+	added := &pb.TripDescriptor{TripId: proto.String("A"), RouteId: proto.String("R"), ScheduleRelationship: pb.TripDescriptor_ADDED.Enum()}
+	payloads := map[string]*pb.FeedMessage{
+		"realtime_trip_updates": {Entity: []*pb.FeedEntity{
+			{Id: proto.String("tu"), TripUpdate: &pb.TripUpdate{Trip: td, StopTimeUpdate: []*pb.TripUpdate_StopTimeUpdate{{StopSequence: proto.Uint32(1)}}}},
+			{Id: proto.String("added"), TripUpdate: &pb.TripUpdate{Trip: added, StopTimeUpdate: []*pb.TripUpdate_StopTimeUpdate{{StopId: proto.String("S1")}}}},
+		}},
+		vehiclePositionTopicKey: {Entity: []*pb.FeedEntity{{Id: proto.String("vp"), Vehicle: &pb.VehiclePosition{Trip: td}}}},
+		"realtime_alerts": {Entity: []*pb.FeedEntity{{Id: proto.String("alert"), Alert: &pb.Alert{InformedEntity: []*pb.EntitySelector{{
+			Trip: &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531")},
+		}}}}}},
+	}
+	// A Finder an age after the payloads were fetched, their headers stamped
+	// with timestamp, or with none.
+	finderAfter := func(t *testing.T, timestamp *uint64, age time.Duration) *Finder {
+		f := NewFinder(kvcache.NewMemoryStore(), payloadAgeLookup{feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}})
+		t.Cleanup(func() { f.Close() })
+		for kind, msg := range payloads {
+			msg = proto.Clone(msg).(*pb.FeedMessage)
+			msg.Header = &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0"), Timestamp: timestamp}
+			data, err := proto.Marshal(msg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := f.AddData(ctx, getTopicKey("BA", kind), data); err != nil {
+				t.Fatal(err)
+			}
+		}
+		f.Clock = &clock.Mock{T: fetched.Add(age)}
+		return f
+	}
+	stamped := proto.Uint64(uint64(fetched.Unix()))
+	tcs := []struct {
+		name      string
+		timestamp *uint64
+		age       time.Duration
+		current   bool
+	}{
+		{"under an hour old", stamped, 59 * time.Minute, true},
+		{"exactly an hour old", stamped, time.Hour, true},
+		{"over an hour old", stamped, 61 * time.Minute, false},
+		{"over an hour ahead of the clock", stamped, -61 * time.Minute, false},
+		{"without a header timestamp", nil, 61 * time.Minute, true},
+	}
+	trip, addedTrip := testRun(1, "T", 31), testRun(2, "A", 31)
+	stop, agency, route := &model.Stop{}, &model.Agency{}, &model.Route{}
+	stop.FeedVersionID = 1
+	stop.StopID.Set("S1")
+	agency.ID, agency.FeedVersionID = 5, 1
+	route.FeedVersionID = 1
+	route.RouteID.Set("R")
+	count := func(current bool) int {
+		if current {
+			return 1
+		}
+		return 0
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			f := finderAfter(t, tc.timestamp, tc.age)
+			// Trip updates.
+			assert.Equal(t, tc.current, f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)}) != nil, "FindRunUpdate")
+			assert.Len(t, f.GetAddedTripsForStop(ctx, stop), count(tc.current), "GetAddedTripsForStop")
+			_, err := f.MakeTrip(ctx, addedTrip)
+			assert.Equal(t, tc.current, err == nil, "MakeTrip")
+			// Vehicle positions.
+			assert.Equal(t, tc.current, f.FindVehiclePositionForTrip(ctx, trip, nil) != nil, "FindVehiclePositionForTrip")
+			assert.Len(t, f.FindVehiclePositionsForAgency(ctx, agency, nil, nil), count(tc.current), "FindVehiclePositionsForAgency")
+			assert.Len(t, f.FindVehiclePositionsForRoute(ctx, route, nil, nil), count(tc.current), "FindVehiclePositionsForRoute")
+			// Read whatever the age.
+			assert.Len(t, f.FindAlertsForTrip(ctx, trip, nil, nil), 1, "FindAlertsForTrip")
+			msg, stale, ok := f.GetMessage(ctx, "BA", "realtime_trip_updates")
+			if assert.True(t, ok, "GetMessage") {
+				assert.NotNil(t, msg)
+				assert.Equal(t, !tc.current, stale, "GetMessage reports the payload stale")
+			}
+		})
+	}
 }

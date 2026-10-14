@@ -208,7 +208,9 @@ type RTFinder interface {
 	// lookup cache methods
 	StopTimezone(context.Context, int, string) (*time.Location, bool)
 	FeedVersionTimezone(context.Context, int) (*time.Location, bool)
-	GetMessage(context.Context, string, string) (*pb.FeedMessage, bool)
+	// GetMessage returns a feed's held payload, whether it's stale, and
+	// whether one is held.
+	GetMessage(context.Context, string, string) (*pb.FeedMessage, bool, bool)
 }
 
 // GbfsFinder manages and looks up GBFS data

@@ -133,8 +133,8 @@ func (f *Finder) findVehiclePositions(ctx context.Context, fvid int, where *mode
 	var ret []*model.VehiclePosition
 	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, fvid)
 	for _, topic := range topics {
-		src, ok := f.cache.GetSource(ctx, getTopicKey(topic, vehiclePositionTopicKey))
-		if !ok || src == nil {
+		src, ok := f.currentSource(ctx, getTopicKey(topic, vehiclePositionTopicKey))
+		if !ok {
 			continue
 		}
 		for _, ent := range src.GetVehiclePositions() {
