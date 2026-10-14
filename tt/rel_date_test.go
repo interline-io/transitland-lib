@@ -47,6 +47,37 @@ func TestRelativeDate(t *testing.T) {
 			whenLocal: defaultLocal,
 			expect:    "2024-07-15T10:00:00-07:00",
 		},
+		{
+			name:      "yesterday with tz",
+			dateLabel: "yesterday",
+			whenLocal: defaultLocal,
+			expect:    "2024-07-14T10:00:00-07:00",
+		},
+		{
+			name:      "tomorrow with tz",
+			dateLabel: "tomorrow",
+			whenLocal: defaultLocal,
+			expect:    "2024-07-16T10:00:00-07:00",
+		},
+		// the local date, not the UTC date, is the one offset
+		{
+			name:      "yesterday, local date behind UTC",
+			dateLabel: "yesterday",
+			whenLocal: "2024-07-15T23:30:00 America/Los_Angeles",
+			expect:    "2024-07-14T23:30:00-07:00",
+		},
+		{
+			name:      "yesterday across a month",
+			dateLabel: "yesterday",
+			whenLocal: "2024-07-01T10:00:00 America/Los_Angeles",
+			expect:    "2024-06-30T10:00:00-07:00",
+		},
+		{
+			name:      "tomorrow across a year",
+			dateLabel: "tomorrow",
+			whenLocal: "2024-12-31T10:00:00 America/Los_Angeles",
+			expect:    "2025-01-01T10:00:00-08:00",
+		},
 		// same dow allowed
 		{
 			name:      "monday",

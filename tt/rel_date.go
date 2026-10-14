@@ -41,11 +41,16 @@ func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, e
 	// Parse date or use special label
 	dowOffset := -1
 	nextFlag := false
+	dayOffset := 0
 	switch relativeDateLabel {
 	case "today":
 		// default
 	case "":
 		// equiv to "today"
+	case "yesterday":
+		dayOffset = -1
+	case "tomorrow":
+		dayOffset = 1
 	case "sunday":
 		dowOffset = 0
 	case "monday":
@@ -94,6 +99,9 @@ func RelativeDate(currentTime time.Time, relativeDateLabel string) (time.Time, e
 
 	// Construct time from parsed components
 	baseTime := time.Date(clYear, clMonth, clDay, clHour, clMin, clSec, 0, clLoc)
+	if dayOffset != 0 {
+		return baseTime.AddDate(0, 0, dayOffset), nil
+	}
 
 	// Check the next 7 days to get the correct weekday
 	if dowOffset >= 0 {

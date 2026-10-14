@@ -223,7 +223,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 	const query = `query($where: TripFilter!) {
 		trips(where: $where) {
 			trip_id
-			stop_times { stop_sequence schedule_relationship departure { estimated_delay } }
+			stop_times { stop_sequence service_date schedule_relationship departure { estimated_delay } }
 			alerts { header_text { text } }
 			vehicle_position { vehicle { label } }
 		}
@@ -231,8 +231,9 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 	tcs := []struct {
 		name  string
 		where hw
-		// At FTVL. A trip found without a date has no date for a delay-only
-		// estimate, but its stop times still carry the update.
+		// At FTVL. A trip found without a date has no date for its stop times, so
+		// none for a delay-only estimate, but its stop times still carry the update.
+		serviceDate  string
 		delay        *int64
 		relationship string
 		alerts       []string
@@ -241,6 +242,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "today's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-30"},
+			serviceDate:  "2018-05-30",
 			delay:        ptr(int64(60)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 30", "Current run"},
@@ -249,6 +251,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "tomorrow's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-31"},
+			serviceDate:  "2018-05-31",
 			delay:        ptr(int64(300)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 31"},
@@ -256,6 +259,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		{
 			name:         "next week's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-06-05"},
+			serviceDate:  "2018-06-05",
 			relationship: "STATIC",
 		},
 		{
@@ -280,6 +284,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 				}
 				for _, st := range trip.Get("stop_times").Array() {
 					if st.Get("stop_sequence").Int() == 12 {
+						assert.Equal(t, tc.serviceDate, st.Get("service_date").String(), "service_date at FTVL")
 						assert.Equal(t, tc.delay, optionalInt(st.Get("departure.estimated_delay")), "estimated_delay at FTVL")
 						assert.Equal(t, tc.relationship, st.Get("schedule_relationship").String(), "schedule_relationship at FTVL")
 					}
@@ -353,4 +358,55 @@ func TestTripRT_Runs_PatternTrips(t *testing.T) {
 			assert.True(t, found, "expected trip 1031527WKDY among the patterns' trips")
 		},
 	})
+}
+
+// A trip looked up as yesterday's, today's and tomorrow's run shows its vehicle
+// only under the vehicle's own run, and each run's stop times on its own date.
+// Through Route.trips, since the top-level trips query resolves no relative
+// date.
+func TestTripRT_Runs_RelativeDates(t *testing.T) {
+	const query = `query($route_id: String!, $trip_id: String!) {
+		routes(where: {feed_onestop_id: "BA", route_id: $route_id}) {
+			yesterday: trips(where: {trip_id: $trip_id, relative_date: YESTERDAY}) { ...run }
+			today: trips(where: {trip_id: $trip_id, relative_date: TODAY}) { ...run }
+			tomorrow: trips(where: {trip_id: $trip_id, relative_date: TOMORROW}) { ...run }
+		}
+	}
+	fragment run on Trip {
+		stop_times(limit: 1) { service_date }
+		vehicle_position { vehicle { label } }
+	}`
+	tcs := []struct {
+		name    string
+		routeId string
+		tripId  string
+		vehicle string
+	}{
+		{name: "a vehicle naming its date", routeId: "05", tripId: "1031527WKDY", vehicle: "May 30 train"},
+		{name: "a vehicle naming none, on its current run", routeId: "03", tripId: "2211533WKDY", vehicle: "Undated train"},
+	}
+	for _, tc := range tcs {
+		testRt(t, rtTestCase{
+			name:    tc.name,
+			query:   query,
+			vars:    hw{"route_id": tc.routeId, "trip_id": tc.tripId},
+			rtfiles: runsRTFiles,
+			whenUtc: rtFixtureWhenUtc,
+			cb: func(t *testing.T, jj string) {
+				expect := map[string]struct{ serviceDate, vehicle string }{
+					"yesterday": {serviceDate: "2018-05-29"},
+					"today":     {serviceDate: "2018-05-30", vehicle: tc.vehicle},
+					"tomorrow":  {serviceDate: "2018-05-31"},
+				}
+				for alias, want := range expect {
+					trip := gjson.Get(jj, "routes.0."+alias+".0")
+					if !assert.True(t, trip.Exists(), "expected a trip as %s's run", alias) {
+						continue
+					}
+					assert.Equal(t, want.serviceDate, trip.Get("stop_times.0.service_date").String(), "%s service_date", alias)
+					assert.Equal(t, want.vehicle, trip.Get("vehicle_position.vehicle.label").String(), "%s vehicle", alias)
+				}
+			},
+		})
+	}
 }

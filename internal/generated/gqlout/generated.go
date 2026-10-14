@@ -12409,10 +12409,10 @@ type StopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under ` + "`" + `use_service_window` + "`" + `, the requested date"
+  "GTFS service date for this scheduled stop time, on a departure or on a trip found on one date; under ` + "`" + `use_service_window` + "`" + `, the requested date"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "Calendar date for this scheduled stop time, on a departure or on a trip found on one date"
   date: Date
 
   "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
@@ -12483,10 +12483,10 @@ type FlexStopTime {
   "Departure data, including GTFS-RT updates and estimates"
   departure: StopTimeEvent!
 
-  "When part of an arrival/departure query, the GTFS service date for this scheduled stop time; under ` + "`" + `use_service_window` + "`" + `, the requested date"
+  "GTFS service date for this scheduled stop time, on a departure or on a trip found on one date; under ` + "`" + `use_service_window` + "`" + `, the requested date"
   service_date: Date
 
-  "When part of an arrival/departure query, the calendar date for this scheduled stop time"
+  "Calendar date for this scheduled stop time, on a departure or on a trip found on one date"
   date: Date
 
   "Real-time status of the parent trip. ` + "`" + `STATIC` + "`" + ` means no GTFS-RT data was matched. See ` + "`" + `ScheduleRelationship` + "`" + ` for per-value semantics"
@@ -13359,6 +13359,10 @@ RelativeDate specifies a calendar date relative to the current local time.
 enum RelativeDate {
   "The current date"
   TODAY
+  "The day before the current date"
+  YESTERDAY
+  "The day after the current date"
+  TOMORROW
   "Next Monday, or today if it is currently Monday"
   MONDAY
   "Next Tuesday, or today if it is currently Tuesday"
@@ -14753,7 +14757,7 @@ input TripFilter {
   Several wall calendar dates, which need not be contiguous. Unlike ` + "`" + `service_dates` + "`" + `, a trip departing after midnight is matched for the calendar date it departs on, so each requested date also matches the service date before it — and ` + "`" + `Trip.service_dates` + "`" + ` can therefore name a day earlier than any requested here. Departures more than 48 hours into their service date are not reached. Takes precedence over ` + "`" + `service_date` + "`" + `, ` + "`" + `service_dates` + "`" + ` and ` + "`" + `relative_date` + "`" + `.
   """
   dates: [Date!]
-  "Calendar date relative to today; see ` + "`" + `RelativeDate` + "`" + `. Ignored if ` + "`" + `dates` + "`" + ` or ` + "`" + `service_dates` + "`" + ` is set"
+  "Calendar date relative to today in the feed version's timezone; see ` + "`" + `RelativeDate` + "`" + `. Ignored if ` + "`" + `dates` + "`" + ` or ` + "`" + `service_dates` + "`" + ` is set. Not applied by the top-level ` + "`" + `trips` + "`" + ` query; use ` + "`" + `Route.trips` + "`" + ` or ` + "`" + `FeedVersion.trips` + "`" + `"
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead. Not applied by the top-level ` + "`" + `trips` + "`" + ` query; use ` + "`" + `Route.trips` + "`" + ` or ` + "`" + `FeedVersion.trips` + "`" + `"
   use_service_window: Boolean
