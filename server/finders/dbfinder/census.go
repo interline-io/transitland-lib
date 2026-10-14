@@ -90,7 +90,7 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		// loop-then-tag pass.
 		fields.perStopAttribution = true
 		var ents []*model.CensusGeography
-		q, err := censusDatasetGeographySelect(limit, forStopids(entityIds), fields)
+		q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(entityIds), fields)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 				return nil, queryErr(ctx, err)
 			}
 			var ents []*model.CensusGeography
-			q, err := censusDatasetGeographySelect(limit, forStopids(stopIds), fields)
+			q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(stopIds), fields)
 			if err != nil {
 				return nil, err
 			}
@@ -249,7 +249,7 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 
 func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, p, getCensusGeographySelectFields(ctx))
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), p, getCensusGeographySelectFields(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, wh
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, w, getCensusGeographySelectFields(ctx))
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, getCensusGeographySelectFields(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, w
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, w, getCensusGeographySelectFields(ctx))
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, getCensusGeographySelectFields(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ const censusSegmentDegrees = 0.01
 // antimeridian, which planar intersections can't represent.
 var errCensusAntimeridian = errors.New("census geography search areas that cross the antimeridian are not supported")
 
-func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeographyFilter, fields censusGeographySelectFields) (sq.SelectBuilder, error) {
+func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, where *model.CensusDatasetGeographyFilter, fields censusGeographySelectFields) (sq.SelectBuilder, error) {
 	// Include matched entity column
 	cols := []string{
 		"tlcg.id",
@@ -518,11 +518,19 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			return sq.StatementBuilder.Select().
 				Column("ST_Segmentize(ST_CollectionExtract(ST_MakeValid(ST_GeomFromGeoJSON(?)), 3), ?) as buffer", string(jj), censusSegmentDegrees)
 		}
-		stopUnionClipSelect := func() sq.SelectBuilder {
-			return sq.StatementBuilder.Select().
-				Column("ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry) as buffer", stopBufferRadius).
+		// The stops to buffer, gated like any other entity select, since a request
+		// can name any stop id. Every read of gtfs_stops below starts here.
+		stopsSelect := func() sq.SelectBuilder {
+			q := sq.StatementBuilder.Select().
 				From("gtfs_stops").
+				Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
+				Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+			return pfJoinCheckFv(joinImported(q), permFilter)
+		}
+		stopUnionClipSelect := func() sq.SelectBuilder {
+			return stopsSelect().
+				Column("ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry) as buffer", stopBufferRadius)
 		}
 
 		// The query area, however it was expressed. `bbox` keeps precedence over
@@ -576,15 +584,12 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				// Per-stop attribution keeps a row per stop. Otherwise every stop
 				// shares one id, so the GROUP BY below lists a geography once.
 				qPointsUse = true
-				qPoints = sq.StatementBuilder.Select().Column("gtfs_stops.geometry as buffer")
+				qPoints = stopsSelect().Column("gtfs_stops.geometry as buffer")
 				if fields.perStopAttribution {
 					qPoints = qPoints.Column("gtfs_stops.id as match_entity_id")
 				} else {
 					qPoints = qPoints.Column("0 as match_entity_id")
 				}
-				qPoints = qPoints.
-					From("gtfs_stops").
-					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 				if areaClip {
 					// A combined query area restricts point matching to stops
 					// inside it rather than being silently ignored.
@@ -599,11 +604,9 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				// intersects multiple stops in the input set; that's the
 				// intent — callers want per-stop apportionment.
 				qBufferUse = true
-				qBuffer = sq.StatementBuilder.Select().
+				qBuffer = stopsSelect().
 					Column("gtfs_stops.id as match_entity_id").
-					Column("ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry as buffer", stopBufferRadius).
-					From("gtfs_stops").
-					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+					Column("ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry as buffer", stopBufferRadius)
 			} else {
 				// Default: union over the input stop set. Used by
 				// routes/agencies (which want the union over their stops) and
