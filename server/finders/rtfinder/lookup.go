@@ -26,8 +26,9 @@ type Lookup interface {
 	// GetTripSpan returns when a trip runs on its service day: zero for a trip
 	// that isn't found, or has no timed stop times.
 	GetTripSpan(ctx context.Context, fvid int, tripId int) (TripSpan, bool)
-	// GetGtfsStopID returns a stop's GTFS stop_id.
-	GetGtfsStopID(ctx context.Context, id int) (string, bool)
+	// GetTripStops returns a trip's stop times in order along the trip, with
+	// their GTFS stop_ids and scheduled times: none for a trip that isn't found.
+	GetTripStops(ctx context.Context, fvid int, tripId int) ([]StopRef, bool)
 	// StopTimezone returns a stop's timezone, or known when it is given.
 	StopTimezone(ctx context.Context, id int, known string) (*time.Location, bool)
 	// GetGtfsAgencyID returns an agency's GTFS agency_id.
@@ -74,8 +75,6 @@ var errLookupFailed = errors.New("rtfinder: lookup failed")
 
 // The lookup queries, together so the package's SQL reads in one place.
 const (
-	gtfsStopIdQuery = `select stop_id from gtfs_stops where id = $1 limit 1`
-
 	gtfsAgencyIdQuery = `select agency_id from gtfs_agencies where id = $1 limit 1`
 
 	feedOperatorCountQuery = `
@@ -161,6 +160,22 @@ const (
 		from gtfs_frequencies
 		where trip_id = $1 and end_time > start_time
 	) fr`
+
+	// A trip's stop times in order, with their stops' GTFS stop_ids. Stop times
+	// are stored on the journey pattern's first trip and shifted by each other
+	// trip's offset, as in tripSpanQuery.
+	tripStopsQuery = `
+	select
+		sts.stop_sequence,
+		s.stop_id,
+		sts.arrival_time + t.journey_pattern_offset as arrival_time,
+		sts.departure_time + t.journey_pattern_offset as departure_time
+	from gtfs_trips t
+	join gtfs_trips t2 on t2.trip_id::text = t.journey_pattern_id and t2.feed_version_id = t.feed_version_id
+	join gtfs_stop_times sts on sts.trip_id = t2.id and sts.feed_version_id = $2
+	join gtfs_stops s on s.id = sts.stop_id
+	where t.id = $1 and t.feed_version_id = $2
+	order by sts.stop_sequence`
 )
 
 // PostgresLookup answers a Finder's lookups from the Transitland database.
@@ -174,7 +189,7 @@ type PostgresLookup struct {
 	fvRouteCache           *kvcache.Cache[feedVersionRouteKey, GtfsRoute] // routes by GTFS route_id within a feed version
 	routeCache             *kvcache.Cache[int, GtfsRoute]                 // routes by database id
 	tripSpanCache          *kvcache.Cache[model.FVPair, TripSpan]         // when trips run, by database id
-	gtfsStopIdCache        *kvcache.Cache[int, string]                    // GTFS stop_ids by stop id
+	tripStopsCache         *kvcache.Cache[model.FVPair, []StopRef]        // trips' stop times, by database id
 	gtfsAgencyIdCache      *kvcache.Cache[int, string]                    // GTFS agency_ids by agency id
 	feedOperatorCountCache *kvcache.Cache[string, int]                    // operator counts by feed onestop_id
 	agencyRouteIdCache     *kvcache.Cache[int, map[string]bool]           // sets of GTFS route_ids by agency id
@@ -197,7 +212,7 @@ func NewPostgresLookup(db tldb.Ext) *PostgresLookup {
 	f.fvRouteCache = newRefreshCache("fvroutes", f.queryFeedVersionRoute)
 	f.routeCache = newRefreshCache("routes", f.queryRoute)
 	f.tripSpanCache = newRefreshCache("tripspans", f.queryTripSpan)
-	f.gtfsStopIdCache = newRefreshCache("gtfsstopids", f.queryGtfsStopID)
+	f.tripStopsCache = newRefreshCache("tripstops", f.queryTripStops)
 	f.gtfsAgencyIdCache = newRefreshCache("gtfsagencyids", f.queryGtfsAgencyID)
 	f.feedOperatorCountCache = newRefreshCache("feedoperatorcounts", f.queryFeedOperatorCount)
 	f.agencyRouteIdCache = newRefreshCache("agencyrouteids", f.queryAgencyRouteIDs)
@@ -212,22 +227,6 @@ func newRefreshCache[K comparable, V any](topic string, fn func(context.Context,
 	c.RefreshTimeout = lookupTimeout
 	c.NegativeTTL = c.Expires
 	return c
-}
-
-// GetGtfsStopID returns the GTFS stop_id of a stop by database id.
-func (f *PostgresLookup) GetGtfsStopID(ctx context.Context, id int) (string, bool) {
-	return getUnlessGone(ctx, f.gtfsStopIdCache, id)
-}
-
-func (f *PostgresLookup) queryGtfsStopID(ctx context.Context, id int) (string, error) {
-	eid := ""
-	err := sqlx.GetContext(ctx, f.db, &eid, gtfsStopIdQuery, id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return eid, kvcache.ErrNotFound
-	} else if err != nil {
-		log.For(ctx).Error().Err(err).Int("stop_id", id).Msg("rtfinder: stop id lookup failed")
-	}
-	return eid, err
 }
 
 // GetGtfsAgencyID returns the GTFS agency_id of an agency by database id.
@@ -344,6 +343,25 @@ func (f *PostgresLookup) queryTripSpan(ctx context.Context, key model.FVPair) (T
 		log.For(ctx).Error().Err(err).Int("feed_version_id", key.FeedVersionID).Int("trip_id", key.EntityID).Msg("rtfinder: trip span lookup failed")
 	}
 	return ret, err
+}
+
+// GetTripStops returns a trip's stop times in order along the trip, with their
+// GTFS stop_ids and scheduled times: none for a trip that isn't found.
+func (f *PostgresLookup) GetTripStops(ctx context.Context, fvid int, tripId int) ([]StopRef, bool) {
+	return getUnlessGone(ctx, f.tripStopsCache, model.FVPair{FeedVersionID: fvid, EntityID: tripId})
+}
+
+func (f *PostgresLookup) queryTripStops(ctx context.Context, key model.FVPair) ([]StopRef, error) {
+	var ret []StopRef
+	err := sqlx.SelectContext(ctx, f.db, &ret, tripStopsQuery, key.EntityID, key.FeedVersionID)
+	if err != nil {
+		log.For(ctx).Error().Err(err).Int("feed_version_id", key.FeedVersionID).Int("trip_id", key.EntityID).Msg("rtfinder: trip stops lookup failed")
+		return nil, err
+	}
+	if len(ret) == 0 {
+		return nil, kvcache.ErrNotFound
+	}
+	return ret, nil
 }
 
 // GetRoute returns a route by database id.

@@ -18,6 +18,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tldb"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
@@ -179,26 +180,32 @@ func TestPostgresLookup_GetTripRouteIDs(t *testing.T) {
 	}
 }
 
-func TestPostgresLookup_GetGtfsStopID(t *testing.T) {
+// GetTripStops returns a trip's stop times in order, with their GTFS stop_ids
+// and their times shifted by the trip's offset into its journey pattern.
+func TestPostgresLookup_GetTripStops(t *testing.T) {
 	if a, ok := testutil.CheckTestDB(); !ok {
 		t.Skip(a)
 	}
 	raw := testutil.MustOpenTestDB(t)
 	db := &countingDB{Ext: raw}
-	stop := testStop(t, raw, testBartFeedVersion(t, raw), "FTVL")
+	fvid := testBartFeedVersion(t, raw)
+	tripID := 0
+	if err := sqlx.Get(raw, &tripID, "select id from gtfs_trips where feed_version_id = $1 and trip_id = $2", fvid, "1031527WKDY"); err != nil {
+		t.Fatal(err)
+	}
 	lookup := NewPostgresLookup(db)
 	ctx := context.Background()
-	sid, ok := lookup.GetGtfsStopID(ctx, stop.ID)
-	assert.True(t, ok)
-	assert.Equal(t, "FTVL", sid)
-	// A stop that isn't there is looked up once, and remembered as missing,
-	// not as an empty stop_id that would match a stop time update naming no
-	// stop.
+	stops, ok := lookup.GetTripStops(ctx, fvid, tripID)
+	if assert.True(t, ok) && assert.Len(t, stops, 20) {
+		assert.Equal(t, StopRef{StopSequence: 1, StopID: "DALY", Arrival: tt.NewSeconds(15*3600 + 27*60), Departure: tt.NewSeconds(15*3600 + 27*60)}, stops[0])
+		assert.Equal(t, StopRef{StopSequence: 12, StopID: "FTVL", Arrival: tt.NewSeconds(16*3600 + 2*60), Departure: tt.NewSeconds(16*3600 + 2*60)}, stops[11])
+	}
+	// A trip that isn't there is looked up once, and remembered as missing.
 	for range 2 {
-		_, ok := lookup.GetGtfsStopID(ctx, -1)
+		_, ok := lookup.GetTripStops(ctx, fvid, -1)
 		assert.False(t, ok)
 	}
-	assert.EqualValues(t, 2, db.rowQueries.Load())
+	assert.EqualValues(t, 2, db.tripQueries.Load())
 }
 
 func TestPostgresLookup_GetGtfsAgencyID(t *testing.T) {

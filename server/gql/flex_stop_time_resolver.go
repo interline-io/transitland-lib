@@ -43,33 +43,38 @@ func (r *flexStopTimeResolver) Trip(ctx context.Context, obj *model.FlexStopTime
 }
 
 func (r *flexStopTimeResolver) Arrival(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error) {
-	var loc *time.Location
-	var ok bool
-	if obj.StopID.Valid {
-		loc, ok = model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
-	} else if obj.LocationID.Valid || obj.LocationGroupID.Valid {
-		// For Location/LocationGroup, use the feed version's agency timezone
-		loc, ok = model.ForContext(ctx).RTFinder.FeedVersionTimezone(ctx, obj.FeedVersionID)
-	}
-	if loc == nil || !ok {
+	stopLoc, agencyLoc, ok := flexStopTimeLocations(ctx, obj)
+	if !ok {
 		return nil, nil
 	}
-	return fromSte(nil, nil, obj.ArrivalTime, obj.ServiceDate, loc), nil
+	return stopTimeEvent(nil, 0, obj.ArrivalTime, obj.ServiceDate, agencyLoc, stopLoc), nil
 }
 
 func (r *flexStopTimeResolver) Departure(ctx context.Context, obj *model.FlexStopTime) (*model.StopTimeEvent, error) {
-	var loc *time.Location
-	var ok bool
-	if obj.StopID.Valid {
-		loc, ok = model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
-	} else if obj.LocationID.Valid || obj.LocationGroupID.Valid {
-		// For Location/LocationGroup, use the feed version's agency timezone
-		loc, ok = model.ForContext(ctx).RTFinder.FeedVersionTimezone(ctx, obj.FeedVersionID)
-	}
-	if loc == nil || !ok {
+	stopLoc, agencyLoc, ok := flexStopTimeLocations(ctx, obj)
+	if !ok {
 		return nil, nil
 	}
-	return fromSte(nil, nil, obj.DepartureTime, obj.ServiceDate, loc), nil
+	return stopTimeEvent(nil, 0, obj.DepartureTime, obj.ServiceDate, agencyLoc, stopLoc), nil
+}
+
+// flexStopTimeLocations returns the timezone a flex stop time's local times
+// are shown in, that of its stop or else of its feed version's agency, and
+// the agency timezone its scheduled times count in.
+func flexStopTimeLocations(ctx context.Context, obj *model.FlexStopTime) (stopLoc *time.Location, agencyLoc *time.Location, ok bool) {
+	agencyLoc, agencyOK := model.ForContext(ctx).RTFinder.FeedVersionTimezone(ctx, obj.FeedVersionID)
+	if obj.StopID.Valid {
+		stopLoc, ok = model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
+	} else if obj.LocationID.Valid || obj.LocationGroupID.Valid {
+		stopLoc, ok = agencyLoc, agencyOK
+	}
+	if stopLoc == nil || !ok {
+		return nil, nil, false
+	}
+	if agencyLoc == nil || !agencyOK {
+		agencyLoc = stopLoc
+	}
+	return stopLoc, agencyLoc, true
 }
 
 func (r *flexStopTimeResolver) ScheduleRelationship(ctx context.Context, obj *model.FlexStopTime) (*model.ScheduleRelationship, error) {

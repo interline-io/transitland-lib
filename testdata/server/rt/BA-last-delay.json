@@ -31,8 +31,17 @@
                             "uncertainty": 30,
                             "time": 1527721110
                         }
+                    },
+                    {
+                        "stop_sequence": 13,
+                        "stop_id": "COLS",
+                        "departure": {
+                            "delay": 90,
+                            "uncertainty": 30,
+                            "time": 1527721650
+                        }
                     }
-               ]
+                ]
             }
         }
     ]
