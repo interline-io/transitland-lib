@@ -1,8 +1,11 @@
 package gql
 
 import (
+	"encoding/json"
+	"math"
 	"testing"
 
+	"github.com/99designs/gqlgen/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -10,7 +13,7 @@ import (
 func TestCensusResolver(t *testing.T) {
 	c, cfg := newTestClient(t)
 	// Define checks and get IDs for tests
-	countyArea := 2126920288.43 // Area of Alameda County in m^2
+	countyArea := 2126920949.9718297 // Area of Alameda County in m^2
 	geographyId := 0
 	if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001403000'`).Scan(&geographyId); err != nil {
 		t.Errorf("could not get geography id for test: %s", err.Error())
@@ -22,6 +25,25 @@ func TestCensusResolver(t *testing.T) {
 	bartMcarStopId := 0
 	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'MCAR'`).Scan(&bartMcarStopId); err != nil {
 		t.Errorf("could not get stop id for test: %s", err.Error())
+	}
+
+	// Search areas with more vertices than the finder intersects whole, so
+	// they are subdivided: a 600-vertex circle inside Alameda County, and the
+	// 2,961-vertex outline of tract 450701.
+	var circleRing [][]float64
+	for i := 0; i <= 600; i++ {
+		a := 2 * math.Pi * float64(i%600) / 600
+		circleRing = append(circleRing, []float64{-122.25 + 0.03*math.Cos(a), 37.80 + 0.03*math.Sin(a)})
+	}
+	circle := hw{"type": "Polygon", "coordinates": [][][]float64{circleRing}}
+	circleArea := 27638158.48917035 // Derived by direct SQL, without subdivision
+	tractOutline := hw{}
+	var tractOutlineJson string
+	if err := cfg.Adapter.DBX().QueryRowx(`select ST_AsGeoJSON(ST_GeometryN(geometry::geometry, 1)) from tl_census_geographies where geoid = '1400000US06001450701'`).Scan(&tractOutlineJson); err != nil {
+		t.Errorf("could not get tract outline for test: %s", err.Error())
+	}
+	if err := json.Unmarshal([]byte(tractOutlineJson), &tractOutline); err != nil {
+		t.Errorf("could not parse tract outline for test: %s", err.Error())
 	}
 
 	// Define test cases
@@ -218,8 +240,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					1,
-					1918910.47033,
-					31235.844716912135,
+					1918913.384123061,
+					31235.844686623335,
 				)
 			},
 		},
@@ -232,8 +254,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					10,
-					9.496240598676275e+06,
-					3.123584448019881e+06,
+					9496243.013759723,
+					3123584.4581301054,
 				)
 			},
 		},
@@ -249,8 +271,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					16,
-					1.7083968128707554e+07,
-					7.996376116638191e+06,
+					17083972.98913558,
+					7996376.297622201,
 				)
 			},
 		},
@@ -263,8 +285,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					3,
-					3.9412406339011015e+06,
-					62472.080208225176,
+					3941244.1183623667,
+					62472.080173725684,
 				)
 			},
 		},
@@ -289,8 +311,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					11,
-					4755614.60179,
-					829385.7985148486,
+					4755616.146625203,
+					829386.4530724211,
 				)
 			},
 		},
@@ -316,7 +338,7 @@ func TestCensusResolver(t *testing.T) {
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					1,
 					countyArea,
-					829385.7985148486,
+					829386.6022729833,
 				)
 			},
 		},
@@ -363,8 +385,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					1,
-					1918910.47033,
-					31235.844716912135,
+					1918913.384123061,
+					31235.844686623343,
 				)
 			},
 		},
@@ -393,8 +415,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					1,
-					1918910.47033,
-					15617.923982297536,
+					1918913.384123061,
+					15617.923991315816,
 				)
 			},
 		},
@@ -470,8 +492,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					1,
-					1918910.47033,
-					31235.844716912135,
+					1918913.384123061,
+					31235.844686623343,
 				)
 			},
 		},
@@ -493,8 +515,8 @@ func TestCensusResolver(t *testing.T) {
 					t,
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					1,
-					1918910.47033,
-					15617.923982297536,
+					1918913.384123061,
+					15617.923991315816,
 				)
 			},
 		},
@@ -572,9 +594,9 @@ func TestCensusResolver(t *testing.T) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					18,
+					1,
 					countyArea,
-					65341022.43,
+					65341023.520996064,
 				)
 			},
 		},
@@ -586,9 +608,9 @@ func TestCensusResolver(t *testing.T) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					39,
-					73325034.5592,
-					687170.8023156085,
+					37,
+					73325244.76026103,
+					687170.8023190418,
 				)
 			},
 		},
@@ -603,10 +625,88 @@ func TestCensusResolver(t *testing.T) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					39,
-					73325034.5592,
-					687170.8023156085,
+					37,
+					73325244.76026103,
+					687170.8023190418,
 				)
+			},
+		},
+		{
+			// The circle is subdivided before intersecting; the tracts it
+			// touches still add up to its whole area.
+			name:  "subdivided search area - tract",
+			query: `query($feature:Polygon) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature}}) { name geoid geometry_area intersection_area }} }`,
+			vars:  hw{"feature": circle},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					56,
+					52213095.85575217,
+					circleArea,
+				)
+			},
+		},
+		{
+			// The county containing the circle reports the same area as the
+			// sum of its tracts.
+			name:  "subdivided search area - county",
+			query: `query($feature:Polygon) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "county", location:{within:$feature}}) { name geoid geometry_area intersection_area }} }`,
+			vars:  hw{"feature": circle},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					countyArea,
+					circleArea,
+				)
+			},
+		},
+		{
+			// A tract searched within its own outline is fully covered, and
+			// the neighbors that only share its boundary get no area.
+			name:  "subdivided search area - tract within its own outline",
+			query: `query($feature:Polygon) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{within:$feature}}) { geoid geometry_area intersection_area }} }`,
+			vars:  hw{"feature": tractOutline},
+			f: func(t *testing.T, jj string) {
+				found := false
+				for _, v := range gjson.Get(jj, "census_datasets.0.geographies").Array() {
+					if v.Get("geoid").String() == "1400000US06001450701" {
+						found = true
+						assert.InDelta(t, v.Get("geometry_area").Float(), v.Get("intersection_area").Float(), 0.01, "expected the tract fully covered")
+					} else {
+						assert.Less(t, v.Get("intersection_area").Float(), 1.0, "expected no area for neighbor %s", v.Get("geoid").String())
+					}
+				}
+				assert.True(t, found, "expected the tract itself")
+			},
+		},
+		{
+			// With no radius, an agency matches the geographies containing its
+			// stops, and lists each once however many stops it contains.
+			name:  "agency geographies without radius - county",
+			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"county"}) { geoid } } }`,
+			vars:  vars,
+			f: func(t *testing.T, jj string) {
+				geoids := gjson.Get(jj, "agencies.0.census_geographies.#.geoid").Array()
+				if assert.Len(t, geoids, 1) {
+					assert.Equal(t, "0500000US06001", geoids[0].String())
+				}
+			},
+		},
+		{
+			name:  "agency geographies without radius - tract",
+			query: `query { agencies(where:{agency_id:"BART"}) { agency_id census_geographies(where:{layer:"tract"}) { geoid } } }`,
+			vars:  vars,
+			f: func(t *testing.T, jj string) {
+				geoids := gjson.Get(jj, "agencies.0.census_geographies.#.geoid").Array()
+				assert.NotEmpty(t, geoids)
+				seen := map[string]bool{}
+				for _, g := range geoids {
+					assert.False(t, seen[g.String()], "expected one row for %s", g.String())
+					seen[g.String()] = true
+				}
 			},
 		},
 	}
@@ -729,8 +829,32 @@ func TestCensusResolver_DatasetValuesRelay(t *testing.T) {
 	queryTestcases(t, c, testcases)
 }
 
+func TestCensusResolver_Antimeridian(t *testing.T) {
+	c, _ := newTestClient(t)
+	q := `query($bbox:BoundingBox, $within:Polygon, $near:PointRadius) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:$bbox, within:$within, near:$near}}) { geoid intersection_area } } }`
+	testcases := []struct {
+		name string
+		vars hw
+	}{
+		{"bbox past 180", hw{"bbox": hw{"min_lon": 178.0, "min_lat": 51.0, "max_lon": 182.0, "max_lat": 53.0}}},
+		{"bbox with min_lon east of max_lon", hw{"bbox": hw{"min_lon": 170.0, "min_lat": 51.0, "max_lon": -170.0, "max_lat": 53.0}}},
+		{"within drawn across 180", hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{{179, 51}, {-179, 51}, {-179, 53}, {179, 53}, {179, 51}}}}}},
+		{"near circle across 180", hw{"near": hw{"lon": 179.99, "lat": 51.9, "radius": 5000.0}}},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var resp map[string]interface{}
+			opts := []client.Option{}
+			for k, v := range tc.vars {
+				opts = append(opts, client.Var(k, v))
+			}
+			err := c.Post(q, &resp, opts...)
+			assert.ErrorContains(t, err, "antimeridian")
+		})
+	}
+}
+
 func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expectGeometryArea float64, expectIntersectionArea float64) {
-	// Only count each geometry once
 	geometryAreas := map[string]float64{}
 	intersectionArea := 0.0
 	for _, v := range a {
@@ -744,4 +868,5 @@ func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expec
 	assert.InDelta(t, expectIntersectionArea, intersectionArea, 1.0, "expected intersection area")
 	assert.InDelta(t, expectGeometryArea, geometryArea, 1.0, "expected geometry area")
 	assert.Equal(t, expectCount, len(a), "expected geographies returned")
+	assert.Equal(t, len(geometryAreas), len(a), "expected one row per geography")
 }

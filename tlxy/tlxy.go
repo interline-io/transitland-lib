@@ -15,7 +15,9 @@ type GeomCache interface {
 
 const latMeter = 111195.0662709627
 const epsilon = 1e-6
-const earthRadiusMetres float64 = 6371008
+
+// EarthRadiusMeters is the mean radius of the Earth.
+const EarthRadiusMeters float64 = 6371008
 
 func deg2rad(v float64) float64 {
 	return v * math.Pi / 180
@@ -30,7 +32,7 @@ func distanceHaversineCoords(lon1, lat1, lon2, lat2 float64) float64 {
 	dlon := lon2 - lon1
 	d := math.Pow(math.Sin(dlat/2), 2) + math.Cos(lat1)*math.Cos(lat2)*math.Pow(math.Sin(dlon/2), 2)
 	c := 2 * math.Asin(math.Sqrt(d))
-	return earthRadiusMetres * c
+	return EarthRadiusMeters * c
 }
 
 // Point distances

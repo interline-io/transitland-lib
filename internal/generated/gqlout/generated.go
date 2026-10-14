@@ -13735,7 +13735,7 @@ A single spatial unit within a layer — for example, a specific Census Tract, a
 
 Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via ` + "`" + `values` + "`" + `. When queried with a spatial filter, the ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
 
-Note: spatial queries may return the same geography multiple times when it intersects a search area in multiple places (e.g. two separate stop buffers within the same tract). Use ` + "`" + `geoid` + "`" + ` to deduplicate if needed.
+A spatial query returns each geography once, with ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` covering its whole overlap with the search area, even where the search area has several separate parts.
 """
 type CensusGeography {
   "Internal integer ID"
@@ -13754,14 +13754,13 @@ type CensusGeography {
   Standard identifier for this geography.
   For ACS/TIGER geographies this is the FIPS code (e.g. ` + "`" + `06075` + "`" + ` for San Francisco County).
   For NTD geographies this is the NTD agency ID.
-  Use this field to deduplicate results from spatial queries.
   """
   geoid: String
 
   "Human-readable name of this geography (e.g. a county or tract name)"
   name: String
 
-  "Geometry area in square meters"
+  "Geometry area in square meters, measured in the equal-area projection EPSG:6933"
   geometry_area: Float
 
   "Land area, in square meters (from TIGER/Line ` + "`" + `ALAND` + "`" + ` field)"
@@ -13787,6 +13786,7 @@ type CensusGeography {
 
   """
   When this geography was returned by a spatial query, the area of overlap between this geography and the search area, in square meters.
+  Measured the same way as ` + "`" + `geometry_area` + "`" + `, so a geography inside the search area reports the same value for both.
   Divide by ` + "`" + `geometry_area` + "`" + ` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
   """
   intersection_area: Float
@@ -14807,25 +14807,19 @@ input CensusDatasetFilter {
   search: String
 }
 
-"""Search options for census geographies
-
-Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
-"""
+"Search options for census geographies"
 input CensusGeographyFilter {
   "Search within this dataset"
   dataset: String
   "Search within this layer"
   layer: String
-  "Buffer radius in meters around the parent entity's geometry (e.g. stop or route stops)"
+  "Buffer radius in meters around the parent entity's geometry (e.g. stop or route stops). With no radius, or a radius of 0, matches the geographies containing the stops."
   radius: Float
   "Search for geographies matching this string"
   search: String
 }
 
-"""Search options for census geographies within a specific dataset
-
-Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
-"""
+"Search options for census geographies within a specific dataset"
 input CensusDatasetGeographyFilter {
   "Restrict to geographies with these integer IDs"
   ids: [Int!]
@@ -14839,10 +14833,7 @@ input CensusDatasetGeographyFilter {
   location: CensusDatasetGeographyLocationFilter
 }
 
-"""Search options for census geography sources
-
-Note: please see the CensusDatasetGeographyLocationFilter documentation for details on how spatial searches may return duplicate geographies based on multiple intersections.
-"""
+"Search options for census geography sources"
 input CensusSourceGeographyFilter {
   "Restrict to geographies with these integer IDs"
   ids: [Int!]
@@ -14857,12 +14848,7 @@ input CensusSourceGeographyFilter {
 
 A query area (` + "`" + `bbox` + "`" + `, or ` + "`" + `within` + "`" + ` when no bbox is given) composes with ` + "`" + `stop_buffer` + "`" + `: the search area is their intersection, so ` + "`" + `intersection_area` + "`" + ` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. ` + "`" + `near` + "`" + ` does not compose and takes effect only when no other filter applies.
 
-Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
-- Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
-- A complex polygon search that touches multiple disconnected areas of the same geography will return separate entries for each intersection
-- Each duplicate entry will have different ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` values representing the specific overlap
-
-Clients should aggregate or de-duplicate results as needed based on the ` + "`" + `geoid` + "`" + ` field if a single entry per geography is desired.
+Each geography appears once in the result set, and its ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` cover its whole overlap with the search area, even where the search area has several separate parts. A search area that crosses the antimeridian returns an error.
 """
 input CensusDatasetGeographyLocationFilter {
   "Search within this bounding box"
