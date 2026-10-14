@@ -41,7 +41,7 @@ func (r *tripResolver) StopTimes(ctx context.Context, obj *model.Trip, limit *in
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
 		Limit:         resolverCheckLimit(limit),
-		Where:         where,
+		Where:         runStopTimeFilter(obj, where),
 	})()
 	wantsRT := wantsRTStopTimeUpdate(ctx)
 	if !wantsRT && len(obj.RunDates) != 1 {
@@ -78,6 +78,23 @@ func runStopTimes(trip *model.Trip, loaded []*model.StopTime) []*model.StopTime 
 	return sts
 }
 
+// runStopTimeFilter returns a stop time filter with its time bounds moved onto
+// the trip's own stop times, which an instance of a frequency-based trip runs
+// shifted by its offset. Any other trip's filter is returned as is.
+func runStopTimeFilter(trip *model.Trip, where *model.TripStopTimeFilter) *model.TripStopTimeFilter {
+	if where == nil || !trip.RunOffset.Valid {
+		return where
+	}
+	w := *where
+	if w.Start != nil {
+		w.Start = ptr(shifted(*w.Start, -trip.RunOffset.Val))
+	}
+	if w.End != nil {
+		w.End = ptr(shifted(*w.End, -trip.RunOffset.Val))
+	}
+	return &w
+}
+
 // shifted returns a scheduled time moved by offset seconds, or an unknown time
 // unchanged.
 func shifted(t tt.Seconds, offset int64) tt.Seconds {
@@ -92,7 +109,7 @@ func (r *tripResolver) FlexStopTimes(ctx context.Context, obj *model.Trip, limit
 		FeedVersionID: obj.FeedVersionID,
 		TripID:        obj.ID,
 		Limit:         resolverCheckLimit(limit),
-		Where:         where,
+		Where:         runStopTimeFilter(obj, where),
 	})()
 	if len(obj.RunDates) != 1 {
 		return loaded, err

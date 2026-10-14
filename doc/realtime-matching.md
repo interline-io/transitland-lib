@@ -1,6 +1,6 @@
 # Matching realtime data to trips
 
-Transitland attaches GTFS Realtime data (trip updates, vehicle positions and service alerts) to the trips it describes. A trip can run on many days, so realtime data is matched to a **run**: one trip on one service date. This page describes how a message is matched to a run, and which run's data each API field returns.
+Transitland attaches GTFS Realtime data (trip updates, vehicle positions and service alerts) to the trips it describes. A trip can run on many days, so realtime data is matched to a **run**: one trip on one service date, or for a frequency-based trip, one **instance** of it, the trip starting at one of its start times on that date. This page describes how a message is matched to a run, and which run's data each API field returns.
 
 ## Payloads too old to match
 
@@ -10,11 +10,11 @@ Service alerts aren't held to this, since an alert carries its own active period
 
 ## Which run a message describes
 
-Every realtime message describes exactly one run.
+Every realtime message describes one run, except that a message about a frequency-based trip which names no `start_time` describes all of the trip's instances on the date.
 
 - **A message that names a `start_date`** in its trip descriptor describes the run on that date.
 - **A message that names none** describes the trip's **current run**: the run going now, or failing that, the nearest of yesterday's, today's and tomorrow's.
-- **A message about a frequency-based trip** describes the instance starting at its `start_time`, which the spec requires it to name. One that names none describes every instance of the run, since nothing else tells them apart.
+- **A message about a frequency-based trip** describes the instance starting at its `start_time`, which the spec requires it to name. One that names none describes every instance on the date, since nothing else tells them apart.
 
 A run lasts from its trip's first scheduled departure to its last scheduled arrival. A frequency-based trip runs from its first start to its last start plus one trip's length, with a start every `headway_secs` from `start_time`, up to but not including `end_time`. Times count in the agency's timezone from noon minus twelve hours on the service date, as GTFS defines them.
 

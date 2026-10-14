@@ -255,8 +255,11 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		"sts.location_group_id",
 		"sts.arrival_time_freq AS arrival_time",
 		"sts.departure_time_freq AS departure_time",
+		// The instance's start, and its shift from the trip's own stop times,
+		// which include the trip's pattern offset where the run's times below
+		// count from the pattern's representative.
 		"freq.freq_start AS run_start",
-		"freq.freq_start - trip_stop_sequence.first_departure_time AS run_offset",
+		"freq.freq_start - trip_stop_sequence.first_departure_time - gtfs_trips.journey_pattern_offset AS run_offset",
 		"sts.stop_sequence",
 		"sts.shape_dist_traveled",
 		"sts.pickup_type",
@@ -424,8 +427,11 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		"sts.location_group_id",
 		"sts_freq.arrival_time_freq AS arrival_time",
 		"sts_freq.departure_time_freq AS departure_time",
+		// The instance's start, and its shift from the trip's own stop times,
+		// which include the trip's pattern offset where the run's times below
+		// count from the pattern's representative.
 		"freq.freq_start AS run_start",
-		"freq.freq_start - trip_stop_sequence.first_departure_time AS run_offset",
+		"freq.freq_start - trip_stop_sequence.first_departure_time - gtfs_trips.journey_pattern_offset AS run_offset",
 		"sts.stop_sequence",
 		"sts.shape_dist_traveled",
 		"sts.pickup_type",

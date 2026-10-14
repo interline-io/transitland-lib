@@ -238,3 +238,60 @@ func sortStopTimes(sts []*model.StopTime) {
 		)
 	})
 }
+
+// A departure of a frequency-based trip carries its instance's start and the
+// shift from the trip's own stop times, on both departures queries. The
+// "offset" trip's template isn't its pattern's representative, so the shift
+// differs from the one the queries apply to the representative's times.
+func TestStopDeparturesSelect_FrequencyInstances(t *testing.T) {
+	ctx := context.Background()
+	tx, err := testutil.MustOpenTestDB(t).Beginx()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = tx.Rollback() })
+	fvid := testdb.CopyTestFeed(t, tx, testreader.NewFrequencyTestFeed())
+	stop1 := 0
+	require.NoError(t, tx.Get(&stop1, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "stop1"))
+	// Each trip's own first departure.
+	var tripIds []int
+	require.NoError(t, tx.Select(&tripIds, "select id from gtfs_trips where feed_version_id = $1", fvid))
+	firstDeparture := map[int]int64{}
+	for _, id := range tripIds {
+		var sts []*model.StopTime
+		require.NoError(t, dbutil.Select(ctx, tx, stopTimeSelect([]model.FVPair{{FeedVersionID: fvid, EntityID: id}}, stopTimeEntityTrip, nil), &sts))
+		require.NotEmpty(t, sts)
+		firstDeparture[id] = sts[0].DepartureTime.Val
+	}
+	date := tt.NewDate(time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC))
+	hm := func(h, m int) int64 { return int64(h*3600 + m*60) }
+	for _, q := range []struct {
+		name string
+		q    sq.SelectBuilder
+	}{
+		{"live", stopDeparturesSelect(fvid, []int{stop1}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date})},
+		{"materialized", stopDeparturesMaterializedSelect(fvid, []int{stop1}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date})},
+	} {
+		t.Run(q.name, func(t *testing.T) {
+			var sts []*model.StopTime
+			require.NoError(t, dbutil.Select(ctx, tx, q.q, &sts))
+			starts := map[string][]int64{}
+			for _, st := range sts {
+				if !st.RunStart.Valid {
+					assert.False(t, st.RunOffset.Valid, "%s has no offset", st.GtfsTripID)
+					continue
+				}
+				starts[st.GtfsTripID] = append(starts[st.GtfsTripID], st.RunStart.Val)
+				// The offset moves the trip's own stop times onto the instance,
+				// whose first stop departs at its start.
+				assert.Equal(t, st.RunStart.Val, firstDeparture[st.TripID.Int()]+st.RunOffset.Val, "%s at %s: first departure plus offset", st.GtfsTripID, st.RunStart)
+				assert.Equal(t, st.RunStart.Val, st.DepartureTime.Val, "%s at %s: departure", st.GtfsTripID, st.RunStart)
+			}
+			for _, v := range starts {
+				slices.Sort(v)
+			}
+			assert.Equal(t, map[string][]int64{
+				"offset": {hm(7, 0), hm(7, 30)},
+				"meet":   {hm(10, 0), hm(10, 30), hm(11, 0), hm(11, 30)},
+			}, starts)
+		})
+	}
+}

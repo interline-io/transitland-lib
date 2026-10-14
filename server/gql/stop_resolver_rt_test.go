@@ -339,6 +339,7 @@ func TestStopRT_FrequencyInstances(t *testing.T) {
 					trip_id
 					schedule_relationship
 					stop_times { stop_sequence schedule_relationship departure { scheduled estimated_delay } }
+					later: stop_times(where: {start: "08:33:00"}) { stop_sequence departure { scheduled } }
 				}
 				departure { scheduled estimated_delay }
 			}
@@ -377,6 +378,13 @@ func TestStopRT_FrequencyInstances(t *testing.T) {
 					assert.Equal(t, ptr(int64(60)), delay, start)
 					// The delay carries along the instance.
 					assert.Equal(t, ptr(int64(60)), optionalInt(st.Get("trip.stop_times.4.departure.estimated_delay")), "last stop")
+					// A time window applies to the instance's own times: its stops
+					// from 08:33 on are the last four, which the template visits
+					// from 06:07.
+					if later := st.Get("trip.later").Array(); assert.Len(t, later, 4, "stops from 08:33") {
+						assert.Equal(t, int64(2), later[0].Get("stop_sequence").Int())
+						assert.Equal(t, "08:37:00", later[0].Get("departure.scheduled").String())
+					}
 				default:
 					assert.Equal(t, "STATIC", rel, start)
 					assert.Equal(t, "STATIC", tripRel, start)
