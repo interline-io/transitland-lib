@@ -557,7 +557,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				qBufferUse = true
 				qBuffer = sq.StatementBuilder.Select().
 					Column("0 as match_entity_id").
-					Column("(ST_Dump(buffer)).geom as buffer").
+					Column("buffer").
 					From("buffer_outer")
 				q = q.WithCTE(sq.CTE{
 					Alias:        "buffer_outer",
@@ -567,18 +567,34 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			}
 		}
 		if qBufferUse {
+			// Subdivide the clip, so each geography is intersected with the few
+			// small pieces near it rather than the whole clip. The GROUP BY below
+			// sums the pieces back into one row per geography.
+			//
+			// ST_Subdivide splits multipolygons itself, so the stop union isn't
+			// dumped first, and per-stop buffers are already small. Each
+			// set-returning function multiplies the planner's row estimate by
+			// 1,000, enough to make Postgres JIT-compile small queries.
+			if !fields.perStopAttribution {
+				qBuffer = sq.StatementBuilder.
+					Select("clip.match_entity_id", "ST_Subdivide(clip.buffer) as buffer").
+					FromSelect(qBuffer, "clip")
+			}
 			q = q.WithCTE(sq.CTE{
 				Alias:        "buffer",
 				Materialized: true,
 				Expression:   qBuffer,
 			})
 			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
-				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
+				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)")).
+				GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_entity_id")
+			// Intersect in planar lon/lat, then measure on the spheroid. The
+			// geography ST_Intersection reprojects both inputs on every row.
 			if fields.intersectionArea {
-				q = q.Column("ST_Area(ST_Intersection(tlcg.geometry, buffer.buffer)) as intersection_area")
+				q = q.Column("sum(ST_Area(ST_Intersection(tlcg.geometry::geometry, buffer.buffer)::geography)) as intersection_area")
 			}
 			if fields.intersectionGeometry {
-				q = q.Column("ST_Intersection(tlcg.geometry, buffer.buffer) as intersection_geometry")
+				q = q.Column("ST_Union(ST_Intersection(tlcg.geometry::geometry, buffer.buffer)) as intersection_geometry")
 			}
 			if fields.perStopAttribution {
 				q = q.Column("buffer.match_entity_id")

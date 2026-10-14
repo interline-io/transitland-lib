@@ -290,7 +290,7 @@ func TestCensusResolver(t *testing.T) {
 					gjson.Get(jj, "census_datasets.0.geographies").Array(),
 					11,
 					4755614.60179,
-					829385.7985148486,
+					829387.720486505,
 				)
 			},
 		},
@@ -572,7 +572,7 @@ func TestCensusResolver(t *testing.T) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					18,
+					1,
 					countyArea,
 					65341022.43,
 				)
@@ -586,7 +586,7 @@ func TestCensusResolver(t *testing.T) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					39,
+					37,
 					73325034.5592,
 					687170.8023156085,
 				)
@@ -603,7 +603,7 @@ func TestCensusResolver(t *testing.T) {
 				testIntersectionArea(
 					t,
 					gjson.Get(jj, "agencies.0.census_geographies").Array(),
-					39,
+					37,
 					73325034.5592,
 					687170.8023156085,
 				)
@@ -730,7 +730,6 @@ func TestCensusResolver_DatasetValuesRelay(t *testing.T) {
 }
 
 func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expectGeometryArea float64, expectIntersectionArea float64) {
-	// Only count each geometry once
 	geometryAreas := map[string]float64{}
 	intersectionArea := 0.0
 	for _, v := range a {
@@ -744,4 +743,5 @@ func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expec
 	assert.InDelta(t, expectIntersectionArea, intersectionArea, 1.0, "expected intersection area")
 	assert.InDelta(t, expectGeometryArea, geometryArea, 1.0, "expected geometry area")
 	assert.Equal(t, expectCount, len(a), "expected geographies returned")
+	assert.Equal(t, len(geometryAreas), len(a), "expected one row per geography")
 }

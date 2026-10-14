@@ -3871,12 +3871,7 @@ input CensusSourceGeographyFilter {
 
 A query area (`bbox`, or `within` when no bbox is given) composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. `near` does not compose and takes effect only when no other filter applies.
 
-Note: when using spatial searches (radius, stop_buffer, etc.), individual census geographies may appear multiple times in the result set, each representing a different intersection with the search area. For example:
-- Two stops with small radius buffers in the same census tract will return that tract twice, once for each buffer intersection
-- A complex polygon search that touches multiple disconnected areas of the same geography will return separate entries for each intersection
-- Each duplicate entry will have different `intersection_area` and `intersection_geometry` values representing the specific overlap
-
-Clients should aggregate or de-duplicate results as needed based on the `geoid` field if a single entry per geography is desired.
+Each geography appears once in the result set, and its `intersection_area` and `intersection_geometry` cover its whole overlap with the search area, even where the search area has several separate parts. The exception is a `stop_buffer` with a radius of 0, which matches stops as points and returns a geography once per contained stop.
 """
 input CensusDatasetGeographyLocationFilter {
   "Search within this bounding box"
