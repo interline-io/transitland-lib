@@ -35,7 +35,7 @@ A `DUPLICATED` message names the trip it copies but describes a new run, so it n
 
 ## Which stop time an update describes
 
-A trip update's stop time updates are placed on the run's stop times all at once, in order along the trip: each is looked for at or after the stop time the previous one was placed on. A stop time update that names a `stop_sequence` describes the stop time with that `stop_sequence`; one that names only a `stop_id` describes the next stop time at that stop, which picks the right visit on a loop that serves a stop twice. One that names both has to agree with the stop time on both. When a feed's `stop_sequence` values aren't the static feed's, as after a renumbering, each update still finds its stop by `stop_id`. A stop time update that names no stop time from there on, or that comes out of order, is left out.
+A trip update's stop time updates are placed on the run's stop times all at once, in order along the trip: each is looked for at or after the stop time the previous one was placed on. A stop time update that names a `stop_sequence` describes the stop time with that `stop_sequence`; one that names only a `stop_id` describes the next stop time at that stop, which picks the right visit on a loop that serves a stop twice. One that names both takes the stop time that agrees on both. Failing that, it takes the next stop time at its `stop_id`, for a feed whose `stop_sequence` values aren't the static feed's, as after a renumbering; failing that, the stop time at its `stop_sequence`, for an update whose `stop_id` is an assigned platform the schedule doesn't have. A stop time update that names no stop time from there on, or that comes out of order, is left out.
 
 Departures, a trip's stop times, and the router's trips all match this way, since matching asks the static data for the whole trip rather than taking the stop times a query happens to hold.
 
@@ -43,11 +43,11 @@ Departures, a trip's stop times, and the router's trips all match this way, sinc
 
 Each stop time's estimated arrival and departure come from its own stop time update when it has one: the departure event, or else the arrival event, for the departure, and the other way round for the arrival. An event's time is the estimate; an event with only a delay adds it to the scheduled time.
 
-A stop time the update doesn't predict takes the delay carried from earlier in the trip, as the GTFS Realtime spec describes: the trip update's own `delay` until the first stop time update, then the delay given at the nearest earlier stop time update, or the delay its time implies against the schedule. A `SKIPPED` stop has no estimate and passes the carried delay on; a `NO_DATA` stop ends the carry, so the stops after it have no estimate until an update gives one.
+A stop time the update doesn't predict takes the delay carried from earlier in the trip, as the GTFS Realtime spec describes: the trip update's own `delay` until the first stop time update, then the delay given at the nearest earlier stop time update, or the delay its time implies against the schedule. A `SKIPPED` stop has no estimate, though a delay its update gives still carries; a `NO_DATA` stop ends the carry, so the stops after it have no estimate until an update gives one.
 
 Scheduled times count from noon minus twelve hours on the service date in the agency's timezone, as GTFS defines them, so an estimate on the day clocks change is still right. A trip found without a date has no scheduled instants, so only the times its update gives become estimates: delays, given or carried, estimate nothing.
 
-The GraphQL API's `StopTime.arrival` and `departure` report these estimates, and the router boards and alights by the estimated departures.
+The GraphQL API's `StopTime.arrival` and `departure` report these estimates, and the router boards and alights by the estimated departures. `StopTime.schedule_relationship` reports `SKIPPED` and `NO_DATA` for such stops, `CANCELED` or `DELETED` for every stop of such a trip, and otherwise the trip's relationship, or `SCHEDULED` for a stop time with any other realtime data, such as a carried delay.
 
 ## Which run a trip stands for
 
@@ -75,7 +75,7 @@ These fields return only the realtime data on the trip's run:
 
 A trip found without a date has no service date for its stop times, so a trip update that gives only delays, not times, produces no estimates on its `stop_times`.
 
-`StopTime.arrival` and `departure` show their `scheduled_local` and `estimated_local` times in the stop's timezone, while the instants themselves count in the agency's.
+`StopTime.arrival` and `departure` give `scheduled` and `estimated` as times of the service day in the agency's clock, so `estimated` less `scheduled` is `estimated_delay`, and give `scheduled_local` and `estimated_local` in the stop's timezone. Without a schedule, `estimated` is a clock time in the stop's timezone.
 
 ## Dates under use_service_window
 
@@ -97,7 +97,6 @@ The spec requires an alert's trip selector to resolve to a single trip instance.
 
 ## Not yet handled
 
-- `StopTime.schedule_relationship` reports a `SKIPPED` or `NO_DATA` stop as scheduled, though neither has an estimate.
 - A run described by several realtime feeds takes the first feed's trip update for everything.
 - `NEW` and `DUPLICATED` trips aren't shown as runs of their own, and trips identified without a `trip_id` aren't matched. Frequency-based trips aren't matched by `start_time`.
 - Trips added in real time are listed at a stop whatever date and time window the query asks for, and only on a route the feed version has.

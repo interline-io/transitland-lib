@@ -35,12 +35,7 @@ func (f *Finder) FindRunUpdate(ctx context.Context, run Run) *pb.TripUpdate {
 // runs: the requested ones, or its current run. False when the run has no
 // trip update.
 func (f *Finder) FindStopTimeUpdate(ctx context.Context, t *model.Trip, st *model.StopTime) (*model.RTStopTimeUpdate, bool) {
-	stops, matched := f.matchTrip(ctx, t)
-	i := slices.IndexFunc(stops, func(s StopRef) bool { return s.StopSequence == st.StopSequence.Int() })
-	if i < 0 {
-		return nil, false
-	}
-	return matched[i], true
+	return f.matchTrip(ctx, t).at(st.StopSequence.Int())
 }
 
 // FindStopTimeUpdates returns the realtime data for a trip's stop times, in
@@ -49,33 +44,62 @@ func (f *Finder) FindStopTimeUpdates(ctx context.Context, t *model.Trip, sts []*
 	if len(sts) == 0 {
 		return nil
 	}
-	stops, matched := f.matchTrip(ctx, t)
-	bySeq := make(map[int]*model.RTStopTimeUpdate, len(stops))
-	for i, s := range stops {
-		bySeq[s.StopSequence] = matched[i]
-	}
+	m := f.matchTrip(ctx, t)
 	ret := make([]*model.RTStopTimeUpdate, len(sts))
 	for i, st := range sts {
-		ret[i] = bySeq[st.StopSequence.Int()]
+		ret[i], _ = m.at(st.StopSequence.Int())
 	}
 	return ret
 }
 
-// matchTrip matches the trip update on a trip's run to the trip's stop times,
-// returning both in the trip's order, or nothing without a trip update. The
-// stop times come from the Lookup rather than the caller, which may hold only
-// some of them, since matching needs them all in order.
-func (f *Finder) matchTrip(ctx context.Context, t *model.Trip) ([]StopRef, []*model.RTStopTimeUpdate) {
+// tripMatch is a trip update matched to a trip's stop times. Without stop
+// times, the update applies to the trip's run but nothing is matched to its
+// stop times: the update has nothing to place or carry, or the stop times
+// couldn't be looked up.
+type tripMatch struct {
+	tu      *pb.TripUpdate // nil when the run has no update
+	stops   []StopRef
+	matched []*model.RTStopTimeUpdate
+}
+
+// at returns the realtime data for the stop time at a stop_sequence: the trip
+// update alone when nothing is matched to the stop times, and nothing for a
+// stop_sequence the trip doesn't have.
+func (m tripMatch) at(seq int) (*model.RTStopTimeUpdate, bool) {
+	if m.tu == nil {
+		return nil, false
+	}
+	if len(m.stops) == 0 {
+		return &model.RTStopTimeUpdate{TripUpdate: m.tu}, true
+	}
+	i := slices.IndexFunc(m.stops, func(s StopRef) bool { return s.StopSequence == seq })
+	if i < 0 {
+		return nil, false
+	}
+	return m.matched[i], true
+}
+
+// matchTrip matches the trip update on a trip's run to the trip's stop times.
+// The stop times come from the Lookup rather than the caller, which may hold
+// only some of them, since matching needs them all in order. An update with
+// no stop time updates and no delay, such as a cancellation, needs none, and
+// when the Lookup can't answer, the update applies without estimates rather
+// than not at all.
+func (f *Finder) matchTrip(ctx context.Context, t *model.Trip) tripMatch {
 	updates := f.modelTripUpdates(ctx, t)
 	if len(updates) == 0 {
-		return nil, nil
+		return tripMatch{}
+	}
+	tu := updates[0]
+	if len(tu.StopTimeUpdate) == 0 && tu.Delay == nil {
+		return tripMatch{tu: tu}
 	}
 	stops, ok := f.lookup.GetTripStops(ctx, t.FeedVersionID, t.ID)
 	if !ok {
-		log.For(ctx).Debug().Int("feed_version_id", t.FeedVersionID).Int("trip_id", t.ID).Msg("rtfinder: trip stops not found; its trip update isn't matched")
-		return nil, nil
+		log.For(ctx).Debug().Int("feed_version_id", t.FeedVersionID).Int("trip_id", t.ID).Msg("rtfinder: trip stops not found; its trip update applies without estimates")
+		return tripMatch{tu: tu}
 	}
-	return stops, MatchStops(updates[0], f.runStart(ctx, t), stops)
+	return tripMatch{tu: tu, stops: stops, matched: MatchStops(tu, f.runStart(ctx, t), stops)}
 }
 
 // runStart returns the instant a trip's run's stop times count from, or 0
@@ -99,34 +123,40 @@ func (f *Finder) runStart(ctx context.Context, t *model.Trip) int64 {
 //
 // A delay carries to the stop times the update doesn't predict: the trip's own
 // delay until the first stop time update, then the delay given or implied at
-// the nearest earlier one. A SKIPPED stop passes the carried delay on, and
-// NO_DATA ends it.
+// the nearest earlier one. A SKIPPED stop has no estimate, though a delay its
+// update gives still carries, and NO_DATA ends the carry.
 func MatchStops(tu *pb.TripUpdate, base int64, stops []StopRef) []*model.RTStopTimeUpdate {
 	placed := placeUpdates(tu, stops)
 	recs := make([]model.RTStopTimeUpdate, len(stops))
 	ret := make([]*model.RTStopTimeUpdate, len(stops))
 	carried, hasCarried := int64(tu.GetDelay()), tu.Delay != nil
-	for i, stop := range stops {
-		stu := placed[i]
-		r := &recs[i]
-		*r = model.RTStopTimeUpdate{TripUpdate: tu, StopTimeUpdate: stu}
-		ret[i] = r
-		switch stu.GetScheduleRelationship() {
-		case pb.TripUpdate_StopTimeUpdate_SKIPPED:
-			continue
-		case pb.TripUpdate_StopTimeUpdate_NO_DATA:
-			hasCarried = false
-			continue
-		}
-		arr := instant(base, stop.Arrival)
-		dep := instant(base, stop.Departure)
-		r.EstimatedArrival = estimate(r.ArrivalEvent(), arr)
-		r.EstimatedDeparture = estimate(r.DepartureEvent(), dep)
+	// carry takes the delay a stop time update gives or implies: its
+	// departure's, or else its arrival's.
+	carry := func(stu *pb.TripUpdate_StopTimeUpdate, arr int64, dep int64) {
 		if d, ok := eventDelay(stu.GetDeparture(), dep); ok {
 			carried, hasCarried = d, true
 		} else if d, ok := eventDelay(stu.GetArrival(), arr); ok {
 			carried, hasCarried = d, true
 		}
+	}
+	for i, stop := range stops {
+		stu := placed[i]
+		r := &recs[i]
+		*r = model.RTStopTimeUpdate{TripUpdate: tu, StopTimeUpdate: stu}
+		ret[i] = r
+		arr := instant(base, stop.Arrival)
+		dep := instant(base, stop.Departure)
+		switch stu.GetScheduleRelationship() {
+		case pb.TripUpdate_StopTimeUpdate_NO_DATA:
+			hasCarried = false
+			continue
+		case pb.TripUpdate_StopTimeUpdate_SKIPPED:
+			carry(stu, arr, dep)
+			continue
+		}
+		r.EstimatedArrival = estimate(r.ArrivalEvent(), arr)
+		r.EstimatedDeparture = estimate(r.DepartureEvent(), dep)
+		carry(stu, arr, dep)
 		if hasCarried {
 			if r.EstimatedArrival == 0 && arr != 0 {
 				r.EstimatedArrival = arr + carried
@@ -160,9 +190,14 @@ func placeUpdates(tu *pb.TripUpdate, stops []StopRef) []*pb.TripUpdate_StopTimeU
 	for _, stu := range tu.StopTimeUpdate {
 		i := slices.IndexFunc(stops[from:], func(s StopRef) bool { return names(stu, s) })
 		if i < 0 && stu.StopSequence != nil && stu.GetStopId() != "" {
-			// The update's stop_sequence values aren't this schedule's, as after
-			// a renumbering, while its stop_ids still are.
+			// The update's stop_sequence and stop_id name different stop times.
+			// Either its stop_sequence values aren't this schedule's, as after a
+			// renumbering, while its stop_ids are, or its stop_id is an assigned
+			// platform the schedule doesn't have, while its stop_sequence is right.
 			i = slices.IndexFunc(stops[from:], func(s StopRef) bool { return s.StopID == stu.GetStopId() })
+			if i < 0 {
+				i = slices.IndexFunc(stops[from:], func(s StopRef) bool { return s.StopSequence == int(stu.GetStopSequence()) })
+			}
 		}
 		if i < 0 {
 			continue

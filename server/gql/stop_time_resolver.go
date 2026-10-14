@@ -36,19 +36,29 @@ func (r *stopTimeResolver) DropOffBookingRule(ctx context.Context, obj *model.St
 
 func (r *stopTimeResolver) ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error) {
 	stu := obj.RTStopTimeUpdate
-	// Use StopTimeUpdate ScheduleRelationship value if explicitly provided
-	// if stu != nil && stu.StopTimeUpdate != nil && stu.StopTimeUpdate.ScheduleRelationship != nil {
-	// 	return convertScheduleRelationship(stu.StopTimeUpdate.ScheduleRelationship.String()), nil
-	// }
-	// Otherwise, try defaulting to TripUpdate ScheduleRelationship value
-	if stu != nil && stu.TripUpdate != nil && stu.TripUpdate.Trip != nil && stu.TripUpdate.Trip.ScheduleRelationship != nil {
-		return convertScheduleRelationship(stu.TripUpdate.Trip.ScheduleRelationship.String()), nil
+	if stu == nil {
+		return ptr(model.ScheduleRelationshipStatic), nil
 	}
-	// Otherwise, if ANY RT data is present (e.g. a propagated delay), default to SCHEDULED
-	if stu != nil && (stu.StopTimeUpdate != nil || stu.EstimatedArrival != 0 || stu.EstimatedDeparture != 0) {
+	// A canceled or deleted trip serves none of its stops.
+	var tripRel *pb.TripDescriptor_ScheduleRelationship
+	if td := stu.TripUpdate.GetTrip(); td != nil {
+		tripRel = td.ScheduleRelationship
+	}
+	if tripRel != nil && (*tripRel == pb.TripDescriptor_CANCELED || *tripRel == pb.TripDescriptor_DELETED) {
+		return convertScheduleRelationship(tripRel.String()), nil
+	}
+	// A skipped stop, or one without data, says so whatever the trip reports.
+	if stopRel := stu.StopTimeUpdate.GetScheduleRelationship(); stu.StopTimeUpdate != nil && (stopRel == pb.TripUpdate_StopTimeUpdate_SKIPPED || stopRel == pb.TripUpdate_StopTimeUpdate_NO_DATA) {
+		return convertScheduleRelationship(stopRel.String()), nil
+	}
+	// Otherwise the trip's relationship, when it gives one, or SCHEDULED for
+	// any other realtime data, such as a carried delay.
+	if tripRel != nil {
+		return convertScheduleRelationship(tripRel.String()), nil
+	}
+	if stu.StopTimeUpdate != nil || stu.EstimatedArrival != 0 || stu.EstimatedDeparture != 0 {
 		return ptr(model.ScheduleRelationshipScheduled), nil
 	}
-	// Otherwise, default to STATIC
 	return ptr(model.ScheduleRelationshipStatic), nil
 }
 
@@ -100,8 +110,8 @@ func stopTimeEventAt(ctx context.Context, obj *model.StopTime, ste *pb.TripUpdat
 	return stopTimeEvent(ste, estimated, sched, obj.ServiceDate, agencyLoc, stopLoc), nil
 }
 
-// stopTimeLocations returns the timezone a stop time's local times are shown
-// in, its stop's, and the agency timezone its scheduled times count in.
+// stopTimeLocations returns the stop's timezone, which shows a stop time's
+// local times, and the agency's timezone, which counts its scheduled times.
 // Without a stop, as at a flex location, both are the agency's; without the
 // agency's, both are the stop's.
 func stopTimeLocations(ctx context.Context, stopId tt.Key, fvid int) (stopLoc *time.Location, agencyLoc *time.Location, ok bool) {
@@ -122,7 +132,7 @@ func stopTimeLocations(ctx context.Context, stopId tt.Key, fvid int) (stopLoc *t
 }
 
 // stopTimeEvent reports a stop time's scheduled time and its estimate, if
-// any, with the realtime event the estimate came from. The scheduled instant
+// any, with the realtime event that produced the estimate. The scheduled instant
 // counts sched from the service date's start in agencyLoc, as GTFS defines
 // it, and the local times are in stopLoc.
 func stopTimeEvent(ste *pb.TripUpdate_StopTimeEvent, estimated int64, sched tt.Seconds, serviceDate tt.Date, agencyLoc *time.Location, stopLoc *time.Location) *model.StopTimeEvent {
@@ -148,14 +158,10 @@ func stopTimeEvent(ste *pb.TripUpdate_StopTimeEvent, estimated int64, sched tt.S
 			if delay > -(24*3600) && delay < 24*3600 {
 				a.EstimatedDelay = ptr(delay)
 			}
-			// As a time of day, an estimate given as a delay is the scheduled
-			// time shifted by it.
-			if ste == nil || ste.Time == nil {
-				a.Estimated = ptr(tt.NewSeconds(int(sched.Val) + delay))
-			}
-		}
-		if a.Estimated == nil {
-			// An estimate given as a time, or without a schedule, is a clock time.
+			// As a time of the service day, in the scheduled time's clock.
+			a.Estimated = ptr(tt.NewSeconds(int(sched.Val) + delay))
+		} else {
+			// Without a schedule, as a clock time in the stop's timezone.
 			a.Estimated = ptr(tt.NewSeconds(estLocal.Hour()*3600 + estLocal.Minute()*60 + estLocal.Second()))
 		}
 	}

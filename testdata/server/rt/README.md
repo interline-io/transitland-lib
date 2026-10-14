@@ -34,3 +34,7 @@ Realtime data naming particular runs of trips at Fruitvale ("FTVL"), each delay-
 - Trip "1031527WKDY" has alerts dated 2018-05-30, 2018-05-31 and 2030-05-28, and an undated alert.
 - Trip "5172328WKDY" has an alert dated 2018-05-30 and an undated alert.
 - Vehicles run trip "1031527WKDY" dated 2018-05-30, and trip "2211533WKDY" undated.
+
+# BA-skipped.json
+
+Trips at Fruitvale ("FTVL") on 2018-05-30: "1031527WKDY" skips it after a 30 second delay at Lake Merritt, "1131530WKDY" has no data for it after a 31 second delay at Coliseum, and "2211533WKDY" has a 32 second delay at Coliseum and nothing after.

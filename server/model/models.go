@@ -154,7 +154,7 @@ type RTStopTimeUpdate struct {
 }
 
 // ArrivalEvent returns the stop time update's arrival event, or else its
-// departure event: the event the arrival is estimated from.
+// departure event: the event that estimates the arrival.
 func (u *RTStopTimeUpdate) ArrivalEvent() *pb.TripUpdate_StopTimeEvent {
 	if u.StopTimeUpdate == nil {
 		return nil
@@ -166,7 +166,7 @@ func (u *RTStopTimeUpdate) ArrivalEvent() *pb.TripUpdate_StopTimeEvent {
 }
 
 // DepartureEvent returns the stop time update's departure event, or else its
-// arrival event: the event the departure is estimated from.
+// arrival event: the event that estimates the departure.
 func (u *RTStopTimeUpdate) DepartureEvent() *pb.TripUpdate_StopTimeEvent {
 	if u.StopTimeUpdate == nil {
 		return nil

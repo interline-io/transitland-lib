@@ -132,7 +132,7 @@ func TestStopRT_AfterMidnight(t *testing.T) {
 				}
 				found = true
 				assert.Equal(t, checkTrip, st.Get("trip.trip_id").String())
-				assert.Equal(t, "00:05:00", st.Get("arrival.estimated").String())
+				assert.Equal(t, "24:05:00", st.Get("arrival.estimated").String())
 				assert.Equal(t, "2018-05-31T00:05:00-07:00", st.Get("arrival.estimated_local").String())
 				assert.Equal(t, "2018-05-31T07:05:00Z", st.Get("arrival.estimated_utc").String())
 				assert.Equal(t, "24:02:00", st.Get("arrival.scheduled").String())
@@ -288,6 +288,41 @@ func TestStopRT_StopIDFallback_DoubleVisit(t *testing.T) {
 		},
 	}
 	testRt(t, tc)
+}
+
+// A skipped stop, or one the update has no data for, reports that relationship
+// and no estimate, while a stop the update doesn't name takes the carried
+// delay and reports SCHEDULED.
+func TestStopRT_SkippedAndNoData(t *testing.T) {
+	testRt(t, rtTestCase{
+		name:    "skipped and no data stops",
+		query:   rtTestStopQuery,
+		vars:    rtTestStopQueryVars(),
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-skipped.json"}},
+		whenUtc: rtFixtureWhenUtc,
+		cb: func(t *testing.T, jj string) {
+			want := map[string]struct {
+				rel   string
+				delay *int64
+			}{
+				"1031527WKDY": {"SKIPPED", nil},
+				"1131530WKDY": {"NO_DATA", nil},
+				"2211533WKDY": {"SCHEDULED", ptr(int64(32))},
+			}
+			found := map[string]bool{}
+			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
+				tid := st.Get("trip.trip_id").String()
+				w, ok := want[tid]
+				if !ok {
+					continue
+				}
+				found[tid] = true
+				assert.Equal(t, w.rel, st.Get("schedule_relationship").String(), "%s schedule_relationship", tid)
+				assert.Equal(t, w.delay, optionalInt(st.Get("departure.estimated_delay")), "%s estimated_delay", tid)
+			}
+			assert.Len(t, found, 3)
+		},
+	})
 }
 
 func TestStopRT_NoRT(t *testing.T) {

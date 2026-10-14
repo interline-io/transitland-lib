@@ -2,6 +2,7 @@ package rtfinder
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/rt/pb"
@@ -78,6 +79,7 @@ func TestMatchStops_Placement(t *testing.T) {
 		{"one before the previous match is left out", []*pb.TripUpdate_StopTimeUpdate{stu(5, ""), stu(2, "")}, []int{4, -1}},
 		{"a stop_id doesn't name a stop time without one", []*pb.TripUpdate_StopTimeUpdate{stu(0, "E")}, []int{-1}},
 		{"a stop_sequence names a stop time without a stop_id", []*pb.TripUpdate_StopTimeUpdate{stu(6, "E")}, []int{5}},
+		{"by stop_sequence when the stop_id is an assigned platform", []*pb.TripUpdate_StopTimeUpdate{stu(5, "PLATFORM")}, []int{4}},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
@@ -152,6 +154,11 @@ func TestMatchStops_Estimates(t *testing.T) {
 			want: []est{late(0, 60), none, late(2, 60), late(3, 60), late(4, 60)},
 		},
 		{
+			name: "a SKIPPED stop's own delay carries",
+			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), delayOf(60)), withDeparture(withRelationship(stu(2, ""), pb.TripUpdate_StopTimeUpdate_SKIPPED), delayOf(600))},
+			want: []est{late(0, 60), none, late(2, 600), late(3, 600), late(4, 600)},
+		},
+		{
 			name: "a time carries the delay it implies",
 			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), timeOf(depA+180))},
 			want: []est{{depA + 180, depA + 180}, late(1, 180), late(2, 180), late(3, 180), late(4, 180)},
@@ -202,7 +209,7 @@ func TestMatchStops_Estimates(t *testing.T) {
 		}
 	})
 	// A stop time without a scheduled time gets no estimate from a delay, and
-	// the delay carries past it.
+	// the delay carries past that stop.
 	t.Run("a stop time without a scheduled time", func(t *testing.T) {
 		untimed := []StopRef{stops[0], {StopSequence: 2, StopID: "B"}, stops[2]}
 		tu := &pb.TripUpdate{StopTimeUpdate: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(1, ""), delayOf(60))}}
@@ -220,13 +227,15 @@ func TestFinder_MatchStops(t *testing.T) {
 	loc := testLosAngeles(t)
 	msg := &pb.FeedMessage{
 		Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
-		Entity: []*pb.FeedEntity{{
-			Id: proto.String("T"),
-			TripUpdate: &pb.TripUpdate{
+		Entity: []*pb.FeedEntity{
+			{Id: proto.String("T"), TripUpdate: &pb.TripUpdate{
 				Trip:           &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531")},
 				StopTimeUpdate: []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(2, ""), delayOf(60))},
-			},
-		}},
+			}},
+			{Id: proto.String("C"), TripUpdate: &pb.TripUpdate{
+				Trip: &pb.TripDescriptor{TripId: proto.String("C"), StartDate: proto.String("20180531"), ScheduleRelationship: pb.TripDescriptor_CANCELED.Enum()},
+			}},
+		},
 	}
 	stops := testTripStops(10*3600, "A", "B", "C", "D")
 	dayStart := tt.ServiceDayStart(testDate(31), loc).Unix()
@@ -245,9 +254,11 @@ func TestFinder_MatchStops(t *testing.T) {
 		}
 	})
 	t.Run("FindStopTimeUpdates", func(t *testing.T) {
+		stopLookups := &atomic.Int64{}
 		lookup := tripUpdateLookup{
 			feedVersionLookup: feedVersionLookup{unexpectedLookup: unexpectedLookup{t}, tz: loc},
 			stops:             map[int][]StopRef{7: stops},
+			stopLookups:       stopLookups,
 		}
 		f := testFinder(t, lookup, "realtime_trip_updates", msg)
 		// Only the last two stop times, as a filtered query holds.
@@ -263,8 +274,18 @@ func TestFinder_MatchStops(t *testing.T) {
 		}
 		_, ok := f.FindStopTimeUpdate(ctx, testRun(7, "T", 31), testStopTime(9))
 		assert.False(t, ok)
-		// A trip whose stop times the Lookup doesn't have isn't matched.
-		_, ok = f.FindStopTimeUpdate(ctx, testRun(8, "T", 31), testStopTime(1))
-		assert.False(t, ok)
+		// A trip whose stop times the Lookup can't give still has its update,
+		// without estimates.
+		if r, ok := f.FindStopTimeUpdate(ctx, testRun(8, "T", 31), testStopTime(1)); assert.True(t, ok) {
+			assert.NotNil(t, r.TripUpdate)
+			assert.Nil(t, r.StopTimeUpdate)
+			assert.Zero(t, r.EstimatedDeparture)
+		}
+		// A cancellation has nothing to match, so it asks for no stop times.
+		lookups := stopLookups.Load()
+		if r, ok := f.FindStopTimeUpdate(ctx, testRun(9, "C", 31), testStopTime(1)); assert.True(t, ok) {
+			assert.Equal(t, pb.TripDescriptor_CANCELED, r.TripUpdate.GetTrip().GetScheduleRelationship())
+		}
+		assert.Equal(t, lookups, stopLookups.Load(), "stop lookups for a cancellation")
 	})
 }

@@ -533,8 +533,9 @@ func (l feedVersionLookup) FeedVersionTimezone(_ context.Context, fvid int) (*ti
 // times makes.
 type tripUpdateLookup struct {
 	feedVersionLookup
-	spans map[int]TripSpan  // by trip id
-	stops map[int][]StopRef // by trip id
+	spans       map[int]TripSpan  // by trip id
+	stops       map[int][]StopRef // by trip id
+	stopLookups *atomic.Int64     // counts GetTripStops calls, when set
 }
 
 func (l tripUpdateLookup) GetTripSpan(_ context.Context, _ int, tripId int) (TripSpan, bool) {
@@ -542,6 +543,9 @@ func (l tripUpdateLookup) GetTripSpan(_ context.Context, _ int, tripId int) (Tri
 }
 
 func (l tripUpdateLookup) GetTripStops(_ context.Context, _ int, tripId int) ([]StopRef, bool) {
+	if l.stopLookups != nil {
+		l.stopLookups.Add(1)
+	}
 	stops, ok := l.stops[tripId]
 	return stops, ok
 }
