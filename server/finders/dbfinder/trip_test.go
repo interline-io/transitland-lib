@@ -229,3 +229,20 @@ func TestExpandTripServiceDates(t *testing.T) {
 		assert.Nil(t, got(ent))
 	})
 }
+
+// A window ending on a day whose midnight a DST change skips still holds that
+// day: America/Santiago jumped from midnight to 01:00 on 2024-09-08.
+func TestMapIntoServiceWindow_MidnightDST(t *testing.T) {
+	loc, err := time.LoadLocation("America/Santiago")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fvsw := &model.ServiceWindow{
+		NowLocal:     time.Date(2024, 9, 8, 9, 30, 0, 0, loc),
+		StartDate:    time.Date(2024, 9, 2, 12, 0, 0, 0, loc), // Monday
+		EndDate:      time.Date(2024, 9, 8, 12, 0, 0, 0, loc), // Sunday
+		FallbackWeek: time.Date(2024, 3, 4, 12, 0, 0, 0, loc), // Monday
+	}
+	got := mapIntoServiceWindow(testDate(t, "2024-09-08"), fvsw)
+	assert.Equal(t, "2024-09-08", got.String())
+}

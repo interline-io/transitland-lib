@@ -282,12 +282,11 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 				if !assert.Equal(t, "1031527WKDY", trip.Get("trip_id").String()) {
 					return
 				}
-				for _, st := range trip.Get("stop_times").Array() {
-					if st.Get("stop_sequence").Int() == 12 {
-						assert.Equal(t, tc.serviceDate, st.Get("service_date").String(), "service_date at FTVL")
-						assert.Equal(t, tc.delay, optionalInt(st.Get("departure.estimated_delay")), "estimated_delay at FTVL")
-						assert.Equal(t, tc.relationship, st.Get("schedule_relationship").String(), "schedule_relationship at FTVL")
-					}
+				st := trip.Get("stop_times.#(stop_sequence==12)")
+				if assert.True(t, st.Exists(), "expected the stop time at FTVL") {
+					assert.Equal(t, tc.serviceDate, st.Get("service_date").String(), "service_date at FTVL")
+					assert.Equal(t, tc.delay, optionalInt(st.Get("departure.estimated_delay")), "estimated_delay at FTVL")
+					assert.Equal(t, tc.relationship, st.Get("schedule_relationship").String(), "schedule_relationship at FTVL")
 				}
 				var alerts []string
 				for _, a := range trip.Get("alerts.#.header_text.0.text").Array() {
@@ -361,9 +360,10 @@ func TestTripRT_Runs_PatternTrips(t *testing.T) {
 }
 
 // A trip looked up as yesterday's, today's and tomorrow's run shows its vehicle
-// only under the vehicle's own run, and each run's stop times on its own date.
-// Through Route.trips, since the top-level trips query resolves no relative
-// date.
+// only under the vehicle's own run.
+//
+// Each run's stop times fall on its own date, counted in the feed's timezone.
+// Through Route.trips, since the top-level trips query resolves no relative date.
 func TestTripRT_Runs_RelativeDates(t *testing.T) {
 	const query = `query($route_id: String!, $trip_id: String!) {
 		routes(where: {feed_onestop_id: "BA", route_id: $route_id}) {
@@ -378,12 +378,15 @@ func TestTripRT_Runs_RelativeDates(t *testing.T) {
 	}`
 	tcs := []struct {
 		name    string
+		whenUtc string
 		routeId string
 		tripId  string
 		vehicle string
 	}{
-		{name: "a vehicle naming its date", routeId: "05", tripId: "1031527WKDY", vehicle: "May 30 train"},
-		{name: "a vehicle naming none, on its current run", routeId: "03", tripId: "2211533WKDY", vehicle: "Undated train"},
+		{name: "a vehicle naming its date", whenUtc: rtFixtureWhenUtc, routeId: "05", tripId: "1031527WKDY", vehicle: "May 30 train"},
+		{name: "a vehicle naming none, on its current run", whenUtc: rtFixtureWhenUtc, routeId: "03", tripId: "2211533WKDY", vehicle: "Undated train"},
+		// 23:30 on May 30 in the feed's timezone, already May 31 in UTC.
+		{name: "late evening, a day behind UTC", whenUtc: "2018-05-31T06:30:00Z", routeId: "05", tripId: "1031527WKDY", vehicle: "May 30 train"},
 	}
 	for _, tc := range tcs {
 		testRt(t, rtTestCase{
@@ -391,7 +394,7 @@ func TestTripRT_Runs_RelativeDates(t *testing.T) {
 			query:   query,
 			vars:    hw{"route_id": tc.routeId, "trip_id": tc.tripId},
 			rtfiles: runsRTFiles,
-			whenUtc: rtFixtureWhenUtc,
+			whenUtc: tc.whenUtc,
 			cb: func(t *testing.T, jj string) {
 				expect := map[string]struct{ serviceDate, vehicle string }{
 					"yesterday": {serviceDate: "2018-05-29"},

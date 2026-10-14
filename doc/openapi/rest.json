@@ -248,12 +248,14 @@
         }
       },
       "relativeDateParam": {
-        "description": "Search for departures on a relative date label, e.g. TODAY, TUESDAY, NEXT_WEDNESDAY",
+        "description": "Search for departures on a relative date label, e.g. TODAY, TOMORROW, TUESDAY, NEXT_WEDNESDAY",
         "in": "query",
         "name": "relative_date",
         "schema": {
           "enum": [
             "TODAY",
+            "YESTERDAY",
+            "TOMORROW",
             "MONDAY",
             "TUESDAY",
             "WEDNESDAY",

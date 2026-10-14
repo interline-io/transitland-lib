@@ -114,11 +114,12 @@ func frequencySelect(limit *int, after *model.Cursor, permFilter *model.PermFilt
 // weekday in its fallback week.
 func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
 	loc := fvsw.NowLocal.Location()
-	// Compared in the feed version's timezone. The window's dates are local
-	// midnight and a date scalar parses as midnight UTC, so comparing the two
-	// as given puts the first or last day of the window outside it.
+	// Compared as calendar dates in the feed version's timezone. A date scalar
+	// parses as midnight UTC, and comparing instants misplaces the window's
+	// first or last day.
 	local := tzTruncate(s, loc)
-	if !local.Val.Before(fvsw.StartDate) && !local.Val.After(fvsw.EndDate) {
+	day := civilDate(local.Val)
+	if !day.Before(civilDate(fvsw.StartDate)) && !day.After(civilDate(fvsw.EndDate)) {
 		return local
 	}
 	dow := int(local.Val.Weekday()) - 1
@@ -126,6 +127,13 @@ func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
 		dow = 6
 	}
 	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
+}
+
+// civilDate returns t's calendar date in its own location, as midnight UTC, so
+// dates compare as dates whatever their time of day.
+func civilDate(t time.Time) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
 // Resolve a filter's date inputs into the one service date to match, in the feed
