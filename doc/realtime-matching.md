@@ -2,6 +2,12 @@
 
 Transitland attaches GTFS Realtime data (trip updates, vehicle positions and service alerts) to the trips it describes. A trip can run on many days, so realtime data is matched to a **run**: one trip on one service date. This page describes how a message is matched to a run, and which run's data each API field returns.
 
+## Payloads too old to match
+
+Trip updates and vehicle positions are matched only from a payload whose header timestamp is at most an hour old. A feed that stops updating keeps its last payload for up to a day, and its delays, cancellations and vehicles would otherwise keep applying long after they stopped being true; a live feed's payload is a few minutes old at most. A payload without a header timestamp is matched whatever its age.
+
+Service alerts aren't held to this, since an alert carries its own active periods, and many feeds serve alerts from files that never update their header. The latest realtime download serves a feed's last payload however old it is.
+
 ## Which run a message describes
 
 Every realtime message describes exactly one run.

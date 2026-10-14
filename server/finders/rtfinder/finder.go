@@ -156,6 +156,8 @@ func (f *Finder) findAlerts(ctx context.Context, fvid int, limit *int, active *b
 	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, fvid)
 	tnow := f.Clock.Now()
 	for _, topic := range topics {
+		// Not held to maxPayloadAge: an alert carries its own active periods,
+		// and many feeds serve alerts from files that never update the header.
 		src, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_alerts"))
 		if !ok || src == nil {
 			continue
@@ -345,6 +347,7 @@ func stopAgrees(s *pb.EntitySelector, fv feedVersionRefs) bool {
 	return true
 }
 
+// GetMessage returns a feed's held payload, however old.
 func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) (*pb.FeedMessage, bool) {
 	tk := getTopicKey(topic, topicKey)
 	a, ok := f.cache.GetSource(ctx, tk)
@@ -352,6 +355,29 @@ func (f *Finder) GetMessage(ctx context.Context, topic string, topicKey string) 
 		return a.msg, ok
 	}
 	return nil, false
+}
+
+// maxPayloadAge is how old a payload's header timestamp can be before matching
+// trip updates and vehicle positions ignores the payload. Live feeds are a few
+// minutes old at most, while feeds that have stopped updating are hours old.
+const maxPayloadAge = time.Hour
+
+// currentSource returns a feed's held payload, or nothing when its header
+// timestamp is more than maxPayloadAge old. A payload without a header
+// timestamp counts as current.
+func (f *Finder) currentSource(ctx context.Context, topicKey string) (*Source, bool) {
+	src, ok := f.cache.GetSource(ctx, topicKey)
+	if !ok || src == nil {
+		return nil, false
+	}
+	ts := src.msg.GetHeader().GetTimestamp()
+	if ts > 0 && f.Clock.Now().Sub(time.Unix(int64(ts), 0)) > maxPayloadAge {
+		log.TraceCheck(func() {
+			log.For(ctx).Trace().Str("topic", topicKey).Uint64("header_timestamp", ts).Msg("rtfinder: payload too old to match")
+		})
+		return nil, false
+	}
+	return src, true
 }
 
 // FindStopTimeUpdate returns the update for a stop time on a trip's runs: the
@@ -478,7 +504,7 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 	var ret []*pb.TripUpdate
 	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, t.FeedVersionID)
 	for _, topic := range topics {
-		a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
+		a, ok := f.currentSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
 		if !ok {
 			continue
 		}
@@ -528,7 +554,7 @@ func (f *Finder) getTrips(ctx context.Context, topic string, tid string) []*pb.T
 	if tid == "" {
 		return nil
 	}
-	a, ok := f.cache.GetSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
+	a, ok := f.currentSource(ctx, getTopicKey(topic, "realtime_trip_updates"))
 	if !ok {
 		return nil
 	}

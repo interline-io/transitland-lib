@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/rt"
+	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/azchecker"
 	"github.com/interline-io/transitland-lib/server/auth/fga"
@@ -152,12 +153,19 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	// Setup RT
 	rtf := rtfinder.NewFinder(kvcache.NewMemoryStore(), rtfinder.NewPostgresLookup(db))
 	rtf.Clock = cl
+	// Each fixture is served as a live feed's payload: fetched at the test's
+	// time, with its header stamped then, so it's never too old to match.
+	fetched := uint64(when.Unix())
 	for _, rtj := range opts.RTJsons {
 		fn := testdata.Path("server", "rt", rtj.Fname)
 		msg, err := rt.ReadFile(fn)
 		if err != nil {
 			t.Fatal(err)
 		}
+		if msg.Header == nil {
+			msg.Header = &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}
+		}
+		msg.Header.Timestamp = &fetched
 		key := fmt.Sprintf("rtdata:%s:%s", rtj.Feed, rtj.Ftype)
 		rtdata, err := proto.Marshal(msg)
 		if err != nil {
