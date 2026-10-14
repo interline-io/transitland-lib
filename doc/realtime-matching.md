@@ -37,7 +37,7 @@ A `DUPLICATED` message names the trip it copies but describes a new run, so it n
 
 A trip update's stop time updates are placed on the run's stop times all at once, in order along the trip: each is looked for at or after the stop time the previous one was placed on. A stop time update that names a `stop_sequence` describes the stop time with that `stop_sequence`; one that names only a `stop_id` describes the next stop time at that stop, which picks the right visit on a loop that serves a stop twice. One that names both takes the stop time that agrees on both. Failing that, it takes the next stop time at its `stop_id`, for a feed whose `stop_sequence` values aren't the static feed's, as after a renumbering; failing that, the stop time at its `stop_sequence`, for an update whose `stop_id` is an assigned platform the schedule doesn't have. A stop time update that names no stop time from there on, or that comes out of order, is left out.
 
-Departures, a trip's stop times, and the router's trips all match this way, since matching asks the static data for the whole trip rather than taking the stop times a query happens to hold.
+Departures and a trip's stop times both match this way, since matching asks the static data for the whole trip rather than taking the stop times a query happens to hold, and a caller that gives RTFinder a run's stop times by value gets the same answer.
 
 ## Delays and estimates
 
@@ -47,7 +47,7 @@ A stop time the update doesn't predict takes the delay carried from earlier in t
 
 Scheduled times count from noon minus twelve hours on the service date in the agency's timezone, as GTFS defines them, so an estimate on the day clocks change is still right. A trip found without a date has no scheduled instants, so only the times its update gives become estimates: delays, given or carried, estimate nothing.
 
-The GraphQL API's `StopTime.arrival` and `departure` report these estimates, and the router boards and alights by the estimated departures. `StopTime.schedule_relationship` reports `SKIPPED` and `NO_DATA` for such stops, `CANCELED` or `DELETED` for every stop of such a trip, and otherwise the trip's relationship, or `SCHEDULED` for a stop time with any other realtime data, such as a carried delay.
+The GraphQL API's `StopTime.arrival` and `departure` report these estimates. `StopTime.schedule_relationship` reports `SKIPPED` and `NO_DATA` for such stops, `CANCELED` or `DELETED` for every stop of such a trip, and otherwise the trip's relationship, or `SCHEDULED` for a stop time with any other realtime data, such as a carried delay.
 
 ## Which run a trip stands for
 
