@@ -2,6 +2,7 @@ package gql
 
 import (
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/tt"
@@ -40,7 +41,9 @@ func TestStopRT_Basic(t *testing.T) {
 				}
 				found = true
 				assert.Equal(t, checkTrip, st.Get("trip.trip_id").String())
-				assert.Equal(t, "2018-05-30T22:27:30Z", st.Get("trip.timestamp").String())
+				// The trip update has no timestamp of its own, so it takes the
+				// header's: when the fixture was fetched.
+				assert.Equal(t, rtFixtureWhenUtc, st.Get("trip.timestamp").String())
 				// arrival
 				assert.Equal(t, "16:02:30", st.Get("arrival.estimated").String())
 				assert.Equal(t, "2018-05-30T16:02:30-07:00", st.Get("arrival.estimated_local").String())
@@ -568,4 +571,34 @@ func TestStopRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
 			}
 		},
 	})
+}
+
+// Departures carry estimates from a trip updates payload fetched under an hour
+// ago, and none from one fetched over an hour ago.
+func TestStopRT_StalePayload(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		age       time.Duration
+		estimated bool
+	}{
+		{"fetched 59 minutes ago", 59 * time.Minute, true},
+		{"fetched 61 minutes ago", 61 * time.Minute, false},
+	} {
+		testRt(t, rtTestCase{
+			name:    tc.name,
+			query:   rtTestStopQuery,
+			vars:    rtTestStopQueryVars(),
+			whenUtc: rtFixtureWhenUtc,
+			rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA.json", Age: tc.age}},
+			cb: func(t *testing.T, jj string) {
+				sts := gjson.Get(jj, "stops.0.stop_times").Array()
+				if !assert.NotEmpty(t, sts) {
+					return
+				}
+				for _, st := range sts {
+					assert.Equal(t, tc.estimated, st.Get("arrival.estimated").Value() != nil, "trip %s", st.Get("trip.trip_id").String())
+				}
+			},
+		})
+	}
 }
