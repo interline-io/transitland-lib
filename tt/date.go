@@ -52,3 +52,10 @@ func (r Date) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(r.Val.Format("2006-01-02"))
 }
+
+// ServiceDayStart is the instant a service date's times count from: noon less
+// twelve hours in loc, which differs from midnight on the days clocks change.
+func ServiceDayStart(d Date, loc *time.Location) time.Time {
+	y, m, day := d.Val.Date()
+	return time.Date(y, m, day, 12, 0, 0, 0, loc).Add(-12 * time.Hour)
+}

@@ -132,7 +132,7 @@ func TestStopRT_AfterMidnight(t *testing.T) {
 				}
 				found = true
 				assert.Equal(t, checkTrip, st.Get("trip.trip_id").String())
-				assert.Equal(t, "00:05:00", st.Get("arrival.estimated").String())
+				assert.Equal(t, "24:05:00", st.Get("arrival.estimated").String())
 				assert.Equal(t, "2018-05-31T00:05:00-07:00", st.Get("arrival.estimated_local").String())
 				assert.Equal(t, "2018-05-31T07:05:00Z", st.Get("arrival.estimated_utc").String())
 				assert.Equal(t, "24:02:00", st.Get("arrival.scheduled").String())
@@ -199,9 +199,11 @@ func TestStopRT_DepartureFallback(t *testing.T) {
 	testRt(t, tc)
 }
 
-func TestStopRT_LastDelay(t *testing.T) {
+// A stop time the trip update doesn't name takes the delay given at the
+// nearest earlier stop, Lake Merritt's 45 seconds, not Coliseum's 90 after it.
+func TestStopRT_CarriedDelay(t *testing.T) {
 	tc := rtTestCase{
-		name:    "use delay value from last provided delay in trip update",
+		name:    "the nearest earlier delay carries",
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-last-delay.json"}},
@@ -259,9 +261,12 @@ func TestStopRT_StopIDFallback(t *testing.T) {
 	testRt(t, tc)
 }
 
-func TestStopRT_StopIDFallback_NoDoubleVisit(t *testing.T) {
+// Stop time updates naming stops by stop_id alone are placed in order along
+// the trip, so a stop the update names twice takes the first in order, and the
+// second, which no later stop time matches, is left out.
+func TestStopRT_StopIDFallback_DoubleVisit(t *testing.T) {
 	tc := rtTestCase{
-		name:    "do not use stop_id as fallback if stop is visited twice",
+		name:    "a stop named twice takes the update in order",
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
 		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-stop-double-visit.json"}},
@@ -275,8 +280,7 @@ func TestStopRT_StopIDFallback_NoDoubleVisit(t *testing.T) {
 					continue
 				}
 				found = true
-				assert.Equal(t, "", st.Get("departure.estimated_utc").String())
-				assert.Equal(t, "", st.Get("departure.time_utc").String())
+				assert.Equal(t, "2018-05-30T23:02:30Z", st.Get("departure.estimated_utc").String())
 			}
 			if !found {
 				t.Errorf("expected to find trip '%s'", checkTrip)
@@ -284,6 +288,41 @@ func TestStopRT_StopIDFallback_NoDoubleVisit(t *testing.T) {
 		},
 	}
 	testRt(t, tc)
+}
+
+// A skipped stop, or one the update has no data for, reports that relationship
+// and no estimate, while a stop the update doesn't name takes the carried
+// delay and reports SCHEDULED.
+func TestStopRT_SkippedAndNoData(t *testing.T) {
+	testRt(t, rtTestCase{
+		name:    "skipped and no data stops",
+		query:   rtTestStopQuery,
+		vars:    rtTestStopQueryVars(),
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-skipped.json"}},
+		whenUtc: rtFixtureWhenUtc,
+		cb: func(t *testing.T, jj string) {
+			want := map[string]struct {
+				rel   string
+				delay *int64
+			}{
+				"1031527WKDY": {"SKIPPED", nil},
+				"1131530WKDY": {"NO_DATA", nil},
+				"2211533WKDY": {"SCHEDULED", ptr(int64(32))},
+			}
+			found := map[string]bool{}
+			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
+				tid := st.Get("trip.trip_id").String()
+				w, ok := want[tid]
+				if !ok {
+					continue
+				}
+				found[tid] = true
+				assert.Equal(t, w.rel, st.Get("schedule_relationship").String(), "%s schedule_relationship", tid)
+				assert.Equal(t, w.delay, optionalInt(st.Get("departure.estimated_delay")), "%s estimated_delay", tid)
+			}
+			assert.Len(t, found, 3)
+		},
+	})
 }
 
 func TestStopRT_NoRT(t *testing.T) {

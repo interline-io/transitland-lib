@@ -112,7 +112,7 @@ func TestCurrentRunDate(t *testing.T) {
 	t.Run("a service day counts from noon less twelve hours", func(t *testing.T) {
 		// The clocks went forward at 2 am, so the day's times count from 11 pm the
 		// evening before.
-		start := serviceDayStart(tt.NewDate(time.Date(2018, 3, 11, 0, 0, 0, 0, time.UTC)), la)
+		start := tt.ServiceDayStart(tt.NewDate(time.Date(2018, 3, 11, 0, 0, 0, 0, time.UTC)), la)
 		assert.Equal(t, "2018-03-10T23:00:00-08:00", start.Format(time.RFC3339))
 	})
 }

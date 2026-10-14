@@ -142,10 +142,39 @@ type RouteStopPatternTimetableTimeGrid struct {
 	Values [][]tt.Seconds
 }
 
+// RTStopTimeUpdate is the realtime data matched to one stop time of a run.
 type RTStopTimeUpdate struct {
-	LastDelay      *int32
+	TripUpdate *pb.TripUpdate
+	// The stop time update naming the stop time, or nil when none does.
 	StopTimeUpdate *pb.TripUpdate_StopTimeUpdate
-	TripUpdate     *pb.TripUpdate
+	// Estimated arrival and departure in unix seconds, or 0 for none: from the
+	// stop time update's events, or else the delay carried from earlier stops.
+	EstimatedArrival   int64
+	EstimatedDeparture int64
+}
+
+// ArrivalEvent returns the stop time update's arrival event, or else its
+// departure event: the event that estimates the arrival.
+func (u *RTStopTimeUpdate) ArrivalEvent() *pb.TripUpdate_StopTimeEvent {
+	if u.StopTimeUpdate == nil {
+		return nil
+	}
+	if u.StopTimeUpdate.Arrival != nil {
+		return u.StopTimeUpdate.Arrival
+	}
+	return u.StopTimeUpdate.Departure
+}
+
+// DepartureEvent returns the stop time update's departure event, or else its
+// arrival event: the event that estimates the departure.
+func (u *RTStopTimeUpdate) DepartureEvent() *pb.TripUpdate_StopTimeEvent {
+	if u.StopTimeUpdate == nil {
+		return nil
+	}
+	if u.StopTimeUpdate.Departure != nil {
+		return u.StopTimeUpdate.Departure
+	}
+	return u.StopTimeUpdate.Arrival
 }
 
 type StopTime struct {

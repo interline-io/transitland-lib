@@ -15201,7 +15201,7 @@
                                             "x-order": 515
                                           },
                                           "estimated": {
-                                            "description": "Estimated time in local time HH:MM:SS",
+                                            "description": "Estimated time HH:MM:SS, as a time of the service day like `scheduled`; a clock time in the stop's timezone without a schedule",
                                             "example": "15:21:04",
                                             "format": "hms",
                                             "nullable": true,
@@ -15317,7 +15317,7 @@
                                             "x-order": 535
                                           },
                                           "estimated": {
-                                            "description": "Estimated time in local time HH:MM:SS",
+                                            "description": "Estimated time HH:MM:SS, as a time of the service day like `scheduled`; a clock time in the stop's timezone without a schedule",
                                             "example": "15:21:04",
                                             "format": "hms",
                                             "nullable": true,
@@ -16878,7 +16878,7 @@
                                       "x-order": 94
                                     },
                                     "estimated": {
-                                      "description": "Estimated time in local time HH:MM:SS",
+                                      "description": "Estimated time HH:MM:SS, as a time of the service day like `scheduled`; a clock time in the stop's timezone without a schedule",
                                       "example": "15:21:04",
                                       "format": "hms",
                                       "nullable": true,
@@ -16994,7 +16994,7 @@
                                       "x-order": 114
                                     },
                                     "estimated": {
-                                      "description": "Estimated time in local time HH:MM:SS",
+                                      "description": "Estimated time HH:MM:SS, as a time of the service day like `scheduled`; a clock time in the stop's timezone without a schedule",
                                       "example": "15:21:04",
                                       "format": "hms",
                                       "nullable": true,
@@ -19151,7 +19151,7 @@
                                                 "x-order": 1044
                                               },
                                               "estimated": {
-                                                "description": "Estimated time in local time HH:MM:SS",
+                                                "description": "Estimated time HH:MM:SS, as a time of the service day like `scheduled`; a clock time in the stop's timezone without a schedule",
                                                 "example": "15:21:04",
                                                 "format": "hms",
                                                 "nullable": true,
@@ -19267,7 +19267,7 @@
                                                 "x-order": 1064
                                               },
                                               "estimated": {
-                                                "description": "Estimated time in local time HH:MM:SS",
+                                                "description": "Estimated time HH:MM:SS, as a time of the service day like `scheduled`; a clock time in the stop's timezone without a schedule",
                                                 "example": "15:21:04",
                                                 "format": "hms",
                                                 "nullable": true,

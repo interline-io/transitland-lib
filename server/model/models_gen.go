@@ -1558,7 +1558,7 @@ type StopTimeEvent struct {
 	//
 	// This value can be set directly from a matching GTFS-RT StopTimeUpdate timestamp or delay value, or derived from the trip's overall delay. Values at or beyond ±86,400 seconds (24 hours) are treated as erroneous and returned as null.
 	EstimatedDelay *int `json:"estimated_delay,omitempty"`
-	// Estimated time in local time HH:MM:SS
+	// Estimated time HH:MM:SS, as a time of the service day like `scheduled`; a clock time in the stop's timezone without a schedule
 	Estimated *tt.Seconds `json:"estimated,omitempty"`
 	// Scheduled time in UTC
 	ScheduledUtc *time.Time `json:"scheduled_utc,omitempty"`

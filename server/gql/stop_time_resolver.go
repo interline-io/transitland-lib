@@ -36,19 +36,29 @@ func (r *stopTimeResolver) DropOffBookingRule(ctx context.Context, obj *model.St
 
 func (r *stopTimeResolver) ScheduleRelationship(ctx context.Context, obj *model.StopTime) (*model.ScheduleRelationship, error) {
 	stu := obj.RTStopTimeUpdate
-	// Use StopTimeUpdate ScheduleRelationship value if explicitly provided
-	// if stu != nil && stu.StopTimeUpdate != nil && stu.StopTimeUpdate.ScheduleRelationship != nil {
-	// 	return convertScheduleRelationship(stu.StopTimeUpdate.ScheduleRelationship.String()), nil
-	// }
-	// Otherwise, try defaulting to TripUpdate ScheduleRelationship value
-	if stu != nil && stu.TripUpdate != nil && stu.TripUpdate.Trip != nil && stu.TripUpdate.Trip.ScheduleRelationship != nil {
-		return convertScheduleRelationship(stu.TripUpdate.Trip.ScheduleRelationship.String()), nil
+	if stu == nil {
+		return ptr(model.ScheduleRelationshipStatic), nil
 	}
-	// Otherwise, if ANY RT data is present (e.g. a propagated delay), default to SCHEDULED
-	if stu != nil && (stu.StopTimeUpdate != nil || stu.LastDelay != nil) {
+	// A canceled or deleted trip serves none of its stops.
+	var tripRel *pb.TripDescriptor_ScheduleRelationship
+	if td := stu.TripUpdate.GetTrip(); td != nil {
+		tripRel = td.ScheduleRelationship
+	}
+	if tripRel != nil && (*tripRel == pb.TripDescriptor_CANCELED || *tripRel == pb.TripDescriptor_DELETED) {
+		return convertScheduleRelationship(tripRel.String()), nil
+	}
+	// A skipped stop, or one without data, says so whatever the trip reports.
+	if stopRel := stu.StopTimeUpdate.GetScheduleRelationship(); stu.StopTimeUpdate != nil && (stopRel == pb.TripUpdate_StopTimeUpdate_SKIPPED || stopRel == pb.TripUpdate_StopTimeUpdate_NO_DATA) {
+		return convertScheduleRelationship(stopRel.String()), nil
+	}
+	// Otherwise the trip's relationship, when it gives one, or SCHEDULED for
+	// any other realtime data, such as a carried delay.
+	if tripRel != nil {
+		return convertScheduleRelationship(tripRel.String()), nil
+	}
+	if stu.StopTimeUpdate != nil || stu.EstimatedArrival != 0 || stu.EstimatedDeparture != 0 {
 		return ptr(model.ScheduleRelationshipScheduled), nil
 	}
-	// Otherwise, default to STATIC
 	return ptr(model.ScheduleRelationshipStatic), nil
 }
 
@@ -73,101 +83,88 @@ func tripRun(trip *model.Trip, serviceDate tt.Date) *model.Trip {
 }
 
 func (r *stopTimeResolver) Arrival(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error) {
-	// Lookup timezone
-	loc, ok := model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
-	if loc == nil || !ok {
-		return nil, errors.New("timezone not available for stop")
-	}
-	// Create arrival; fallback to RT departure if arrival is not present
 	var ste *pb.TripUpdate_StopTimeEvent
-	var delay *int32
-	if rtStu := obj.RTStopTimeUpdate; rtStu != nil {
-		delay = rtStu.LastDelay
-		if stu := rtStu.StopTimeUpdate; stu == nil {
-		} else if stu.Arrival != nil {
-			ste = stu.Arrival
-		} else if stu.Departure != nil {
-			ste = stu.Departure
-		}
+	var estimated int64
+	if u := obj.RTStopTimeUpdate; u != nil {
+		ste, estimated = u.ArrivalEvent(), u.EstimatedArrival
 	}
-	return fromSte(ste, delay, obj.DepartureTime, obj.ServiceDate, loc), nil
+	return stopTimeEventAt(ctx, obj, ste, estimated, obj.ArrivalTime)
 }
 
 func (r *stopTimeResolver) Departure(ctx context.Context, obj *model.StopTime) (*model.StopTimeEvent, error) {
-	// Lookup timezone
-	loc, ok := model.ForContext(ctx).RTFinder.StopTimezone(ctx, obj.StopID.Int(), "")
-	if loc == nil || !ok {
-		return nil, errors.New("timezone not available for stop")
-	}
-	// Create departure; fallback to RT arrival if departure is not present
 	var ste *pb.TripUpdate_StopTimeEvent
-	var delay *int32
-	if rtStu := obj.RTStopTimeUpdate; rtStu != nil {
-		delay = rtStu.LastDelay
-		if stu := rtStu.StopTimeUpdate; stu == nil {
-		} else if stu.Departure != nil {
-			ste = stu.Departure
-		} else if stu.Arrival != nil {
-			ste = stu.Arrival
-		}
+	var estimated int64
+	if u := obj.RTStopTimeUpdate; u != nil {
+		ste, estimated = u.DepartureEvent(), u.EstimatedDeparture
 	}
-	return fromSte(ste, delay, obj.DepartureTime, obj.ServiceDate, loc), nil
+	return stopTimeEventAt(ctx, obj, ste, estimated, obj.DepartureTime)
 }
 
-func fromSte(ste *pb.TripUpdate_StopTimeEvent, lastDelay *int32, sched tt.Seconds, serviceDate tt.Date, loc *time.Location) *model.StopTimeEvent {
+// stopTimeEventAt reports one of a stop time's scheduled times, with the
+// estimate from its realtime event, in the stop time's timezones.
+func stopTimeEventAt(ctx context.Context, obj *model.StopTime, ste *pb.TripUpdate_StopTimeEvent, estimated int64, sched tt.Seconds) (*model.StopTimeEvent, error) {
+	stopLoc, agencyLoc, ok := stopTimeLocations(ctx, obj.StopID, obj.FeedVersionID)
+	if !ok {
+		return nil, errors.New("timezone not available for stop")
+	}
+	return stopTimeEvent(ste, estimated, sched, obj.ServiceDate, agencyLoc, stopLoc), nil
+}
+
+// stopTimeLocations returns the stop's timezone, which shows a stop time's
+// local times, and the agency's timezone, which counts its scheduled times.
+// Without a stop, as at a flex location, both are the agency's; without the
+// agency's, both are the stop's.
+func stopTimeLocations(ctx context.Context, stopId tt.Key, fvid int) (stopLoc *time.Location, agencyLoc *time.Location, ok bool) {
+	rtf := model.ForContext(ctx).RTFinder
+	agencyLoc, agencyOK := rtf.FeedVersionTimezone(ctx, fvid)
+	agencyOK = agencyOK && agencyLoc != nil
+	if !stopId.Valid {
+		return agencyLoc, agencyLoc, agencyOK
+	}
+	stopLoc, ok = rtf.StopTimezone(ctx, stopId.Int(), "")
+	if stopLoc == nil || !ok {
+		return nil, nil, false
+	}
+	if !agencyOK {
+		agencyLoc = stopLoc
+	}
+	return stopLoc, agencyLoc, true
+}
+
+// stopTimeEvent reports a stop time's scheduled time and its estimate, if
+// any, with the realtime event that produced the estimate. The scheduled instant
+// counts sched from the service date's start in agencyLoc, as GTFS defines
+// it, and the local times are in stopLoc.
+func stopTimeEvent(ste *pb.TripUpdate_StopTimeEvent, estimated int64, sched tt.Seconds, serviceDate tt.Date, agencyLoc *time.Location, stopLoc *time.Location) *model.StopTimeEvent {
 	a := model.StopTimeEvent{
-		StopTimezone: loc.String(),
+		StopTimezone: stopLoc.String(),
 		Scheduled:    &sched,
 	}
-
-	// Nothing else to do without timezone
-	if loc == nil {
-		return &a
-	}
-
-	// Apply local timezone
-	// Hours, minutes, seconds in local scheduled time
 	if serviceDate.Valid && sched.Valid {
-		sd := serviceDate.Val
-		h, m, s := sched.HMS()
-		schedLocal := time.Date(sd.Year(), sd.Month(), sd.Day(), h, m, s, 0, loc)
-		schedUtc := schedLocal.In(time.UTC)
+		schedUtc := tt.ServiceDayStart(serviceDate, agencyLoc).Add(time.Duration(sched.Val) * time.Second).UTC()
 		a.ScheduledUtc = &schedUtc
 		a.ScheduledUnix = ptr(int(schedUtc.Unix()))
-		a.ScheduledLocal = &schedLocal
+		a.ScheduledLocal = ptr(schedUtc.In(stopLoc))
 	}
-
-	// Get timestamp and delay
-	var useDelay *int32 = lastDelay
-	if ste != nil && ste.Delay != nil {
-		useDelay = ste.Delay
+	if estimated != 0 {
+		estUtc := time.Unix(estimated, 0).UTC()
+		estLocal := estUtc.In(stopLoc)
+		a.EstimatedUtc = &estUtc
+		a.EstimatedUnix = ptr(int(estimated))
+		a.EstimatedLocal = &estLocal
+		if a.ScheduledUnix != nil {
+			// Against the schedule, within a day; anything more is a bad prediction.
+			delay := int(estimated) - *a.ScheduledUnix
+			if delay > -(24*3600) && delay < 24*3600 {
+				a.EstimatedDelay = ptr(delay)
+			}
+			// As a time of the service day, in the scheduled time's clock.
+			a.Estimated = ptr(tt.NewSeconds(int(sched.Val) + delay))
+		} else {
+			// Without a schedule, as a clock time in the stop's timezone.
+			a.Estimated = ptr(tt.NewSeconds(estLocal.Hour()*3600 + estLocal.Minute()*60 + estLocal.Second()))
+		}
 	}
-	var useTime *int64 = nil
-	if ste != nil && ste.Time != nil {
-		useTime = ste.Time
-	}
-
-	// Apply time or delay value
-	if useTime != nil {
-		// Use explicit timestamp
-		estUtc := time.Unix(*useTime, 0).UTC()
-		estLocal := estUtc.In(loc)
-		est := tt.NewSeconds(estLocal.Hour()*3600 + estLocal.Minute()*60 + estLocal.Second())
-		a.Estimated = ptr(est)
-		a.EstimatedUtc = ptr(estUtc)
-		a.EstimatedUnix = ptr(int(estUtc.Unix()))
-		a.EstimatedLocal = ptr(estLocal)
-	} else if useDelay != nil && a.ScheduledUtc != nil {
-		// Create a time based on STE delay
-		estUtc := a.ScheduledUtc.Add(time.Second * time.Duration(int(*useDelay)))
-		estLocal := estUtc.In(loc)
-		est := tt.NewSeconds(int(sched.Val) + int(*useDelay))
-		a.Estimated = ptr(est)
-		a.EstimatedUtc = ptr(estUtc)
-		a.EstimatedUnix = ptr(int(estUtc.Unix()))
-		a.EstimatedLocal = ptr(estLocal)
-	}
-
 	// Only pass through actual message time, delay, uncertainty
 	if ste != nil {
 		if ste.Time != nil {
@@ -180,15 +177,6 @@ func fromSte(ste *pb.TripUpdate_StopTimeEvent, lastDelay *int32, sched tt.Second
 		}
 		if ste.Uncertainty != nil {
 			a.Uncertainty = ptr(int(ste.GetUncertainty()))
-		}
-	}
-
-	// Set EstimatedDelay inclusive of all possible sources
-	if a.EstimatedUtc != nil && a.ScheduledUtc != nil {
-		// Clamp to reasonable bounds
-		estDelay := int(a.EstimatedUtc.Unix() - a.ScheduledUtc.Unix())
-		if estDelay > -(24*3600) && estDelay < (24*3600) {
-			a.EstimatedDelay = ptr(estDelay)
 		}
 	}
 	return &a

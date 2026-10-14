@@ -8,6 +8,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/directions"
+	"github.com/interline-io/transitland-lib/server/finders/rtfinder"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
@@ -153,7 +154,7 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 			// create a new StopTime
 			rtst := &model.StopTime{}
 			rtst.RTTrip = trip
-			rtst.RTStopTimeUpdate = &model.RTStopTimeUpdate{TripUpdate: rtTrip, StopTimeUpdate: stu}
+			rtst.RTStopTimeUpdate = rtfinder.AddedStopTimeUpdate(rtTrip, stu)
 			rtst.FeedVersionID = obj.FeedVersionID
 			rtst.TripID.Set("0")
 			rtst.StopID.Set(strconv.Itoa(obj.ID))

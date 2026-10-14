@@ -120,7 +120,7 @@ func currentRunDate(now time.Time, loc *time.Location, span TripSpan) tt.Date {
 	current, nearest := today, time.Duration(-1)
 	for _, days := range []int{-1, 0, 1} {
 		d := tt.NewDate(today.Val.AddDate(0, 0, days))
-		day := serviceDayStart(d, loc)
+		day := tt.ServiceDayStart(d, loc)
 		start := day.Add(time.Duration(span.FirstDeparture) * time.Second)
 		end := day.Add(time.Duration(span.LastArrival) * time.Second)
 		// Zero while the run is going.
@@ -142,11 +142,4 @@ func sameDay(a tt.Date, b tt.Date) bool {
 	ay, am, ad := a.Val.Date()
 	by, bm, bd := b.Val.Date()
 	return ay == by && am == bm && ad == bd
-}
-
-// serviceDayStart is the start of a service date's clock: noon less twelve
-// hours, which differs from midnight on the days clocks change.
-func serviceDayStart(d tt.Date, loc *time.Location) time.Time {
-	y, m, day := d.Val.Date()
-	return time.Date(y, m, day, 12, 0, 0, 0, loc).Add(-12 * time.Hour)
 }
