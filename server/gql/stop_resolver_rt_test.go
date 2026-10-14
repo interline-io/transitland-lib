@@ -602,3 +602,22 @@ func TestStopRT_StalePayload(t *testing.T) {
 		})
 	}
 }
+
+// An added trip on a route the feed version doesn't have leaves the rest of
+// the stop's departures in place.
+func TestStopRT_AddedTripUnknownRoute(t *testing.T) {
+	testRt(t, rtTestCase{
+		name:    "added trip on an unknown route",
+		query:   rtTestStopQuery,
+		vars:    rtTestStopQueryVars(),
+		rtfiles: []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_trip_updates", Fname: "BA-added-unknown-route.json"}},
+		whenUtc: rtFixtureWhenUtc,
+		cb: func(t *testing.T, jj string) {
+			var trips []string
+			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
+				trips = append(trips, st.Get("trip.trip_id").String())
+			}
+			assert.Subset(t, trips, []string{"1031527WKDY", "1131530WKDY", "2211533WKDY"}, "scheduled departures")
+		},
+	})
+}

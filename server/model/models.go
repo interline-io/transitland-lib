@@ -102,7 +102,9 @@ type Route struct {
 }
 
 type Trip struct {
-	RTTripID string // internal: for ADDED trips
+	// internal: an ADDED trip's trip_id, set on the trips MakeTrip builds;
+	// empty for a scheduled trip.
+	RTTripID string
 	// internal: the service dates of the requested runs, as given rather than
 	// relocated into a fallback week. Realtime data is matched to these runs;
 	// with none, to the trip's current run.

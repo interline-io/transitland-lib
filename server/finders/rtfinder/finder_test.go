@@ -621,7 +621,7 @@ func TestFinder_TripUpdatesFromLookup(t *testing.T) {
 		delay int32 // of the update matched at FTVL; zero when none matches
 	}{
 		{"run by start_date", testRun(1, "1031527WKDY", 31), 12, 300},
-		{"stop by stop_id", testRun(1, "1031527WKDY", 30), 99, 60},
+		{"another run by start_date", testRun(1, "1031527WKDY", 30), 12, 60},
 		{"current run, from the trip's span", testRun(2, "5172328WKDY", 30), 12, 180},
 		{"current run not requested", testRun(2, "5172328WKDY", 31), 12, 0},
 	}
@@ -878,6 +878,92 @@ func TestFinder_PayloadAge(t *testing.T) {
 			if assert.True(t, ok, "GetMessage") {
 				assert.NotNil(t, msg)
 				assert.Equal(t, !tc.current, stale, "GetMessage reports the payload stale")
+			}
+		})
+	}
+}
+
+// A stop time update matches by stop_sequence only when it names one, and by
+// stop_id only when it names no stop_sequence.
+func TestFinder_MatchStops_StopSequence(t *testing.T) {
+	departs := func(delay int32) *pb.TripUpdate_StopTimeEvent {
+		return &pb.TripUpdate_StopTimeEvent{Delay: proto.Int32(delay)}
+	}
+	ctx := context.Background()
+	tcs := []struct {
+		name  string
+		stus  []*pb.TripUpdate_StopTimeUpdate
+		stops []StopRef
+		match []int // index of each stop's matched stop time update, or -1 for none
+	}{
+		{
+			name: "an update without a stop_sequence doesn't match stop_sequence 0",
+			stus: []*pb.TripUpdate_StopTimeUpdate{
+				{StopId: proto.String("C"), Departure: departs(60)},
+				{StopId: proto.String("D"), Departure: departs(90)},
+			},
+			stops: []StopRef{{StopSequence: 0, StopID: "A"}, {StopSequence: 1, StopID: "C"}},
+			match: []int{-1, 0},
+		},
+		{
+			name: "the stop_id fallback skips an update that gives another stop_sequence",
+			stus: []*pb.TripUpdate_StopTimeUpdate{
+				{StopSequence: proto.Uint32(10), StopId: proto.String("X"), Departure: departs(900)},
+			},
+			stops: []StopRef{{StopSequence: 3, StopID: "X"}, {StopSequence: 10, StopID: "X"}},
+			match: []int{-1, 0},
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			msg := &pb.FeedMessage{
+				Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
+				Entity: []*pb.FeedEntity{{Id: proto.String("t"), TripUpdate: &pb.TripUpdate{
+					Trip:           &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531")},
+					StopTimeUpdate: tc.stus,
+				}}},
+			}
+			f := testFinder(t, feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}, "realtime_trip_updates", msg)
+			ru := f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)})
+			if !assert.NotNil(t, ru) {
+				return
+			}
+			got := ru.MatchStops(ctx, tc.stops)
+			for i, want := range tc.match {
+				if !assert.NotNil(t, got[i], "stop %d", i) {
+					continue
+				}
+				if want < 0 {
+					assert.Nil(t, got[i].StopTimeUpdate, "stop %d", i)
+				} else {
+					assert.True(t, proto.Equal(tc.stus[want], got[i].StopTimeUpdate), "stop %d", i)
+				}
+			}
+		})
+	}
+}
+
+// A DUPLICATED update names the trip it copies, and describes a new run, as
+// does an ADDED update naming a scheduled trip: neither changes the scheduled
+// trip's run.
+func TestFinder_FindRunUpdate_Copies(t *testing.T) {
+	ctx := context.Background()
+	td := func(rel pb.TripDescriptor_ScheduleRelationship) *pb.TripDescriptor {
+		return &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531"), ScheduleRelationship: rel.Enum()}
+	}
+	for _, rel := range []pb.TripDescriptor_ScheduleRelationship{pb.TripDescriptor_DUPLICATED, pb.TripDescriptor_ADDED} {
+		t.Run(rel.String(), func(t *testing.T) {
+			msg := &pb.FeedMessage{
+				Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
+				Entity: []*pb.FeedEntity{
+					{Id: proto.String("scheduled"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_SCHEDULED)}},
+					{Id: proto.String("copy"), TripUpdate: &pb.TripUpdate{Trip: td(rel)}},
+				},
+			}
+			f := testFinder(t, feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}, "realtime_trip_updates", msg)
+			ru := f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)})
+			if assert.NotNil(t, ru) {
+				assert.Equal(t, pb.TripDescriptor_SCHEDULED, ru.TripUpdate().GetTrip().GetScheduleRelationship())
 			}
 		})
 	}

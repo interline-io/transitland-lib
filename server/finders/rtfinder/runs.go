@@ -27,6 +27,8 @@ type tripRuns struct {
 	// Set for a trip that stands for no run, such as a pattern's representative
 	// trip, which no message describes.
 	none bool
+	// Set for a trip added in real time, whose own ADDED updates describe it.
+	added bool
 }
 
 // describes reports whether a message with this trip descriptor describes one
@@ -76,6 +78,7 @@ func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
 		dates:   t.RunDates,
 		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, span) }),
 		none:    t.NoRealtime,
+		added:   t.RTTripID != "",
 	}
 }
 

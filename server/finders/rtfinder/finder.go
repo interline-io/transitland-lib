@@ -82,6 +82,17 @@ func (f *Finder) runUpdates(ctx context.Context, fvid int, tripId string, runs t
 	for _, topic := range topics {
 		var found *pb.TripUpdate
 		for _, a := range f.getTrips(ctx, topic, tripId) {
+			// A DUPLICATED update names the trip it copies, but describes a
+			// new run, not one of that trip's. So does an ADDED update naming
+			// a scheduled trip, the form duplicates took before DUPLICATED.
+			switch a.GetTrip().GetScheduleRelationship() {
+			case pb.TripDescriptor_DUPLICATED:
+				continue
+			case pb.TripDescriptor_ADDED:
+				if !runs.added {
+					continue
+				}
+			}
 			if runs.describes(a.GetTrip()) {
 				found = a
 			}
@@ -457,10 +468,10 @@ func (u *RunUpdate) MatchStops(ctx context.Context, stops []StopRef) []*model.RT
 // trip updates on its run, one from each realtime feed. stopId returns the
 // stop's GTFS stop_id, and is called only when no update names seq.
 func matchStop(ctx context.Context, rtTrips []*pb.TripUpdate, seq int, stopId func() (string, bool)) (*model.RTStopTimeUpdate, bool) {
-	// Attempt to match on stop sequence
+	// Attempt to match on stop sequence, among the updates that name one.
 	for _, rtTrip := range rtTrips {
 		for _, ste := range rtTrip.StopTimeUpdate {
-			if int(ste.GetStopSequence()) == seq {
+			if ste.StopSequence != nil && int(ste.GetStopSequence()) == seq {
 				log.TraceCheck(func() {
 					log.For(ctx).Trace().Str("trip_id", rtTrip.GetTrip().GetTripId()).Int("seq", seq).Msg("found stop time update on trip_id/stop_sequence")
 				})
@@ -478,11 +489,15 @@ func matchStop(ctx context.Context, rtTrips []*pb.TripUpdate, seq int, stopId fu
 		return nil, false
 	}
 	rtTrip := rtTrips[0]
-	// Without a stop_sequence match, the stop_id identifies the stop time only
-	// if the update visits the stop once.
+	// The stop_id identifies the stop time only in an update that names no
+	// stop_sequence, which would have matched above if it were this stop
+	// time's, and only if the update visits the stop once.
+	byStopId := func(ste *pb.TripUpdate_StopTimeUpdate) bool {
+		return ste.StopSequence == nil && ste.GetStopId() == sid
+	}
 	visits := 0
 	for _, ste := range rtTrip.StopTimeUpdate {
-		if ste.GetStopId() == sid {
+		if byStopId(ste) {
 			visits++
 		}
 	}
@@ -497,7 +512,7 @@ func matchStop(ctx context.Context, rtTrips []*pb.TripUpdate, seq int, stopId fu
 		if ste.Departure != nil && ste.Departure.Delay != nil {
 			lastDelay = ste.Departure.Delay
 		}
-		if sid == ste.GetStopId() {
+		if byStopId(ste) {
 			log.TraceCheck(func() {
 				log.For(ctx).Trace().Str("trip_id", rtTrip.GetTrip().GetTripId()).Str("stop_id", sid).Msg("found stop time update on trip_id/stop_id")
 			})
@@ -519,12 +534,17 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 			continue
 		}
 		// TODO: index more efficiently
-		// One added trip per trip_id, the last in the feed.
+		// One added trip per trip_id, the last in the feed, and only on a
+		// route the feed version has: MakeTrip builds its trip from that route.
 		for _, trips := range a.tripUpdates {
 			trip := trips[len(trips)-1]
-			if trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
-				ret = append(ret, trip)
+			if trip.Trip.GetScheduleRelationship() != pb.TripDescriptor_ADDED || !slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
+				continue
 			}
+			if _, ok := f.lookup.GetFeedVersionRoute(ctx, t.FeedVersionID, trip.Trip.GetRouteId()); !ok {
+				continue
+			}
+			ret = append(ret, trip)
 		}
 	}
 	return ret
@@ -534,7 +554,7 @@ func (f *Finder) MakeTrip(ctx context.Context, obj *model.Trip) (*model.Trip, er
 	t := model.Trip{}
 	t.FeedVersionID = obj.FeedVersionID
 	t.TripID = obj.TripID
-	t.RTTripID = obj.RTTripID
+	t.RTTripID = obj.TripID.Val
 	// Any update naming the trip will do: this only needs its route and
 	// direction, whichever run it describes.
 	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, obj.FeedVersionID)
