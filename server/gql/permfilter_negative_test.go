@@ -8,7 +8,6 @@ import (
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
-	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -88,11 +87,11 @@ func TestPermFilter_Negative(t *testing.T) {
 
 		// The census finders read the request's selection set, so they are checked
 		// through GraphQL.
-		c := client.New(usercheck.UserDefaultMiddleware("test")(model.AddConfigAndPerms(cfg, NewDefaultHandler())))
+		gqlClient := newPermTestClientFromConfig(cfg, "test")
 		countGeographies := func(query, path string) func() (int, error) {
 			return func() (int, error) {
 				var resp map[string]any
-				if err := c.Post(query, &resp, client.Var("stop_ids", []int{ftvl})); err != nil {
+				if err := gqlClient.Post(query, &resp, client.Var("stop_ids", []int{ftvl})); err != nil {
 					return 0, err
 				}
 				return len(gjson.Get(toJson(resp), path).Array()), nil

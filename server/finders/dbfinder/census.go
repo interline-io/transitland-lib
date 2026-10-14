@@ -504,6 +504,19 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			return q, err
 		}
 
+		// The stops to buffer pass the same gates as any other entity select, since
+		// a request can name any stop id. Every read of gtfs_stops in this select
+		// starts here.
+		stopsSelect := func() sq.SelectBuilder {
+			stops := sq.StatementBuilder.Select().
+				From("gtfs_stops").
+				Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
+				Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+			stops = joinImported(stops)
+			return pfJoinCheckFv(stops, permFilter)
+		}
+
 		// Single-row clip-geometry builders (column `buffer`), shared between the
 		// standalone branches and the combined query-area + stop_buffer case so
 		// the geometry SQL lives in one place.
@@ -517,16 +530,6 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			jj, _ := geojson.Marshal(loc.Within.Val)
 			return sq.StatementBuilder.Select().
 				Column("ST_Segmentize(ST_CollectionExtract(ST_MakeValid(ST_GeomFromGeoJSON(?)), 3), ?) as buffer", string(jj), censusSegmentDegrees)
-		}
-		// The stops to buffer, gated like any other entity select, since a request
-		// can name any stop id. Every read of gtfs_stops below starts here.
-		stopsSelect := func() sq.SelectBuilder {
-			q := sq.StatementBuilder.Select().
-				From("gtfs_stops").
-				Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
-				Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
-			return pfJoinCheckFv(joinImported(q), permFilter)
 		}
 		stopUnionClipSelect := func() sq.SelectBuilder {
 			return stopsSelect().
