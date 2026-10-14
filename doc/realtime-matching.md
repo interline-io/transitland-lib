@@ -31,11 +31,11 @@ For example, for an undated message:
 
 If a feed sends several updates for the same run, the last one wins.
 
-A `DUPLICATED` update names the trip it copies but describes a new run, so it's never matched to one of that trip's runs. Neither is an `ADDED` update that names a scheduled trip, the form duplicates took before `DUPLICATED` existed. A trip added in real time still matches its own `ADDED` updates.
+A `DUPLICATED` message names the trip it copies but describes a new run, so it never describes one of that trip's runs, whether it's a trip update, a vehicle position or an alert. Neither does an `ADDED` message that names a scheduled trip, the form duplicates took before `DUPLICATED` existed. Only `ADDED` messages describe a trip added in real time.
 
 ## Which stop time an update describes
 
-A stop time update that names a `stop_sequence` describes the trip's stop time with that `stop_sequence`. One that names only a `stop_id` describes the stop time at that stop, as long as the trip update names the stop only once; on a loop that visits the stop twice, neither visit matches. A stop time that no stop time update describes still has the trip update, with the last delay it gives.
+A stop time update that names a `stop_sequence` describes the trip's stop time with that `stop_sequence`. If no update names a stop time's `stop_sequence`, one that names its `stop_id` describes it, as long as the trip update names that stop only once. When the trip update names the stop more than once, as on a loop, the stop time gets no realtime data, and neither does a stop time whose `stop_id` can't be looked up. A stop time that the trip update doesn't name still has the trip update, with the last delay it gives.
 
 ## Which run a trip stands for
 

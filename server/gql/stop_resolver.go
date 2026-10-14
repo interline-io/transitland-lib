@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/directions"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 )
 
 // STOP
@@ -133,13 +135,24 @@ func (r *stopResolver) getStopTimes(ctx context.Context, obj *model.Stop, limit 
 	// Handle added trips; these must specify stop_id in StopTimeUpdates
 	// We can't skip this, because we need to find added trips even for static only feeds
 	for _, rtTrip := range model.ForContext(ctx).RTFinder.GetAddedTripsForStop(ctx, obj) {
+		// Each added trip is built once, from the update in hand. One on a route
+		// the feed version doesn't have has no trip to show, so it's left out.
+		trip, err := model.ForContext(ctx).RTFinder.MakeTrip(ctx, obj.FeedVersionID, rtTrip)
+		if err != nil {
+			log.For(ctx).Debug().Err(err).Str("trip_id", rtTrip.GetTrip().GetTripId()).Str("route_id", rtTrip.GetTrip().GetRouteId()).Msg("added trip left out: route not in feed version")
+			continue
+		}
+		// The run the trip update names; one naming none is the current run.
+		if d, err := tt.ParseDate(rtTrip.GetTrip().GetStartDate()); err == nil {
+			trip = tripRun(trip, d)
+		}
 		for _, stu := range rtTrip.StopTimeUpdate {
 			if stu.GetStopId() != obj.StopID.Val {
 				continue
 			}
 			// create a new StopTime
 			rtst := &model.StopTime{}
-			rtst.RTTripID = rtTrip.Trip.GetTripId()
+			rtst.RTTrip = trip
 			rtst.RTStopTimeUpdate = &model.RTStopTimeUpdate{TripUpdate: rtTrip, StopTimeUpdate: stu}
 			rtst.FeedVersionID = obj.FeedVersionID
 			rtst.TripID.Set("0")

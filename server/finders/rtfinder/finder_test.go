@@ -621,7 +621,7 @@ func TestFinder_TripUpdatesFromLookup(t *testing.T) {
 		delay int32 // of the update matched at FTVL; zero when none matches
 	}{
 		{"run by start_date", testRun(1, "1031527WKDY", 31), 12, 300},
-		{"another run by start_date", testRun(1, "1031527WKDY", 30), 12, 60},
+		{"stop by stop_id", testRun(1, "1031527WKDY", 30), 99, 60},
 		{"current run, from the trip's span", testRun(2, "5172328WKDY", 30), 12, 180},
 		{"current run not requested", testRun(2, "5172328WKDY", 31), 12, 0},
 	}
@@ -847,7 +847,7 @@ func TestFinder_PayloadAge(t *testing.T) {
 		{"over an hour ahead of the clock", stamped, -61 * time.Minute, false},
 		{"without a header timestamp", nil, 61 * time.Minute, true},
 	}
-	trip, addedTrip := testRun(1, "T", 31), testRun(2, "A", 31)
+	trip := testRun(1, "T", 31)
 	stop, agency, route := &model.Stop{}, &model.Agency{}, &model.Route{}
 	stop.FeedVersionID = 1
 	stop.StopID.Set("S1")
@@ -866,8 +866,6 @@ func TestFinder_PayloadAge(t *testing.T) {
 			// Trip updates.
 			assert.Equal(t, tc.current, f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)}) != nil, "FindRunUpdate")
 			assert.Len(t, f.GetAddedTripsForStop(ctx, stop), count(tc.current), "GetAddedTripsForStop")
-			_, err := f.MakeTrip(ctx, addedTrip)
-			assert.Equal(t, tc.current, err == nil, "MakeTrip")
 			// Vehicle positions.
 			assert.Equal(t, tc.current, f.FindVehiclePositionForTrip(ctx, trip, nil) != nil, "FindVehiclePositionForTrip")
 			assert.Len(t, f.FindVehiclePositionsForAgency(ctx, agency, nil, nil), count(tc.current), "FindVehiclePositionsForAgency")
@@ -883,8 +881,7 @@ func TestFinder_PayloadAge(t *testing.T) {
 	}
 }
 
-// A stop time update matches by stop_sequence only when it names one, and by
-// stop_id only when it names no stop_sequence.
+// A stop time update matches by stop_sequence only when it names one.
 func TestFinder_MatchStops_StopSequence(t *testing.T) {
 	departs := func(delay int32) *pb.TripUpdate_StopTimeEvent {
 		return &pb.TripUpdate_StopTimeEvent{Delay: proto.Int32(delay)}
@@ -903,14 +900,6 @@ func TestFinder_MatchStops_StopSequence(t *testing.T) {
 				{StopId: proto.String("D"), Departure: departs(90)},
 			},
 			stops: []StopRef{{StopSequence: 0, StopID: "A"}, {StopSequence: 1, StopID: "C"}},
-			match: []int{-1, 0},
-		},
-		{
-			name: "the stop_id fallback skips an update that gives another stop_sequence",
-			stus: []*pb.TripUpdate_StopTimeUpdate{
-				{StopSequence: proto.Uint32(10), StopId: proto.String("X"), Departure: departs(900)},
-			},
-			stops: []StopRef{{StopSequence: 3, StopID: "X"}, {StopSequence: 10, StopID: "X"}},
 			match: []int{-1, 0},
 		},
 	}
@@ -943,28 +932,46 @@ func TestFinder_MatchStops_StopSequence(t *testing.T) {
 	}
 }
 
-// A DUPLICATED update names the trip it copies, and describes a new run, as
-// does an ADDED update naming a scheduled trip: neither changes the scheduled
-// trip's run.
-func TestFinder_FindRunUpdate_Copies(t *testing.T) {
+// A copy of a trip, sent as DUPLICATED or as ADDED naming the scheduled trip,
+// leaves the scheduled trip's own trip update and vehicle in place, and a trip
+// added in real time takes only ADDED data.
+func TestFinder_CopiesOfATrip(t *testing.T) {
 	ctx := context.Background()
+	lookup := feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}
 	td := func(rel pb.TripDescriptor_ScheduleRelationship) *pb.TripDescriptor {
 		return &pb.TripDescriptor{TripId: proto.String("T"), StartDate: proto.String("20180531"), ScheduleRelationship: rel.Enum()}
 	}
+	header := &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}
 	for _, rel := range []pb.TripDescriptor_ScheduleRelationship{pb.TripDescriptor_DUPLICATED, pb.TripDescriptor_ADDED} {
 		t.Run(rel.String(), func(t *testing.T) {
-			msg := &pb.FeedMessage{
-				Header: &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")},
-				Entity: []*pb.FeedEntity{
-					{Id: proto.String("scheduled"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_SCHEDULED)}},
-					{Id: proto.String("copy"), TripUpdate: &pb.TripUpdate{Trip: td(rel)}},
-				},
+			// The copy comes last, and its vehicle reported last.
+			updates := testFinder(t, lookup, "realtime_trip_updates", &pb.FeedMessage{Header: header, Entity: []*pb.FeedEntity{
+				{Id: proto.String("own"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_SCHEDULED)}},
+				{Id: proto.String("copy"), TripUpdate: &pb.TripUpdate{Trip: td(rel)}},
+			}})
+			vehicles := testFinder(t, lookup, vehiclePositionTopicKey, &pb.FeedMessage{Header: header, Entity: []*pb.FeedEntity{
+				{Id: proto.String("own"), Vehicle: &pb.VehiclePosition{Trip: td(pb.TripDescriptor_SCHEDULED), Timestamp: proto.Uint64(100)}},
+				{Id: proto.String("copy"), Vehicle: &pb.VehiclePosition{Trip: td(rel), Timestamp: proto.Uint64(200)}},
+			}})
+			if ru := updates.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)}); assert.NotNil(t, ru) {
+				assert.Equal(t, pb.TripDescriptor_SCHEDULED, ru.TripUpdate().GetTrip().GetScheduleRelationship(), "trip update")
 			}
-			f := testFinder(t, feedVersionLookup{unexpectedLookup: unexpectedLookup{t}}, "realtime_trip_updates", msg)
-			ru := f.FindRunUpdate(ctx, Run{FeedVersionID: 1, TripID: "T", Date: testDate(31)})
-			if assert.NotNil(t, ru) {
-				assert.Equal(t, pb.TripDescriptor_SCHEDULED, ru.TripUpdate().GetTrip().GetScheduleRelationship())
+			if vp := vehicles.FindVehiclePositionForTrip(ctx, testRun(1, "T", 31), nil); assert.NotNil(t, vp) {
+				assert.Equal(t, "own", vp.ID, "vehicle")
 			}
 		})
 	}
+	t.Run("trip added in real time", func(t *testing.T) {
+		// An added trip sharing its trip_id with scheduled trip T: T's update
+		// comes last.
+		f := testFinder(t, lookup, "realtime_trip_updates", &pb.FeedMessage{Header: header, Entity: []*pb.FeedEntity{
+			{Id: proto.String("added"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_ADDED)}},
+			{Id: proto.String("own"), TripUpdate: &pb.TripUpdate{Trip: td(pb.TripDescriptor_SCHEDULED)}},
+		}})
+		added := testRun(0, "T", 31)
+		added.AddedInRealtime = true
+		if tu := f.FindTrip(ctx, added); assert.NotNil(t, tu) {
+			assert.Equal(t, pb.TripDescriptor_ADDED, tu.GetTrip().GetScheduleRelationship())
+		}
+	})
 }

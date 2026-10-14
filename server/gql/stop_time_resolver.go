@@ -53,18 +53,8 @@ func (r *stopTimeResolver) ScheduleRelationship(ctx context.Context, obj *model.
 }
 
 func (r *stopTimeResolver) Trip(ctx context.Context, obj *model.StopTime) (*model.Trip, error) {
-	if obj.TripID.Val == "0" && obj.RTTripID != "" {
-		t := model.Trip{}
-		t.FeedVersionID = obj.FeedVersionID
-		t.TripID.Set(obj.RTTripID)
-		a, err := model.ForContext(ctx).RTFinder.MakeTrip(ctx, &t)
-		// The run the trip update names; one naming none is the current run.
-		if obj.RTStopTimeUpdate != nil {
-			if d, perr := tt.ParseDate(obj.RTStopTimeUpdate.TripUpdate.GetTrip().GetStartDate()); perr == nil {
-				a = tripRun(a, d)
-			}
-		}
-		return a, err
+	if obj.RTTrip != nil {
+		return obj.RTTrip, nil
 	}
 	trip, err := LoaderFor(ctx).TripsByIDs.Load(ctx, obj.TripID.Int())()
 	return tripRun(trip, obj.ServiceDate), err

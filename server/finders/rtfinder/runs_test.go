@@ -50,6 +50,28 @@ func TestTripRuns(t *testing.T) {
 	t.Run("a start_date may also be written with hyphens", func(t *testing.T) {
 		assert.True(t, runs("2018-05-30", "2018-05-31").describes(dated("2018-05-31")))
 	})
+
+	as := func(rel pb.TripDescriptor_ScheduleRelationship) *pb.TripDescriptor {
+		td := dated("20180531")
+		td.ScheduleRelationship = rel.Enum()
+		return td
+	}
+	t.Run("a copy of a scheduled trip describes none of its runs", func(t *testing.T) {
+		r := runs("2018-05-30", "2018-05-31")
+		assert.True(t, r.describes(as(pb.TripDescriptor_SCHEDULED)))
+		assert.True(t, r.describes(as(pb.TripDescriptor_CANCELED)))
+		assert.False(t, r.describes(as(pb.TripDescriptor_DUPLICATED)))
+		assert.False(t, r.describes(as(pb.TripDescriptor_ADDED)))
+	})
+
+	t.Run("only an ADDED message describes a trip added in real time", func(t *testing.T) {
+		r := runs("2018-05-30", "2018-05-31")
+		r.added = true
+		assert.True(t, r.describes(as(pb.TripDescriptor_ADDED)))
+		assert.False(t, r.describes(dated("20180531")))
+		assert.False(t, r.describes(as(pb.TripDescriptor_SCHEDULED)))
+		assert.False(t, r.describes(as(pb.TripDescriptor_DUPLICATED)))
+	})
 }
 
 func TestCurrentRunDate(t *testing.T) {

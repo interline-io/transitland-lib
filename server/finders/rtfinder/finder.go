@@ -82,17 +82,6 @@ func (f *Finder) runUpdates(ctx context.Context, fvid int, tripId string, runs t
 	for _, topic := range topics {
 		var found *pb.TripUpdate
 		for _, a := range f.getTrips(ctx, topic, tripId) {
-			// A DUPLICATED update names the trip it copies, but describes a
-			// new run, not one of that trip's. So does an ADDED update naming
-			// a scheduled trip, the form duplicates took before DUPLICATED.
-			switch a.GetTrip().GetScheduleRelationship() {
-			case pb.TripDescriptor_DUPLICATED:
-				continue
-			case pb.TripDescriptor_ADDED:
-				if !runs.added {
-					continue
-				}
-			}
 			if runs.describes(a.GetTrip()) {
 				found = a
 			}
@@ -489,15 +478,11 @@ func matchStop(ctx context.Context, rtTrips []*pb.TripUpdate, seq int, stopId fu
 		return nil, false
 	}
 	rtTrip := rtTrips[0]
-	// The stop_id identifies the stop time only in an update that names no
-	// stop_sequence, which would have matched above if it were this stop
-	// time's, and only if the update visits the stop once.
-	byStopId := func(ste *pb.TripUpdate_StopTimeUpdate) bool {
-		return ste.StopSequence == nil && ste.GetStopId() == sid
-	}
+	// Without a stop_sequence match, the stop_id identifies the stop time only
+	// if the update visits the stop once.
 	visits := 0
 	for _, ste := range rtTrip.StopTimeUpdate {
-		if byStopId(ste) {
+		if ste.GetStopId() == sid {
 			visits++
 		}
 	}
@@ -512,7 +497,7 @@ func matchStop(ctx context.Context, rtTrips []*pb.TripUpdate, seq int, stopId fu
 		if ste.Departure != nil && ste.Departure.Delay != nil {
 			lastDelay = ste.Departure.Delay
 		}
-		if byStopId(ste) {
+		if sid == ste.GetStopId() {
 			log.TraceCheck(func() {
 				log.For(ctx).Trace().Str("trip_id", rtTrip.GetTrip().GetTripId()).Str("stop_id", sid).Msg("found stop time update on trip_id/stop_id")
 			})
@@ -534,48 +519,32 @@ func (f *Finder) GetAddedTripsForStop(ctx context.Context, t *model.Stop) []*pb.
 			continue
 		}
 		// TODO: index more efficiently
-		// One added trip per trip_id, the last in the feed, and only on a
-		// route the feed version has: MakeTrip builds its trip from that route.
+		// One added trip per trip_id, the last in the feed.
 		for _, trips := range a.tripUpdates {
 			trip := trips[len(trips)-1]
-			if trip.Trip.GetScheduleRelationship() != pb.TripDescriptor_ADDED || !slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
-				continue
+			if trip.Trip.GetScheduleRelationship() == pb.TripDescriptor_ADDED && slices.ContainsFunc(trip.StopTimeUpdate, func(ste *pb.TripUpdate_StopTimeUpdate) bool { return ste.GetStopId() == sid.Val }) {
+				ret = append(ret, trip)
 			}
-			if _, ok := f.lookup.GetFeedVersionRoute(ctx, t.FeedVersionID, trip.Trip.GetRouteId()); !ok {
-				continue
-			}
-			ret = append(ret, trip)
 		}
 	}
 	return ret
 }
 
-func (f *Finder) MakeTrip(ctx context.Context, obj *model.Trip) (*model.Trip, error) {
-	t := model.Trip{}
-	t.FeedVersionID = obj.FeedVersionID
-	t.TripID = obj.TripID
-	t.RTTripID = obj.TripID.Val
-	// Any update naming the trip will do: this only needs its route and
-	// direction, whichever run it describes.
-	topics, _ := f.lookup.GetFeedVersionRTFeeds(ctx, obj.FeedVersionID)
-	var rtTrip *pb.TripUpdate
-	for _, topic := range topics {
-		if found := f.getTrips(ctx, topic, t.TripID.Val); len(found) > 0 {
-			rtTrip = found[0]
-			break
-		}
+// MakeTrip returns the trip a trip update adds in real time to a feed version,
+// on the route its descriptor names, or an error when the feed version has no
+// such route.
+func (f *Finder) MakeTrip(ctx context.Context, fvid int, tu *pb.TripUpdate) (*model.Trip, error) {
+	td := tu.GetTrip()
+	r, ok := f.lookup.GetFeedVersionRoute(ctx, fvid, td.GetRouteId())
+	if !ok {
+		return nil, errors.New("not found")
 	}
-	if rtTrip != nil {
-		rtt := rtTrip.Trip
-		r, ok := f.lookup.GetFeedVersionRoute(ctx, obj.FeedVersionID, rtt.GetRouteId())
-		if !ok {
-			return nil, errors.New("not found")
-		}
-		t.RouteID.Set(strconv.Itoa(r.ID))
-		t.DirectionID.SetInt(int(rtt.GetDirectionId()))
-		return &t, nil
-	}
-	return nil, errors.New("not found")
+	t := model.Trip{AddedInRealtime: true}
+	t.FeedVersionID = fvid
+	t.TripID.Set(td.GetTripId())
+	t.RouteID.Set(strconv.Itoa(r.ID))
+	t.DirectionID.SetInt(int(td.GetDirectionId()))
+	return &t, nil
 }
 
 // getTrips returns a feed's trip updates naming a trip_id, one for each run

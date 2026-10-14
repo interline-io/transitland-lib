@@ -194,7 +194,7 @@ type EntityMutator interface {
 type RTFinder interface {
 	AddData(context.Context, string, []byte) error
 	FindTrip(context.Context, *Trip) *pb.TripUpdate
-	MakeTrip(context.Context, *Trip) (*Trip, error)
+	MakeTrip(context.Context, int, *pb.TripUpdate) (*Trip, error)
 	FindAlertsForTrip(context.Context, *Trip, *int, *bool) []*Alert
 	FindAlertsForStop(context.Context, *Stop, *int, *bool) []*Alert
 	FindAlertsForRoute(context.Context, *Route, *int, *bool, bool, bool) []*Alert

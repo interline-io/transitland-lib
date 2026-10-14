@@ -27,7 +27,7 @@ type tripRuns struct {
 	// Set for a trip that stands for no run, such as a pattern's representative
 	// trip, which no message describes.
 	none bool
-	// Set for a trip added in real time, whose own ADDED updates describe it.
+	// Set for a trip added in real time, which only ADDED messages describe.
 	added bool
 }
 
@@ -35,6 +35,18 @@ type tripRuns struct {
 // of the runs.
 func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	if r.none {
+		return false
+	}
+	// A DUPLICATED message names the trip it copies but describes a new run, as
+	// does an ADDED message naming a scheduled trip, the form duplicates took
+	// before DUPLICATED. Only ADDED messages describe a trip added in real
+	// time, so a scheduled trip sharing its trip_id can't lend it data.
+	switch rel := td.GetScheduleRelationship(); {
+	case rel == pb.TripDescriptor_DUPLICATED:
+		return false
+	case r.added && rel != pb.TripDescriptor_ADDED:
+		return false
+	case !r.added && rel == pb.TripDescriptor_ADDED:
 		return false
 	}
 	run, ok := descriptorDate(td)
@@ -50,7 +62,7 @@ func (r tripRuns) describes(td *pb.TripDescriptor) bool {
 	return slices.ContainsFunc(r.dates, func(d tt.Date) bool { return sameDay(d, run) })
 }
 
-// Run names one run of a trip: a trip on one service date.
+// Run names one run of a scheduled trip: the trip on one service date.
 type Run struct {
 	FeedVersionID int
 	TripID        string // GTFS trip_id
@@ -78,7 +90,7 @@ func (f *Finder) tripRunsOf(ctx context.Context, t *model.Trip) tripRuns {
 		dates:   t.RunDates,
 		current: sync.OnceValues(func() (tt.Date, bool) { return f.currentRun(ctx, t.FeedVersionID, span) }),
 		none:    t.NoRealtime,
-		added:   t.RTTripID != "",
+		added:   t.AddedInRealtime,
 	}
 }
 

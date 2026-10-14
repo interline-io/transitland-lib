@@ -102,9 +102,8 @@ type Route struct {
 }
 
 type Trip struct {
-	// internal: an ADDED trip's trip_id, set on the trips MakeTrip builds;
-	// empty for a scheduled trip.
-	RTTripID string
+	// internal: set on a trip added in real time, which MakeTrip builds.
+	AddedInRealtime bool
 	// internal: the service dates of the requested runs, as given rather than
 	// relocated into a fallback week. Realtime data is matched to these runs;
 	// with none, to the trip's current run.
@@ -153,7 +152,7 @@ type StopTime struct {
 	ServiceDate      tt.Date
 	Date             tt.Date
 	GtfsTripID       string            // internal: the trip's GTFS trip_id, for matching realtime
-	RTTripID         string            // internal: for ADDED trips
+	RTTrip           *Trip             // internal: the trip of a stop time added in real time
 	RTStopTimeUpdate *RTStopTimeUpdate // internal
 	gtfs.StopTime
 }
