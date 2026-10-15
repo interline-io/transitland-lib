@@ -113,9 +113,7 @@ func isGroupedFinder(mt reflect.Type) bool {
 // callFinder calls a finder method with finderTestKeys zero-valued keys, and zero
 // values for its other arguments.
 func callFinder(ctx context.Context, f model.Finder, m reflect.Method) []reflect.Value {
-	// The census geography finders read the fields a GraphQL query selects.
-	ctx = graphql.WithOperationContext(ctx, &graphql.OperationContext{})
-	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{}}})
+	ctx = withEmptySelection(ctx)
 	args := make([]reflect.Value, m.Type.NumIn())
 	args[0] = reflect.ValueOf(ctx)
 	for i := 1; i < len(args)-1; i++ {
@@ -123,6 +121,13 @@ func callFinder(ctx context.Context, f model.Finder, m reflect.Method) []reflect
 	}
 	args[len(args)-1] = reflect.MakeSlice(m.Type.In(len(args)-1), finderTestKeys, finderTestKeys)
 	return reflect.ValueOf(f).MethodByName(m.Name).Call(args)
+}
+
+// withEmptySelection returns ctx inside a GraphQL field that selects nothing. The
+// census geography finders read the selected fields, and panic without one.
+func withEmptySelection(ctx context.Context) context.Context {
+	ctx = graphql.WithOperationContext(ctx, &graphql.OperationContext{})
+	return graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{}}})
 }
 
 func Test_queryErrs(t *testing.T) {

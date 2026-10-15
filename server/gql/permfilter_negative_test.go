@@ -6,9 +6,11 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 )
 
 // Flipping feed_states.public = false strips the only access path the default
@@ -73,6 +75,29 @@ func TestPermFilter_Negative(t *testing.T) {
 			t.Fatal("found no routes for the HA segments")
 		}
 
+		stopID := "FTVL"
+		baStops, err := f.StopsByFeedVersionIDs(ctx, nil, &model.StopFilter{StopID: &stopID}, []int{baFv})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(baStops[0]) != 1 {
+			t.Fatalf("found %d BART stops with stop_id FTVL, expected 1", len(baStops[0]))
+		}
+		ftvl := baStops[0][0].ID
+
+		// The census finders read the request's selection set, so they are checked
+		// through GraphQL.
+		gqlClient := newPermTestClientFromConfig(cfg, "test")
+		countGeographies := func(query, path string) func() (int, error) {
+			return func() (int, error) {
+				var resp map[string]any
+				if err := gqlClient.Post(query, &resp, client.Var("stop_ids", []int{ftvl})); err != nil {
+					return 0, err
+				}
+				return len(gjson.Get(toJson(resp), path).Array()), nil
+			}
+		}
+
 		checks := []struct {
 			name  string
 			count func() (int, error)
@@ -109,6 +134,29 @@ func TestPermFilter_Negative(t *testing.T) {
 			{"AttributionsByFeedVersionIDs", func() (int, error) {
 				return countGroups(f.AttributionsByFeedVersionIDs(ctx, nil, nil, nil, []int{ctFv}))
 			}},
+			// The census stop buffer reads stops by the ids a request names. These
+			// cover each read: the buffer union, alone and clipped to a bbox, and
+			// the radius 0 point match.
+			{"CensusGeographiesByDatasetIDs stop_buffer", countGeographies(
+				`query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { geoid } } }`,
+				"census_datasets.0.geographies",
+			)},
+			{"CensusGeographiesByDatasetIDs stop_buffer and bbox", countGeographies(
+				`query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:{min_lon:-123.0, min_lat:37.0, max_lon:-122.0, max_lat:38.0}, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { geoid } } }`,
+				"census_datasets.0.geographies",
+			)},
+			{"CensusGeographiesByDatasetIDs stop_buffer radius 0", countGeographies(
+				`query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { geoid } } }`,
+				"census_datasets.0.geographies",
+			)},
+			{"CensusGeographiesByLayerIDs stop_buffer", countGeographies(
+				`query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { layers { name geographies(where:{location:{stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { geoid } } } }`,
+				`census_datasets.0.layers.#(name=="tract").geographies`,
+			)},
+			{"CensusGeographiesBySourceIDs stop_buffer", countGeographies(
+				`query($stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { sources(where:{name:"tl_2024_06_tract.zip"}) { geographies(where:{location:{stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { geoid } } } }`,
+				"census_datasets.0.sources.0.geographies",
+			)},
 		}
 
 		// Each loader has to return rows first, or its check below would pass

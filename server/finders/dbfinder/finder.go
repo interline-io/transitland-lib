@@ -224,7 +224,7 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 // joinImported restricts a select over imported entity rows to feed versions whose import
 // completed. It is applied to the entity selects: agency, place, route, stop, trip, shape,
 // pathway, level, frequency, transfer, translation, attribution, location group stop and
-// the fares entities.
+// the fares entities. The census stop_buffer filter also applies it to the stops it buffers.
 //
 // Excluded: an import still running (in_progress), and an import that failed and left rows
 // behind (success = false). Both columns are load-bearing and neither implies the other -- a
@@ -251,9 +251,13 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 //   - The FeedVersion child resolvers -- geometry, feed_infos, locations, location_groups,
 //     booking_rules -- and the stop_times reachable under locations. They hang off the
 //     feed version select, which is ungated by design, so nothing upstream covers them.
-//   - The operator and feed spatial filters, and the census stop buffer, which reach
-//     imported tables through feed_states or by raw entity id. These cannot use this helper
-//     as written: it keys off feed_versions.id, which is not in scope for them.
+//   - The operator and feed spatial filters, which reach imported tables through
+//     feed_states. These cannot use this helper as written: it keys off feed_versions.id,
+//     which is not in scope for them.
+//   - The pagination cursor subselects in the stop, route, agency and trip selects, which
+//     read the cursor's row by the raw id from the request.
+//   - The entity update and delete mutations, which load the row to edit by the id from
+//     the request.
 //
 // Everything else that reads those tables is keyed by ids that can only have come from one of
 // the gated selects above.
