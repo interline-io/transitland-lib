@@ -504,10 +504,23 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			return q, err
 		}
 
-		// A request names the stops to buffer by id. Every read of gtfs_stops in this
-		// select starts here.
+		// A request names the stops to buffer by id, read by primary key into a
+		// materialized CTE. Every read of the stops in this select starts there.
+		//
+		// Gating gtfs_stops directly let the planner pick a plan that took minutes
+		// for tens of thousands of ids, against seconds when the ids are read first.
+		if stopBufferClip {
+			q = q.WithCTE(sq.CTE{
+				Alias:        "requested_stops",
+				Materialized: true,
+				Expression: sq.StatementBuilder.
+					Select("gtfs_stops.id", "gtfs_stops.feed_version_id", "gtfs_stops.geometry").
+					From("gtfs_stops").
+					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds)),
+			})
+		}
 		stopsSelect := func() sq.SelectBuilder {
-			return gatedRows("gtfs_stops", permFilter).Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+			return gatedRows("requested_stops", permFilter)
 		}
 
 		// Single-row clip-geometry builders (column `buffer`), shared between the
@@ -526,7 +539,7 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		}
 		stopUnionClipSelect := func() sq.SelectBuilder {
 			return stopsSelect().
-				Column("ST_Union(ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry) as buffer", stopBufferRadius)
+				Column("ST_Union(ST_Buffer(requested_stops.geometry::geography, ?)::geometry) as buffer", stopBufferRadius)
 		}
 
 		// The query area, however it was expressed. `bbox` keeps precedence over
@@ -580,9 +593,9 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 				// Per-stop attribution keeps a row per stop. Otherwise every stop
 				// shares one id, so the GROUP BY below lists a geography once.
 				qPointsUse = true
-				qPoints = stopsSelect().Column("gtfs_stops.geometry as buffer")
+				qPoints = stopsSelect().Column("requested_stops.geometry as buffer")
 				if fields.perStopAttribution {
-					qPoints = qPoints.Column("gtfs_stops.id as match_entity_id")
+					qPoints = qPoints.Column("requested_stops.id as match_entity_id")
 				} else {
 					qPoints = qPoints.Column("0 as match_entity_id")
 				}
@@ -592,7 +605,7 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 					q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
 					qPoints = qPoints.
 						JoinClause("CROSS JOIN clip_area").
-						Where(sq.Expr("ST_Intersects(clip_area.buffer, gtfs_stops.geometry)"))
+						Where(sq.Expr("ST_Intersects(clip_area.buffer, requested_stops.geometry)"))
 				}
 			} else if fields.perStopAttribution {
 				// One buffer per stop, attribution preserved as
@@ -601,8 +614,8 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 				// intent — callers want per-stop apportionment.
 				qBufferUse = true
 				qBuffer = stopsSelect().
-					Column("gtfs_stops.id as match_entity_id").
-					Column("ST_Buffer(gtfs_stops.geometry::geography, ?)::geometry as buffer", stopBufferRadius)
+					Column("requested_stops.id as match_entity_id").
+					Column("ST_Buffer(requested_stops.geometry::geography, ?)::geometry as buffer", stopBufferRadius)
 			} else {
 				// Default: union over the input stop set. Used by
 				// routes/agencies (which want the union over their stops) and
