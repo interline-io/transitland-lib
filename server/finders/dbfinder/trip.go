@@ -497,10 +497,13 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		q = q.Where(In("gtfs_trips.id", ids))
 	}
 
-	// Handle cursor
+	// Handle cursor. A request can name any row, so the cursor's row goes through gatedRows.
 	if after != nil && after.Valid && after.ID > 0 {
 		if after.FeedVersionID == 0 {
-			q = q.Where(sq.Expr("(gtfs_trips.feed_version_id, gtfs_trips.id) > (select feed_version_id,id from gtfs_trips where id = ?)", after.ID))
+			cursorRow := gatedRows("gtfs_trips", permFilter).
+				Columns("gtfs_trips.feed_version_id", "gtfs_trips.id").
+				Where(sq.Eq{"gtfs_trips.id": after.ID})
+			q = q.Where(sq.Expr("(gtfs_trips.feed_version_id, gtfs_trips.id) > (?)", cursorRow))
 		} else {
 			q = q.Where(sq.Expr("(gtfs_trips.feed_version_id, gtfs_trips.id) > (?,?)", after.FeedVersionID, after.ID))
 		}

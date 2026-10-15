@@ -226,21 +226,20 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	// Default ordering
 	q = q.OrderBy("gtfs_agencies.feed_version_id,gtfs_agencies.id")
 
-	// Handle cursor
+	// Handle cursor. A request can name any row, so the cursor's row goes through gatedRows.
 	if after != nil && after.Valid && after.ID > 0 {
 		if where != nil && where.Location != nil && where.Location.Focus != nil {
-			whereExpr := sq.Expr(
-				"(ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), gtfs_agencies.id) > (select ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), agency_id from tl_agency_geometries where agency_id = ?)",
-				where.Location.Focus.Lon,
-				where.Location.Focus.Lat,
-				where.Location.Focus.Lon,
-				where.Location.Focus.Lat,
-				after.ID)
-			q = q.Where(whereExpr)
+			focus := where.Location.Focus
+			cursorRow := gatedRows("tl_agency_geometries", permFilter).
+				Column("ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?))", focus.Lon, focus.Lat).
+				Column("tl_agency_geometries.agency_id").
+				Where(sq.Eq{"tl_agency_geometries.agency_id": after.ID})
+			q = q.Where(sq.Expr("(ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), gtfs_agencies.id) > (?)", focus.Lon, focus.Lat, cursorRow))
 		} else if after.FeedVersionID == 0 {
+			cursorRow := gatedRows("gtfs_agencies", permFilter).Where(sq.Eq{"gtfs_agencies.id": after.ID})
 			q = q.
-				Where(sq.Expr("gtfs_agencies.feed_version_id >= (select feed_version_id from gtfs_agencies where id = ?)", after.ID)).
-				Where(sq.Expr("(gtfs_agencies.feed_version_id, gtfs_agencies.id) > (select feed_version_id,id from gtfs_agencies where id = ?)", after.ID))
+				Where(sq.Expr("gtfs_agencies.feed_version_id >= (?)", cursorRow.Columns("gtfs_agencies.feed_version_id"))).
+				Where(sq.Expr("(gtfs_agencies.feed_version_id, gtfs_agencies.id) > (?)", cursorRow.Columns("gtfs_agencies.feed_version_id", "gtfs_agencies.id")))
 		} else {
 			q = q.
 				Where(sq.Expr("gtfs_agencies.feed_version_id >= ?", after.FeedVersionID)).

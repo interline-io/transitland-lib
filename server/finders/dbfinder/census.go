@@ -504,17 +504,10 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			return q, err
 		}
 
-		// The stops to buffer pass the same gates as any other entity select, since
-		// a request can name any stop id. Every read of gtfs_stops in this select
-		// starts here.
+		// A request names the stops to buffer by id. Every read of gtfs_stops in this
+		// select starts here.
 		stopsSelect := func() sq.SelectBuilder {
-			stops := sq.StatementBuilder.Select().
-				From("gtfs_stops").
-				Join("feed_versions ON feed_versions.id = gtfs_stops.feed_version_id").
-				Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
-			stops = joinImported(stops)
-			return pfJoinCheckFv(stops, permFilter)
+			return gatedRows("gtfs_stops", permFilter).Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
 		}
 
 		// Single-row clip-geometry builders (column `buffer`), shared between the
