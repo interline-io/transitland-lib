@@ -3,12 +3,10 @@ package dbfinder
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
-	"github.com/interline-io/transitland-lib/tt"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,49 +84,6 @@ func TestFinder_CursorGate(t *testing.T) {
 			rows, err = check.page(&after)
 			require.NoError(t, err)
 			assert.Empty(t, rows, "a cursor at a hidden row must start no page")
-		})
-	}
-}
-
-// A stop's observations come only from feed versions the caller can see, whichever feed
-// version the request names.
-func TestFinder_StopObservationGate(t *testing.T) {
-	db := testutil.MustOpenTestDB(t)
-	tx, err := db.Beginx()
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = tx.Rollback() })
-	f := NewFinder(dbutil.WithQueryLogger(tx, false, 0))
-	ctx := context.Background()
-
-	// The fixtures record an observation at BART's FTVL against BART's active feed version.
-	ba, ftvlID := "BA", "FTVL"
-	stops, err := f.FindStops(ctx, nil, nil, nil, &model.StopFilter{FeedOnestopID: &ba, StopID: &ftvlID})
-	require.NoError(t, err)
-	require.Len(t, stops, 1, "expected the bart FTVL stop")
-	ftvl := stops[0]
-	day, err := time.Parse("2006-01-02", "2023-03-09")
-	require.NoError(t, err)
-	filters := []struct {
-		name  string
-		where *model.StopObservationFilter
-	}{
-		{"named feed version", &model.StopObservationFilter{Source: "TripUpdate", FeedVersionID: ftvl.FeedVersionID, TripStartDate: tt.NewDate(day)}},
-		{"any feed version", nil},
-	}
-	count := func(t *testing.T, where *model.StopObservationFilter) int {
-		t.Helper()
-		obs, err := f.StopObservationsByStopIDs(ctx, nil, where, []int{ftvl.ID})
-		require.NoError(t, err)
-		return len(obs[0])
-	}
-
-	for _, filter := range filters {
-		require.NotZero(t, count(t, filter.where), "%s: expected the fixture observation while BART is public", filter.name)
-	}
-	setFeedPublic(t, tx, ftvl.FeedVersionID, false)
-	for _, filter := range filters {
-		t.Run(filter.name, func(t *testing.T) {
-			assert.Zero(t, count(t, filter.where), "observations of a hidden feed version must not be returned")
 		})
 	}
 }

@@ -520,21 +520,23 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	// Handle cursor. A request can name any row, so the cursor's row goes through gatedRows.
 	if after != nil && after.Valid && after.ID > 0 {
 		if where != nil && where.Location != nil && where.Location.Focus != nil {
+			// The cursor compares the page's sort key, measuring distance with <-> as the
+			// ORDER BY does: ST_Distance measures on the spheroid, <-> on a sphere.
 			focus := where.Location.Focus
 			if useActive.Materialized() {
 				// When materialized, we have tl_materialized_active_routes set as 'gtfs_routes', which has a 'geometry_simplified' column
 				cursorRow := gatedRows("tl_materialized_active_routes", permFilter).
-					Column("ST_Distance(tl_materialized_active_routes.geometry_simplified, ST_MakePoint(?,?))", focus.Lon, focus.Lat).
+					Column("tl_materialized_active_routes.geometry_simplified <-> ST_MakePoint(?,?)", focus.Lon, focus.Lat).
 					Column("tl_materialized_active_routes.id").
 					Where(sq.Eq{"tl_materialized_active_routes.id": after.ID})
-				q = q.Where(sq.Expr("(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (?)", focus.Lon, focus.Lat, cursorRow))
+				q = q.Where(sq.Expr("(gtfs_routes.geometry_simplified <-> ST_MakePoint(?,?), gtfs_routes.id) > (?)", focus.Lon, focus.Lat, cursorRow))
 			} else {
 				cursorRow := gatedRows("tl_route_representative_shapes", permFilter).
-					Column("ST_Distance(gtfs_shapes.geometry, ST_MakePoint(?,?))", focus.Lon, focus.Lat).
+					Column("gtfs_shapes.geometry <-> ST_MakePoint(?,?)", focus.Lon, focus.Lat).
 					Column("tl_route_representative_shapes.route_id").
 					Join("gtfs_shapes ON gtfs_shapes.id = tl_route_representative_shapes.shape_id").
 					Where(sq.Eq{"tl_route_representative_shapes.route_id": after.ID, "tl_route_representative_shapes.rank": 0})
-				q = q.Where(sq.Expr("(ST_Distance(rep_shape.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (?)", focus.Lon, focus.Lat, cursorRow))
+				q = q.Where(sq.Expr("(rep_shape.geometry <-> ST_MakePoint(?,?), gtfs_routes.id) > (?)", focus.Lon, focus.Lat, cursorRow))
 			}
 		} else if after.FeedVersionID == 0 {
 			cursorRow := gatedRows("gtfs_routes", permFilter).Where(sq.Eq{"gtfs_routes.id": after.ID})

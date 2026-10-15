@@ -229,12 +229,14 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 	// Handle cursor. A request can name any row, so the cursor's row goes through gatedRows.
 	if after != nil && after.Valid && after.ID > 0 {
 		if where != nil && where.Location != nil && where.Location.Focus != nil {
+			// The cursor compares the page's sort key, measuring distance with <-> as the
+			// ORDER BY does: ST_Distance measures on the spheroid, <-> on a sphere.
 			focus := where.Location.Focus
 			cursorRow := gatedRows("tl_agency_geometries", permFilter).
-				Column("ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?))", focus.Lon, focus.Lat).
+				Column("tl_agency_geometries.geometry <-> ST_MakePoint(?,?)", focus.Lon, focus.Lat).
 				Column("tl_agency_geometries.agency_id").
 				Where(sq.Eq{"tl_agency_geometries.agency_id": after.ID})
-			q = q.Where(sq.Expr("(ST_Distance(tl_agency_geometries.geometry, ST_MakePoint(?,?)), gtfs_agencies.id) > (?)", focus.Lon, focus.Lat, cursorRow))
+			q = q.Where(sq.Expr("(tl_agency_geometries.geometry <-> ST_MakePoint(?,?), gtfs_agencies.id) > (?)", focus.Lon, focus.Lat, cursorRow))
 		} else if after.FeedVersionID == 0 {
 			cursorRow := gatedRows("gtfs_agencies", permFilter).Where(sq.Eq{"gtfs_agencies.id": after.ID})
 			q = q.

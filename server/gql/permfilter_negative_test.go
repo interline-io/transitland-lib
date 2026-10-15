@@ -5,10 +5,12 @@ import (
 	"errors"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -133,6 +135,15 @@ func TestPermFilter_Negative(t *testing.T) {
 			}},
 			{"AttributionsByFeedVersionIDs", func() (int, error) {
 				return countGroups(f.AttributionsByFeedVersionIDs(ctx, nil, nil, nil, []int{ctFv}))
+			}},
+			// Observations match a stop by stop_id, from any feed version, so each one is
+			// checked against its own. The fixtures record one at FTVL against BART.
+			{"StopObservationsByStopIDs", func() (int, error) {
+				where := &model.StopObservationFilter{Source: "TripUpdate", FeedVersionID: baFv, TripStartDate: tt.NewDate(time.Date(2023, 3, 9, 0, 0, 0, 0, time.UTC))}
+				return countGroups(f.StopObservationsByStopIDs(ctx, nil, where, []int{ftvl}))
+			}},
+			{"StopObservationsByStopIDs any feed version", func() (int, error) {
+				return countGroups(f.StopObservationsByStopIDs(ctx, nil, nil, []int{ftvl}))
 			}},
 			// The census stop buffer reads stops by the ids a request names. These
 			// cover each read: the buffer union, alone and clipped to a bbox, and

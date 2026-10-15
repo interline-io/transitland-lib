@@ -86,19 +86,26 @@ func (f *Finder) StopExternalReferencesByStopIDs(ctx context.Context, ids []int)
 }
 
 func (f *Finder) StopObservationsByStopIDs(ctx context.Context, limit *int, where *model.StopObservationFilter, keys []int) ([][]*model.StopObservation, error) {
-	// A request can name any feed version, so each observation is gated by its own.
-	q := gatedRows("ext_performance_stop_observations", f.PermFilter(ctx)).
-		Columns("gtfs_stops.id as stop_id", "ext_performance_stop_observations.*").
-		Join("gtfs_stops on gtfs_stops.stop_id = ext_performance_stop_observations.to_stop_id").
+	// A request can name any feed version, so each observation passes the permission
+	// check for its own.
+	//
+	// Not joinImported: an import doesn't write observations, so an unimport leaves them in
+	// place, and their feed version may be a container that is never imported at all.
+	q := sq.StatementBuilder.Select("gtfs_stops.id as stop_id", "obs.*").
+		From("ext_performance_stop_observations obs").
+		Join("feed_versions ON feed_versions.id = obs.feed_version_id").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+		Join("gtfs_stops on gtfs_stops.stop_id = obs.to_stop_id").
 		Where(In("gtfs_stops.id", keys)).
 		Limit(finderCheckLimit(limit))
 	if where != nil {
-		q = q.Where("ext_performance_stop_observations.feed_version_id = ?", where.FeedVersionID)
-		q = q.Where("ext_performance_stop_observations.trip_start_date = ?", where.TripStartDate)
-		q = q.Where("ext_performance_stop_observations.source = ?", where.Source)
+		q = q.Where("obs.feed_version_id = ?", where.FeedVersionID)
+		q = q.Where("obs.trip_start_date = ?", where.TripStartDate)
+		q = q.Where("obs.source = ?", where.Source)
 		// q = q.Where("start_time >= ?", where.StartTime)
 		// q = q.Where("end_time <= ?", where.EndTime)
 	}
+	q = pfJoinCheckFv(q, f.PermFilter(ctx))
 	var ents []*model.StopObservation
 	err := dbutil.Select(ctx, f.db, q, &ents)
 	return arrangeGroup(keys, ents, func(ent *model.StopObservation) int { return ent.StopID }), queryErr(ctx, err)
@@ -663,15 +670,19 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 	if after != nil && after.Valid && after.ID > 0 {
 		cursorRow := gatedRows("gtfs_stops", permFilter).Where(sq.Eq{"gtfs_stops.id": after.ID})
 		if where != nil && where.Location != nil && where.Location.Focus != nil {
-			// Complex ordering with focus point
-			// When ordering by distance from focus, we need to find the distance
-			// of the 'after' stop to determine the minimum distance threshold for pagination
+			// The cursor compares the page's sort key: distance from the focus point, then
+			// feed version and id, which keep stops at the same distance in order.
+			//
+			// Distance is measured with <-> as in the ORDER BY. ST_Distance measures on the
+			// spheroid, <-> on a sphere, and the two can order nearby stops differently.
 			focus := where.Location.Focus
 			q = q.Where(sq.Expr(
-				"ST_Distance(gtfs_stops.geometry, ST_MakePoint(?,?)) > (?)",
+				"(gtfs_stops.geometry <-> ST_MakePoint(?,?), gtfs_stops.feed_version_id, gtfs_stops.id) > (?)",
 				focus.Lon,
 				focus.Lat,
-				cursorRow.Column("ST_Distance(gtfs_stops.geometry, ST_MakePoint(?,?))", focus.Lon, focus.Lat)))
+				cursorRow.
+					Column("gtfs_stops.geometry <-> ST_MakePoint(?,?)", focus.Lon, focus.Lat).
+					Columns("gtfs_stops.feed_version_id", "gtfs_stops.id")))
 		} else if after.FeedVersionID == 0 {
 			q = q.
 				Where(sq.Expr("gtfs_stops.feed_version_id >= (?)", cursorRow.Columns("gtfs_stops.feed_version_id"))).
