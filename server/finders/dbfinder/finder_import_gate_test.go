@@ -80,11 +80,22 @@ func TestFinder_ImportGate(t *testing.T) {
 		return out
 	}
 
+	// Stop observations aren't written by an import, and an unimport leaves them in place,
+	// so the import's state must not hide them.
+	observations := func(t *testing.T) int {
+		t.Helper()
+		obs, err := f.StopObservationsByStopIDs(ctx, nil, nil, []int{ftvl[0].ID})
+		require.NoError(t, err)
+		return len(obs[0])
+	}
+
 	// Baseline: a completed import is visible.
 	setImport(t, true, false)
 	for k, v := range counts(t) {
 		assert.Greater(t, v, 0, "%s should be visible for a completed import", k)
 	}
+	visibleObservations := observations(t)
+	require.NotZero(t, visibleObservations, "expected the fixture observation at FTVL")
 
 	// Both columns are load-bearing, and neither subsumes the other: a feed version being
 	// unimported still has success = true, and a failed import has in_progress = false.
@@ -102,6 +113,12 @@ func TestFinder_ImportGate(t *testing.T) {
 			for k, v := range counts(t) {
 				assert.Equal(t, 0, v, "%s must be hidden while: %s", k, tc.name)
 			}
+			assert.Equal(t, visibleObservations, observations(t), "stop observations must stay visible while: %s", tc.name)
 		})
 	}
+
+	// An unimport removes the import record.
+	_, err = tx.ExecContext(ctx, `DELETE FROM feed_version_gtfs_imports WHERE feed_version_id = $1`, fvid)
+	require.NoError(t, err)
+	assert.Equal(t, visibleObservations, observations(t), "stop observations must outlive an unimport")
 }

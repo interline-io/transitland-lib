@@ -517,25 +517,32 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	// Default ordering
 	q = q.OrderBy("gtfs_routes.feed_version_id,gtfs_routes.id")
 
-	// Handle cursor
+	// Handle cursor. A request can name any row, so the cursor's row goes through gatedRows.
 	if after != nil && after.Valid && after.ID > 0 {
 		if where != nil && where.Location != nil && where.Location.Focus != nil {
-			// When materialized, we have tl_materialized_active_routes set as 'gtfs_routes', which has a 'geometry_simplified' column
-			whereExpr := sq.Expr(
-				useActive.UseTable(
-					"(ST_Distance(rep_shape.geometry, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(s.geometry, ST_MakePoint(?,?)), r.route_id from tl_route_representative_shapes r join gtfs_shapes s on s.id = r.shape_id where r.route_id = ? and r.rank = 0)",
-					"(ST_Distance(gtfs_routes.geometry_simplified, ST_MakePoint(?,?)), gtfs_routes.id) > (select ST_Distance(geometry_simplified, ST_MakePoint(?,?)), id from tl_materialized_active_routes where id = ?)",
-				),
-				where.Location.Focus.Lon,
-				where.Location.Focus.Lat,
-				where.Location.Focus.Lon,
-				where.Location.Focus.Lat,
-				after.ID)
-			q = q.Where(whereExpr)
+			// The cursor compares the page's sort key, measuring distance with <-> as the
+			// ORDER BY does: ST_Distance measures on the spheroid, <-> on a sphere.
+			focus := where.Location.Focus
+			if useActive.Materialized() {
+				// When materialized, we have tl_materialized_active_routes set as 'gtfs_routes', which has a 'geometry_simplified' column
+				cursorRow := gatedRows("tl_materialized_active_routes", permFilter).
+					Column("tl_materialized_active_routes.geometry_simplified <-> ST_MakePoint(?,?)", focus.Lon, focus.Lat).
+					Column("tl_materialized_active_routes.id").
+					Where(sq.Eq{"tl_materialized_active_routes.id": after.ID})
+				q = q.Where(sq.Expr("(gtfs_routes.geometry_simplified <-> ST_MakePoint(?,?), gtfs_routes.id) > (?)", focus.Lon, focus.Lat, cursorRow))
+			} else {
+				cursorRow := gatedRows("tl_route_representative_shapes", permFilter).
+					Column("gtfs_shapes.geometry <-> ST_MakePoint(?,?)", focus.Lon, focus.Lat).
+					Column("tl_route_representative_shapes.route_id").
+					Join("gtfs_shapes ON gtfs_shapes.id = tl_route_representative_shapes.shape_id").
+					Where(sq.Eq{"tl_route_representative_shapes.route_id": after.ID, "tl_route_representative_shapes.rank": 0})
+				q = q.Where(sq.Expr("(rep_shape.geometry <-> ST_MakePoint(?,?), gtfs_routes.id) > (?)", focus.Lon, focus.Lat, cursorRow))
+			}
 		} else if after.FeedVersionID == 0 {
+			cursorRow := gatedRows("gtfs_routes", permFilter).Where(sq.Eq{"gtfs_routes.id": after.ID})
 			q = q.
-				Where(sq.Expr("gtfs_routes.feed_version_id >= (select feed_version_id from gtfs_routes where id = ?)", after.ID)).
-				Where(sq.Expr("(gtfs_routes.feed_version_id, gtfs_routes.id) > (select feed_version_id,id from gtfs_routes where id = ?)", after.ID))
+				Where(sq.Expr("gtfs_routes.feed_version_id >= (?)", cursorRow.Columns("gtfs_routes.feed_version_id"))).
+				Where(sq.Expr("(gtfs_routes.feed_version_id, gtfs_routes.id) > (?)", cursorRow.Columns("gtfs_routes.feed_version_id", "gtfs_routes.id")))
 		} else {
 			q = q.
 				Where(sq.Expr("gtfs_routes.feed_version_id >= ?", after.FeedVersionID)).

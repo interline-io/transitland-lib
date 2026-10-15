@@ -224,7 +224,8 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 // joinImported restricts a select over imported entity rows to feed versions whose import
 // completed. It is applied to the entity selects: agency, place, route, stop, trip, shape,
 // pathway, level, frequency, transfer, translation, attribution, location group stop and
-// the fares entities. The census stop_buffer filter also applies it to the stops it buffers.
+// the fares entities. gatedRows applies it, with the permission check, to rows a request
+// selects by a raw id.
 //
 // Excluded: an import still running (in_progress), and an import that failed and left rows
 // behind (success = false). Both columns are load-bearing and neither implies the other -- a
@@ -254,8 +255,6 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 //   - The operator and feed spatial filters, which reach imported tables through
 //     feed_states. These cannot use this helper as written: it keys off feed_versions.id,
 //     which is not in scope for them.
-//   - The pagination cursor subselects in the stop, route, agency and trip selects, which
-//     read the cursor's row by the raw id from the request.
 //   - The entity update and delete mutations, which load the row to edit by the id from
 //     the request.
 //
@@ -289,6 +288,21 @@ func pfJoinCheckFv(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBu
 		sqOr = append(sqOr, sq.Expr("1=1")) // Global admin: allow all rows
 	}
 	return q.Where(sqOr)
+}
+
+// gatedRows selects the rows of table that the caller can see: rows of feed versions whose
+// import completed, in feeds the caller can access. table must have a feed_version_id column.
+//
+// table is formatted into the SQL, an exception to building queries from literals: every
+// caller passes a constant table name, never a value from the request.
+func gatedRows(table string, permFilter *model.PermFilter) sq.SelectBuilder {
+	table = az09(table)
+	q := sq.StatementBuilder.Select().
+		From(table).
+		Join(fmt.Sprintf("feed_versions ON feed_versions.id = %s.feed_version_id", table)).
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
+	q = joinImported(q)
+	return pfJoinCheckFv(q, permFilter)
 }
 
 func In[T any](col string, val []T) sq.Sqlizer {

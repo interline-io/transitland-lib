@@ -331,7 +331,16 @@ func feedVersionSelect(ctx context.Context, limit *int, after *model.Cursor, ids
 		q = q.Where(In("feed_versions.id", ids))
 	}
 	if after != nil && after.Valid && after.ID > 0 {
-		q = q.Where(sq.Expr("(feed_versions.fetched_at,feed_versions.id) < (select fetched_at,id from feed_versions where id = ?)", after.ID))
+		// A request can name any feed version, so the cursor's row passes the same
+		// permission check as this select. gatedRows doesn't apply: a feed version has
+		// no feed_version_id.
+		cursorRow := sq.StatementBuilder.
+			Select("feed_versions.fetched_at", "feed_versions.id").
+			From("feed_versions").
+			Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
+			Where(sq.Eq{"feed_versions.id": after.ID})
+		cursorRow = pfJoinCheckFv(cursorRow, permFilter)
+		q = q.Where(sq.Expr("(feed_versions.fetched_at, feed_versions.id) < (?)", cursorRow))
 	}
 
 	// Handle permissions
