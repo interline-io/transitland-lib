@@ -157,7 +157,24 @@ type RTStopTimeUpdate struct {
 	// stop time update's events, or else the delay carried from earlier stops.
 	EstimatedArrival   int64
 	EstimatedDeparture int64
+	// The sources of the estimates, empty for none.
+	ArrivalSource   EstimateSource
+	DepartureSource EstimateSource
 }
+
+// EstimateSource names the source of an estimated arrival or departure.
+type EstimateSource string
+
+const (
+	// EstimateTime is the time the stop time update's event gives.
+	EstimateTime EstimateSource = "time"
+	// EstimateDelay is the scheduled time plus a delay that the stop time
+	// update's own events give or imply.
+	EstimateDelay EstimateSource = "delay"
+	// EstimateCarried is the scheduled time plus a delay carried from an
+	// earlier stop time update, or the trip's own delay before the first.
+	EstimateCarried EstimateSource = "carried"
+)
 
 // ArrivalEvent returns the stop time update's arrival event, or else its
 // departure event: the event that estimates the arrival.
