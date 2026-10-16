@@ -224,7 +224,7 @@ type CensusDatasetGeographyFilter struct {
 
 // Search options for census geographies
 //
-// The query area is the first of `bbox`, `within` and `geography_ids` that is set. It composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. `near` does not compose and takes effect only when no other filter applies.
+// The query area is the first of `bbox`, `within` and `geography_ids` that is set. It composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. With `stop_buffer.exclude`, the search area is instead the query area minus the stop buffers, and a geography wholly inside the buffers is not returned. `near` does not compose and takes effect only when no other filter applies.
 //
 // Each geography appears once in the result set, and its `intersection_area` and `intersection_geometry` cover its whole overlap with the search area, even where the search area has several separate parts. A `bbox`, `within` polygon or `near` circle that crosses the antimeridian returns an error.
 type CensusDatasetGeographyLocationFilter struct {
@@ -304,7 +304,7 @@ type CensusGeography struct {
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
 	// When this geography was returned by a spatial query, the area of overlap between this geography and the search area, in square meters.
 	// Measured the same way as `geometry_area`, so a geography inside the search area reports the same value for both.
-	// Divide by `geometry_area` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
+	// Divide by `geometry_area` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate the population inside the search area.
 	IntersectionArea *float64 `json:"intersection_area,omitempty"`
 	// When this geography was returned by a spatial query, the geometry of the intersection between this geography and the search area.
 	// Only populated when explicitly requested; may be expensive to compute.
@@ -1358,12 +1358,14 @@ type StopAreaFilter struct {
 	Ids []int `json:"ids,omitempty"`
 }
 
-// A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer
+// A buffer around a set of stops. A census geography search matches the geographies that intersect any stop's buffer. With `exclude`, the search area is instead the part of the query area outside every buffer.
 type StopBuffer struct {
 	// Stop integer IDs to buffer around
 	StopIds []int `json:"stop_ids,omitempty"`
 	// Buffer radius in meters around each stop
 	Radius *float64 `json:"radius,omitempty"`
+	// Search the part of the query area outside the buffers, rather than inside them. Requires a query area and a positive `radius`
+	Exclude *bool `json:"exclude,omitempty"`
 }
 
 // Set or update a cross-feed stop reference linking this stop to a stop in another feed

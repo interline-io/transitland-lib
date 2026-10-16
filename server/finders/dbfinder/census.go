@@ -444,6 +444,10 @@ const censusSegmentDegrees = 0.01
 // antimeridian, which planar intersections can't represent.
 var errCensusAntimeridian = errors.New("census geography search areas that cross the antimeridian are not supported")
 
+// errCensusStopBufferExclude reports a stop_buffer.exclude without both a
+// query area and a positive radius.
+var errCensusStopBufferExclude = errors.New("census geography stop_buffer.exclude requires a query area (bbox, within or geography_ids) and a positive radius")
+
 func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, where *model.CensusDatasetGeographyFilter, fields censusGeographySelectFields) (sq.SelectBuilder, error) {
 	// Include matched entity column
 	cols := []string{
@@ -498,9 +502,13 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		geographyIdsClip := len(loc.GeographyIds) > 0
 		stopBufferClip := loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0
 		stopBufferRadius := 0.0
-		if stopBufferClip {
+		stopBufferExclude := false
+		// Read even without stop ids, so the exclude check below also covers an
+		// empty stop list.
+		if loc.StopBuffer != nil {
 			// Clamp ceiling of 1600m ~ 1 mile, a common US analysis radius.
 			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_600)
+			stopBufferExclude = loc.StopBuffer.Exclude != nil && *loc.StopBuffer.Exclude
 		}
 		if err := checkCensusAntimeridian(loc, stopBufferClip); err != nil {
 			return q, err
@@ -564,25 +572,38 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		}
 		areaClip := areaClipSelect != nil
 
-		// Filter precedence: the query area composes with `stop_buffer` — clip
-		// intersection for a positive radius, area-restricted point matching
-		// for radius 0. Otherwise the first filter present in this chain
-		// applies and the rest are ignored.
-		// Composition applies to the top-level query path only: in per-stop
-		// attribution mode (the internal by-entity loaders) a positive-radius
-		// stop_buffer takes precedence and the query area is not applied.
+		// Exclude subtracts the buffers from a query area, and radius 0 already
+		// means matching the geographies that contain a stop.
+		if stopBufferExclude && (!areaClip || stopBufferRadius == 0) {
+			return q, errCensusStopBufferExclude
+		}
+
+		// Filter precedence: only the query area and `stop_buffer` compose.
+		//
+		// With a positive radius, the search area is the part of the query area
+		// inside the stop buffers, or with exclude, the part outside them. With
+		// radius 0, a geography matches when it contains a stop inside the query
+		// area. Otherwise the first filter present in this chain applies and the
+		// rest are ignored. In per-stop attribution mode (the internal by-entity
+		// loaders), a positive-radius stop_buffer takes precedence and the query
+		// area is not applied.
 		if areaClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
-			// Clip to the intersection of the query area and the stop-buffer
-			// union: census apportioned to where the two overlap, not either
-			// alone. Compose the same single-row clip CTEs the standalone
-			// branches use. Without this case the chain below would honor only
-			// the query area and ignore the buffer.
+			// Clip the query area to the stop-buffer union: their intersection, or
+			// with exclude, their difference. Without this case the chain below
+			// would honor only the buffer and ignore the query area.
 			qBufferUse = true
 			subdivide = true
 			q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
 			q = q.WithCTE(sq.CTE{Alias: "clip_stops", Materialized: true, Expression: stopUnionClipSelect()})
+			combine := "ST_Intersection(clip_area.buffer, clip_stops.buffer) as buffer"
+			if stopBufferExclude {
+				// The union is NULL when no requested stop is visible. Default it to
+				// empty, so hidden stops subtract nothing rather than nulling the
+				// difference.
+				combine = "ST_Difference(clip_area.buffer, COALESCE(clip_stops.buffer, 'SRID=4326;GEOMETRYCOLLECTION EMPTY'::geometry)) as buffer"
+			}
 			qBuffer = sq.StatementBuilder.Select().
-				Column("ST_Intersection(clip_area.buffer, clip_stops.buffer) as buffer").
+				Column(combine).
 				Column("0 as match_entity_id").
 				From("clip_area").
 				JoinClause("CROSS JOIN clip_stops")
@@ -650,10 +671,10 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 				// Cut the search area into small pieces, so each geography is
 				// intersected with just the union of the pieces it touches.
 				//
-				// A bbox, a near circle and per-stop buffers are never cut.
-				// ST_Subdivide's planner estimate is 1,000 rows per input row,
-				// which multiplied across per-stop buffers or batched loaders
-				// makes Postgres JIT-compile otherwise fast queries.
+				// Per-stop buffers, and a bbox or near circle on its own, are
+				// never cut. ST_Subdivide's planner estimate is 1,000 rows per
+				// input row, which multiplied across per-stop buffers or batched
+				// loaders makes Postgres JIT-compile otherwise fast queries.
 				qBuffer = sq.StatementBuilder.
 					Select("clip.match_entity_id").
 					Column("ST_Segmentize(ST_Subdivide(ST_CollectionExtract(clip.buffer, 3), ?), ?) as buffer", censusClipMaxVertices, censusSegmentDegrees).

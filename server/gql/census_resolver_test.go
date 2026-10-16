@@ -5,7 +5,6 @@ import (
 	"math"
 	"testing"
 
-	"github.com/99designs/gqlgen/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -55,6 +54,10 @@ func TestCensusResolver(t *testing.T) {
 	if err := json.Unmarshal([]byte(tractOutlineJson), &tractOutline); err != nil {
 		t.Errorf("could not parse tract outline for test: %s", err.Error())
 	}
+
+	// The stop buffer exclude error cases share one query and bbox.
+	excludeQuery := `query($bbox:BoundingBox, $stop_buffer:StopBuffer) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:$stop_buffer}}) { geoid } } }`
+	excludeBbox := hw{"min_lon": -123.0, "min_lat": 37.0, "max_lon": -122.0, "max_lat": 38.0}
 
 	// Define test cases
 	vars := hw{}
@@ -683,6 +686,105 @@ func TestCensusResolver(t *testing.T) {
 			},
 		},
 		{
+			// Exclude subtracts the buffer from the query area. The FTVL buffer
+			// lies inside the FTVL tract, so the tract keeps its area less the
+			// buffer's, and the neighbors that only share a boundary get none.
+			name:  "combined geography ids and stop buffer exclude - tract",
+			query: `query($ids:[Int!], $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{geography_ids:$ids, stop_buffer:{stop_ids:$stop_ids, radius:100, exclude:true}}}) { geoid geometry_area intersection_area }} }`,
+			vars: hw{
+				"ids":      []int{ftvlTractId},
+				"stop_ids": []int{bartFtvlStopId},
+			},
+			f: func(t *testing.T, jj string) {
+				found := false
+				for _, v := range gjson.Get(jj, "census_datasets.0.geographies").Array() {
+					if v.Get("geoid").String() == "1400000US06001406100" {
+						found = true
+						// The tract's area and the buffer's, from the cases above.
+						assert.InDelta(t, 1918913.384123061-31235.844686623343, v.Get("intersection_area").Float(), 1.0, "expected the tract less the buffer")
+					} else {
+						assert.Less(t, v.Get("intersection_area").Float(), 1.0, "expected no area for neighbor %s", v.Get("geoid").String())
+					}
+				}
+				assert.True(t, found, "expected the tract itself")
+			},
+		},
+		{
+			// A buffer away from the query area subtracts nothing, where the
+			// intersection matches no geographies.
+			name:  "combined geography ids and stop buffer exclude disjoint - tract",
+			query: `query($ids:[Int!], $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{geography_ids:$ids, stop_buffer:{stop_ids:$stop_ids, radius:100, exclude:true}}}) { geoid geometry_area intersection_area }} }`,
+			vars: hw{
+				"ids":      []int{geographyId},
+				"stop_ids": []int{bartFtvlStopId},
+			},
+			f: func(t *testing.T, jj string) {
+				found := false
+				for _, v := range gjson.Get(jj, "census_datasets.0.geographies").Array() {
+					if v.Get("geoid").String() == "1400000US06001403000" {
+						found = true
+						assert.InDelta(t, v.Get("geometry_area").Float(), v.Get("intersection_area").Float(), 0.01, "expected the tract fully covered")
+					} else {
+						assert.Less(t, v.Get("intersection_area").Float(), 1.0, "expected no area for neighbor %s", v.Get("geoid").String())
+					}
+				}
+				assert.True(t, found, "expected the tract itself")
+			},
+		},
+		{
+			// Inside and outside the buffers split the query area, so each
+			// tract's two parts add up to its overlap with the county.
+			name:  "combined geography ids and stop buffer exclude splits area - tract",
+			query: `query($ids:[Int!], $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { area: geographies(limit:1000, where:{layer: "tract", location:{geography_ids:$ids}}) { geoid intersection_area } inside: geographies(limit:1000, where:{layer: "tract", location:{geography_ids:$ids, stop_buffer:{stop_ids:$stop_ids, radius:1000}}}) { geoid intersection_area } outside: geographies(limit:1000, where:{layer: "tract", location:{geography_ids:$ids, stop_buffer:{stop_ids:$stop_ids, radius:1000, exclude:true}}}) { geoid intersection_area } } }`,
+			vars: hw{
+				"ids":      []int{alamedaCountyId},
+				"stop_ids": []int{bartFtvlStopId, bartMcarStopId},
+			},
+			f: testStopBufferSplit,
+		},
+		{
+			// The same split holds for a bbox query area.
+			name:  "combined bbox and stop buffer exclude splits area - tract",
+			query: `query($bbox:BoundingBox, $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { area: geographies(limit:1000, where:{layer: "tract", location:{bbox:$bbox}}) { geoid intersection_area } inside: geographies(limit:1000, where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:1000}}}) { geoid intersection_area } outside: geographies(limit:1000, where:{layer: "tract", location:{bbox:$bbox, stop_buffer:{stop_ids:$stop_ids, radius:1000, exclude:true}}}) { geoid intersection_area } } }`,
+			vars: hw{
+				"bbox":     hw{"min_lon": -122.30, "min_lat": 37.75, "max_lon": -122.20, "max_lat": 37.85},
+				"stop_ids": []int{bartFtvlStopId, bartMcarStopId},
+			},
+			f: testStopBufferSplit,
+		},
+		{
+			// Exclude requires a query area and a positive radius.
+			name:                "stop buffer exclude without a query area",
+			query:               excludeQuery,
+			vars:                hw{"stop_buffer": hw{"stop_ids": []int{bartFtvlStopId}, "radius": 100.0, "exclude": true}},
+			expectErrorContains: "stop_buffer.exclude requires",
+		},
+		{
+			name:                "stop buffer exclude with radius 0",
+			query:               excludeQuery,
+			vars:                hw{"bbox": excludeBbox, "stop_buffer": hw{"stop_ids": []int{bartFtvlStopId}, "radius": 0.0, "exclude": true}},
+			expectErrorContains: "stop_buffer.exclude requires",
+		},
+		{
+			name:                "stop buffer exclude without a radius",
+			query:               excludeQuery,
+			vars:                hw{"bbox": excludeBbox, "stop_buffer": hw{"stop_ids": []int{bartFtvlStopId}, "exclude": true}},
+			expectErrorContains: "stop_buffer.exclude requires",
+		},
+		{
+			// An empty stop list gets the same check.
+			name:                "stop buffer exclude without stop ids or a query area",
+			query:               excludeQuery,
+			vars:                hw{"stop_buffer": hw{"stop_ids": []int{}, "radius": 100.0, "exclude": true}},
+			expectErrorContains: "stop_buffer.exclude requires",
+		},
+		{
+			name:                "stop buffer exclude without stop ids, with radius 0",
+			query:               excludeQuery,
+			vars:                hw{"bbox": excludeBbox, "stop_buffer": hw{"stop_ids": []int{}, "radius": 0.0, "exclude": true}},
+			expectErrorContains: "stop_buffer.exclude requires",
+		},
+		{
 			// An id that names no geography matches nothing, and is ignored
 			// beside one that does.
 			name:  "geography ids unknown - county",
@@ -959,25 +1061,43 @@ func TestCensusResolver_DatasetValuesRelay(t *testing.T) {
 func TestCensusResolver_Antimeridian(t *testing.T) {
 	c, _ := newTestClient(t)
 	q := `query($bbox:BoundingBox, $within:Polygon, $near:PointRadius) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:$bbox, within:$within, near:$near}}) { geoid intersection_area } } }`
-	testcases := []struct {
-		name string
-		vars hw
-	}{
-		{"bbox past 180", hw{"bbox": hw{"min_lon": 178.0, "min_lat": 51.0, "max_lon": 182.0, "max_lat": 53.0}}},
-		{"bbox with min_lon east of max_lon", hw{"bbox": hw{"min_lon": 170.0, "min_lat": 51.0, "max_lon": -170.0, "max_lat": 53.0}}},
-		{"within drawn across 180", hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{{179, 51}, {-179, 51}, {-179, 53}, {179, 53}, {179, 51}}}}}},
-		{"near circle across 180", hw{"near": hw{"lon": 179.99, "lat": 51.9, "radius": 5000.0}}},
+	testcases := []testcase{
+		{name: "bbox past 180", query: q, vars: hw{"bbox": hw{"min_lon": 178.0, "min_lat": 51.0, "max_lon": 182.0, "max_lat": 53.0}}, expectErrorContains: "antimeridian"},
+		{name: "bbox with min_lon east of max_lon", query: q, vars: hw{"bbox": hw{"min_lon": 170.0, "min_lat": 51.0, "max_lon": -170.0, "max_lat": 53.0}}, expectErrorContains: "antimeridian"},
+		{name: "within drawn across 180", query: q, vars: hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{{179, 51}, {-179, 51}, {-179, 53}, {179, 53}, {179, 51}}}}}, expectErrorContains: "antimeridian"},
+		{name: "near circle across 180", query: q, vars: hw{"near": hw{"lon": 179.99, "lat": 51.9, "radius": 5000.0}}, expectErrorContains: "antimeridian"},
 	}
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			var resp map[string]interface{}
-			opts := []client.Option{}
-			for k, v := range tc.vars {
-				opts = append(opts, client.Var(k, v))
-			}
-			err := c.Post(q, &resp, opts...)
-			assert.ErrorContains(t, err, "antimeridian")
-		})
+	queryTestcases(t, c, testcases)
+}
+
+// testStopBufferSplit checks that a response's `inside` and `outside`
+// stop-buffer searches split its `area` search between them.
+func testStopBufferSplit(t *testing.T, jj string) {
+	areas := func(path string) map[string]float64 {
+		ret := map[string]float64{}
+		for _, v := range gjson.Get(jj, path).Array() {
+			ret[v.Get("geoid").String()] = v.Get("intersection_area").Float()
+		}
+		return ret
+	}
+	area := areas("census_datasets.0.area")
+	inside := areas("census_datasets.0.inside")
+	outside := areas("census_datasets.0.outside")
+	split := 0
+	for geoid, a := range area {
+		assert.InDelta(t, a, inside[geoid]+outside[geoid], 1.0, "expected inside and outside to add up for %s", geoid)
+		if inside[geoid] >= 1 && outside[geoid] >= 1 {
+			split++
+		}
+	}
+	// Tracts cut by a buffer edge have area on both sides, so the sum checks
+	// the difference rather than either pass alone.
+	assert.Positive(t, split, "expected tracts split by a buffer edge")
+	for _, part := range []map[string]float64{inside, outside} {
+		for geoid := range part {
+			_, ok := area[geoid]
+			assert.True(t, ok, "expected %s in the query area", geoid)
+		}
 	}
 }
 
