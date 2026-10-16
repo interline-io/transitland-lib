@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math"
 
-	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -62,7 +61,7 @@ func (f *Finder) CensusSourcesByIDs(ctx context.Context, ids []int) ([]*model.Ce
 	return arrangeBy(ids, ents, func(ent *model.CensusSource) int { return ent.ID }), nil
 }
 
-func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, where *model.CensusGeographyFilter, entityType string, entityIds []int) ([][]*model.CensusGeography, error) {
+func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, where *model.CensusGeographyFilter, sel model.CensusGeographySelect, entityType string, entityIds []int) ([][]*model.CensusGeography, error) {
 	// Setup where clauses
 	if where == nil {
 		where = &model.CensusGeographyFilter{}
@@ -82,7 +81,7 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 	}
 
 	var entityGeogs []*model.CensusGeography
-	fields := getCensusGeographySelectFields(ctx)
+	fields := censusGeographySelectFields{CensusGeographySelect: sel}
 	if entityType == "stop" {
 		// One batched query for every requested stop. The select keeps
 		// per-stop attribution (match_entity_id = stop.id) so arrangeGroup
@@ -247,9 +246,9 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 	return ret, nil
 }
 
-func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
+func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, sel model.CensusGeographySelect, keys []int) ([][]*model.CensusGeography, error) {
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), p, getCensusGeographySelectFields(ctx))
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), p, censusGeographySelectFields{CensusGeographySelect: sel})
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +260,7 @@ func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, 
 	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.DatasetID }), queryErr(ctx, err)
 }
 
-func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, where *model.CensusSourceGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
+func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, where *model.CensusSourceGeographyFilter, sel model.CensusGeographySelect, keys []int) ([][]*model.CensusGeography, error) {
 	w := &model.CensusDatasetGeographyFilter{}
 	if where != nil {
 		w.Ids = where.Ids
@@ -269,7 +268,7 @@ func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, wh
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, getCensusGeographySelectFields(ctx))
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, censusGeographySelectFields{CensusGeographySelect: sel})
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +287,7 @@ func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, wh
 	return arrangeGroup(keys, ents, func(ent *model.CensusGeography) int { return ent.LayerID }), queryErr(ctx, err)
 }
 
-func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, where *model.CensusSourceGeographyFilter, keys []int) ([][]*model.CensusGeography, error) {
+func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, where *model.CensusSourceGeographyFilter, sel model.CensusGeographySelect, keys []int) ([][]*model.CensusGeography, error) {
 	w := &model.CensusDatasetGeographyFilter{}
 	if where != nil {
 		w.Ids = where.Ids
@@ -296,7 +295,7 @@ func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, w
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, getCensusGeographySelectFields(ctx))
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, censusGeographySelectFields{CensusGeographySelect: sel})
 	if err != nil {
 		return nil, err
 	}
@@ -388,43 +387,13 @@ func censusSourceSelect(limit *int, after *model.Cursor, ids []int, where *model
 }
 
 type censusGeographySelectFields struct {
-	intersectionArea     bool
-	intersectionGeometry bool
-	geometryArea         bool
-	geometry             bool
+	model.CensusGeographySelect
 	// Caller flag (not GraphQL-driven): when true, the buffer CTE for the
 	// `stop_buffer` filter emits one row per stop with match_entity_id =
 	// gtfs_stops.id instead of unioning all stops into a single polygon.
 	// Used by CensusGeographiesByEntityIDs for entityType == "stop" so a
 	// single batched query can be grouped back per requesting stop.
 	perStopAttribution bool
-}
-
-func getCensusGeographySelectFields(ctx context.Context) censusGeographySelectFields {
-	fields := censusGeographySelectFields{}
-	if containsField(ctx, "geometry") {
-		fields.geometry = true
-	}
-	if containsField(ctx, "geometry_area") {
-		fields.geometryArea = true
-	}
-	if containsField(ctx, "intersection_geometry") {
-		fields.intersectionGeometry = true
-	}
-	if containsField(ctx, "intersection_area") {
-		fields.intersectionArea = true
-	}
-	return fields
-}
-
-func containsField(ctx context.Context, fieldName string) bool {
-	fields := graphql.CollectFieldsCtx(ctx, nil)
-	for _, field := range fields {
-		if field.Name == fieldName {
-			return true
-		}
-	}
-	return false
 }
 
 // censusClipMaxVertices is the most vertices in a piece of a subdivided search
@@ -467,7 +436,7 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		"tlcd.id as dataset_id",
 		"tlcg.layer_id as layer_id",
 	}
-	if fields.geometry {
+	if fields.Geometry {
 		cols = append(cols, "tlcg.geometry as geometry")
 	}
 
@@ -481,7 +450,7 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		Join("tl_census_datasets tlcd on tlcd.id = tlcl.dataset_id").
 		Join("tl_census_sources tlcs on tlcs.id = tlcg.source_id").
 		Limit(finderCheckLimit(limit))
-	if fields.geometryArea {
+	if fields.GeometryArea {
 		// Measured like intersection_area, so a geography inside the search area
 		// reports the same value for both.
 		q = q.Column("ST_Area(ST_Transform(ST_Segmentize(tlcg.geometry::geometry, ?), 6933)) as geometry_area", censusSegmentDegrees)
@@ -695,17 +664,17 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			// as a great circle.
 			if subdivide {
 				q = q.GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_entity_id")
-				if fields.intersectionArea {
+				if fields.IntersectionArea {
 					q = q.Column("ST_Area(ST_Transform(ST_Segmentize(ST_Intersection(tlcg.geometry::geometry, ST_Union(buffer.buffer)), ?), 6933)) as intersection_area", censusSegmentDegrees)
 				}
-				if fields.intersectionGeometry {
+				if fields.IntersectionGeometry {
 					q = q.Column("ST_Intersection(tlcg.geometry::geometry, ST_Union(buffer.buffer)) as intersection_geometry")
 				}
 			} else {
-				if fields.intersectionArea {
+				if fields.IntersectionArea {
 					q = q.Column("ST_Area(ST_Transform(ST_Segmentize(ST_Intersection(tlcg.geometry::geometry, buffer.buffer), ?), 6933)) as intersection_area", censusSegmentDegrees)
 				}
-				if fields.intersectionGeometry {
+				if fields.IntersectionGeometry {
 					q = q.Column("ST_Intersection(tlcg.geometry::geometry, buffer.buffer) as intersection_geometry")
 				}
 			}

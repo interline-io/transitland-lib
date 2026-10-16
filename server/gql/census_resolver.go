@@ -12,7 +12,7 @@ import (
 type censusDatasetResolver struct{ *Resolver }
 
 func (r *censusDatasetResolver) Geographies(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusDatasetGeographyFilter) ([]*model.CensusGeography, error) {
-	return LoaderFor(ctx).CensusGeographiesByDatasetIDs.Load(ctx, censusDatasetGeographyLoaderParam{DatasetID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where})()
+	return LoaderFor(ctx).CensusGeographiesByDatasetIDs.Load(ctx, censusDatasetGeographyLoaderParam{DatasetID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where, Select: censusGeographySelect(ctx)})()
 }
 
 func (r *censusDatasetResolver) Sources(ctx context.Context, obj *model.CensusDataset, limit *int, where *model.CensusSourceFilter) ([]*model.CensusSource, error) {
@@ -91,7 +91,7 @@ func (r *censusSourceResolver) Layers(ctx context.Context, obj *model.CensusSour
 }
 
 func (r *censusSourceResolver) Geographies(ctx context.Context, obj *model.CensusSource, limit *int, where *model.CensusSourceGeographyFilter) (ret []*model.CensusGeography, err error) {
-	return LoaderFor(ctx).CensusGeographiesBySourceIDs.Load(ctx, censusSourceGeographyLoaderParam{SourceID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where})()
+	return LoaderFor(ctx).CensusGeographiesBySourceIDs.Load(ctx, censusSourceGeographyLoaderParam{SourceID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where, Select: censusGeographySelect(ctx)})()
 }
 
 func (r *censusSourceResolver) Tables(ctx context.Context, obj *model.CensusSource, limit *int, where *model.CensusTableFilter) (ret []*model.CensusTable, err error) {
@@ -128,7 +128,7 @@ func (r *censusTableResolver) Fields(ctx context.Context, obj *model.CensusTable
 type censusLayerResolver struct{ *Resolver }
 
 func (r *censusLayerResolver) Geographies(ctx context.Context, obj *model.CensusLayer, limit *int, where *model.CensusSourceGeographyFilter) (ret []*model.CensusGeography, err error) {
-	return LoaderFor(ctx).CensusGeographiesByLayerIDs.Load(ctx, censusSourceGeographyLoaderParam{LayerID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where})()
+	return LoaderFor(ctx).CensusGeographiesByLayerIDs.Load(ctx, censusSourceGeographyLoaderParam{LayerID: obj.ID, Limit: resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT), Where: where, Select: censusGeographySelect(ctx)})()
 }
 
 // add geography resolvers to agency, route, stop
@@ -139,6 +139,7 @@ func (r *agencyResolver) CensusGeographies(ctx context.Context, obj *model.Agenc
 		EntityID:   obj.ID,
 		Limit:      resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT),
 		Where:      where,
+		Select:     censusGeographySelect(ctx),
 	})()
 }
 
@@ -148,6 +149,7 @@ func (r *routeResolver) CensusGeographies(ctx context.Context, obj *model.Route,
 		EntityID:   obj.ID,
 		Limit:      resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT),
 		Where:      where,
+		Select:     censusGeographySelect(ctx),
 	})()
 }
 
@@ -157,5 +159,17 @@ func (r *stopResolver) CensusGeographies(ctx context.Context, obj *model.Stop, l
 		EntityID:   obj.ID,
 		Limit:      resolverCheckLimitMax(limit, RESOLVER_CENSUS_MAXLIMIT),
 		Where:      where,
+		Select:     censusGeographySelect(ctx),
 	})()
+}
+
+// censusGeographySelect reports which geometry columns the current census
+// geography field selects.
+func censusGeographySelect(ctx context.Context) model.CensusGeographySelect {
+	return model.CensusGeographySelect{
+		Geometry:             containsField(ctx, "geometry"),
+		GeometryArea:         containsField(ctx, "geometry_area"),
+		IntersectionArea:     containsField(ctx, "intersection_area"),
+		IntersectionGeometry: containsField(ctx, "intersection_geometry"),
+	}
 }

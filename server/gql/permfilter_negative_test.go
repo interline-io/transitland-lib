@@ -90,8 +90,8 @@ func TestPermFilter_Negative(t *testing.T) {
 		}
 		ftvl := baStops[0][0].ID
 
-		// The census finders read the request's selection set, so they are checked
-		// through GraphQL.
+		// The census checks run through GraphQL, so they cover the census resolvers
+		// and loaders too.
 		gqlClient := newPermTestClientFromConfig(cfg, "test")
 		countGeographies := func(query, path string) func() (int, error) {
 			return func() (int, error) {
