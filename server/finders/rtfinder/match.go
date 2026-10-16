@@ -137,13 +137,17 @@ func MatchStops(tu *pb.TripUpdate, base int64, stops []StopRef) []*model.RTStopT
 	ret := make([]*model.RTStopTimeUpdate, len(stops))
 	carried, hasCarried := int64(tu.GetDelay()), tu.Delay != nil
 	// carry takes the delay a stop time update gives or implies: its
-	// departure's, or else its arrival's.
-	carry := func(stu *pb.TripUpdate_StopTimeUpdate, arr int64, dep int64) {
+	// departure's, or else its arrival's. It reports whether it took one.
+	carry := func(stu *pb.TripUpdate_StopTimeUpdate, arr int64, dep int64) bool {
 		if d, ok := eventDelay(stu.GetDeparture(), dep); ok {
 			carried, hasCarried = d, true
-		} else if d, ok := eventDelay(stu.GetArrival(), arr); ok {
-			carried, hasCarried = d, true
+			return true
 		}
+		if d, ok := eventDelay(stu.GetArrival(), arr); ok {
+			carried, hasCarried = d, true
+			return true
+		}
+		return false
 	}
 	for i, stop := range stops {
 		stu := placed[i]
@@ -160,15 +164,20 @@ func MatchStops(tu *pb.TripUpdate, base int64, stops []StopRef) []*model.RTStopT
 			carry(stu, arr, dep)
 			continue
 		}
-		r.EstimatedArrival = estimate(r.ArrivalEvent(), arr)
-		r.EstimatedDeparture = estimate(r.DepartureEvent(), dep)
-		carry(stu, arr, dep)
+		r.EstimatedArrival, r.ArrivalSource = estimate(r.ArrivalEvent(), arr)
+		r.EstimatedDeparture, r.DepartureSource = estimate(r.DepartureEvent(), dep)
+		// A delay this stop time's own update gives fills in for an event it
+		// doesn't estimate, as one from earlier stops would.
+		source := model.EstimateCarried
+		if carry(stu, arr, dep) {
+			source = model.EstimateDelay
+		}
 		if hasCarried {
 			if r.EstimatedArrival == 0 && arr != 0 {
-				r.EstimatedArrival = arr + carried
+				r.EstimatedArrival, r.ArrivalSource = arr+carried, source
 			}
 			if r.EstimatedDeparture == 0 && dep != 0 {
-				r.EstimatedDeparture = dep + carried
+				r.EstimatedDeparture, r.DepartureSource = dep+carried, source
 			}
 		}
 	}
@@ -180,8 +189,8 @@ func MatchStops(tu *pb.TripUpdate, base int64, stops []StopRef) []*model.RTStopT
 // times its update gives.
 func AddedStopTimeUpdate(tu *pb.TripUpdate, stu *pb.TripUpdate_StopTimeUpdate) *model.RTStopTimeUpdate {
 	r := &model.RTStopTimeUpdate{TripUpdate: tu, StopTimeUpdate: stu}
-	r.EstimatedArrival = estimate(r.ArrivalEvent(), 0)
-	r.EstimatedDeparture = estimate(r.DepartureEvent(), 0)
+	r.EstimatedArrival, r.ArrivalSource = estimate(r.ArrivalEvent(), 0)
+	r.EstimatedDeparture, r.DepartureSource = estimate(r.DepartureEvent(), 0)
 	return r
 }
 
@@ -233,19 +242,22 @@ func instant(base int64, secs tt.Seconds) int64 {
 	return base + secs.Val
 }
 
-// estimate returns an event's prediction: its time, or else its delay added to
-// the scheduled instant when that's known; 0 for none.
-func estimate(e *pb.TripUpdate_StopTimeEvent, sched int64) int64 {
+// estimate returns an event's prediction and its source: its time, or else its
+// delay added to the scheduled instant when that's known; 0 for none.
+func estimate(e *pb.TripUpdate_StopTimeEvent, sched int64) (int64, model.EstimateSource) {
 	if e == nil {
-		return 0
+		return 0, ""
 	}
 	if e.Time != nil {
-		return e.GetTime()
+		if t := e.GetTime(); t != 0 {
+			return t, model.EstimateTime
+		}
+		return 0, ""
 	}
 	if e.Delay != nil && sched != 0 {
-		return sched + int64(e.GetDelay())
+		return sched + int64(e.GetDelay()), model.EstimateDelay
 	}
-	return 0
+	return 0, ""
 }
 
 // eventDelay returns the delay an event gives, or else the one its time implies

@@ -219,6 +219,72 @@ func TestMatchStops_Estimates(t *testing.T) {
 	})
 }
 
+// Each estimate records its source: the time or delay of the stop time update's
+// own event, or a delay carried from an earlier one or from the trip. A stop's
+// own update can also supply the delay for an event it doesn't estimate.
+func TestMatchStops_Sources(t *testing.T) {
+	stops := testTripStops(600, "A", "B", "C", "D", "E")
+	const (
+		none    = model.EstimateSource("")
+		ownTime = model.EstimateTime
+		ownDly  = model.EstimateDelay
+		carried = model.EstimateCarried
+	)
+	arrB, depD := testBase+stops[1].Arrival.Val, testBase+stops[3].Departure.Val
+	tcs := []struct {
+		name     string
+		delay    *int32 // the trip's delay
+		stus     []*pb.TripUpdate_StopTimeUpdate
+		arr, dep []model.EstimateSource
+	}{
+		{
+			name:  "own times and delays, with carried delays before and between",
+			delay: proto.Int32(30),
+			stus:  []*pb.TripUpdate_StopTimeUpdate{withDeparture(stu(2, ""), delayOf(60)), withDeparture(stu(4, ""), timeOf(depD+120))},
+			arr:   []model.EstimateSource{carried, ownDly, carried, ownTime, carried},
+			dep:   []model.EstimateSource{carried, ownDly, carried, ownTime, carried},
+		},
+		{
+			name: "an event without a time or delay takes its stop's own other delay",
+			stus: []*pb.TripUpdate_StopTimeUpdate{withDeparture(withArrival(stu(2, ""), delayOf(60)), &pb.TripUpdate_StopTimeEvent{Uncertainty: proto.Int32(30)})},
+			arr:  []model.EstimateSource{none, ownDly, carried, carried, carried},
+			dep:  []model.EstimateSource{none, ownDly, carried, carried, carried},
+		},
+		{
+			name: "an arrival time stands in for a missing departure",
+			stus: []*pb.TripUpdate_StopTimeUpdate{withArrival(stu(2, ""), timeOf(arrB+240))},
+			arr:  []model.EstimateSource{none, ownTime, carried, carried, carried},
+			dep:  []model.EstimateSource{none, ownTime, carried, carried, carried},
+		},
+		{
+			name:  "NO_DATA leaves no estimates, so no sources",
+			delay: proto.Int32(30),
+			stus:  []*pb.TripUpdate_StopTimeUpdate{withRelationship(stu(2, ""), pb.TripUpdate_StopTimeUpdate_NO_DATA)},
+			arr:   []model.EstimateSource{carried, none, none, none, none},
+			dep:   []model.EstimateSource{carried, none, none, none, none},
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			tu := &pb.TripUpdate{Trip: &pb.TripDescriptor{TripId: proto.String("T")}, Delay: tc.delay, StopTimeUpdate: tc.stus}
+			got := MatchStops(tu, testBase, stops)
+			if !assert.Len(t, got, len(stops)) {
+				return
+			}
+			for i, r := range got {
+				assert.Equal(t, tc.arr[i], r.ArrivalSource, "stop time %d arrival", i)
+				assert.Equal(t, tc.dep[i], r.DepartureSource, "stop time %d departure", i)
+			}
+		})
+	}
+	t.Run("an added trip's times", func(t *testing.T) {
+		tu := &pb.TripUpdate{Trip: &pb.TripDescriptor{TripId: proto.String("ADDED")}}
+		r := AddedStopTimeUpdate(tu, withDeparture(stu(1, ""), timeOf(5000)))
+		assert.Equal(t, ownTime, r.ArrivalSource)
+		assert.Equal(t, ownTime, r.DepartureSource)
+	})
+}
+
 // A run's trip update is matched to stop times given by value, and
 // FindStopTimeUpdates matches a trip's, asking the Lookup for them so that a
 // caller holding only some of them still gets the carried delay.

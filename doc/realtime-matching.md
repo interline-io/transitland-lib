@@ -46,6 +46,8 @@ Each stop time's estimated arrival and departure come from its own stop time upd
 
 A stop time the update doesn't predict takes the delay carried from earlier in the trip, as the GTFS Realtime spec describes: the trip update's own `delay` until the first stop time update, then the delay given at the nearest earlier stop time update, or the delay its time implies against the schedule. A `SKIPPED` stop has no estimate, though a delay its update gives still carries; a `NO_DATA` stop ends the carry, so the stops after it have no estimate until an update gives one.
 
+Each estimate records its source on `RTStopTimeUpdate` (`ArrivalSource` and `DepartureSource`): `time` or `delay` from the stop time update's own events, or `carried` for a delay carried from an earlier update or the trip. When a stop time's own update estimates one event and not the other, the delay it gives fills in for the other, and that estimate's source is `delay`.
+
 Scheduled times count from noon minus twelve hours on the service date in the agency's timezone, as GTFS defines them, so an estimate on the day clocks change is still right. A trip found without a date has no scheduled instants, so only the times its update gives become estimates: delays, given or carried, estimate nothing.
 
 The GraphQL API's `StopTime.arrival` and `departure` report these estimates. `StopTime.schedule_relationship` reports `SKIPPED` and `NO_DATA` for such stops, `CANCELED` or `DELETED` for every stop of such a trip, and otherwise the trip's relationship, or `SCHEDULED` for a stop time with any other realtime data, such as a carried delay.
