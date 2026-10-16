@@ -559,13 +559,14 @@ func TestAcceptForURLType(t *testing.T) {
 	}
 }
 
-// negotiatingServer mimics a server that returns base64 text unless
-// GTFS-RT protobuf is the first Accept type, and records request headers.
+// negotiatingServer mimics an API Gateway that returns base64 text unless the
+// first Accept type is a configured binary type, and records request headers.
 func negotiatingServer(t *testing.T, got *http.Header) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*got = r.Header.Clone()
-		if strings.HasPrefix(r.Header.Get("Accept"), "application/x-google-protobuf") {
+		first, _, _ := strings.Cut(r.Header.Get("Accept"), ",")
+		if first == "application/x-google-protobuf" || first == "*/*" {
 			w.Header().Set("Content-Type", "application/x-google-protobuf")
 			w.Write([]byte{0x0a, 0x00})
 			return
@@ -585,7 +586,7 @@ func TestAuthenticatedRequest_AcceptByURLType(t *testing.T) {
 		{"default", nil, DefaultAccept, []byte("CgA=")},
 		{"static", []RequestOption{WithURLType("static_current")}, DefaultAccept, []byte("CgA=")},
 		{"realtime", []RequestOption{WithURLType("realtime_trip_updates")}, RealtimeAccept, []byte{0x0a, 0x00}},
-		{"header overrides url type", []RequestOption{WithURLType("realtime_trip_updates"), WithHeaders(http.Header{"accept": {"*/*"}})}, "*/*", []byte("CgA=")},
+		{"header overrides url type", []RequestOption{WithURLType("realtime_trip_updates"), WithHeaders(http.Header{"accept": {"application/json"}})}, "application/json", []byte("CgA=")},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
