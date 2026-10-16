@@ -444,6 +444,10 @@ const censusSegmentDegrees = 0.01
 // antimeridian, which planar intersections can't represent.
 var errCensusAntimeridian = errors.New("census geography search areas that cross the antimeridian are not supported")
 
+// errCensusStopBufferExclude reports a stop_buffer.exclude without both a
+// query area and a positive radius.
+var errCensusStopBufferExclude = errors.New("census geography stop_buffer.exclude requires a query area (bbox, within or geography_ids) and a positive radius")
+
 func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, where *model.CensusDatasetGeographyFilter, fields censusGeographySelectFields) (sq.SelectBuilder, error) {
 	// Include matched entity column
 	cols := []string{
@@ -498,9 +502,11 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		geographyIdsClip := len(loc.GeographyIds) > 0
 		stopBufferClip := loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0
 		stopBufferRadius := 0.0
+		stopBufferExclude := false
 		if stopBufferClip {
 			// Clamp ceiling of 1600m ~ 1 mile, a common US analysis radius.
 			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_600)
+			stopBufferExclude = loc.StopBuffer.Exclude != nil && *loc.StopBuffer.Exclude
 		}
 		if err := checkCensusAntimeridian(loc, stopBufferClip); err != nil {
 			return q, err
@@ -564,10 +570,16 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		}
 		areaClip := areaClipSelect != nil
 
+		// Exclude subtracts the buffers from a query area, and radius 0 already
+		// means matching the geographies that contain a stop.
+		if stopBufferExclude && (!areaClip || stopBufferRadius == 0) {
+			return q, errCensusStopBufferExclude
+		}
+
 		// Filter precedence: the query area composes with `stop_buffer` — clip
-		// intersection for a positive radius, area-restricted point matching
-		// for radius 0. Otherwise the first filter present in this chain
-		// applies and the rest are ignored.
+		// intersection for a positive radius (difference with exclude),
+		// area-restricted point matching for radius 0. Otherwise the first
+		// filter present in this chain applies and the rest are ignored.
 		// Composition applies to the top-level query path only: in per-stop
 		// attribution mode (the internal by-entity loaders) a positive-radius
 		// stop_buffer takes precedence and the query area is not applied.
@@ -581,8 +593,15 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			subdivide = true
 			q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
 			q = q.WithCTE(sq.CTE{Alias: "clip_stops", Materialized: true, Expression: stopUnionClipSelect()})
+			combine := "ST_Intersection(clip_area.buffer, clip_stops.buffer) as buffer"
+			if stopBufferExclude {
+				// With exclude, the query area minus the buffers. The union is NULL
+				// when no requested stop is visible, so it defaults to empty: hidden
+				// stops subtract nothing rather than nulling the difference.
+				combine = "ST_Difference(clip_area.buffer, COALESCE(clip_stops.buffer, 'SRID=4326;GEOMETRYCOLLECTION EMPTY'::geometry)) as buffer"
+			}
 			qBuffer = sq.StatementBuilder.Select().
-				Column("ST_Intersection(clip_area.buffer, clip_stops.buffer) as buffer").
+				Column(combine).
 				Column("0 as match_entity_id").
 				From("clip_area").
 				JoinClause("CROSS JOIN clip_stops")

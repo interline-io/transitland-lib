@@ -14846,7 +14846,7 @@ input CensusSourceGeographyFilter {
 
 """Search options for census geographies
 
-The query area is the first of ` + "`" + `bbox` + "`" + `, ` + "`" + `within` + "`" + ` and ` + "`" + `geography_ids` + "`" + ` that is set. It composes with ` + "`" + `stop_buffer` + "`" + `: the search area is their intersection, so ` + "`" + `intersection_area` + "`" + ` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. ` + "`" + `near` + "`" + ` does not compose and takes effect only when no other filter applies.
+The query area is the first of ` + "`" + `bbox` + "`" + `, ` + "`" + `within` + "`" + ` and ` + "`" + `geography_ids` + "`" + ` that is set. It composes with ` + "`" + `stop_buffer` + "`" + `: the search area is their intersection, so ` + "`" + `intersection_area` + "`" + ` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. With ` + "`" + `stop_buffer.exclude` + "`" + `, the search area is instead the query area minus the stop buffers, and a geography wholly inside the buffers is not returned. ` + "`" + `near` + "`" + ` does not compose and takes effect only when no other filter applies.
 
 Each geography appears once in the result set, and its ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` cover its whole overlap with the search area, even where the search area has several separate parts. A ` + "`" + `bbox` + "`" + `, ` + "`" + `within` + "`" + ` polygon or ` + "`" + `near` + "`" + ` circle that crosses the antimeridian returns an error.
 """
@@ -14865,12 +14865,14 @@ input CensusDatasetGeographyLocationFilter {
   stop_buffer: StopBuffer
 }
 
-"""A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer"""
+"""A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer, or with ` + "`" + `exclude` + "`" + `, the parts of the query area outside every buffer"""
 input StopBuffer {
   "Stop integer IDs to buffer around"
   stop_ids: [Int!]
   "Buffer radius in meters around each stop"
   radius: Float
+  "Search the part of the query area outside every buffer, rather than inside them. Requires a query area and a positive ` + "`" + `radius` + "`" + `"
+  exclude: Boolean
 }
 
 """Search options for census tables"""
@@ -56503,7 +56505,7 @@ func (ec *executionContext) unmarshalInputStopBuffer(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"stop_ids", "radius"}
+	fieldsInOrder := [...]string{"stop_ids", "radius", "exclude"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -56524,6 +56526,13 @@ func (ec *executionContext) unmarshalInputStopBuffer(ctx context.Context, obj an
 				return it, err
 			}
 			it.Radius = data
+		case "exclude":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("exclude"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Exclude = data
 		}
 	}
 	return it, nil
