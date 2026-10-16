@@ -74,7 +74,7 @@ func TestFinder_ImportGate(t *testing.T) {
 		agencies, err := f.FindAgencies(ctx, nil, nil, nil, &model.AgencyFilter{FeedVersionSha1: &sha1})
 		require.NoError(t, err)
 		out["agencies"] = len(agencies)
-		tracts, err := f.CensusGeographiesByDatasetIDs(withEmptySelection(ctx), nil, stopBuffer, []int{datasets[0].ID})
+		tracts, err := f.CensusGeographiesByDatasetIDs(ctx, nil, stopBuffer, model.CensusGeographySelect{}, []int{datasets[0].ID})
 		require.NoError(t, err)
 		out["census tracts"] = len(tracts[0])
 		return out

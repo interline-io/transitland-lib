@@ -31,6 +31,16 @@ type PlaceGeometrySelect struct {
 	Bbox bool
 }
 
+// CensusGeographySelect chooses which geometry columns a census geography query
+// returns. Each is expensive on every row, so a query returns only the ones its
+// field selects.
+type CensusGeographySelect struct {
+	Geometry             bool
+	GeometryArea         bool
+	IntersectionArea     bool
+	IntersectionGeometry bool
+}
+
 //////////
 
 type Feed struct {

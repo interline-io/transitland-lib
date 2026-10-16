@@ -836,6 +836,34 @@ func TestCensusResolver(t *testing.T) {
 				}
 			},
 		},
+		{
+			// Sibling fields share a loader batch, and each still gets the
+			// columns it selects, whichever field opens the batch.
+			name:  "sibling fields with different selections - dataset, layer and source",
+			query: `query($ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { whole: geographies(where:{layer:"tract", location:{geography_ids:$ids}}) { geoid geometry_area } clipped: geographies(where:{layer:"tract", location:{bbox:{min_lon:-122.30, min_lat:37.75, max_lon:-122.20, max_lat:37.85}}}) { geoid intersection_area } layers { name whole: geographies(where:{location:{geography_ids:$ids}}) { geoid geometry_area } clipped: geographies(where:{location:{bbox:{min_lon:-122.30, min_lat:37.75, max_lon:-122.20, max_lat:37.85}}}) { geoid intersection_area } } sources(where:{name:"tl_2024_06_tract.zip"}) { whole: geographies(where:{location:{geography_ids:$ids}}) { geoid geometry_area } clipped: geographies(where:{location:{bbox:{min_lon:-122.30, min_lat:37.75, max_lon:-122.20, max_lat:37.85}}}) { geoid intersection_area } } } }`,
+			vars:  hw{"ids": []int{ftvlTractId}},
+			f: func(t *testing.T, jj string) {
+				testSelectedFields(t, jj, map[string]string{
+					"census_datasets.0.whole":                           "geometry_area",
+					"census_datasets.0.clipped":                         "intersection_area",
+					`census_datasets.0.layers.#(name=="tract").whole`:   "geometry_area",
+					`census_datasets.0.layers.#(name=="tract").clipped`: "intersection_area",
+					"census_datasets.0.sources.0.whole":                 "geometry_area",
+					"census_datasets.0.sources.0.clipped":               "intersection_area",
+				})
+			},
+		},
+		{
+			name:  "sibling fields with different selections - stop",
+			query: `query { stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { tract: census_geographies(where:{layer:"tract", radius:100.0}) { geoid geometry_area } county: census_geographies(where:{layer:"county", radius:100.0}) { geoid intersection_area } } }`,
+			vars:  vars,
+			f: func(t *testing.T, jj string) {
+				testSelectedFields(t, jj, map[string]string{
+					"stops.0.tract":  "geometry_area",
+					"stops.0.county": "intersection_area",
+				})
+			},
+		},
 	}
 	queryTestcases(t, c, testcases)
 }
@@ -996,4 +1024,20 @@ func testIntersectionArea(t *testing.T, a []gjson.Result, expectCount int, expec
 	assert.InDelta(t, expectGeometryArea, geometryArea, 1.0, "expected geometry area")
 	assert.Equal(t, expectCount, len(a), "expected geographies returned")
 	assert.Equal(t, len(geometryAreas), len(a), "expected one row per geography")
+}
+
+// testSelectedFields checks that every row at each path has a value for the
+// field selected there.
+func testSelectedFields(t *testing.T, jj string, fields map[string]string) {
+	for path, field := range fields {
+		rows := gjson.Get(jj, path).Array()
+		assert.NotEmpty(t, rows, "expected rows at %s", path)
+		nulls := 0
+		for _, v := range rows {
+			if v.Get(field).Type == gjson.Null {
+				nulls++
+			}
+		}
+		assert.Zero(t, nulls, "expected %s on every row at %s", field, path)
+	}
 }

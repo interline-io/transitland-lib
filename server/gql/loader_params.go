@@ -197,12 +197,14 @@ type censusGeographyLoaderParam struct {
 	LayerID    int
 	Limit      *int
 	Where      *model.CensusGeographyFilter
+	Select     model.CensusGeographySelect
 }
 
 type censusDatasetGeographyLoaderParam struct {
 	DatasetID int
 	Limit     *int
 	Where     *model.CensusDatasetGeographyFilter
+	Select    model.CensusGeographySelect
 }
 
 type censusSourceGeographyLoaderParam struct {
@@ -210,6 +212,7 @@ type censusSourceGeographyLoaderParam struct {
 	LayerID  int
 	Limit    *int
 	Where    *model.CensusSourceGeographyFilter
+	Select   model.CensusGeographySelect
 }
 
 type censusValueLoaderParam struct {
