@@ -489,11 +489,13 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		qPointsUse := false
 		var qPoints sq.SelectBuilder
 		// Set for search areas that can be too large to intersect whole: a stop
-		// union, and a `within` polygon past censusClipMaxVertices.
+		// union, a union of geographies, and a `within` polygon past
+		// censusClipMaxVertices.
 		subdivide := false
 
 		loc := where.Location
 		withinClip := loc.Within != nil && loc.Within.Valid
+		geographyIdsClip := len(loc.GeographyIds) > 0
 		stopBufferClip := loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0
 		stopBufferRadius := 0.0
 		if stopBufferClip {
@@ -537,23 +539,35 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			return sq.StatementBuilder.Select().
 				Column("ST_Segmentize(ST_CollectionExtract(ST_MakeValid(ST_GeomFromGeoJSON(?)), 3), ?) as buffer", string(jj), censusSegmentDegrees)
 		}
+		geographyIdsClipSelect := func() sq.SelectBuilder {
+			// No matching ids leaves a NULL union, which matches nothing.
+			return sq.StatementBuilder.Select().
+				Column("ST_Union(clip_geographies.geometry::geometry) as buffer").
+				From("tl_census_geographies clip_geographies").
+				Where(sq.Eq{"clip_geographies.id": loc.GeographyIds})
+		}
 		stopUnionClipSelect := func() sq.SelectBuilder {
 			return stopsSelect().
 				Column("ST_Union(ST_Buffer(requested_stops.geometry::geography, ?)::geometry) as buffer", stopBufferRadius)
 		}
 
-		// The query area, however it was expressed. `bbox` keeps precedence over
-		// `within` when both are set.
-		areaClipSelect := withinClipSelect
-		if loc.Bbox != nil {
+		// The query area, however it was expressed: the first of `bbox`,
+		// `within` and `geography_ids` that is set.
+		var areaClipSelect func() sq.SelectBuilder
+		switch {
+		case loc.Bbox != nil:
 			areaClipSelect = bboxClipSelect
+		case withinClip:
+			areaClipSelect = withinClipSelect
+		case geographyIdsClip:
+			areaClipSelect = geographyIdsClipSelect
 		}
-		areaClip := loc.Bbox != nil || withinClip
+		areaClip := areaClipSelect != nil
 
-		// Filter precedence: the query area (`bbox`, or `within` when no bbox is
-		// given) composes with `stop_buffer` — clip intersection for a positive
-		// radius, area-restricted point matching for radius 0. Otherwise the
-		// first filter present in this chain applies and the rest are ignored.
+		// Filter precedence: the query area composes with `stop_buffer` — clip
+		// intersection for a positive radius, area-restricted point matching
+		// for radius 0. Otherwise the first filter present in this chain
+		// applies and the rest are ignored.
 		// Composition applies to the top-level query path only: in per-stop
 		// attribution mode (the internal by-entity loaders) a positive-radius
 		// stop_buffer takes precedence and the query area is not applied.
@@ -579,6 +593,12 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			qBufferUse = true
 			subdivide = len(loc.Within.Val.FlatCoords())/loc.Within.Val.Stride() > censusClipMaxVertices
 			qBuffer = withinClipSelect().Column("0 as match_entity_id")
+		} else if geographyIdsClip && !stopBufferClip {
+			// Always cut: the union's vertices can't be counted before the
+			// query runs, and an admin boundary often has thousands.
+			qBufferUse = true
+			subdivide = true
+			qBuffer = geographyIdsClipSelect().Column("0 as match_entity_id")
 		} else if loc.Near != nil && !stopBufferClip {
 			// Guarded like the branches above so a stop_buffer isn't discarded
 			// here: without it a radius-0 buffer alongside `near` would skip
@@ -736,6 +756,10 @@ func checkCensusAntimeridian(loc *model.CensusDatasetGeographyLocationFilter, st
 		if b.Min(0) < -180 || b.Max(0) > 180 || b.Max(0)-b.Min(0) > 180 {
 			return errCensusAntimeridian
 		}
+	case len(loc.GeographyIds) > 0:
+		// The named geographies are stored like the ones they clip, so even
+		// one split at the antimeridian clips correctly.
+		return nil
 	case loc.Near != nil && !stopBufferClip:
 		// The circle's half width in longitude, on a sphere. A circle that
 		// reaches a pole spans every longitude.

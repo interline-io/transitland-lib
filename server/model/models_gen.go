@@ -224,14 +224,16 @@ type CensusDatasetGeographyFilter struct {
 
 // Search options for census geographies
 //
-// A query area (`bbox`, or `within` when no bbox is given) composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. `near` does not compose and takes effect only when no other filter applies.
+// The query area is the first of `bbox`, `within` and `geography_ids` that is set. It composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. `near` does not compose and takes effect only when no other filter applies.
 //
-// Each geography appears once in the result set, and its `intersection_area` and `intersection_geometry` cover its whole overlap with the search area, even where the search area has several separate parts. A search area that crosses the antimeridian returns an error.
+// Each geography appears once in the result set, and its `intersection_area` and `intersection_geometry` cover its whole overlap with the search area, even where the search area has several separate parts. A `bbox`, `within` polygon or `near` circle that crosses the antimeridian returns an error.
 type CensusDatasetGeographyLocationFilter struct {
 	// Search within this bounding box
 	Bbox *BoundingBox `json:"bbox,omitempty"`
 	// Search within this geographic polygon
 	Within *tt.Polygon `json:"within,omitempty"`
+	// Search within the union of the `CensusGeography` entities with these integer IDs
+	GeographyIds []int `json:"geography_ids,omitempty"`
 	// Search within specified radius of a point
 	Near *PointRadius `json:"near,omitempty"`
 	// Focus search on this point; results will be sorted by distance

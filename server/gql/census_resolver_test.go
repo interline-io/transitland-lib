@@ -26,6 +26,16 @@ func TestCensusResolver(t *testing.T) {
 	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'MCAR'`).Scan(&bartMcarStopId); err != nil {
 		t.Errorf("could not get stop id for test: %s", err.Error())
 	}
+	geographyIdFor := func(geoid string) int {
+		id := 0
+		if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = $1`, geoid).Scan(&id); err != nil {
+			t.Errorf("could not get geography id for %s: %s", geoid, err.Error())
+		}
+		return id
+	}
+	alamedaCountyId := geographyIdFor("0500000US06001")
+	kingCountyId := geographyIdFor("0500000US53033")
+	ftvlTractId := geographyIdFor("1400000US06001406100") // Contains the FTVL stop
 
 	// Search areas with more vertices than the finder intersects whole, so
 	// they are subdivided: a 600-vertex circle inside Alameda County, and the
@@ -585,6 +595,123 @@ func TestCensusResolver(t *testing.T) {
 				"near":     hw{"lon": -122.270, "lat": 37.805, "radius": 1000.0},
 			},
 			expect: `{"census_datasets":[{"name":"tiger2024","geographies":[{"geoid":"1400000US06001406100","name":"4061"}]}]}`,
+		},
+		{
+			// Two separate tracts are both fully covered, and the neighbors
+			// that only share a boundary get no area.
+			name:  "geography ids - tract",
+			query: `query($ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{geography_ids:$ids}}) { geoid geometry_area intersection_area }} }`,
+			vars:  hw{"ids": []int{ftvlTractId, geographyId}},
+			f: func(t *testing.T, jj string) {
+				covered := map[string]bool{}
+				for _, v := range gjson.Get(jj, "census_datasets.0.geographies").Array() {
+					geoid := v.Get("geoid").String()
+					if geoid == "1400000US06001406100" || geoid == "1400000US06001403000" {
+						covered[geoid] = true
+						assert.InDelta(t, v.Get("geometry_area").Float(), v.Get("intersection_area").Float(), 0.01, "expected %s fully covered", geoid)
+					} else {
+						assert.Less(t, v.Get("intersection_area").Float(), 1.0, "expected no area for neighbor %s", geoid)
+					}
+				}
+				assert.Len(t, covered, 2, "expected both tracts")
+			},
+		},
+		{
+			// Overlapping geographies are merged: the county and a tract
+			// inside it cover the county once.
+			name:  "geography ids overlapping - county",
+			query: `query($ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "county", location:{geography_ids:$ids}}) { geoid geometry_area intersection_area }} }`,
+			vars:  hw{"ids": []int{alamedaCountyId, ftvlTractId}},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					countyArea,
+					countyArea,
+				)
+			},
+		},
+		{
+			// The county contains the whole FTVL buffer, so the result matches
+			// the stop-buffer-only case.
+			name:  "combined geography ids and stop buffer - tract",
+			query: `query($ids:[Int!], $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "tract", location:{geography_ids:$ids, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { name geoid geometry_area intersection_area }} }`,
+			vars: hw{
+				"ids":      []int{alamedaCountyId},
+				"stop_ids": []int{bartFtvlStopId},
+			},
+			f: func(t *testing.T, jj string) {
+				testIntersectionArea(
+					t,
+					gjson.Get(jj, "census_datasets.0.geographies").Array(),
+					1,
+					1918913.384123061,
+					31235.844686623343,
+				)
+			},
+		},
+		{
+			// The tract holding the stop matches, and a tract away from the
+			// buffer leaves nothing to search. Dropping either filter would
+			// return a tract for both.
+			name:  "combined geography ids and stop buffer disjoint - tract",
+			query: `query($inside:[Int!], $outside:[Int!], $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { inside: geographies(where:{layer: "tract", location:{geography_ids:$inside, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { geoid } outside: geographies(where:{layer: "tract", location:{geography_ids:$outside, stop_buffer:{stop_ids:$stop_ids, radius:100}}}) { geoid } } }`,
+			vars: hw{
+				"inside":   []int{ftvlTractId},
+				"outside":  []int{geographyId},
+				"stop_ids": []int{bartFtvlStopId},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Equal(t, []string{"1400000US06001406100"}, astr(gjson.Get(jj, "census_datasets.0.inside.#.geoid").Array()))
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.outside").Array(), "disjoint clip must match no geographies")
+			},
+		},
+		{
+			// Radius 0 matches the stop's tract only when the stop is inside
+			// the named geographies.
+			name:  "combined geography ids and stop buffer radius 0 - tract",
+			query: `query($inside:[Int!], $outside:[Int!], $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { inside: geographies(where:{layer: "tract", location:{geography_ids:$inside, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { geoid } outside: geographies(where:{layer: "tract", location:{geography_ids:$outside, stop_buffer:{stop_ids:$stop_ids, radius:0}}}) { geoid } } }`,
+			vars: hw{
+				"inside":   []int{alamedaCountyId},
+				"outside":  []int{geographyId},
+				"stop_ids": []int{bartFtvlStopId},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Equal(t, []string{"1400000US06001406100"}, astr(gjson.Get(jj, "census_datasets.0.inside.#.geoid").Array()))
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.outside").Array(), "stop outside the geographies must not match")
+			},
+		},
+		{
+			// An id that names no geography matches nothing, and is ignored
+			// beside one that does.
+			name:  "geography ids unknown - county",
+			query: `query($known:[Int!], $unknown:[Int!]) { census_datasets(where:{name:"tiger2024"}) { known: geographies(where:{layer: "county", location:{geography_ids:$known}}) { geoid } unknown: geographies(where:{layer: "county", location:{geography_ids:$unknown}}) { geoid } } }`,
+			vars: hw{
+				"known":   []int{alamedaCountyId, -1},
+				"unknown": []int{-1},
+			},
+			f: func(t *testing.T, jj string) {
+				assert.Equal(t, []string{"0500000US06001"}, astr(gjson.Get(jj, "census_datasets.0.known.#.geoid").Array()))
+				assert.Empty(t, gjson.Get(jj, "census_datasets.0.unknown").Array(), "unknown id must match no geographies")
+			},
+		},
+		{
+			// `within` takes precedence: the triangle around Alameda County
+			// wins over King County.
+			name:  "within and geography ids - county",
+			query: `query($feature:Polygon, $ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) {name geographies(where:{layer: "county", location:{within:$feature, geography_ids:$ids}}) { geoid }} }`,
+			vars: hw{
+				"ids": []int{kingCountyId},
+				"feature": hw{"type": "Polygon", "coordinates": [][][]float64{{
+					{-123.77489413290716, 38.794161309061735},
+					{-122.69431950796763, 35.52679604934255},
+					{-119.9104881819854, 37.991860068760204},
+					{-123.77489413290716, 38.794161309061735},
+				}}},
+			},
+			selector:     "census_datasets.0.geographies.#.geoid",
+			selectExpect: []string{"0500000US06001"},
 		},
 		{
 			name:  "agency intersection areas - county",
