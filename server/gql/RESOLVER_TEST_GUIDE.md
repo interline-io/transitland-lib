@@ -259,6 +259,8 @@ Use when testing error conditions like invalid input or permission failures.
 }
 ```
 
+To check the message as well, set `expectErrorContains` to text the error message must contain. It implies `expectError`.
+
 **When to use:**
 - Testing input validation (e.g., bbox too large)
 - Testing limit/offset errors

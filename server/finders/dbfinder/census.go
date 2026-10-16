@@ -503,7 +503,9 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		stopBufferClip := loc.StopBuffer != nil && len(loc.StopBuffer.StopIds) > 0
 		stopBufferRadius := 0.0
 		stopBufferExclude := false
-		if stopBufferClip {
+		// Read even without stop ids, so the exclude check below also covers an
+		// empty stop list.
+		if loc.StopBuffer != nil {
 			// Clamp ceiling of 1600m ~ 1 mile, a common US analysis radius.
 			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_600)
 			stopBufferExclude = loc.StopBuffer.Exclude != nil && *loc.StopBuffer.Exclude
@@ -576,28 +578,28 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			return q, errCensusStopBufferExclude
 		}
 
-		// Filter precedence: the query area composes with `stop_buffer` — clip
-		// intersection for a positive radius (difference with exclude),
-		// area-restricted point matching for radius 0. Otherwise the first
-		// filter present in this chain applies and the rest are ignored.
-		// Composition applies to the top-level query path only: in per-stop
-		// attribution mode (the internal by-entity loaders) a positive-radius
-		// stop_buffer takes precedence and the query area is not applied.
+		// Filter precedence: only the query area and `stop_buffer` compose.
+		//
+		// With a positive radius, the search area is the part of the query area
+		// inside the stop buffers, or with exclude, the part outside them. With
+		// radius 0, a geography matches when it contains a stop inside the query
+		// area. Otherwise the first filter present in this chain applies and the
+		// rest are ignored. In per-stop attribution mode (the internal by-entity
+		// loaders), a positive-radius stop_buffer takes precedence and the query
+		// area is not applied.
 		if areaClip && stopBufferClip && stopBufferRadius > 0 && !fields.perStopAttribution {
-			// Clip to the intersection of the query area and the stop-buffer
-			// union: census apportioned to where the two overlap, not either
-			// alone. Compose the same single-row clip CTEs the standalone
-			// branches use. Without this case the chain below would honor only
-			// the query area and ignore the buffer.
+			// Clip the query area to the stop-buffer union: their intersection, or
+			// with exclude, their difference. Without this case the chain below
+			// would honor only the buffer and ignore the query area.
 			qBufferUse = true
 			subdivide = true
 			q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
 			q = q.WithCTE(sq.CTE{Alias: "clip_stops", Materialized: true, Expression: stopUnionClipSelect()})
 			combine := "ST_Intersection(clip_area.buffer, clip_stops.buffer) as buffer"
 			if stopBufferExclude {
-				// With exclude, the query area minus the buffers. The union is NULL
-				// when no requested stop is visible, so it defaults to empty: hidden
-				// stops subtract nothing rather than nulling the difference.
+				// The union is NULL when no requested stop is visible. Default it to
+				// empty, so hidden stops subtract nothing rather than nulling the
+				// difference.
 				combine = "ST_Difference(clip_area.buffer, COALESCE(clip_stops.buffer, 'SRID=4326;GEOMETRYCOLLECTION EMPTY'::geometry)) as buffer"
 			}
 			qBuffer = sq.StatementBuilder.Select().
@@ -669,10 +671,10 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 				// Cut the search area into small pieces, so each geography is
 				// intersected with just the union of the pieces it touches.
 				//
-				// A bbox, a near circle and per-stop buffers are never cut.
-				// ST_Subdivide's planner estimate is 1,000 rows per input row,
-				// which multiplied across per-stop buffers or batched loaders
-				// makes Postgres JIT-compile otherwise fast queries.
+				// Per-stop buffers, and a bbox or near circle on its own, are
+				// never cut. ST_Subdivide's planner estimate is 1,000 rows per
+				// input row, which multiplied across per-stop buffers or batched
+				// loaders makes Postgres JIT-compile otherwise fast queries.
 				qBuffer = sq.StatementBuilder.
 					Select("clip.match_entity_id").
 					Column("ST_Segmentize(ST_Subdivide(ST_CollectionExtract(clip.buffer, 3), ?), ?) as buffer", censusClipMaxVertices, censusSegmentDegrees).

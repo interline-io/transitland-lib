@@ -37,6 +37,8 @@ type testcase struct {
 	expect      string
 	user        string
 	expectError bool
+	// expectErrorContains expects an error containing this text
+	expectErrorContains string
 	// sel allows multiple selector checks against the same query result
 	sel []testcaseSelector
 	// f is a custom test function for complex assertions
@@ -99,14 +101,18 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 	for k, v := range tc.vars {
 		opts = append(opts, client.Var(k, v))
 	}
+	expectError := tc.expectError || tc.expectErrorContains != ""
 	if err := c.Post(tc.query, &resp, opts...); err != nil {
-		if tc.expectError {
+		if expectError {
 			tested = true // expectError counts as a test
+			if tc.expectErrorContains != "" {
+				assert.ErrorContains(t, err, tc.expectErrorContains)
+			}
 		} else {
 			t.Error(err)
 			return
 		}
-	} else if tc.expectError {
+	} else if expectError {
 		t.Error("expected error")
 	}
 	jj := toJson(resp)

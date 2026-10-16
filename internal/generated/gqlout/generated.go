@@ -13787,7 +13787,7 @@ type CensusGeography {
   """
   When this geography was returned by a spatial query, the area of overlap between this geography and the search area, in square meters.
   Measured the same way as ` + "`" + `geometry_area` + "`" + `, so a geography inside the search area reports the same value for both.
-  Divide by ` + "`" + `geometry_area` + "`" + ` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate population served.
+  Divide by ` + "`" + `geometry_area` + "`" + ` to get the fraction of the geography covered by the search area, then apply that fraction to a population value to estimate the population inside the search area.
   """
   intersection_area: Float
 
@@ -14865,13 +14865,13 @@ input CensusDatasetGeographyLocationFilter {
   stop_buffer: StopBuffer
 }
 
-"""A buffer around a set of stops, used to search for census geographies that intersect any stop's buffer, or with ` + "`" + `exclude` + "`" + `, the parts of the query area outside every buffer"""
+"""A buffer around a set of stops. A census geography search matches the geographies that intersect any stop's buffer. With ` + "`" + `exclude` + "`" + `, the search area is instead the part of the query area outside every buffer."""
 input StopBuffer {
   "Stop integer IDs to buffer around"
   stop_ids: [Int!]
   "Buffer radius in meters around each stop"
   radius: Float
-  "Search the part of the query area outside every buffer, rather than inside them. Requires a query area and a positive ` + "`" + `radius` + "`" + `"
+  "Search the part of the query area outside the buffers, rather than inside them. Requires a query area and a positive ` + "`" + `radius` + "`" + `"
   exclude: Boolean
 }
 

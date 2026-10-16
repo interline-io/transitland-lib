@@ -15,10 +15,13 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// Rows from private feeds must not reach any loader under test.
+//
 // Flipping feed_states.public = false strips the only access path the default
-// empty PermFilter has, so every loader under test should go from returning rows
-// to returning none. If pfJoinCheckFv is missing from any loader, that loader
-// keeps returning rows and its subtest fails.
+// empty PermFilter has, so each loader should go from returning rows to
+// returning none. If pfJoinCheckFv is missing from any loader, that loader
+// keeps returning rows and its subtest fails. A census exclude search instead
+// stops subtracting the buffers of the hidden stops.
 func TestPermFilter_Negative(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
@@ -98,6 +101,22 @@ func TestPermFilter_Negative(t *testing.T) {
 				}
 				return len(gjson.Get(toJson(resp), path).Array()), nil
 			}
+		}
+
+		// An exclude search subtracts only the buffers of visible stops.
+		// excludeAreas returns the FTVL tract's area and its area outside the
+		// FTVL buffer.
+		ftvlTract := 0
+		if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001406100'`).Scan(&ftvlTract); err != nil {
+			t.Fatal(err)
+		}
+		excludeAreas := func(t *testing.T) (float64, float64) {
+			jj := postQuery(t, gqlClient, `query($ids:[Int!], $stop_ids:[Int!]) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{geography_ids:$ids, stop_buffer:{stop_ids:$stop_ids, radius:100, exclude:true}}}) { geoid geometry_area intersection_area } } }`, hw{"ids": []int{ftvlTract}, "stop_ids": []int{ftvl}})
+			tract := gjson.Get(jj, `census_datasets.0.geographies.#(geoid=="1400000US06001406100")`)
+			if !tract.Exists() {
+				t.Fatal("found no FTVL tract")
+			}
+			return tract.Get("geometry_area").Float(), tract.Get("intersection_area").Float()
 		}
 
 		checks := []struct {
@@ -181,6 +200,11 @@ func TestPermFilter_Negative(t *testing.T) {
 				t.Fatalf("%s: returned no rows while the feeds are public", c.name)
 			}
 		}
+		// Likewise, the exclude search has to subtract the buffer first.
+		geometryArea, outside := excludeAreas(t)
+		if outside > geometryArea-1 {
+			t.Fatal("CensusGeographiesByDatasetIDs stop_buffer exclude: subtracted no buffer while the feeds are public")
+		}
 
 		if _, err := cfg.Adapter.DBX().ExecContext(ctx, "update feed_states set public = false"); err != nil {
 			t.Fatal(err)
@@ -192,6 +216,10 @@ func TestPermFilter_Negative(t *testing.T) {
 				assert.Zero(t, n, "expected no rows once every feed is private")
 			})
 		}
+		t.Run("CensusGeographiesByDatasetIDs stop_buffer exclude", func(t *testing.T) {
+			_, outside := excludeAreas(t)
+			assert.InDelta(t, geometryArea, outside, 0.01, "expected the whole tract once every feed is private")
+		})
 	})
 }
 
