@@ -530,6 +530,7 @@ type ComplexityRoot struct {
 		File                  func(childComplexity int) int
 		Files                 func(childComplexity int, limit *int) int
 		Frequencies           func(childComplexity int, limit *int, after *int, where *model.FrequencyFilter) int
+		Geohashes             func(childComplexity int, precision *int) int
 		Geometry              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LatestCalendarDate    func(childComplexity int) int
@@ -582,6 +583,11 @@ type ComplexityRoot struct {
 		Size         func(childComplexity int) int
 		ValuesCount  func(childComplexity int) int
 		ValuesUnique func(childComplexity int) int
+	}
+
+	FeedVersionGeohash struct {
+		Geohash   func(childComplexity int) int
+		StopCount func(childComplexity int) int
 	}
 
 	FeedVersionGtfsImport struct {
@@ -1801,6 +1807,7 @@ type FeedVersionResolver interface {
 	Files(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedVersionFileInfo, error)
 	ServiceLevels(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.FeedVersionServiceLevelFilter) ([]*model.FeedVersionServiceLevel, error)
 	ServiceWindow(ctx context.Context, obj *model.FeedVersion) (*model.FeedVersionServiceWindow, error)
+	Geohashes(ctx context.Context, obj *model.FeedVersion, precision *int) ([]*model.FeedVersionGeohash, error)
 	Agencies(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.AgencyFilter) ([]*model.Agency, error)
 	Routes(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.RouteFilter) ([]*model.Route, error)
 	Stops(ctx context.Context, obj *model.FeedVersion, limit *int, where *model.StopFilter) ([]*model.Stop, error)
@@ -4305,6 +4312,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersion.Frequencies(childComplexity, args["limit"].(*int), args["after"].(*int), args["where"].(*model.FrequencyFilter)), true
+	case "FeedVersion.geohashes":
+		if e.ComplexityRoot.FeedVersion.Geohashes == nil {
+			break
+		}
+
+		args, err := ec.field_FeedVersion_geohashes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.FeedVersion.Geohashes(childComplexity, args["precision"].(*int)), true
 	case "FeedVersion.geometry":
 		if e.ComplexityRoot.FeedVersion.Geometry == nil {
 			break
@@ -4661,6 +4679,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.FeedVersionFileInfo.ValuesUnique(childComplexity), true
+
+	case "FeedVersionGeohash.geohash":
+		if e.ComplexityRoot.FeedVersionGeohash.Geohash == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FeedVersionGeohash.Geohash(childComplexity), true
+	case "FeedVersionGeohash.stop_count":
+		if e.ComplexityRoot.FeedVersionGeohash.StopCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FeedVersionGeohash.StopCount(childComplexity), true
 
 	case "FeedVersionGtfsImport.created_at":
 		if e.ComplexityRoot.FeedVersionGtfsImport.CreatedAt == nil {
@@ -11451,6 +11482,11 @@ type FeedVersion {
   
   "Summary details on service dates for this feed version"
   service_window: FeedVersionServiceWindow
+
+  """
+  Geohash cells containing this feed version's stops, with the number of stops in each; a fingerprint of where the feed serves, for comparing two feed versions. Computed when the feed version is fetched, at precisions 3 and 5; other precisions return no cells.
+  """
+  geohashes(precision: Int = 5): [FeedVersionGeohash!]!
   
   "Agencies associated with this feed version, if imported"
   agencies(limit: Int, where: AgencyFilter): [Agency!]!
@@ -11618,6 +11654,14 @@ type FeedVersionServiceWindow {
   fallback_week: Date
   "Default timezone"
   default_timezone: String
+}
+
+"""A geohash cell containing stops of a feed version"""
+type FeedVersionGeohash {
+  "Geohash of the cell [example:9q8yy]"
+  geohash: String!
+  "Number of stops in the cell; zero when the cell is reached only by a GTFS-Flex location's bounding box"
+  stop_count: Int!
 }
 
 """Weekly service summary: total seconds of scheduled service for each day-of-week within a single week of a feed version"""
@@ -16033,6 +16077,8 @@ func (ec *executionContext) childFields_FeedVersion(ctx context.Context, field g
 		return ec.fieldContext_FeedVersion_service_levels(ctx, field)
 	case "service_window":
 		return ec.fieldContext_FeedVersion_service_window(ctx, field)
+	case "geohashes":
+		return ec.fieldContext_FeedVersion_geohashes(ctx, field)
 	case "agencies":
 		return ec.fieldContext_FeedVersion_agencies(ctx, field)
 	case "routes":
@@ -16145,6 +16191,16 @@ func (ec *executionContext) childFields_FeedVersionFileInfo(ctx context.Context,
 		return ec.fieldContext_FeedVersionFileInfo_values_unique(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type FeedVersionFileInfo", field.Name)
+}
+
+func (ec *executionContext) childFields_FeedVersionGeohash(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "geohash":
+		return ec.fieldContext_FeedVersionGeohash_geohash(ctx, field)
+	case "stop_count":
+		return ec.fieldContext_FeedVersionGeohash_stop_count(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FeedVersionGeohash", field.Name)
 }
 
 func (ec *executionContext) childFields_FeedVersionGtfsImport(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -19012,6 +19068,20 @@ func (ec *executionContext) field_FeedVersion_frequencies_args(ctx context.Conte
 		return nil, err
 	}
 	args["where"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_FeedVersion_geohashes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "precision",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["precision"] = arg0
 	return args, nil
 }
 
@@ -29847,6 +29917,50 @@ func (ec *executionContext) fieldContext_FeedVersion_service_window(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _FeedVersion_geohashes(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersion_geohashes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.FeedVersion().Geohashes(ctx, obj, fc.Args["precision"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.FeedVersionGeohash) graphql.Marshaler {
+			return ec.marshalNFeedVersionGeohash2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionGeohashᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersion_geohashes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "FeedVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FeedVersionGeohash(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_FeedVersion_geohashes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _FeedVersion_agencies(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersion) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -31572,6 +31686,52 @@ func (ec *executionContext) _FeedVersionFileInfo_values_unique(ctx context.Conte
 }
 func (ec *executionContext) fieldContext_FeedVersionFileInfo_values_unique(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("FeedVersionFileInfo", field, false, false, errors.New("field of type Counts does not have child fields"))
+}
+
+func (ec *executionContext) _FeedVersionGeohash_geohash(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionGeohash) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersionGeohash_geohash(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Geohash, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersionGeohash_geohash(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FeedVersionGeohash", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _FeedVersionGeohash_stop_count(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionGeohash) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FeedVersionGeohash_stop_count(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StopCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FeedVersionGeohash_stop_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FeedVersionGeohash", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _FeedVersionGtfsImport_id(ctx context.Context, field graphql.CollectedField, obj *model.FeedVersionGtfsImport) (ret graphql.Marshaler) {
@@ -62171,6 +62331,42 @@ func (ec *executionContext) _FeedVersion(ctx context.Context, sel ast.SelectionS
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "geohashes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._FeedVersion_geohashes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "agencies":
 			field := field
 
@@ -63474,6 +63670,50 @@ func (ec *executionContext) _FeedVersionFileInfo(ctx context.Context, sel ast.Se
 			}
 		case "values_unique":
 			out.Values[i] = ec._FeedVersionFileInfo_values_unique(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var feedVersionGeohashImplementors = []string{"FeedVersionGeohash"}
+
+func (ec *executionContext) _FeedVersionGeohash(ctx context.Context, sel ast.SelectionSet, obj *model.FeedVersionGeohash) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, feedVersionGeohashImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FeedVersionGeohash")
+		case "geohash":
+			out.Values[i] = ec._FeedVersionGeohash_geohash(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "stop_count":
+			out.Values[i] = ec._FeedVersionGeohash_stop_count(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -75016,6 +75256,32 @@ func (ec *executionContext) marshalNFeedVersionFileInfo2ᚖgithubᚗcomᚋinterl
 		return graphql.Null
 	}
 	return ec._FeedVersionFileInfo(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNFeedVersionGeohash2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionGeohashᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FeedVersionGeohash) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNFeedVersionGeohash2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionGeohash(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNFeedVersionGeohash2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionGeohash(ctx context.Context, sel ast.SelectionSet, v *model.FeedVersionGeohash) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._FeedVersionGeohash(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNFeedVersionImportResult2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFeedVersionImportResult(ctx context.Context, sel ast.SelectionSet, v model.FeedVersionImportResult) graphql.Marshaler {

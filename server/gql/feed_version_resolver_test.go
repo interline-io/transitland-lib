@@ -59,6 +59,53 @@ func TestFeedVersionResolver(t *testing.T) {
 			expect: `{"feed_versions":[{"service_window":{"default_timezone":"America/Los_Angeles","earliest_calendar_date":"2017-10-02","fallback_week":"2018-06-18","feed_end_date":null,"feed_start_date":null,"latest_calendar_date":"2019-10-06"}}]}`,
 		},
 		{
+			name:   "geohashes precision 3",
+			query:  `query($feed_version_sha1: String!) {  feed_versions(where:{sha1:$feed_version_sha1}) {geohashes(precision: 3) {geohash stop_count}} }`,
+			vars:   hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"}, // BART
+			expect: `{"feed_versions":[{"geohashes":[{"geohash":"9q8","stop_count":15},{"geohash":"9q9","stop_count":30},{"geohash":"9qc","stop_count":5}]}]}`,
+		},
+		{
+			name:  "geohashes default precision",
+			query: `query($feed_version_sha1: String!) {  feed_versions(where:{sha1:$feed_version_sha1}) {geohashes {geohash stop_count}} }`,
+			vars:  hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"}, // BART
+			f: func(t *testing.T, jj string) {
+				cells := gjson.Get(jj, "feed_versions.0.geohashes").Array()
+				assert.Len(t, cells, 33)
+				stops := int64(0)
+				for _, cell := range cells {
+					assert.Len(t, cell.Get("geohash").String(), 5)
+					stops += cell.Get("stop_count").Int()
+				}
+				assert.Equal(t, int64(50), stops)
+				assert.Equal(t, "9q8vy", cells[0].Get("geohash").String())
+			},
+		},
+		{
+			name:  "geohashes batched across feed versions",
+			query: `query {  feed_versions(limit: 100) {sha1 geohashes {geohash}} }`,
+			f: func(t *testing.T, jj string) {
+				expect := map[string]int{
+					"e535eb2b3b9ac3ef15d82c56575e914575e732e0": 33,
+					"d2813c293bcfd7a97dde599527ae6c62c98e66c6": 21,
+					"c969427f56d3a645195dd8365cde6d7feae7e99b": 56,
+					"43e2278aa272879c79460582152b04e7487f0493": 8,
+				}
+				for _, fv := range gjson.Get(jj, "feed_versions").Array() {
+					if n, ok := expect[fv.Get("sha1").String()]; ok {
+						assert.Len(t, fv.Get("geohashes").Array(), n, fv.Get("sha1").String())
+						delete(expect, fv.Get("sha1").String())
+					}
+				}
+				assert.Empty(t, expect, "feed versions missing from the result")
+			},
+		},
+		{
+			name:   "geohashes precision not stored",
+			query:  `query($feed_version_sha1: String!) {  feed_versions(where:{sha1:$feed_version_sha1}) {geohashes(precision: 7) {geohash}} }`,
+			vars:   hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"}, // BART
+			expect: `{"feed_versions":[{"geohashes":[]}]}`,
+		},
+		{
 			name:   "feed_infos",
 			query:  `query($feed_version_sha1: String!) {  feed_versions(where:{sha1:$feed_version_sha1}) {feed_infos {feed_publisher_name feed_publisher_url feed_lang feed_version feed_start_date feed_end_date}} }`,
 			vars:   hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"}, // check BART instead

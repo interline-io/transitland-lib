@@ -84,6 +84,7 @@ type Loaders struct {
 	FeedVersionsByFeedIDs                                         *dataloader.Loader[feedVersionLoaderParam, []*model.FeedVersion]
 	FeedVersionsByIDs                                             *dataloader.Loader[int, *model.FeedVersion]
 	FeedVersionServiceLevelsByFeedVersionIDs                      *dataloader.Loader[feedVersionServiceLevelLoaderParam, []*model.FeedVersionServiceLevel]
+	FeedVersionGeohashesByFeedVersionIDs                          *dataloader.Loader[feedVersionGeohashLoaderParam, []*model.FeedVersionGeohash]
 	FeedVersionServiceWindowByFeedVersionIDs                      *dataloader.Loader[int, *model.FeedVersionServiceWindow]
 	FlexStopTimesByTripIDs                                        *dataloader.Loader[tripStopTimeLoaderParam, []*model.FlexStopTime]
 	FlexStopTimesByStopIDs                                        *dataloader.Loader[stopTimeLoaderParam, []*model.FlexStopTime]
@@ -356,6 +357,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 
+		FeedVersionGeohashesByFeedVersionIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.FeedVersionGeohashesByFeedVersionIDs,
+			func(p feedVersionGeohashLoaderParam) (int, int, *int) {
+				return p.FeedVersionID, p.Precision, p.Limit
+			},
+		),
 		FeedVersionServiceWindowByFeedVersionIDs: withWaitAndCapacity(waitTime, maxBatch, dbf.FeedVersionServiceWindowByFeedVersionIDs),
 		FlexStopTimesByTripIDs: withWaitAndCapacityGroup(waitTime, stopTimeBatchSize, dbf.FlexStopTimesByTripIDs,
 			func(p tripStopTimeLoaderParam) (model.FVPair, *model.TripStopTimeFilter, *int) {

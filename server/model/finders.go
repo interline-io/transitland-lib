@@ -112,6 +112,7 @@ type EntityLoader interface {
 	FeedVersionsByFeedIDs(context.Context, *int, *FeedVersionFilter, []int) ([][]*FeedVersion, error)
 	FeedVersionsByIDs(context.Context, []int) ([]*FeedVersion, []error)
 	FeedVersionServiceLevelsByFeedVersionIDs(context.Context, *int, *FeedVersionServiceLevelFilter, []int) ([][]*FeedVersionServiceLevel, error)
+	FeedVersionGeohashesByFeedVersionIDs(context.Context, *int, int, []int) ([][]*FeedVersionGeohash, error)
 	FeedVersionServiceWindowByFeedVersionIDs(context.Context, []int) ([]*FeedVersionServiceWindow, []error)
 	FlexStopTimesByStopIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)
 	FlexStopTimesByLocationIDs(context.Context, *int, *StopTimeFilter, []FVPair) ([][]*FlexStopTime, error)

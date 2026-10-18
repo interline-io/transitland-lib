@@ -465,6 +465,11 @@ type FeedVersion {
   
   "Summary details on service dates for this feed version"
   service_window: FeedVersionServiceWindow
+
+  """
+  Geohash cells containing this feed version's stops, with the number of stops in each; a fingerprint of where the feed serves, for comparing two feed versions. Computed when the feed version is fetched, at precisions 3 and 5; other precisions return no cells.
+  """
+  geohashes(precision: Int = 5): [FeedVersionGeohash!]!
   
   "Agencies associated with this feed version, if imported"
   agencies(limit: Int, where: AgencyFilter): [Agency!]!
@@ -632,6 +637,14 @@ type FeedVersionServiceWindow {
   fallback_week: Date
   "Default timezone"
   default_timezone: String
+}
+
+"""A geohash cell containing stops of a feed version"""
+type FeedVersionGeohash {
+  "Geohash of the cell [example:9q8yy]"
+  geohash: String!
+  "Number of stops in the cell; zero when the cell is reached only by a GTFS-Flex location's bounding box"
+  stop_count: Int!
 }
 
 """Weekly service summary: total seconds of scheduled service for each day-of-week within a single week of a feed version"""
