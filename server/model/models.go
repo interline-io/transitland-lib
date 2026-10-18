@@ -216,6 +216,7 @@ type StopTime struct {
 	GtfsTripID       string            // internal: the trip's GTFS trip_id, for matching realtime
 	RunStart         tt.Seconds        `db:"run_start"`  // internal: the start of the run, for an instance of a frequency-based trip
 	RunOffset        tt.Int            `db:"run_offset"` // internal: the seconds the run's times are shifted from the trip's stop times, for such an instance
+	RouteID          tt.Int            `db:"route_id"`   // internal: the trip's route, for a filter's route_limit
 	RTTrip           *Trip             // internal: the trip of a stop time added in real time
 	RTStopTimeUpdate *RTStopTimeUpdate // internal
 	gtfs.StopTime

@@ -16,6 +16,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -233,15 +234,7 @@ func TestStopDeparturesSelect_RouteLimit(t *testing.T) {
 	var fvid, stopID int
 	require.NoError(t, db.Get(&fvid, "select feed_versions.id from feed_versions join current_feeds on current_feeds.id = feed_versions.feed_id join feed_states on feed_states.feed_version_id = feed_versions.id where current_feeds.onestop_id = $1", "HA"))
 	require.NoError(t, db.Get(&stopID, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "6968"))
-	var trips []struct {
-		ID      int `db:"id"`
-		RouteID int `db:"route_id"`
-	}
-	require.NoError(t, db.Select(&trips, "select id, route_id from gtfs_trips where feed_version_id = $1", fvid))
-	tripRoutes := map[int]int{}
-	for _, trip := range trips {
-		tripRoutes[trip.ID] = trip.RouteID
-	}
+	tripRoutes := tripRouteIDs(t, db, fvid)
 
 	date := tt.NewDate(time.Date(2018, 5, 29, 0, 0, 0, 0, time.UTC))
 	queries := map[string]func(routeLimit *int) sq.SelectBuilder{
@@ -278,6 +271,104 @@ func TestStopDeparturesSelect_RouteLimit(t *testing.T) {
 			assert.Equal(t, expect, routeDepartures(t, q(ptr(2))))
 		})
 	}
+}
+
+// RouteLimit holds across the service days a window spans: a stop's departures
+// keep each route's first stop times by when they happen, not each service
+// day's first.
+func TestStopTimesByStopIDs_RouteLimit(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	db := testutil.MustOpenTestDB(t)
+	f := NewFinder(db)
+	// BART's MacArthur, with trips after midnight
+	var fvid, stopID int
+	require.NoError(t, db.Get(&fvid, "select feed_versions.id from feed_versions join current_feeds on current_feeds.id = feed_versions.feed_id join feed_states on feed_states.feed_version_id = feed_versions.id where current_feeds.onestop_id = $1", "BA"))
+	require.NoError(t, db.Get(&stopID, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "MCAR_S"))
+	tripRoutes := tripRouteIDs(t, db, fvid)
+
+	windows := []struct {
+		name       string
+		date       tt.Date
+		start, end int
+	}{
+		{"into the next service day", tt.NewDate(time.Date(2018, 5, 30, 0, 0, 0, 0, time.UTC)), 23 * 3600, 30 * 3600},
+		{"back into the previous service day", tt.NewDate(time.Date(2018, 5, 31, 0, 0, 0, 0, time.UTC)), 15 * 60, 6 * 3600},
+	}
+	type departure struct {
+		serviceDate   string
+		departureTime string
+		tripID        int
+	}
+	departureOf := func(st *model.StopTime) departure {
+		return departure{st.ServiceDate.Format(time.DateOnly), st.DepartureTime.String(), st.TripID.Int()}
+	}
+	when := func(st *model.StopTime) int64 {
+		return st.ServiceDate.Val.Unix() + int64(st.DepartureTime.Int())
+	}
+	for _, materialized := range []bool{false, true} {
+		ctx := model.WithConfig(context.Background(), model.Config{UseMaterializedDepartures: materialized})
+		for _, w := range windows {
+			t.Run(fmt.Sprintf("%s, materialized=%t", w.name, materialized), func(t *testing.T) {
+				find := func(routeLimit *int) []*model.StopTime {
+					date := w.date
+					where := &model.StopTimeFilter{Date: &date, StartTime: ptr(w.start), EndTime: ptr(w.end), RouteLimit: routeLimit}
+					sts, err := f.StopTimesByStopIDs(ctx, nil, where, []model.FVPair{{FeedVersionID: fvid, EntityID: stopID}})
+					require.NoError(t, err)
+					return sts[0]
+				}
+				// Each route's earliest departure, and the service days its departures fall on
+				earliest := map[int]*model.StopTime{}
+				serviceDates := map[int]map[string]bool{}
+				for _, st := range find(nil) {
+					route := tripRoutes[st.TripID.Int()]
+					if e, ok := earliest[route]; !ok || when(st) < when(e) {
+						earliest[route] = st
+					}
+					if serviceDates[route] == nil {
+						serviceDates[route] = map[string]bool{}
+					}
+					serviceDates[route][st.ServiceDate.Format(time.DateOnly)] = true
+				}
+				// Some route departs on both service days, so a limit per service day returns it twice
+				spanning := 0
+				for _, dates := range serviceDates {
+					if len(dates) > 1 {
+						spanning++
+					}
+				}
+				require.Greater(t, spanning, 0)
+
+				expect := map[int]departure{}
+				for route, st := range earliest {
+					expect[route] = departureOf(st)
+				}
+				got := map[int]departure{}
+				for _, st := range find(ptr(1)) {
+					route := tripRoutes[st.TripID.Int()]
+					_, repeated := got[route]
+					assert.False(t, repeated, "route %d returned twice", route)
+					got[route] = departureOf(st)
+				}
+				assert.Equal(t, expect, got)
+			})
+		}
+	}
+}
+
+// tripRouteIDs maps each trip in a feed version to its route.
+func tripRouteIDs(t *testing.T, db *sqlx.DB, fvid int) map[int]int {
+	var trips []struct {
+		ID      int `db:"id"`
+		RouteID int `db:"route_id"`
+	}
+	require.NoError(t, db.Select(&trips, "select id, route_id from gtfs_trips where feed_version_id = $1", fvid))
+	ret := map[int]int{}
+	for _, trip := range trips {
+		ret[trip.ID] = trip.RouteID
+	}
+	return ret
 }
 
 // firstStopTimeDiff describes the first row where two sorted results differ.
