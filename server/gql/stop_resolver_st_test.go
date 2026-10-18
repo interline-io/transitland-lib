@@ -138,6 +138,25 @@ func TestStopResolver_StopTimes(t *testing.T) {
 			selector:     "stops.0.departures.#.departure_time",
 			selectExpect: []string{"10:05:00", "10:20:00", "10:35:00", "10:50:00"},
 		},
+		// route_limit: the two routes' departures alternate in this window
+		{
+			name:         "departure route_limit 1",
+			query:        `query{ stops(where:{stop_id:"RICH"}) { departures(where:{route_limit: 1, service_date:"2018-05-30", start_time: 36000, end_time: 39600}) {departure_time}}}`,
+			selector:     "stops.0.departures.#.departure_time",
+			selectExpect: []string{"10:05:00", "10:12:00"},
+		},
+		{
+			name:         "departure route_limit 2",
+			query:        `query{ stops(where:{stop_id:"RICH"}) { departures(where:{route_limit: 2, service_date:"2018-05-30", start_time: 36000, end_time: 39600}) {departure_time}}}`,
+			selector:     "stops.0.departures.#.departure_time",
+			selectExpect: []string{"10:05:00", "10:12:00", "10:20:00", "10:27:00"},
+		},
+		{
+			name:         "departure route_limit, limit still caps the stop",
+			query:        `query{ stops(where:{stop_id:"RICH"}) { departures(limit: 3, where:{route_limit: 2, service_date:"2018-05-30", start_time: 36000, end_time: 39600}) {departure_time}}}`,
+			selector:     "stops.0.departures.#.departure_time",
+			selectExpect: []string{"10:05:00", "10:12:00", "10:20:00"},
+		},
 	}
 	for _, materialized := range []bool{false, true} {
 		t.Run(fmt.Sprintf("UseMaterializedDepartures=%t", materialized), func(t *testing.T) {

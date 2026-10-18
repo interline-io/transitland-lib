@@ -237,6 +237,14 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		serviceDate = where.ServiceDate.Val
 	}
 
+	// Each entity's departures in order, for firstDepartures, or with RouteLimit
+	// each route's departures at each entity. A stop time names exactly one
+	// stop, location or location group.
+	entityRank := "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts.departure_time_freq, gtfs_trips.id) AS entity_rank"
+	if where != nil && where.RouteLimit != nil {
+		entityRank = "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id, gtfs_trips.route_id order by sts.departure_time_freq, gtfs_trips.id) AS entity_rank"
+	}
+
 	// Build main query with CTEs
 	q := sq.StatementBuilder.Select(
 		"gtfs_trips.journey_pattern_id",
@@ -267,9 +275,7 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 		"sts.end_pickup_drop_off_window",
 		"sts.pickup_booking_rule_id",
 		"sts.drop_off_booking_rule_id",
-		// Each entity's departures in order, for firstDepartures. A stop time
-		// names exactly one stop, location or location group.
-		"row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts.departure_time_freq, gtfs_trips.id) AS entity_rank",
+		entityRank,
 	).
 		WithCTE(activeServicesCTE(fvid, serviceDate)).
 		From("gtfs_trips").
@@ -375,6 +381,11 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 			q = q.Where(sq.LtOrEq{"sts.departure_time_freq": *where.EndTime})
 		}
 	}
+	// The ranks count each route's departures; the loader still caps each
+	// entity's total at limit.
+	if where != nil && where.RouteLimit != nil {
+		limit = where.RouteLimit
+	}
 	return firstDepartures(q, limit)
 }
 
@@ -409,6 +420,14 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		}
 	}
 
+	// Each entity's departures in order, for firstDepartures, or with RouteLimit
+	// each route's departures at each entity. A stop time names exactly one
+	// stop, location or location group.
+	entityRank := "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts_freq.departure_time_freq, gtfs_trips.id) AS entity_rank"
+	if where != nil && where.RouteLimit != nil {
+		entityRank = "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id, gtfs_trips.route_id order by sts_freq.departure_time_freq, gtfs_trips.id) AS entity_rank"
+	}
+
 	// Build main query with CTEs
 	q := sq.StatementBuilder.Select(
 		"gtfs_trips.journey_pattern_id",
@@ -439,9 +458,7 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 		"sts.end_pickup_drop_off_window",
 		"sts.pickup_booking_rule_id",
 		"sts.drop_off_booking_rule_id",
-		// Each entity's departures in order, for firstDepartures. A stop time
-		// names exactly one stop, location or location group.
-		"row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts_freq.departure_time_freq, gtfs_trips.id) AS entity_rank",
+		entityRank,
 	).
 		WithCTE(activeServicesCTE(fvid, serviceDate)).
 		WithCTE(sq.CTE{Alias: "at_entity", Materialized: true, Expression: atEntity}).
@@ -541,12 +558,16 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 			q = q.Where(sq.LtOrEq{"sts_freq.departure_time_freq": *where.EndTime})
 		}
 	}
+	// The ranks count each route's departures; the loader still caps each
+	// entity's total at limit.
+	if where != nil && where.RouteLimit != nil {
+		limit = where.RouteLimit
+	}
 	return firstDepartures(q, limit)
 }
 
-// firstDepartures keeps each entity's first limit rows of a departures query,
-// numbered by its entity_rank column, so frequency runs past the limit never
-// leave the database.
+// firstDepartures keeps the rows of a departures query whose entity_rank is
+// within limit, so frequency runs past the limit never leave the database.
 func firstDepartures(q sq.SelectBuilder, limit *int) sq.SelectBuilder {
 	return sq.StatementBuilder.
 		Select("departures.*").

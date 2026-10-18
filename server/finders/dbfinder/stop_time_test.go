@@ -78,6 +78,9 @@ func TestStopDeparturesMaterializedSelect(t *testing.T) {
 						departureFilter{"time window", func() *model.StopTimeFilter {
 							return &model.StopTimeFilter{ServiceDate: &date, StartTime: ptr(7 * 3600), EndTime: ptr(10 * 3600)}
 						}},
+						departureFilter{"route limit", func() *model.StopTimeFilter {
+							return &model.StopTimeFilter{ServiceDate: &date, RouteLimit: ptr(1)}
+						}},
 					)
 					if len(routeOnestopIds) > 0 {
 						filters = append(filters,
@@ -214,6 +217,65 @@ func TestStopDeparturesSelect_Limit(t *testing.T) {
 				stop2: {"05:10:00", "07:10:00", "07:40:00"},
 			}
 			assert.Equal(t, expect, departureTimes(t, q(ptr(3))))
+		})
+	}
+}
+
+// With RouteLimit, both departures queries keep each route's first stop times
+// at a stop, rather than the stop's first.
+func TestStopDeparturesSelect_RouteLimit(t *testing.T) {
+	if a, ok := testutil.CheckTestDB(); !ok {
+		t.Skip(a)
+	}
+	ctx := context.Background()
+	db := testutil.MustOpenTestDB(t)
+	// HART's Marion Transit Center, which many routes serve
+	var fvid, stopID int
+	require.NoError(t, db.Get(&fvid, "select feed_versions.id from feed_versions join current_feeds on current_feeds.id = feed_versions.feed_id join feed_states on feed_states.feed_version_id = feed_versions.id where current_feeds.onestop_id = $1", "HA"))
+	require.NoError(t, db.Get(&stopID, "select id from gtfs_stops where feed_version_id = $1 and stop_id = $2", fvid, "6968"))
+	var trips []struct {
+		ID      int `db:"id"`
+		RouteID int `db:"route_id"`
+	}
+	require.NoError(t, db.Select(&trips, "select id, route_id from gtfs_trips where feed_version_id = $1", fvid))
+	tripRoutes := map[int]int{}
+	for _, trip := range trips {
+		tripRoutes[trip.ID] = trip.RouteID
+	}
+
+	date := tt.NewDate(time.Date(2018, 5, 29, 0, 0, 0, 0, time.UTC))
+	queries := map[string]func(routeLimit *int) sq.SelectBuilder{
+		"departures": func(routeLimit *int) sq.SelectBuilder {
+			return stopDeparturesSelect(fvid, []int{stopID}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date, RouteLimit: routeLimit})
+		},
+		"materialized departures": func(routeLimit *int) sq.SelectBuilder {
+			return stopDeparturesMaterializedSelect(fvid, []int{stopID}, stopTimeEntityStop, nil, &model.StopTimeFilter{ServiceDate: &date, RouteLimit: routeLimit})
+		},
+	}
+	// Each route's departure times, in order
+	routeDepartures := func(t *testing.T, q sq.SelectBuilder) map[int][]string {
+		var sts []*model.StopTime
+		require.NoError(t, dbutil.Select(ctx, db, q, &sts))
+		ret := map[int][]string{}
+		for _, st := range sts {
+			route := tripRoutes[st.TripID.Int()]
+			ret[route] = append(ret[route], st.DepartureTime.String())
+		}
+		return ret
+	}
+	for name, q := range queries {
+		t.Run(name, func(t *testing.T) {
+			all := routeDepartures(t, q(nil))
+			expect := map[int][]string{}
+			trimmed := 0
+			for route, departures := range all {
+				expect[route] = departures[:min(2, len(departures))]
+				trimmed += len(departures) - len(expect[route])
+			}
+			// Several routes, with departures past the route limit to leave out
+			require.Greater(t, len(all), 1)
+			require.Greater(t, trimmed, 0)
+			assert.Equal(t, expect, routeDepartures(t, q(ptr(2))))
 		})
 	}
 }
