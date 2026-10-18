@@ -3707,6 +3707,8 @@ input StopTimeFilter {
   exclude_first: Boolean
   "Exclude the last stop_time of each trip"
   exclude_last: Boolean
+  "At most this many stop times for each route; `limit` still caps the stop's total"
+  route_limit: Int
 }
 
 """Search options for stop times within a single trip (no date filter applies, since the parent trip determines the schedule)"""

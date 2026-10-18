@@ -14693,6 +14693,8 @@ input StopTimeFilter {
   exclude_first: Boolean
   "Exclude the last stop_time of each trip"
   exclude_last: Boolean
+  "At most this many stop times for each route; ` + "`" + `limit` + "`" + ` still caps the stop's total"
+  route_limit: Int
 }
 
 """Search options for stop times within a single trip (no date filter applies, since the parent trip determines the schedule)"""
@@ -57000,7 +57002,7 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"date", "relative_date", "service_date", "use_service_window", "start_time", "end_time", "start", "end", "next", "route_onestop_ids", "allow_previous_route_onestop_ids", "exclude_first", "exclude_last"}
+	fieldsInOrder := [...]string{"date", "relative_date", "service_date", "use_service_window", "start_time", "end_time", "start", "end", "next", "route_onestop_ids", "allow_previous_route_onestop_ids", "exclude_first", "exclude_last", "route_limit"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -57098,6 +57100,13 @@ func (ec *executionContext) unmarshalInputStopTimeFilter(ctx context.Context, ob
 				return it, err
 			}
 			it.ExcludeLast = data
+		case "route_limit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("route_limit"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RouteLimit = data
 		}
 	}
 	return it, nil

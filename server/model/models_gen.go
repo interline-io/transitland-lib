@@ -1599,6 +1599,8 @@ type StopTimeFilter struct {
 	ExcludeFirst *bool `json:"exclude_first,omitempty"`
 	// Exclude the last stop_time of each trip
 	ExcludeLast *bool `json:"exclude_last,omitempty"`
+	// At most this many stop times for each route; `limit` still caps the stop's total
+	RouteLimit *int `json:"route_limit,omitempty"`
 }
 
 // A tenant organization that owns groups and feeds
