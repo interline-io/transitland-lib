@@ -176,6 +176,10 @@ models:
     extraFields:
       FeedVersionID:
         type: int
+  FeedVersionGeohash:
+    extraFields:
+      FeedVersionID:
+        type: int
   RouteHeadway:
     fields:
       stop:

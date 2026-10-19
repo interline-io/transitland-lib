@@ -39,6 +39,12 @@ type feedVersionLoaderParam struct {
 	Where  *model.FeedVersionFilter
 }
 
+type feedVersionGeohashLoaderParam struct {
+	FeedVersionID int
+	Precision     int
+	Limit         *int
+}
+
 type feedVersionServiceLevelLoaderParam struct {
 	FeedVersionID int
 	Limit         *int

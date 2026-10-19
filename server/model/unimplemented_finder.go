@@ -277,6 +277,9 @@ func (UnimplementedFinder) FeedVersionsByFeedIDs(context.Context, *int, *FeedVer
 func (UnimplementedFinder) FeedVersionsByIDs(_ context.Context, ids []int) ([]*FeedVersion, []error) {
 	return notImplBatch[*FeedVersion](ids)
 }
+func (UnimplementedFinder) FeedVersionGeohashesByFeedVersionIDs(context.Context, *int, int, []int) ([][]*FeedVersionGeohash, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) FeedVersionServiceLevelsByFeedVersionIDs(context.Context, *int, *FeedVersionServiceLevelFilter, []int) ([][]*FeedVersionServiceLevel, error) {
 	return nil, notImplErr()
 }

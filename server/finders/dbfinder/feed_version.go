@@ -125,6 +125,23 @@ func (f *Finder) FeedVersionServiceLevelsByFeedVersionIDs(ctx context.Context, l
 	return arrangeGroup(keys, ents, func(ent *model.FeedVersionServiceLevel) int { return ent.FeedVersionID }), queryErr(ctx, err)
 }
 
+func (f *Finder) FeedVersionGeohashesByFeedVersionIDs(ctx context.Context, limit *int, precision int, keys []int) ([][]*model.FeedVersionGeohash, error) {
+	var ents []*model.FeedVersionGeohash
+	err := dbutil.Select(ctx,
+		f.db,
+		lateralWrap(
+			feedVersionGeohashSelect(limit, precision, f.PermFilter(ctx)),
+			"feed_versions",
+			"id",
+			"tl_feed_version_geohashes",
+			"feed_version_id",
+			keys,
+		),
+		&ents,
+	)
+	return arrangeGroup(keys, ents, func(ent *model.FeedVersionGeohash) int { return ent.FeedVersionID }), queryErr(ctx, err)
+}
+
 func (f *Finder) FindFeedVersionServiceWindow(ctx context.Context, fvid int) (*model.ServiceWindow, error) {
 	a, _, err := f.fvslCache.Get(ctx, fvid)
 	if err != nil || a == nil || a.Location == nil {
@@ -385,6 +402,26 @@ func feedVersionServiceLevelSelect(limit *int, after *model.Cursor, ids []int, p
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"feed_version_service_levels.id": after.ID})
 	}
+	q = pfJoinCheckFv(q, permFilter)
+	return q
+}
+
+// feedVersionGeohashSelect reads a feed version's stop geohash cells at one
+// precision. Cells are stored for every precision together, keyed on
+// (feed_version_id, geohash), so precision is the geohash length.
+func feedVersionGeohashSelect(limit *int, precision int, permFilter *model.PermFilter) sq.SelectBuilder {
+	q := sq.StatementBuilder.
+		Select(
+			"tl_feed_version_geohashes.feed_version_id",
+			"tl_feed_version_geohashes.geohash",
+			"tl_feed_version_geohashes.stop_count",
+		).
+		From("tl_feed_version_geohashes").
+		Join("feed_versions on feed_versions.id = tl_feed_version_geohashes.feed_version_id").
+		Join("current_feeds on current_feeds.id = feed_versions.feed_id").
+		Where(sq.Eq{"length(tl_feed_version_geohashes.geohash)": precision}).
+		Limit(finderCheckLimit(limit)).
+		OrderBy("tl_feed_version_geohashes.geohash")
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

@@ -598,6 +598,15 @@ type FeedVersionFilter struct {
 	License *LicenseFilter `json:"license,omitempty"`
 }
 
+// A geohash cell containing stops of a feed version
+type FeedVersionGeohash struct {
+	// Geohash of the cell [example:9q8yy]
+	Geohash string `json:"geohash"`
+	// Number of stops in the cell; zero when the cell is reached only by a GTFS-Flex location's bounding box
+	StopCount     int `json:"stop_count"`
+	FeedVersionID int `json:"-"`
+}
+
 // Result of feed version import operation
 type FeedVersionImportResult struct {
 	// True if the import succeeded

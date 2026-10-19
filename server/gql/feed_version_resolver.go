@@ -73,6 +73,17 @@ func (r *feedVersionResolver) ServiceLevels(ctx context.Context, obj *model.Feed
 	return LoaderFor(ctx).FeedVersionServiceLevelsByFeedVersionIDs.Load(ctx, feedVersionServiceLevelLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit), Where: where})()
 }
 
+func (r *feedVersionResolver) Geohashes(ctx context.Context, obj *model.FeedVersion, precision *int) ([]*model.FeedVersionGeohash, error) {
+	p := 5
+	if precision != nil {
+		p = *precision
+	}
+	// A fingerprint is only useful whole, so this is capped well above the
+	// usual list limit: a national feed can have several thousand p5 cells.
+	limit := RESOLVER_GEOHASH_MAXLIMIT
+	return LoaderFor(ctx).FeedVersionGeohashesByFeedVersionIDs.Load(ctx, feedVersionGeohashLoaderParam{FeedVersionID: obj.ID, Precision: p, Limit: &limit})()
+}
+
 func (r *feedVersionResolver) FeedInfos(ctx context.Context, obj *model.FeedVersion, limit *int) ([]*model.FeedInfo, error) {
 	return LoaderFor(ctx).FeedInfosByFeedVersionIDs.Load(ctx, feedInfoLoaderParam{FeedVersionID: obj.ID, Limit: resolverCheckLimit(limit)})()
 }
