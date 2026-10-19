@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"strings"
 
@@ -18,6 +19,9 @@ type RTConvertCommand struct {
 	InputFile  string
 	OutputFile string
 	Format     string
+	URLType    string
+	headers    []string
+	reqHeaders http.Header
 }
 
 func (cmd *RTConvertCommand) HelpDesc() (string, string) {
@@ -41,6 +45,8 @@ func (cmd *RTConvertCommand) HelpArgs() string {
 func (cmd *RTConvertCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVarP(&cmd.OutputFile, "out", "o", "", "Write output to file; defaults to stdout")
 	fl.StringVarP(&cmd.Format, "format", "f", "json", "Output format: json, geojson, geojsonl (geojson formats only convert vehicle position entities)")
+	fl.StringVar(&cmd.URLType, "url-type", "realtime", "DMFR feed.urls key for the request; selects request headers")
+	fl.StringArrayVar(&cmd.headers, "header", nil, "Request header as 'Name: value', replacing any default of the same name; may be repeated")
 }
 
 func (cmd *RTConvertCommand) Parse(args []string) error {
@@ -49,12 +55,17 @@ func (cmd *RTConvertCommand) Parse(args []string) error {
 		return errors.New("requires input pb")
 	}
 	cmd.InputFile = fl.Arg(0)
+	headers, err := request.ParseHeaders(cmd.headers)
+	if err != nil {
+		return err
+	}
+	cmd.reqHeaders = headers
 	return nil
 }
 
 func (cmd *RTConvertCommand) Run(ctx context.Context) error {
 	// Fetch
-	msg, err := rt.ReadURL(ctx, cmd.InputFile, request.WithAllowLocal)
+	msg, err := rt.ReadURL(ctx, cmd.InputFile, request.WithAllowLocal, request.WithURLType(cmd.URLType), request.WithHeaders(cmd.reqHeaders))
 	if err != nil {
 		return err
 	}

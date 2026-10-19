@@ -35,6 +35,7 @@ transitland validate [flags] [<reader>]
       --error-threshold strings            Fail validation if file exceeds error percentage; format: 'filename:percent' or '*:percent' for default (e.g., 'stops.txt:5' or '*:10')
       --ext strings                        Include GTFS Extension
       --feed-id string                     Feed onestop ID for DMFR and secret lookup (requires --dmfr)
+      --header stringArray                 Request header as 'Name: value', replacing any default of the same name; may be repeated
   -h, --help                               help for validate
       --include-entities                   Include GTFS entities in JSON output
       --include-route-geometries           Include route geometries in JSON output

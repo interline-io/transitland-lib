@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/fetch"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -51,6 +52,8 @@ type FetchCommand struct {
 	fetchedAt   string
 	jobsFile    string
 	dmfrFile    string
+	urlType     string
+	headers     []string
 }
 
 func (cmd *FetchCommand) HelpDesc() (string, string) {
@@ -74,6 +77,8 @@ func (cmd *FetchCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.fetchedAt, "fetched-at", "", "Manually specify fetched_at value, e.g. 2020-02-06T12:34:56Z")
 	fl.StringVar(&cmd.jobsFile, "jobs-file", "", "Specify fetch jobs in file, one per line as 'feed_id <tab> url'")
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "Path to DMFR Secrets file")
+	fl.StringVar(&cmd.urlType, "url-type", "", "DMFR feed.urls key recorded for the fetch; also selects secrets and request headers (default: static_current, or manual with --feed-url)")
+	fl.StringArrayVar(&cmd.headers, "header", nil, "Request header as 'Name: value', replacing any default of the same name; may be repeated")
 	// StaticFetchOptions
 	fl.BoolVar(&cmd.Options.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls")
 	fl.BoolVar(&cmd.Options.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem directories/zip files")
@@ -91,6 +96,11 @@ func (cmd *FetchCommand) Parse(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
+	headers, err := request.ParseHeaders(cmd.headers)
+	if err != nil {
+		return err
+	}
+	cmd.Options.Headers = headers
 	// When using --feed-url, it must be mutually exclusive with --dmfr and --jobs-file,
 	// and exactly one positional feed_id must be provided.
 	if cmd.Options.FeedURL != "" {
@@ -232,6 +242,9 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 		} else {
 			opts.URLType = "static_current"
 			opts.FeedURL = feed.URLs.StaticCurrent
+		}
+		if cmd.urlType != "" {
+			opts.URLType = cmd.urlType
 		}
 		toFetch = append(toFetch, fetchJob{OnestopID: feed.FeedID, StaticFetchOptions: opts})
 	}

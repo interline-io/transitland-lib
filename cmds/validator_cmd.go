@@ -40,6 +40,7 @@ type ValidatorCommand struct {
 	DMFRFile                 string
 	FeedID                   string
 	URLType                  string
+	headers                  []string
 	AllowFTPFetch            bool
 	AllowLocalFetch          bool
 	AllowS3Fetch             bool
@@ -93,6 +94,7 @@ func (cmd *ValidatorCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.DMFRFile, "dmfr", "", "DMFR file providing feed URL and authorization config; used with --feed-id")
 	fl.StringVar(&cmd.FeedID, "feed-id", "", "Feed onestop ID for DMFR and secret lookup (requires --dmfr)")
 	fl.StringVar(&cmd.URLType, "url-type", "static_current", "URL type in DMFR feed.urls to validate")
+	fl.StringArrayVar(&cmd.headers, "header", nil, "Request header as 'Name: value', replacing any default of the same name; may be repeated")
 	fl.BoolVar(&cmd.AllowFTPFetch, "allow-ftp-fetch", false, "Allow fetching from FTP urls when --dmfr is used")
 	fl.BoolVar(&cmd.AllowLocalFetch, "allow-local-fetch", false, "Allow fetching from filesystem paths when --dmfr is used")
 	fl.BoolVar(&cmd.AllowS3Fetch, "allow-s3-fetch", false, "Allow fetching from S3 urls when --dmfr is used")
@@ -119,6 +121,11 @@ func (cmd *ValidatorCommand) Parse(args []string) error {
 	if cmd.readerPath == "" && cmd.DMFRFile == "" {
 		return errors.New("requires input reader or --dmfr with --feed-id")
 	}
+	headers, err := request.ParseHeaders(cmd.headers)
+	if err != nil {
+		return err
+	}
+	cmd.Options.RequestHeaders = headers
 	if cmd.SecretsFile != "" {
 		r, err := dmfr.LoadAndParseRegistry(cmd.SecretsFile)
 		if err != nil {
@@ -265,7 +272,7 @@ func (cmd *ValidatorCommand) fetchWithAuth(ctx context.Context) (string, error) 
 	// Strip any "#subdir" fragment for the download and re-attach it to the
 	// temp path so tlcsv's internal-zip-path semantics are preserved.
 	fetchURL, fragment, hasFragment := strings.Cut(feedURL, "#")
-	var reqOpts []request.RequestOption
+	reqOpts := []request.RequestOption{request.WithURLType(cmd.URLType), request.WithHeaders(cmd.Options.RequestHeaders)}
 	if cmd.AllowFTPFetch {
 		reqOpts = append(reqOpts, request.WithAllowFTP)
 	}
