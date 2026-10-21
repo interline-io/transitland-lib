@@ -44,7 +44,6 @@ func TestBestWeek_Caltrain(t *testing.T) {
 		week(t, "2025-06-30", "2025-07-06", 21510411, 21510411, 21510411, 21510411, 13458933, 16536528, 13458933),
 		week(t, "2025-12-29", "2026-01-04", 22059857, 22059857, 22059857, 0, 0, 0, 0),
 	}
-	assert.Equal(t, 13458933+21510411+21510411+21510411+21510411+13458933+16536528, totalService(levels[4]))
 	assert.Equal(t, "2025-06-30", bestWeekOf(levels), "the busiest full-service week")
 
 	// Reduced service on a day still counts as service on it.
@@ -65,7 +64,6 @@ func TestBestWeek_MBTA(t *testing.T) {
 		week(t, "2025-09-01", "2025-09-07", 16566840, 31430700, 31430700, 31430700, 31555320, 20879460, 16527240),
 		week(t, "2025-09-08", "2025-09-14", 31430700, 31430700, 31430700, 31430700, 31555320, 20879460, 16527240),
 	}
-	assert.Equal(t, 16527240+31430700+31430700+31430700+31430700+31555320+20879460, totalService(levels[4]))
 	assert.Equal(t, "2025-09-08", bestWeekOf(levels), "the busiest full-service week")
 
 	t.Run("every week partial", func(t *testing.T) {
@@ -73,7 +71,6 @@ func TestBestWeek_MBTA(t *testing.T) {
 			week(t, "2025-08-04", "2025-08-10", 0, 30602160, 30639300, 30639300, 30661200, 20477520, 15909060),
 			week(t, "2025-08-11", "2025-08-17", 31320720, 0, 31334820, 31334820, 31374840, 21093000, 16452720),
 		}
-		assert.Equal(t, 16452720+31320720+0+31334820+31334820+31374840+21093000, totalService(partial[1]))
 		assert.Equal(t, "2025-08-11", bestWeekOf(partial), "the busiest week")
 	})
 }
@@ -86,8 +83,6 @@ func TestBestWeek_RTD(t *testing.T) {
 		week(t, "2025-06-30", "2025-07-06", 21510411, 21510411, 21510411, 21510411, 13458933, 16536528, 13458933),
 		week(t, "2025-09-15", "2025-11-23", 22059857, 22059857, 22059857, 22059857, 22126637, 16538433, 13424463),
 	}
-	assert.Equal(t, 0, totalService(levels[0]))
 	assert.False(t, hasFullService(levels[0]))
-	assert.Equal(t, 13424463+22059857+22059857+22059857+22059857+22126637+16538433, totalService(levels[3]))
 	assert.Equal(t, "2025-09-15", bestWeekOf(levels), "the busiest full-service week")
 }

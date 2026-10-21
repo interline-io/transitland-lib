@@ -10,10 +10,6 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// How a finder resolves the dates in a filter into the GTFS service dates it
-// matches. Every finder shares this, so they agree on which dates a query means;
-// a finder only decides which services run on a date.
-
 // DepartureLookbackDays bounds how far back a wall calendar date query reaches
 // for after-midnight departures. 1 covers departures up to 48:00; raising it
 // covers services that run longer, at one more service date per query.
@@ -43,15 +39,14 @@ func calendarServiceDates(dates []time.Time, lookback int) []time.Time {
 	return out
 }
 
-// TzTruncate returns the date of s as noon in loc. Noon, since a DST change can
+// tzTruncate returns the date of s as noon in loc. Noon, since a DST change can
 // skip local midnight but never noon.
-func TzTruncate(s time.Time, loc *time.Location) *tt.Date {
+func tzTruncate(s time.Time, loc *time.Location) *tt.Date {
 	if loc == nil {
-		log.Error().Msg("TzTruncate: loc is nil, set to UTC")
+		log.Error().Msg("tzTruncate: loc is nil, set to UTC")
 		loc = time.UTC
 	}
-	d := tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 12, 0, 0, 0, loc))
-	return &d
+	return ptr(tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 12, 0, 0, 0, loc)))
 }
 
 // ResolveRelativeDate returns the date a relative date names, counted from
@@ -67,7 +62,7 @@ func mapIntoServiceWindow(s time.Time, fvsw *ServiceWindow) *tt.Date {
 	// Compared as calendar dates in the feed version's timezone. A date scalar
 	// parses as midnight UTC, and comparing instants misplaces the window's
 	// first or last day.
-	local := TzTruncate(s, loc)
+	local := tzTruncate(s, loc)
 	day := civilDate(local.Val)
 	if !day.Before(civilDate(fvsw.StartDate)) && !day.After(civilDate(fvsw.EndDate)) {
 		return local
@@ -76,7 +71,7 @@ func mapIntoServiceWindow(s time.Time, fvsw *ServiceWindow) *tt.Date {
 	if dow < 0 {
 		dow = 6
 	}
-	return TzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
+	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
 }
 
 // civilDate returns t's calendar date in its own location, as midnight UTC, so
@@ -86,11 +81,12 @@ func civilDate(t time.Time) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
-// ResolveServiceDate resolves a filter's date inputs into the one service date
-// to match, in the feed version's terms: a relative date becomes concrete, and
+// ResolveServiceDate resolves a filter's date inputs into the service date to
+// match, and the requested date before any relocation.
+//
+// In the feed version's terms, a relative date becomes concrete and
 // use_service_window relocates a date outside the window into the fallback week.
-// Also returns the requested date, before any relocation. Without a window, the
-// date is used as given.
+// Without a window, the date is used as given.
 func ResolveServiceDate(serviceDate *tt.Date, relativeDate *RelativeDate, useServiceWindow bool, fvsw *ServiceWindow) (*tt.Date, *tt.Date, error) {
 	if fvsw == nil {
 		return serviceDate, serviceDate, nil
@@ -100,7 +96,7 @@ func ResolveServiceDate(serviceDate *tt.Date, relativeDate *RelativeDate, useSer
 		if err != nil {
 			return nil, nil, fmt.Errorf("invalid relative_date %q: %w", *relativeDate, err)
 		}
-		serviceDate = TzTruncate(s, fvsw.NowLocal.Location())
+		serviceDate = tzTruncate(s, fvsw.NowLocal.Location())
 	}
 	asked := serviceDate
 	// Guarded: use_service_window with no date at all is a valid filter.
@@ -127,7 +123,7 @@ func ResolveTripDates(where *TripFilter, fvsw *ServiceWindow) ([]TripDate, error
 	if where == nil {
 		return nil, nil
 	}
-	useServiceWindow := where.UseServiceWindow != nil && *where.UseServiceWindow
+	useServiceWindow := nilOr(where.UseServiceWindow, false)
 	src, lookback := where.ServiceDates, 0
 	if len(where.Dates) > 0 {
 		src, lookback = where.Dates, DepartureLookbackDays
@@ -164,18 +160,20 @@ func ResolveTripDates(where *TripFilter, fvsw *ServiceWindow) ([]TripDate, error
 	return []TripDate{{Query: serviceDate.Val, Report: []time.Time{askedDate.Val}, Single: true}}, nil
 }
 
-// SetTripRunDates records the dates a trip runs on, among the dates its filter
-// resolved to, as the requested dates. ran reports whether the trip's service is
-// active on a query date. A single service_date is a run but not a service_dates
-// entry, and the trip was matched on it, so ran is not consulted.
-func SetTripRunDates(trip *Trip, dates []TripDate, ran func(query time.Time) bool) {
+// SetTripRunDates records the dates a trip runs on, as the dates its filter
+// requested.
+//
+// ran reports whether the trip's service is active on dates[i].Query. A trip
+// matched on a single service_date runs on it, and that run is not a
+// service_dates entry.
+func SetTripRunDates(trip *Trip, dates []TripDate, ran func(i int) bool) {
 	if len(dates) == 1 && dates[0].Single {
 		trip.RunDates = []tt.Date{tt.NewDate(dates[0].Report[0])}
 		return
 	}
 	var matched []time.Time
-	for _, d := range dates {
-		if ran(d.Query) {
+	for i, d := range dates {
+		if ran(i) {
 			matched = append(matched, d.Report...)
 		}
 	}
@@ -196,20 +194,27 @@ type ServiceDayQuery struct {
 }
 
 // ExpandStopTimeFilter splits a stop time filter into the service days it
-// covers, in the feed version's terms: dates resolve against its timezone and
-// clock, a window crossing midnight takes in the neighboring service day, and
-// use_service_window relocates each day on its own. It rewrites where's dates
-// and times in place, so callers pass a copy.
+// covers.
+//
+// Dates resolve against the feed version's timezone and clock, a window crossing
+// midnight takes in the neighboring service day, and use_service_window
+// relocates each day on its own.
 func ExpandStopTimeFilter(where *StopTimeFilter, fvsw *ServiceWindow) []ServiceDayQuery {
+	// Rewritten below; callers reuse the filter for each feed version.
+	if where != nil {
+		c := *where
+		where = &c
+	}
+
 	// Pre-processing
 	// Convert Start, End to StartTime, EndTime
 	if where != nil {
 		if where.Start != nil {
-			where.StartTime = intPtr(where.Start.Int())
+			where.StartTime = ptr(where.Start.Int())
 			where.Start = nil
 		}
 		if where.End != nil {
-			where.EndTime = intPtr(where.End.Int())
+			where.EndTime = ptr(where.End.Int())
 			where.End = nil
 		}
 	}
@@ -225,12 +230,12 @@ func ExpandStopTimeFilter(where *StopTimeFilter, fvsw *ServiceWindow) []ServiceD
 		// Set ServiceDate to local timezone
 		// ServiceDate is a strict GTFS calendar date
 		if where.ServiceDate != nil {
-			where.ServiceDate = TzTruncate(where.ServiceDate.Val, loc)
+			where.ServiceDate = tzTruncate(where.ServiceDate.Val, loc)
 		}
 
 		// Set Date to local timezone
 		if where.Date != nil {
-			where.Date = TzTruncate(where.Date.Val, loc)
+			where.Date = tzTruncate(where.Date.Val, loc)
 		}
 
 		// Convert relative date
@@ -239,18 +244,18 @@ func ExpandStopTimeFilter(where *StopTimeFilter, fvsw *ServiceWindow) []ServiceD
 				// This should always succeed because it is an enum and will be caught earlier
 				// TODO: log
 			} else {
-				where.Date = TzTruncate(s, loc)
+				where.Date = tzTruncate(s, loc)
 			}
 		}
 
 		// Convert where.Next into departure date and time window
 		if where.Next != nil {
 			if where.Date == nil {
-				where.Date = TzTruncate(nowLocal, loc)
+				where.Date = tzTruncate(nowLocal, loc)
 			}
 			st := nowLocal.Hour()*3600 + nowLocal.Minute()*60 + nowLocal.Second()
-			where.StartTime = intPtr(st)
-			where.EndTime = intPtr(st + *where.Next)
+			where.StartTime = ptr(st)
+			where.EndTime = ptr(st + *where.Next)
 		}
 
 	}
@@ -259,7 +264,7 @@ func ExpandStopTimeFilter(where *StopTimeFilter, fvsw *ServiceWindow) []ServiceD
 	// window keeps its own schedule.
 	serviceDay := func(asked tt.Date) ServiceDayQuery {
 		w := *where
-		w.ServiceDate, _, _ = ResolveServiceDate(&asked, nil, where.UseServiceWindow != nil && *where.UseServiceWindow, fvsw)
+		w.ServiceDate, _, _ = ResolveServiceDate(&asked, nil, nilOr(where.UseServiceWindow, false), fvsw)
 		return ServiceDayQuery{Where: &w, Report: &asked}
 	}
 
@@ -284,20 +289,20 @@ func ExpandStopTimeFilter(where *StopTimeFilter, fvsw *ServiceWindow) []ServiceD
 		// Query previous day
 		if whereStartTime < lookBehind {
 			prev := serviceDay(day(-1))
-			prev.Where.StartTime = intPtr(dayEnd + whereStartTime)
-			prev.Where.EndTime = intPtr(dayEndMax)
+			prev.Where.StartTime = ptr(dayEnd + whereStartTime)
+			prev.Where.EndTime = ptr(dayEndMax)
 			whereGroups = append(whereGroups, prev)
 		}
 		// Query requested day
 		requested := serviceDay(day(0))
-		requested.Where.StartTime = intPtr(max(dayStart, whereStartTime))
-		requested.Where.EndTime = intPtr(whereEndTime)
+		requested.Where.StartTime = ptr(max(dayStart, whereStartTime))
+		requested.Where.EndTime = ptr(whereEndTime)
 		whereGroups = append(whereGroups, requested)
 		// Query next day
 		if whereEndTime > dayEnd {
 			next := serviceDay(day(1))
-			next.Where.StartTime = intPtr(dayStart)
-			next.Where.EndTime = intPtr(whereEndTime - dayEnd)
+			next.Where.StartTime = ptr(dayStart)
+			next.Where.EndTime = ptr(whereEndTime - dayEnd)
 			whereGroups = append(whereGroups, next)
 		}
 	} else if where != nil && where.ServiceDate != nil {
@@ -312,6 +317,13 @@ func ExpandStopTimeFilter(where *StopTimeFilter, fvsw *ServiceWindow) []ServiceD
 	return whereGroups
 }
 
-func intPtr(v int) *int {
+func ptr[T any](v T) *T {
 	return &v
+}
+
+func nilOr[T any](v *T, def T) T {
+	if v == nil {
+		return def
+	}
+	return *v
 }

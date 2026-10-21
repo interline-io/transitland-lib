@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/gtfs"
@@ -11,13 +10,6 @@ import (
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 )
-
-type ServiceWindow struct {
-	NowLocal     time.Time
-	StartDate    time.Time
-	EndDate      time.Time
-	FallbackWeek time.Time
-}
 
 type StopPlaceParam struct {
 	ID    int

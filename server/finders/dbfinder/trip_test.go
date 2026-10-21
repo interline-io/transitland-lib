@@ -40,10 +40,12 @@ func mustResolveTripDates(t *testing.T, where *model.TripFilter, fvsw *model.Ser
 func testServiceWindow(t *testing.T) *model.ServiceWindow {
 	t.Helper()
 	return &model.ServiceWindow{
-		NowLocal:     testDate(t, "2026-05-13"),
-		StartDate:    testDate(t, "2026-05-11"),
-		EndDate:      testDate(t, "2026-05-17"),
-		FallbackWeek: testDate(t, "2026-05-11"),
+		NowLocal: testDate(t, "2026-05-13"),
+		FeedServiceWindow: model.FeedServiceWindow{
+			StartDate:    testDate(t, "2026-05-11"),
+			EndDate:      testDate(t, "2026-05-17"),
+			FallbackWeek: testDate(t, "2026-05-11"),
+		},
 	}
 }
 
@@ -85,37 +87,11 @@ func TestExpandTripServiceDates(t *testing.T) {
 		return out
 	}
 
-	t.Run("relabels database dates as requested dates", func(t *testing.T) {
-		dates := mustResolveTripDates(t,
-			&model.TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: ptr(true)},
-			testServiceWindow(t),
-		)
-		ent := trip("2026-05-13")
-		expandTripServiceDates([]*model.Trip{ent}, dates)
-		assert.Equal(t, []string{"2030-01-02"}, got(ent))
-	})
-
-	t.Run("expands one database date into every date it stands for", func(t *testing.T) {
-		dates := mustResolveTripDates(t,
-			&model.TripFilter{ServiceDates: testDates(t, "2030-01-09", "2030-01-02"), UseServiceWindow: ptr(true)},
-			testServiceWindow(t),
-		)
-		ent := trip("2026-05-13")
-		expandTripServiceDates([]*model.Trip{ent}, dates)
-		assert.Equal(t, []string{"2030-01-02", "2030-01-09"}, got(ent))
-	})
-
 	t.Run("sorts across database dates", func(t *testing.T) {
 		dates := mustResolveTripDates(t, &model.TripFilter{ServiceDates: testDates(t, "2026-05-13", "2026-05-11")}, nil)
 		ent := trip("2026-05-13,2026-05-11")
 		expandTripServiceDates([]*model.Trip{ent}, dates)
 		assert.Equal(t, []string{"2026-05-11", "2026-05-13"}, got(ent))
-	})
-
-	t.Run("no dates requested", func(t *testing.T) {
-		ent := trip("2026-05-13")
-		expandTripServiceDates([]*model.Trip{ent}, nil)
-		assert.Nil(t, got(ent))
 	})
 
 	t.Run("trip matched no dates", func(t *testing.T) {

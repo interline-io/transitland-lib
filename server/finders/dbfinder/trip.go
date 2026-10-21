@@ -3,7 +3,6 @@ package dbfinder
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -144,6 +143,13 @@ func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilde
 // Record each trip's runs from the aggregated service_dates column: the query
 // dates its service ran on.
 func expandTripServiceDates(ents []*model.Trip, dates []model.TripDate) {
+	if len(dates) == 0 {
+		return
+	}
+	keys := make([]string, len(dates))
+	for i, d := range dates {
+		keys[i] = d.Query.Format("2006-01-02")
+	}
 	for _, ent := range ents {
 		ran := map[string]bool{}
 		if ent.ServiceDatesAgg.Valid && ent.ServiceDatesAgg.Val != "" {
@@ -151,7 +157,7 @@ func expandTripServiceDates(ents []*model.Trip, dates []model.TripDate) {
 				ran[s] = true
 			}
 		}
-		model.SetTripRunDates(ent, dates, func(query time.Time) bool { return ran[query.Format("2006-01-02")] })
+		model.SetTripRunDates(ent, dates, func(i int) bool { return ran[keys[i]] })
 	}
 }
 
@@ -303,7 +309,6 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		OrderBy("gtfs_trips.feed_version_id,gtfs_trips.id").
 		Limit(finderCheckLimit(limit))
 
-	// Resolved into a local: `where` is reused for every feed version.
 	tripDates, err := model.ResolveTripDates(where, fvsw)
 	if err != nil {
 		return q, nil, err

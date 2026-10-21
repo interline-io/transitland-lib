@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"time"
 
@@ -27,43 +26,37 @@ type FeedServiceWindow struct {
 	Location     *time.Location
 }
 
-// At returns the window as of now, in the feed version's timezone.
-func (w FeedServiceWindow) At(now time.Time) *ServiceWindow {
-	return &ServiceWindow{
-		NowLocal:     now.In(w.Location),
-		StartDate:    w.StartDate,
-		EndDate:      w.EndDate,
-		FallbackWeek: w.FallbackWeek,
-	}
+// ServiceWindow is a feed version's service window as of a request's time.
+type ServiceWindow struct {
+	FeedServiceWindow
+	NowLocal time.Time
 }
 
-// NewFeedServiceWindow chooses a feed version's service window from the stats its
-// fetch computed. The window is its feed_info dates when it has both, otherwise
-// the weeks of regular service its service levels show; see serviceLevelWindow.
-func NewFeedServiceWindow(fvsw dmfr.FeedVersionServiceWindow, levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Time) (FeedServiceWindow, error) {
-	loc, err := time.LoadLocation(fvsw.DefaultTimezone.Val)
-	if err != nil {
-		return FeedServiceWindow{}, fmt.Errorf("unable to load default timezone %q: %w", fvsw.DefaultTimezone.Val, err)
-	}
+// At returns the window as of now, in the feed version's timezone.
+func (w FeedServiceWindow) At(now time.Time) *ServiceWindow {
+	return &ServiceWindow{FeedServiceWindow: w, NowLocal: now.In(w.Location)}
+}
+
+// NewFeedServiceWindow chooses a feed version's service window, in loc, its
+// default timezone, from the stats its fetch computed. The window is its
+// feed_info dates when it has both, otherwise the weeks of regular service its
+// service levels show; see serviceLevelWindow.
+func NewFeedServiceWindow(fvsw dmfr.FeedVersionServiceWindow, levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Time, loc *time.Location) FeedServiceWindow {
 	start, end, fallbackWeek := serviceLevelWindow(levels, fetchedAt)
 	if fvsw.FeedStartDate.Valid && fvsw.FeedEndDate.Valid && !fvsw.FeedStartDate.Val.IsZero() && !fvsw.FeedEndDate.Val.IsZero() {
 		start, end = fvsw.FeedStartDate.Val, fvsw.FeedEndDate.Val
 	}
 	return FeedServiceWindow{
-		StartDate:    TzTruncate(start, loc).Val,
-		EndDate:      TzTruncate(end, loc).Val,
-		FallbackWeek: TzTruncate(fallbackWeek, loc).Val,
+		StartDate:    tzTruncate(start, loc).Val,
+		EndDate:      tzTruncate(end, loc).Val,
+		FallbackWeek: tzTruncate(fallbackWeek, loc).Val,
 		Location:     loc,
-	}, nil
+	}
 }
 
 // minServiceRatio is the share of the busiest week's service a week needs to
 // count as regular service.
 const minServiceRatio = 0.75
-
-func totalService(sl dmfr.FeedVersionServiceLevel) int {
-	return sl.Monday + sl.Tuesday + sl.Wednesday + sl.Thursday + sl.Friday + sl.Saturday + sl.Sunday
-}
 
 func hasFullService(sl dmfr.FeedVersionServiceLevel) bool {
 	return sl.Monday > 0 && sl.Tuesday > 0 && sl.Wednesday > 0 && sl.Thursday > 0 && sl.Friday > 0 && sl.Saturday > 0 && sl.Sunday > 0
@@ -92,16 +85,16 @@ func serviceLevelWindow(levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Ti
 		if (sd.Before(fetchedAt) || sd.Equal(fetchedAt)) && (ed.After(fetchedAt) || ed.Equal(fetchedAt)) {
 			fetchedWeek = i
 		}
-		if totalService(ent) > highestService {
+		if ent.Total() > highestService {
 			highestIdx = i
-			highestService = totalService(ent)
+			highestService = ent.Total()
 		}
 	}
 	if fetchedWeek < 0 {
 		fetchedWeek = highestIdx
 	}
 	// If the fetched week has bad service, use highest week
-	if float64(totalService(levels[fetchedWeek]))/float64(highestService) < minServiceRatio {
+	if float64(levels[fetchedWeek].Total())/float64(highestService) < minServiceRatio {
 		fetchedWeek = highestIdx
 	}
 
@@ -110,7 +103,7 @@ func serviceLevelWindow(levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Ti
 	endDate = levels[fetchedWeek].EndDate.Val
 	for i := fetchedWeek; i < len(levels); i++ {
 		ent := levels[i]
-		if float64(totalService(ent))/float64(highestService) < minServiceRatio {
+		if float64(ent.Total())/float64(highestService) < minServiceRatio {
 			break
 		}
 		if ent.StartDate.Val.Before(startDate) {
@@ -120,7 +113,7 @@ func serviceLevelWindow(levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Ti
 	}
 	for i := fetchedWeek - 1; i > 0; i-- {
 		ent := levels[i]
-		if float64(totalService(ent))/float64(highestService) < minServiceRatio {
+		if float64(ent.Total())/float64(highestService) < minServiceRatio {
 			break
 		}
 		if ent.EndDate.Val.After(endDate) {
@@ -135,7 +128,7 @@ func serviceLevelWindow(levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Ti
 // every day, or failing that the busiest week in it. Levels are in date order.
 func bestWeek(levels []dmfr.FeedVersionServiceLevel, startDate, endDate time.Time) time.Time {
 	best := levels[0].StartDate.Val
-	bestService := totalService(levels[0])
+	bestService := levels[0].Total()
 	hasFullServiceWeek := false
 	isWeekInWindow := func(ent dmfr.FeedVersionServiceLevel) bool {
 		sd := ent.StartDate.Val
@@ -144,8 +137,8 @@ func bestWeek(levels []dmfr.FeedVersionServiceLevel, startDate, endDate time.Tim
 	}
 	// First pass: look for weeks with service on all days
 	for _, ent := range levels {
-		if isWeekInWindow(ent) && hasFullService(ent) && totalService(ent) > bestService {
-			bestService = totalService(ent)
+		if isWeekInWindow(ent) && hasFullService(ent) && ent.Total() > bestService {
+			bestService = ent.Total()
 			best = ent.StartDate.Val
 			hasFullServiceWeek = true
 		}
@@ -153,8 +146,8 @@ func bestWeek(levels []dmfr.FeedVersionServiceLevel, startDate, endDate time.Tim
 	// Second pass: if no full-service week found, fall back to any week with highest service
 	if !hasFullServiceWeek {
 		for _, ent := range levels {
-			if isWeekInWindow(ent) && totalService(ent) > bestService {
-				bestService = totalService(ent)
+			if isWeekInWindow(ent) && ent.Total() > bestService {
+				bestService = ent.Total()
 				best = ent.StartDate.Val
 			}
 		}

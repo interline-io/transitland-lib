@@ -1,6 +1,7 @@
 package model
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -27,19 +28,26 @@ func testDates(t *testing.T, dates ...string) []*tt.Date {
 	return out
 }
 
-func testBool(v bool) *bool {
-	return &v
-}
-
 // A window covering one week, whose fallback week is the same Monday-Sunday.
 func testServiceWindow(t *testing.T) *ServiceWindow {
 	t.Helper()
 	return &ServiceWindow{
-		NowLocal:     testDate(t, "2026-05-13"),
-		StartDate:    testDate(t, "2026-05-11"),
-		EndDate:      testDate(t, "2026-05-17"),
-		FallbackWeek: testDate(t, "2026-05-11"),
+		NowLocal: testDate(t, "2026-05-13"),
+		FeedServiceWindow: FeedServiceWindow{
+			StartDate:    testDate(t, "2026-05-11"),
+			EndDate:      testDate(t, "2026-05-17"),
+			FallbackWeek: testDate(t, "2026-05-11"),
+		},
 	}
+}
+
+func mustResolveTripDates(t *testing.T, where *TripFilter, fvsw *ServiceWindow) []TripDate {
+	t.Helper()
+	dates, err := ResolveTripDates(where, fvsw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dates
 }
 
 func TestCalendarServiceDates(t *testing.T) {
@@ -121,7 +129,7 @@ func TestTzTruncate(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			got := TzTruncate(tc.in, santiago)
+			got := tzTruncate(tc.in, santiago)
 			assert.Equal(t, tc.expect, got.String())
 			assert.Equal(t, 12, got.Val.Hour())
 		})
@@ -140,10 +148,12 @@ func TestMapIntoServiceWindow(t *testing.T) {
 		}
 		day := func(y int, m time.Month, d int) time.Time { return time.Date(y, m, d, 0, 0, 0, 0, loc) }
 		fvsw := &ServiceWindow{
-			NowLocal:     time.Date(2026, 5, 13, 9, 30, 0, 0, loc),
-			StartDate:    day(2026, 5, 11), // Monday
-			EndDate:      day(2026, 5, 17), // Sunday
-			FallbackWeek: day(2026, 3, 2),  // Monday
+			NowLocal: time.Date(2026, 5, 13, 9, 30, 0, 0, loc),
+			FeedServiceWindow: FeedServiceWindow{
+				StartDate:    day(2026, 5, 11), // Monday
+				EndDate:      day(2026, 5, 17), // Sunday
+				FallbackWeek: day(2026, 3, 2),  // Monday
+			},
 		}
 		tcs := []struct{ name, in, expect string }{
 			{"first day of the window is inside it", "2026-05-11", "2026-05-11"},
@@ -170,10 +180,12 @@ func TestMapIntoServiceWindow_MidnightDST(t *testing.T) {
 		t.Fatal(err)
 	}
 	fvsw := &ServiceWindow{
-		NowLocal:     time.Date(2024, 9, 8, 9, 30, 0, 0, loc),
-		StartDate:    time.Date(2024, 9, 2, 12, 0, 0, 0, loc), // Monday
-		EndDate:      time.Date(2024, 9, 8, 12, 0, 0, 0, loc), // Sunday
-		FallbackWeek: time.Date(2024, 3, 4, 12, 0, 0, 0, loc), // Monday
+		NowLocal: time.Date(2024, 9, 8, 9, 30, 0, 0, loc),
+		FeedServiceWindow: FeedServiceWindow{
+			StartDate:    time.Date(2024, 9, 2, 12, 0, 0, 0, loc), // Monday
+			EndDate:      time.Date(2024, 9, 8, 12, 0, 0, 0, loc), // Sunday
+			FallbackWeek: time.Date(2024, 3, 4, 12, 0, 0, 0, loc), // Monday
+		},
 	}
 	got := mapIntoServiceWindow(testDate(t, "2024-09-08"), fvsw)
 	assert.Equal(t, "2024-09-08", got.String())
@@ -238,48 +250,44 @@ func TestResolveTripDates(t *testing.T) {
 		{
 			// 2030-01-02 is a Wednesday.
 			"a single service_date outside the window relocates but reports as requested",
-			&TripFilter{ServiceDate: testDates(t, "2030-01-02")[0], UseServiceWindow: testBool(true)}, testServiceWindow(t),
+			&TripFilter{ServiceDate: testDates(t, "2030-01-02")[0], UseServiceWindow: ptrTo(true)}, testServiceWindow(t),
 			[]string{"2026-05-13 -> 2030-01-02 (single)"},
 		},
 		{
 			"use_service_window without a window is inert",
-			&TripFilter{ServiceDates: testDates(t, "2030-01-01"), UseServiceWindow: testBool(true)}, nil,
+			&TripFilter{ServiceDates: testDates(t, "2030-01-01"), UseServiceWindow: ptrTo(true)}, nil,
 			[]string{"2030-01-01 -> 2030-01-01"},
 		},
 		{
 			"dates inside the window are not relocated",
-			&TripFilter{ServiceDates: testDates(t, "2026-05-13"), UseServiceWindow: testBool(true)}, testServiceWindow(t),
+			&TripFilter{ServiceDates: testDates(t, "2026-05-13"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t),
 			[]string{"2026-05-13 -> 2026-05-13"},
 		},
 		{
 			// 2030-01-02 is a Wednesday, relocating to the fallback week's
 			// Wednesday; the caller still gets back the date it asked about.
 			"dates outside the window relocate but report as requested",
-			&TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: testBool(true)}, testServiceWindow(t),
+			&TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t),
 			[]string{"2026-05-13 -> 2030-01-02"},
 		},
 		{
 			// Two Wednesdays collapse onto one fallback day, which must expand
 			// back to both rather than being queried or reported twice.
 			"same weekday collapses to one query date",
-			&TripFilter{ServiceDates: testDates(t, "2030-01-02", "2030-01-09"), UseServiceWindow: testBool(true)}, testServiceWindow(t),
+			&TripFilter{ServiceDates: testDates(t, "2030-01-02", "2030-01-09"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t),
 			[]string{"2026-05-13 -> 2030-01-02 2030-01-09"},
 		},
 		{
 			// The lookback runs before relocation, so the preceding day maps by
 			// its own weekday: Tuesday 2030-01-01 to the fallback Tuesday.
 			"lookback relocates independently of the requested date",
-			&TripFilter{Dates: testDates(t, "2030-01-02"), UseServiceWindow: testBool(true)}, testServiceWindow(t),
+			&TripFilter{Dates: testDates(t, "2030-01-02"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t),
 			[]string{"2026-05-12 -> 2030-01-01", "2026-05-13 -> 2030-01-02"},
 		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			dates, err := ResolveTripDates(tc.where, tc.fvsw)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assert.Equal(t, tc.expect, fmtPairs(dates))
+			assert.Equal(t, tc.expect, fmtPairs(mustResolveTripDates(t, tc.where, tc.fvsw)))
 		})
 	}
 }
@@ -299,57 +307,46 @@ func TestSetTripRunDates(t *testing.T) {
 		}
 		return out
 	}
-	ranOn := func(days ...string) func(time.Time) bool {
-		return func(q time.Time) bool {
-			for _, d := range days {
-				if q.Format("2006-01-02") == d {
-					return true
-				}
-			}
-			return false
+	// ranOn reports a trip as running on the given query dates.
+	ranOn := func(dates []TripDate, days ...string) func(int) bool {
+		return func(i int) bool {
+			return slices.Contains(days, dates[i].Query.Format("2006-01-02"))
 		}
-	}
-	resolve := func(where *TripFilter, fvsw *ServiceWindow) []TripDate {
-		dates, err := ResolveTripDates(where, fvsw)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return dates
 	}
 
 	t.Run("relabels query dates as requested dates", func(t *testing.T) {
-		dates := resolve(&TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: testBool(true)}, testServiceWindow(t))
+		dates := mustResolveTripDates(t, &TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t))
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn("2026-05-13"))
+		SetTripRunDates(trip, dates, ranOn(dates, "2026-05-13"))
 		assert.Equal(t, []string{"2030-01-02"}, serviceDates(trip))
 		assert.Equal(t, []string{"2030-01-02"}, format(trip.RunDates))
 	})
 
 	t.Run("expands one query date into every date it stands for, sorted", func(t *testing.T) {
-		dates := resolve(&TripFilter{ServiceDates: testDates(t, "2030-01-09", "2030-01-02"), UseServiceWindow: testBool(true)}, testServiceWindow(t))
+		dates := mustResolveTripDates(t, &TripFilter{ServiceDates: testDates(t, "2030-01-09", "2030-01-02"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t))
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn("2026-05-13"))
+		SetTripRunDates(trip, dates, ranOn(dates, "2026-05-13"))
 		assert.Equal(t, []string{"2030-01-02", "2030-01-09"}, serviceDates(trip))
 	})
 
 	t.Run("only the dates the trip ran", func(t *testing.T) {
-		dates := resolve(&TripFilter{Dates: testDates(t, "2026-05-13")}, nil)
+		dates := mustResolveTripDates(t, &TripFilter{Dates: testDates(t, "2026-05-13")}, nil)
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn("2026-05-12"))
+		SetTripRunDates(trip, dates, ranOn(dates, "2026-05-12"))
 		assert.Equal(t, []string{"2026-05-12"}, serviceDates(trip))
 	})
 
 	t.Run("a single service_date is a run but not a service date", func(t *testing.T) {
-		dates := resolve(&TripFilter{ServiceDate: testDates(t, "2026-05-13")[0]}, nil)
+		dates := mustResolveTripDates(t, &TripFilter{ServiceDate: testDates(t, "2026-05-13")[0]}, nil)
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn())
+		SetTripRunDates(trip, dates, ranOn(dates))
 		assert.Nil(t, serviceDates(trip))
 		assert.Equal(t, []string{"2026-05-13"}, format(trip.RunDates))
 	})
 
 	t.Run("no dates requested", func(t *testing.T) {
 		trip := &Trip{}
-		SetTripRunDates(trip, nil, ranOn("2026-05-13"))
+		SetTripRunDates(trip, nil, ranOn(nil, "2026-05-13"))
 		assert.Nil(t, serviceDates(trip))
 		assert.Nil(t, trip.RunDates)
 	})

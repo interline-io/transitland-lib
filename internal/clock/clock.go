@@ -1,8 +1,6 @@
 package clock
 
-import (
-	"time"
-)
+import "time"
 
 // Allow for time mocking
 type Clock interface {

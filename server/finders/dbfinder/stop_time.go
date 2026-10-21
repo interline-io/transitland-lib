@@ -87,17 +87,10 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		if err != nil {
 			return nil, err
 		}
-		// Copied: the expansion rewrites the filter's date in place, and each
-		// feed version resolves it against its own service window.
-		fvWhere := where
-		if where != nil {
-			w := *where
-			fvWhere = &w
-		}
 		// Run separate queries for each possible service day
 		var fvEnts []*model.StopTime
 		ranked := false
-		for _, day := range model.ExpandStopTimeFilter(fvWhere, fvsw) {
+		for _, day := range model.ExpandStopTimeFilter(where, fvsw) {
 			w := day.Where
 			var sts []*model.StopTime
 			var q sq.SelectBuilder
@@ -131,8 +124,8 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		}
 		// Each service day's departures query keeps each route's first stop
 		// times, so a window across days can hold more than RouteLimit of them.
-		if ranked && fvWhere != nil && fvWhere.RouteLimit != nil {
-			fvEnts = firstForRoutes(fvEnts, *fvWhere.RouteLimit)
+		if ranked && where != nil && where.RouteLimit != nil {
+			fvEnts = firstForRoutes(fvEnts, *where.RouteLimit)
 		}
 		ents = append(ents, fvEnts...)
 	}
