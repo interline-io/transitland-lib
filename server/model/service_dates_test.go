@@ -37,6 +37,7 @@ func testServiceWindow(t *testing.T) *ServiceWindow {
 			StartDate:    testDate(t, "2026-05-11"),
 			EndDate:      testDate(t, "2026-05-17"),
 			FallbackWeek: testDate(t, "2026-05-11"),
+			Location:     time.UTC,
 		},
 	}
 }
@@ -153,6 +154,7 @@ func TestMapIntoServiceWindow(t *testing.T) {
 				StartDate:    day(2026, 5, 11), // Monday
 				EndDate:      day(2026, 5, 17), // Sunday
 				FallbackWeek: day(2026, 3, 2),  // Monday
+				Location:     loc,
 			},
 		}
 		tcs := []struct{ name, in, expect string }{
@@ -185,6 +187,7 @@ func TestMapIntoServiceWindow_MidnightDST(t *testing.T) {
 			StartDate:    time.Date(2024, 9, 2, 12, 0, 0, 0, loc), // Monday
 			EndDate:      time.Date(2024, 9, 8, 12, 0, 0, 0, loc), // Sunday
 			FallbackWeek: time.Date(2024, 3, 4, 12, 0, 0, 0, loc), // Monday
+			Location:     loc,
 		},
 	}
 	got := mapIntoServiceWindow(testDate(t, "2024-09-08"), fvsw)
@@ -265,7 +268,7 @@ func TestResolveTripDates(t *testing.T) {
 		},
 		{
 			// 2030-01-02 is a Wednesday, relocating to the fallback week's
-			// Wednesday; the caller still gets back the date it asked about.
+			// Wednesday; the caller still gets back the date it requested.
 			"dates outside the window relocate but report as requested",
 			&TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t),
 			[]string{"2026-05-13 -> 2030-01-02"},
@@ -308,16 +311,16 @@ func TestSetTripRunDates(t *testing.T) {
 		return out
 	}
 	// ranOn reports a trip as running on the given query dates.
-	ranOn := func(dates []TripDate, days ...string) func(int) bool {
-		return func(i int) bool {
-			return slices.Contains(days, dates[i].Query.Format("2006-01-02"))
+	ranOn := func(days ...string) func(time.Time) bool {
+		return func(query time.Time) bool {
+			return slices.Contains(days, query.Format("2006-01-02"))
 		}
 	}
 
 	t.Run("relabels query dates as requested dates", func(t *testing.T) {
 		dates := mustResolveTripDates(t, &TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t))
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn(dates, "2026-05-13"))
+		SetTripRunDates(trip, dates, ranOn("2026-05-13"))
 		assert.Equal(t, []string{"2030-01-02"}, serviceDates(trip))
 		assert.Equal(t, []string{"2030-01-02"}, format(trip.RunDates))
 	})
@@ -325,29 +328,96 @@ func TestSetTripRunDates(t *testing.T) {
 	t.Run("expands one query date into every date it stands for, sorted", func(t *testing.T) {
 		dates := mustResolveTripDates(t, &TripFilter{ServiceDates: testDates(t, "2030-01-09", "2030-01-02"), UseServiceWindow: ptrTo(true)}, testServiceWindow(t))
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn(dates, "2026-05-13"))
+		SetTripRunDates(trip, dates, ranOn("2026-05-13"))
 		assert.Equal(t, []string{"2030-01-02", "2030-01-09"}, serviceDates(trip))
 	})
 
 	t.Run("only the dates the trip ran", func(t *testing.T) {
 		dates := mustResolveTripDates(t, &TripFilter{Dates: testDates(t, "2026-05-13")}, nil)
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn(dates, "2026-05-12"))
+		SetTripRunDates(trip, dates, ranOn("2026-05-12"))
 		assert.Equal(t, []string{"2026-05-12"}, serviceDates(trip))
 	})
 
 	t.Run("a single service_date is a run but not a service date", func(t *testing.T) {
 		dates := mustResolveTripDates(t, &TripFilter{ServiceDate: testDates(t, "2026-05-13")[0]}, nil)
 		trip := &Trip{}
-		SetTripRunDates(trip, dates, ranOn(dates))
+		SetTripRunDates(trip, dates, ranOn())
 		assert.Nil(t, serviceDates(trip))
 		assert.Equal(t, []string{"2026-05-13"}, format(trip.RunDates))
 	})
 
 	t.Run("no dates requested", func(t *testing.T) {
 		trip := &Trip{}
-		SetTripRunDates(trip, nil, ranOn(nil, "2026-05-13"))
+		SetTripRunDates(trip, nil, ranOn("2026-05-13"))
 		assert.Nil(t, serviceDates(trip))
 		assert.Nil(t, trip.RunDates)
+	})
+
+	t.Run("replaces the dates a trip already has", func(t *testing.T) {
+		dates := mustResolveTripDates(t, &TripFilter{ServiceDates: testDates(t, "2026-05-13")}, nil)
+		trip := &Trip{}
+		SetTripRunDates(trip, dates, ranOn("2026-05-13"))
+		SetTripRunDates(trip, dates, ranOn("2026-05-13"))
+		assert.Equal(t, []string{"2026-05-13"}, serviceDates(trip))
+		assert.Equal(t, []string{"2026-05-13"}, format(trip.RunDates))
+	})
+}
+
+// An invalid relative_date fails resolution whatever other dates the filter
+// has, whenever a window can resolve the relative date.
+func TestResolveTripDates_InvalidRelativeDate(t *testing.T) {
+	invalid := RelativeDate("NOT_A_DAY")
+	_, err := ResolveTripDates(&TripFilter{ServiceDates: testDates(t, "2026-05-13"), RelativeDate: &invalid}, testServiceWindow(t))
+	assert.ErrorContains(t, err, "invalid relative_date")
+}
+
+func TestExpandStopTimeFilter(t *testing.T) {
+	invalid := RelativeDate("NOT_A_DAY")
+	t.Run("an invalid relative_date is an error", func(t *testing.T) {
+		_, err := ExpandStopTimeFilter(&StopTimeFilter{RelativeDate: &invalid}, testServiceWindow(t))
+		assert.ErrorContains(t, err, "invalid relative_date")
+	})
+
+	t.Run("next and relative_date need a window", func(t *testing.T) {
+		_, err := ExpandStopTimeFilter(&StopTimeFilter{Next: ptrTo(3600)}, nil)
+		assert.Error(t, err)
+		today := RelativeDateToday
+		_, err = ExpandStopTimeFilter(&StopTimeFilter{RelativeDate: &today}, nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("a service_date without a window is used as given", func(t *testing.T) {
+		days, err := ExpandStopTimeFilter(&StopTimeFilter{ServiceDate: testDates(t, "2026-05-13")[0]}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if assert.Len(t, days, 1) {
+			assert.Equal(t, "2026-05-13", days[0].Report.String())
+			assert.Equal(t, "2026-05-13", days[0].Where.ServiceDate.String())
+		}
+	})
+
+	t.Run("next counts from the window's clock", func(t *testing.T) {
+		fvsw := testServiceWindow(t)
+		fvsw.NowLocal = fvsw.NowLocal.Add(10 * time.Hour)
+		days, err := ExpandStopTimeFilter(&StopTimeFilter{Next: ptrTo(3600)}, fvsw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if assert.Len(t, days, 1) {
+			assert.Equal(t, "2026-05-13", days[0].Report.String())
+			assert.Equal(t, 10*3600, *days[0].Where.StartTime)
+			assert.Equal(t, 11*3600, *days[0].Where.EndTime)
+		}
+	})
+
+	t.Run("leaves the caller's filter alone", func(t *testing.T) {
+		where := &StopTimeFilter{Next: ptrTo(3600)}
+		if _, err := ExpandStopTimeFilter(where, testServiceWindow(t)); err != nil {
+			t.Fatal(err)
+		}
+		assert.Nil(t, where.Date)
+		assert.Nil(t, where.StartTime)
 	})
 }

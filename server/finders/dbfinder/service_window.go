@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/server/caches/tzcache"
@@ -54,11 +55,6 @@ func (c *serviceWindowCache) Get(ctx context.Context, fvid int) (model.FeedServi
 		return model.FeedServiceWindow{}, fmt.Errorf("no service window for feed version %d", fvid)
 	}
 	row := rows[0]
-	// Shared across feed versions in one timezone.
-	loc, ok := c.tzCache.Location(row.DefaultTimezone.Val)
-	if !ok {
-		return model.FeedServiceWindow{}, fmt.Errorf("unable to load default timezone %q for feed version %d", row.DefaultTimezone.Val, fvid)
-	}
 	fvslQuery := sq.StatementBuilder.
 		Select("start_date", "end_date", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday").
 		From("feed_version_service_levels").
@@ -70,7 +66,20 @@ func (c *serviceWindowCache) Get(ctx context.Context, fvid int) (model.FeedServi
 	if err := dbutil.Select(ctx, c.db, fvslQuery, &levels); err != nil {
 		return model.FeedServiceWindow{}, err
 	}
-	w := model.NewFeedServiceWindow(row.FeedVersionServiceWindow, levels, row.FetchedAt.Val, loc)
+	w, err := model.NewFeedServiceWindow(row.FeedVersionServiceWindow, levels, row.FetchedAt.Val, c.loadLocation)
+	if err != nil {
+		return model.FeedServiceWindow{}, fmt.Errorf("feed version %d: %w", fvid, err)
+	}
 	c.windows[fvid] = w
 	return w, nil
+}
+
+// loadLocation resolves a timezone through the cache, so feed versions in one
+// timezone share its location.
+func (c *serviceWindowCache) loadLocation(name string) (*time.Location, error) {
+	loc, ok := c.tzCache.Location(name)
+	if !ok {
+		return nil, fmt.Errorf("unknown timezone %q", name)
+	}
+	return loc, nil
 }

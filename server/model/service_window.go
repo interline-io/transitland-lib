@@ -2,13 +2,14 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 )
 
-// Now is the time a request runs at: its configured clock's, or the system's.
+// Now is a request's time: its configured clock's, or the system's.
 func Now(ctx context.Context) time.Time {
 	if clock := ForContext(ctx).Clock; clock != nil {
 		return clock.Now()
@@ -16,9 +17,8 @@ func Now(ctx context.Context) time.Time {
 	return time.Now()
 }
 
-// FeedServiceWindow is the stretch of a feed version's regular service that date
-// filters resolve dates against, and the week that stands in for dates outside
-// it.
+// FeedServiceWindow is a feed version's service window: the dates of its regular
+// service, and the week used in place of any date outside that range.
 type FeedServiceWindow struct {
 	StartDate    time.Time
 	EndDate      time.Time
@@ -26,7 +26,8 @@ type FeedServiceWindow struct {
 	Location     *time.Location
 }
 
-// ServiceWindow is a feed version's service window as of a request's time.
+// ServiceWindow is a feed version's service window as of a request's time, with
+// NowLocal in the window's Location.
 type ServiceWindow struct {
 	FeedServiceWindow
 	NowLocal time.Time
@@ -37,11 +38,20 @@ func (w FeedServiceWindow) At(now time.Time) *ServiceWindow {
 	return &ServiceWindow{FeedServiceWindow: w, NowLocal: now.In(w.Location)}
 }
 
-// NewFeedServiceWindow chooses a feed version's service window, in loc, its
-// default timezone, from the stats its fetch computed. The window is its
-// feed_info dates when it has both, otherwise the weeks of regular service its
-// service levels show; see serviceLevelWindow.
-func NewFeedServiceWindow(fvsw dmfr.FeedVersionServiceWindow, levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Time, loc *time.Location) FeedServiceWindow {
+// NewFeedServiceWindow chooses a feed version's service window from the stats
+// its fetch computed.
+//
+// The window is its feed_info dates when it has both, otherwise the weeks of
+// regular service its service levels show; see serviceLevelWindow. Its timezone
+// is the feed version's default timezone, which loadLocation resolves.
+func NewFeedServiceWindow(fvsw dmfr.FeedVersionServiceWindow, levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Time, loadLocation func(name string) (*time.Location, error)) (FeedServiceWindow, error) {
+	loc, err := loadLocation(fvsw.DefaultTimezone.Val)
+	if err != nil {
+		return FeedServiceWindow{}, fmt.Errorf("unable to load default timezone %q: %w", fvsw.DefaultTimezone.Val, err)
+	}
+	if loc == nil {
+		return FeedServiceWindow{}, fmt.Errorf("no location for default timezone %q", fvsw.DefaultTimezone.Val)
+	}
 	start, end, fallbackWeek := serviceLevelWindow(levels, fetchedAt)
 	if fvsw.FeedStartDate.Valid && fvsw.FeedEndDate.Valid && !fvsw.FeedStartDate.Val.IsZero() && !fvsw.FeedEndDate.Val.IsZero() {
 		start, end = fvsw.FeedStartDate.Val, fvsw.FeedEndDate.Val
@@ -51,7 +61,7 @@ func NewFeedServiceWindow(fvsw dmfr.FeedVersionServiceWindow, levels []dmfr.Feed
 		EndDate:      tzTruncate(end, loc).Val,
 		FallbackWeek: tzTruncate(fallbackWeek, loc).Val,
 		Location:     loc,
-	}
+	}, nil
 }
 
 // minServiceRatio is the share of the busiest week's service a week needs to
@@ -65,9 +75,9 @@ func hasFullService(sl dmfr.FeedVersionServiceLevel) bool {
 // serviceLevelWindow finds the weeks of regular service in a feed version's
 // weekly service levels, and the week to stand in for dates outside them.
 //
-// It starts from the week the feed version was fetched in, or the busiest week
-// when that one is missing or has less than minServiceRatio of the busiest
-// week's service, and extends in both directions while weeks keep that ratio.
+// It starts from the week of the feed version's fetch, or the busiest week when
+// that one is missing or has less than minServiceRatio of the busiest week's
+// service, and extends in both directions while weeks keep that ratio.
 func serviceLevelWindow(levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Time) (startDate, endDate, fallbackWeek time.Time) {
 	if len(levels) == 0 {
 		return
@@ -125,7 +135,7 @@ func serviceLevelWindow(levels []dmfr.FeedVersionServiceLevel, fetchedAt time.Ti
 }
 
 // bestWeek returns the start of the busiest week in the window with service on
-// every day, or failing that the busiest week in it. Levels are in date order.
+// every day, or failing that its busiest week. Levels are in date order.
 func bestWeek(levels []dmfr.FeedVersionServiceLevel, startDate, endDate time.Time) time.Time {
 	best := levels[0].StartDate.Val
 	bestService := levels[0].Total()

@@ -3,6 +3,7 @@ package dbfinder
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -140,15 +141,16 @@ func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilde
 	`, sd, sd, sd, sd, sd)
 }
 
-// Record each trip's runs from the aggregated service_dates column: the query
-// dates its service ran on.
+// Record each trip's runs from the aggregated service_dates column, which holds
+// each query date on which its service ran.
 func expandTripServiceDates(ents []*model.Trip, dates []model.TripDate) {
 	if len(dates) == 0 {
 		return
 	}
-	keys := make([]string, len(dates))
-	for i, d := range dates {
-		keys[i] = d.Query.Format("2006-01-02")
+	// The column's format for each query date, once per call rather than per trip.
+	keys := make(map[int64]string, len(dates))
+	for _, d := range dates {
+		keys[d.Query.Unix()] = d.Query.Format("2006-01-02")
 	}
 	for _, ent := range ents {
 		ran := map[string]bool{}
@@ -157,7 +159,7 @@ func expandTripServiceDates(ents []*model.Trip, dates []model.TripDate) {
 				ran[s] = true
 			}
 		}
-		model.SetTripRunDates(ent, dates, func(i int) bool { return ran[keys[i]] })
+		model.SetTripRunDates(ent, dates, func(query time.Time) bool { return ran[keys[query.Unix()]] })
 	}
 }
 

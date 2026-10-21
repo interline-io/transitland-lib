@@ -45,6 +45,7 @@ func testServiceWindow(t *testing.T) *model.ServiceWindow {
 			StartDate:    testDate(t, "2026-05-11"),
 			EndDate:      testDate(t, "2026-05-17"),
 			FallbackWeek: testDate(t, "2026-05-11"),
+			Location:     time.UTC,
 		},
 	}
 }
@@ -86,6 +87,16 @@ func TestExpandTripServiceDates(t *testing.T) {
 		}
 		return out
 	}
+
+	t.Run("relabels database dates as requested dates", func(t *testing.T) {
+		dates := mustResolveTripDates(t,
+			&model.TripFilter{ServiceDates: testDates(t, "2030-01-02"), UseServiceWindow: ptr(true)},
+			testServiceWindow(t),
+		)
+		ent := trip("2026-05-13")
+		expandTripServiceDates([]*model.Trip{ent}, dates)
+		assert.Equal(t, []string{"2030-01-02"}, got(ent))
+	})
 
 	t.Run("sorts across database dates", func(t *testing.T) {
 		dates := mustResolveTripDates(t, &model.TripFilter{ServiceDates: testDates(t, "2026-05-13", "2026-05-11")}, nil)

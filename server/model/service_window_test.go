@@ -1,8 +1,10 @@
 package model
 
 import (
+	"errors"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/tt"
@@ -46,7 +48,7 @@ func TestBestWeek_Caltrain(t *testing.T) {
 	}
 	assert.Equal(t, "2025-06-30", bestWeekOf(levels), "the busiest full-service week")
 
-	// Reduced service on a day still counts as service on it.
+	// A day with reduced service still counts as a day with service.
 	assert.False(t, hasFullService(levels[0]))
 	assert.False(t, hasFullService(levels[5]))
 	assert.True(t, hasFullService(levels[1]))
@@ -85,4 +87,39 @@ func TestBestWeek_RTD(t *testing.T) {
 	}
 	assert.False(t, hasFullService(levels[0]))
 	assert.Equal(t, "2025-09-15", bestWeekOf(levels), "the busiest full-service week")
+}
+
+func TestNewFeedServiceWindow(t *testing.T) {
+	levels := []dmfr.FeedVersionServiceLevel{
+		week(t, "2025-08-11", "2025-08-17", 1, 1, 1, 1, 1, 1, 1),
+	}
+	fvsw := dmfr.FeedVersionServiceWindow{DefaultTimezone: tt.NewString("America/Los_Angeles")}
+
+	t.Run("in the feed version's default timezone", func(t *testing.T) {
+		var asked string
+		w, err := NewFeedServiceWindow(fvsw, levels, time.Time{}, func(name string) (*time.Location, error) {
+			asked = name
+			return time.LoadLocation(name)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, "America/Los_Angeles", asked)
+		assert.Equal(t, "America/Los_Angeles", w.Location.String())
+		assert.Equal(t, "2025-08-11", w.FallbackWeek.Format("2006-01-02"))
+	})
+
+	t.Run("a timezone that doesn't load is an error", func(t *testing.T) {
+		_, err := NewFeedServiceWindow(fvsw, levels, time.Time{}, func(name string) (*time.Location, error) {
+			return nil, errors.New("no such timezone")
+		})
+		assert.ErrorContains(t, err, "no such timezone")
+	})
+
+	t.Run("no location is an error", func(t *testing.T) {
+		_, err := NewFeedServiceWindow(fvsw, levels, time.Time{}, func(name string) (*time.Location, error) {
+			return nil, nil
+		})
+		assert.Error(t, err)
+	})
 }

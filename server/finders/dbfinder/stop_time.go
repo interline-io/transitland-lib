@@ -90,7 +90,11 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		// Run separate queries for each possible service day
 		var fvEnts []*model.StopTime
 		ranked := false
-		for _, day := range model.ExpandStopTimeFilter(where, fvsw) {
+		days, err := model.ExpandStopTimeFilter(where, fvsw)
+		if err != nil {
+			return nil, err
+		}
+		for _, day := range days {
 			w := day.Where
 			var sts []*model.StopTime
 			var q sq.SelectBuilder
