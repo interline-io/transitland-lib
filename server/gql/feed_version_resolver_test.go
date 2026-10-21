@@ -12,6 +12,7 @@ import (
 )
 
 func TestFeedVersionResolver(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	vars := hw{"feed_version_sha1": "d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
 	within := hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{
 		{-122.39803791046143, 37.794626736533836},
@@ -688,6 +689,7 @@ func TestFeedVersionResolver_BookingRules(t *testing.T) {
 }
 
 func TestFeedVersionResolver_License(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	q := `query($lic:LicenseFilter) {feed_versions(where: {license: $lic}) {sha1 feed { onestop_id} }}`
 	baFvs := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 	haFvs := []string{"c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c"}
@@ -848,6 +850,7 @@ func TestFeedVersionResolver_License(t *testing.T) {
 // TestFeedVersionResolver_TableCursors pages through each GTFS table list with
 // `after`, and selects records from it with `where: {ids}`.
 func TestFeedVersionResolver_TableCursors(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	c, _ := newTestClient(t)
 	tcs := []struct {
 		field string

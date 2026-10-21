@@ -5,12 +5,14 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/model"
 )
 
 // Fares v1 data comes from the CT and BA feeds; Fares v2 data comes from
 // ctran-flex and from the supplemental feed.
 func TestFareResolver(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	ctSha1 := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
 	baSha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
@@ -147,7 +149,10 @@ func TestFareResolver(t *testing.T) {
 			name:   "fare_transfer_rules",
 			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_transfer_rules { from_leg_group_id to_leg_group_id transfer_count duration_limit duration_limit_type fare_transfer_type fare_product_id filter_fare_product_id } } }`,
 			vars:   hw{"sha1": supplementalSha1},
-			expect: `{"feed_versions":[{"fare_transfer_rules":[{"duration_limit":5400,"duration_limit_type":1,"fare_product_id":"express_upgrade","fare_transfer_type":0,"filter_fare_product_id":"two_zone","from_leg_group_id":"local_legs","to_leg_group_id":"express_legs","transfer_count":null}]}]}`,
+			expect: `{"feed_versions":[{"fare_transfer_rules":[` +
+				`{"duration_limit":5400,"duration_limit_type":1,"fare_product_id":"express_upgrade","fare_transfer_type":0,"filter_fare_product_id":"two_zone","from_leg_group_id":"local_legs","to_leg_group_id":"express_legs","transfer_count":null},` +
+				`{"duration_limit":3600,"duration_limit_type":0,"fare_product_id":null,"fare_transfer_type":0,"filter_fare_product_id":null,"from_leg_group_id":"local_legs","to_leg_group_id":"local_legs","transfer_count":1}` +
+				`]}]}`,
 		},
 		{
 			name:  "rider_categories",
@@ -234,6 +239,11 @@ func TestFareResolver(t *testing.T) {
 				`"to_leg_rules":[{"leg_group_id":"express_legs","fare_product_id":"two_zone"}],` +
 				`"fare_products":[{"fare_product_id":"express_upgrade"}],` +
 				`"filter_fare_products":[{"fare_product_id":"two_zone","rider_category_id":"adult"},{"fare_product_id":"two_zone","rider_category_id":"youth"}]` +
+				`},{` +
+				`"from_leg_rules":[{"leg_group_id":"local_legs","fare_product_id":"two_zone"},{"leg_group_id":"local_legs","fare_product_id":"two_zone_peak"}],` +
+				`"to_leg_rules":[{"leg_group_id":"local_legs","fare_product_id":"two_zone"},{"leg_group_id":"local_legs","fare_product_id":"two_zone_peak"}],` +
+				`"fare_products":[],` +
+				`"filter_fare_products":[]` +
 				`}]}]}`,
 		},
 		{
@@ -290,6 +300,7 @@ func TestFareResolver(t *testing.T) {
 // TestFareResolver_Cursor exercises keyset (after) pagination, mirroring
 // TestFeedVersionResolver_Shapes_Cursor.
 func TestFareResolver_Cursor(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	c, cfg := newTestClient(t)
 	ctx := model.WithConfig(context.Background(), cfg)
 
@@ -357,6 +368,7 @@ func TestFareResolver_Cursor(t *testing.T) {
 }
 
 func TestFeedVersionResolver_StopAreas(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	testcases := []testcase{
 		{
 			name:  "every stop area in the feed version",

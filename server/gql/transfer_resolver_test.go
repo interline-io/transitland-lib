@@ -2,9 +2,12 @@ package gql
 
 import (
 	"testing"
+
+	"github.com/interline-io/transitland-lib/internal/testconfig"
 )
 
 func TestFeedVersionResolver_Transfers(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	baSha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 	q := `query($sha1:String!, $where:TransferFilter) {
 		feed_versions(where:{sha1:$sha1}) {
@@ -51,8 +54,8 @@ func TestFeedVersionResolver_Transfers(t *testing.T) {
 				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.from_route.route_id`, expect: []string{"L"}},
 				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.to_route.route_id`, expect: []string{"X"}},
 				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.from_stop.stop_id`, expect: []string{"N1"}},
-				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.from_trip.trip_id`, expect: []string{"101"}},
-				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.to_trip.trip_id`, expect: []string{"102"}},
+				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.from_trip.trip_id`, expect: []string{"T101"}},
+				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.to_trip.trip_id`, expect: []string{"T102"}},
 				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.from_stop`, expect: []string{""}},
 			},
 		},

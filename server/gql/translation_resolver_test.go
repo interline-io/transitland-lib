@@ -2,9 +2,12 @@ package gql
 
 import (
 	"testing"
+
+	"github.com/interline-io/transitland-lib/internal/testconfig"
 )
 
 func TestFeedVersionResolver_Translations(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	// The supplemental feed has two translations by record_id for one stop, one by
 	// field_value, and one for a route.
 	q := `query($sha1:String!, $where:TranslationFilter) {

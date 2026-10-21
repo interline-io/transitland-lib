@@ -23,6 +23,7 @@ import (
 // keeps returning rows and its subtest fails. A census exclude search instead
 // stops subtracting the buffers of the hidden stops.
 func TestPermFilter_Negative(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
 		f := cfg.Finder

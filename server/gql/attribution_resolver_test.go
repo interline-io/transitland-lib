@@ -2,9 +2,12 @@ package gql
 
 import (
 	"testing"
+
+	"github.com/interline-io/transitland-lib/internal/testconfig"
 )
 
 func TestFeedVersionResolver_Attributions(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	// The supplemental feed has attributions: one for the whole feed, and one each
 	// for an agency, a route and a trip.
 	q := `query($sha1:String!, $where:AttributionFilter) {
@@ -52,7 +55,7 @@ func TestFeedVersionResolver_Attributions(t *testing.T) {
 			query:        q,
 			vars:         hw{"sha1": supplementalSha1, "where": hw{"attribution_id": "trip_operator"}},
 			selector:     "feed_versions.0.attributions.0.trip.trip_id",
-			selectExpect: []string{"101"},
+			selectExpect: []string{"T101"},
 		},
 		{
 			name:   "feed version without attributions",
