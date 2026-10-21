@@ -18,6 +18,10 @@ import (
 
 const DEFAULT_WHEN = "2022-09-01T00:00:00Z"
 
+// supplementalSha1 is the sha1 of testdata/server/gtfs/supplemental.zip, the feed
+// that has the GTFS tables no real fixture has. It changes with the zip.
+const supplementalSha1 = "d2d37e1477319248366385a5b76bd32c0832f93f"
+
 type hw = map[string]interface{}
 
 type testcaseSelector struct {

@@ -108,6 +108,11 @@ transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_ST
 transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch 
 transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --activate
 
+# Supplemental feed: GTFS tables no real fixture has. It is fetched last and never
+# activated, so it shifts no other ids and stays out of active-version queries.
+transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch --feed-url="$SCRIPTDIR/server/gtfs/supplemental.zip" supplemental
+transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE"
+
 # Sync again
 transitland sync --dburl="$TL_TEST_SERVER_DATABASE_URL" "$SCRIPTDIR/server/server-test.dmfr.json"
 

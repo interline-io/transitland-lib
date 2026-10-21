@@ -6,7 +6,6 @@ import (
 
 func TestFeedVersionResolver_Transfers(t *testing.T) {
 	baSha1 := "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
-	ctSha1 := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
 	q := `query($sha1:String!, $where:TransferFilter) {
 		feed_versions(where:{sha1:$sha1}) {
 			transfers(where:$where) {
@@ -44,14 +43,14 @@ func TestFeedVersionResolver_Transfers(t *testing.T) {
 			selectExpect: []string{"19TH_N", "MCAR_S", "SBRN", "FRMT", "WCRK"},
 		},
 		{
-			// The supplemental CT transfers reference routes and trips.
+			// The supplemental feed's transfers reference routes and trips.
 			name:  "route and trip references",
 			query: q,
-			vars:  hw{"sha1": ctSha1},
+			vars:  hw{"sha1": supplementalSha1},
 			sel: []testcaseSelector{
-				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.from_route.route_id`, expect: []string{"Lo-130"}},
-				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.to_route.route_id`, expect: []string{"Bu-130"}},
-				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.from_stop.stop_id`, expect: []string{"70011"}},
+				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.from_route.route_id`, expect: []string{"L"}},
+				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.to_route.route_id`, expect: []string{"X"}},
+				{selector: `feed_versions.0.transfers.#(transfer_type==1)#.from_stop.stop_id`, expect: []string{"N1"}},
 				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.from_trip.trip_id`, expect: []string{"101"}},
 				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.to_trip.trip_id`, expect: []string{"102"}},
 				{selector: `feed_versions.0.transfers.#(transfer_type==4)#.from_stop`, expect: []string{""}},

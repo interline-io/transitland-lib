@@ -129,6 +129,7 @@ For running tests locally, the following instructions should help get started:
    - Builds and installs the `cmd/transitland` command
    - Sets up test feeds contained in `testdata/server/server-test.dmfr.json`
    - Fetches and imports feeds contained in `testdata/server/gtfs`
+   - Imports `testdata/server/gtfs/supplemental.zip` without activating it. This small feed holds the GTFS tables no real fixture has; add new test-only GTFS data to it, and update `supplementalSha1` in `server/gql` when the zip changes
    - Creates additional fixtures defined in `testdata/server/test_supplement.pgsql`
    - Note that temporary files will be created in `testdata/server/tmp`; these are excluded in `.gitignore`
 3. Optional: Set `TL_TEST_REDIS_URL` to run some GBFS tests
