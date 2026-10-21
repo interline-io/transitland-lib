@@ -23,6 +23,7 @@ import (
 // keeps returning rows and its subtest fails. A census exclude search instead
 // stops subtracting the buffers of the hidden stops.
 func TestPermFilter_Negative(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
 		f := cfg.Finder
@@ -40,7 +41,7 @@ func TestPermFilter_Negative(t *testing.T) {
 			}
 			return fvs[0].ID
 		}
-		ctFv := fvID("d2813c293bcfd7a97dde599527ae6c62c98e66c6")
+		supplementalFv := fvID(supplementalSha1)
 		flexFv := fvID("e8bc76c3c8602cad745f41a49ed5c5627ad6904c")
 		baFv := fvID("e535eb2b3b9ac3ef15d82c56575e914575e732e0")
 		haFv := fvID("c969427f56d3a645195dd8365cde6d7feae7e99b")
@@ -148,12 +149,14 @@ func TestPermFilter_Negative(t *testing.T) {
 			{"LocationGroupStopsByFeedVersionIDs", func() (int, error) {
 				return countGroups(f.LocationGroupStopsByFeedVersionIDs(ctx, nil, nil, nil, []int{flexFv}))
 			}},
-			{"StopAreasByFeedVersionIDs", func() (int, error) { return countGroups(f.StopAreasByFeedVersionIDs(ctx, nil, nil, nil, []int{ctFv})) }},
+			{"StopAreasByFeedVersionIDs", func() (int, error) {
+				return countGroups(f.StopAreasByFeedVersionIDs(ctx, nil, nil, nil, []int{supplementalFv}))
+			}},
 			{"TranslationsByFeedVersionIDs", func() (int, error) {
-				return countGroups(f.TranslationsByFeedVersionIDs(ctx, nil, nil, nil, []int{ctFv}))
+				return countGroups(f.TranslationsByFeedVersionIDs(ctx, nil, nil, nil, []int{supplementalFv}))
 			}},
 			{"AttributionsByFeedVersionIDs", func() (int, error) {
-				return countGroups(f.AttributionsByFeedVersionIDs(ctx, nil, nil, nil, []int{ctFv}))
+				return countGroups(f.AttributionsByFeedVersionIDs(ctx, nil, nil, nil, []int{supplementalFv}))
 			}},
 			// Observations match a stop by stop_id, from any feed version, so each one is
 			// checked against its own. The fixtures record one at FTVL against BART.
