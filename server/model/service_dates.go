@@ -186,3 +186,132 @@ func SetTripRunDates(trip *Trip, dates []TripDate, ran func(query time.Time) boo
 		trip.RunDates = append(trip.RunDates, d)
 	}
 }
+
+// ServiceDayQuery is one service day's share of a stop time filter: the filter
+// to run, and the requested service date its stop times report. Report is nil
+// for a filter without a date, which matches a stop's every stop time.
+type ServiceDayQuery struct {
+	Where  *StopTimeFilter
+	Report *tt.Date
+}
+
+// ExpandStopTimeFilter splits a stop time filter into the service days it
+// covers, in the feed version's terms: dates resolve against its timezone and
+// clock, a window crossing midnight takes in the neighboring service day, and
+// use_service_window relocates each day on its own. It rewrites where's dates
+// and times in place, so callers pass a copy.
+func ExpandStopTimeFilter(where *StopTimeFilter, fvsw *ServiceWindow) []ServiceDayQuery {
+	// Pre-processing
+	// Convert Start, End to StartTime, EndTime
+	if where != nil {
+		if where.Start != nil {
+			where.StartTime = intPtr(where.Start.Int())
+			where.Start = nil
+		}
+		if where.End != nil {
+			where.EndTime = intPtr(where.End.Int())
+			where.End = nil
+		}
+	}
+
+	// Further processing of the StopTimeFilter
+	if where != nil {
+		var nowLocal time.Time
+		if fvsw != nil {
+			nowLocal = fvsw.NowLocal
+		}
+		loc := nowLocal.Location()
+
+		// Set ServiceDate to local timezone
+		// ServiceDate is a strict GTFS calendar date
+		if where.ServiceDate != nil {
+			where.ServiceDate = TzTruncate(where.ServiceDate.Val, loc)
+		}
+
+		// Set Date to local timezone
+		if where.Date != nil {
+			where.Date = TzTruncate(where.Date.Val, loc)
+		}
+
+		// Convert relative date
+		if where.RelativeDate != nil {
+			if s, err := ResolveRelativeDate(*where.RelativeDate, nowLocal); err != nil {
+				// This should always succeed because it is an enum and will be caught earlier
+				// TODO: log
+			} else {
+				where.Date = TzTruncate(s, loc)
+			}
+		}
+
+		// Convert where.Next into departure date and time window
+		if where.Next != nil {
+			if where.Date == nil {
+				where.Date = TzTruncate(nowLocal, loc)
+			}
+			st := nowLocal.Hour()*3600 + nowLocal.Minute()*60 + nowLocal.Second()
+			where.StartTime = intPtr(st)
+			where.EndTime = intPtr(st + *where.Next)
+		}
+
+	}
+
+	// Each service day is relocated on its own, so a neighboring day inside the
+	// window keeps its own schedule.
+	serviceDay := func(asked tt.Date) ServiceDayQuery {
+		w := *where
+		w.ServiceDate, _, _ = ResolveServiceDate(&asked, nil, where.UseServiceWindow != nil && *where.UseServiceWindow, fvsw)
+		return ServiceDayQuery{Where: &w, Report: &asked}
+	}
+
+	// Check if we are crossing date boundaires, and split into separate service date queries
+	var whereGroups []ServiceDayQuery
+	if where != nil && where.Date != nil {
+		day := func(days int) tt.Date {
+			return tt.NewDate(where.Date.Val.AddDate(0, 0, days))
+		}
+		dayStart := 0
+		dayEnd := 24 * 60 * 60
+		dayEndMax := 100 * 60 * 60
+		whereStartTime := dayStart
+		if where.StartTime != nil {
+			whereStartTime = *where.StartTime
+		}
+		whereEndTime := dayEnd
+		if where.EndTime != nil {
+			whereEndTime = *where.EndTime
+		}
+		lookBehind := 6 * 3600
+		// Query previous day
+		if whereStartTime < lookBehind {
+			prev := serviceDay(day(-1))
+			prev.Where.StartTime = intPtr(dayEnd + whereStartTime)
+			prev.Where.EndTime = intPtr(dayEndMax)
+			whereGroups = append(whereGroups, prev)
+		}
+		// Query requested day
+		requested := serviceDay(day(0))
+		requested.Where.StartTime = intPtr(max(dayStart, whereStartTime))
+		requested.Where.EndTime = intPtr(whereEndTime)
+		whereGroups = append(whereGroups, requested)
+		// Query next day
+		if whereEndTime > dayEnd {
+			next := serviceDay(day(1))
+			next.Where.StartTime = intPtr(dayStart)
+			next.Where.EndTime = intPtr(whereEndTime - dayEnd)
+			whereGroups = append(whereGroups, next)
+		}
+	} else if where != nil && where.ServiceDate != nil {
+		whereGroups = append(whereGroups, serviceDay(*where.ServiceDate))
+	}
+
+	// Default
+	if len(whereGroups) == 0 {
+		whereGroups = append(whereGroups, ServiceDayQuery{Where: where})
+	}
+
+	return whereGroups
+}
+
+func intPtr(v int) *int {
+	return &v
+}
