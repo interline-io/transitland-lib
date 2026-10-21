@@ -14,7 +14,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query { feeds {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "BA", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "BA", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX", "supplemental"},
 		},
 		{
 			name:   "basic fields",
@@ -89,7 +89,7 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where spec=gtfs",
 			query:        `query { feeds(where:{spec:[GTFS]}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "test", "EX", "supplemental"},
 		},
 		{
 			name:         "where spec=gtfs-rt",
@@ -107,13 +107,13 @@ func TestFeedResolver(t *testing.T) {
 			name:         "where fetch_error=false",
 			query:        `query { feeds(where:{fetch_error:false}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "EX", "supplemental"},
 		},
 		{
 			name:         "where import_status=success",
 			query:        `query { feeds(where:{import_status:SUCCESS}) {onestop_id}}`,
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "BA", "HA", "WMATA", "EX", "supplemental"},
 		},
 		{
 			name:         "where import_status=in_progress", // TODO: mock an in-progress import
@@ -325,19 +325,19 @@ func TestFeedResolver_Cursor(t *testing.T) {
 	testcases := []testcase{
 		{
 			name:         "no cursor",
-			query:        "query{feeds(limit:10){id onestop_id}}",
+			query:        "query{feeds(limit:100){id onestop_id}}",
 			selector:     "feeds.#.onestop_id",
 			selectExpect: allIds,
 		},
 		{
 			name:         "after 0",
-			query:        "query{feeds(after: 0, limit:10){id onestop_id}}",
+			query:        "query{feeds(after: 0, limit:100){id onestop_id}}",
 			selector:     "feeds.#.onestop_id",
 			selectExpect: allIds,
 		},
 		{
 			name:         "after 1st",
-			query:        "query($after: Int!){feeds(after: $after, limit:10){id onestop_id}}",
+			query:        "query($after: Int!){feeds(after: $after, limit:100){id onestop_id}}",
 			vars:         hw{"after": allEnts[1].ID},
 			selector:     "feeds.#.onestop_id",
 			selectExpect: allIds[2:],
@@ -376,7 +376,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX", "supplemental"},
 		},
 		// license: create_derived_product
 		{
@@ -405,7 +405,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX", "supplemental"},
 		},
 		// license: commercial_use_allowed
 		{
@@ -434,7 +434,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX", "supplemental"},
 		},
 		// license: redistribution_allowed
 		{
@@ -463,7 +463,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX", "supplemental"},
 		},
 
 		// license: use_without_attribution
@@ -493,7 +493,7 @@ func TestFeedResolver_License(t *testing.T) {
 			query:        q,
 			vars:         hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:     "feeds.#.onestop_id",
-			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX"},
+			selectExpect: []string{"CT", "ctran-flex", "test-gbfs", "HA", "WMATA", "BA~rt", "CT~rt", "test", "EX", "supplemental"},
 		},
 	}
 	c, _ := newTestClient(t)

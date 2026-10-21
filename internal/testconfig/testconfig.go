@@ -83,6 +83,23 @@ func ConfigTxRollback(t testing.TB, opts Options, cb func(model.Config)) {
 	})
 }
 
+// SupplementalSha1 returns the sha1 of the supplemental fixture feed's only
+// version, found by the feed's onestop id. The sha1 changes whenever
+// testdata/server/gtfs/supplemental.zip does.
+func SupplementalSha1(t testing.TB) string {
+	t.Helper()
+	cfg := Config(t, Options{})
+	osid := "supplemental"
+	fvs, err := cfg.Finder.FindFeedVersions(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.FeedVersionFilter{FeedOnestopID: &osid})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fvs) != 1 {
+		t.Fatalf("found %d supplemental feed versions, expected 1", len(fvs))
+	}
+	return fvs[0].SHA1
+}
+
 type RTJsonFile struct {
 	Feed  string
 	Ftype string

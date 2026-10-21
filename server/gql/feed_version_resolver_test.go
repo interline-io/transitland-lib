@@ -12,6 +12,7 @@ import (
 )
 
 func TestFeedVersionResolver(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	vars := hw{"feed_version_sha1": "d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
 	within := hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{
 		{-122.39803791046143, 37.794626736533836},
@@ -25,7 +26,7 @@ func TestFeedVersionResolver(t *testing.T) {
 			name:         "basic",
 			query:        `query {  feed_versions {sha1} }`,
 			selector:     "feed_versions.#.sha1",
-			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", "148d00724546e1526d5d84d1f9d095df24f6517c"},
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", "148d00724546e1526d5d84d1f9d095df24f6517c", supplementalSha1},
 		},
 		{
 			name:   "basic fields",
@@ -688,11 +689,12 @@ func TestFeedVersionResolver_BookingRules(t *testing.T) {
 }
 
 func TestFeedVersionResolver_License(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	q := `query($lic:LicenseFilter) {feed_versions(where: {license: $lic}) {sha1 feed { onestop_id} }}`
 	baFvs := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 	haFvs := []string{"c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c"}
 	ctFvs := []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
-	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}
+	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", supplementalSha1}
 	testcases := []testcase{
 		// license: share_alike_optional
 		{
@@ -848,8 +850,8 @@ func TestFeedVersionResolver_License(t *testing.T) {
 // TestFeedVersionResolver_TableCursors pages through each GTFS table list with
 // `after`, and selects records from it with `where: {ids}`.
 func TestFeedVersionResolver_TableCursors(t *testing.T) {
+	supplementalSha1 := testconfig.SupplementalSha1(t)
 	c, _ := newTestClient(t)
-	ctSha1 := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
 	tcs := []struct {
 		field string
 		sha1  string
@@ -857,9 +859,9 @@ func TestFeedVersionResolver_TableCursors(t *testing.T) {
 		{"frequencies", "43e2278aa272879c79460582152b04e7487f0493"},
 		{"transfers", "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
 		{"location_group_stops", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"},
-		{"stop_areas", ctSha1},
-		{"translations", ctSha1},
-		{"attributions", ctSha1},
+		{"stop_areas", supplementalSha1},
+		{"translations", supplementalSha1},
+		{"attributions", supplementalSha1},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.field, func(t *testing.T) {

@@ -141,6 +141,11 @@
       "urls": {
         "static_current": "file://testdata/server/gtfs/eg.zip"
       }
+    },
+    {
+      "spec": "gtfs",
+      "id": "supplemental",
+      "name": "Supplemental Transit"
     }
   ],
   "license_spdx_identifier": "CC0-1.0"

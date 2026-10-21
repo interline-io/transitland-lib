@@ -89,7 +89,7 @@ transitland dbmigrate-natural-earth --dburl="$TL_TEST_SERVER_DATABASE_URL"
 # Create the month partitions against the populated server DB. The fetch/import steps
 # above already wrote their (static) feed_fetches rows, which route to feed_fetches_static,
 # so this leaves a realistically partitioned table for the test suite.
-psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/../schema/postgres/ops/feed_fetches_partition/01_seed_partitions.sql"
+psql -v ON_ERROR_STOP=1 -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/../schema/postgres/ops/feed_fetches_partition/01_seed_partitions.sql"
 
 
 #########################
@@ -108,12 +108,18 @@ transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_ST
 transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch 
 transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --activate
 
+# Supplemental feed: GTFS tables no real fixture has. It is fetched last and never
+# activated, so it shifts no other ids and stays out of active-version queries. Its
+# early fetched_at lists it after the real fixtures' versions.
+transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch --fetched-at=2020-01-01T00:00:00Z --feed-url="$SCRIPTDIR/server/gtfs/supplemental.zip" supplemental
+transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE"
+
 # Sync again
 transitland sync --dburl="$TL_TEST_SERVER_DATABASE_URL" "$SCRIPTDIR/server/server-test.dmfr.json"
 
 # Supplemental data
-psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/test_supplement.pgsql"
+psql -v ON_ERROR_STOP=1 -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/test_supplement.pgsql"
 
 # Load census data
-psql -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/census/census.pgsql"
+psql -v ON_ERROR_STOP=1 -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/server/census/census.pgsql"
 
