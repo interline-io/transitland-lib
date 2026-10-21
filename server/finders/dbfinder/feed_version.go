@@ -3,7 +3,6 @@ package dbfinder
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -143,23 +142,11 @@ func (f *Finder) FeedVersionGeohashesByFeedVersionIDs(ctx context.Context, limit
 }
 
 func (f *Finder) FindFeedVersionServiceWindow(ctx context.Context, fvid int) (*model.ServiceWindow, error) {
-	a, _, err := f.fvslCache.Get(ctx, fvid)
-	if err != nil || a == nil || a.Location == nil {
+	w, err := f.fvslCache.Get(ctx, fvid)
+	if err != nil {
 		return nil, errors.New("no service window found")
 	}
-	// Get local time
-	nowLocal := time.Now().In(a.Location)
-	if model.ForContext(ctx).Clock != nil {
-		nowLocal = model.ForContext(ctx).Clock.Now().In(a.Location)
-	}
-	// Copy back to model
-	ret := &model.ServiceWindow{
-		NowLocal:     nowLocal,
-		StartDate:    a.StartDate,
-		EndDate:      a.EndDate,
-		FallbackWeek: a.FallbackWeek,
-	}
-	return ret, err
+	return w.At(model.Now(ctx)), nil
 }
 
 func (f *Finder) FeedInfosByFeedVersionIDs(ctx context.Context, limit *int, keys []int) ([][]*model.FeedInfo, error) {
