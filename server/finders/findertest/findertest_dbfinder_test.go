@@ -3,7 +3,6 @@ package findertest
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
@@ -22,7 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestDBFinder(t *testing.T) {
-	Run(t, func(t testing.TB, when time.Time) model.Config {
-		return testconfig.Config(t, testconfig.Options{WhenUtc: when.UTC().Format(time.RFC3339)})
+	Run(t, func(t testing.TB) model.Config {
+		return testconfig.Config(t, testconfig.Options{})
 	})
 }

@@ -2,11 +2,6 @@ package findertest
 
 // Cases duplicated from server/gql/pathway_resolver_test.go.
 
-// WMATA Rail provides a station-modeled GTFS feed with pathways and levels.
-// Most assertions are anchored on stops in the Pentagon City station (STN_C08),
-// which has well-defined platform/entrance/node topology and a small enough
-// pathway set to enumerate exactly.
-
 func pathwayResolverTestcases() []testcase {
 	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
 	// NODE_C08_FG_PAID = Pentagon City fare-gates, paid side.
@@ -171,7 +166,7 @@ func pathwayResolverTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionPathwaysTestcases() []testcase {
+func feedVersionResolverPathwaysTestcases() []testcase {
 	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
 	q := `query($sha1:String!, $limit:Int, $where:PathwayFilter) {
 		feed_versions(where:{sha1:$sha1}) {

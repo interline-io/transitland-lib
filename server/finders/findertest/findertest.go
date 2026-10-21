@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/client"
+	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/gql"
@@ -20,37 +21,81 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// NewConfig returns a server config whose finder holds the server test feeds,
-// with its clock set to when.
-type NewConfig func(t testing.TB, when time.Time) model.Config
+// NewConfig returns a server config whose finder holds the server test feeds.
+type NewConfig func(t testing.TB) model.Config
 
-// Run runs every case against the finder that newConfig builds. Some cases read
-// more rows than the API allows by default, so callers first raise
-// gql.RESOLVER_MAXLIMIT, as the resolver tests do.
-func Run(t *testing.T, newConfig NewConfig) {
-	groups := []struct {
-		name  string
-		cases func() []testcase
-	}{
+// caseGroup is one resolver test function's cases, run against one client.
+type caseGroup struct {
+	name  string
+	cases func() []testcase
+}
+
+// clockGroup is one resolver test function's cases, each run at its own time.
+type clockGroup struct {
+	name  string
+	cases func() []testcaseWithClock
+}
+
+// The resolver test functions the suite runs, by name.
+var (
+	caseGroups = []caseGroup{
+		{"BookingRuleResolver", bookingRuleResolverTestcases},
+		{"BookingRuleResolver_FeedVersion", bookingRuleResolverFeedVersionTestcases},
+		{"BookingRuleResolver_PriorNoticeService", bookingRuleResolverPriorNoticeServiceTestcases},
+		{"CalendarResolver", calendarResolverTestcases},
+		{"FeedVersionResolver_Locations", feedVersionResolverLocationsTestcases},
+		{"FeedVersionResolver_BookingRules", feedVersionResolverBookingRulesTestcases},
+		{"FeedVersionResolver_LocationGroups", feedVersionResolverLocationGroupsTestcases},
 		{"LevelResolver", levelResolverTestcases},
-		{"FeedVersionResolver_Levels", feedVersionLevelsTestcases},
+		{"FeedVersionResolver_Levels", feedVersionResolverLevelsTestcases},
+		{"LocationResolver", locationResolverTestcases},
+		{"LocationResolver_StopTimes", locationResolverStopTimesTestcases},
+		{"LocationGroupResolver", locationGroupResolverTestcases},
+		{"LocationGroupResolver_StopTimes", locationGroupResolverStopTimesTestcases},
+		{"LocationGroupResolver_Stops", locationGroupResolverStopsTestcases},
+		{"LocationGroupResolver_FeedVersion", locationGroupResolverFeedVersionTestcases},
+		{"FeedVersionResolver_LocationGroupStops", feedVersionResolverLocationGroupStopsTestcases},
 		{"PathwayResolver", pathwayResolverTestcases},
-		{"FeedVersionResolver_Pathways", feedVersionPathwaysTestcases},
+		{"FeedVersionResolver_Pathways", feedVersionResolverPathwaysTestcases},
+		{"RouteResolver_License", routeResolverLicenseTestcases},
+		{"FeedVersionResolver_Shapes", feedVersionResolverShapesTestcases},
+		{"ShapeResolver_Trips", shapeResolverTripsTestcases},
+		{"StopResolver_StopTimes_Dates", stopResolverStopTimesDatesTestcases},
+		{"StopResolver_StopTimes_DateWindows", stopResolverStopTimesDateWindowsTestcases},
+		{"StopResolver_LocationGroups", stopResolverLocationGroupsTestcases},
 		{"TripResolver", tripResolverTestcases},
-		{"TripResolver_Frequencies", tripFrequenciesTestcases},
+		{"TripResolver_Frequencies", tripResolverFrequenciesTestcases},
+		{"TripResolver_License", tripResolverLicenseTestcases},
+		{"TripResolver_FlexStopTimes", tripResolverFlexStopTimesTestcases},
+		{"TripResolver_SafeDuration", tripResolverSafeDurationTestcases},
+		{"FeedVersionResolver_Frequencies", feedVersionResolverFrequenciesTestcases},
+		{"AgencyResolver_License", agencyResolverLicenseTestcases},
+		{"OperatorResolver_License", operatorResolverLicenseTestcases},
 	}
-	for _, g := range groups {
+	clockGroups = []clockGroup{
+		{"RouteResolver_Date", routeResolverDateTestcases},
+	}
+)
+
+// Run runs every case against the finder that newConfig builds, setting the
+// config's clock to the time the case runs at. Some cases read more rows than
+// the API allows by default, so callers first raise gql.RESOLVER_MAXLIMIT, as
+// the resolver tests do.
+func Run(t *testing.T, newConfig NewConfig) {
+	for _, g := range caseGroups {
 		t.Run(g.name, func(t *testing.T) {
 			queryTestcases(t, newTestClient(t, newConfig, defaultWhen), g.cases())
 		})
 	}
-	t.Run("RouteResolver_Date", func(t *testing.T) {
-		for _, tc := range routeResolverDateTestcases() {
-			t.Run(tc.name, func(t *testing.T) {
-				queryTestcase(t, newTestClient(t, newConfig, tc.whenUtc), tc.testcase)
-			})
-		}
-	})
+	for _, g := range clockGroups {
+		t.Run(g.name, func(t *testing.T) {
+			for _, tc := range g.cases() {
+				t.Run(tc.name, func(t *testing.T) {
+					queryTestcase(t, newTestClient(t, newConfig, tc.whenUtc), tc.testcase)
+				})
+			}
+		})
+	}
 }
 
 // newTestClient serves the config through the GraphQL handler, as a signed-in
@@ -60,8 +105,10 @@ func newTestClient(t testing.TB, newConfig NewConfig, whenUtc string) *client.Cl
 	if err != nil {
 		t.Fatal(err)
 	}
+	cfg := newConfig(t)
+	cfg.Clock = &clock.Mock{T: when}
 	srv := gql.NewDefaultHandler()
-	graphqlServer := model.AddConfigAndPerms(newConfig(t, when), srv)
+	graphqlServer := model.AddConfigAndPerms(cfg, srv)
 	srvMiddleware := usercheck.NewUserDefaultMiddleware(func() authn.User {
 		return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
 	})

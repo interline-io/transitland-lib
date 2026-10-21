@@ -178,7 +178,7 @@ func tripResolverTestcases() []testcase {
 	return testcases
 }
 
-func tripFrequenciesTestcases() []testcase {
+func tripResolverFrequenciesTestcases() []testcase {
 	// CITY1 runs five headway bands; its first stop departs at 06:00:00.
 	const q = `query($trip_id:String!) {trips(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", trip_id:$trip_id}) {frequencies{start_time end_time headway_secs trip{trip_id stop_times(limit:1){departure_time}}}}}`
 	vars := hw{"trip_id": "CITY1"}
@@ -233,6 +233,315 @@ func tripFrequenciesTestcases() []testcase {
 			vars:         hw{"trip_id": "AB1"},
 			selector:     "trips.0.frequencies.#.headway_secs",
 			selectExpect: []string{},
+		},
+	}
+	return testcases
+}
+
+func tripResolverLicenseTestcases() []testcase {
+	q := `
+	query ($lic: LicenseFilter) {
+		trips(limit: 100000, where: {license: $lic}) {
+		  trip_id
+		  feed_version {
+			feed {
+			  onestop_id
+			  license {
+				share_alike_optional
+				create_derived_product
+				commercial_use_allowed
+				redistribution_allowed
+			  }
+			}
+		  }
+		}
+	  }
+	`
+	testcases := []testcase{
+		// license: share_alike_optional
+		{
+			name:               "license filter: share_alike_optional = yes",
+			query:              q,
+			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
+		},
+		{
+			name:               "license filter: share_alike_optional = no",
+			query:              q,
+			vars:               hw{"lic": hw{"share_alike_optional": "NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
+		},
+		{
+			name:               "license filter: share_alike_optional = exclude_no",
+			query:              q,
+			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
+		},
+		// license: create_derived_product
+		{
+			name:               "license filter: create_derived_product = yes",
+			query:              q,
+			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
+		},
+		{
+			name:               "license filter: create_derived_product = no",
+			query:              q,
+			vars:               hw{"lic": hw{"create_derived_product": "NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
+		},
+		{
+			name:               "license filter: create_derived_product = exclude_no",
+			query:              q,
+			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
+		},
+		// license: commercial_use_allowed
+		{
+			name:               "license filter: commercial_use_allowed = yes",
+			query:              q,
+			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
+		},
+		{
+			name:               "license filter: commercial_use_allowed = no",
+			query:              q,
+			vars:               hw{"lic": hw{"commercial_use_allowed": "NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
+		},
+		{
+			name:               "license filter: commercial_use_allowed = exclude_no",
+			query:              q,
+			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
+		},
+		// license: redistribution_allowed
+		{
+			name:               "license filter: redistribution_allowed = yes",
+			query:              q,
+			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
+		},
+		{
+			name:               "license filter: redistribution_allowed = no",
+			query:              q,
+			vars:               hw{"lic": hw{"redistribution_allowed": "NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
+		},
+		{
+			name:               "license filter: redistribution_allowed = exclude_no",
+			query:              q,
+			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
+		},
+		// license: use_without_attribution
+		{
+			name:               "license filter: use_without_attribution = yes",
+			query:              q,
+			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"HA", "WMATA"},
+			selectExpectCount:  31232,
+		},
+		{
+			name:               "license filter: use_without_attribution = no",
+			query:              q,
+			vars:               hw{"lic": hw{"use_without_attribution": "NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"BA"},
+			selectExpectCount:  2525,
+		},
+		{
+			name:               "license filter: use_without_attribution = exclude_no",
+			query:              q,
+			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
+			selector:           "trips.#.feed_version.feed.onestop_id",
+			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			selectExpectCount:  32806,
+		},
+	}
+	return testcases
+}
+
+func tripResolverFlexStopTimesTestcases() []testcase {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	// A specific trip_id from the C-TRAN flex feed for deterministic testing
+	ctranFlexTripID := "trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>"
+	testcases := []testcase{
+		{
+			name: "flex stop times via trip",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						trip_id
+						flex_stop_times {
+							stop_sequence
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.stop_sequence",
+			selectExpect: []string{"1", "2"},
+		},
+		{
+			name: "flex stop times fields with pickup window",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						flex_stop_times {
+							stop_sequence
+							start_pickup_drop_off_window
+							end_pickup_drop_off_window
+							pickup_type
+							drop_off_type
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.start_pickup_drop_off_window",
+			selectExpect: []string{"05:30:00", "05:30:00"},
+		},
+		{
+			name: "flex stop times with location group",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						flex_stop_times {
+							stop_sequence
+							location_group {
+								location_group_id
+							}
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.location_group.location_group_id",
+			selectExpect: []string{"location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e", "location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"},
+		},
+		{
+			name: "flex stop times with booking rule",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						flex_stop_times {
+							stop_sequence
+							pickup_booking_rule {
+								booking_rule_id
+								booking_type
+							}
+						}
+					}
+				}
+			}`,
+			vars:         hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			selector:     "feed_versions.0.trips.0.flex_stop_times.#.pickup_booking_rule.booking_rule_id",
+			selectExpect: []string{"booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a", "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"},
+		},
+	}
+	return testcases
+}
+
+func tripResolverSafeDurationTestcases() []testcase {
+	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
+	ctranFlexTripID := "trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>"
+	testcases := []testcase{
+		{
+			name: "trip safe duration fields",
+			query: `query($sha1: String!, $trip_id: String!) {
+				feed_versions(where:{sha1:$sha1}) {
+					trips(where:{trip_id:$trip_id}) {
+						trip_id
+						safe_duration_factor
+						safe_duration_offset
+					}
+				}
+			}`,
+			vars:   hw{"sha1": ctranFlexSha1, "trip_id": ctranFlexTripID},
+			expect: `{"feed_versions":[{"trips":[{"trip_id":"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>","safe_duration_factor":1,"safe_duration_offset":0}]}]}`,
+		},
+		{
+			name: "safe duration fields null for non-flex trip",
+			query: `query($trip_id: String!) {
+				trips(where:{trip_id:$trip_id}) {
+					trip_id
+					safe_duration_factor
+					safe_duration_offset
+				}
+			}`,
+			vars:   hw{"trip_id": "3850526WKDY"},
+			expect: `{"trips":[{"trip_id":"3850526WKDY","safe_duration_factor":null,"safe_duration_offset":null}]}`,
+		},
+	}
+	return testcases
+}
+
+func feedVersionResolverFrequenciesTestcases() []testcase {
+	exSha1 := "43e2278aa272879c79460582152b04e7487f0493"
+	q := `query($sha1:String!) {
+		feed_versions(where:{sha1:$sha1}) {
+			frequencies { start_time end_time headway_secs trip { trip_id } }
+		}
+	}`
+	testcases := []testcase{
+		{
+			name:  "every frequency in the feed version",
+			query: q,
+			vars:  hw{"sha1": exSha1},
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.frequencies.#.headway_secs", expectCount: 11},
+				{selector: "feed_versions.0.frequencies.#.trip.trip_id", expectUnique: []string{"STBA", "CITY1", "CITY2"}},
+				{selector: `feed_versions.0.frequencies.#(trip.trip_id=="STBA")#.start_time`, expect: []string{"06:00:00"}},
+				{selector: `feed_versions.0.frequencies.#(trip.trip_id=="STBA")#.end_time`, expect: []string{"22:00:00"}},
+			},
+		},
+		{
+			name:   "feed version fields",
+			query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { frequencies(limit:1) { feed_version_sha1 feed_onestop_id feed_version { sha1 } } } }`,
+			vars:   hw{"sha1": exSha1},
+			expect: `{"feed_versions":[{"frequencies":[{"feed_version_sha1":"43e2278aa272879c79460582152b04e7487f0493","feed_onestop_id":"EX","feed_version":{"sha1":"43e2278aa272879c79460582152b04e7487f0493"}}]}]}`,
+		},
+		{
+			// Trip.frequencies shares the feed version select.
+			name:  "feed version fields through a trip",
+			query: `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { trips(where:{trip_id:"CITY1"}) { frequencies { feed_version_sha1 feed_onestop_id } } } }`,
+			vars:  hw{"sha1": exSha1},
+			sel: []testcaseSelector{
+				{selector: "feed_versions.0.trips.0.frequencies.#.feed_version_sha1", expectUnique: []string{exSha1}},
+				{selector: "feed_versions.0.trips.0.frequencies.#.feed_onestop_id", expectUnique: []string{"EX"}},
+			},
+		},
+		{
+			name:   "feed version without frequencies",
+			query:  q,
+			vars:   hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+			expect: `{"feed_versions":[{"frequencies":[]}]}`,
 		},
 	}
 	return testcases
