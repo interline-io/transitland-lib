@@ -1,10 +1,16 @@
 package findertest
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
+	"github.com/twpayne/go-polyline"
 )
 
 // Cases duplicated from server/gql/route_resolver_test.go.
@@ -294,4 +300,543 @@ func routeResolverDateTestcases() []testcaseWithClock {
 		},
 	}
 	return testcases
+}
+
+func routeResolverTestcases() []testcase {
+	vars := hw{"route_id": "03"}
+	testcases := []testcase{
+		{
+			name:         "basic",
+			query:        `query {  routes { route_id } }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"1", "12", "14", "15", "16", "17", "19", "20", "24", "25", "275", "30", "31", "32", "33", "34", "35", "36", "360", "37", "38", "39", "400", "42", "45", "46", "48", "5", "51", "6", "60", "7", "75", "8", "9", "96", "97", "570", "571", "572", "573", "574", "800", "PWT", "SKY", "01", "03", "05", "07", "11", "19", "Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130", "2bc6804f-9e24-4b91-8947-c73a2363e7b6", "68456f6e-2a04-4fcb-971b-fd57348e2ed7", "3dce5414-260d-4cdb-b3d8-b256802d35c5", "0553af3e-53b8-4f98-ba47-0fc03d2404de", "fb93d53e-bf9a-426b-adb2-c913e4d5ecfd", "424421e5-c7c4-4307-8893-5ab9c913cecf", "RED", "BLUE", "GREEN", "YELLOW", "ORANGE", "SILVER", "SHUTTLE"},
+		},
+		{
+			name:   "basic fields",
+			query:  `query($route_id: String!) {  routes(where:{route_id:$route_id}) {onestop_id route_id route_short_name route_long_name route_type route_color route_text_color route_sort_order route_url route_desc cemv_support feed_version_sha1 feed_onestop_id} }`,
+			vars:   vars,
+			expect: `{"routes":[{"cemv_support":null,"feed_onestop_id":"BA","feed_version_sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0","onestop_id":"r-9q9n-warmsprings~southfremont~richmond","route_color":"ff9933","route_desc":null,"route_id":"03","route_long_name":"Warm Springs/South Fremont - Richmond","route_short_name":null,"route_sort_order":null,"route_text_color":null,"route_type":1,"route_url":"http://www.bart.gov/schedules/bylineresults?route=3"}]}`,
+		},
+		{
+			name:   "route_type_basic",
+			query:  `query($route_id: String!) {  routes(where:{route_id:$route_id}) {route_type route_type_basic} }`,
+			vars:   vars,
+			expect: `{"routes":[{"route_type":1,"route_type_basic":1}]}`,
+		},
+		{
+			name:         "geometry",
+			query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {geometry} }`,
+			vars:         vars,
+			selector:     "routes.0.geometry.type",
+			selectExpect: []string{"MultiLineString"},
+		},
+		{
+			name:   "feed_version",
+			query:  `query($route_id: String!) {  routes(where:{route_id:$route_id}) {feed_version{sha1}} }`,
+			vars:   vars,
+			expect: `{"routes":[{"feed_version":{"sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0"}}]}`,
+		},
+		{
+			name:         "trips",
+			query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {trips{trip_id trip_headsign}} }`,
+			vars:         hw{"route_id": "Bu-130"}, // use baby bullet
+			selector:     "routes.0.trips.#.trip_id",
+			selectExpect: []string{"305", "309", "313", "319", "323", "329", "365", "371", "375", "381", "385", "310", "314", "320", "324", "330", "360", "366", "370", "376", "380", "386", "801", "803", "802", "804"},
+		},
+		{
+			name:         "route_stops",
+			query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {route_stops{stop{stop_id stop_name}}} }`,
+			vars:         vars,
+			selector:     "routes.0.route_stops.#.stop.stop_id",
+			selectExpect: []string{"12TH", "19TH", "19TH_N", "ASHB", "BAYF", "COLS", "DBRK", "DELN", "PLZA", "FRMT", "FTVL", "HAYW", "LAKE", "MCAR", "MCAR_S", "NBRK", "RICH", "SANL", "SHAY", "UCTY", "WARM"},
+		},
+		{
+			name:         "stops",
+			query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {stops{stop_id stop_name}} }`,
+			vars:         vars,
+			selector:     "routes.0.stops.#.stop_id",
+			selectExpect: []string{"12TH", "19TH", "19TH_N", "ASHB", "BAYF", "COLS", "DBRK", "DELN", "PLZA", "FRMT", "FTVL", "HAYW", "LAKE", "MCAR", "MCAR_S", "NBRK", "RICH", "SANL", "SHAY", "UCTY", "WARM"},
+		},
+		{
+			// computations are not stable so just check success
+			name:         "geometries",
+			query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {geometries {generated}} }`,
+			vars:         vars,
+			selector:     "routes.0.geometries.#.generated",
+			selectExpect: []string{"false"},
+		},
+		{
+			// Migration guard: geometry is reconstructed from tl_route_representative_shapes,
+			// so pin the structural invariants on a reviewed shape (Caltrain Bu-130). These
+			// hold regardless of the source table and outlive the tl_route_geometries drop.
+			name:  "geometry invariants (Bu-130)",
+			query: `query { routes(where:{route_id:"Bu-130"}) { geometries { generated geometry combined_geometry } } }`,
+			f: func(t *testing.T, jj string) {
+				g := gjson.Get(jj, "routes.0.geometries.0")
+				// combined_geometry is a MultiLineString with one linestring per representative shape.
+				assert.Equal(t, "MultiLineString", g.Get("combined_geometry.type").String())
+				assert.Len(t, g.Get("combined_geometry.coordinates").Array(), 4, "combined_geometry linestring count")
+				// primary geometry is the rank-0 line: a LineString equal to combined_geometry[0].
+				assert.Equal(t, "LineString", g.Get("geometry.type").String())
+				assert.Equal(t, g.Get("combined_geometry.coordinates.0").Raw, g.Get("geometry.coordinates").Raw, "primary geometry == combined_geometry[0]")
+				assert.False(t, g.Get("generated").Bool())
+				// shape_id isn't exposed via the resolver, so pin the rank-0 line's point
+				// count and first vertex to lock the actual shape it resolves to.
+				pts := g.Get("geometry.coordinates").Array()
+				assert.Len(t, pts, 382, "primary geometry point count")
+				assert.InDelta(t, -121.903170, pts[0].Array()[0].Float(), 1e-5, "first vertex lon")
+				assert.InDelta(t, 37.330157, pts[0].Array()[1].Float(), 1e-5, "first vertex lat")
+			},
+		},
+		{
+			// only check dow_category explicitly it's not a stable computation
+			name:         "headways",
+			query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {headways{dow_category departures service_date stop_trip_count stop{stop_id}}} }`,
+			vars:         vars,
+			selector:     "routes.0.headways.#.dow_category",
+			selectExpect: []string{"1", "6", "7", "1", "6", "7"}, // now includes one for each direction and dow category
+		},
+		{
+			name:         "where onestop_id",
+			query:        `query {routes(where:{onestop_id:"r-9q9j-bullet"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130"},
+		},
+		{
+			name:  "where feed_version_sha1",
+			query: `query {routes(where:{feed_version_sha1:"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}) {route_id} }`,
+
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
+		},
+		{
+			name:         "where feed_onestop_id",
+			query:        `query {routes(where:{feed_onestop_id:"CT"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
+		},
+		{
+			name:         "where route_id",
+			query:        `query {routes(where:{route_id:"Lo-130"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Lo-130"},
+		},
+		{
+			name:         "where route_type=2",
+			query:        `query {routes(where:{route_type:2}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130"},
+		},
+		{
+			name:         "where route_types=[2]",
+			query:        `query {routes(where:{route_types:[2]}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130"},
+		},
+		{
+			name:         "where route_types=[0,2]",
+			query:        `query {routes(where:{route_types:[0,2]}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "800"},
+		},
+		{
+			name:         "where route_type=0 route_types=[2]",
+			query:        `query {routes(where:{route_type:0, route_types:[2]}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "Gi-130", "Sp-130", "800"},
+		},
+		{
+			name:         "where search",
+			query:        `query {routes(where:{search:"warm"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"03", "05"},
+		},
+		{
+			name:         "where search 2",
+			query:        `query {routes(where:{search:"bullet"}) {route_id} }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130"},
+		},
+		// route patterns
+		{
+			name: "route patterns",
+			query: `{
+				routes(where: {feed_onestop_id: "BA", route_id: "03"}) {
+				  route_id
+				  patterns {
+					count
+					direction_id
+					stop_pattern_id
+					trips(limit: 1) {
+					  trip_id
+					}
+				  }
+				}
+			  }`,
+
+			selector:     "routes.0.patterns.#.count",
+			selectExpect: []string{"132", "124", "56", "50", "2"},
+		},
+		{
+			name: "route patterns representative_trip",
+			query: `{
+				routes(where: {feed_onestop_id: "BA", route_id: "03"}) {
+				  patterns {
+					count
+					representative_trip { trip_id }
+					trips(limit: 1) { trip_id }
+				  }
+				}
+			  }`,
+			f: func(t *testing.T, jj string) {
+				// Walked per pattern rather than as two `#.` arrays: gjson omits the
+				// elements whose path is missing, so a null representative_trip would
+				// shift one array against the other instead of failing.
+				//
+				// min(id) in the aggregate is the trip trips(limit:1) returns, which
+				// orders by (feed_version_id, id). They agree only where a stop pattern
+				// runs in one direction — trips() does not filter on direction, so a
+				// pattern operated both ways returns the same trip for both rows.
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					rep := pat.Get("representative_trip.trip_id")
+					assert.True(t, rep.Exists(), "pattern %d resolves a representative trip", i)
+					assert.Equal(t, pat.Get("trips.0.trip_id").String(), rep.String(), "pattern %d", i)
+				}
+			},
+		},
+		{
+			name:  "route patterns timetable only the date's trips",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count trips(limit:1000) { trip_id } timetable { stop_ids trips { trip_id } departure_times { values delta polyline } arrival_times { values } pickup_types { values delta polyline } drop_off_types { values } timepoints { values delta polyline } } } } }`,
+			f: func(t *testing.T, jj string) {
+				checkPatternTimetable(t, jj)
+				// Pattern 31 runs 132 trips across the weekday, Saturday and Sunday
+				// calendars, and 26 on this Wednesday.
+				pat := gjson.Get(jj, "routes.0.patterns.#(stop_pattern_id==31)")
+				assert.Equal(t, int64(26), pat.Get("trips.#").Int(), "the pattern's trips on the date")
+				table := pat.Get("timetable")
+				assert.Equal(t, int64(26), table.Get("trips.#").Int())
+				assert.Equal(t, "2221650WKDY", table.Get("trips.0.trip_id").String(), "the day's first trip")
+				assert.Equal(t, "16:50:00", table.Get("departure_times.values.0.0").String())
+				assert.Equal(t, int64(16*3600+50*60), table.Get("departure_times.delta.0.0").Int(), "delta in seconds")
+				assert.Equal(t, "18:00:00", table.Get("arrival_times.values.18.0").String())
+				assert.Equal(t, int64(1), table.Get("timepoints.values.0.0").Int())
+			},
+		},
+		{
+			name:  "route patterns timetable without a date",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date timetable { stop_ids } } } }`,
+			f: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					assert.Equal(t, gjson.Null, pat.Get("service_date").Type, "pattern %d", i)
+					assert.Equal(t, gjson.Null, pat.Get("timetable").Type, "pattern %d", i)
+				}
+			},
+		},
+		{
+			name:  "route patterns timetable under aliases",
+			query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { weekday: patterns(where:{service_date:"2018-05-30"}) { service_date timetable { trips { trip_id } } } again: patterns(where:{service_date:"2018-05-30"}) { service_date timetable { trips { trip_id } } } sunday: patterns(where:{service_date:"2018-06-03"}) { service_date timetable { trips { trip_id } } } } }`,
+			f: func(t *testing.T, jj string) {
+				// Each alias gets its own day's trips, and the same day twice is the
+				// same answer twice.
+				route := gjson.Get(jj, "routes.0")
+				assert.Equal(t, route.Get("weekday").Raw, route.Get("again").Raw)
+				for alias, day := range map[string]struct{ date, service string }{
+					"weekday": {"2018-05-30", "WKDY"},
+					"sunday":  {"2018-06-03", "SUN"},
+				} {
+					pats := route.Get(alias).Array()
+					assert.NotEmpty(t, pats, "%s patterns returned", alias)
+					for i, pat := range pats {
+						assert.Equal(t, day.date, pat.Get("service_date").String(), "%s pattern %d", alias, i)
+						trips := pat.Get("timetable.trips.#.trip_id").Array()
+						assert.NotEmpty(t, trips, "%s pattern %d has trips", alias, i)
+						for _, trip := range trips {
+							assert.True(t, strings.HasSuffix(trip.String(), day.service), "%s pattern %d trip %s", alias, i, trip.String())
+						}
+					}
+				}
+			},
+		},
+		{
+			name:  "route patterns timetable pickup and drop-off",
+			query: `{ routes(where:{feed_onestop_id:"WMATA", route_id:"GREEN"}) { patterns(where:{service_date:"2026-04-29"}) { timetable { trips { trip_id } pickup_types { values } drop_off_types { values } } } } }`,
+			f: func(t *testing.T, jj string) {
+				// This late trip lets nobody off at the stop it starts from.
+				found := false
+				for _, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
+					for j, trip := range pat.Get("timetable.trips").Array() {
+						if trip.Get("trip_id").String() != "11687110_20571" {
+							continue
+						}
+						found = true
+						assert.Equal(t, int64(0), pat.Get(fmt.Sprintf("timetable.pickup_types.values.0.%d", j)).Int())
+						assert.Equal(t, int64(1), pat.Get(fmt.Sprintf("timetable.drop_off_types.values.0.%d", j)).Int())
+					}
+				}
+				assert.True(t, found, "trip found in a pattern's timetable")
+			},
+		},
+		{
+			name:  "route patterns timetable frequency trip",
+			query: `{ feed_versions(where:{feed_onestop_id:"EX"}) { routes(where:{route_id:"STBA"}) { patterns(where:{service_date:"2007-01-02"}) { timetable { trips { trip_id frequencies { headway_secs } } departure_times { values } } } } } }`,
+			f: func(t *testing.T, jj string) {
+				// A trip run from frequencies.txt is one column, its template, and says
+				// when it repeats.
+				table := gjson.Get(jj, "feed_versions.0.routes.0.patterns.0.timetable")
+				assert.Equal(t, int64(1), table.Get("trips.#").Int())
+				assert.Equal(t, int64(1800), table.Get("trips.0.frequencies.0.headway_secs").Int())
+				assert.Equal(t, "06:20:00", table.Get("departure_times.values.1.0").String(), "the template's second stop")
+			},
+		},
+		{
+			name:  "route patterns timetable flex",
+			query: `{ routes(where:{feed_onestop_id:"ctran-flex", route_id:"2bc6804f-9e24-4b91-8947-c73a2363e7b6"}) { patterns(where:{service_date:"2026-01-06"}) { timetable { stop_ids } } } }`,
+			f: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					assert.Equal(t, gjson.Null, pat.Get("timetable").Type, "pattern %d", i)
+				}
+			},
+		},
+		{
+			name: "route patterns inactive fv",
+			query: `{
+				routes(where: {feed_onestop_id: "EX", feed_version_sha1: "43e2278aa272879c79460582152b04e7487f0493", route_id: "AAMV"}) {
+				  route_id
+				  patterns {
+					count
+					direction_id
+					stop_pattern_id
+					trips(limit: 1) {
+					  trip_id
+					}
+				  }
+				}
+			  }`,
+
+			selector:     "routes.0.patterns.#.count",
+			selectExpect: []string{"2", "2"},
+		},
+		// serves_stop_onestop_id
+		{
+			name: "serves_stop_onestop_id",
+			query: `{
+				routes(where: {serves_stop_onestop_id: "s-9q8yyufxmv-sanfranciscocaltrain"}) {
+					route_id
+				}
+			}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"Bu-130", "Gi-130", "Li-130", "Lo-130", "Sp-130"},
+		},
+		{
+			name: "serves_stop_onestop_id:none",
+			query: `{
+				routes(where: {serves_stop_onestop_id: "s-invalid-stop"}) {
+					route_id
+				}
+			}`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
+		// route serviced
+		{
+			name: "route serviced=true",
+			query: `{
+				routes(where: {feed_onestop_id: "EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", serviced:true}) {
+				  route_id
+				}
+			  }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"AB", "BFC", "STBA", "CITY", "AAMV"},
+		},
+		{
+			name: "route serviced=false",
+			query: `{
+				routes(where: {feed_onestop_id: "EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", serviced:false}) {
+				  route_id
+				}
+			  }`,
+			selector:     "routes.#.route_id",
+			selectExpect: []string{"NOTRIPS"},
+		},
+	}
+	return testcases
+}
+
+func routeResolverCursorTestcases(t *testing.T, cfg model.Config) []testcase {
+	allEnts, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allIds := []string{}
+	for _, ent := range allEnts {
+		allIds = append(allIds, ent.RouteID.Val)
+	}
+	testcases := []testcase{
+		{
+			name:         "no cursor",
+			query:        "query{routes(limit:10){feed_version{id} id route_id}}",
+			selector:     "routes.#.route_id",
+			selectExpect: allIds[:10],
+		},
+		{
+			name:         "after 0",
+			query:        "query{routes(after: 0, limit:10){feed_version{id} id route_id}}",
+			selector:     "routes.#.route_id",
+			selectExpect: allIds[:10],
+		},
+		{
+			name:         "after 10th",
+			query:        "query($after: Int!){routes(after: $after, limit:10){feed_version{id} id route_id}}",
+			vars:         hw{"after": allEnts[10].ID},
+			selector:     "routes.#.route_id",
+			selectExpect: allIds[11:21],
+		},
+		{
+			name:         "after last",
+			query:        "query($after: Int!){routes(after: $after, limit:10){feed_version{id} id route_id}}",
+			vars:         hw{"after": allEnts[len(allEnts)-1].ID},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
+		{
+			name:         "after invalid id returns no results",
+			query:        "query($after: Int!){routes(after: $after, limit:10){feed_version{id} id route_id}}",
+			vars:         hw{"after": 10_000_000},
+			selector:     "routes.#.route_id",
+			selectExpect: []string{},
+		},
+	}
+	return testcases
+}
+
+// checkPatternTimetable checks each timetable's grids are stops by trips and
+// decode back from their encodings, and its trips run in order of first time.
+func checkPatternTimetable(t *testing.T, jj string) {
+	pats := gjson.Get(jj, "routes.0.patterns").Array()
+	assert.NotEmpty(t, pats, "patterns returned")
+	for i, pat := range pats {
+		count := int(pat.Get("count").Int())
+		table := pat.Get("timetable")
+		stops := len(table.Get("stop_ids").Array())
+		assert.NotZero(t, stops, "pattern %d has stops", i)
+		assert.Len(t, table.Get("trips").Array(), count, "pattern %d: a column per trip", i)
+		for _, name := range []string{"departure_times", "arrival_times", "pickup_types", "drop_off_types", "timepoints"} {
+			grid := table.Get(name)
+			if !grid.Exists() {
+				continue
+			}
+			rows := grid.Get("values").Array()
+			assert.Len(t, rows, stops, "pattern %d %s: a row per stop", i, name)
+			for k, row := range rows {
+				assert.Len(t, row.Array(), count, "pattern %d %s stop %d: a cell per trip", i, name, k)
+			}
+			checkGridEncodings(t, grid, fmt.Sprintf("pattern %d %s", i, name))
+		}
+		prev := int64(-1)
+		for _, v := range gridRow(t, table.Get("departure_times.values.0")) {
+			if v == nil {
+				continue
+			}
+			assert.LessOrEqual(t, prev, *v, "pattern %d: trips by time at the first stop", i)
+			prev = *v
+		}
+	}
+}
+
+// checkGridEncodings checks a grid's delta and polyline, where asked for, decode
+// back to its values.
+func checkGridEncodings(t *testing.T, grid gjson.Result, label string) {
+	var values [][]*int64
+	for _, row := range grid.Get("values").Array() {
+		values = append(values, gridRow(t, row))
+	}
+	if delta := grid.Get("delta"); delta.Exists() {
+		var rows [][]*int64
+		for _, row := range delta.Array() {
+			rows = append(rows, gridRow(t, row))
+		}
+		assert.Equal(t, values, undoDelta(rows), "%s delta", label)
+	}
+	if lines := grid.Get("polyline"); lines.Exists() {
+		var rows [][]*int64
+		for _, line := range lines.Array() {
+			rows = append(rows, decodePolylineRow(t, line.String()))
+		}
+		assert.Equal(t, values, undoDelta(rows), "%s polyline", label)
+	}
+}
+
+// gridRow reads one row of a grid, times as seconds, nil where null.
+func gridRow(t *testing.T, row gjson.Result) []*int64 {
+	cells := row.Array()
+	ret := make([]*int64, 0, len(cells))
+	for _, cell := range cells {
+		switch cell.Type {
+		case gjson.Null:
+			ret = append(ret, nil)
+		case gjson.String:
+			v, err := tt.StringToSeconds(cell.String())
+			assert.NoError(t, err)
+			ret = append(ret, &v)
+		default:
+			v := cell.Int()
+			ret = append(ret, &v)
+		}
+	}
+	return ret
+}
+
+// undoDelta adds each column's first non-null value back to the later ones.
+func undoDelta(rows [][]*int64) [][]*int64 {
+	ret := make([][]*int64, len(rows))
+	for i, row := range rows {
+		ret[i] = make([]*int64, len(row))
+	}
+	if len(rows) == 0 {
+		return ret
+	}
+	for j := range rows[0] {
+		var first *int64
+		for i, row := range rows {
+			if row[j] == nil {
+				continue
+			}
+			v := *row[j]
+			if first == nil {
+				first = &v
+			} else {
+				v += *first
+			}
+			ret[i][j] = &v
+		}
+	}
+	return ret
+}
+
+// decodePolylineRow reads one row of a grid's polyline, nil where '.'.
+func decodePolylineRow(t *testing.T, s string) []*int64 {
+	ret := make([]*int64, 0, len(s))
+	buf, prev := []byte(s), int64(0)
+	for len(buf) > 0 {
+		if buf[0] == '.' {
+			ret = append(ret, nil)
+			buf = buf[1:]
+			continue
+		}
+		d, rest, err := polyline.DecodeInt(buf)
+		if !assert.NoError(t, err) {
+			return ret
+		}
+		prev += int64(d)
+		v := prev
+		ret = append(ret, &v)
+		buf = rest
+	}
+	return ret
 }

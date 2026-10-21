@@ -172,8 +172,6 @@ func tripResolverTestcases() []testcase {
 			selector:     "trips.0.feed_version.feed.license.commercial_use_allowed",
 			selectExpect: []string{"no"},
 		},
-
-		// TODO: check where feed_version_sha1, feed_onestop_id but only check count
 	}
 	return testcases
 }

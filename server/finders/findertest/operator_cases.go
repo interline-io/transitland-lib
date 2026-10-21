@@ -140,3 +140,138 @@ func operatorResolverLicenseTestcases() []testcase {
 	}
 	return testcases
 }
+
+func operatorResolverTestcases() []testcase {
+	testcases := []testcase{
+		{
+			name:   "basic fields",
+			query:  `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {onestop_id}}`,
+			vars:   hw{},
+			expect: `{"operators":[{"onestop_id":"o-9q9-bayarearapidtransit"}]}`,
+		},
+		{
+			name:         "onestop_ids",
+			query:        `query{operators(where:{onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			name:         "onestop_ids with onestop_id",
+			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain", onestop_ids:["o-9q9-bayarearapidtransit"]}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			// BART is a virtual (generated) operator record in the test data; Caltrain is defined in Atlas.
+			name:  "generated",
+			query: `query{operators(where:{onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) {onestop_id generated}}`,
+			sel: []testcaseSelector{
+				{selector: `operators.#(onestop_id=="o-9q9-bayarearapidtransit").generated`, expect: []string{"true"}},
+				{selector: `operators.#(onestop_id=="o-9q9-caltrain").generated`, expect: []string{"false"}},
+			},
+		},
+		{
+			name:         "onestop_ids no match",
+			query:        `query{operators(where:{onestop_ids:["o-does-not-exist"]}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
+			name:         "agencies",
+			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {agencies{agency_name}}}`,
+			selector:     "operators.0.agencies.#.agency_name",
+			selectExpect: []string{"Bay Area Rapid Transit"},
+		},
+		{
+			name:         "agencies limit",
+			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {agencies(limit:1){agency_name}}}`,
+			selector:     "operators.0.agencies.#.agency_name",
+			selectExpect: []string{"Bay Area Rapid Transit"},
+		},
+		{
+			// Each operator gets its own agency: the limit counts per operator, and a
+			// limit on the batch query would leave whichever operator came second empty.
+			name:  "agencies limit across operators",
+			query: `query{operators(where:{onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) {onestop_id agencies(limit:1){agency_name}}}`,
+			sel: []testcaseSelector{
+				{selector: `operators.#(onestop_id=="o-9q9-bayarearapidtransit").agencies.#.agency_name`, expect: []string{"Bay Area Rapid Transit"}},
+				{selector: `operators.#(onestop_id=="o-9q9-caltrain").agencies.#.agency_name`, expect: []string{"Caltrain"}},
+			},
+		},
+		{
+			name:         "agencies limit 0",
+			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {agencies(limit:0){agency_name}}}`,
+			selector:     "operators.0.agencies.#.agency_name",
+			selectExpect: []string{},
+		},
+		{
+			name:         "feeds",
+			query:        `query{operators(where:{onestop_id:"o-9q9-bayarearapidtransit"}) {feeds{onestop_id}}}`,
+			selector:     "operators.0.feeds.#.onestop_id",
+			selectExpect: []string{"BA"},
+		},
+		{
+			name:         "feeds incl rt",
+			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain"}) {feeds{onestop_id}}}`,
+			selector:     "operators.0.feeds.#.onestop_id",
+			selectExpect: []string{"CT", "CT~rt"},
+		},
+		{
+			name:         "feeds only gtfs-rt",
+			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain"}) {feeds(where:{spec:GTFS_RT}) {onestop_id}}}`,
+			selector:     "operators.0.feeds.#.onestop_id",
+			selectExpect: []string{"CT~rt"},
+		},
+		{
+			name:         "feeds only gtfs",
+			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain"}) {feeds(where:{spec:GTFS}) {onestop_id}}}`,
+			selector:     "operators.0.feeds.#.onestop_id",
+			selectExpect: []string{"CT"},
+		},
+		{
+			name:   "tags us_ntd_id=90134",
+			query:  `query{operators(where:{tags:{us_ntd_id:"90134"}}) {onestop_id}}`,
+			vars:   hw{},
+			expect: `{"operators":[{"onestop_id":"o-9q9-caltrain"}]}`,
+		},
+		{
+			name:   "tags us_ntd_id=12345",
+			query:  `query{operators(where:{tags:{us_ntd_id:"12345"}}) {onestop_id}}`,
+			vars:   hw{},
+			expect: `{"operators":[]}`,
+		},
+		{
+			name:   "tags us_ntd_id presence",
+			query:  `query{operators(where:{tags:{us_ntd_id:""}}) {onestop_id}}`,
+			vars:   hw{},
+			expect: `{"operators":[{"onestop_id":"o-9q9-caltrain"}]}`,
+		},
+		// search
+		{
+			name:         "search by onestop id",
+			query:        `query { operators(where:{search: "o-9q9-bayarearapidtransit"}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{"o-9q9-bayarearapidtransit"},
+		},
+		{
+			name:         "search by name",
+			query:        `query { operators(where:{search: "bay area"}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{"o-9q9-bayarearapidtransit"},
+		},
+		{
+			name:         "search not found",
+			query:        `query { operators(where:{search: "new york"}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{},
+		},
+		{
+			// `_` and `%` are ILIKE wildcards; unescaped they over-match every row.
+			name:         "search escapes ilike wildcards",
+			query:        `query { operators(where:{search: "__"}) {onestop_id}}`,
+			selector:     "operators.#.onestop_id",
+			selectExpect: []string{},
+		},
+	}
+	return testcases
+}

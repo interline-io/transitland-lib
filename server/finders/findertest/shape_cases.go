@@ -1,8 +1,10 @@
 package findertest
 
 import (
+	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -117,6 +119,50 @@ func shapeResolverTripsTestcases() []testcase {
 				}
 				assert.Contains(t, tripIDs, "3850526WKDY")
 			},
+		},
+	}
+	return testcases
+}
+
+// TestFeedVersionResolver_Shapes_Cursor exercises keyset (after) pagination,
+// mirroring TestAgencyResolver_Cursor.
+func feedVersionResolverShapesCursorTestcases(t *testing.T, cfg model.Config) []testcase {
+	ctx := model.WithConfig(context.Background(), cfg)
+
+	sha1 := bartShapeSha1
+	fvs, err := cfg.Finder.FindFeedVersions(ctx, nil, nil, nil, &model.FeedVersionFilter{Sha1: &sha1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fvs) == 0 {
+		t.Fatal("bart feed version not found")
+	}
+	allEnts, err := cfg.Finder.FindShapesByFeedVersion(ctx, fvs[0].ID, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(allEnts) < 2 {
+		t.Fatalf("expected multiple shapes, got %d", len(allEnts))
+	}
+	allIds := []string{}
+	for _, ent := range allEnts {
+		allIds = append(allIds, ent.ShapeID.Val)
+	}
+
+	testcases := []testcase{
+		{
+			name:         "no cursor",
+			query:        `query($sha1:String!){feed_versions(where:{sha1:$sha1}){shapes(limit:100){id shape_id}}}`,
+			vars:         hw{"sha1": bartShapeSha1},
+			selector:     "feed_versions.0.shapes.#.shape_id",
+			selectExpect: allIds,
+		},
+		{
+			name:         "after first",
+			query:        `query($sha1:String!,$after:Int!){feed_versions(where:{sha1:$sha1}){shapes(after:$after,limit:100){shape_id}}}`,
+			vars:         hw{"sha1": bartShapeSha1, "after": allEnts[0].ID},
+			selector:     "feed_versions.0.shapes.#.shape_id",
+			selectExpect: allIds[1:],
 		},
 	}
 	return testcases

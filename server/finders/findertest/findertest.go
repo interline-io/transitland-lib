@@ -8,6 +8,8 @@ package findertest
 
 import (
 	"encoding/json"
+	"maps"
+	"slices"
 	"testing"
 	"time"
 
@@ -24,6 +26,14 @@ import (
 // NewConfig returns a server config whose finder holds the server test feeds.
 type NewConfig func(t testing.TB) model.Config
 
+// Capability names an optional feature of a finder. The cases that need one run
+// only against finders that support it.
+type Capability string
+
+// Spatial is filtering feeds, feed versions, operators and agencies by bbox,
+// within and near, against their polygon geometries.
+const Spatial Capability = "Spatial"
+
 // caseGroup is one resolver test function's cases, run against one client.
 type caseGroup struct {
 	name  string
@@ -34,6 +44,13 @@ type caseGroup struct {
 type clockGroup struct {
 	name  string
 	cases func() []testcaseWithClock
+}
+
+// cfgGroup is one resolver test function's cases, built from the config of the
+// finder under test, which they read ids from.
+type cfgGroup struct {
+	name  string
+	cases func(t *testing.T, cfg model.Config) []testcase
 }
 
 // The resolver test functions the suite runs, by name.
@@ -71,52 +88,105 @@ var (
 		{"FeedVersionResolver_Frequencies", feedVersionResolverFrequenciesTestcases},
 		{"AgencyResolver_License", agencyResolverLicenseTestcases},
 		{"OperatorResolver_License", operatorResolverLicenseTestcases},
+		{"AgencyResolver", agencyResolverTestcases},
+		{"AgencyResolver_Stops", agencyResolverStopsTestcases},
+		{"FareResolver", fareResolverTestcases},
+		{"FeedResolver", feedResolverTestcases},
+		{"FeedResolver_License", feedResolverLicenseTestcases},
+		{"FeedVersionResolver", feedVersionResolverTestcases},
+		{"FeedVersionResolver_License", feedVersionResolverLicenseTestcases},
+		{"OperatorResolver", operatorResolverTestcases},
+		{"RouteResolver", routeResolverTestcases},
+	}
+	optionalGroups = map[Capability][]caseGroup{
+		Spatial: {
+			{"FeedResolver", feedResolverSpatialTestcases},
+			{"FeedVersionResolver", feedVersionResolverSpatialTestcases},
+			{"OperatorResolver", operatorResolverSpatialTestcases},
+		},
+	}
+	cfgGroups = []cfgGroup{
+		{"AgencyResolver_Cursor", agencyResolverCursorTestcases},
+		{"AgencyResolver_StopsCursor", agencyResolverStopsCursorTestcases},
+		{"FeedResolver_Cursor", feedResolverCursorTestcases},
+		{"FeedVersionResolver_PathwaysAndLevels_Cursor", feedVersionResolverPathwaysAndLevelsCursorTestcases},
+		{"RouteResolver_Cursor", routeResolverCursorTestcases},
+		{"FeedVersionResolver_Shapes_Cursor", feedVersionResolverShapesCursorTestcases},
+		{"StopResolverCursor", stopResolverCursorTestcases},
+		{"StopResolverLicense", stopResolverLicenseTestcases},
 	}
 	clockGroups = []clockGroup{
 		{"RouteResolver_Date", routeResolverDateTestcases},
 	}
 )
 
-// Run runs every case against the finder that newConfig builds, setting the
-// config's clock to the time the case runs at. Some cases read more rows than
-// the API allows by default, so callers first raise gql.RESOLVER_MAXLIMIT, as
-// the resolver tests do.
-func Run(t *testing.T, newConfig NewConfig) {
+// Run runs the cases against the finder that newConfig builds, skipping those
+// that need a capability missing from supports. It sets the config's clock to
+// the time the case runs at and its search radius limit to the one the cases
+// expect. Some cases read more rows than the API allows by default, so callers
+// first raise gql.RESOLVER_MAXLIMIT, as the resolver tests do.
+func Run(t *testing.T, newConfig NewConfig, supports ...Capability) {
 	for _, g := range caseGroups {
 		t.Run(g.name, func(t *testing.T) {
-			queryTestcases(t, newTestClient(t, newConfig, defaultWhen), g.cases())
+			c, _ := newTestClient(t, newConfig, defaultWhen)
+			queryTestcases(t, c, g.cases())
+		})
+	}
+	for _, capability := range slices.Sorted(maps.Keys(optionalGroups)) {
+		t.Run(string(capability), func(t *testing.T) {
+			if !slices.Contains(supports, capability) {
+				t.Skipf("finder does not support %s", capability)
+			}
+			for _, g := range optionalGroups[capability] {
+				t.Run(g.name, func(t *testing.T) {
+					c, _ := newTestClient(t, newConfig, defaultWhen)
+					queryTestcases(t, c, g.cases())
+				})
+			}
 		})
 	}
 	for _, g := range clockGroups {
 		t.Run(g.name, func(t *testing.T) {
 			for _, tc := range g.cases() {
 				t.Run(tc.name, func(t *testing.T) {
-					queryTestcase(t, newTestClient(t, newConfig, tc.whenUtc), tc.testcase)
+					c, _ := newTestClient(t, newConfig, tc.whenUtc)
+					queryTestcase(t, c, tc.testcase)
 				})
 			}
+		})
+	}
+	for _, g := range cfgGroups {
+		t.Run(g.name, func(t *testing.T) {
+			c, cfg := newTestClient(t, newConfig, defaultWhen)
+			queryTestcases(t, c, g.cases(t, cfg))
 		})
 	}
 }
 
 // newTestClient serves the config through the GraphQL handler, as a signed-in
-// test user.
-func newTestClient(t testing.TB, newConfig NewConfig, whenUtc string) *client.Client {
+// test user, and returns the config it serves.
+func newTestClient(t testing.TB, newConfig NewConfig, whenUtc string) (*client.Client, model.Config) {
 	when, err := time.Parse(time.RFC3339, whenUtc)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg := newConfig(t)
 	cfg.Clock = &clock.Mock{T: when}
+	cfg.MaxRadius = maxRadius
 	srv := gql.NewDefaultHandler()
 	graphqlServer := model.AddConfigAndPerms(cfg, srv)
 	srvMiddleware := usercheck.NewUserDefaultMiddleware(func() authn.User {
 		return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
 	})
-	return client.New(srvMiddleware(graphqlServer))
+	return client.New(srvMiddleware(graphqlServer)), cfg
 }
 
 // defaultWhen is the time a case runs at unless it sets its own.
 const defaultWhen = "2022-09-01T00:00:00Z"
+
+// maxRadius is the search radius limit, in meters, that the cases' too-large
+// searches exceed.
+const maxRadius = 100_000
 
 type hw = map[string]interface{}
 
@@ -259,6 +329,14 @@ func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
 	if !tested {
 		t.Errorf("no test performed, check test case")
 	}
+}
+
+func astr(a []gjson.Result) []string {
+	var ret []string
+	for _, b := range a {
+		ret = append(ret, b.String())
+	}
+	return ret
 }
 
 func queryTestcases(t *testing.T, c *client.Client, tcs []testcase) {

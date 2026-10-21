@@ -23,5 +23,5 @@ func TestMain(m *testing.M) {
 func TestDBFinder(t *testing.T) {
 	Run(t, func(t testing.TB) model.Config {
 		return testconfig.Config(t, testconfig.Options{})
-	})
+	}, Spatial)
 }

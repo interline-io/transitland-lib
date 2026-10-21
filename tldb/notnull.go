@@ -13,24 +13,8 @@ type NotNullFilter struct{}
 // Validate .
 func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
-	case *gtfs.Agency:
-		// Used in textsearch
-		v.AgencyID.OrSet("")
-		v.AgencyURL.OrSet("")
-		v.AgencyEmail.OrSet("")
-		v.AgencyURL.OrSet("")
-	case *gtfs.Route:
-		// Used in textsearch
-		v.RouteLongName.OrSet("")
-		v.RouteShortName.OrSet("")
-		v.RouteDesc.OrSet("")
 	case *gtfs.Stop:
 		v.LocationType.OrSet(0)
-		// Used in textsearch
-		v.StopName.OrSet("")
-		v.StopDesc.OrSet("")
-		v.StopCode.OrSet("")
-		v.StopURL.OrSet("")
 	case *gtfs.Trip:
 		v.DirectionID.OrSet(0)
 		v.StopPatternID.OrSet(0)
@@ -46,6 +30,30 @@ func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 		v.Friday.OrSet(0)
 		v.Saturday.OrSet(0)
 		v.Sunday.OrSet(0)
+	}
+	return nil
+}
+
+// textSearchFilter sets the text fields the textsearch columns index to empty
+// strings when unset, since a null one would leave the row's whole vector null.
+// An empty string reads back as unset, so readers see no change.
+type textSearchFilter struct{}
+
+func (e *textSearchFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+	switch v := ent.(type) {
+	case *gtfs.Agency:
+		v.AgencyID.OrSet("")
+		v.AgencyURL.OrSet("")
+		v.AgencyEmail.OrSet("")
+	case *gtfs.Route:
+		v.RouteLongName.OrSet("")
+		v.RouteShortName.OrSet("")
+		v.RouteDesc.OrSet("")
+	case *gtfs.Stop:
+		v.StopName.OrSet("")
+		v.StopDesc.OrSet("")
+		v.StopCode.OrSet("")
+		v.StopURL.OrSet("")
 	}
 	return nil
 }
