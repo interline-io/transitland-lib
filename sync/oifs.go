@@ -35,6 +35,16 @@ type agencyPlace struct {
 var nameTilde = "[-:&@/]"
 var nameFilter = "[^[:alnum:]~><]"
 
+// GeneratedOperatorOnestopID is the onestop id sync gives the operator it
+// generates for an agency that has no onestop id of its own.
+func GeneratedOperatorOnestopID(feedOnestopID, agencyName string) string {
+	fsid := "unknown"
+	if strings.HasPrefix(feedOnestopID, "f-") && len(feedOnestopID) > 2 {
+		fsid = feedOnestopID[2:]
+	}
+	return fmt.Sprintf("o-%s-%s", fsid, filterName(agencyName))
+}
+
 // filterName .
 func filterName(name string) string {
 	re1 := regexp.MustCompile(nameTilde)
@@ -262,11 +272,7 @@ func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool
 			if agency.OnestopID.Valid {
 				oif.ResolvedOnestopID = agency.OnestopID
 			} else {
-				fsid := "unknown"
-				if strings.HasPrefix(feed.FeedID, "f-") && len(feed.FeedID) > 2 {
-					fsid = feed.FeedID[2:]
-				}
-				oif.ResolvedOnestopID.Set(fmt.Sprintf("o-%s-%s", fsid, filterName(agency.AgencyName.Val)))
+				oif.ResolvedOnestopID.Set(GeneratedOperatorOnestopID(feed.FeedID, agency.AgencyName.Val))
 			}
 			// Save
 			if _, err := atx.Insert(ctx, &oif); err != nil {
