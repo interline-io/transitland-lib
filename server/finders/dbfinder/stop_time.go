@@ -648,28 +648,28 @@ func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow
 		// Set ServiceDate to local timezone
 		// ServiceDate is a strict GTFS calendar date
 		if where.ServiceDate != nil {
-			where.ServiceDate = tzTruncate(where.ServiceDate.Val, loc)
+			where.ServiceDate = model.TzTruncate(where.ServiceDate.Val, loc)
 		}
 
 		// Set Date to local timezone
 		if where.Date != nil {
-			where.Date = tzTruncate(where.Date.Val, loc)
+			where.Date = model.TzTruncate(where.Date.Val, loc)
 		}
 
 		// Convert relative date
 		if where.RelativeDate != nil {
-			if s, err := tt.RelativeDate(nowLocal, kebabize(string(*where.RelativeDate))); err != nil {
+			if s, err := model.ResolveRelativeDate(*where.RelativeDate, nowLocal); err != nil {
 				// This should always succeed because it is an enum and will be caught earlier
 				// TODO: log
 			} else {
-				where.Date = tzTruncate(s, loc)
+				where.Date = model.TzTruncate(s, loc)
 			}
 		}
 
 		// Convert where.Next into departure date and time window
 		if where.Next != nil {
 			if where.Date == nil {
-				where.Date = tzTruncate(nowLocal, loc)
+				where.Date = model.TzTruncate(nowLocal, loc)
 			}
 			st := nowLocal.Hour()*3600 + nowLocal.Minute()*60 + nowLocal.Second()
 			where.StartTime = ptr(st)
@@ -682,7 +682,7 @@ func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow
 	// window keeps its own schedule.
 	serviceDay := func(asked tt.Date) serviceDayQuery {
 		w := *where
-		w.ServiceDate, _, _ = resolveServiceDate(&asked, nil, nilOr(where.UseServiceWindow, false), fvsw)
+		w.ServiceDate, _, _ = model.ResolveServiceDate(&asked, nil, nilOr(where.UseServiceWindow, false), fvsw)
 		return serviceDayQuery{where: &w, report: &asked}
 	}
 

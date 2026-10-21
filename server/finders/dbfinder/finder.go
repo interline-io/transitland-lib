@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 	"golang.org/x/text/unicode/norm"
 )
@@ -53,13 +51,13 @@ type Finder struct {
 	Clock      clock.Clock
 	db         tldb.Ext
 	adminCache *adminCache
-	fvslCache  *clock.ServiceWindowCache
+	fvslCache  *serviceWindowCache
 }
 
 func NewFinder(db tldb.Ext) *Finder {
 	finder := &Finder{
 		db:        db,
-		fvslCache: clock.NewServiceWindowCache(db),
+		fvslCache: newServiceWindowCache(db),
 	}
 	return finder
 }
@@ -163,20 +161,6 @@ func nilOr[T any, PT *T](v PT, def T) T {
 func ptr[T any, PT *T](v T) PT {
 	a := v
 	return &a
-}
-
-func kebabize(a string) string {
-	return strings.ReplaceAll(strings.ToLower(a), "_", "-")
-}
-
-// tzTruncate returns the date of s as noon in loc. Noon, since a DST change can
-// skip local midnight but never noon.
-func tzTruncate(s time.Time, loc *time.Location) *tt.Date {
-	if loc == nil {
-		log.Error().Msg("tzTruncate: loc is nil, set to UTC")
-		loc = time.UTC
-	}
-	return ptr(tt.NewDate(time.Date(s.Year(), s.Month(), s.Day(), 12, 0, 0, 0, loc)))
 }
 
 func checkFloat(v *float64, min float64, max float64) float64 {

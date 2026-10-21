@@ -2,8 +2,6 @@ package dbfinder
 
 import (
 	"context"
-	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -110,55 +108,6 @@ func frequencySelect(limit *int, after *model.Cursor, permFilter *model.PermFilt
 	return q.OrderBy("gtfs_frequencies.id ASC").Limit(finderCheckLimit(limit))
 }
 
-// Replaces a date outside the feed version's service window with the same
-// weekday in its fallback week.
-func mapIntoServiceWindow(s time.Time, fvsw *model.ServiceWindow) *tt.Date {
-	loc := fvsw.NowLocal.Location()
-	// Compared as calendar dates in the feed version's timezone. A date scalar
-	// parses as midnight UTC, and comparing instants misplaces the window's
-	// first or last day.
-	local := tzTruncate(s, loc)
-	day := civilDate(local.Val)
-	if !day.Before(civilDate(fvsw.StartDate)) && !day.After(civilDate(fvsw.EndDate)) {
-		return local
-	}
-	dow := int(local.Val.Weekday()) - 1
-	if dow < 0 {
-		dow = 6
-	}
-	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
-}
-
-// civilDate returns t's calendar date in its own location, as midnight UTC, so
-// dates compare as dates whatever their time of day.
-func civilDate(t time.Time) time.Time {
-	y, m, d := t.Date()
-	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
-}
-
-// Resolve a filter's date inputs into the one service date to match, in the feed
-// version's terms: a relative date becomes concrete, and use_service_window
-// relocates a date outside the window into the fallback week. Also returns the
-// requested date, before any relocation.
-func resolveServiceDate(serviceDate *tt.Date, relativeDate *model.RelativeDate, useServiceWindow bool, fvsw *model.ServiceWindow) (*tt.Date, *tt.Date, error) {
-	if fvsw == nil {
-		return serviceDate, serviceDate, nil
-	}
-	if relativeDate != nil {
-		s, err := tt.RelativeDate(fvsw.NowLocal, kebabize(string(*relativeDate)))
-		if err != nil {
-			return nil, nil, fmt.Errorf("invalid relative_date %q: %w", *relativeDate, err)
-		}
-		serviceDate = tzTruncate(s, fvsw.NowLocal.Location())
-	}
-	asked := serviceDate
-	// Guarded: use_service_window with no date at all is a valid filter.
-	if useServiceWindow && serviceDate != nil {
-		serviceDate = mapIntoServiceWindow(serviceDate.Val, fvsw)
-	}
-	return serviceDate, asked, nil
-}
-
 // Restrict a query over gtfs_trips to the trips running on a service date.
 //
 // The join is inner, so a trip whose calendar does not cover the date drops out.
@@ -192,83 +141,17 @@ func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilde
 	`, sd, sd, sd, sd, sd)
 }
 
-// tripDate is a service date to match in the database and the dates it is
-// reported as. They differ under use_service_window, which relocates a date
-// into the fallback week; several requested dates can land on the same day.
-// Single marks a query for one service_date, which has no aggregated column, so
-// every trip found is a run on its one reported date.
-type tripDate struct {
-	query  time.Time
-	report []time.Time
-	single bool
-}
-
-// Resolve a trip filter's dates into the service dates to match. Wall calendar
-// `dates` also reach back DepartureLookbackDays.
-func resolveTripDates(where *model.TripFilter, fvsw *model.ServiceWindow) []tripDate {
-	if where == nil {
-		return nil
-	}
-	src, lookback := where.ServiceDates, 0
-	if len(where.Dates) > 0 {
-		src, lookback = where.Dates, DepartureLookbackDays
-	}
-	var requested []time.Time
-	for _, d := range src {
-		if d != nil {
-			requested = append(requested, d.Val)
-		}
-	}
-	var out []tripDate
-	at := map[string]int{}
-	for _, report := range calendarServiceDates(requested, lookback) {
-		query := report
-		if nilOr(where.UseServiceWindow, false) && fvsw != nil {
-			query = mapIntoServiceWindow(report, fvsw).Val
-		}
-		key := query.Format("2006-01-02")
-		i, ok := at[key]
-		if !ok {
-			i = len(out)
-			at[key] = i
-			out = append(out, tripDate{query: query})
-		}
-		out[i].report = append(out[i].report, report)
-	}
-	return out
-}
-
-// Split the aggregated service_dates column into the per-trip list the API
-// returns, relabeled as the requested dates, and record those as the trip's
-// runs. A single service_date is a run but not a service_dates entry.
-func expandTripServiceDates(ents []*model.Trip, dates []tripDate) {
-	if len(dates) == 1 && dates[0].single {
-		for _, ent := range ents {
-			ent.RunDates = []tt.Date{tt.NewDate(dates[0].report[0])}
-		}
-		return
-	}
-	if len(dates) == 0 {
-		return
-	}
-	report := map[string][]time.Time{}
-	for _, d := range dates {
-		report[d.query.Format("2006-01-02")] = d.report
-	}
+// Record each trip's runs from the aggregated service_dates column: the query
+// dates its service ran on.
+func expandTripServiceDates(ents []*model.Trip, dates []model.TripDate) {
 	for _, ent := range ents {
-		if !ent.ServiceDatesAgg.Valid || ent.ServiceDatesAgg.Val == "" {
-			continue
+		ran := map[string]bool{}
+		if ent.ServiceDatesAgg.Valid && ent.ServiceDatesAgg.Val != "" {
+			for _, s := range strings.Split(ent.ServiceDatesAgg.Val, ",") {
+				ran[s] = true
+			}
 		}
-		var matched []time.Time
-		for _, s := range strings.Split(ent.ServiceDatesAgg.Val, ",") {
-			matched = append(matched, report[s]...)
-		}
-		sort.Slice(matched, func(i, j int) bool { return matched[i].Before(matched[j]) })
-		for _, m := range matched {
-			d := tt.NewDate(m)
-			ent.ServiceDates = append(ent.ServiceDates, &d)
-			ent.RunDates = append(ent.RunDates, d)
-		}
+		model.SetTripRunDates(ent, dates, func(query time.Time) bool { return ran[query.Format("2006-01-02")] })
 	}
 }
 
@@ -390,7 +273,7 @@ func (f *Finder) TripsByFeedVersionIDs(ctx context.Context, limit *int, where *m
 }
 
 // Returns the query and how each matched service date should be reported.
-func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.TripFilter, fvsw *model.ServiceWindow) (sq.SelectBuilder, []tripDate, error) {
+func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFilter *model.PermFilter, where *model.TripFilter, fvsw *model.ServiceWindow) (sq.SelectBuilder, []model.TripDate, error) {
 	q := sq.StatementBuilder.Select(
 		"gtfs_trips.id",
 		"gtfs_trips.feed_version_id",
@@ -421,15 +304,10 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		Limit(finderCheckLimit(limit))
 
 	// Resolved into a local: `where` is reused for every feed version.
-	var serviceDate, askedDate *tt.Date
-	if where != nil {
-		var err error
-		serviceDate, askedDate, err = resolveServiceDate(where.ServiceDate, where.RelativeDate, nilOr(where.UseServiceWindow, false), fvsw)
-		if err != nil {
-			return q, nil, err
-		}
+	tripDates, err := model.ResolveTripDates(where, fvsw)
+	if err != nil {
+		return q, nil, err
 	}
-	tripDates := resolveTripDates(where, fvsw)
 
 	// Process other parameters
 	if where != nil {
@@ -454,12 +332,14 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 		if len(where.RouteIds) > 0 {
 			q = q.Where(In("gtfs_trips.route_id", where.RouteIds))
 		}
-		if len(tripDates) > 0 {
+		if len(tripDates) == 1 && tripDates[0].Single {
+			q = serviceDateLateral(q, tt.NewDate(tripDates[0].Query))
+		} else if len(tripDates) > 0 {
 			// One row per trip carrying the dates it runs, instead of one query
 			// per date. Aggregated as text to ride back on a single column.
 			var dates []string
 			for _, d := range tripDates {
-				dates = append(dates, d.query.Format("2006-01-02"))
+				dates = append(dates, d.Query.Format("2006-01-02"))
 			}
 			q = q.Column("svc.service_dates_agg").JoinClause(`
 			join lateral (
@@ -483,9 +363,6 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 					AND gcdb.date is null
 			) svc on true
 			`, strings.Join(dates, ",")).Where("svc.service_dates_agg is not null")
-		} else if serviceDate != nil {
-			q = serviceDateLateral(q, *serviceDate)
-			tripDates = []tripDate{{report: []time.Time{askedDate.Val}, single: true}}
 		}
 		// Handle license filtering
 		q = licenseFilter(where.License, q)

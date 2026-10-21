@@ -2,8 +2,6 @@ package clock
 
 import (
 	"time"
-
-	"github.com/interline-io/log"
 )
 
 // Allow for time mocking
@@ -25,16 +23,4 @@ type Mock struct {
 
 func (dc *Mock) Now() time.Time {
 	return dc.T
-}
-
-// Helpers
-
-// tzTruncate returns the date of s as noon in loc. Noon, since a DST change can
-// skip local midnight but never noon.
-func tzTruncate(s time.Time, loc *time.Location) time.Time {
-	if loc == nil {
-		log.Error().Msg("tzTruncate: loc is nil, set to UTC")
-		loc = time.UTC
-	}
-	return time.Date(s.Year(), s.Month(), s.Day(), 12, 0, 0, 0, loc)
 }
