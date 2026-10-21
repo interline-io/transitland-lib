@@ -299,28 +299,3 @@ func Test_az09(t *testing.T) {
 		})
 	}
 }
-
-// A date's local noon exists even on a day whose midnight a DST change skips:
-// America/Santiago jumped from midnight to 01:00 on 2024-09-08.
-func TestTzTruncate(t *testing.T) {
-	santiago, err := time.LoadLocation("America/Santiago")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tcs := []struct {
-		name   string
-		in     time.Time
-		expect string
-	}{
-		{"a date scalar on the day DST starts", time.Date(2024, 9, 8, 0, 0, 0, 0, time.UTC), "2024-09-08"},
-		{"late on the evening before", time.Date(2024, 9, 7, 23, 30, 0, 0, santiago), "2024-09-07"},
-		{"early on the morning after", time.Date(2024, 9, 9, 0, 30, 0, 0, santiago), "2024-09-09"},
-	}
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			got := tzTruncate(tc.in, santiago)
-			assert.Equal(t, tc.expect, got.String())
-			assert.Equal(t, 12, got.Val.Hour())
-		})
-	}
-}

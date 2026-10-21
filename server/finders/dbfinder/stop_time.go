@@ -8,7 +8,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
 
@@ -88,21 +87,18 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		if err != nil {
 			return nil, err
 		}
-		// Copied: the expansion rewrites the filter's date in place, and each
-		// feed version resolves it against its own service window.
-		fvWhere := where
-		if where != nil {
-			w := *where
-			fvWhere = &w
-		}
 		// Run separate queries for each possible service day
 		var fvEnts []*model.StopTime
 		ranked := false
-		for _, day := range stopTimeFilterExpand(fvWhere, fvsw) {
-			w := day.where
+		days, err := model.ExpandStopTimeFilter(where, fvsw)
+		if err != nil {
+			return nil, err
+		}
+		for _, day := range days {
+			w := day.Where
 			var sts []*model.StopTime
 			var q sq.SelectBuilder
-			if day.report != nil {
+			if day.Report != nil {
 				// Get stop_times on a specified day
 				var entityKeys []int
 				for _, k := range entityPairs {
@@ -122,18 +118,18 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 				return nil, queryErr(ctx, err)
 			}
 			// Report the requested service date
-			if day.report != nil {
+			if day.Report != nil {
 				ranked = true
 				for _, ent := range sts {
-					ent.SetServiceDate(*day.report)
+					ent.SetServiceDate(*day.Report)
 				}
 			}
 			fvEnts = append(fvEnts, sts...)
 		}
 		// Each service day's departures query keeps each route's first stop
 		// times, so a window across days can hold more than RouteLimit of them.
-		if ranked && fvWhere != nil && fvWhere.RouteLimit != nil {
-			fvEnts = firstForRoutes(fvEnts, *fvWhere.RouteLimit)
+		if ranked && where != nil && where.RouteLimit != nil {
+			fvEnts = firstForRoutes(fvEnts, *where.RouteLimit)
 		}
 		ents = append(ents, fvEnts...)
 	}
@@ -614,125 +610,6 @@ func firstDepartures(q sq.SelectBuilder, limit *int) sq.SelectBuilder {
 		FromSelect(q, "departures").
 		Where(sq.LtOrEq{"departures.entity_rank": finderCheckLimit(limit)}).
 		OrderBy("departures.departure_time", "departures.trip_id")
-}
-
-// serviceDayQuery is one service day's share of a stop time filter: the filter
-// to run, and the requested service date its stop times report.
-type serviceDayQuery struct {
-	where  *model.StopTimeFilter
-	report *tt.Date
-}
-
-func stopTimeFilterExpand(where *model.StopTimeFilter, fvsw *model.ServiceWindow) []serviceDayQuery {
-	// Pre-processing
-	// Convert Start, End to StartTime, EndTime
-	if where != nil {
-		if where.Start != nil {
-			where.StartTime = ptr(where.Start.Int())
-			where.Start = nil
-		}
-		if where.End != nil {
-			where.EndTime = ptr(where.End.Int())
-			where.End = nil
-		}
-	}
-
-	// Further processing of the StopTimeFilter
-	if where != nil {
-		var nowLocal time.Time
-		if fvsw != nil {
-			nowLocal = fvsw.NowLocal
-		}
-		loc := nowLocal.Location()
-
-		// Set ServiceDate to local timezone
-		// ServiceDate is a strict GTFS calendar date
-		if where.ServiceDate != nil {
-			where.ServiceDate = tzTruncate(where.ServiceDate.Val, loc)
-		}
-
-		// Set Date to local timezone
-		if where.Date != nil {
-			where.Date = tzTruncate(where.Date.Val, loc)
-		}
-
-		// Convert relative date
-		if where.RelativeDate != nil {
-			if s, err := tt.RelativeDate(nowLocal, kebabize(string(*where.RelativeDate))); err != nil {
-				// This should always succeed because it is an enum and will be caught earlier
-				// TODO: log
-			} else {
-				where.Date = tzTruncate(s, loc)
-			}
-		}
-
-		// Convert where.Next into departure date and time window
-		if where.Next != nil {
-			if where.Date == nil {
-				where.Date = tzTruncate(nowLocal, loc)
-			}
-			st := nowLocal.Hour()*3600 + nowLocal.Minute()*60 + nowLocal.Second()
-			where.StartTime = ptr(st)
-			where.EndTime = ptr(st + *where.Next)
-		}
-
-	}
-
-	// Each service day is relocated on its own, so a neighboring day inside the
-	// window keeps its own schedule.
-	serviceDay := func(asked tt.Date) serviceDayQuery {
-		w := *where
-		w.ServiceDate, _, _ = resolveServiceDate(&asked, nil, nilOr(where.UseServiceWindow, false), fvsw)
-		return serviceDayQuery{where: &w, report: &asked}
-	}
-
-	// Check if we are crossing date boundaires, and split into separate service date queries
-	var whereGroups []serviceDayQuery
-	if where != nil && where.Date != nil {
-		day := func(days int) tt.Date {
-			return tt.NewDate(where.Date.Val.AddDate(0, 0, days))
-		}
-		dayStart := 0
-		dayEnd := 24 * 60 * 60
-		dayEndMax := 100 * 60 * 60
-		whereStartTime := dayStart
-		if where.StartTime != nil {
-			whereStartTime = *where.StartTime
-		}
-		whereEndTime := dayEnd
-		if where.EndTime != nil {
-			whereEndTime = *where.EndTime
-		}
-		lookBehind := 6 * 3600
-		// Query previous day
-		if whereStartTime < lookBehind {
-			prev := serviceDay(day(-1))
-			prev.where.StartTime = ptr(dayEnd + whereStartTime)
-			prev.where.EndTime = ptr(dayEndMax)
-			whereGroups = append(whereGroups, prev)
-		}
-		// Query requested day
-		requested := serviceDay(day(0))
-		requested.where.StartTime = ptr(max(dayStart, whereStartTime))
-		requested.where.EndTime = ptr(whereEndTime)
-		whereGroups = append(whereGroups, requested)
-		// Query next day
-		if whereEndTime > dayEnd {
-			next := serviceDay(day(1))
-			next.where.StartTime = ptr(dayStart)
-			next.where.EndTime = ptr(whereEndTime - dayEnd)
-			whereGroups = append(whereGroups, next)
-		}
-	} else if where != nil && where.ServiceDate != nil {
-		whereGroups = append(whereGroups, serviceDay(*where.ServiceDate))
-	}
-
-	// Default
-	if len(whereGroups) == 0 {
-		whereGroups = append(whereGroups, serviceDayQuery{where: where})
-	}
-
-	return whereGroups
 }
 
 func pairKeys(spairs []model.FVPair) ([]int, []int) {
