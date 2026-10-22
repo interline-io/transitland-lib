@@ -84,11 +84,10 @@ func ConfigTxRollback(t testing.TB, opts Options, cb func(model.Config)) {
 }
 
 // SupplementalSha1 returns the sha1 of the supplemental fixture feed's only
-// version, found by the feed's onestop id. The sha1 changes whenever
-// testdata/server/gtfs/supplemental.zip does.
-func SupplementalSha1(t testing.TB) string {
+// version, as the config's finder finds it by the feed's onestop id. The sha1
+// changes with each edit to testdata/server/gtfs/supplemental.zip.
+func SupplementalSha1(t testing.TB, cfg model.Config) string {
 	t.Helper()
-	cfg := Config(t, Options{})
 	osid := "supplemental"
 	fvs, err := cfg.Finder.FindFeedVersions(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.FeedVersionFilter{FeedOnestopID: &osid})
 	if err != nil {
@@ -115,6 +114,30 @@ func DefaultRTJson() []RTJsonFile {
 		{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts.json"},
 		{Feed: "CT", Ftype: "realtime_trip_updates", Fname: "CT.json"},
 	}
+}
+
+// AddRTJsons adds realtime fixtures from testdata/server/rt to an RTFinder.
+// Each is served as a live feed's payload: fetched its Age before now, with its
+// header stamped then.
+func AddRTJsons(ctx context.Context, rtf model.RTFinder, now time.Time, files []RTJsonFile) error {
+	for _, rtj := range files {
+		msg, err := rt.ReadFile(testdata.Path("server", "rt", rtj.Fname))
+		if err != nil {
+			return err
+		}
+		if msg.Header == nil {
+			msg.Header = &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}
+		}
+		msg.Header.Timestamp = proto.Uint64(uint64(now.Add(-rtj.Age).Unix()))
+		rtdata, err := proto.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		if err := rtf.AddData(ctx, fmt.Sprintf("rtdata:%s:%s", rtj.Feed, rtj.Ftype), rtdata); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options) model.Config {
@@ -173,26 +196,8 @@ func newTestConfig(t testing.TB, ctx context.Context, db tldb.Ext, opts Options)
 	// Setup RT
 	rtf := rtfinder.NewFinder(kvcache.NewMemoryStore(), rtfinder.NewPostgresLookup(db))
 	rtf.Clock = cl
-	// Each fixture is served as a live feed's payload: fetched Age before the
-	// test's time, with its header stamped then.
-	for _, rtj := range opts.RTJsons {
-		fn := testdata.Path("server", "rt", rtj.Fname)
-		msg, err := rt.ReadFile(fn)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if msg.Header == nil {
-			msg.Header = &pb.FeedHeader{GtfsRealtimeVersion: proto.String("2.0")}
-		}
-		msg.Header.Timestamp = proto.Uint64(uint64(when.Add(-rtj.Age).Unix()))
-		key := fmt.Sprintf("rtdata:%s:%s", rtj.Feed, rtj.Ftype)
-		rtdata, err := proto.Marshal(msg)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := rtf.AddData(ctx, key, rtdata); err != nil {
-			t.Fatal(err)
-		}
+	if err := AddRTJsons(ctx, rtf, when, opts.RTJsons); err != nil {
+		t.Fatal(err)
 	}
 
 	// Setup GBFS

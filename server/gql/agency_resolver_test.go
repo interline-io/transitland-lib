@@ -1,270 +1,153 @@
 package gql
 
 import (
-	"context"
 	"testing"
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
-	"github.com/interline-io/transitland-lib/tlxy"
 )
 
 func TestAgencyResolver(t *testing.T) {
 	vars := hw{"agency_id": "caltrain-ca-us"}
 	testcases := []testcase{
-		{
-			name:         "basic",
-			query:        `query { agencies {agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "BART", "", "1"},
-		},
-		{
-			name:   "basic fields",
-			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {onestop_id agency_id agency_name agency_lang agency_phone agency_timezone agency_url agency_email agency_fare_url cemv_support feed_version_sha1 feed_onestop_id}}`,
-			vars:   vars,
-			expect: `{"agencies":[{"agency_email":null,"agency_fare_url":null,"agency_id":"caltrain-ca-us","agency_lang":"en","agency_name":"Caltrain","agency_phone":"800-660-4287","agency_timezone":"America/Los_Angeles","agency_url":"http://www.caltrain.com","cemv_support":null,"feed_onestop_id":"CT","feed_version_sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6","onestop_id":"o-9q9-caltrain"}]}`,
-		},
-		{
-			// just ensure this query completes successfully; checking coordinates is a pain and flaky.
-			name:         "geometry",
-			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {geometry}}`,
-			vars:         vars,
-			selector:     "agencies.0.geometry.type",
-			selectExpect: []string{"Polygon"},
-		},
-		{
-			name:   "feed_version",
-			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {feed_version { sha1 }}}`,
-			vars:   vars,
-			expect: `{"agencies":[{"feed_version":{"sha1":"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}}]}`,
-		},
-		{
-			name:         "routes",
-			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {routes { route_id }}}`,
-			vars:         vars,
-			selector:     "agencies.0.routes.#.route_id",
-			selectExpect: []string{"Bu-130", "Li-130", "Lo-130", "TaSj-130", "Gi-130", "Sp-130"},
-		},
-		{
-			name:   "route_types",
-			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {route_types}}`,
-			vars:   vars,
-			expect: `{"agencies":[{"route_types":[2,3]}]}`,
-		},
-		{
-			name:   "route_types extended",
-			query:  `query{agencies(where:{feed_onestop_id:"HA"}) {route_types}}`,
-			expect: `{"agencies":[{"route_types":[0,3,4]}]}`,
-		},
-		// Every route type in the fixtures is already a basic one, so this says the
-		// field is wired and deduplicates; tt.TestBasicRouteType is what covers the
-		// fold itself, over codes no fixture carries.
-		{
-			name:   "route_types_basic",
-			query:  `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {route_types route_types_basic}}`,
-			vars:   vars,
-			expect: `{"agencies":[{"route_types":[2,3],"route_types_basic":[2,3]}]}`,
-		},
-		{
-			name:   "route_types_basic across a feed",
-			query:  `query{agencies(where:{feed_onestop_id:"HA"}) {route_types_basic}}`,
-			expect: `{"agencies":[{"route_types_basic":[0,3,4]}]}`,
-		},
-		{
-			name:         "route_types through operator",
-			query:        `query{operators(where:{onestop_id:"o-9q9-caltrain"}) {agencies{route_types}}}`,
-			selector:     "operators.0.agencies.0.route_types",
-			selectExpect: []string{"2", "3"},
-		},
 		// places should test filters because it's not a root resolver
 		{
-			name:         "places",
-			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.0.places.#.city_name",
-			selectExpect: []string{"San Mateo", "San Francisco", "San Jose", ""},
+			Name:         "places",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.city_name",
+			SelectExpect: []string{"San Mateo", "San Francisco", "San Jose", ""},
 		},
 		{
-			name:         "places get adm0_iso",
-			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.0.places.#.adm0_iso",
-			selectExpect: []string{"US", "US", "US", "US"},
+			Name:         "places get adm0_iso",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.adm0_iso",
+			SelectExpect: []string{"US", "US", "US", "US"},
 		},
 		{
-			name:         "places get adm1_iso",
-			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.0.places.#.adm1_iso",
-			selectExpect: []string{"US-CA", "US-CA", "US-CA", "US-CA"},
-		},
-
-		{
-			name:         "places rank 0.25",
-			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.25}) {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.0.places.#.city_name",
-			selectExpect: []string{"San Mateo", "San Jose", ""},
+			Name:         "places get adm1_iso",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.adm1_iso",
+			SelectExpect: []string{"US-CA", "US-CA", "US-CA", "US-CA"},
 		},
 		{
-			name:         "places rank 0.75",
-			query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.75}) {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.0.places.#.adm1_name",
-			selectExpect: []string{"California"},
+			Name:         "places rank 0.25",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.25}) {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.city_name",
+			SelectExpect: []string{"San Mateo", "San Jose", ""},
+		},
+		{
+			Name:         "places rank 0.75",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.75}) {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.adm1_name",
+			SelectExpect: []string{"California"},
 		},
 		// place iso codes
 		{
-			name:         "places iso3166 country",
-			query:        `query { agencies(where:{adm0_iso: "US"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"},
+			Name:         "places iso3166 country",
+			Query:        `query { agencies(where:{adm0_iso: "US"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"},
 		},
 		{
-			name:         "places iso3166 state",
-			query:        `query { agencies(where:{adm1_iso: "US-CA"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+			Name:         "places iso3166 state",
+			Query:        `query { agencies(where:{adm1_iso: "US-CA"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
 		},
 		{
-			name:         "places iso3166 state lowercase",
-			query:        `query { agencies(where:{adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+			Name:         "places iso3166 state lowercase",
+			Query:        `query { agencies(where:{adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
 		},
 		{
-			name:         "places iso3166 state and country",
-			query:        `query { agencies(where:{adm0_iso: "us", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+			Name:         "places iso3166 state and country",
+			Query:        `query { agencies(where:{adm0_iso: "us", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
 		},
 		{
-			name:         "places iso3166 state and city",
-			query:        `query { agencies(where:{city_name: "oakland", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit"},
+			Name:         "places iso3166 state and city",
+			Query:        `query { agencies(where:{city_name: "oakland", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit"},
 		},
 		{
-			name:         "places iso3166 state and city no result",
-			query:        `query { agencies(where:{city_name: "test", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{},
+			Name:         "places iso3166 state and city no result",
+			Query:        `query { agencies(where:{city_name: "test", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
 		},
 		{
-			name:         "places iso3166 state no results",
-			query:        `query { agencies(where:{adm1_iso: "US-NY"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{},
+			Name:         "places iso3166 state no results",
+			Query:        `query { agencies(where:{adm1_iso: "US-NY"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
 		},
 		{
-			name:         "places state",
-			query:        `query { agencies(where:{adm1_name: "California"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+			Name:         "places state",
+			Query:        `query { agencies(where:{adm1_name: "California"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
 		},
 		{
-			name:         "places state no result",
-			query:        `query { agencies(where:{adm1_name: "New York"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{},
+			Name:         "places state no result",
+			Query:        `query { agencies(where:{adm1_name: "New York"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
 		},
 		{
 			// `%` is an ILIKE wildcard; unescaped it would match every adm0_iso.
-			name:         "places adm0_iso escapes ilike wildcards",
-			query:        `query { agencies(where:{adm0_iso: "%"}) {onestop_id}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{},
+			Name:         "places adm0_iso escapes ilike wildcards",
+			Query:        `query { agencies(where:{adm0_iso: "%"}) {onestop_id}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
 		},
 		{
-			name:         "places city",
-			query:        `query { agencies(where:{city_name: "Berkeley"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-bayarearapidtransit"},
+			Name:         "places city",
+			Query:        `query { agencies(where:{city_name: "Berkeley"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit"},
 		},
 		{
-			name:         "places city 2",
-			query:        `query { agencies(where:{city_name: "San Jose"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-caltrain"},
+			Name:         "places city 2",
+			Query:        `query { agencies(where:{city_name: "San Jose"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-caltrain"},
 		},
 		{
-			name:         "places city 2 lowercase",
-			query:        `query { agencies(where:{city_name: "san jose"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
-			vars:         vars,
-			selector:     "agencies.#.onestop_id",
-			selectExpect: []string{"o-9q9-caltrain"},
+			Name:         "places city 2 lowercase",
+			Query:        `query { agencies(where:{city_name: "san jose"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-caltrain"},
 		},
-		// search
-		{
-			name:         "search",
-			query:        `query($search:String!) { agencies(where:{search:$search}) {agency_id}}`,
-			vars:         hw{"search": "Bay Area"},
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"BART"},
-		},
-		{
-			name:         "search",
-			query:        `query($search:String!) { agencies(where:{search:$search}) {agency_id}}`,
-			vars:         hw{"search": "caltrain"},
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us"},
-		},
-		// TODO
-		// {"census_geographies", }
 	}
 	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
-}
-
-func TestAgencyResolver_Cursor(t *testing.T) {
-	c, cfg := newTestClient(t)
-	allEnts, err := cfg.Finder.FindAgencies(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	allIds := []string{}
-	for _, ent := range allEnts {
-		allIds = append(allIds, ent.AgencyID.Val)
-	}
-	testcases := []testcase{
-		{
-			name:         "no cursor",
-			query:        "query{agencies(limit:10){feed_version{id} id agency_id}}",
-			selector:     "agencies.#.agency_id",
-			selectExpect: allIds,
-		},
-		{
-			name:         "after 0",
-			query:        "query{agencies(after: 0, limit:10){feed_version{id} id agency_id}}",
-			selector:     "agencies.#.agency_id",
-			selectExpect: allIds,
-		},
-		{
-			name:         "after 1st",
-			query:        "query($after: Int!){agencies(after: $after, limit:10){feed_version{id} id agency_id}}",
-			vars:         hw{"after": allEnts[1].ID},
-			selector:     "agencies.#.agency_id",
-			selectExpect: allIds[2:],
-		},
-	}
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }
 
 var fgaTestTuples = []authz.TupleKey{
@@ -292,213 +175,21 @@ var fgaTestTuples = []authz.TupleKey{
 	},
 }
 
-// The WMATA feed is the only fixture with a station hierarchy: 125 served
-// platforms hanging off 98 stations, plus entrances and generic nodes that no
-// route serves.
 func TestAgencyResolver_Stops(t *testing.T) {
-	q := `query($osid:String!, $where:AgencyStopFilter, $limit:Int) { agencies(where:{onestop_id:$osid}) { stops(limit:$limit, where:$where) { stop_id location_type } } }`
-	wmata := hw{"osid": "o-dqcj-wmata", "limit": 1000}
 	testcases := []testcase{
 		{
-			name:               "default returns the served platforms",
-			query:              q,
-			vars:               wmata,
-			selector:           "agencies.0.stops.#.location_type",
-			selectExpectUnique: []string{"0"},
-			selectExpectCount:  125,
-		},
-		{
-			name:              "location_type 1 returns stations",
-			query:             q,
-			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1}},
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 98,
-		},
-		{
-			name:              "explicit location_type 0 matches the default",
-			query:             q,
-			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 0}},
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 125,
-		},
-		{
-			name:              "location_type null is treated as 0",
-			query:             q,
-			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": nil}},
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 125,
-		},
-		{
-			// Entrances and nodes belong to the same stations but are not served
-			// and are not reached from a served stop, so they stay out.
-			name:         "location_type 2 returns no entrances",
-			query:        q,
-			vars:         hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 2}},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: []string{},
-		},
-		{
-			name:              "limit applies per agency",
-			query:             q,
-			vars:              hw{"osid": "o-dqcj-wmata", "limit": 10, "where": hw{"location_type": 1}},
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 10,
-		},
-		{
-			name:         "agency without stations",
-			query:        q,
-			vars:         hw{"osid": "o-9q9-caltrain", "limit": 1000, "where": hw{"location_type": 1}},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: []string{},
-		},
-		{
-			name:               "scoped to the agency, not the feed version",
-			query:              q,
-			vars:               hw{"osid": "o-9q9-caltrain", "limit": 1000},
-			selector:           "agencies.0.stops.#.location_type",
-			selectExpectUnique: []string{"0"},
-			selectExpectCount:  64,
-		},
-		{
-			name:         "other stop options apply",
-			query:        q,
-			vars:         hw{"osid": "o-9q9-caltrain", "limit": 1000, "where": hw{"stop_id": "70011"}},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: []string{"70011"},
-		},
-		{
-			// Served-by filters apply to the served platform, so they select
-			// stations too. Applied to the returned row they would match no
-			// station at all, since a station is never served directly.
-			name:               "served_by_route_types selects the stations of those routes",
-			query:              q,
-			vars:               hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1, "served_by_route_types": []int{3}}},
-			selector:           "agencies.0.stops.#.location_type",
-			selectExpectUnique: []string{"1"},
-			selectExpectCount:  10,
-		},
-		{
-			// The subway serves every station, so this matches the unfiltered
-			// station count.
-			name:              "served_by_route_types narrows to the subway stations",
-			query:             q,
-			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1, "served_by_route_types": []int{1}}},
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 98,
-		},
-		{
-			name:              "served_by_route_onestop_ids narrows to one line's stations",
-			query:             q,
-			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1, "served_by_route_onestop_ids": []string{"r-dqcj-r"}}},
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 27,
-		},
-		{
-			name:              "served_by_route_onestop_ids takes the union of lines",
-			query:             q,
-			vars:              hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"location_type": 1, "served_by_route_onestop_ids": []string{"r-dqcj-r", "r-dqcm-g"}}},
-			selector:          "agencies.0.stops.#.stop_id",
-			selectExpectCount: 46,
-		},
-		{
-			// The filter matches against the agency's own routes; another
-			// operator's route can never match.
-			name:         "another agency's route matches nothing",
-			query:        q,
-			vars:         hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"served_by_route_onestop_ids": []string{"r-9q9-antioch~sfia~millbrae"}}},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: []string{},
-		},
-		{
-			// Only route Onestop IDs are accepted; anything else matches nothing
-			// rather than being ignored.
-			name:         "non-route ids match nothing",
-			query:        q,
-			vars:         hw{"osid": "o-dqcj-wmata", "limit": 1000, "where": hw{"served_by_route_onestop_ids": []string{"o-dqcj-wmata"}}},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: []string{},
-		},
-		{
-			// The relation walks platform to station and never back down: HART
-			// serves 2,349 platforms and has no stations, so nothing is added.
-			name:               "unserved siblings are not pulled in",
-			query:              q,
-			vars:               hw{"osid": "o-dhv-hillsborougharearegionaltransit", "limit": 3000},
-			selector:           "agencies.0.stops.#.location_type",
-			selectExpectUnique: []string{"0"},
-			selectExpectCount:  2349,
-		},
-		{
-			// Operators reach stops through their agencies; there is no
-			// Operator.stops, just as there is no Operator.routes.
-			name:  "reached through an operator's agencies",
-			query: `query { operators(where:{onestop_id:"o-dqcj-wmata"}) { agencies { stations: stops(limit:1000, where:{location_type:1}) { stop_id } platforms: stops(limit:100, where:{location_type:0}) { stop_id } } } }`,
-			sel: []testcaseSelector{
-				{selector: "operators.0.agencies.0.stations.#.stop_id", expectCount: 98},
-				{selector: "operators.0.agencies.0.platforms.#.stop_id", expectCount: 100},
-			},
-		},
-		{
 			// Two agencies in one request must not share a limit.
-			name:  "batched agencies keep separate limits",
-			query: `query { agencies(where:{adm0_iso:"US"}) { onestop_id stops(limit:3) { stop_id } } }`,
-			sel: []testcaseSelector{
-				{selector: "agencies.#.onestop_id", expect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"}},
-				{selector: "agencies.0.stops.#.stop_id", expectCount: 3},
-				{selector: "agencies.3.stops.#.stop_id", expectCount: 3},
+			Name:  "batched agencies keep separate limits",
+			Query: `query { agencies(where:{adm0_iso:"US"}) { onestop_id stops(limit:3) { stop_id } } }`,
+			Sel: []testcaseSelector{
+				{Selector: "agencies.#.onestop_id", Expect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"}},
+				{Selector: "agencies.0.stops.#.stop_id", ExpectCount: 3},
+				{Selector: "agencies.3.stops.#.stop_id", ExpectCount: 3},
 			},
 		},
 	}
 	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
-}
-
-func TestAgencyResolver_StopsCursor(t *testing.T) {
-	c, cfg := newTestClient(t)
-	ctx := model.WithConfig(context.Background(), cfg)
-	osid := "o-dqcj-wmata"
-	agencies, err := cfg.Finder.FindAgencies(ctx, nil, nil, nil, &model.AgencyFilter{OnestopID: &osid})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(agencies) != 1 {
-		t.Fatalf("expected 1 agency, got %d", len(agencies))
-	}
-	locationType := 1
-	allGroups, err := cfg.Finder.StopsByAgencyIDs(ctx, nil, nil, &model.AgencyStopFilter{LocationType: &locationType}, []int{agencies[0].ID})
-	if err != nil {
-		t.Fatal(err)
-	}
-	allEnts := allGroups[0]
-	allIds := []string{}
-	for _, ent := range allEnts {
-		allIds = append(allIds, ent.StopID.Val)
-	}
-	q := `query($osid:String!, $after:Int) { agencies(where:{onestop_id:$osid}) { stops(after:$after, limit:1000, where:{location_type:1}) { stop_id } } }`
-	testcases := []testcase{
-		{
-			name:         "no cursor",
-			query:        q,
-			vars:         hw{"osid": osid},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: allIds,
-		},
-		{
-			name:         "after 0",
-			query:        q,
-			vars:         hw{"osid": osid, "after": 0},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: allIds,
-		},
-		{
-			name:         "after 1st",
-			query:        q,
-			vars:         hw{"osid": osid, "after": allEnts[1].ID},
-			selector:     "agencies.0.stops.#.stop_id",
-			selectExpect: allIds[2:],
-		},
-	}
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }
 
 func TestAgencyResolver_Authz(t *testing.T) {
@@ -515,271 +206,24 @@ func TestAgencyResolver_Authz(t *testing.T) {
 
 	testcases := []testcase{
 		{
-			name:         "basic",
-			query:        `query { agencies {agency_id}}`,
-			user:         "ian",
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART", "", "573", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "1"},
+			Name:         "basic",
+			Query:        `query { agencies {agency_id}}`,
+			User:         "ian",
+			Selector:     "agencies.#.agency_id",
+			SelectExpect: []string{"caltrain-ca-us", "BART", "", "573", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "1"},
 		},
 		{
-			name:         "basic",
-			query:        `query { agencies {agency_id}}`,
-			user:         "public",
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART", "", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "1"},
+			Name:         "basic",
+			Query:        `query { agencies {agency_id}}`,
+			User:         "public",
+			Selector:     "agencies.#.agency_id",
+			SelectExpect: []string{"caltrain-ca-us", "BART", "", "a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6", "1"},
 		},
 	}
 	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			c := client.New(usercheck.UserDefaultMiddleware(tc.user)(srv))
-			queryTestcase(t, c, tc)
+		t.Run(tc.Name, func(t *testing.T) {
+			c := client.New(usercheck.UserDefaultMiddleware(tc.User)(srv))
+			gqlcase.QueryTestcase(t, c, tc)
 		})
 	}
-}
-
-func TestAgencyResolver_Location(t *testing.T) {
-	c, cfg := newTestClient(t)
-	testAgencyID := 0
-	if err := cfg.Adapter.DBX().
-		QueryRowx(`select gtfs_agencies.id from gtfs_agencies join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = 'BA' and agency_id = $1`, "BART").
-		Scan(&testAgencyID); err != nil {
-		t.Errorf("could not get agency ID for test: %s", err.Error())
-	}
-	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
-	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
-	testcases := []testcase{
-		{
-			name:         "near 100m",
-			query:        `query {agencies(where:{near:{lon:-122.407974,lat:37.784471,radius:100.0}}) {agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"BART"},
-		},
-		{
-			name:         "near 10000m",
-			query:        `query {agencies(where:{near:{lon:-122.407974,lat:37.784471,radius:10000.0}}) {agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART"},
-		},
-		{
-			name:         "within polygon",
-			query:        `query{agencies(where:{within:{type:"Polygon",coordinates:[[[-122.39803791046143,37.794626736533836],[-122.40106344223022,37.792303711508595],[-122.3965573310852,37.789641468930114],[-122.3938751220703,37.792354581451946],[-122.39803791046143,37.794626736533836]]]}}){agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"BART"},
-		},
-		{
-			name:         "within polygon big",
-			query:        `query{agencies(where:{within:{type:"Polygon",coordinates:[[[-122.39481925964355,37.80151060070086],[-122.41653442382812,37.78652126637423],[-122.39662170410156,37.76847577247014],[-122.37301826477051,37.784757615348575],[-122.39481925964355,37.80151060070086]]]}}){id agency_id}}`,
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"caltrain-ca-us", "BART"},
-		},
-		{
-			name:         "where bbox 1",
-			query:        `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
-			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{"BART"},
-		},
-		{
-			name:         "where bbox 2",
-			query:        `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
-			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
-			selector:     "agencies.#.agency_id",
-			selectExpect: []string{},
-		},
-		{
-			name:        "where bbox too large",
-			query:       `query($bbox:BoundingBox) {agencies(where:{bbox:$bbox}) {agency_id}}`,
-			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			expectError: true,
-		},
-		// Focus tests
-		{
-			name: "focus basic: West coast focus returns CA agencies before FL agencies",
-			query: `query($lat:Float!, $lon:Float!) {
-				agencies(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
-					agency_id
-					feed_version { feed { onestop_id } }
-				}
-			}`,
-			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
-			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"CT", "BA", "HA", "WMATA", "ctran-flex"},
-		},
-		{
-			name: "focus basic: East coast focus returns FL agency before CA agencies",
-			query: `query($lat:Float!, $lon:Float!) {
-				agencies(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
-					agency_id
-					feed_version { feed { onestop_id } }
-				}
-			}`,
-			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
-			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"HA", "WMATA", "BA", "CT", "ctran-flex"},
-		},
-		{
-			name: "focus with pagination: maintains ordering",
-			query: `query($lat:Float!, $lon:Float!, $after:Int) {
-				agencies(limit: 2, after: $after, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
-					id
-					agency_id
-					feed_version { feed { onestop_id } }
-				}
-			}`,
-			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testAgencyID},
-			selector:     "agencies.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"HA", "WMATA"},
-		},
-	}
-	queryTestcases(t, c, testcases)
-}
-
-func TestAgencyResolver_License(t *testing.T) {
-	q := `
-	query ($lic: LicenseFilter) {
-		agencies(limit: 10000, where: {license: $lic}) {
-		  agency_id
-		  feed_version {
-			feed {
-			  onestop_id
-			  license {
-				share_alike_optional
-				create_derived_product
-				commercial_use_allowed
-				redistribution_allowed
-			  }
-			}
-		  }
-		}
-	  }	  
-	`
-	testcases := []testcase{
-		// license: share_alike_optional
-		{
-			name:               "license filter: share_alike_optional = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  2,
-		},
-		{
-			name:               "license filter: share_alike_optional = no",
-			query:              q,
-			vars:               hw{"lic": hw{"share_alike_optional": "NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
-		},
-		{
-			name:               "license filter: share_alike_optional = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4,
-		},
-		// license: create_derived_product
-		{
-			name:               "license filter: create_derived_product = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  2,
-		},
-		{
-			name:               "license filter: create_derived_product = no",
-			query:              q,
-			vars:               hw{"lic": hw{"create_derived_product": "NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
-		},
-		{
-			name:               "license filter: create_derived_product = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4,
-		},
-		// license: commercial_use_allowed
-		{
-			name:               "license filter: commercial_use_allowed = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  2,
-		},
-		{
-			name:               "license filter: commercial_use_allowed = no",
-			query:              q,
-			vars:               hw{"lic": hw{"commercial_use_allowed": "NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
-		},
-		{
-			name:               "license filter: commercial_use_allowed = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4,
-		},
-		// license: redistribution_allowed
-		{
-			name:               "license filter: redistribution_allowed = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  2,
-		},
-		{
-			name:               "license filter: redistribution_allowed = no",
-			query:              q,
-			vars:               hw{"lic": hw{"redistribution_allowed": "NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
-		},
-		{
-			name:               "license filter: redistribution_allowed = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4,
-		},
-		// license: use_without_attribution
-		{
-			name:               "license filter: use_without_attribution = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  2,
-		},
-		{
-			name:               "license filter: use_without_attribution = no",
-			query:              q,
-			vars:               hw{"lic": hw{"use_without_attribution": "NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  1,
-		},
-		{
-			name:               "license filter: use_without_attribution = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
-			selector:           "agencies.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4,
-		},
-	}
-	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
 }

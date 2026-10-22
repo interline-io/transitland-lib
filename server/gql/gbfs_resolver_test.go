@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/gbfs"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/testdata"
 )
@@ -33,18 +34,18 @@ func setupGbfs(ctx context.Context, gbf model.GbfsFinder) error {
 func TestGbfsBikeResolver(t *testing.T) {
 	testcases := []testcase{
 		{
-			name: "basic",
-			query: `{
+			Name: "basic",
+			Query: `{
 				bikes(where: {near:{lon: -122.396445, lat:37.793250, radius:100}}) {
 				  bike_id
 				}
 			}`,
-			selector:     "bikes.#.bike_id",
-			selectExpect: []string{"2e09a0ed99c8ad32cca516661618645e"},
+			Selector:     "bikes.#.bike_id",
+			SelectExpect: []string{"2e09a0ed99c8ad32cca516661618645e"},
 		},
 		{
-			name: "feed",
-			query: `{
+			Name: "feed",
+			Query: `{
 				bikes(where: {near:{lon: -122.396445, lat:37.793250, radius:100}}) {
 				  bike_id
 				  feed {
@@ -54,40 +55,40 @@ func TestGbfsBikeResolver(t *testing.T) {
 				  }
 				}
 			}`,
-			selector:     "bikes.#.feed.system_information.name",
-			selectExpect: []string{"Bay Wheels"},
+			Selector:     "bikes.#.feed.system_information.name",
+			SelectExpect: []string{"Bay Wheels"},
 		},
 		{
-			name: "limit 5",
-			query: `{
+			Name: "limit 5",
+			Query: `{
 				bikes(limit:5, where: {near:{lon: -122.396445, lat:37.793250, radius:1000}}) {
 				  bike_id
 				}
 			}`,
-			selector:     "bikes.#.bike_id",
-			selectExpect: []string{"0cbf9b08f8b71a6362e20c8173c071a6", "1682088b2335fa5365610e6d299fde2d", "1bc913bf913729a147458cd6b2f91773", "1d61a000cb330f6c260fc439d29b20ab", "21667e59d3c6bc814b6716d87621ddde"},
+			Selector:     "bikes.#.bike_id",
+			SelectExpect: []string{"0cbf9b08f8b71a6362e20c8173c071a6", "1682088b2335fa5365610e6d299fde2d", "1bc913bf913729a147458cd6b2f91773", "1d61a000cb330f6c260fc439d29b20ab", "21667e59d3c6bc814b6716d87621ddde"},
 		},
 		{
-			name: "limit 1",
-			query: `{
+			Name: "limit 1",
+			Query: `{
 				bikes(limit:1, where: {near:{lon: -122.396445, lat:37.793250, radius:1000}}) {
 				  bike_id
 				}
 			}`,
-			selector:     "bikes.#.bike_id",
-			selectExpect: []string{"0cbf9b08f8b71a6362e20c8173c071a6"},
+			Selector:     "bikes.#.bike_id",
+			SelectExpect: []string{"0cbf9b08f8b71a6362e20c8173c071a6"},
 		},
 	}
 	c, cfg := newTestClient(t)
 	setupGbfs(context.Background(), cfg.GbfsFinder)
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }
 
 func TestGbfsStationResolver(t *testing.T) {
 	testcases := []testcase{
 		{
-			name: "basic",
-			query: `{
+			Name: "basic",
+			Query: `{
 				docks(where: {near: {lon: -121.908666, lat: 37.336289, radius: 100}}) {
 				  station_id
 				  address
@@ -109,12 +110,12 @@ func TestGbfsStationResolver(t *testing.T) {
 				}
 			  }
 			`,
-			selector:     "docks.#.station_id",
-			selectExpect: []string{"d75591d7-080d-46cb-8ada-0fbe6af676fc"},
+			Selector:     "docks.#.station_id",
+			SelectExpect: []string{"d75591d7-080d-46cb-8ada-0fbe6af676fc"},
 		},
 		{
-			name: "feed",
-			query: `{
+			Name: "feed",
+			Query: `{
 				docks(where: {near:{lon: -121.908666, lat:37.336289, radius:100}}) {
 				  station_id
 				  feed {
@@ -124,12 +125,12 @@ func TestGbfsStationResolver(t *testing.T) {
 				  }
 				}
 			}`,
-			selector:     "docks.#.feed.system_information.name",
-			selectExpect: []string{"Bay Wheels"},
+			Selector:     "docks.#.feed.system_information.name",
+			SelectExpect: []string{"Bay Wheels"},
 		},
 		{
-			name: "region",
-			query: `{
+			Name: "region",
+			Query: `{
 				docks(where: {near: {lon: -121.908666, lat: 37.336289, radius: 100}}) {
 				  station_id
 				  region {
@@ -139,12 +140,12 @@ func TestGbfsStationResolver(t *testing.T) {
 				}
 			  }
 			  `,
-			selector:     "docks.#.region.name",
-			selectExpect: []string{"San Jose"},
+			Selector:     "docks.#.region.name",
+			SelectExpect: []string{"San Jose"},
 		},
 		{
-			name: "calendars",
-			query: `{
+			Name: "calendars",
+			Query: `{
 				docks(where: {near: {lon: -121.908666, lat: 37.336289, radius: 100}}) {
 				  station_id
 				  feed {
@@ -159,12 +160,12 @@ func TestGbfsStationResolver(t *testing.T) {
 				  }
 				}
 			  }`,
-			selector:     "docks.0.feed.calendars.0.end_month",
-			selectExpect: []string{"12"},
+			Selector:     "docks.0.feed.calendars.0.end_month",
+			SelectExpect: []string{"12"},
 		},
 		{
-			name: "status",
-			query: `{
+			Name: "status",
+			Query: `{
 				docks(where: {near: {lon: -121.908666, lat: 37.336289, radius: 100}}) {
 				  station_id
 				  status {
@@ -181,33 +182,33 @@ func TestGbfsStationResolver(t *testing.T) {
 				}
 			  }
 			`,
-			selector:     "docks.0.status.num_bikes_available",
-			selectExpect: []string{"11"},
+			Selector:     "docks.0.status.num_bikes_available",
+			SelectExpect: []string{"11"},
 		},
 		{
-			name: "limit 5",
-			query: `{
+			Name: "limit 5",
+			Query: `{
 				docks(limit: 5, where: {near: {lon: -121.908666, lat: 37.336289, radius: 1000}}) {
 				  station_id
 				}
 			  }
 			  `,
-			selector:     "docks.#.station_id",
-			selectExpect: []string{"27045384-791c-4519-8087-fce2f7c48a69", "28988488-fb74-4bbc-9e69-613698b2dd8c", "2c7560e6-62c6-4403-8b97-8016471948b5", "3ebc4f3f-2941-47cd-a173-83f01a91bf57", "a96032c0-9ff2-4fbe-8f03-6b3f9816947d"},
+			Selector:     "docks.#.station_id",
+			SelectExpect: []string{"27045384-791c-4519-8087-fce2f7c48a69", "28988488-fb74-4bbc-9e69-613698b2dd8c", "2c7560e6-62c6-4403-8b97-8016471948b5", "3ebc4f3f-2941-47cd-a173-83f01a91bf57", "a96032c0-9ff2-4fbe-8f03-6b3f9816947d"},
 		},
 		{
-			name: "limit 1",
-			query: `{
+			Name: "limit 1",
+			Query: `{
 				docks(limit: 1, where: {near: {lon: -121.908666, lat: 37.336289, radius: 1000}}) {
 				  station_id
 				}
 			  }
 			  `,
-			selector:     "docks.#.station_id",
-			selectExpect: []string{"27045384-791c-4519-8087-fce2f7c48a69"},
+			Selector:     "docks.#.station_id",
+			SelectExpect: []string{"27045384-791c-4519-8087-fce2f7c48a69"},
 		},
 	}
 	c, cfg := newTestClient(t)
 	setupGbfs(context.Background(), cfg.GbfsFinder)
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }

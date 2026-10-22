@@ -16,7 +16,7 @@ When adding a new GTFS entity type (e.g., `BookingRule`, `Location`), you'll nee
 8. **Loaders** (`server/gql/loaders.go`)
 9. **Resolver** (`server/gql/<entity>_resolver.go`)
 10. **Register Resolver** (`server/gql/resolver.go`)
-11. **Tests** (`server/gql/<entity>_resolver_test.go`, plus the shared permission and cursor tests)
+11. **Tests** (`server/gql/gqltest/<entity>_cases.go`, plus the shared permission and cursor tests)
 
 ## 1. Adding New Resolvers
 
@@ -305,20 +305,22 @@ To make `LoaderFor(ctx)` work, you need to configure the data loaders.
 
 ### Step 8: Add Tests
 
-Create tests in `server/gql/pathway_resolver_test.go`. Find records by stable keys, such as a feed version's sha1 or a GTFS ID. Internal IDs depend on the order the fixtures load, so never hard-code them.
+Add cases to `server/gql/gqltest/pathway_cases.go`, so every finder runs them, and register the builder in `caseGroups` in `gqltest.go`. Find records by stable keys, such as a feed version's sha1 or a GTFS ID, and look them up through `cfg.Finder` rather than SQL. Internal IDs depend on the order the fixtures load, so never hard-code them.
 
 ```go
-package gql
+package gqltest
 
 import (
     "testing"
+
+    "github.com/interline-io/transitland-lib/server/model"
 )
 
-func TestPathwayResolver(t *testing.T) {
+func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
     testcases := []testcase{
         {
-            name: "basic pathway query",
-            query: `query($sha1: String!) {
+            Name: "basic pathway query",
+            Query: `query($sha1: String!) {
                 feed_versions(where: {sha1: $sha1}) {
                     pathways(limit: 1) {
                         pathway_id
@@ -327,19 +329,18 @@ func TestPathwayResolver(t *testing.T) {
                     }
                 }
             }`,
-            vars:              hw{"sha1": "..."},
-            selector:          "feed_versions.0.pathways.#.pathway_id",
-            selectExpectCount: 1,
+            Vars:              hw{"sha1": "..."},
+            Selector:          "feed_versions.0.pathways.#.pathway_id",
+            SelectExpectCount: 1,
         },
     }
-    c, _ := newTestClient(t)
-    queryTestcases(t, c, testcases)
+    return testcases
 }
 ```
 
 Two shared tests cover every list:
 - **`TestPermFilter_Negative`** (`server/gql/permfilter_negative_test.go`): Add each new finder to its `checks` table. The test requires each finder to return rows while the feeds are public, then expects none once every feed is private, so it fails for a select that skips `pfJoinCheckFv`.
-- **`TestFeedVersionResolver_TableCursors`** (`server/gql/feed_version_resolver_test.go`): Add each new `FeedVersion` list, with a feed version that has at least three records. The test checks ascending IDs, `after`, `ids`, and `after` with `ids`.
+- **`feedVersionResolverTableCursorsTest`** (`server/gql/gqltest/feed_version_cases.go`): Add each new `FeedVersion` list, with a feed version that has at least three records. The test checks ascending IDs, `after`, `ids`, and `after` with `ids`.
 
 When a test checks that something gets filtered out, first assert that the unfiltered query returns rows, so the test can't pass without exercising the filter. `RESOLVER_TEST_GUIDE.md` documents the test harness.
 
@@ -673,13 +674,13 @@ func (r *feedVersionResolver) Transfers(ctx context.Context, obj *model.FeedVers
 
 ### Tests
 
-`TestFeedVersionResolver_Transfers` in `server/gql/transfer_resolver_test.go` queries each field and the `transfer_type` filter on feed versions it finds by sha1. The finder also has an entry in each shared test:
+`feedVersionResolverTransfersTestcases` in `server/gql/gqltest/transfer_cases.go` queries each field and the `transfer_type` filter on feed versions it finds by sha1. The finder also has an entry in each shared test:
 
 ```go
 // TestPermFilter_Negative, in server/gql/permfilter_negative_test.go:
 {"TransfersByFeedVersionIDs", func() (int, error) { return countGroups(f.TransfersByFeedVersionIDs(ctx, nil, nil, nil, []int{baFv})) }},
 
-// TestFeedVersionResolver_TableCursors, in server/gql/feed_version_resolver_test.go:
+// feedVersionResolverTableCursorsTest, in server/gql/gqltest/feed_version_cases.go:
 {"transfers", "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
 ```
 
@@ -731,10 +732,10 @@ When adding a new entity to GraphQL, ensure you complete all these steps:
   - [ ] Add resolver method for the new field on the parent type
   - [ ] For a `FeedVersion` list, pass `resolverCheckLimitMax(limit, RESOLVER_GTFS_TABLE_MAXLIMIT)` and `checkCursor(after)`
 
-- [ ] **Tests** (`server/gql/<entity>_resolver_test.go`)
+- [ ] **Tests** (`server/gql/gqltest/<entity>_cases.go`)
   - [ ] Add test cases for basic queries
   - [ ] Test filters and relationships
   - [ ] Test accessing entity from parent (e.g., `feed_versions { transfers { ... } }`)
   - [ ] Find records by stable keys, never by hard-coded internal IDs
   - [ ] Add the finder to `TestPermFilter_Negative`
-  - [ ] Add each `FeedVersion` list to `TestFeedVersionResolver_TableCursors`
+  - [ ] Add each `FeedVersion` list to `feedVersionResolverTableCursorsTest`

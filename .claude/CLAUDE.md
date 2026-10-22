@@ -162,6 +162,7 @@ Entity structs in `gtfs/` have filenames matching their GTFS source files (e.g.,
 - Uses `testify/assert` for assertions
 - CSV reader tests use `internal/testreader.ReaderTester` with expected entity counts
 - GraphQL resolver tests use `testcase` structs with GraphQL queries and `queryTestcase()` helper
+- Resolver cases every finder must answer alike live in `server/gql/gqltest`, which `gqltest.Run` runs against any `model.Finder`; `server/gql` keeps only the cases that need the database finder. See `server/gql/RESOLVER_TEST_GUIDE.md`
 - Test data lives in `testdata/` (GTFS fixtures, server test data, DMFR files)
 
 ## PR Summary

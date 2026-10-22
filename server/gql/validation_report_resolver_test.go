@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -19,19 +20,19 @@ func TestValidationReportResolver(t *testing.T) {
 	testcases := []testcase{
 		// Saved validation reports
 		{
-			name:  "validation reports",
-			query: q,
-			vars:  hw{"feed_version_sha1": fvsha1},
-			f: func(t *testing.T, jj string) {
+			Name:  "validation reports",
+			Query: q,
+			Vars:  hw{"feed_version_sha1": fvsha1},
+			F: func(t *testing.T, jj string) {
 				reports := gjson.Get(jj, "feed_versions.0.validation_reports")
 				assert.Equal(t, 1, len(reports.Array()))
 				report := reports.Get("0")
-				assert.Equal(t, []string{"stops.txt", "stops.txt"}, astr(report.Get("errors.#.filename").Array()))
-				assert.Equal(t, []string{"InvalidFieldError", "InvalidFieldError"}, astr(report.Get("errors.#.error_type").Array()))
-				assert.Equal(t, []string{"1", "1"}, astr(report.Get("errors.#.count").Array()))
+				assert.Equal(t, []string{"stops.txt", "stops.txt"}, gqlcase.Strings(report.Get("errors.#.filename").Array()))
+				assert.Equal(t, []string{"InvalidFieldError", "InvalidFieldError"}, gqlcase.Strings(report.Get("errors.#.error_type").Array()))
+				assert.Equal(t, []string{"1", "1"}, gqlcase.Strings(report.Get("errors.#.count").Array()))
 				var messages []string
 				for _, a := range report.Get("errors").Array() {
-					messages = append(messages, astr(a.Get("errors.#.message").Array())...)
+					messages = append(messages, gqlcase.Strings(a.Get("errors.#.message").Array())...)
 				}
 				expMessages := []string{
 					"invalid value for field stop_lat '-200': out of bounds, less than -90.000000",
@@ -41,61 +42,61 @@ func TestValidationReportResolver(t *testing.T) {
 			},
 		},
 		{
-			name:         "success=true",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"success": true}},
-			selector:     "feed_versions.0.validation_reports.#.success",
-			selectExpect: []string{"true"},
+			Name:         "success=true",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"success": true}},
+			Selector:     "feed_versions.0.validation_reports.#.success",
+			SelectExpect: []string{"true"},
 		},
 		{
-			name:         "success=false",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"success": false}},
-			selector:     "feed_versions.0.validation_reports.#.success",
-			selectExpect: []string{},
+			Name:         "success=false",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"success": false}},
+			Selector:     "feed_versions.0.validation_reports.#.success",
+			SelectExpect: []string{},
 		},
 		{
-			name:         "includes_static=true",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_static": true}},
-			selector:     "feed_versions.0.validation_reports.#.includes_static",
-			selectExpect: []string{"true"},
+			Name:         "includes_static=true",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_static": true}},
+			Selector:     "feed_versions.0.validation_reports.#.includes_static",
+			SelectExpect: []string{"true"},
 		},
 		{
-			name:         "includes_static=false",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_static": false}},
-			selector:     "feed_versions.0.validation_reports.#.includes_static",
-			selectExpect: []string{},
+			Name:         "includes_static=false",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_static": false}},
+			Selector:     "feed_versions.0.validation_reports.#.includes_static",
+			SelectExpect: []string{},
 		},
 
 		{
-			name:         "includes_rt=true",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_rt": true}},
-			selector:     "feed_versions.0.validation_reports.#.includes_rt",
-			selectExpect: []string{},
+			Name:         "includes_rt=true",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_rt": true}},
+			Selector:     "feed_versions.0.validation_reports.#.includes_rt",
+			SelectExpect: []string{},
 		},
 		{
-			name:         "includes_rt=false",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_rt": false}},
-			selector:     "feed_versions.0.validation_reports.#.includes_rt",
-			selectExpect: []string{"false"},
+			Name:         "includes_rt=false",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"includes_rt": false}},
+			Selector:     "feed_versions.0.validation_reports.#.includes_rt",
+			SelectExpect: []string{"false"},
 		},
 		{
-			name:         "report_ids",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"report_ids": []int{reportId}}},
-			selector:     "feed_versions.0.validation_reports.#.id",
-			selectExpect: []string{strconv.Itoa(reportId)},
+			Name:         "report_ids",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"report_ids": []int{reportId}}},
+			Selector:     "feed_versions.0.validation_reports.#.id",
+			SelectExpect: []string{strconv.Itoa(reportId)},
 		},
 		{
-			name:         "report_ids",
-			query:        q,
-			vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"report_ids": []int{100000}}},
-			selector:     "feed_versions.0.validation_reports.#.id",
-			selectExpect: []string{},
+			Name:         "report_ids",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": fvsha1, "where": hw{"report_ids": []int{100000}}},
+			Selector:     "feed_versions.0.validation_reports.#.id",
+			SelectExpect: []string{},
 		},
 		// TODO:
 		// {
@@ -107,5 +108,5 @@ func TestValidationReportResolver(t *testing.T) {
 		// 	},
 		// },
 	}
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }
