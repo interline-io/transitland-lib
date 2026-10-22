@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/booking_rule_resolver_test.go.
 
-func bookingRuleResolverTestcases() []testcase {
+func bookingRuleResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	brid := "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"
 	testcases := []testcase{
@@ -64,7 +70,7 @@ func bookingRuleResolverTestcases() []testcase {
 	return testcases
 }
 
-func bookingRuleResolverFeedVersionTestcases() []testcase {
+func bookingRuleResolverFeedVersionTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	brid := "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"
 	testcases := []testcase{
@@ -94,7 +100,7 @@ func bookingRuleResolverFeedVersionTestcases() []testcase {
 	return testcases
 }
 
-func bookingRuleResolverPriorNoticeServiceTestcases() []testcase {
+func bookingRuleResolverPriorNoticeServiceTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	brid := "booking_rule_id__2bc6804f-9e24-4b91-8947-c73a2363e7b6_MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a"
 	testcases := []testcase{

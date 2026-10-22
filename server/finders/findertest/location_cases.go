@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/location_resolver_test.go.
 
-func locationResolverTestcases() []testcase {
+func locationResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	roseVillageLocationID := "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"
 	testcases := []testcase{
@@ -96,7 +102,7 @@ func locationResolverTestcases() []testcase {
 	return testcases
 }
 
-func locationResolverStopTimesTestcases() []testcase {
+func locationResolverStopTimesTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	roseVillageLocationID := "location_id__c7400cc8-959c-42c8-991f-8f601ec9ea59"
 	testcases := []testcase{

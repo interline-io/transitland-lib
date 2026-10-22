@@ -541,12 +541,15 @@ func TestRouteResolver_Location(t *testing.T) {
 	// San Jose coordinates: approximately in downtown San Jose
 	// This should put CT stops (Caltrain San Jose area) much closer than HA stops (Florida)
 	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
-	var testRouteId int
-	if err := cfg.Adapter.DBX().
-		QueryRowx(`select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = $1 and route_id = $2`, "HA", "96").
-		Scan(&testRouteId); err != nil {
-		t.Errorf("could not get route ID for test: %s", err.Error())
+	testFeed, testRouteCode := "HA", "96"
+	testRoutes, err := cfg.Finder.FindRoutes(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.RouteFilter{FeedOnestopID: &testFeed, RouteID: &testRouteCode})
+	if err != nil {
+		t.Fatal(err)
 	}
+	if len(testRoutes) != 1 {
+		t.Fatalf("found %d active routes with route_id %s in %s, expected 1", len(testRoutes), testRouteCode, testFeed)
+	}
+	testRouteId := testRoutes[0].ID
 
 	testcases := []testcase{
 		// just ensure geometry queries complete successfully; checking coordinates is a pain and flaky.

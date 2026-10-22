@@ -539,12 +539,15 @@ func TestAgencyResolver_Authz(t *testing.T) {
 
 func TestAgencyResolver_Location(t *testing.T) {
 	c, cfg := newTestClient(t)
-	testAgencyID := 0
-	if err := cfg.Adapter.DBX().
-		QueryRowx(`select gtfs_agencies.id from gtfs_agencies join feed_states using(feed_version_id) join current_feeds cf on cf.id = feed_states.feed_id where cf.onestop_id = 'BA' and agency_id = $1`, "BART").
-		Scan(&testAgencyID); err != nil {
-		t.Errorf("could not get agency ID for test: %s", err.Error())
+	testFeed, testAgencyCode := "BA", "BART"
+	testAgencies, err := cfg.Finder.FindAgencies(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.AgencyFilter{FeedOnestopID: &testFeed, AgencyID: &testAgencyCode})
+	if err != nil {
+		t.Fatal(err)
 	}
+	if len(testAgencies) != 1 {
+		t.Fatalf("found %d active agencies with agency_id %s in %s, expected 1", len(testAgencies), testAgencyCode, testFeed)
+	}
+	testAgencyID := testAgencies[0].ID
 	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
 	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
 	testcases := []testcase{

@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/operator_resolver_test.go.
 
-func operatorResolverLicenseTestcases() []testcase {
+func operatorResolverLicenseTestcases(t *testing.T, cfg model.Config) []testcase {
 	q := `
 	query ($lic: LicenseFilter) {
 		operators(limit: 10000, where: {license: $lic}) {
@@ -141,7 +147,7 @@ func operatorResolverLicenseTestcases() []testcase {
 	return testcases
 }
 
-func operatorResolverTestcases() []testcase {
+func operatorResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	testcases := []testcase{
 		{
 			name:   "basic fields",

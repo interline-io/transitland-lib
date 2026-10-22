@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/calendar_resolver_test.go.
 
-func calendarResolverTestcases() []testcase {
+func calendarResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	vars := hw{"trip_id": "3850526WKDY"}
 	testcases := []testcase{
 		{

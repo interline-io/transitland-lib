@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 )
 
 // Cases duplicated from server/gql/agency_resolver_test.go.
 
-func agencyResolverLicenseTestcases() []testcase {
+func agencyResolverLicenseTestcases(t *testing.T, cfg model.Config) []testcase {
 	q := `
 	query ($lic: LicenseFilter) {
 		agencies(limit: 10000, where: {license: $lic}) {
@@ -158,7 +159,7 @@ func agencyResolverLicenseTestcases() []testcase {
 	return testcases
 }
 
-func agencyResolverTestcases() []testcase {
+func agencyResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	vars := hw{"agency_id": "caltrain-ca-us"}
 	testcases := []testcase{
 		{
@@ -247,7 +248,7 @@ func agencyResolverTestcases() []testcase {
 // The WMATA feed is the only fixture with a station hierarchy: 125 served
 // platforms hanging off 98 stations, plus entrances and generic nodes that no
 // route serves.
-func agencyResolverStopsTestcases() []testcase {
+func agencyResolverStopsTestcases(t *testing.T, cfg model.Config) []testcase {
 	q := `query($osid:String!, $where:AgencyStopFilter, $limit:Int) { agencies(where:{onestop_id:$osid}) { stops(limit:$limit, where:$where) { stop_id location_type } } }`
 	wmata := hw{"osid": "o-dqcj-wmata", "limit": 1000}
 	testcases := []testcase{
@@ -469,6 +470,61 @@ func agencyResolverStopsCursorTestcases(t *testing.T, cfg model.Config) []testca
 			vars:         hw{"osid": osid, "after": allEnts[1].ID},
 			selector:     "agencies.0.stops.#.stop_id",
 			selectExpect: allIds[2:],
+		},
+	}
+	return testcases
+}
+
+func agencyResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
+	testFeed, testAgencyCode := "BA", "BART"
+	testAgencies, err := cfg.Finder.FindAgencies(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.AgencyFilter{FeedOnestopID: &testFeed, AgencyID: &testAgencyCode})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(testAgencies) != 1 {
+		t.Fatalf("found %d active agencies with agency_id %s in %s, expected 1", len(testAgencies), testAgencyCode, testFeed)
+	}
+	testAgencyID := testAgencies[0].ID
+	floridaFocus := tlxy.Point{Lat: 27.9506, Lon: -82.4572}
+	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
+	testcases := []testcase{
+		// Focus tests
+		{
+			name: "focus basic: West coast focus returns CA agencies before FL agencies",
+			query: `query($lat:Float!, $lon:Float!) {
+				agencies(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					agency_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			selector:     "agencies.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"CT", "BA", "HA", "WMATA", "ctran-flex"},
+		},
+		{
+			name: "focus basic: East coast focus returns FL agency before CA agencies",
+			query: `query($lat:Float!, $lon:Float!) {
+				agencies(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					agency_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			selector:     "agencies.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "WMATA", "BA", "CT", "ctran-flex"},
+		},
+		{
+			name: "focus with pagination: maintains ordering",
+			query: `query($lat:Float!, $lon:Float!, $after:Int) {
+				agencies(limit: 2, after: $after, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
+					id
+					agency_id
+					feed_version { feed { onestop_id } }
+				}
+			}`,
+			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testAgencyID},
+			selector:     "agencies.#.feed_version.feed.onestop_id",
+			selectExpect: []string{"HA", "WMATA"},
 		},
 	}
 	return testcases

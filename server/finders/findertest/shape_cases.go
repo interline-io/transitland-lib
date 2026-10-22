@@ -16,7 +16,7 @@ import (
 // All BART routes are route_type 1 (metro).
 const bartShapeSha1 = "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 
-func feedVersionResolverShapesTestcases() []testcase {
+func feedVersionResolverShapesTestcases(t *testing.T, cfg model.Config) []testcase {
 	testcases := []testcase{
 		{
 			name:     "shapes",
@@ -90,7 +90,7 @@ func feedVersionResolverShapesTestcases() []testcase {
 	return testcases
 }
 
-func shapeResolverTripsTestcases() []testcase {
+func shapeResolverTripsTestcases(t *testing.T, cfg model.Config) []testcase {
 	// shapes(where:{shape_id:"02_shp"}) yields exactly one shape, so shapes.0 is
 	// unambiguous. Every BART trip on 02_shp runs route 01, direction 1.
 	testcases := []testcase{

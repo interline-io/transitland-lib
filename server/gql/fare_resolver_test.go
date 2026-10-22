@@ -146,9 +146,9 @@ func TestFareResolver(t *testing.T) {
 			expect: `{"feed_versions":[{"fare_leg_join_rules":[{"from_network_id":"local","from_stop":{"stop_id":"S1"},"to_network_id":"express","to_stop":{"stop_id":"S2"}}]}]}`,
 		},
 		{
-			name:   "fare_transfer_rules",
-			query:  `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_transfer_rules { from_leg_group_id to_leg_group_id transfer_count duration_limit duration_limit_type fare_transfer_type fare_product_id filter_fare_product_id } } }`,
-			vars:   hw{"sha1": supplementalSha1},
+			name:  "fare_transfer_rules",
+			query: `query($sha1: String!) { feed_versions(where: {sha1: $sha1}) { fare_transfer_rules { from_leg_group_id to_leg_group_id transfer_count duration_limit duration_limit_type fare_transfer_type fare_product_id filter_fare_product_id } } }`,
+			vars:  hw{"sha1": supplementalSha1},
 			expect: `{"feed_versions":[{"fare_transfer_rules":[` +
 				`{"duration_limit":5400,"duration_limit_type":1,"fare_product_id":"express_upgrade","fare_transfer_type":0,"filter_fare_product_id":"two_zone","from_leg_group_id":"local_legs","to_leg_group_id":"express_legs","transfer_count":null},` +
 				`{"duration_limit":3600,"duration_limit_type":0,"fare_product_id":null,"fare_transfer_type":0,"filter_fare_product_id":null,"from_leg_group_id":"local_legs","to_leg_group_id":"local_legs","transfer_count":1}` +

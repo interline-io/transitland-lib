@@ -7,6 +7,7 @@
 package findertest
 
 import (
+	"context"
 	"encoding/json"
 	"maps"
 	"slices"
@@ -34,23 +35,17 @@ type Capability string
 // within and near, against their polygon geometries.
 const Spatial Capability = "Spatial"
 
-// caseGroup is one resolver test function's cases, run against one client.
+// caseGroup is one resolver test function's cases, run against one client and
+// built from the config of the finder under test, which some read ids from.
 type caseGroup struct {
 	name  string
-	cases func() []testcase
+	cases func(t *testing.T, cfg model.Config) []testcase
 }
 
 // clockGroup is one resolver test function's cases, each run at its own time.
 type clockGroup struct {
 	name  string
 	cases func() []testcaseWithClock
-}
-
-// cfgGroup is one resolver test function's cases, built from the config of the
-// finder under test, which they read ids from.
-type cfgGroup struct {
-	name  string
-	cases func(t *testing.T, cfg model.Config) []testcase
 }
 
 // The resolver test functions the suite runs, by name.
@@ -91,22 +86,18 @@ var (
 		{"AgencyResolver", agencyResolverTestcases},
 		{"AgencyResolver_Stops", agencyResolverStopsTestcases},
 		{"FareResolver", fareResolverTestcases},
+		{"FeedVersionResolver_StopAreas", feedVersionResolverStopAreasTestcases},
+		{"FeedVersionResolver_Translations", feedVersionResolverTranslationsTestcases},
+		{"FeedVersionResolver_Attributions", feedVersionResolverAttributionsTestcases},
+		{"FeedVersionResolver_Transfers", feedVersionResolverTransfersTestcases},
 		{"FeedResolver", feedResolverTestcases},
 		{"FeedResolver_License", feedResolverLicenseTestcases},
 		{"FeedVersionResolver", feedVersionResolverTestcases},
 		{"FeedVersionResolver_License", feedVersionResolverLicenseTestcases},
 		{"OperatorResolver", operatorResolverTestcases},
 		{"RouteResolver", routeResolverTestcases},
-	}
-	optionalGroups = map[Capability][]caseGroup{
-		Spatial: {
-			{"FeedResolver", feedResolverSpatialTestcases},
-			{"FeedVersionResolver", feedVersionResolverSpatialTestcases},
-			{"OperatorResolver", operatorResolverSpatialTestcases},
-		},
-	}
-	cfgGroups = []cfgGroup{
 		{"AgencyResolver_Cursor", agencyResolverCursorTestcases},
+		{"FareResolver_Cursor", fareResolverCursorTestcases},
 		{"AgencyResolver_StopsCursor", agencyResolverStopsCursorTestcases},
 		{"FeedResolver_Cursor", feedResolverCursorTestcases},
 		{"FeedVersionResolver_PathwaysAndLevels_Cursor", feedVersionResolverPathwaysAndLevelsCursorTestcases},
@@ -114,9 +105,33 @@ var (
 		{"FeedVersionResolver_Shapes_Cursor", feedVersionResolverShapesCursorTestcases},
 		{"StopResolverCursor", stopResolverCursorTestcases},
 		{"StopResolverLicense", stopResolverLicenseTestcases},
+		{"StopResolver", stopResolverTestcases},
+		{"StopResolverLocation", stopResolverLocationTestcases},
+		{"RouteResolver_Location", routeResolverLocationTestcases},
+		{"AgencyResolver_Location", agencyResolverLocationTestcases},
+		{"QueryResolver", queryResolverTestcases},
+		{"StopResolver_StopTimes", stopResolverStopTimesTestcases},
+	}
+	optionalGroups = map[Capability][]caseGroup{
+		Spatial: {
+			{"FeedResolver", feedResolverSpatialTestcases},
+			{"FeedVersionResolver", feedVersionResolverSpatialTestcases},
+			{"OperatorResolver", operatorResolverSpatialTestcases},
+			{"AgencyResolver_Location", agencyResolverLocationSpatialTestcases},
+			{"FeedResolver_GeohashFilter", feedResolverGeohashFilterSpatialTestcases},
+			{"FeedVersionResolver_GeohashFilter", feedVersionResolverGeohashFilterSpatialTestcases},
+		},
+	}
+	groupConfigs = map[string]func(*model.Config){
+		"FeedResolver_GeohashFilter":        useGeohashFilter,
+		"FeedVersionResolver_GeohashFilter": useGeohashFilter,
 	}
 	clockGroups = []clockGroup{
 		{"RouteResolver_Date", routeResolverDateTestcases},
+		{"StopResolver_StopTimes_RelativeDates", stopResolverStopTimesRelativeDatesTestcases},
+		{"StopResolver_StopTimes_Next", stopResolverStopTimesNextTestcases},
+		{"StopResolver_StopTimes_Frequencies", stopResolverStopTimesFrequenciesTestcases},
+		{"FeedVersionResolver_Trips_Date", feedVersionResolverTripsDateTestcases},
 	}
 )
 
@@ -128,8 +143,8 @@ var (
 func Run(t *testing.T, newConfig NewConfig, supports ...Capability) {
 	for _, g := range caseGroups {
 		t.Run(g.name, func(t *testing.T) {
-			c, _ := newTestClient(t, newConfig, defaultWhen)
-			queryTestcases(t, c, g.cases())
+			c, cfg := newTestClient(t, newConfig, defaultWhen, groupConfigs[g.name])
+			queryTestcases(t, c, g.cases(t, cfg))
 		})
 	}
 	for _, capability := range slices.Sorted(maps.Keys(optionalGroups)) {
@@ -139,8 +154,8 @@ func Run(t *testing.T, newConfig NewConfig, supports ...Capability) {
 			}
 			for _, g := range optionalGroups[capability] {
 				t.Run(g.name, func(t *testing.T) {
-					c, _ := newTestClient(t, newConfig, defaultWhen)
-					queryTestcases(t, c, g.cases())
+					c, cfg := newTestClient(t, newConfig, defaultWhen, groupConfigs[g.name])
+					queryTestcases(t, c, g.cases(t, cfg))
 				})
 			}
 		})
@@ -149,23 +164,22 @@ func Run(t *testing.T, newConfig NewConfig, supports ...Capability) {
 		t.Run(g.name, func(t *testing.T) {
 			for _, tc := range g.cases() {
 				t.Run(tc.name, func(t *testing.T) {
-					c, _ := newTestClient(t, newConfig, tc.whenUtc)
+					c, _ := newTestClient(t, newConfig, tc.whenUtc, nil)
 					queryTestcase(t, c, tc.testcase)
 				})
 			}
 		})
 	}
-	for _, g := range cfgGroups {
-		t.Run(g.name, func(t *testing.T) {
-			c, cfg := newTestClient(t, newConfig, defaultWhen)
-			queryTestcases(t, c, g.cases(t, cfg))
-		})
-	}
 }
 
 // newTestClient serves the config through the GraphQL handler, as a signed-in
-// test user, and returns the config it serves.
-func newTestClient(t testing.TB, newConfig NewConfig, whenUtc string) (*client.Client, model.Config) {
+// test user, and returns the config it serves. The clock reads whenUtc, or
+// defaultWhen when it is empty, as in the resolver tests, and configure, if set,
+// sets the group's options.
+func newTestClient(t testing.TB, newConfig NewConfig, whenUtc string, configure func(*model.Config)) (*client.Client, model.Config) {
+	if whenUtc == "" {
+		whenUtc = defaultWhen
+	}
 	when, err := time.Parse(time.RFC3339, whenUtc)
 	if err != nil {
 		t.Fatal(err)
@@ -173,12 +187,45 @@ func newTestClient(t testing.TB, newConfig NewConfig, whenUtc string) (*client.C
 	cfg := newConfig(t)
 	cfg.Clock = &clock.Mock{T: when}
 	cfg.MaxRadius = maxRadius
+	if configure != nil {
+		configure(&cfg)
+	}
 	srv := gql.NewDefaultHandler()
 	graphqlServer := model.AddConfigAndPerms(cfg, srv)
 	srvMiddleware := usercheck.NewUserDefaultMiddleware(func() authn.User {
 		return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
 	})
 	return client.New(srvMiddleware(graphqlServer)), cfg
+}
+
+// useGeohashFilter turns on the geohash secondary filter for spatial queries.
+func useGeohashFilter(cfg *model.Config) {
+	cfg.UseGeohashFilter = true
+}
+
+// findSupplementalSha1 returns the sha1 of the supplemental fixture feed's only
+// version, as the finder under test finds it by the feed's onestop id.
+func findSupplementalSha1(t *testing.T, cfg model.Config) string {
+	t.Helper()
+	osid := "supplemental"
+	fvs, err := cfg.Finder.FindFeedVersions(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.FeedVersionFilter{FeedOnestopID: &osid})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fvs) != 1 {
+		t.Fatalf("found %d supplemental feed versions, expected 1", len(fvs))
+	}
+	return fvs[0].SHA1
+}
+
+// decodeGeojson decodes a GeoJSON feature for a query variable.
+func decodeGeojson(t *testing.T, d string) hw {
+	t.Helper()
+	var feature hw
+	if err := json.Unmarshal([]byte(d), &feature); err != nil {
+		t.Fatal(err)
+	}
+	return feature
 }
 
 // defaultWhen is the time a case runs at unless it sets its own.

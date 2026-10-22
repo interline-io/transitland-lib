@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/location_group_resolver_test.go.
 
-func locationGroupResolverTestcases() []testcase {
+func locationGroupResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
 	testcases := []testcase{
@@ -63,7 +69,7 @@ func locationGroupResolverTestcases() []testcase {
 	return testcases
 }
 
-func locationGroupResolverStopTimesTestcases() []testcase {
+func locationGroupResolverStopTimesTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	vaMedicalCenterLocationGroupID := "location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"
 	testcases := []testcase{
@@ -198,7 +204,7 @@ func locationGroupResolverStopTimesTestcases() []testcase {
 	return testcases
 }
 
-func locationGroupResolverStopsTestcases() []testcase {
+func locationGroupResolverStopsTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
 	testcases := []testcase{
@@ -236,7 +242,7 @@ func locationGroupResolverStopsTestcases() []testcase {
 	return testcases
 }
 
-func locationGroupResolverFeedVersionTestcases() []testcase {
+func locationGroupResolverFeedVersionTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
 	testcases := []testcase{

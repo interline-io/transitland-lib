@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/trip_resolver_test.go.
 
-func tripResolverTestcases() []testcase {
+func tripResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	vars := hw{"trip_id": "3850526WKDY"}
 	testcases := []testcase{
 		{
@@ -176,7 +182,7 @@ func tripResolverTestcases() []testcase {
 	return testcases
 }
 
-func tripResolverFrequenciesTestcases() []testcase {
+func tripResolverFrequenciesTestcases(t *testing.T, cfg model.Config) []testcase {
 	// CITY1 runs five headway bands; its first stop departs at 06:00:00.
 	const q = `query($trip_id:String!) {trips(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", trip_id:$trip_id}) {frequencies{start_time end_time headway_secs trip{trip_id stop_times(limit:1){departure_time}}}}}`
 	vars := hw{"trip_id": "CITY1"}
@@ -236,7 +242,7 @@ func tripResolverFrequenciesTestcases() []testcase {
 	return testcases
 }
 
-func tripResolverLicenseTestcases() []testcase {
+func tripResolverLicenseTestcases(t *testing.T, cfg model.Config) []testcase {
 	q := `
 	query ($lic: LicenseFilter) {
 		trips(limit: 100000, where: {license: $lic}) {
@@ -385,7 +391,7 @@ func tripResolverLicenseTestcases() []testcase {
 	return testcases
 }
 
-func tripResolverFlexStopTimesTestcases() []testcase {
+func tripResolverFlexStopTimesTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	// A specific trip_id from the C-TRAN flex feed for deterministic testing
 	ctranFlexTripID := "trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>"
@@ -466,7 +472,7 @@ func tripResolverFlexStopTimesTestcases() []testcase {
 	return testcases
 }
 
-func tripResolverSafeDurationTestcases() []testcase {
+func tripResolverSafeDurationTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	ctranFlexTripID := "trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<MTWTFxx_20220107_20320522__053000_190000__053000_190000__m_b3a73dc523608998d850c431bf49b740093fd69415233fb3e74709073b335b6a>"
 	testcases := []testcase{
@@ -500,7 +506,7 @@ func tripResolverSafeDurationTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionResolverFrequenciesTestcases() []testcase {
+func feedVersionResolverFrequenciesTestcases(t *testing.T, cfg model.Config) []testcase {
 	exSha1 := "43e2278aa272879c79460582152b04e7487f0493"
 	q := `query($sha1:String!) {
 		feed_versions(where:{sha1:$sha1}) {

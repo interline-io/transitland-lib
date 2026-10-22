@@ -814,10 +814,15 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
 	sanJoseRadiusMeters := 10_000.0 // 10km
 
-	var testStopID int
-	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = $1`, "70252").Scan(&testStopID); err != nil {
-		t.Errorf("could not get stop ID for test: %s", err.Error())
+	testStopCode := "70252"
+	testStops, err := cfg.Finder.FindStops(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.StopFilter{StopID: &testStopCode})
+	if err != nil {
+		t.Fatal(err)
 	}
+	if len(testStops) != 1 {
+		t.Fatalf("found %d active stops with stop_id %s, expected 1", len(testStops), testStopCode)
+	}
+	testStopID := testStops[0].ID
 
 	testcases := []testcase{
 		{

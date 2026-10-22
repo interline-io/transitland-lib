@@ -12,7 +12,7 @@ import (
 
 // Cases duplicated from server/gql/pathway_resolver_test.go.
 
-func pathwayResolverTestcases() []testcase {
+func pathwayResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
 	// NODE_C08_FG_PAID = Pentagon City fare-gates, paid side.
 	// Outgoing pathways: 1 exit gate (mode 7) + 8 walkways/escalators (mode 1).
@@ -176,7 +176,7 @@ func pathwayResolverTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionResolverPathwaysTestcases() []testcase {
+func feedVersionResolverPathwaysTestcases(t *testing.T, cfg model.Config) []testcase {
 	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
 	q := `query($sha1:String!, $limit:Int, $where:PathwayFilter) {
 		feed_versions(where:{sha1:$sha1}) {

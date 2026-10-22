@@ -3,13 +3,14 @@ package findertest
 import (
 	"testing"
 
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
 
 // Cases duplicated from server/gql/feed_version_resolver_test.go.
 
-func feedVersionResolverLocationsTestcases() []testcase {
+func feedVersionResolverLocationsTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	testcases := []testcase{
 		{
@@ -31,7 +32,7 @@ func feedVersionResolverLocationsTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionResolverBookingRulesTestcases() []testcase {
+func feedVersionResolverBookingRulesTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	testcases := []testcase{
 		{
@@ -53,7 +54,7 @@ func feedVersionResolverBookingRulesTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionResolverLocationGroupsTestcases() []testcase {
+func feedVersionResolverLocationGroupsTestcases(t *testing.T, cfg model.Config) []testcase {
 	ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	testcases := []testcase{
 		{
@@ -84,14 +85,15 @@ func feedVersionResolverLocationGroupsTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionResolverTestcases() []testcase {
+func feedVersionResolverTestcases(t *testing.T, cfg model.Config) []testcase {
+	supplementalSha1 := findSupplementalSha1(t, cfg)
 	vars := hw{"feed_version_sha1": "d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
 	testcases := []testcase{
 		{
 			name:         "basic",
 			query:        `query {  feed_versions {sha1} }`,
 			selector:     "feed_versions.#.sha1",
-			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", "148d00724546e1526d5d84d1f9d095df24f6517c"},
+			selectExpect: []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "c969427f56d3a645195dd8365cde6d7feae7e99b", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "43e2278aa272879c79460582152b04e7487f0493", "96b67c0934b689d9085c52967365d8c233ea321d", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", "148d00724546e1526d5d84d1f9d095df24f6517c", supplementalSha1},
 		},
 		{
 			name:   "basic fields",
@@ -390,12 +392,13 @@ func feedVersionResolverTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionResolverLicenseTestcases() []testcase {
+func feedVersionResolverLicenseTestcases(t *testing.T, cfg model.Config) []testcase {
+	supplementalSha1 := findSupplementalSha1(t, cfg)
 	q := `query($lic:LicenseFilter) {feed_versions(where: {license: $lic}) {sha1 feed { onestop_id} }}`
 	baFvs := []string{"e535eb2b3b9ac3ef15d82c56575e914575e732e0", "dd7aca4a8e4c90908fd3603c097fabee75fea907", "96b67c0934b689d9085c52967365d8c233ea321d"}
 	haFvs := []string{"c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c"}
 	ctFvs := []string{"d2813c293bcfd7a97dde599527ae6c62c98e66c6"}
-	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"}
+	HaCtExFvs := []string{"43e2278aa272879c79460582152b04e7487f0493", "c969427f56d3a645195dd8365cde6d7feae7e99b", "148d00724546e1526d5d84d1f9d095df24f6517c", "d2813c293bcfd7a97dde599527ae6c62c98e66c6", "e8bc76c3c8602cad745f41a49ed5c5627ad6904c", supplementalSha1}
 	testcases := []testcase{
 		// license: share_alike_optional
 		{
@@ -541,6 +544,117 @@ func feedVersionResolverLicenseTestcases() []testcase {
 			vars:         hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
 			selector:     "feed_versions.#.sha1",
 			selectExpect: HaCtExFvs,
+		},
+	}
+	return testcases
+}
+
+func feedVersionResolverTripsDateTestcases() []testcaseWithClock {
+	weekdayTrips := []string{"STBA", "CITY1", "CITY2", "AB1", "AB2", "BFC1", "BFC2"}
+	weekendTrips := []string{"STBA", "CITY1", "CITY2", "AB1", "AB2", "BFC1", "BFC2", "AAMV1", "AAMV2", "AAMV3", "AAMV4"} // all trips
+	const q = `
+	query ($sha1: String, $service_date: Date, $relative_date: RelativeDate, $use_service_window:Boolean) {
+		feed_versions(where: {sha1: $sha1}) {
+			id
+			sha1
+			trips(where: {relative_date: $relative_date, service_date: $service_date,use_service_window:$use_service_window}) {
+				id
+				trip_id
+			}
+		}
+	}`
+	testcases := []testcaseWithClock{
+		{
+			whenUtc: "2007-02-05T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, no filters",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493"},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekendTrips,
+			},
+		},
+		{
+			whenUtc: "2007-02-05T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, service date (tuesday)",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "service_date": "2007-02-06"},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekdayTrips,
+			},
+		},
+		{
+			whenUtc: "2007-02-05T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, service date (saturday)",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "service_date": "2007-02-10"},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekendTrips, // all trips
+			},
+		},
+		// Relative dates
+		{
+			whenUtc: "2007-02-03T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, relative date (today, today is saturday)",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "relative_date": "TODAY"},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekendTrips,
+			},
+		},
+		{
+			whenUtc: "2007-02-03T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, relative date (next-monday, today is saturday)",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "relative_date": "NEXT_MONDAY"},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekdayTrips,
+			},
+		},
+		{
+			whenUtc: "2007-02-05T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, relative date (next-saturday, today is monday)",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "relative_date": "NEXT_SATURDAY"},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekendTrips, // all trips
+			},
+		},
+		// Window
+		{
+			whenUtc: "2024-07-23T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, service date (tuesday), outside of window",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "service_date": "2024-07-23"},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: []string{},
+			},
+		},
+		{
+			whenUtc: "2024-07-23T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, service date (tuesday), outside of window, use fallback",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "service_date": "2024-07-23", "use_service_window": true},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekdayTrips,
+			},
+		},
+		{
+			whenUtc: "2024-07-23T22:00:00Z",
+			testcase: testcase{
+				name:         "trips, relative date (next-saturday, today is tuesday), outside of window, use fallback",
+				query:        q,
+				vars:         hw{"sha1": "43e2278aa272879c79460582152b04e7487f0493", "relative_date": "NEXT_SATURDAY", "use_service_window": true},
+				selector:     "feed_versions.0.trips.#.trip_id",
+				selectExpect: weekendTrips,
+			},
 		},
 	}
 	return testcases

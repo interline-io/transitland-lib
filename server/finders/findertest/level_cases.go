@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/level_resolver_test.go.
 
-func levelResolverTestcases() []testcase {
+func levelResolverTestcases(t *testing.T, cfg model.Config) []testcase {
 	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
 	testcases := []testcase{
 		{
@@ -30,7 +36,7 @@ func levelResolverTestcases() []testcase {
 	return testcases
 }
 
-func feedVersionResolverLevelsTestcases() []testcase {
+func feedVersionResolverLevelsTestcases(t *testing.T, cfg model.Config) []testcase {
 	wmataSha1 := "148d00724546e1526d5d84d1f9d095df24f6517c"
 	q := `query($sha1:String!, $limit:Int, $where:LevelFilter) {
 		feed_versions(where:{sha1:$sha1}) {

@@ -1,8 +1,14 @@
 package findertest
 
+import (
+	"testing"
+
+	"github.com/interline-io/transitland-lib/server/model"
+)
+
 // Cases duplicated from server/gql/location_group_stop_resolver_test.go.
 
-func feedVersionResolverLocationGroupStopsTestcases() []testcase {
+func feedVersionResolverLocationGroupStopsTestcases(t *testing.T, cfg model.Config) []testcase {
 	flexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
 	q := `query($sha1:String!, $limit:Int) {
 		feed_versions(where:{sha1:$sha1}) {
