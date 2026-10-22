@@ -1,4 +1,4 @@
-package gql
+package gqltest
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func TestAgencyRT_Alerts(t *testing.T) {
+func agencyRTAlertsTest(t *testing.T, newConfig NewConfig) {
 	activeVars := rtTestStopQueryVars()
 	activeVars["active"] = true
 	tcs := []rtTestCase{
@@ -70,14 +70,14 @@ func TestAgencyRT_Alerts(t *testing.T) {
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, tc)
+		testRt(t, newConfig, tc)
 	}
 }
 
 // With include_modes, Agency.alerts also returns an alert on a mode the agency
 // runs, but not one on a mode it doesn't run, nor one narrowed to a route, stop
 // or trip; alerts on the agency itself still come back.
-func TestAgencyRT_AlertsIncludeModes(t *testing.T) {
+func agencyRTAlertsIncludeModesTest(t *testing.T, newConfig NewConfig) {
 	vars := rtTestStopQueryVars()
 	vars["include_modes"] = true
 	agencyAlerts := func(t *testing.T, jj string) []string {
@@ -91,7 +91,7 @@ func TestAgencyRT_AlertsIncludeModes(t *testing.T) {
 		}
 		return ret
 	}
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "modes",
 		query:   rtTestStopQuery,
 		vars:    vars,
@@ -100,7 +100,7 @@ func TestAgencyRT_AlertsIncludeModes(t *testing.T) {
 			assert.Equal(t, []string{"All BART subway service"}, agencyAlerts(t, jj))
 		},
 	})
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "agency",
 		query:   rtTestStopQuery,
 		vars:    vars,

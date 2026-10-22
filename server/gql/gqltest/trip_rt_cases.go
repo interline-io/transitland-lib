@@ -1,4 +1,4 @@
-package gql
+package gqltest
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 
 // The departures are the trip's run of 2018-05-30, read that afternoon. Its
 // two alerts name no start_date, so both are on the current run.
-func TestTripRT_Alerts(t *testing.T) {
+func tripRTAlertsTest(t *testing.T, newConfig NewConfig) {
 	activeVars := rtTestStopQueryVars()
 	activeVars["active"] = true
 	tcs := []rtTestCase{
@@ -74,11 +74,11 @@ func TestTripRT_Alerts(t *testing.T) {
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, tc)
+		testRt(t, newConfig, tc)
 	}
 }
 
-func TestTripRT_StopTimes(t *testing.T) {
+func tripRTStopTimesTest(t *testing.T, newConfig NewConfig) {
 	const tripRtQuery = `query($trip_id:String!) {
 	trips(where: { trip_id: $trip_id }) {
 	  id
@@ -133,19 +133,19 @@ func TestTripRT_StopTimes(t *testing.T) {
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, tc)
+		testRt(t, newConfig, tc)
 	}
 }
 
 // Realtime population on a trip's stop times is conditional on the selection,
 // so schedule_relationship has to be one of the fields that turns it on.
-func TestTripRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
+func tripRTScheduleRelationshipWithoutArrivalDepartureTest(t *testing.T, newConfig NewConfig) {
 	const query = `query($trip_id: String!) {
 		trips(where: {trip_id: $trip_id}) {
 			stop_times { schedule_relationship stop_sequence }
 		}
 	}`
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "schedule_relationship alone",
 		query:   query,
 		vars:    hw{"trip_id": "1131530WKDY"},
