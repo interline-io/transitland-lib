@@ -19,20 +19,6 @@ import (
 // by bad-coordinate stops without dropping legitimate city-scale matches.
 const GeohashBboxFilterPrecision uint = 3
 
-// GeohashBboxFilterMaxCells caps the number of cells the secondary filter will
-// expand a bbox into. Country/continent-scale bboxes blow past this; at that
-// size the filter adds no selectivity (it matches nearly everything) and only
-// bloats the cell list, so it's skipped in favor of the primary spatial
-// predicate. 1000 p3 cells is roughly continent scale (the contiguous US is
-// ~760); we may lower this in the future if large lists prove costly in practice.
-const GeohashBboxFilterMaxCells = 1000
-
-// GeohashFilterCells returns the cells the feed-version bbox filter matches a
-// bbox against, or nil when the filter should be skipped.
-func GeohashFilterCells(bbox BoundingBox) []string {
-	return CellsCoveringBbox(bbox, GeohashBboxFilterPrecision, GeohashBboxFilterMaxCells)
-}
-
 // CellsCoveringBbox returns the sorted, deduplicated set of geohash cells at the
 // given precision whose tiles intersect bbox. It returns nil for a bbox it
 // cannot represent — precision 0, coordinates outside [-180,180]×[-90,90], or an

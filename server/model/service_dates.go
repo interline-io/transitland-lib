@@ -1,10 +1,8 @@
 package model
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -338,31 +336,4 @@ func nilOr[T any](v *T, def T) T {
 		return def
 	}
 	return *v
-}
-
-// FirstForRoutes keeps each route's first n stop times at each entity, across
-// service days.
-func FirstForRoutes(sts []*StopTime, n int) []*StopTime {
-	// The service days' times overlap, so order by when each stop time happens,
-	// as the resolver does.
-	slices.SortStableFunc(sts, func(a, b *StopTime) int {
-		return cmp.Compare(
-			a.ServiceDate.Val.Unix()+int64(a.DepartureTime.Int()),
-			b.ServiceDate.Val.Unix()+int64(b.DepartureTime.Int()),
-		)
-	})
-	type routeAtEntity struct {
-		stop, location, locationGroup string
-		route                         int64
-	}
-	seen := map[routeAtEntity]int{}
-	var ret []*StopTime
-	for _, st := range sts {
-		k := routeAtEntity{st.StopID.Val, st.LocationID.Val, st.LocationGroupID.Val, st.RouteID.Val}
-		if seen[k] < n {
-			seen[k]++
-			ret = append(ret, st)
-		}
-	}
-	return ret
 }
