@@ -10,21 +10,10 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
-
-type oifmatch struct {
-	feedID               int
-	resolvedGtfsAgencyID string
-}
-
-type agencyOnestop struct {
-	OnestopID tt.String
-	gtfs.Agency
-}
 
 type agencyPlace struct {
 	Name     tt.String
@@ -79,81 +68,86 @@ func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
 	return strings.Join(places, " / "), nil
 }
 
+// updateOifs brings an operator's rows in line with its associated feeds, as
+// PlanOperatorOifs plans, and says whether any row changed.
 func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
-	// Update OIFs that belong to this operator
-	updated := false
-	oiflookup := map[oifmatch]int{}
-	oifmatches := map[int]bool{}
-	oifexisting := []dmfr.OperatorAssociatedFeed{}
-	if err := atx.Select(ctx, &oifexisting, "select * from current_operators_in_feed where operator_id = ?", operator.ID); err != nil {
+	existing := []dmfr.OperatorAssociatedFeed{}
+	if err := atx.Select(ctx, &existing, "select * from current_operators_in_feed where operator_id = ?", operator.ID); err != nil {
 		return false, err
 	}
-	for _, oif := range oifexisting {
-		oiflookup[oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}] = oif.ID
-	}
+	feeds := map[string]FeedAgencies{}
 	for _, oif := range operator.AssociatedFeeds {
-		// Get feed id
-		oif.ResolvedOnestopID.Set(operator.OnestopID.Val)
-		oif.ResolvedName.Set(operator.Name.Val)
-		oif.ResolvedShortName.Set(operator.ShortName.Val)
-		oif.OperatorID.SetInt(operator.ID)
-		if err := atx.Get(ctx, &oif.FeedID, "select id from current_feeds where onestop_id = ?", oif.FeedOnestopID.Val); err == sql.ErrNoRows {
-			log.For(ctx).Info().Msgf("Warning: no feed for '%s'", oif.FeedOnestopID.Val)
+		osid := oif.FeedOnestopID.Val
+		if _, ok := feeds[osid]; ok {
+			continue
+		}
+		feedID := 0
+		if err := atx.Get(ctx, &feedID, "select id from current_feeds where onestop_id = ?", osid); err == sql.ErrNoRows {
+			log.For(ctx).Info().Msgf("Warning: no feed for '%s'", osid)
 			continue
 		} else if err != nil {
 			return false, err
 		}
-		// Get agencies
-		agencies := []gtfs.Agency{}
-		if err := atx.Select(ctx, &agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id where feed_states.feed_id = ?", oif.FeedID); err != nil {
-			return false, err
-		}
-		agencyID := 0
-		if len(agencies) == 1 {
-			// match regardless of gtfs_agency_id
-			oif.ResolvedGtfsAgencyID.Set(agencies[0].AgencyID.Val)
-			agencyID = agencies[0].ID
-		} else if len(agencies) > 1 {
-			// match on gtfs_agency_id
-			for _, agency := range agencies {
-				if agency.AgencyID.Val == oif.GtfsAgencyID.Val {
-					oif.ResolvedGtfsAgencyID.Set(agency.AgencyID.Val)
-					agencyID = agency.ID
-				}
-			}
-		}
-		places, err := getPlaces(ctx, atx, agencyID)
+		agencies, err := feedAgencies(ctx, atx, feedID)
 		if err != nil {
 			return false, err
 		}
-		oif.ResolvedPlaces.Set(places)
-		// Match or insert. A matched row is refreshed, not kept as first written:
-		// the operator may have a new name or the agency new places, and a NULL
-		// agency id, written before the feed had a version, matches ''.
-		check := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}
-		if match, ok := oiflookup[check]; ok {
-			oifmatches[match] = true
-			changed, err := refreshOif(ctx, atx, match, oif)
-			if err != nil {
-				return false, err
-			}
-			updated = updated || changed
-		} else {
-			updated = true
-			if _, err := atx.Insert(ctx, &oif); err != nil {
-				return false, err
-			}
-		}
+		feeds[osid] = FeedAgencies{FeedID: feedID, Agencies: agencies}
 	}
-	deleteoifs := []int{}
-	for _, oif := range oifexisting {
-		if _, ok := oifmatches[oif.ID]; !ok {
-			deleteoifs = append(deleteoifs, oif.ID)
-		}
+	return writeOifPlan(ctx, atx, PlanOperatorOifs(operator, existing, feeds))
+}
+
+// feedAgencies returns the agencies of a feed's active version, with their
+// onestop ids.
+func feedAgencies(ctx context.Context, atx tldb.Adapter, feedID int) ([]FeedAgency, error) {
+	q := atx.Sqrl().
+		Select("gtfs_agencies.*", "feed_version_agency_onestop_ids.onestop_id as onestop_id").
+		From("gtfs_agencies").
+		Join("feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id").
+		Join("current_feeds on current_feeds.id = feed_states.feed_id").
+		JoinClause("left join feed_version_agency_onestop_ids on feed_version_agency_onestop_ids.entity_id = gtfs_agencies.agency_id and feed_version_agency_onestop_ids.feed_version_id = gtfs_agencies.feed_version_id").
+		Where(sq.Eq{"current_feeds.id": feedID})
+	qstr, qargs, err := q.ToSql()
+	if err != nil {
+		return nil, err
 	}
-	if len(deleteoifs) > 0 {
+	agencies := []FeedAgency{}
+	if err := atx.Select(ctx, &agencies, qstr, qargs...); err != nil {
+		return nil, err
+	}
+	return agencies, nil
+}
+
+// writeOifPlan applies a plan to current_operators_in_feed, with each written
+// row's places resolved from its agency, and says whether any row changed.
+func writeOifPlan(ctx context.Context, atx tldb.Adapter, plan OifPlan) (bool, error) {
+	updated := false
+	for _, row := range plan.Refreshes {
+		places, err := getPlaces(ctx, atx, row.AgencyID)
+		if err != nil {
+			return false, err
+		}
+		row.ResolvedPlaces.Set(places)
+		changed, err := refreshOif(ctx, atx, row.ID, row.OperatorAssociatedFeed)
+		if err != nil {
+			return false, err
+		}
+		updated = updated || changed
+	}
+	for _, row := range plan.Inserts {
+		places, err := getPlaces(ctx, atx, row.AgencyID)
+		if err != nil {
+			return false, err
+		}
+		row.ResolvedPlaces.Set(places)
+		if _, err := atx.Insert(ctx, &row.OperatorAssociatedFeed); err != nil {
+			return false, err
+		}
 		updated = true
-		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).ExecContext(ctx); err != nil {
+	}
+	if len(plan.Deletes) > 0 {
+		updated = true
+		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": plan.Deletes}).ExecContext(ctx); err != nil {
 			return false, err
 		}
 	}
@@ -211,86 +205,23 @@ func deleteHiddenOifs(ctx context.Context, atx tldb.Adapter, feedID int) (bool, 
 	return n > 0, err
 }
 
+// feedUpdateOifs brings a feed's generated rows in line with the agencies of its
+// active version, as PlanFeedOifs plans, and says whether any row changed.
 func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
-	// Update OIFs that do not have an operator
-	feedid := feed.ID
 	// Rows of soft-deleted operators go first, so none of them keeps an agency
 	// from its generated row.
-	updated, err := deleteHiddenOifs(ctx, atx, feedid)
+	hidden, err := deleteHiddenOifs(ctx, atx, feed.ID)
 	if err != nil {
 		return false, err
 	}
-	oiflookup := map[oifmatch]int{}
-	oifmatches := map[int]bool{}
-	oifexisting := []dmfr.OperatorAssociatedFeed{}
-	if err := atx.Select(ctx, &oifexisting, "select * from current_operators_in_feed where feed_id = ?", feedid); err != nil {
+	existing := []dmfr.OperatorAssociatedFeed{}
+	if err := atx.Select(ctx, &existing, "select * from current_operators_in_feed where feed_id = ?", feed.ID); err != nil {
 		return false, err
 	}
-	for _, oif := range oifexisting {
-		key := oifmatch{feedID: oif.FeedID, resolvedGtfsAgencyID: oif.ResolvedGtfsAgencyID.Val}
-		if oif.OperatorID.Valid {
-			// An Atlas row is never deleted here, and owns its key, so a generated row
-			// for the same agency goes unmatched and is deleted below.
-			oifmatches[oif.ID] = true
-			oiflookup[key] = oif.ID
-		} else if _, ok := oiflookup[key]; !ok {
-			oiflookup[key] = oif.ID
-		}
-	}
-	agencies := []agencyOnestop{}
-	agencyQuery := atx.Sqrl().
-		Select("gtfs_agencies.*", "feed_version_agency_onestop_ids.onestop_id as onestop_id").
-		From("gtfs_agencies").
-		Join("feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id").
-		Join("current_feeds on current_feeds.id = feed_states.feed_id").
-		JoinClause("left join feed_version_agency_onestop_ids on feed_version_agency_onestop_ids.entity_id = gtfs_agencies.agency_id and feed_version_agency_onestop_ids.feed_version_id = gtfs_agencies.feed_version_id").
-		Where(sq.Eq{"current_feeds.id": feedid})
-	qstr, qargs, err := agencyQuery.ToSql()
+	agencies, err := feedAgencies(ctx, atx, feed.ID)
 	if err != nil {
 		return false, err
 	}
-	if err := atx.Select(ctx, &agencies, qstr, qargs...); err != nil {
-		return false, err
-	}
-	for _, agency := range agencies {
-		check := oifmatch{feedID: feedid, resolvedGtfsAgencyID: agency.AgencyID.Val}
-		if match, ok := oiflookup[check]; ok {
-			oifmatches[match] = true
-		} else {
-			updated = true
-			// Generate OnestopID
-			oif := dmfr.OperatorAssociatedFeed{
-				FeedID:               feedid,
-				ResolvedGtfsAgencyID: tt.NewString(agency.AgencyID.Val),
-				ResolvedName:         tt.NewString(agency.AgencyName.Val),
-			}
-			if places, err := getPlaces(ctx, atx, agency.ID); err != nil {
-				return false, err
-			} else {
-				oif.ResolvedPlaces.Set(places)
-			}
-			if agency.OnestopID.Valid {
-				oif.ResolvedOnestopID = agency.OnestopID
-			} else {
-				oif.ResolvedOnestopID.Set(GeneratedOperatorOnestopID(feed.FeedID, agency.AgencyName.Val))
-			}
-			// Save
-			if _, err := atx.Insert(ctx, &oif); err != nil {
-				return false, err
-			}
-		}
-	}
-	deleteoifs := []int{}
-	for _, oif := range oifexisting {
-		if _, ok := oifmatches[oif.ID]; !ok {
-			deleteoifs = append(deleteoifs, oif.ID)
-		}
-	}
-	if len(deleteoifs) > 0 {
-		updated = true
-		if _, err := atx.Sqrl().Delete("current_operators_in_feed").Where(sq.Eq{"id": deleteoifs}).ExecContext(ctx); err != nil {
-			return false, err
-		}
-	}
-	return updated, nil
+	updated, err := writeOifPlan(ctx, atx, PlanFeedOifs(feed.ID, feed.FeedID, existing, agencies))
+	return hidden || updated, err
 }
