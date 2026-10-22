@@ -8,7 +8,7 @@ import (
 )
 
 func TestFeedVersionRequest(t *testing.T) {
-	supplementalSha1 := testconfig.SupplementalSha1(t)
+	supplementalSha1 := testconfig.SupplementalSha1(t, testconfig.Config(t, testconfig.Options{}))
 	fv := "d2813c293bcfd7a97dde599527ae6c62c98e66c6"
 	fvDir := "d9b0478a85b85fc68f14136fd96c0551fc0bfc98"
 	testcases := []testCase{

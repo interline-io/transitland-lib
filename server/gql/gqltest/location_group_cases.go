@@ -11,17 +11,17 @@ func locationGroupResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
 	testcases := []testcase{
 		{
-			name: "location groups - returns multiple location groups",
-			query: `query($sha1: String!) {
+			Name: "location groups - returns multiple location groups",
+			Query: `query($sha1: String!) {
 				feed_versions(where: {sha1: $sha1}) {
 					location_groups(limit: 1000) {
 						location_group_id
 					}
 				}
 			}`,
-			vars:     hw{"sha1": ctranFlexSha1},
-			selector: "feed_versions.0.location_groups.#.location_group_id",
-			selectExpect: []string{
+			Vars:     hw{"sha1": ctranFlexSha1},
+			Selector: "feed_versions.0.location_groups.#.location_group_id",
+			SelectExpect: []string{
 				"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a",
 				"location_group_id__331e6ae2-66b0-4d01-aef9-f9ef35328981",
 				"location_group_id__58bcb950-3baa-41ce-a36c-ae6a1a36f97a",
@@ -36,8 +36,8 @@ func locationGroupResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		},
 		// Test feed metadata fields
 		{
-			name: "location group feed metadata",
-			query: `query($sha1: String!, $location_group_id: String) {
+			Name: "location group feed metadata",
+			Query: `query($sha1: String!, $location_group_id: String) {
 				feed_versions(where: {sha1: $sha1}) {
 					location_groups(where: {location_group_id: $location_group_id}) {
 						location_group_id
@@ -46,22 +46,22 @@ func locationGroupResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			}`,
-			vars:   hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
-			expect: `{"feed_versions":[{"location_groups":[{"feed_onestop_id":"ctran-flex","feed_version_sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c","location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}]}]}`,
+			Vars:   hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
+			Expect: `{"feed_versions":[{"location_groups":[{"feed_onestop_id":"ctran-flex","feed_version_sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c","location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}]}]}`,
 		},
 		// Test empty result for non-existent location_group_id
 		{
-			name: "location group filter not found",
-			query: `query($sha1: String!) {
+			Name: "location group filter not found",
+			Query: `query($sha1: String!) {
 				feed_versions(where: {sha1: $sha1}) {
 					location_groups(where: {location_group_id: "nonexistent"}) {
 						location_group_id
 					}
 				}
 			}`,
-			vars:         hw{"sha1": ctranFlexSha1},
-			selector:     "feed_versions.0.location_groups.#.location_group_id",
-			selectExpect: []string{},
+			Vars:         hw{"sha1": ctranFlexSha1},
+			Selector:     "feed_versions.0.location_groups.#.location_group_id",
+			SelectExpect: []string{},
 		},
 	}
 	return testcases
@@ -72,8 +72,8 @@ func locationGroupResolverStopTimesTestcases(t testing.TB, cfg model.Config) []t
 	vaMedicalCenterLocationGroupID := "location_group_id__db7489d3-7478-4d3b-a47f-60c58e3fed6e"
 	testcases := []testcase{
 		{
-			name: "location group stop times basic",
-			query: `query($sha1: String!, $location_group_id: String) {
+			Name: "location group stop times basic",
+			Query: `query($sha1: String!, $location_group_id: String) {
 				feed_versions(where:{sha1:$sha1}) {
 					location_groups(where:{location_group_id:$location_group_id}) {
 						location_group_id
@@ -86,18 +86,18 @@ func locationGroupResolverStopTimesTestcases(t testing.TB, cfg model.Config) []t
 					}
 				}
 			}`,
-			vars:                    hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
-			selector:                "feed_versions.0.location_groups.0.stop_times.#.trip.trip_id",
-			selectExpectCount:       150,
-			selectExpectUniqueCount: 125,
-			selectExpectContains: []string{
+			Vars:                    hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
+			Selector:                "feed_versions.0.location_groups.0.stop_times.#.trip.trip_id",
+			SelectExpectCount:       150,
+			SelectExpectUniqueCount: 125,
+			SelectExpectContains: []string{
 				"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_to-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_si-<xxxxxxx_20220107_20320522__080000_180000__080000_180000__p_20250901>",
 				"trip_id__ri-<2bc6804f-9e24-4b91-8947-c73a2363e7b6>_from-<db7489d3-7478-4d3b-a47f-60c58e3fed6e>_to-<c7400cc8-959c-42c8-991f-8f601ec9ea59>_si-<xxxxxxx_20220107_20320522__080000_180000__080000_180000__p_20240704>",
 			},
 		},
 		{
-			name: "location group stop times flex fields",
-			query: `query($sha1: String!, $location_group_id: String) {
+			Name: "location group stop times flex fields",
+			Query: `query($sha1: String!, $location_group_id: String) {
 				feed_versions(where:{sha1:$sha1}) {
 					location_groups(where:{location_group_id:$location_group_id}) {
 						location_group_id
@@ -111,38 +111,38 @@ func locationGroupResolverStopTimesTestcases(t testing.TB, cfg model.Config) []t
 					}
 				}
 			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
-			sel: []testcaseSelector{
+			Vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
+			Sel: []testcaseSelector{
 				{
-					selector:          "feed_versions.0.location_groups.0.stop_times.#.stop_sequence",
-					expectCount:       150,
-					expectUniqueCount: 2,
+					Selector:          "feed_versions.0.location_groups.0.stop_times.#.stop_sequence",
+					ExpectCount:       150,
+					ExpectUniqueCount: 2,
 				},
 				{
-					selector:          "feed_versions.0.location_groups.0.stop_times.#.start_pickup_drop_off_window",
-					expectCount:       150,
-					expectUniqueCount: 5,
+					Selector:          "feed_versions.0.location_groups.0.stop_times.#.start_pickup_drop_off_window",
+					ExpectCount:       150,
+					ExpectUniqueCount: 5,
 				},
 				{
-					selector:          "feed_versions.0.location_groups.0.stop_times.#.end_pickup_drop_off_window",
-					expectCount:       150,
-					expectUniqueCount: 4,
+					Selector:          "feed_versions.0.location_groups.0.stop_times.#.end_pickup_drop_off_window",
+					ExpectCount:       150,
+					ExpectUniqueCount: 4,
 				},
 				{
-					selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_type",
-					expectCount:       150,
-					expectUniqueCount: 2,
+					Selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_type",
+					ExpectCount:       150,
+					ExpectUniqueCount: 2,
 				},
 				{
-					selector:          "feed_versions.0.location_groups.0.stop_times.#.drop_off_type",
-					expectCount:       150,
-					expectUniqueCount: 2,
+					Selector:          "feed_versions.0.location_groups.0.stop_times.#.drop_off_type",
+					ExpectCount:       150,
+					ExpectUniqueCount: 2,
 				},
 			},
 		},
 		{
-			name: "location group stop times with booking rule",
-			query: `query($sha1: String!, $location_group_id: String) {
+			Name: "location group stop times with booking rule",
+			Query: `query($sha1: String!, $location_group_id: String) {
 				feed_versions(where:{sha1:$sha1}) {
 					location_groups(where:{location_group_id:$location_group_id}) {
 						location_group_id
@@ -155,23 +155,23 @@ func locationGroupResolverStopTimesTestcases(t testing.TB, cfg model.Config) []t
 					}
 				}
 			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
-			sel: []testcaseSelector{
+			Vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
+			Sel: []testcaseSelector{
 				{
-					selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_booking_rule.booking_rule_id",
-					expectCount:       150,
-					expectUniqueCount: 25,
+					Selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_booking_rule.booking_rule_id",
+					ExpectCount:       150,
+					ExpectUniqueCount: 25,
 				},
 				{
-					selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_booking_rule.booking_type",
-					expectCount:       150,
-					expectUniqueCount: 1,
+					Selector:          "feed_versions.0.location_groups.0.stop_times.#.pickup_booking_rule.booking_type",
+					ExpectCount:       150,
+					ExpectUniqueCount: 1,
 				},
 			},
 		},
 		{
-			name: "location group stop times navigates back to location_group",
-			query: `query($sha1: String!, $location_group_id: String) {
+			Name: "location group stop times navigates back to location_group",
+			Query: `query($sha1: String!, $location_group_id: String) {
 				feed_versions(where:{sha1:$sha1}) {
 					location_groups(where:{location_group_id:$location_group_id}) {
 						location_group_id
@@ -184,17 +184,17 @@ func locationGroupResolverStopTimesTestcases(t testing.TB, cfg model.Config) []t
 					}
 				}
 			}`,
-			vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
-			sel: []testcaseSelector{
+			Vars: hw{"sha1": ctranFlexSha1, "location_group_id": vaMedicalCenterLocationGroupID},
+			Sel: []testcaseSelector{
 				{
-					selector:     "feed_versions.0.location_groups.0.stop_times.#.location_group.location_group_id",
-					expectCount:  150,
-					expectUnique: []string{vaMedicalCenterLocationGroupID},
+					Selector:     "feed_versions.0.location_groups.0.stop_times.#.location_group.location_group_id",
+					ExpectCount:  150,
+					ExpectUnique: []string{vaMedicalCenterLocationGroupID},
 				},
 				{
-					selector:     "feed_versions.0.location_groups.0.stop_times.#.location_group.location_group_name",
-					expectCount:  150,
-					expectUnique: []string{"VA Medical Center (fixed route stop)"},
+					Selector:     "feed_versions.0.location_groups.0.stop_times.#.location_group.location_group_name",
+					ExpectCount:  150,
+					ExpectUnique: []string{"VA Medical Center (fixed route stop)"},
 				},
 			},
 		},
@@ -207,8 +207,8 @@ func locationGroupResolverStopsTestcases(t testing.TB, cfg model.Config) []testc
 	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
 	testcases := []testcase{
 		{
-			name: "location group with stops",
-			query: `query($sha1: String!, $location_group_id: String) {
+			Name: "location group with stops",
+			Query: `query($sha1: String!, $location_group_id: String) {
 				feed_versions(where: {sha1: $sha1}) {
 					location_groups(where: {location_group_id: $location_group_id}) {
 						location_group_id
@@ -219,9 +219,9 @@ func locationGroupResolverStopsTestcases(t testing.TB, cfg model.Config) []testc
 					}
 				}
 			}`,
-			vars:     hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
-			selector: "feed_versions.0.location_groups.0.stops.#.stop_id",
-			selectExpect: []string{
+			Vars:     hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
+			Selector: "feed_versions.0.location_groups.0.stops.#.stop_id",
+			SelectExpect: []string{
 				"stop_id__756c0e65-32d2-4e32-a6b7-a15c3c22e6cf",
 				"stop_id__2e44e463-310b-4069-a709-fa0eb8f73ba9",
 				"stop_id__b9138aff-d962-4de4-aa6e-1a2d0fd11dcb",
@@ -245,8 +245,8 @@ func locationGroupResolverFeedVersionTestcases(t testing.TB, cfg model.Config) [
 	fairgroundsLocationGroupID := "location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"
 	testcases := []testcase{
 		{
-			name: "location groups basic fields",
-			query: `query($sha1: String!, $location_group_id: String) {
+			Name: "location groups basic fields",
+			Query: `query($sha1: String!, $location_group_id: String) {
 				feed_versions(where: {sha1: $sha1}) {
 					location_groups(where: {location_group_id: $location_group_id}, limit: 1) {
 						location_group_id
@@ -257,8 +257,8 @@ func locationGroupResolverFeedVersionTestcases(t testing.TB, cfg model.Config) [
 					}
 				}
 			}`,
-			vars:   hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
-			expect: `{"feed_versions":[{"location_groups":[{"feed_version":{"sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c"},"location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a","location_group_name":"Clark County Fairgroun..."}]}]}`,
+			Vars:   hw{"sha1": ctranFlexSha1, "location_group_id": fairgroundsLocationGroupID},
+			Expect: `{"feed_versions":[{"location_groups":[{"feed_version":{"sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c"},"location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a","location_group_name":"Clark County Fairgroun..."}]}]}`,
 		},
 	}
 	return testcases

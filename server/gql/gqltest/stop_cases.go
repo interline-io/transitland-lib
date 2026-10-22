@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/client"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/stretchr/testify/assert"
@@ -22,8 +23,8 @@ func stopResolverLocationGroupsTestcases(t testing.TB, cfg model.Config) []testc
 
 	testcases := []testcase{
 		{
-			name: "stop with location groups - returns location group id",
-			query: `query($sha1: String!, $stop_id: String!) {
+			Name: "stop with location groups - returns location group id",
+			Query: `query($sha1: String!, $stop_id: String!) {
 				feed_versions(where: {sha1: $sha1}) {
 					stops(where: {stop_id: $stop_id}) {
 						stop_id
@@ -33,15 +34,15 @@ func stopResolverLocationGroupsTestcases(t testing.TB, cfg model.Config) []testc
 					}
 				}
 			}`,
-			vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
-			selector: "feed_versions.0.stops.0.location_groups.#.location_group_id",
-			selectExpect: []string{
+			Vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			Selector: "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			SelectExpect: []string{
 				fairgroundsLocationGroupID,
 			},
 		},
 		{
-			name: "stop with location groups - returns location group name",
-			query: `query($sha1: String!, $stop_id: String!) {
+			Name: "stop with location groups - returns location group name",
+			Query: `query($sha1: String!, $stop_id: String!) {
 				feed_versions(where: {sha1: $sha1}) {
 					stops(where: {stop_id: $stop_id}) {
 						stop_id
@@ -51,15 +52,15 @@ func stopResolverLocationGroupsTestcases(t testing.TB, cfg model.Config) []testc
 					}
 				}
 			}`,
-			vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop2},
-			selector: "feed_versions.0.stops.0.location_groups.0.location_group_name",
-			selectExpect: []string{
+			Vars:     hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop2},
+			Selector: "feed_versions.0.stops.0.location_groups.0.location_group_name",
+			SelectExpect: []string{
 				"Clark County Fairgroun...",
 			},
 		},
 		{
-			name: "stop location groups - navigate to feed metadata",
-			query: `query($sha1: String!, $stop_id: String!) {
+			Name: "stop location groups - navigate to feed metadata",
+			Query: `query($sha1: String!, $stop_id: String!) {
 				feed_versions(where: {sha1: $sha1}) {
 					stops(where: {stop_id: $stop_id}) {
 						stop_id
@@ -71,12 +72,12 @@ func stopResolverLocationGroupsTestcases(t testing.TB, cfg model.Config) []testc
 					}
 				}
 			}`,
-			vars:   hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
-			expect: `{"feed_versions":[{"stops":[{"location_groups":[{"feed_onestop_id":"ctran-flex","feed_version_sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c","location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}],"stop_id":"stop_id__756c0e65-32d2-4e32-a6b7-a15c3c22e6cf"}]}]}`,
+			Vars:   hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			Expect: `{"feed_versions":[{"stops":[{"location_groups":[{"feed_onestop_id":"ctran-flex","feed_version_sha1":"e8bc76c3c8602cad745f41a49ed5c5627ad6904c","location_group_id":"location_group_id__138b146e-30ff-4837-baf8-bd75b47bac6a"}],"stop_id":"stop_id__756c0e65-32d2-4e32-a6b7-a15c3c22e6cf"}]}]}`,
 		},
 		{
-			name: "stop without location groups - returns empty",
-			query: `query($sha1: String!, $stop_id: String!) {
+			Name: "stop without location groups - returns empty",
+			Query: `query($sha1: String!, $stop_id: String!) {
 				feed_versions(where: {sha1: $sha1}) {
 					stops(where: {stop_id: $stop_id}) {
 						stop_id
@@ -87,13 +88,13 @@ func stopResolverLocationGroupsTestcases(t testing.TB, cfg model.Config) []testc
 				}
 			}`,
 			// BART stop - not part of any location group
-			vars:         hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "MCAR"},
-			selector:     "feed_versions.0.stops.0.location_groups.#.location_group_id",
-			selectExpect: []string{},
+			Vars:         hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "MCAR"},
+			Selector:     "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			SelectExpect: []string{},
 		},
 		{
-			name: "stop location groups with limit",
-			query: `query($sha1: String!, $stop_id: String!) {
+			Name: "stop location groups with limit",
+			Query: `query($sha1: String!, $stop_id: String!) {
 				feed_versions(where: {sha1: $sha1}) {
 					stops(where: {stop_id: $stop_id}) {
 						stop_id
@@ -103,9 +104,9 @@ func stopResolverLocationGroupsTestcases(t testing.TB, cfg model.Config) []testc
 					}
 				}
 			}`,
-			vars:              hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
-			selector:          "feed_versions.0.stops.0.location_groups.#.location_group_id",
-			selectExpectCount: 1,
+			Vars:              hw{"sha1": ctranFlexSha1, "stop_id": fairgroundsStop1},
+			Selector:          "feed_versions.0.stops.0.location_groups.#.location_group_id",
+			SelectExpectCount: 1,
 		},
 	}
 	return testcases
@@ -114,40 +115,41 @@ func stopResolverLocationGroupsTestcases(t testing.TB, cfg model.Config) []testc
 func stopResolverCursorTestcases(t testing.TB, cfg model.Config) []testcase {
 	// First 1000 stops...
 	dbf := cfg.Finder
-	allEnts, err := dbf.FindStops(context.Background(), nil, nil, nil, nil)
+	allEnts, err := dbf.FindStops(model.WithConfig(context.Background(), cfg), nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	needAtLeast(t, 100, "stops", allEnts)
 	allIds := []string{}
 	for _, st := range allEnts {
 		allIds = append(allIds, st.StopID.Val)
 	}
 	testcases := []testcase{
 		{
-			name:         "no cursor",
-			query:        "query{stops(limit:100){feed_version{id} id stop_id}}",
-			selector:     "stops.#.stop_id",
-			selectExpect: allIds[:100],
+			Name:         "no cursor",
+			Query:        "query{stops(limit:100){feed_version{id} id stop_id}}",
+			Selector:     "stops.#.stop_id",
+			SelectExpect: allIds[:100],
 		},
 		{
-			name:         "after 0",
-			query:        "query{stops(after: 0, limit:100){feed_version{id} id stop_id}}",
-			selector:     "stops.#.stop_id",
-			selectExpect: allIds[:100],
+			Name:         "after 0",
+			Query:        "query{stops(after: 0, limit:100){feed_version{id} id stop_id}}",
+			Selector:     "stops.#.stop_id",
+			SelectExpect: allIds[:100],
 		},
 		{
-			name:         "after 10th",
-			query:        "query($after: Int!){stops(after: $after, limit:10){feed_version{id} id stop_id}}",
-			vars:         hw{"after": allEnts[10].ID},
-			selector:     "stops.#.stop_id",
-			selectExpect: allIds[11:21],
+			Name:         "after 10th",
+			Query:        "query($after: Int!){stops(after: $after, limit:10){feed_version{id} id stop_id}}",
+			Vars:         hw{"after": allEnts[10].ID},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: allIds[11:21],
 		},
 		{
-			name:         "after invalid id returns no records",
-			query:        "query($after: Int!){stops(after: $after, limit:10){feed_version{id} id stop_id}}",
-			vars:         hw{"after": 10_000_000},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
+			Name:         "after invalid id returns no records",
+			Query:        "query($after: Int!){stops(after: $after, limit:10){feed_version{id} id stop_id}}",
+			Vars:         hw{"after": 10_000_000},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
 		},
 	}
 	return testcases
@@ -177,128 +179,128 @@ func stopResolverLicenseTestcases(t testing.TB, cfg model.Config) []testcase {
 	testcases := []testcase{
 		// license: share_alike_optional
 		{
-			name:               "license filter: share_alike_optional = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  4524,
+			Name:               "license filter: share_alike_optional = yes",
+			Query:              q,
+			Vars:               hw{"lic": hw{"share_alike_optional": "YES"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"HA", "WMATA"},
+			SelectExpectCount:  4524,
 		},
 		{
-			name:               "license filter: share_alike_optional = no",
-			query:              q,
-			vars:               hw{"lic": hw{"share_alike_optional": "NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  50,
+			Name:               "license filter: share_alike_optional = no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"share_alike_optional": "NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"BA"},
+			SelectExpectCount:  50,
 		},
 		{
-			name:               "license filter: share_alike_optional = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4881,
+			Name:               "license filter: share_alike_optional = exclude_no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"share_alike_optional": "EXCLUDE_NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			SelectExpectCount:  4881,
 		},
 		// license: create_derived_product
 		{
-			name:               "license filter: create_derived_product = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"create_derived_product": "YES"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  4524,
+			Name:               "license filter: create_derived_product = yes",
+			Query:              q,
+			Vars:               hw{"lic": hw{"create_derived_product": "YES"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"HA", "WMATA"},
+			SelectExpectCount:  4524,
 		},
 		{
-			name:               "license filter: create_derived_product = no",
-			query:              q,
-			vars:               hw{"lic": hw{"create_derived_product": "NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  50,
+			Name:               "license filter: create_derived_product = no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"create_derived_product": "NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"BA"},
+			SelectExpectCount:  50,
 		},
 		{
-			name:               "license filter: create_derived_product = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4881,
+			Name:               "license filter: create_derived_product = exclude_no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"create_derived_product": "EXCLUDE_NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			SelectExpectCount:  4881,
 		},
 		// license: commercial_use_allowed
 		{
-			name:               "license filter: commercial_use_allowed = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  4524,
+			Name:               "license filter: commercial_use_allowed = yes",
+			Query:              q,
+			Vars:               hw{"lic": hw{"commercial_use_allowed": "YES"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"HA", "WMATA"},
+			SelectExpectCount:  4524,
 		},
 		{
-			name:               "license filter: commercial_use_allowed = no",
-			query:              q,
-			vars:               hw{"lic": hw{"commercial_use_allowed": "NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  50,
+			Name:               "license filter: commercial_use_allowed = no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"commercial_use_allowed": "NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"BA"},
+			SelectExpectCount:  50,
 		},
 		{
-			name:               "license filter: commercial_use_allowed = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4881,
+			Name:               "license filter: commercial_use_allowed = exclude_no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"commercial_use_allowed": "EXCLUDE_NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			SelectExpectCount:  4881,
 		},
 		// license: redistribution_allowed
 		{
-			name:               "license filter: redistribution_allowed = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  4524,
+			Name:               "license filter: redistribution_allowed = yes",
+			Query:              q,
+			Vars:               hw{"lic": hw{"redistribution_allowed": "YES"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"HA", "WMATA"},
+			SelectExpectCount:  4524,
 		},
 		{
-			name:               "license filter: redistribution_allowed = no",
-			query:              q,
-			vars:               hw{"lic": hw{"redistribution_allowed": "NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  50,
+			Name:               "license filter: redistribution_allowed = no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"redistribution_allowed": "NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"BA"},
+			SelectExpectCount:  50,
 		},
 		{
-			name:               "license filter: redistribution_allowed = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4881,
+			Name:               "license filter: redistribution_allowed = exclude_no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"redistribution_allowed": "EXCLUDE_NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			SelectExpectCount:  4881,
 		},
 		// license: use_without_attribution
 		{
-			name:               "license filter: use_without_attribution = yes",
-			query:              q,
-			vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"HA", "WMATA"},
-			selectExpectCount:  4524,
+			Name:               "license filter: use_without_attribution = yes",
+			Query:              q,
+			Vars:               hw{"lic": hw{"use_without_attribution": "YES"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"HA", "WMATA"},
+			SelectExpectCount:  4524,
 		},
 		{
-			name:               "license filter: use_without_attribution = no",
-			query:              q,
-			vars:               hw{"lic": hw{"use_without_attribution": "NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"BA"},
-			selectExpectCount:  50,
+			Name:               "license filter: use_without_attribution = no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"use_without_attribution": "NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"BA"},
+			SelectExpectCount:  50,
 		},
 		{
-			name:               "license filter: use_without_attribution = exclude_no",
-			query:              q,
-			vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
-			selector:           "stops.#.feed_version.feed.onestop_id",
-			selectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
-			selectExpectCount:  4881,
+			Name:               "license filter: use_without_attribution = exclude_no",
+			Query:              q,
+			Vars:               hw{"lic": hw{"use_without_attribution": "EXCLUDE_NO"}},
+			Selector:           "stops.#.feed_version.feed.onestop_id",
+			SelectExpectUnique: []string{"CT", "HA", "WMATA", "ctran-flex"},
+			SelectExpectCount:  4881,
 		},
 	}
 	return testcases
@@ -318,36 +320,36 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 
 	testcases := []testcase{
 		{
-			name:         "basic",
-			query:        `query($feed_version_sha1:String!) { stops(where:{feed_version_sha1:$feed_version_sha1}) { stop_id } }`, // just check BART
-			vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
-			selector:     "stops.#.stop_id",
-			selectExpect: bartStops,
+			Name:         "basic",
+			Query:        `query($feed_version_sha1:String!) { stops(where:{feed_version_sha1:$feed_version_sha1}) { stop_id } }`, // just check BART
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: bartStops,
 		},
 		{
-			name:   "basic fields",
-			query:  `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {onestop_id feed_version_sha1 feed_onestop_id location_type stop_code stop_desc stop_id stop_name stop_timezone stop_url wheelchair_boarding zone_id} }`,
-			vars:   vars,
-			expect: `{"stops":[{"feed_onestop_id":"BA","feed_version_sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0","location_type":0,"onestop_id":"s-9q9p1wxf72-macarthur","stop_code":null,"stop_desc":null,"stop_id":"MCAR","stop_name":"MacArthur","stop_timezone":null,"stop_url":"http://www.bart.gov/stations/MCAR/","wheelchair_boarding":1,"zone_id":"MCAR"}]}`,
+			Name:   "basic fields",
+			Query:  `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {onestop_id feed_version_sha1 feed_onestop_id location_type stop_code stop_desc stop_id stop_name stop_timezone stop_url wheelchair_boarding zone_id} }`,
+			Vars:   vars,
+			Expect: `{"stops":[{"feed_onestop_id":"BA","feed_version_sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0","location_type":0,"onestop_id":"s-9q9p1wxf72-macarthur","stop_code":null,"stop_desc":null,"stop_id":"MCAR","stop_name":"MacArthur","stop_timezone":null,"stop_url":"http://www.bart.gov/stations/MCAR/","wheelchair_boarding":1,"zone_id":"MCAR"}]}`,
 		},
 		{
-			name:   "feed_version",
-			query:  `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {feed_version_sha1} }`,
-			vars:   vars,
-			expect: `{"stops":[{"feed_version_sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0"}]}`,
+			Name:   "feed_version",
+			Query:  `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {feed_version_sha1} }`,
+			Vars:   vars,
+			Expect: `{"stops":[{"feed_version_sha1":"e535eb2b3b9ac3ef15d82c56575e914575e732e0"}]}`,
 		},
 		{
-			name:         "route_stops",
-			query:        `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {route_stops{route{route_id route_short_name}}} }`,
-			vars:         vars,
-			selector:     "stops.0.route_stops.#.route.route_id",
-			selectExpect: []string{"01", "03", "07"},
+			Name:         "route_stops",
+			Query:        `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {route_stops{route{route_id route_short_name}}} }`,
+			Vars:         vars,
+			Selector:     "stops.0.route_stops.#.route.route_id",
+			SelectExpect: []string{"01", "03", "07"},
 		},
 		{
-			name:  "timestamps",
-			query: `query($stop_id: String!) { stops(where:{stop_id:$stop_id}) { created_at updated_at } }`,
-			vars:  vars,
-			f: func(t *testing.T, jj string) {
+			Name:  "timestamps",
+			Query: `query($stop_id: String!) { stops(where:{stop_id:$stop_id}) { created_at updated_at } }`,
+			Vars:  vars,
+			F: func(t *testing.T, jj string) {
 				createdAt := gjson.Get(jj, "stops.0.created_at").String()
 				updatedAt := gjson.Get(jj, "stops.0.updated_at").String()
 				assert.NotEmpty(t, createdAt, "created_at should be exposed and non-empty")
@@ -355,116 +357,116 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
-			name:         "where onestop_id",
-			query:        `query{stops(where:{onestop_id:"s-9q9k658fd1-sanjosediridoncaltrain"}) {stop_id} }`,
-			vars:         vars,
-			selector:     "stops.0.stop_id",
-			selectExpect: []string{"70262"},
+			Name:         "where onestop_id",
+			Query:        `query{stops(where:{onestop_id:"s-9q9k658fd1-sanjosediridoncaltrain"}) {stop_id} }`,
+			Vars:         vars,
+			Selector:     "stops.0.stop_id",
+			SelectExpect: []string{"70262"},
 		},
 		{
-			name:         "where feed_version_sha1",
-			query:        `query($feed_version_sha1:String!) { stops(where:{feed_version_sha1:$feed_version_sha1}) { stop_id } }`, // just check BART
-			vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
-			selector:     "stops.#.stop_id",
-			selectExpect: bartStops,
+			Name:         "where feed_version_sha1",
+			Query:        `query($feed_version_sha1:String!) { stops(where:{feed_version_sha1:$feed_version_sha1}) { stop_id } }`, // just check BART
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: bartStops,
 		},
 		{
-			name:         "where feed_onestop_id",
-			query:        `query{stops(where:{feed_onestop_id:"BA"}) { stop_id } }`, // just check BART
-			selector:     "stops.#.stop_id",
-			selectExpect: bartStops,
+			Name:         "where feed_onestop_id",
+			Query:        `query{stops(where:{feed_onestop_id:"BA"}) { stop_id } }`, // just check BART
+			Selector:     "stops.#.stop_id",
+			SelectExpect: bartStops,
 		},
 		{
-			name:         "where stop_id",
-			query:        `query{stops(where:{stop_id:"12TH"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"12TH"},
+			Name:         "where stop_id",
+			Query:        `query{stops(where:{stop_id:"12TH"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"12TH"},
 		},
 		{
-			name:         "where search",
-			query:        `query{stops(where:{search:"macarthur"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"MCAR", "MCAR_S"},
+			Name:         "where search",
+			Query:        `query{stops(where:{search:"macarthur"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"MCAR", "MCAR_S"},
 		},
 		{
-			name:         "where search 2",
-			query:        `query{stops(where:{search:"ftvl"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"FTVL"},
+			Name:         "where search 2",
+			Query:        `query{stops(where:{search:"ftvl"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"FTVL"},
 		},
 		{
-			name:         "where search 3",
-			query:        `query{stops(where:{search:"warm springs"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"WARM"},
+			Name:         "where search 3",
+			Query:        `query{stops(where:{search:"warm springs"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"WARM"},
 		},
 		// served_by_route_types
 		{
-			name:         "served_by_route_types=[2]",
-			query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_types:[0]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713"},
+			Name:         "served_by_route_types=[2]",
+			Query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_types:[0]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713"},
 		},
 		{
-			name:         "served_by_route_types=[0,4]",
-			query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_types:[0,4]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713", "8030", "8031", "8032", "8033", "8034", "8035", "8038", "8039", "8040", "8041", "8042", "8043"},
+			Name:         "served_by_route_types=[0,4]",
+			Query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_types:[0,4]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713", "8030", "8031", "8032", "8033", "8034", "8035", "8038", "8039", "8040", "8041", "8042", "8043"},
 		},
 		{
-			name:         "served_by_route_type=0",
-			query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_type:0}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713"},
+			Name:         "served_by_route_type=0",
+			Query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_type:0}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713"},
 		},
 		{
-			name:         "served_by_route_type=4",
-			query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_type:4}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"8030", "8031", "8032", "8033", "8034", "8035", "8038", "8039", "8040", "8041", "8042", "8043"},
+			Name:         "served_by_route_type=4",
+			Query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_type:4}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"8030", "8031", "8032", "8033", "8034", "8035", "8038", "8039", "8040", "8041", "8042", "8043"},
 		},
 		{
-			name:         "served_by_route_type=0 served_by_route_types=[4]",
-			query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_type:0, served_by_route_types:[4]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713", "8030", "8031", "8032", "8033", "8034", "8035", "8038", "8039", "8040", "8041", "8042", "8043"},
+			Name:         "served_by_route_type=0 served_by_route_types=[4]",
+			Query:        `query{stops(where:{feed_onestop_id: "HA", served_by_route_type:0, served_by_route_types:[4]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713", "8030", "8031", "8032", "8033", "8034", "8035", "8038", "8039", "8040", "8041", "8042", "8043"},
 		},
 		// served_by_onestop_ids
 		{
-			name:         "served_by_onestop_ids=o-9q9-bayarearapidtransit",
-			query:        `query{stops(where:{served_by_onestop_ids:["o-9q9-bayarearapidtransit"]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: bartStops,
+			Name:         "served_by_onestop_ids=o-9q9-bayarearapidtransit",
+			Query:        `query{stops(where:{served_by_onestop_ids:["o-9q9-bayarearapidtransit"]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: bartStops,
 		},
 		{
-			name:         "served_by_onestop_ids=o-9q9-caltrain",
-			query:        `query{stops(where:{served_by_onestop_ids:["o-9q9-caltrain"]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: caltrainStops, // caltrain stops minus a couple non-service stops
+			Name:         "served_by_onestop_ids=o-9q9-caltrain",
+			Query:        `query{stops(where:{served_by_onestop_ids:["o-9q9-caltrain"]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: caltrainStops, // caltrain stops minus a couple non-service stops
 		},
 		{
-			name:         "served_by_onestop_ids=r-9q9-antioch~sfia~millbrae",
-			query:        `query{stops(where:{served_by_onestop_ids:["r-9q9-antioch~sfia~millbrae"]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "BALB", "CIVC", "COLM", "CONC", "DALY", "EMBR", "GLEN", "LAFY", "MCAR", "MCAR_S", "MLBR", "MONT", "NCON", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "ROCK", "SBRN", "SFIA", "SSAN", "WCRK", "WOAK"}, // yellow line stops
+			Name:         "served_by_onestop_ids=r-9q9-antioch~sfia~millbrae",
+			Query:        `query{stops(where:{served_by_onestop_ids:["r-9q9-antioch~sfia~millbrae"]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "BALB", "CIVC", "COLM", "CONC", "DALY", "EMBR", "GLEN", "LAFY", "MCAR", "MCAR_S", "MLBR", "MONT", "NCON", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "ROCK", "SBRN", "SFIA", "SSAN", "WCRK", "WOAK"}, // yellow line stops
 		},
 		{
-			name:         "served_by_onestop_ids=r-9q9-antioch~sfia~millbrae,r-9q8y-richmond~dalycity~millbrae",
-			query:        `query{stops(where:{served_by_onestop_ids:["r-9q9-antioch~sfia~millbrae","r-9q8y-richmond~dalycity~millbrae"]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "CIVC", "COLM", "CONC", "DALY", "DBRK", "DELN", "PLZA", "EMBR", "GLEN", "LAFY", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SSAN", "WCRK", "WOAK"}, // combination of yellow and red line stops
+			Name:         "served_by_onestop_ids=r-9q9-antioch~sfia~millbrae,r-9q8y-richmond~dalycity~millbrae",
+			Query:        `query{stops(where:{served_by_onestop_ids:["r-9q9-antioch~sfia~millbrae","r-9q8y-richmond~dalycity~millbrae"]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"12TH", "16TH", "19TH", "19TH_N", "24TH", "ANTC", "ASHB", "BALB", "CIVC", "COLM", "CONC", "DALY", "DBRK", "DELN", "PLZA", "EMBR", "GLEN", "LAFY", "MCAR", "MCAR_S", "MLBR", "MONT", "NBRK", "NCON", "ORIN", "PITT", "PCTR", "PHIL", "POWL", "RICH", "ROCK", "SBRN", "SFIA", "SSAN", "WCRK", "WOAK"}, // combination of yellow and red line stops
 		},
 		{
-			name:         "served_by_onestop_ids=o-9q9-bayarearapidtransit,r-9q9-antioch~sfia~millbrae",
-			query:        `query{stops(where:{served_by_onestop_ids:["o-9q9-bayarearapidtransit","r-9q9-antioch~sfia~millbrae"]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: bartStops, // all bart stops
+			Name:         "served_by_onestop_ids=o-9q9-bayarearapidtransit,r-9q9-antioch~sfia~millbrae",
+			Query:        `query{stops(where:{served_by_onestop_ids:["o-9q9-bayarearapidtransit","r-9q9-antioch~sfia~millbrae"]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: bartStops, // all bart stops
 		},
 		{
-			name:         "served_by_onestop_ids=o-9q9-bayarearapidtransit,o-9q9-caltrain",
-			query:        `query{stops(limit:1000,where:{served_by_onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: allStops, // all stops
+			Name:         "served_by_onestop_ids=o-9q9-bayarearapidtransit,o-9q9-caltrain",
+			Query:        `query{stops(limit:1000,where:{served_by_onestop_ids:["o-9q9-bayarearapidtransit","o-9q9-caltrain"]}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: allStops, // all stops
 		},
 		// {
 		// 	"served_by_route_types=2,served_by_onestop_ids=o-9q9-bayarearapidtransit,o-9q9-caltrain",
@@ -478,98 +480,98 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		// TODO: level, pathways_from_stop, pathways_to_stop: test data has no pathways...
 		// stop_times
 		{
-			name:         "stop_times",
-			query:        `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {stop_times { trip { trip_id} }} }`,
-			vars:         hw{"stop_id": "70302"}, // Morgan hill
-			selector:     "stops.0.stop_times.#.trip.trip_id",
-			selectExpect: []string{"268", "274", "156"},
+			Name:         "stop_times",
+			Query:        `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {stop_times { trip { trip_id} }} }`,
+			Vars:         hw{"stop_id": "70302"}, // Morgan hill
+			Selector:     "stops.0.stop_times.#.trip.trip_id",
+			SelectExpect: []string{"268", "274", "156"},
 		},
 		{
-			name:         "stop_times where weekday_morning",
-			query:        `query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:21600, end_time:25200}) { trip { trip_id} }} }`,
-			vars:         hw{"stop_id": "MCAR", "service_date": "2018-05-29"},
-			selector:     "stops.0.stop_times.#.trip.trip_id",
-			selectExpect: []string{"3830503WKDY", "3850526WKDY", "3610541WKDY", "3630556WKDY", "3650611WKDY", "2210533WKDY", "2230548WKDY", "2250603WKDY", "2270618WKDY", "4410518WKDY", "4430533WKDY", "4450548WKDY", "4470603WKDY"},
+			Name:         "stop_times where weekday_morning",
+			Query:        `query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:21600, end_time:25200}) { trip { trip_id} }} }`,
+			Vars:         hw{"stop_id": "MCAR", "service_date": "2018-05-29"},
+			Selector:     "stops.0.stop_times.#.trip.trip_id",
+			SelectExpect: []string{"3830503WKDY", "3850526WKDY", "3610541WKDY", "3630556WKDY", "3650611WKDY", "2210533WKDY", "2230548WKDY", "2250603WKDY", "2270618WKDY", "4410518WKDY", "4430533WKDY", "4450548WKDY", "4470603WKDY"},
 		},
 		{
-			name:         "stop_times where sunday_morning",
-			query:        `query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:21600, end_time:36000}) { trip { trip_id} }} }`,
-			vars:         hw{"stop_id": "MCAR", "service_date": "2018-05-27"},
-			selector:     "stops.0.stop_times.#.trip.trip_id",
-			selectExpect: []string{"3730756SUN", "3750757SUN", "3770801SUN", "3790821SUN", "3610841SUN", "3630901SUN", "2230800SUN", "2250748SUN", "2270808SUN", "2290828SUN", "2310848SUN", "2330908SUN"},
+			Name:         "stop_times where sunday_morning",
+			Query:        `query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:21600, end_time:36000}) { trip { trip_id} }} }`,
+			Vars:         hw{"stop_id": "MCAR", "service_date": "2018-05-27"},
+			Selector:     "stops.0.stop_times.#.trip.trip_id",
+			SelectExpect: []string{"3730756SUN", "3750757SUN", "3770801SUN", "3790821SUN", "3610841SUN", "3630901SUN", "2230800SUN", "2250748SUN", "2270808SUN", "2290828SUN", "2310848SUN", "2330908SUN"},
 		},
 		{
-			name:         "stop_times where saturday_evening",
-			query:        `query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:57600, end_time:72000}) { trip { trip_id} }} }`,
-			vars:         hw{"stop_id": "MCAR", "service_date": "2018-05-26"},
-			selector:     "stops.0.stop_times.#.trip.trip_id",
-			selectExpect: []string{"3611521SAT", "3631541SAT", "3651601SAT", "3671621SAT", "3691641SAT", "3711701SAT", "3731721SAT", "3751741SAT", "3771801SAT", "3791821SAT", "3611841SAT", "3631901SAT", "2231528SAT", "2251548SAT", "2271608SAT", "2291628SAT", "2311648SAT", "2331708SAT", "2351728SAT", "2211748SAT", "2231808SAT", "2251828SAT", "2271848SAT", "2291908SAT", "4471533SAT", "4491553SAT", "4511613SAT", "4531633SAT", "4411653SAT", "4431713SAT", "4451733SAT", "4471753SAT", "4491813SAT", "4511833SAT", "4531853SAT"},
+			Name:         "stop_times where saturday_evening",
+			Query:        `query($stop_id: String!, $service_date:Date!) {  stops(where:{stop_id:$stop_id}) {stop_times(where:{service_date:$service_date, start_time:57600, end_time:72000}) { trip { trip_id} }} }`,
+			Vars:         hw{"stop_id": "MCAR", "service_date": "2018-05-26"},
+			Selector:     "stops.0.stop_times.#.trip.trip_id",
+			SelectExpect: []string{"3611521SAT", "3631541SAT", "3651601SAT", "3671621SAT", "3691641SAT", "3711701SAT", "3731721SAT", "3751741SAT", "3771801SAT", "3791821SAT", "3611841SAT", "3631901SAT", "2231528SAT", "2251548SAT", "2271608SAT", "2291628SAT", "2311648SAT", "2331708SAT", "2351728SAT", "2211748SAT", "2231808SAT", "2251828SAT", "2271848SAT", "2291908SAT", "4471533SAT", "4491553SAT", "4511613SAT", "4531633SAT", "4411653SAT", "4431713SAT", "4451733SAT", "4471753SAT", "4491813SAT", "4511833SAT", "4531853SAT"},
 		},
 		// serviced
 		{
-			name:         "stop serviced=true",
-			query:        `query{stops(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", serviced:true}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"FUR_CREEK_RES", "BEATTY_AIRPORT", "BULLFROG", "STAGECOACH", "NADAV", "NANAA", "DADAN", "EMSI", "AMV"},
+			Name:         "stop serviced=true",
+			Query:        `query{stops(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", serviced:true}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"FUR_CREEK_RES", "BEATTY_AIRPORT", "BULLFROG", "STAGECOACH", "NADAV", "NANAA", "DADAN", "EMSI", "AMV"},
 		},
 		{
-			name:         "stop serviced=false",
-			query:        `query{stops(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", serviced:false}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"NOTRIPS"},
+			Name:         "stop serviced=false",
+			Query:        `query{stops(where:{feed_onestop_id:"EX", feed_version_sha1:"43e2278aa272879c79460582152b04e7487f0493", serviced:false}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"NOTRIPS"},
 		},
 		// route_type
 		{
 			// tampa street car
-			name:         "stop route_type=0",
-			query:        `query{stops(where:{served_by_route_type:0}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713"},
+			Name:         "stop route_type=0",
+			Query:        `query{stops(where:{served_by_route_type:0}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"6690", "6691", "6692", "6693", "6694", "6695", "6698", "6699", "6700", "6701", "7713"},
 		},
 		{
-			name:         "stop route_type=0 empty",
-			query:        `query{stops(where:{served_by_route_type:0, feed_onestop_id:"BA"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
+			Name:         "stop route_type=0 empty",
+			Query:        `query{stops(where:{served_by_route_type:0, feed_onestop_id:"BA"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
 		},
 		{
 			// BART
-			name:         "stop route_type=1",
-			query:        `query{stops(where:{served_by_route_type:1, feed_onestop_id:"BA"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: bartStops,
+			Name:         "stop route_type=1",
+			Query:        `query{stops(where:{served_by_route_type:1, feed_onestop_id:"BA"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: bartStops,
 		},
 		{
-			name:         "stop route_type=1 empty",
-			query:        `query{stops(where:{served_by_route_type:1, feed_onestop_id:"CT"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
-		},
-		{
-			// Caltrain
-			name:         "stop route_type=2",
-			query:        `query{stops(where:{served_by_route_type:2, feed_onestop_id:"CT"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: caltrainRailStops,
-		},
-		{
-			name:         "stop route_type=2 empty",
-			query:        `query{stops(where:{served_by_route_type:2, feed_onestop_id:"BA"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
+			Name:         "stop route_type=1 empty",
+			Query:        `query{stops(where:{served_by_route_type:1, feed_onestop_id:"CT"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
 		},
 		{
 			// Caltrain
-			name:         "stop route_type=3",
-			query:        `query{stops(where:{served_by_route_type:3, feed_onestop_id:"CT"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: caltrainBusStops,
+			Name:         "stop route_type=2",
+			Query:        `query{stops(where:{served_by_route_type:2, feed_onestop_id:"CT"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: caltrainRailStops,
 		},
 		{
-			name:         "stop route_type=3 empty",
-			query:        `query{stops(where:{served_by_route_type:3, feed_onestop_id:"BA"}) { stop_id } }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
+			Name:         "stop route_type=2 empty",
+			Query:        `query{stops(where:{served_by_route_type:2, feed_onestop_id:"BA"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
+		},
+		{
+			// Caltrain
+			Name:         "stop route_type=3",
+			Query:        `query{stops(where:{served_by_route_type:3, feed_onestop_id:"CT"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: caltrainBusStops,
+		},
+		{
+			Name:         "stop route_type=3 empty",
+			Query:        `query{stops(where:{served_by_route_type:3, feed_onestop_id:"BA"}) { stop_id } }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
 		},
 	}
 	return testcases
@@ -657,49 +659,49 @@ func stopResolverLocationTestcases(t testing.TB, cfg model.Config) []testcase {
 	testcases := []testcase{
 		{
 			// just ensure this query completes successfully; checking coordinates is a pain and flaky.
-			name:         "geometry",
-			query:        `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {geometry} }`,
-			vars:         vars,
-			selector:     "stops.0.geometry.type",
-			selectExpect: []string{"Point"},
+			Name:         "geometry",
+			Query:        `query($stop_id: String!) {  stops(where:{stop_id:$stop_id}) {geometry} }`,
+			Vars:         vars,
+			Selector:     "stops.0.geometry.type",
+			SelectExpect: []string{"Point"},
 		},
 		{
-			name:         "where near 10m",
-			query:        `query {stops(where:{near:{lon:-122.407974,lat:37.784471,radius:10.0}}) {stop_id onestop_id geometry}}`,
-			vars:         vars,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"POWL"},
+			Name:         "where near 10m",
+			Query:        `query {stops(where:{near:{lon:-122.407974,lat:37.784471,radius:10.0}}) {stop_id onestop_id geometry}}`,
+			Vars:         vars,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"POWL"},
 		},
 		{
-			name:         "where near 2000m",
-			query:        `query {stops(where:{near:{lon:-122.407974,lat:37.784471,radius:2000.0}}) {stop_id onestop_id geometry}}`,
-			vars:         vars,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"70011", "70012", "CIVC", "EMBR", "MONT", "POWL"},
+			Name:         "where near 2000m",
+			Query:        `query {stops(where:{near:{lon:-122.407974,lat:37.784471,radius:2000.0}}) {stop_id onestop_id geometry}}`,
+			Vars:         vars,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"70011", "70012", "CIVC", "EMBR", "MONT", "POWL"},
 		},
 		// within features
 		{
-			name:         "where within polygon",
-			query:        `query{stops(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id stop_id}}`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"EMBR", "MONT"},
+			Name:         "where within polygon",
+			Query:        `query{stops(where:{within:{type:"Polygon",coordinates:[[[-122.396,37.8],[-122.408,37.79],[-122.393,37.778],[-122.38,37.787],[-122.396,37.8]]]}}){id stop_id}}`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"EMBR", "MONT"},
 		},
 		{
-			name:   "where locations within_features 1",
-			query:  `query($features: [Feature]) {stops(where:{location:{features:$features}}){stop_id within_features}}`,
-			vars:   hw{"features": []hw{featureSmall}},
-			expect: `{"stops":[{"stop_id":"12TH","within_features":["small"]}]}`,
+			Name:   "where locations within_features 1",
+			Query:  `query($features: [Feature]) {stops(where:{location:{features:$features}}){stop_id within_features}}`,
+			Vars:   hw{"features": []hw{featureSmall}},
+			Expect: `{"stops":[{"stop_id":"12TH","within_features":["small"]}]}`,
 		},
 		{
-			name:   "where locations within_features 2",
-			query:  `query($features: [Feature]) {stops(where:{location:{features:$features}}){stop_id within_features}}`,
-			vars:   hw{"features": []hw{featureSmall, featureBig}},
-			expect: `{"stops":[{"stop_id":"12TH","within_features":["small","big"]},{"stop_id":"19TH","within_features":["big"]},{"stop_id":"19TH_N","within_features":["big"]}]}`,
+			Name:   "where locations within_features 2",
+			Query:  `query($features: [Feature]) {stops(where:{location:{features:$features}}){stop_id within_features}}`,
+			Vars:   hw{"features": []hw{featureSmall, featureBig}},
+			Expect: `{"stops":[{"stop_id":"12TH","within_features":["small","big"]},{"stop_id":"19TH","within_features":["big"]},{"stop_id":"19TH_N","within_features":["big"]}]}`,
 		},
 		// nearby stops
 		{
-			name: "nearby stops 1000m",
-			query: `query($stop_id:String!, $radius:Float!) {
+			Name: "nearby stops 1000m",
+			Query: `query($stop_id:String!, $radius:Float!) {
 				stops(where: {feed_onestop_id: "BA", stop_id: $stop_id}) {
 				  stop_id
 				  nearby_stops(radius:$radius, limit:10) {
@@ -707,13 +709,13 @@ func stopResolverLocationTestcases(t testing.TB, cfg model.Config) []testcase {
 				  }
 				}
 			  }			  `,
-			vars:         hw{"stop_id": "19TH", "radius": 1000},
-			selector:     "stops.0.nearby_stops.#.stop_id",
-			selectExpect: []string{"19TH", "19TH_N", "12TH"},
+			Vars:         hw{"stop_id": "19TH", "radius": 1000},
+			Selector:     "stops.0.nearby_stops.#.stop_id",
+			SelectExpect: []string{"19TH", "19TH_N", "12TH"},
 		},
 		{
-			name: "nearby stops 2000m",
-			query: `query($stop_id:String!, $radius:Float!) {
+			Name: "nearby stops 2000m",
+			Query: `query($stop_id:String!, $radius:Float!) {
 				stops(where: {feed_onestop_id: "BA", stop_id: $stop_id}) {
 				  stop_id
 				  nearby_stops(radius:$radius, limit:10) {
@@ -721,47 +723,47 @@ func stopResolverLocationTestcases(t testing.TB, cfg model.Config) []testcase {
 				  }
 				}
 			  }			  `,
-			vars:         hw{"stop_id": "19TH", "radius": 2000},
-			selector:     "stops.0.nearby_stops.#.stop_id",
-			selectExpect: []string{"19TH", "19TH_N", "12TH", "LAKE"},
+			Vars:         hw{"stop_id": "19TH", "radius": 2000},
+			Selector:     "stops.0.nearby_stops.#.stop_id",
+			SelectExpect: []string{"19TH", "19TH_N", "12TH", "LAKE"},
 		},
 		// bbox
 		{
-			name: "bbox 1",
-			query: `query($bbox:BoundingBox) {
+			Name: "bbox 1",
+			Query: `query($bbox:BoundingBox) {
 				stops(where: {bbox:$bbox}) {
 				  stop_id
 				}
 			  }			  `,
-			vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"19TH", "19TH_N"},
+			Vars:         hw{"bbox": hw{"min_lon": -122.2698781543005, "min_lat": 37.80700393130445, "max_lon": -122.2677640139239, "max_lat": 37.8088734037938}},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"19TH", "19TH_N"},
 		},
 		{
-			name: "bbox 2",
-			query: `query($bbox:BoundingBox) {
+			Name: "bbox 2",
+			Query: `query($bbox:BoundingBox) {
 				stops(where: {bbox:$bbox}) {
 				  stop_id
 				}
 			  }			  `,
-			vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
+			Vars:         hw{"bbox": hw{"min_lon": -124.3340029563042, "min_lat": 40.65505368922123, "max_lon": -123.9653594784379, "max_lat": 40.896440342606525}},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
 		},
 		{
-			name: "bbox too large",
-			query: `query($bbox:BoundingBox) {
+			Name: "bbox too large",
+			Query: `query($bbox:BoundingBox) {
 				stops(where: {bbox:$bbox}) {
 				  stop_id
 				}
 			  }			  `,
-			vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
-			expectError: true,
+			Vars:        hw{"bbox": hw{"min_lon": -137.88020156441956, "min_lat": 30.072648315782004, "max_lon": -109.00421121090919, "max_lat": 45.02437957865729}},
+			ExpectError: true,
 		},
 		// this test is just for debugging purposes
 		{
-			name: "nearby stops check n+1 query",
-			query: `query($radius:Float!) {
+			Name: "nearby stops check n+1 query",
+			Query: `query($radius:Float!) {
 				stops(where: {feed_onestop_id: "BA"}) {
 				  stop_id
 				  nearby_stops(radius:$radius, limit:10) {
@@ -769,45 +771,45 @@ func stopResolverLocationTestcases(t testing.TB, cfg model.Config) []testcase {
 				  }
 				}
 			  }			  `,
-			vars:         hw{"radius": 1000},
-			selector:     "stops.#.stop_id",
-			selectExpect: bartStops,
+			Vars:         hw{"radius": 1000},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: bartStops,
 		},
 		// Focus test cases
 		{
-			name: "focus basic: Florida focus point returns HA stops first",
-			query: `query($lat:Float!, $lon:Float!) {
+			Name: "focus basic: Florida focus point returns HA stops first",
+			Query: `query($lat:Float!, $lon:Float!) {
 				stops(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
 					stop_id
 					feed_version { feed { onestop_id } }
 				}
 			}`,
-			vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
-			selector:     "stops.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA"},
+			Vars:         hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			Selector:     "stops.#.feed_version.feed.onestop_id",
+			SelectExpect: []string{"HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA", "HA"},
 		},
 		{
-			name: "focus basic: San Jose focus point returns CT stops first",
-			query: `query($lat:Float!, $lon:Float!) {
+			Name: "focus basic: San Jose focus point returns CT stops first",
+			Query: `query($lat:Float!, $lon:Float!) {
 				stops(limit: 10, where: {location: {focus: {lat: $lat, lon: $lon}}}) {
 					stop_id
 					feed_version { feed { onestop_id } }
 				}
 			}`,
-			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
-			selector:     "stops.#.feed_version.feed.onestop_id",
-			selectExpect: []string{"CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT"},
+			Vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			Selector:     "stops.#.feed_version.feed.onestop_id",
+			SelectExpect: []string{"CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT", "CT"},
 		},
 		{
-			name: "focus with feed filter: HA stops only, ordered by distance",
-			query: `query($lat:Float!, $lon:Float!) {
+			Name: "focus with feed filter: HA stops only, ordered by distance",
+			Query: `query($lat:Float!, $lon:Float!) {
 				stops(limit: 10, where: {feed_onestop_id: "HA", location: {focus: {lat: $lat, lon: $lon}}}) {
 					stop_id
 					geometry
 				}
 			}`,
-			vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
-			f: func(t *testing.T, jj string) {
+			Vars: hw{"lat": floridaFocus.Lat, "lon": floridaFocus.Lon},
+			F: func(t *testing.T, jj string) {
 				// Verify the query returns stops
 				stopIds := gjson.Get(jj, "stops.#.stop_id").Array()
 				assert.Equal(t, 10, len(stopIds), "should return exactly 10 stops")
@@ -835,32 +837,32 @@ func stopResolverLocationTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
-			name: "focus with pagination: first page",
-			query: `query($lat:Float!, $lon:Float!) {
+			Name: "focus with pagination: first page",
+			Query: `query($lat:Float!, $lon:Float!) {
 				stops: stops(limit: 10, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
 					id
 					stop_id
 				}
 			}`,
-			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242"},
+			Vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242"},
 		},
 		{
-			name: "focus with pagination: second page maintains ordering",
-			query: `query($lat:Float!, $lon:Float!, $after:Int!) {
+			Name: "focus with pagination: second page maintains ordering",
+			Query: `query($lat:Float!, $lon:Float!, $after:Int!) {
 				stops: stops(after: $after, limit: 10, where: {feed_onestop_id: "CT", location: {focus: {lat: $lat, lon: $lon}}}) {
 					id
 					stop_id
 				}
 			}`,
-			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testStopID},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"70272", "70271", "777403", "70241", "70242", "70282", "70281", "70232", "70231", "70291"},
+			Vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "after": testStopID},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"70272", "70271", "777403", "70241", "70242", "70282", "70281", "70232", "70231", "70291"},
 		},
 		{
-			name: "focus with near filter: combined spatial queries",
-			query: `query($lat:Float!, $lon:Float!, $radius:Float!) {
+			Name: "focus with near filter: combined spatial queries",
+			Query: `query($lat:Float!, $lon:Float!, $radius:Float!) {
 				stops(limit: 100, where: {
 					feed_onestop_id: "CT",
 					location: {
@@ -871,9 +873,9 @@ func stopResolverLocationTestcases(t testing.TB, cfg model.Config) []testcase {
 					stop_id
 				}
 			}`,
-			vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "radius": sanJoseRadiusMeters},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242", "70282", "70281"},
+			Vars:         hw{"lat": sanJoseFocus.Lat, "lon": sanJoseFocus.Lon, "radius": sanJoseRadiusMeters},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"777402", "70261", "70262", "70251", "70252", "70272", "70271", "777403", "70241", "70242", "70282", "70281"},
 		},
 	}
 	return testcases
@@ -890,19 +892,21 @@ var (
 	serviceWindowRelocates = [][2]string{{"CT", "70011"}, {"HA", "1014"}, {"WMATA", "ENT_A01_C01_E"}}
 )
 
-// One `stops` selection can span feed versions, and every stop in it shares a
-// single filter. Each feed version resolves the requested date against its own
-// service window, and that resolution must not follow the shared filter into
-// the next feed version. The finder visits them in map order, so a leak makes
-// BA's answer depend on whether it was visited first, and the same request
-// returns different stop times from one call to the next.
+// stopResolverServiceWindowIsPerFeedVersionTest checks that each feed version
+// in one `stops` selection resolves the date against its own service window.
+//
+// Every stop in the selection shares a single filter, and the date resolved for
+// one feed version must not follow that filter into the next. A finder that
+// visits feed versions in no fixed order would then make BA's answer depend on
+// whether BA came first, so the same request would return different stop times
+// from one call to the next.
 func stopResolverServiceWindowIsPerFeedVersionTest(t *testing.T, c *client.Client, cfg model.Config) {
 	query := func(q string) string {
 		var resp map[string]interface{}
 		if err := c.Post(q, &resp); err != nil {
 			t.Fatal(err)
 		}
-		return toJson(resp)
+		return gqlcase.ToJSON(resp)
 	}
 	// Resolved rather than hardcoded: these are unstable database ids.
 	stopID := func(feed string, gtfsStopID string) string {
@@ -949,7 +953,7 @@ func stopResolverServiceWindowIsPerFeedVersionTest(t *testing.T, c *client.Clien
 	relocated := false
 	for i, id := range relocating {
 		fvid := gjson.Get(query(`query{stops(ids:[`+id+`]){feed_version{id}}}`), "stops.0.feed_version.id").Int()
-		w, err := cfg.Finder.FindFeedVersionServiceWindow(context.Background(), int(fvid))
+		w, err := cfg.Finder.FindFeedVersionServiceWindow(model.WithConfig(context.Background(), cfg), int(fvid))
 		if err != nil {
 			t.Fatal(err)
 		}

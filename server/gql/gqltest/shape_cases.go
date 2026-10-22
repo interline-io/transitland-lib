@@ -17,72 +17,72 @@ const bartShapeSha1 = "e535eb2b3b9ac3ef15d82c56575e914575e732e0"
 func feedVersionResolverShapesTestcases(t testing.TB, cfg model.Config) []testcase {
 	testcases := []testcase{
 		{
-			name:     "shapes",
-			query:    `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { shape_id }}}`,
-			vars:     hw{"sha1": bartShapeSha1},
-			selector: "feed_versions.0.shapes.#.shape_id",
-			selectExpect: []string{
+			Name:     "shapes",
+			Query:    `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { shape_id }}}`,
+			Vars:     hw{"sha1": bartShapeSha1},
+			Selector: "feed_versions.0.shapes.#.shape_id",
+			SelectExpect: []string{
 				"01_shp", "02_shp", "03_shp", "04_shp", "05_shp", "06_shp",
 				"07_shp", "08_shp", "11_shp", "12_shp", "19_shp", "20_shp",
 			},
 		},
 		{
-			name:              "shapes count",
-			query:             `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { shape_id }}}`,
-			vars:              hw{"sha1": bartShapeSha1},
-			selector:          "feed_versions.0.shapes.#.shape_id",
-			selectExpectCount: 12,
+			Name:              "shapes count",
+			Query:             `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { shape_id }}}`,
+			Vars:              hw{"sha1": bartShapeSha1},
+			Selector:          "feed_versions.0.shapes.#.shape_id",
+			SelectExpectCount: 12,
 		},
 		{
-			name:              "shapes limit",
-			query:             `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(limit:3) { shape_id }}}`,
-			vars:              hw{"sha1": bartShapeSha1},
-			selector:          "feed_versions.0.shapes.#.shape_id",
-			selectExpectCount: 3,
+			Name:              "shapes limit",
+			Query:             `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(limit:3) { shape_id }}}`,
+			Vars:              hw{"sha1": bartShapeSha1},
+			Selector:          "feed_versions.0.shapes.#.shape_id",
+			SelectExpectCount: 3,
 		},
 		{
-			name:               "shape geometry type",
-			query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { geometry }}}`,
-			vars:               hw{"sha1": bartShapeSha1},
-			selector:           "feed_versions.0.shapes.#.geometry.type",
-			selectExpectUnique: []string{"LineString"},
+			Name:               "shape geometry type",
+			Query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { geometry }}}`,
+			Vars:               hw{"sha1": bartShapeSha1},
+			Selector:           "feed_versions.0.shapes.#.geometry.type",
+			SelectExpectUnique: []string{"LineString"},
 		},
 		{
-			name:               "shape generated",
-			query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { generated }}}`,
-			vars:               hw{"sha1": bartShapeSha1},
-			selector:           "feed_versions.0.shapes.#.generated",
-			selectExpectUnique: []string{"false"},
+			Name:               "shape generated",
+			Query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes { generated }}}`,
+			Vars:               hw{"sha1": bartShapeSha1},
+			Selector:           "feed_versions.0.shapes.#.generated",
+			SelectExpectUnique: []string{"false"},
 		},
 		// where: shape_id
 		{
-			name:         "where shape_id",
-			query:        `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { shape_id }}}`,
-			vars:         hw{"sha1": bartShapeSha1},
-			selector:     "feed_versions.0.shapes.#.shape_id",
-			selectExpect: []string{"02_shp"},
+			Name:         "where shape_id",
+			Query:        `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { shape_id }}}`,
+			Vars:         hw{"sha1": bartShapeSha1},
+			Selector:     "feed_versions.0.shapes.#.shape_id",
+			SelectExpect: []string{"02_shp"},
 		},
 		{
-			name:         "where shape_id not found",
-			query:        `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"nope"}) { shape_id }}}`,
-			vars:         hw{"sha1": bartShapeSha1},
-			selector:     "feed_versions.0.shapes.#.shape_id",
-			selectExpect: []string{},
+			Name:         "where shape_id not found",
+			Query:        `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"nope"}) { shape_id }}}`,
+			Vars:         hw{"sha1": bartShapeSha1},
+			Selector:     "feed_versions.0.shapes.#.shape_id",
+			SelectExpect: []string{},
 		},
 		// where: route_type (trip->route join)
 		{
-			name:              "where route_type 1",
-			query:             `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{route_type:1}) { shape_id }}}`,
-			vars:              hw{"sha1": bartShapeSha1},
-			selector:          "feed_versions.0.shapes.#.shape_id",
-			selectExpectCount: 12,
+			Name:              "where route_type 1",
+			Query:             `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{route_type:1}) { shape_id }}}`,
+			Vars:              hw{"sha1": bartShapeSha1},
+			Selector:          "feed_versions.0.shapes.#.shape_id",
+			SelectExpectCount: 12,
 		},
 		{
-			name:         "where route_type none",
-			query:        `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{route_type:3}) { shape_id }}}`,
-			vars:         hw{"sha1": bartShapeSha1},
-			selector:     "feed_versions.0.shapes.#.shape_id",
-			selectExpect: []string{},
+			Name:         "where route_type none",
+			Query:        `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{route_type:3}) { shape_id }}}`,
+			Vars:         hw{"sha1": bartShapeSha1},
+			Selector:     "feed_versions.0.shapes.#.shape_id",
+			SelectExpect: []string{},
 		},
 	}
 	return testcases
@@ -93,24 +93,24 @@ func shapeResolverTripsTestcases(t testing.TB, cfg model.Config) []testcase {
 	// unambiguous. Every BART trip on 02_shp runs route 01, direction 1.
 	testcases := []testcase{
 		{
-			name:               "shape trips route",
-			query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { trips(limit:1000) { route { route_id } }}}}`,
-			vars:               hw{"sha1": bartShapeSha1},
-			selector:           "feed_versions.0.shapes.0.trips.#.route.route_id",
-			selectExpectUnique: []string{"01"},
+			Name:               "shape trips route",
+			Query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { trips(limit:1000) { route { route_id } }}}}`,
+			Vars:               hw{"sha1": bartShapeSha1},
+			Selector:           "feed_versions.0.shapes.0.trips.#.route.route_id",
+			SelectExpectUnique: []string{"01"},
 		},
 		{
-			name:               "shape trips direction",
-			query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { trips(limit:1000) { direction_id }}}}`,
-			vars:               hw{"sha1": bartShapeSha1},
-			selector:           "feed_versions.0.shapes.0.trips.#.direction_id",
-			selectExpectUnique: []string{"1"},
+			Name:               "shape trips direction",
+			Query:              `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { trips(limit:1000) { direction_id }}}}`,
+			Vars:               hw{"sha1": bartShapeSha1},
+			Selector:           "feed_versions.0.shapes.0.trips.#.direction_id",
+			SelectExpectUnique: []string{"1"},
 		},
 		{
-			name:  "shape trips contains known trip",
-			query: `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { trips(limit:1000) { trip_id }}}}`,
-			vars:  hw{"sha1": bartShapeSha1},
-			f: func(t *testing.T, jj string) {
+			Name:  "shape trips contains known trip",
+			Query: `query($sha1: String!) { feed_versions(where:{sha1:$sha1}) { shapes(where:{shape_id:"02_shp"}) { trips(limit:1000) { trip_id }}}}`,
+			Vars:  hw{"sha1": bartShapeSha1},
+			F: func(t *testing.T, jj string) {
 				var tripIDs []string
 				for _, tr := range gjson.Get(jj, "feed_versions.0.shapes.0.trips").Array() {
 					tripIDs = append(tripIDs, tr.Get("trip_id").String())
@@ -122,8 +122,8 @@ func shapeResolverTripsTestcases(t testing.TB, cfg model.Config) []testcase {
 	return testcases
 }
 
-// TestFeedVersionResolver_Shapes_Cursor exercises keyset (after) pagination,
-// mirroring TestAgencyResolver_Cursor.
+// feedVersionResolverShapesCursorTestcases pages through a feed version's
+// shapes with after.
 func feedVersionResolverShapesCursorTestcases(t testing.TB, cfg model.Config) []testcase {
 	ctx := model.WithConfig(context.Background(), cfg)
 
@@ -139,9 +139,7 @@ func feedVersionResolverShapesCursorTestcases(t testing.TB, cfg model.Config) []
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(allEnts) < 2 {
-		t.Fatalf("expected multiple shapes, got %d", len(allEnts))
-	}
+	needAtLeast(t, 2, "shapes", allEnts)
 	allIds := []string{}
 	for _, ent := range allEnts {
 		allIds = append(allIds, ent.ShapeID.Val)
@@ -149,18 +147,18 @@ func feedVersionResolverShapesCursorTestcases(t testing.TB, cfg model.Config) []
 
 	testcases := []testcase{
 		{
-			name:         "no cursor",
-			query:        `query($sha1:String!){feed_versions(where:{sha1:$sha1}){shapes(limit:100){id shape_id}}}`,
-			vars:         hw{"sha1": bartShapeSha1},
-			selector:     "feed_versions.0.shapes.#.shape_id",
-			selectExpect: allIds,
+			Name:         "no cursor",
+			Query:        `query($sha1:String!){feed_versions(where:{sha1:$sha1}){shapes(limit:100){id shape_id}}}`,
+			Vars:         hw{"sha1": bartShapeSha1},
+			Selector:     "feed_versions.0.shapes.#.shape_id",
+			SelectExpect: allIds,
 		},
 		{
-			name:         "after first",
-			query:        `query($sha1:String!,$after:Int!){feed_versions(where:{sha1:$sha1}){shapes(after:$after,limit:100){shape_id}}}`,
-			vars:         hw{"sha1": bartShapeSha1, "after": allEnts[0].ID},
-			selector:     "feed_versions.0.shapes.#.shape_id",
-			selectExpect: allIds[1:],
+			Name:         "after first",
+			Query:        `query($sha1:String!,$after:Int!){feed_versions(where:{sha1:$sha1}){shapes(after:$after,limit:100){shape_id}}}`,
+			Vars:         hw{"sha1": bartShapeSha1, "after": allEnts[0].ID},
+			Selector:     "feed_versions.0.shapes.#.shape_id",
+			SelectExpect: allIds[1:],
 		},
 	}
 	return testcases

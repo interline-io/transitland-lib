@@ -9,6 +9,7 @@ import (
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
@@ -23,9 +24,9 @@ import (
 // keeps returning rows and its subtest fails. A census exclude search instead
 // stops subtracting the buffers of the hidden stops.
 func TestPermFilter_Negative(t *testing.T) {
-	supplementalSha1 := testconfig.SupplementalSha1(t)
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
+		supplementalSha1 := testconfig.SupplementalSha1(t, cfg)
 		f := cfg.Finder
 
 		// Look up every id while the feeds are still public, since internal ids
@@ -100,7 +101,7 @@ func TestPermFilter_Negative(t *testing.T) {
 				if err := gqlClient.Post(query, &resp, client.Var("stop_ids", []int{ftvl})); err != nil {
 					return 0, err
 				}
-				return len(gjson.Get(toJson(resp), path).Array()), nil
+				return len(gjson.Get(gqlcase.ToJSON(resp), path).Array()), nil
 			}
 		}
 

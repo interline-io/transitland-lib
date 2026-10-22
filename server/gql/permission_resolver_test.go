@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/azchecker"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
@@ -73,7 +74,7 @@ func postQuery(t testing.TB, c *client.Client, query string, vars map[string]int
 	if err != nil {
 		t.Fatal(err)
 	}
-	return toJson(resp)
+	return gqlcase.ToJSON(resp)
 }
 
 // Tests

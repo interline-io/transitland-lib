@@ -25,53 +25,53 @@ func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	testcases := []testcase{
 		{
 			// All outgoing pathways from a known stop are returned.
-			name: "pathways_from_stop returns expected pathway_ids",
-			query: `query($sha1:String!,$stop_id:String!) {
+			Name: "pathways_from_stop returns expected pathway_ids",
+			Query: `query($sha1:String!,$stop_id:String!) {
 				feed_versions(where:{sha1:$sha1}) {
 					stops(where:{stop_id:$stop_id}) {
 						pathways_from_stop { pathway_id }
 					}
 				}
 			}`,
-			vars:     hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			selector: "feed_versions.0.stops.0.pathways_from_stop.#.pathway_id",
-			selectExpect: []string{
+			Vars:     hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Selector: "feed_versions.0.stops.0.pathways_from_stop.#.pathway_id",
+			SelectExpect: []string{
 				"C08_137121", "C08_137122", "C08_137125", "C08_137128", "C08_137131",
 				"C08_137134", "C08_137137", "C08_137140", "C08_137143",
 			},
 		},
 		{
 			// Incoming pathways: NODE_C08_FG_PAID has exactly one entry pathway.
-			name: "pathways_to_stop returns expected pathway_ids",
-			query: `query($sha1:String!,$stop_id:String!) {
+			Name: "pathways_to_stop returns expected pathway_ids",
+			Query: `query($sha1:String!,$stop_id:String!) {
 				feed_versions(where:{sha1:$sha1}) {
 					stops(where:{stop_id:$stop_id}) {
 						pathways_to_stop { pathway_id }
 					}
 				}
 			}`,
-			vars:         hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			selector:     "feed_versions.0.stops.0.pathways_to_stop.#.pathway_id",
-			selectExpect: []string{"C08_137120"},
+			Vars:         hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Selector:     "feed_versions.0.stops.0.pathways_to_stop.#.pathway_id",
+			SelectExpect: []string{"C08_137120"},
 		},
 		{
 			// limit is honored by the resolver.
-			name: "pathways_from_stop honors limit",
-			query: `query($sha1:String!,$stop_id:String!) {
+			Name: "pathways_from_stop honors limit",
+			Query: `query($sha1:String!,$stop_id:String!) {
 				feed_versions(where:{sha1:$sha1}) {
 					stops(where:{stop_id:$stop_id}) {
 						pathways_from_stop(limit: 3) { pathway_id }
 					}
 				}
 			}`,
-			vars:              hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			selector:          "feed_versions.0.stops.0.pathways_from_stop.#.pathway_id",
-			selectExpectCount: 3,
+			Vars:              hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Selector:          "feed_versions.0.stops.0.pathways_from_stop.#.pathway_id",
+			SelectExpectCount: 3,
 		},
 		{
 			// Full pathway field set on a one-way exit gate (pathway_mode=7).
-			name: "pathway fields - one-way exit gate",
-			query: `query($sha1:String!,$stop_id:String!) {
+			Name: "pathway fields - one-way exit gate",
+			Query: `query($sha1:String!,$stop_id:String!) {
 				feed_versions(where:{sha1:$sha1}) {
 					stops(where:{stop_id:$stop_id}) {
 						pathways_from_stop {
@@ -82,19 +82,19 @@ func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			}`,
-			vars: hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			sel: []testcaseSelector{
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").pathway_mode`, expect: []string{"7"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").is_bidirectional`, expect: []string{"0"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").traversal_time`, expect: []string{"5"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").from_stop.stop_id`, expect: []string{"NODE_C08_FG_PAID"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").to_stop.stop_id`, expect: []string{"NODE_C08_FG_UNPAID"}},
+			Vars: hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Sel: []testcaseSelector{
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").pathway_mode`, Expect: []string{"7"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").is_bidirectional`, Expect: []string{"0"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").traversal_time`, Expect: []string{"5"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").from_stop.stop_id`, Expect: []string{"NODE_C08_FG_PAID"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137121").to_stop.stop_id`, Expect: []string{"NODE_C08_FG_UNPAID"}},
 			},
 		},
 		{
 			// Bidirectional walkway: pathway_mode=1, is_bidirectional=1.
-			name: "pathway fields - bidirectional walkway",
-			query: `query($sha1:String!,$stop_id:String!) {
+			Name: "pathway fields - bidirectional walkway",
+			Query: `query($sha1:String!,$stop_id:String!) {
 				feed_versions(where:{sha1:$sha1}) {
 					stops(where:{stop_id:$stop_id}) {
 						pathways_from_stop {
@@ -104,48 +104,48 @@ func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			}`,
-			vars: hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			sel: []testcaseSelector{
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").pathway_mode`, expect: []string{"1"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").is_bidirectional`, expect: []string{"1"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").traversal_time`, expect: []string{"7"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").to_stop.stop_id`, expect: []string{"NODE_C08_M_ELE1_TP"}},
+			Vars: hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Sel: []testcaseSelector{
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").pathway_mode`, Expect: []string{"1"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").is_bidirectional`, Expect: []string{"1"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").traversal_time`, Expect: []string{"7"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").to_stop.stop_id`, Expect: []string{"NODE_C08_M_ELE1_TP"}},
 			},
 		},
 		{
 			// Stop on level C08_L1 (Mezzanine, level_index -1) resolves the level.
-			name:   "stop level resolves",
-			query:  `query($sha1:String!,$stop_id:String!) { feed_versions(where:{sha1:$sha1}) { stops(where:{stop_id:$stop_id}) { level { level_id level_name level_index } } } }`,
-			vars:   hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			expect: `{"feed_versions":[{"stops":[{"level":{"level_id":"C08_L1","level_index":-1,"level_name":"Mezzanine"}}]}]}`,
+			Name:   "stop level resolves",
+			Query:  `query($sha1:String!,$stop_id:String!) { feed_versions(where:{sha1:$sha1}) { stops(where:{stop_id:$stop_id}) { level { level_id level_name level_index } } } }`,
+			Vars:   hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Expect: `{"feed_versions":[{"stops":[{"level":{"level_id":"C08_L1","level_index":-1,"level_name":"Mezzanine"}}]}]}`,
 		},
 		{
 			// Stops without a level resolve level=null (the parent station has no level).
-			name:   "stop without level resolves null",
-			query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { stops(where:{stop_id:"STN_C08"}) { level { level_id } } } }`,
-			vars:   hw{"sha1": wmataSha1},
-			expect: `{"feed_versions":[{"stops":[{"level":null}]}]}`,
+			Name:   "stop without level resolves null",
+			Query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { stops(where:{stop_id:"STN_C08"}) { level { level_id } } } }`,
+			Vars:   hw{"sha1": wmataSha1},
+			Expect: `{"feed_versions":[{"stops":[{"level":null}]}]}`,
 		},
 		{
 			// parent station resolves on a child stop.
-			name:   "stop parent station resolves",
-			query:  `query($sha1:String!,$stop_id:String!) { feed_versions(where:{sha1:$sha1}) { stops(where:{stop_id:$stop_id}) { parent { stop_id stop_name location_type } } } }`,
-			vars:   hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			expect: `{"feed_versions":[{"stops":[{"parent":{"location_type":1,"stop_id":"STN_C08","stop_name":"Pentagon City"}}]}]}`,
+			Name:   "stop parent station resolves",
+			Query:  `query($sha1:String!,$stop_id:String!) { feed_versions(where:{sha1:$sha1}) { stops(where:{stop_id:$stop_id}) { parent { stop_id stop_name location_type } } } }`,
+			Vars:   hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Expect: `{"feed_versions":[{"stops":[{"parent":{"location_type":1,"stop_id":"STN_C08","stop_name":"Pentagon City"}}]}]}`,
 		},
 		{
 			// A station's children include platforms, entrances, and fare-gate nodes.
-			name: "station children include platforms and entrances",
-			query: `query($sha1:String!) {
+			Name: "station children include platforms and entrances",
+			Query: `query($sha1:String!) {
 				feed_versions(where:{sha1:$sha1}) {
 					stops(where:{stop_id:"STN_C08"}) {
 						children { stop_id }
 					}
 				}
 			}`,
-			vars:     hw{"sha1": wmataSha1},
-			selector: "feed_versions.0.stops.0.children.#.stop_id",
-			selectExpectContains: []string{
+			Vars:     hw{"sha1": wmataSha1},
+			Selector: "feed_versions.0.stops.0.children.#.stop_id",
+			SelectExpectContains: []string{
 				"PF_C08_1", "PF_C08_2",
 				"ENT_C08_E", "ENT_C08_W",
 				"NODE_C08_FG_PAID", "NODE_C08_FG_UNPAID",
@@ -154,8 +154,8 @@ func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		{
 			// from_stop and to_stop on a Pathway resolve to full Stop objects,
 			// including nested level resolution.
-			name: "pathway from_stop/to_stop resolve full Stop objects",
-			query: `query($sha1:String!,$stop_id:String!) {
+			Name: "pathway from_stop/to_stop resolve full Stop objects",
+			Query: `query($sha1:String!,$stop_id:String!) {
 				feed_versions(where:{sha1:$sha1}) {
 					stops(where:{stop_id:$stop_id}) {
 						pathways_from_stop {
@@ -166,13 +166,13 @@ func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			}`,
-			vars: hw{"sha1": wmataSha1, "stop_id": fgPaid},
-			sel: []testcaseSelector{
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").from_stop.stop_id`, expect: []string{"NODE_C08_FG_PAID"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").from_stop.location_type`, expect: []string{"3"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").from_stop.level.level_id`, expect: []string{"C08_L1"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").to_stop.stop_id`, expect: []string{"NODE_C08_M_ELE1_TP"}},
-				{selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").to_stop.location_type`, expect: []string{"3"}},
+			Vars: hw{"sha1": wmataSha1, "stop_id": fgPaid},
+			Sel: []testcaseSelector{
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").from_stop.stop_id`, Expect: []string{"NODE_C08_FG_PAID"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").from_stop.location_type`, Expect: []string{"3"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").from_stop.level.level_id`, Expect: []string{"C08_L1"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").to_stop.stop_id`, Expect: []string{"NODE_C08_M_ELE1_TP"}},
+				{Selector: `feed_versions.0.stops.0.pathways_from_stop.#(pathway_id=="C08_137122").to_stop.location_type`, Expect: []string{"3"}},
 			},
 		},
 	}
@@ -192,60 +192,60 @@ func feedVersionResolverPathwaysTestcases(t testing.TB, cfg model.Config) []test
 	}`
 	testcases := []testcase{
 		{
-			name:              "every pathway in the feed version",
-			query:             q,
-			vars:              hw{"sha1": wmataSha1, "limit": 10_000},
-			selector:          "feed_versions.0.pathways.#.pathway_id",
-			selectExpectCount: 2958,
+			Name:              "every pathway in the feed version",
+			Query:             q,
+			Vars:              hw{"sha1": wmataSha1, "limit": 10_000},
+			Selector:          "feed_versions.0.pathways.#.pathway_id",
+			SelectExpectCount: 2958,
 		},
 		{
-			name:              "default limit",
-			query:             q,
-			vars:              hw{"sha1": wmataSha1},
-			selector:          "feed_versions.0.pathways.#.pathway_id",
-			selectExpectCount: 100,
+			Name:              "default limit",
+			Query:             q,
+			Vars:              hw{"sha1": wmataSha1},
+			Selector:          "feed_versions.0.pathways.#.pathway_id",
+			SelectExpectCount: 100,
 		},
 		{
-			name:   "pathway_id",
-			query:  q,
-			vars:   hw{"sha1": wmataSha1, "where": hw{"pathway_id": "C08_137121"}},
-			expect: `{"feed_versions":[{"pathways":[{"pathway_id":"C08_137121","pathway_mode":7,"is_bidirectional":0,"traversal_time":5,"from_stop":{"stop_id":"NODE_C08_FG_PAID"},"to_stop":{"stop_id":"NODE_C08_FG_UNPAID"}}]}]}`,
+			Name:   "pathway_id",
+			Query:  q,
+			Vars:   hw{"sha1": wmataSha1, "where": hw{"pathway_id": "C08_137121"}},
+			Expect: `{"feed_versions":[{"pathways":[{"pathway_id":"C08_137121","pathway_mode":7,"is_bidirectional":0,"traversal_time":5,"from_stop":{"stop_id":"NODE_C08_FG_PAID"},"to_stop":{"stop_id":"NODE_C08_FG_UNPAID"}}]}]}`,
 		},
 		{
-			name:  "pathway_mode",
-			query: q,
-			vars:  hw{"sha1": wmataSha1, "limit": 10_000, "where": hw{"pathway_mode": 5}},
-			sel: []testcaseSelector{
-				{selector: "feed_versions.0.pathways.#.pathway_id", expectCount: 212},
-				{selector: "feed_versions.0.pathways.#.pathway_mode", expectUnique: []string{"5"}},
-				{selector: `feed_versions.0.pathways.#(pathway_id%"C08_*")#.pathway_id`, expect: []string{"C08_137116", "C08_137123", "C08_137126"}},
+			Name:  "pathway_mode",
+			Query: q,
+			Vars:  hw{"sha1": wmataSha1, "limit": 10_000, "where": hw{"pathway_mode": 5}},
+			Sel: []testcaseSelector{
+				{Selector: "feed_versions.0.pathways.#.pathway_id", ExpectCount: 212},
+				{Selector: "feed_versions.0.pathways.#.pathway_mode", ExpectUnique: []string{"5"}},
+				{Selector: `feed_versions.0.pathways.#(pathway_id%"C08_*")#.pathway_id`, Expect: []string{"C08_137116", "C08_137123", "C08_137126"}},
 			},
 		},
 		{
 			// Filter fields combine with AND; C08_137121 is an exit gate, not an elevator.
-			name:   "pathway_id and pathway_mode",
-			query:  q,
-			vars:   hw{"sha1": wmataSha1, "where": hw{"pathway_id": "C08_137121", "pathway_mode": 5}},
-			expect: `{"feed_versions":[{"pathways":[]}]}`,
+			Name:   "pathway_id and pathway_mode",
+			Query:  q,
+			Vars:   hw{"sha1": wmataSha1, "where": hw{"pathway_id": "C08_137121", "pathway_mode": 5}},
+			Expect: `{"feed_versions":[{"pathways":[]}]}`,
 		},
 		{
-			name:   "feed version fields",
-			query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { pathways(limit:1) { feed_version_sha1 feed_onestop_id feed_version { sha1 } } } }`,
-			vars:   hw{"sha1": wmataSha1},
-			expect: `{"feed_versions":[{"pathways":[{"feed_version_sha1":"148d00724546e1526d5d84d1f9d095df24f6517c","feed_onestop_id":"WMATA","feed_version":{"sha1":"148d00724546e1526d5d84d1f9d095df24f6517c"}}]}]}`,
+			Name:   "feed version fields",
+			Query:  `query($sha1:String!) { feed_versions(where:{sha1:$sha1}) { pathways(limit:1) { feed_version_sha1 feed_onestop_id feed_version { sha1 } } } }`,
+			Vars:   hw{"sha1": wmataSha1},
+			Expect: `{"feed_versions":[{"pathways":[{"feed_version_sha1":"148d00724546e1526d5d84d1f9d095df24f6517c","feed_onestop_id":"WMATA","feed_version":{"sha1":"148d00724546e1526d5d84d1f9d095df24f6517c"}}]}]}`,
 		},
 		{
-			name:   "feed version without pathways",
-			query:  q,
-			vars:   hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
-			expect: `{"feed_versions":[{"pathways":[]}]}`,
+			Name:   "feed version without pathways",
+			Query:  q,
+			Vars:   hw{"sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0"},
+			Expect: `{"feed_versions":[{"pathways":[]}]}`,
 		},
 	}
 	return testcases
 }
 
-// TestFeedVersionResolver_PathwaysAndLevels_Cursor exercises keyset (after)
-// pagination and selection by id, mirroring TestFeedVersionResolver_Shapes_Cursor.
+// feedVersionResolverPathwaysAndLevelsCursorTestcases pages through a feed
+// version's pathways and levels with after, and selects them by id.
 func feedVersionResolverPathwaysAndLevelsCursorTestcases(t testing.TB, cfg model.Config) []testcase {
 	ctx := model.WithConfig(context.Background(), cfg)
 
@@ -265,6 +265,8 @@ func feedVersionResolverPathwaysAndLevelsCursorTestcases(t testing.TB, cfg model
 	if err != nil {
 		t.Fatal(err)
 	}
+	needAtLeast(t, 1, "pathway groups", pathwayGroups)
+	needAtLeast(t, 1, "level groups", levelGroups)
 	var pathwayIDs, levelIDs []int
 	for _, ent := range pathwayGroups[0] {
 		pathwayIDs = append(pathwayIDs, ent.ID)
@@ -272,9 +274,8 @@ func feedVersionResolverPathwaysAndLevelsCursorTestcases(t testing.TB, cfg model
 	for _, ent := range levelGroups[0] {
 		levelIDs = append(levelIDs, ent.ID)
 	}
-	if len(pathwayIDs) < 3 || len(levelIDs) < 3 {
-		t.Fatalf("got %d pathways and %d levels, need at least 3 of each", len(pathwayIDs), len(levelIDs))
-	}
+	needAtLeast(t, 3, "pathways", pathwayIDs)
+	needAtLeast(t, 3, "levels", levelIDs)
 	// Paging with after relies on ascending ids, so expect that order whatever
 	// order the finder returned.
 	slices.Sort(pathwayIDs)
@@ -286,52 +287,52 @@ func feedVersionResolverPathwaysAndLevelsCursorTestcases(t testing.TB, cfg model
 	levelsSel := "feed_versions.0.levels.#.id"
 	testcases := []testcase{
 		{
-			name:  "pathways no cursor",
-			query: pathwaysQuery,
-			vars:  hw{"sha1": wmataSha1},
-			f:     expectIDsInOrder(pathwaysSel, pathwayIDs),
+			Name:  "pathways no cursor",
+			Query: pathwaysQuery,
+			Vars:  hw{"sha1": wmataSha1},
+			F:     expectIDsInOrder(pathwaysSel, pathwayIDs),
 		},
 		{
-			name:  "pathways after first",
-			query: pathwaysQuery,
-			vars:  hw{"sha1": wmataSha1, "after": pathwayIDs[0]},
-			f:     expectIDsInOrder(pathwaysSel, pathwayIDs[1:]),
+			Name:  "pathways after first",
+			Query: pathwaysQuery,
+			Vars:  hw{"sha1": wmataSha1, "after": pathwayIDs[0]},
+			F:     expectIDsInOrder(pathwaysSel, pathwayIDs[1:]),
 		},
 		{
-			name:  "pathways by ids",
-			query: pathwaysQuery,
-			vars:  hw{"sha1": wmataSha1, "where": hw{"ids": []int{pathwayIDs[2], pathwayIDs[0]}}},
-			f:     expectIDsInOrder(pathwaysSel, []int{pathwayIDs[0], pathwayIDs[2]}),
+			Name:  "pathways by ids",
+			Query: pathwaysQuery,
+			Vars:  hw{"sha1": wmataSha1, "where": hw{"ids": []int{pathwayIDs[2], pathwayIDs[0]}}},
+			F:     expectIDsInOrder(pathwaysSel, []int{pathwayIDs[0], pathwayIDs[2]}),
 		},
 		{
-			name:  "pathways after first and by ids",
-			query: pathwaysQuery,
-			vars:  hw{"sha1": wmataSha1, "after": pathwayIDs[0], "where": hw{"ids": []int{pathwayIDs[0], pathwayIDs[2]}}},
-			f:     expectIDsInOrder(pathwaysSel, []int{pathwayIDs[2]}),
+			Name:  "pathways after first and by ids",
+			Query: pathwaysQuery,
+			Vars:  hw{"sha1": wmataSha1, "after": pathwayIDs[0], "where": hw{"ids": []int{pathwayIDs[0], pathwayIDs[2]}}},
+			F:     expectIDsInOrder(pathwaysSel, []int{pathwayIDs[2]}),
 		},
 		{
-			name:  "levels no cursor",
-			query: levelsQuery,
-			vars:  hw{"sha1": wmataSha1},
-			f:     expectIDsInOrder(levelsSel, levelIDs),
+			Name:  "levels no cursor",
+			Query: levelsQuery,
+			Vars:  hw{"sha1": wmataSha1},
+			F:     expectIDsInOrder(levelsSel, levelIDs),
 		},
 		{
-			name:  "levels after first",
-			query: levelsQuery,
-			vars:  hw{"sha1": wmataSha1, "after": levelIDs[0]},
-			f:     expectIDsInOrder(levelsSel, levelIDs[1:]),
+			Name:  "levels after first",
+			Query: levelsQuery,
+			Vars:  hw{"sha1": wmataSha1, "after": levelIDs[0]},
+			F:     expectIDsInOrder(levelsSel, levelIDs[1:]),
 		},
 		{
-			name:  "levels by ids",
-			query: levelsQuery,
-			vars:  hw{"sha1": wmataSha1, "where": hw{"ids": []int{levelIDs[2], levelIDs[0]}}},
-			f:     expectIDsInOrder(levelsSel, []int{levelIDs[0], levelIDs[2]}),
+			Name:  "levels by ids",
+			Query: levelsQuery,
+			Vars:  hw{"sha1": wmataSha1, "where": hw{"ids": []int{levelIDs[2], levelIDs[0]}}},
+			F:     expectIDsInOrder(levelsSel, []int{levelIDs[0], levelIDs[2]}),
 		},
 		{
-			name:  "levels after first and by ids",
-			query: levelsQuery,
-			vars:  hw{"sha1": wmataSha1, "after": levelIDs[0], "where": hw{"ids": []int{levelIDs[0], levelIDs[2]}}},
-			f:     expectIDsInOrder(levelsSel, []int{levelIDs[2]}),
+			Name:  "levels after first and by ids",
+			Query: levelsQuery,
+			Vars:  hw{"sha1": wmataSha1, "after": levelIDs[0], "where": hw{"ids": []int{levelIDs[0], levelIDs[2]}}},
+			F:     expectIDsInOrder(levelsSel, []int{levelIDs[2]}),
 		},
 	}
 	return testcases

@@ -10,16 +10,16 @@ func queryResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	q := `query{me{id name email external_data roles}}`
 	testcases := []testcase{
 		{
-			name:         "basic",
-			query:        q,
-			selector:     "me.id",
-			selectExpect: []string{"testuser"},
+			Name:         "basic",
+			Query:        q,
+			Selector:     "me.id",
+			SelectExpect: []string{"testuser"},
 		},
 		{
-			name:         "basic",
-			query:        q,
-			selector:     "me.roles",
-			selectExpect: []string{"testrole"},
+			Name:         "basic",
+			Query:        q,
+			Selector:     "me.roles",
+			SelectExpect: []string{"testrole"},
 		},
 	}
 	return testcases

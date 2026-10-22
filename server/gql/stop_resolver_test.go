@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,12 @@ import (
 
 func TestStopResolver(t *testing.T) {
 	c, cfg := newTestClient(t)
-	queryTestcases(t, c, stopResolverTestcases(t, cfg))
+	gqlcase.QueryTestcases(t, c, stopResolverTestcases(t, cfg))
+}
+
+func BenchmarkStopResolver(b *testing.B) {
+	c, cfg := newTestClient(b)
+	gqlcase.BenchmarkTestcases(b, c, stopResolverTestcases(b, cfg))
 }
 
 // Onestop ID lookups read the materialized table's own onestop_id when the server
@@ -25,70 +31,70 @@ func TestStopResolver(t *testing.T) {
 func TestStopResolver_OnestopID_Materialized(t *testing.T) {
 	testcases := []testcase{
 		{
-			name:         "where onestop_id",
-			query:        `query{stops(where:{onestop_id:"s-9q9k658fd1-sanjosediridoncaltrain"}) {stop_id} }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"70262"},
+			Name:         "where onestop_id",
+			Query:        `query{stops(where:{onestop_id:"s-9q9k658fd1-sanjosediridoncaltrain"}) {stop_id} }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"70262"},
 		},
 		{
-			name:         "where onestop_ids",
-			query:        `query{stops(where:{onestop_ids:["s-9q9k658fd1-sanjosediridoncaltrain","s-9q9p1wxf72-macarthur"]}) {stop_id} }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"70262", "MCAR", "MCAR_S"},
+			Name:         "where onestop_ids",
+			Query:        `query{stops(where:{onestop_ids:["s-9q9k658fd1-sanjosediridoncaltrain","s-9q9p1wxf72-macarthur"]}) {stop_id} }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"70262", "MCAR", "MCAR_S"},
 		},
 		{
 			// Two records share MacArthur's onestop_id.
-			name:         "selected onestop_id",
-			query:        `query{stops(where:{onestop_id:"s-9q9p1wxf72-macarthur"}) {stop_id onestop_id} }`,
-			selector:     "stops.#.onestop_id",
-			selectExpect: []string{"s-9q9p1wxf72-macarthur", "s-9q9p1wxf72-macarthur"},
+			Name:         "selected onestop_id",
+			Query:        `query{stops(where:{onestop_id:"s-9q9p1wxf72-macarthur"}) {stop_id onestop_id} }`,
+			Selector:     "stops.#.onestop_id",
+			SelectExpect: []string{"s-9q9p1wxf72-macarthur", "s-9q9p1wxf72-macarthur"},
 		},
 		{
-			name:         "unknown onestop_id",
-			query:        `query{stops(where:{onestop_id:"s-0000000000-nowhere"}) {stop_id} }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
+			Name:         "unknown onestop_id",
+			Query:        `query{stops(where:{onestop_id:"s-0000000000-nowhere"}) {stop_id} }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
 		},
 		// With previous IDs allowed, a current ID is answered without the history,
 		// and anything else by it. Fruitvale's onestop_id changed between versions;
 		// either way the stop comes back with its current one.
 		{
-			name:         "previous allowed, current id",
-			query:        `query{stops(where:{onestop_id:"s-9q9nfsxn67-fruitvale", allow_previous_onestop_ids:true}) {stop_id} }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"FTVL"},
+			Name:         "previous allowed, current id",
+			Query:        `query{stops(where:{onestop_id:"s-9q9nfsxn67-fruitvale", allow_previous_onestop_ids:true}) {stop_id} }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"FTVL"},
 		},
 		{
-			name:  "previous allowed, previous id",
-			query: `query{stops(where:{onestop_id:"s-9q9nfswzpg-fruitvale", allow_previous_onestop_ids:true}) {stop_id onestop_id} }`,
-			sel: []testcaseSelector{
-				{selector: "stops.#.stop_id", expect: []string{"FTVL"}},
-				{selector: "stops.#.onestop_id", expect: []string{"s-9q9nfsxn67-fruitvale"}},
+			Name:  "previous allowed, previous id",
+			Query: `query{stops(where:{onestop_id:"s-9q9nfswzpg-fruitvale", allow_previous_onestop_ids:true}) {stop_id onestop_id} }`,
+			Sel: []testcaseSelector{
+				{Selector: "stops.#.stop_id", Expect: []string{"FTVL"}},
+				{Selector: "stops.#.onestop_id", Expect: []string{"s-9q9nfsxn67-fruitvale"}},
 			},
 		},
 		{
-			name:         "previous allowed, current and previous ids",
-			query:        `query{stops(where:{onestop_ids:["s-9q9k658fd1-sanjosediridoncaltrain","s-9q9nfswzpg-fruitvale"], allow_previous_onestop_ids:true}) {stop_id} }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"70262", "FTVL"},
+			Name:         "previous allowed, current and previous ids",
+			Query:        `query{stops(where:{onestop_ids:["s-9q9k658fd1-sanjosediridoncaltrain","s-9q9nfswzpg-fruitvale"], allow_previous_onestop_ids:true}) {stop_id} }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"70262", "FTVL"},
 		},
 		{
-			name:         "previous allowed, current and previous ids of one stop",
-			query:        `query{stops(where:{onestop_ids:["s-9q9nfsxn67-fruitvale","s-9q9nfswzpg-fruitvale"], allow_previous_onestop_ids:true}) {stop_id} }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"FTVL"},
+			Name:         "previous allowed, current and previous ids of one stop",
+			Query:        `query{stops(where:{onestop_ids:["s-9q9nfsxn67-fruitvale","s-9q9nfswzpg-fruitvale"], allow_previous_onestop_ids:true}) {stop_id} }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"FTVL"},
 		},
 		{
-			name:         "previous allowed, unknown id",
-			query:        `query{stops(where:{onestop_id:"s-0000000000-nowhere", allow_previous_onestop_ids:true}) {stop_id} }`,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{},
+			Name:         "previous allowed, unknown id",
+			Query:        `query{stops(where:{onestop_id:"s-0000000000-nowhere", allow_previous_onestop_ids:true}) {stop_id} }`,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{},
 		},
 	}
 	for _, materialized := range []bool{false, true} {
 		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
 			c, _ := newTestClientWithOpts(t, testconfig.Options{UseMaterialized: materialized})
-			queryTestcases(t, c, testcases)
+			gqlcase.QueryTestcases(t, c, testcases)
 		})
 	}
 }
@@ -105,19 +111,19 @@ func TestStopResolver_OnestopID_PreviousCursor(t *testing.T) {
 		t.Fatalf("got %d stops for %s, expected 2", len(ents), osid)
 	}
 	query := `query($after:Int){stops(after:$after, limit:1, where:{onestop_id:"s-9q9p1wxf72-macarthur", allow_previous_onestop_ids:true}) {stop_id} }`
-	queryTestcases(t, c, []testcase{
+	gqlcase.QueryTestcases(t, c, []testcase{
 		{
-			name:         "first page",
-			query:        query,
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{ents[0].StopID.Val},
+			Name:         "first page",
+			Query:        query,
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{ents[0].StopID.Val},
 		},
 		{
-			name:         "second page",
-			query:        query,
-			vars:         hw{"after": ents[0].ID},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{ents[1].StopID.Val},
+			Name:         "second page",
+			Query:        query,
+			Vars:         hw{"after": ents[0].ID},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{ents[1].StopID.Val},
 		},
 	})
 }
@@ -129,18 +135,18 @@ func TestStopResolver_OnestopID_PreviousFiltered(t *testing.T) {
 	sanJose := "s-9q9k658fd1-sanjosediridoncaltrain"
 	testcases := []testcase{
 		{
-			name:         "current match",
-			query:        `query($osid:String!){stops(where:{onestop_id:$osid, allow_previous_onestop_ids:true}) {stop_id} }`,
-			vars:         hw{"osid": sanJose},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"70262"},
+			Name:         "current match",
+			Query:        `query($osid:String!){stops(where:{onestop_id:$osid, allow_previous_onestop_ids:true}) {stop_id} }`,
+			Vars:         hw{"osid": sanJose},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"70262"},
 		},
 		{
-			name:         "current match filtered out",
-			query:        `query($osid:String!){stops(where:{onestop_id:$osid, allow_previous_onestop_ids:true, feed_onestop_id:"BA"}) {stop_id} }`,
-			vars:         hw{"osid": sanJose},
-			selector:     "stops.#.stop_id",
-			selectExpect: []string{"FTVL"},
+			Name:         "current match filtered out",
+			Query:        `query($osid:String!){stops(where:{onestop_id:$osid, allow_previous_onestop_ids:true, feed_onestop_id:"BA"}) {stop_id} }`,
+			Vars:         hw{"osid": sanJose},
+			Selector:     "stops.#.stop_id",
+			SelectExpect: []string{"FTVL"},
 		},
 	}
 	for _, materialized := range []bool{false, true} {
@@ -157,7 +163,7 @@ func TestStopResolver_OnestopID_PreviousFiltered(t *testing.T) {
 					t.Fatal(err)
 				}
 				srv := model.AddConfigAndPerms(cfg, NewDefaultHandler())
-				queryTestcases(t, client.New(usercheck.UserDefaultMiddleware("test")(srv)), testcases)
+				gqlcase.QueryTestcases(t, client.New(usercheck.UserDefaultMiddleware("test")(srv)), testcases)
 			})
 		})
 	}
@@ -165,12 +171,12 @@ func TestStopResolver_OnestopID_PreviousFiltered(t *testing.T) {
 
 func TestStopResolverLocation(t *testing.T) {
 	c, cfg := newTestClient(t)
-	queryTestcases(t, c, stopResolverLocationTestcases(t, cfg))
+	gqlcase.QueryTestcases(t, c, stopResolverLocationTestcases(t, cfg))
 }
 
 func TestStopResolver_PreviousOnestopID(t *testing.T) {
 	c, cfg := newTestClient(t)
-	queryTestcases(t, c, stopResolverPreviousOnestopIDTestcases(t, cfg))
+	gqlcase.QueryTestcases(t, c, stopResolverPreviousOnestopIDTestcases(t, cfg))
 }
 
 func TestStopResolver_AdminCache(t *testing.T) {
@@ -188,42 +194,42 @@ func TestStopResolver_AdminCache(t *testing.T) {
 	q := `query($feed_version_sha1:String!, $stop_id:String!) { stops(where:{stop_id:$stop_id, feed_version_sha1:$feed_version_sha1}) { place { adm0_name adm1_name adm0_iso adm1_iso } } }`
 	tcs := []testcase{
 		{
-			name:         "usa",
-			query:        q,
-			vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			selector:     "stops.#.place.adm0_name",
-			selectExpect: []string{"United States of America"},
+			Name:         "usa",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm0_name",
+			SelectExpect: []string{"United States of America"},
 		},
 		{
-			name:         "california",
-			query:        q,
-			vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			selector:     "stops.#.place.adm1_name",
-			selectExpect: []string{"California"},
+			Name:         "california",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm1_name",
+			SelectExpect: []string{"California"},
 		},
 		{
-			name:         "adm0_iso",
-			query:        q,
-			vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			selector:     "stops.#.place.adm0_iso",
-			selectExpect: []string{"US"},
+			Name:         "adm0_iso",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm0_iso",
+			SelectExpect: []string{"US"},
 		},
 		{
-			name:         "adm1_iso",
-			query:        q,
-			vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			selector:     "stops.#.place.adm1_iso",
-			selectExpect: []string{"US-CA"},
+			Name:         "adm1_iso",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm1_iso",
+			SelectExpect: []string{"US-CA"},
 		},
 		{
-			name:         "florida",
-			query:        q,
-			vars:         hw{"feed_version_sha1": "c969427f56d3a645195dd8365cde6d7feae7e99b", "stop_id": "8032"},
-			selector:     "stops.#.place.adm1_name",
-			selectExpect: []string{"Florida"},
+			Name:         "florida",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "c969427f56d3a645195dd8365cde6d7feae7e99b", "stop_id": "8032"},
+			Selector:     "stops.#.place.adm1_name",
+			SelectExpect: []string{"Florida"},
 		},
 	}
-	queryTestcases(t, c, tcs)
+	gqlcase.QueryTestcases(t, c, tcs)
 }
 
 func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
@@ -235,8 +241,8 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		// census_geographies: see per-stop buffer cases below
 		// stop external references
 		{
-			name: "external reference: working",
-			query: `query {
+			Name: "external reference: working",
+			Query: `query {
 				stops(where:{feed_onestop_id: "BA", stop_id:"FTVL"}) {
 				  external_reference {
 					target_stop_id
@@ -247,15 +253,15 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 				  }
 				}
 			  }`,
-			f: func(t *testing.T, jj string) {
+			F: func(t *testing.T, jj string) {
 				assert.EqualValues(t, "CT", gjson.Get(jj, "stops.0.external_reference.target_feed_onestop_id").String())
 				assert.EqualValues(t, "70041", gjson.Get(jj, "stops.0.external_reference.target_stop_id").String())
 				assert.EqualValues(t, "70041", gjson.Get(jj, "stops.0.external_reference.target_active_stop.stop_id").String())
 			},
 		},
 		{
-			name: "external reference: broken",
-			query: `query {
+			Name: "external reference: broken",
+			Query: `query {
 				stops(where:{feed_onestop_id: "BA", stop_id:"POWL"}) {
 				  external_reference {
 					target_stop_id
@@ -266,7 +272,7 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 				  }
 				}
 			  }`,
-			f: func(t *testing.T, jj string) {
+			F: func(t *testing.T, jj string) {
 				assert.EqualValues(t, "CT", gjson.Get(jj, "stops.0.external_reference.target_feed_onestop_id").String())
 				assert.EqualValues(t, "missing", gjson.Get(jj, "stops.0.external_reference.target_stop_id").String())
 				assert.EqualValues(t, nil, gjson.Get(jj, "stops.0.external_reference.target_active_stop").Value())
@@ -274,8 +280,8 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		},
 		// stop observations
 		{
-			name: "observations: found",
-			query: `query($fvid:Int!,$day:Date!) {
+			Name: "observations: found",
+			Query: `query($fvid:Int!,$day:Date!) {
 				stops(where:{feed_onestop_id: "BA", stop_id:"FTVL"}) {
 					observations(where:{feed_version_id:$fvid, source:"TripUpdate", trip_start_date:$day}) {
 						trip_id
@@ -285,8 +291,8 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			  }`,
-			vars: hw{"fvid": stopObsFvid, "day": "2023-03-09"},
-			f: func(t *testing.T, jj string) {
+			Vars: hw{"fvid": stopObsFvid, "day": "2023-03-09"},
+			F: func(t *testing.T, jj string) {
 				assert.EqualValues(t, "test", gjson.Get(jj, "stops.0.observations.0.trip_id").String())
 				assert.EqualValues(t, "03", gjson.Get(jj, "stops.0.observations.0.route_id").String())
 				assert.EqualValues(t, "10:00:00", gjson.Get(jj, "stops.0.observations.0.observed_arrival_time").String())
@@ -295,8 +301,8 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
-			name: "observations: none",
-			query: `query($fvid:Int!,$day:Date!) {
+			Name: "observations: none",
+			Query: `query($fvid:Int!,$day:Date!) {
 				stops(where:{feed_onestop_id: "BA", stop_id:"FTVL"}) {
 					observations(where:{feed_version_id:$fvid, source:"TripUpdate", trip_start_date:$day}) {
 						trip_id
@@ -306,22 +312,22 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					}
 				}
 			  }`,
-			vars:         hw{"fvid": stopObsFvid, "day": "2023-03-08"},
-			selector:     "stops.0.observations.#.trip_id",
-			selectExpect: []string{},
+			Vars:         hw{"fvid": stopObsFvid, "day": "2023-03-08"},
+			Selector:     "stops.0.observations.#.trip_id",
+			SelectExpect: []string{},
 		},
 		// census_geographies (per-stop buffer attribution)
 		{
-			name:         "census_geographies tract by stop buffer",
-			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
-			selector:     "stops.0.census_geographies.#.geoid",
-			selectExpect: []string{"1400000US06001406100"},
+			Name:         "census_geographies tract by stop buffer",
+			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			Selector:     "stops.0.census_geographies.#.geoid",
+			SelectExpect: []string{"1400000US06001406100"},
 		},
 		{
-			name:         "census_geographies county by stop buffer",
-			query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"MCAR"}) { stop_id census_geographies(where:{layer:"county", radius:1000.0}) { geoid } } }`,
-			selector:     "stops.0.census_geographies.#.geoid",
-			selectExpect: []string{"0500000US06001"},
+			Name:         "census_geographies county by stop buffer",
+			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"MCAR"}) { stop_id census_geographies(where:{layer:"county", radius:1000.0}) { geoid } } }`,
+			Selector:     "stops.0.census_geographies.#.geoid",
+			SelectExpect: []string{"0500000US06001"},
 		},
 		{
 			// Two stops resolved in one request batch into a single
@@ -329,19 +335,19 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			// geographies (including the tracts shared by both buffers).
 			// Before per-stop attribution every row carried match_entity_id=0
 			// and both stops resolved to empty lists.
-			name: "census_geographies per-stop attribution across batch",
-			query: `query{
+			Name: "census_geographies per-stop attribution across batch",
+			Query: `query{
 				s12: stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
 				s19: stops(where:{feed_onestop_id:"BA", stop_id:"19TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
 			}`,
-			sel: []testcaseSelector{
+			Sel: []testcaseSelector{
 				{
-					selector: "s12.0.census_geographies.#.geoid",
-					expect:   []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"},
+					Selector: "s12.0.census_geographies.#.geoid",
+					Expect:   []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"},
 				},
 				{
-					selector: "s19.0.census_geographies.#.geoid",
-					expect:   []string{"1400000US06001402801", "1400000US06001402900"},
+					Selector: "s19.0.census_geographies.#.geoid",
+					Expect:   []string{"1400000US06001402801", "1400000US06001402900"},
 				},
 			},
 		},
@@ -358,11 +364,11 @@ func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
 	testcases := []testcase{
 		// within geography ids
 		{
-			name:         "where within geography ids 1",
-			query:        `query($geographyIds:[Int!]){stops(where:{location:{geography_ids:$geographyIds}}){id stop_id}}`,
-			selector:     "stops.#.stop_id",
-			vars:         hw{"geographyIds": []int{geographyId}},
-			selectExpect: []string{"19TH", "19TH_N"},
+			Name:         "where within geography ids 1",
+			Query:        `query($geographyIds:[Int!]){stops(where:{location:{geography_ids:$geographyIds}}){id stop_id}}`,
+			Selector:     "stops.#.stop_id",
+			Vars:         hw{"geographyIds": []int{geographyId}},
+			SelectExpect: []string{"19TH", "19TH_N"},
 		},
 	}
 	return testcases
@@ -374,32 +380,32 @@ func stopResolverPreviousOnestopIDTestcases(t testing.TB, cfg model.Config) []te
 	_ = cfg
 	testcases := []testcase{
 		{
-			name:         "default",
-			query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
-			vars:         hw{"osid": "s-9q9nfsxn67-fruitvale", "previous": false},
-			selector:     "stops.#.onestop_id",
-			selectExpect: []string{"s-9q9nfsxn67-fruitvale"},
+			Name:         "default",
+			Query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
+			Vars:         hw{"osid": "s-9q9nfsxn67-fruitvale", "previous": false},
+			Selector:     "stops.#.onestop_id",
+			SelectExpect: []string{"s-9q9nfsxn67-fruitvale"},
 		},
 		{
-			name:         "old id no result",
-			query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
-			vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": false},
-			selector:     "stops.#.onestop_id",
-			selectExpect: []string{},
+			Name:         "old id no result",
+			Query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
+			Vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": false},
+			Selector:     "stops.#.onestop_id",
+			SelectExpect: []string{},
 		},
 		{
-			name:         "old id no specify fv",
-			query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous, feed_version_sha1:"dd7aca4a8e4c90908fd3603c097fabee75fea907"}) { stop_id onestop_id }}`,
-			vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": false},
-			selector:     "stops.#.onestop_id",
-			selectExpect: []string{"s-9q9nfswzpg-fruitvale"},
+			Name:         "old id no specify fv",
+			Query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous, feed_version_sha1:"dd7aca4a8e4c90908fd3603c097fabee75fea907"}) { stop_id onestop_id }}`,
+			Vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": false},
+			Selector:     "stops.#.onestop_id",
+			SelectExpect: []string{"s-9q9nfswzpg-fruitvale"},
 		},
 		{
-			name:         "use previous",
-			query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
-			vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": true},
-			selector:     "stops.#.onestop_id",
-			selectExpect: []string{"s-9q9nfsxn67-fruitvale"},
+			Name:         "use previous",
+			Query:        `query($osid:String!, $previous:Boolean!) { stops(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { stop_id onestop_id }}`,
+			Vars:         hw{"osid": "s-9q9nfswzpg-fruitvale", "previous": true},
+			Selector:     "stops.#.onestop_id",
+			SelectExpect: []string{"s-9q9nfsxn67-fruitvale"},
 		},
 	}
 	return testcases

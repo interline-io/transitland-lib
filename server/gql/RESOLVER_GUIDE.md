@@ -319,8 +319,8 @@ import (
 func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
     testcases := []testcase{
         {
-            name: "basic pathway query",
-            query: `query($sha1: String!) {
+            Name: "basic pathway query",
+            Query: `query($sha1: String!) {
                 feed_versions(where: {sha1: $sha1}) {
                     pathways(limit: 1) {
                         pathway_id
@@ -329,9 +329,9 @@ func pathwayResolverTestcases(t testing.TB, cfg model.Config) []testcase {
                     }
                 }
             }`,
-            vars:              hw{"sha1": "..."},
-            selector:          "feed_versions.0.pathways.#.pathway_id",
-            selectExpectCount: 1,
+            Vars:              hw{"sha1": "..."},
+            Selector:          "feed_versions.0.pathways.#.pathway_id",
+            SelectExpectCount: 1,
         },
     }
     return testcases

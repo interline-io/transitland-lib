@@ -1,7 +1,6 @@
 package gql
 
 import (
-	"encoding/json"
 	"os"
 	"testing"
 
@@ -10,48 +9,19 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/tidwall/gjson"
 )
 
 const DEFAULT_WHEN = "2022-09-01T00:00:00Z"
 
 type hw = map[string]interface{}
 
-type testcaseSelector struct {
-	selector          string
-	expect            []string
-	expectUnique      []string
-	expectContains    []string
-	expectCount       int
-	expectUniqueCount int
-}
+type testcaseSelector = gqlcase.TestcaseSelector
 
-// testcase defines a GraphQL test case. See RESOLVER_TEST_GUIDE.md for full documentation.
-type testcase struct {
-	name        string
-	query       string
-	vars        hw
-	expect      string
-	user        string
-	expectError bool
-	// expectErrorContains expects an error containing this text
-	expectErrorContains string
-	// sel allows multiple selector checks against the same query result
-	sel []testcaseSelector
-	// f is a custom test function for complex assertions
-	f func(*testing.T, string)
-	// Convenience fields: these wrap to sel with a single testcaseSelector.
-	// Use these for simple single-selector tests; use sel[] for multiple checks.
-	selector                string   // convenience: wraps to sel[].selector
-	selectExpect            []string // convenience: wraps to sel[].expect
-	selectExpectUnique      []string // convenience: wraps to sel[].expectUnique
-	selectExpectContains    []string // convenience: wraps to sel[].expectContains
-	selectExpectCount       int      // convenience: wraps to sel[].expectCount
-	selectExpectUniqueCount int      // convenience: wraps to sel[].expectUniqueCount
-}
+type testcase = gqlcase.Testcase
 
 func TestMain(m *testing.M) {
 	// Increase default limit for testing purposes
@@ -82,118 +52,6 @@ func newTestClientWithOpts(t testing.TB, opts testconfig.Options) (*client.Clien
 		return authn.NewCtxUser("testuser", "", "").WithRoles("testrole")
 	})
 	return client.New(srvMiddleware(graphqlServer)), cfg
-}
-
-func toJson(m map[string]interface{}) string {
-	rr, _ := json.Marshal(&m)
-	return string(rr)
-}
-
-func queryTestcase(t *testing.T, c *client.Client, tc testcase) {
-	tested := false
-	var resp map[string]interface{}
-	opts := []client.Option{}
-	for k, v := range tc.vars {
-		opts = append(opts, client.Var(k, v))
-	}
-	expectError := tc.expectError || tc.expectErrorContains != ""
-	if err := c.Post(tc.query, &resp, opts...); err != nil {
-		if expectError {
-			tested = true // expectError counts as a test
-			if tc.expectErrorContains != "" {
-				assert.ErrorContains(t, err, tc.expectErrorContains)
-			}
-		} else {
-			t.Error(err)
-			return
-		}
-	} else if expectError {
-		t.Error("expected error")
-	}
-	jj := toJson(resp)
-	if tc.expect != "" {
-		tested = true
-		if !assert.JSONEq(t, tc.expect, jj) {
-			t.Errorf("got %s -- expect %s\n", jj, tc.expect)
-		}
-	}
-	if tc.f != nil {
-		tested = true
-		tc.f(t, jj)
-	}
-	if tc.selector != "" {
-		tc.sel = append(tc.sel, testcaseSelector{
-			selector:          tc.selector,
-			expect:            tc.selectExpect,
-			expectCount:       tc.selectExpectCount,
-			expectUnique:      tc.selectExpectUnique,
-			expectContains:    tc.selectExpectContains,
-			expectUniqueCount: tc.selectExpectUniqueCount,
-		})
-	}
-	for _, sel := range tc.sel {
-		a := []string{}
-		for _, v := range gjson.Get(jj, sel.selector).Array() {
-			a = append(a, v.String())
-		}
-		if sel.expectCount != 0 {
-			tested = true
-			if len(a) != sel.expectCount {
-				t.Errorf("selector returned %d elements, expected %d", len(a), sel.expectCount)
-			}
-		}
-		if sel.expectUniqueCount != 0 {
-			tested = true
-			mm := map[string]int{}
-			for _, v := range a {
-				mm[v] += 1
-			}
-			if len(mm) != sel.expectUniqueCount {
-				t.Errorf("selector returned %d unique elements, expected %d", len(mm), sel.expectUniqueCount)
-			}
-		}
-		if sel.expectUnique != nil {
-			tested = true
-			mm := map[string]int{}
-			for _, v := range a {
-				mm[v] += 1
-			}
-			var keys []string
-			for k := range mm {
-				keys = append(keys, k)
-			}
-			assert.ElementsMatch(t, sel.expectUnique, keys)
-		}
-		if sel.expect != nil {
-			tested = true
-			if !assert.ElementsMatch(t, sel.expect, a) {
-				t.Errorf("got %#v -- expect %#v\n\n", a, sel.expect)
-			}
-		}
-		if sel.expectContains != nil {
-			tested = true
-			mm := map[string]bool{}
-			for _, v := range a {
-				mm[v] = true
-			}
-			for _, v := range sel.expectContains {
-				if !mm[v] {
-					t.Errorf("expected result to contain %q", v)
-				}
-			}
-		}
-	}
-	if !tested {
-		t.Errorf("no test performed, check test case")
-	}
-}
-
-func queryTestcases(t *testing.T, c *client.Client, tcs []testcase) {
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			queryTestcase(t, c, tc)
-		})
-	}
 }
 
 func Test_checkBbox(t *testing.T) {
@@ -235,14 +93,6 @@ func Test_checkBbox(t *testing.T) {
 
 		})
 	}
-}
-
-func astr(a []gjson.Result) []string {
-	var ret []string
-	for _, b := range a {
-		ret = append(ret, b.String())
-	}
-	return ret
 }
 
 // RT helpers
@@ -403,7 +253,7 @@ func testRt(t *testing.T, tc rtTestCase) {
 			t.Error(err)
 			return
 		}
-		jj := toJson(resp)
+		jj := gqlcase.ToJSON(resp)
 		if tc.cb != nil {
 			tc.cb(t, jj)
 		}

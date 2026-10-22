@@ -9,6 +9,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tt"
@@ -21,30 +22,30 @@ func TestRouteResolver(t *testing.T) {
 	vars := hw{"route_id": "03"}
 	testcases := []testcase{
 		{
-			name:         "route_stop_buffer stop_points 10m",
-			query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
-			vars:         vars,
-			selector:     "routes.0.route_stop_buffer.stop_points.type",
-			selectExpect: []string{"MultiPoint"},
+			Name:         "route_stop_buffer stop_points 10m",
+			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
+			Vars:         vars,
+			Selector:     "routes.0.route_stop_buffer.stop_points.type",
+			SelectExpect: []string{"MultiPoint"},
 		},
 		{
-			name:         "route_stop_buffer stop_buffer 10m",
-			query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
-			vars:         vars,
-			selector:     "routes.0.route_stop_buffer.stop_buffer.type",
-			selectExpect: []string{"MultiPolygon"},
+			Name:         "route_stop_buffer stop_buffer 10m",
+			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
+			Vars:         vars,
+			Selector:     "routes.0.route_stop_buffer.stop_buffer.type",
+			SelectExpect: []string{"MultiPolygon"},
 		},
 		{
-			name:         "route_stop_buffer stop_convexhull 10m",
-			query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
-			vars:         vars,
-			selector:     "routes.0.route_stop_buffer.stop_convexhull.type",
-			selectExpect: []string{"Polygon"},
+			Name:         "route_stop_buffer stop_convexhull 10m",
+			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
+			Vars:         vars,
+			Selector:     "routes.0.route_stop_buffer.stop_convexhull.type",
+			SelectExpect: []string{"Polygon"},
 		},
 		// route attributes
 		{
-			name: "route attributes",
-			query: `{
+			Name: "route attributes",
+			Query: `{
 						routes(where: {feed_onestop_id: "BA", route_id: "01"}) {
 						  route_id
 						  route_attribute {
@@ -54,7 +55,7 @@ func TestRouteResolver(t *testing.T) {
 						  }
 						}
 					  }`,
-			f: func(t *testing.T, jj string) {
+			F: func(t *testing.T, jj string) {
 				assert.EqualValues(t, 2, gjson.Get(jj, "routes.0.route_attribute.category").Int())
 				assert.EqualValues(t, 201, gjson.Get(jj, "routes.0.route_attribute.subcategory").Int())
 				assert.EqualValues(t, 1, gjson.Get(jj, "routes.0.route_attribute.running_way").Int())
@@ -62,68 +63,68 @@ func TestRouteResolver(t *testing.T) {
 		},
 	}
 	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }
 
 // As for stops: both ways of matching an onestop_id must agree.
 func TestRouteResolver_OnestopID_Materialized(t *testing.T) {
 	testcases := []testcase{
 		{
-			name:         "where onestop_id",
-			query:        `query {routes(where:{onestop_id:"r-9q9j-bullet"}) {route_id} }`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130"},
+			Name:         "where onestop_id",
+			Query:        `query {routes(where:{onestop_id:"r-9q9j-bullet"}) {route_id} }`,
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{"Bu-130"},
 		},
 		{
-			name:         "where onestop_ids",
-			query:        `query {routes(where:{onestop_ids:["r-9q9j-bullet","r-9q9n-warmsprings~southfremont~richmond"]}) {route_id} }`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130", "03"},
+			Name:         "where onestop_ids",
+			Query:        `query {routes(where:{onestop_ids:["r-9q9j-bullet","r-9q9n-warmsprings~southfremont~richmond"]}) {route_id} }`,
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{"Bu-130", "03"},
 		},
 		{
-			name:         "selected onestop_id",
-			query:        `query {routes(where:{onestop_id:"r-9q9j-bullet"}) {onestop_id} }`,
-			selector:     "routes.#.onestop_id",
-			selectExpect: []string{"r-9q9j-bullet"},
+			Name:         "selected onestop_id",
+			Query:        `query {routes(where:{onestop_id:"r-9q9j-bullet"}) {onestop_id} }`,
+			Selector:     "routes.#.onestop_id",
+			SelectExpect: []string{"r-9q9j-bullet"},
 		},
 		{
-			name:         "unknown onestop_id",
-			query:        `query {routes(where:{onestop_id:"r-0000-nowhere"}) {route_id} }`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{},
+			Name:         "unknown onestop_id",
+			Query:        `query {routes(where:{onestop_id:"r-0000-nowhere"}) {route_id} }`,
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{},
 		},
 		// As for stops. This route's onestop_id changed between versions.
 		{
-			name:         "previous allowed, current id",
-			query:        `query {routes(where:{onestop_id:"r-9q9-antioch~sfia~millbrae", allow_previous_onestop_ids:true}) {route_id} }`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01"},
+			Name:         "previous allowed, current id",
+			Query:        `query {routes(where:{onestop_id:"r-9q9-antioch~sfia~millbrae", allow_previous_onestop_ids:true}) {route_id} }`,
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{"01"},
 		},
 		{
-			name:  "previous allowed, previous id",
-			query: `query {routes(where:{onestop_id:"r-9q9-pittsburg~baypoint~sfia~millbrae", allow_previous_onestop_ids:true}) {route_id onestop_id} }`,
-			sel: []testcaseSelector{
-				{selector: "routes.#.route_id", expect: []string{"01"}},
-				{selector: "routes.#.onestop_id", expect: []string{"r-9q9-antioch~sfia~millbrae"}},
+			Name:  "previous allowed, previous id",
+			Query: `query {routes(where:{onestop_id:"r-9q9-pittsburg~baypoint~sfia~millbrae", allow_previous_onestop_ids:true}) {route_id onestop_id} }`,
+			Sel: []testcaseSelector{
+				{Selector: "routes.#.route_id", Expect: []string{"01"}},
+				{Selector: "routes.#.onestop_id", Expect: []string{"r-9q9-antioch~sfia~millbrae"}},
 			},
 		},
 		{
-			name:         "previous allowed, current and previous ids",
-			query:        `query {routes(where:{onestop_ids:["r-9q9j-bullet","r-9q9-pittsburg~baypoint~sfia~millbrae"], allow_previous_onestop_ids:true}) {route_id} }`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130", "01"},
+			Name:         "previous allowed, current and previous ids",
+			Query:        `query {routes(where:{onestop_ids:["r-9q9j-bullet","r-9q9-pittsburg~baypoint~sfia~millbrae"], allow_previous_onestop_ids:true}) {route_id} }`,
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{"Bu-130", "01"},
 		},
 		{
-			name:         "previous allowed, unknown id",
-			query:        `query {routes(where:{onestop_id:"r-0000-nowhere", allow_previous_onestop_ids:true}) {route_id} }`,
-			selector:     "routes.#.route_id",
-			selectExpect: []string{},
+			Name:         "previous allowed, unknown id",
+			Query:        `query {routes(where:{onestop_id:"r-0000-nowhere", allow_previous_onestop_ids:true}) {route_id} }`,
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{},
 		},
 	}
 	for _, materialized := range []bool{false, true} {
 		t.Run(fmt.Sprintf("UseMaterialized=%t", materialized), func(t *testing.T) {
 			c, _ := newTestClientWithOpts(t, testconfig.Options{UseMaterialized: materialized})
-			queryTestcases(t, c, testcases)
+			gqlcase.QueryTestcases(t, c, testcases)
 		})
 	}
 }
@@ -134,18 +135,18 @@ func TestRouteResolver_OnestopID_PreviousFiltered(t *testing.T) {
 	bullet := "r-9q9j-bullet"
 	testcases := []testcase{
 		{
-			name:         "current match",
-			query:        `query($osid:String!){routes(where:{onestop_id:$osid, allow_previous_onestop_ids:true}) {route_id} }`,
-			vars:         hw{"osid": bullet},
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"Bu-130"},
+			Name:         "current match",
+			Query:        `query($osid:String!){routes(where:{onestop_id:$osid, allow_previous_onestop_ids:true}) {route_id} }`,
+			Vars:         hw{"osid": bullet},
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{"Bu-130"},
 		},
 		{
-			name:         "current match filtered out",
-			query:        `query($osid:String!){routes(where:{onestop_id:$osid, allow_previous_onestop_ids:true, operator_onestop_id:"o-9q9-bayarearapidtransit"}) {route_id} }`,
-			vars:         hw{"osid": bullet},
-			selector:     "routes.#.route_id",
-			selectExpect: []string{"01"},
+			Name:         "current match filtered out",
+			Query:        `query($osid:String!){routes(where:{onestop_id:$osid, allow_previous_onestop_ids:true, operator_onestop_id:"o-9q9-bayarearapidtransit"}) {route_id} }`,
+			Vars:         hw{"osid": bullet},
+			Selector:     "routes.#.route_id",
+			SelectExpect: []string{"01"},
 		},
 	}
 	for _, materialized := range []bool{false, true} {
@@ -162,7 +163,7 @@ func TestRouteResolver_OnestopID_PreviousFiltered(t *testing.T) {
 					t.Fatal(err)
 				}
 				srv := model.AddConfigAndPerms(cfg, NewDefaultHandler())
-				queryTestcases(t, client.New(usercheck.UserDefaultMiddleware("test")(srv)), testcases)
+				gqlcase.QueryTestcases(t, client.New(usercheck.UserDefaultMiddleware("test")(srv)), testcases)
 			})
 		})
 	}
@@ -171,81 +172,81 @@ func TestRouteResolver_OnestopID_PreviousFiltered(t *testing.T) {
 func TestRouteResolver_PreviousOnestopID(t *testing.T) {
 	testcases := []testcase{
 		{
-			name:         "default",
-			query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { route_id onestop_id }}`,
-			vars:         hw{"osid": "r-9q9-antioch~sfia~millbrae", "previous": false},
-			selector:     "routes.#.onestop_id",
-			selectExpect: []string{"r-9q9-antioch~sfia~millbrae"},
+			Name:         "default",
+			Query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { route_id onestop_id }}`,
+			Vars:         hw{"osid": "r-9q9-antioch~sfia~millbrae", "previous": false},
+			Selector:     "routes.#.onestop_id",
+			SelectExpect: []string{"r-9q9-antioch~sfia~millbrae"},
 		},
 		{
-			name:         "old id no result",
-			query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { route_id onestop_id }}`,
-			vars:         hw{"osid": "r-9q9-pittsburg~baypoint~sfia~millbrae", "previous": false},
-			selector:     "routes.#.onestop_id",
-			selectExpect: []string{},
+			Name:         "old id no result",
+			Query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { route_id onestop_id }}`,
+			Vars:         hw{"osid": "r-9q9-pittsburg~baypoint~sfia~millbrae", "previous": false},
+			Selector:     "routes.#.onestop_id",
+			SelectExpect: []string{},
 		},
 		{
-			name:         "old id specify fv",
-			query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous, feed_version_sha1:"dd7aca4a8e4c90908fd3603c097fabee75fea907"}) { route_id onestop_id }}`,
-			vars:         hw{"osid": "r-9q9-pittsburg~baypoint~sfia~millbrae", "previous": false},
-			selector:     "routes.#.onestop_id",
-			selectExpect: []string{"r-9q9-pittsburg~baypoint~sfia~millbrae"},
+			Name:         "old id specify fv",
+			Query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous, feed_version_sha1:"dd7aca4a8e4c90908fd3603c097fabee75fea907"}) { route_id onestop_id }}`,
+			Vars:         hw{"osid": "r-9q9-pittsburg~baypoint~sfia~millbrae", "previous": false},
+			Selector:     "routes.#.onestop_id",
+			SelectExpect: []string{"r-9q9-pittsburg~baypoint~sfia~millbrae"},
 		},
 		{
-			name:         "use previous",
-			query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { route_id onestop_id }}`,
-			vars:         hw{"osid": "r-9q9-pittsburg~baypoint~sfia~millbrae", "previous": true},
-			selector:     "routes.#.onestop_id",
-			selectExpect: []string{"r-9q9-antioch~sfia~millbrae"},
+			Name:         "use previous",
+			Query:        `query($osid:String!, $previous:Boolean!) { routes(where:{onestop_id:$osid, allow_previous_onestop_ids:$previous}) { route_id onestop_id }}`,
+			Vars:         hw{"osid": "r-9q9-pittsburg~baypoint~sfia~millbrae", "previous": true},
+			Selector:     "routes.#.onestop_id",
+			SelectExpect: []string{"r-9q9-antioch~sfia~millbrae"},
 		},
 	}
 	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }
 
 func TestRouteResolver_Segments(t *testing.T) {
 	testcases := []testcase{
 		{
-			name:         "two segments",
-			query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id } }}`,
-			vars:         hw{"fsid": "HA", "route_id": "12"},
-			selector:     "routes.0.segments.#.way_id",
-			selectExpect: []string{"645693994", "90865590"},
+			Name:         "two segments",
+			Query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id } }}`,
+			Vars:         hw{"fsid": "HA", "route_id": "12"},
+			Selector:     "routes.0.segments.#.way_id",
+			SelectExpect: []string{"645693994", "90865590"},
 		},
 		{
-			name:         "single segment",
-			query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id } }}`,
-			vars:         hw{"fsid": "HA", "route_id": "19"},
-			selector:     "routes.0.segments.#.way_id",
-			selectExpect: []string{"645693994"},
+			Name:         "single segment",
+			Query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id } }}`,
+			Vars:         hw{"fsid": "HA", "route_id": "19"},
+			Selector:     "routes.0.segments.#.way_id",
+			SelectExpect: []string{"645693994"},
 		},
 		{
-			name:     "geometry",
-			query:    `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id geometry } }}`,
-			vars:     hw{"fsid": "HA", "route_id": "12"},
-			selector: "routes.0.segments.#.geometry",
-			selectExpect: []string{
+			Name:     "geometry",
+			Query:    `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id geometry } }}`,
+			Vars:     hw{"fsid": "HA", "route_id": "12"},
+			Selector: "routes.0.segments.#.geometry",
+			SelectExpect: []string{
 				`{"coordinates":[[-82.458062,27.954493],[-82.458044,27.954442]],"type":"LineString"}`,
 				`{"coordinates":[[-82.437785,28.058093],[-82.438163,28.058095],[-82.438219,28.058091],[-82.438277,28.058079],[-82.43833,28.058061],[-82.438375,28.058036],[-82.438415,28.058002],[-82.438449,28.057959],[-82.438476,28.057911],[-82.438493,28.05786],[-82.438501,28.057806],[-82.438504,28.057755],[-82.438504,28.057713],[-82.438504,28.057535]],"type":"LineString"}`,
 			},
 		},
 		{
-			name:         "segments to patterns multiple",
-			query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id segment_patterns { stop_pattern_id }} }}`,
-			vars:         hw{"fsid": "HA", "route_id": "12"},
-			selector:     "routes.0.segments.#.segment_patterns.#.stop_pattern_id",
-			selectExpect: []string{"[42,40]", "[42]"}, // multiple lookup results look like this
+			Name:         "segments to patterns multiple",
+			Query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id segment_patterns { stop_pattern_id }} }}`,
+			Vars:         hw{"fsid": "HA", "route_id": "12"},
+			Selector:     "routes.0.segments.#.segment_patterns.#.stop_pattern_id",
+			SelectExpect: []string{"[42,40]", "[42]"}, // multiple lookup results look like this
 		},
 		{
-			name:         "segments to patterns single",
-			query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id segment_patterns { stop_pattern_id }} }}`,
-			vars:         hw{"fsid": "HA", "route_id": "19"},
-			selector:     "routes.0.segments.#.segment_patterns.#.stop_pattern_id",
-			selectExpect: []string{"[42,40]"},
+			Name:         "segments to patterns single",
+			Query:        `query($fsid:String!, $route_id:String!) { routes(where:{route_id:$route_id, feed_onestop_id:$fsid}) { route_id segments { id way_id segment_patterns { stop_pattern_id }} }}`,
+			Vars:         hw{"fsid": "HA", "route_id": "19"},
+			Selector:     "routes.0.segments.#.segment_patterns.#.stop_pattern_id",
+			SelectExpect: []string{"[42,40]"},
 		},
 	}
 	c, _ := newTestClient(t)
-	queryTestcases(t, c, testcases)
+	gqlcase.QueryTestcases(t, c, testcases)
 }
 
 func TestRoutePatternGridEncodings(t *testing.T) {

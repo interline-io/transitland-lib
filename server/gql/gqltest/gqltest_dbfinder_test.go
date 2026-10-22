@@ -3,17 +3,16 @@ package gqltest
 import (
 	"os"
 	"testing"
+	"time"
 
-	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
-	"github.com/interline-io/transitland-lib/server/gql"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
 )
 
 func TestMain(m *testing.M) {
-	gql.RESOLVER_MAXLIMIT = 100_000
 	if a, ok := testutil.CheckTestDB(); !ok {
 		log.Print(a)
 		return
@@ -25,40 +24,42 @@ func TestDBFinder(t *testing.T) {
 	Run(t, dbfinderConfig(testconfig.Options{}), Spatial)
 }
 
-// UseMaterializedDepartures plans departure queries from a materialized CTE, and
-// the results must match those without it.
+// TestDBFinder_MaterializedDepartures runs the groups that query stop times on
+// a service day again, planned from the materialized departures CTE. Their
+// results must not change.
 func TestDBFinder_MaterializedDepartures(t *testing.T) {
-	Run(t, dbfinderConfig(testconfig.Options{UseMaterializedDepartures: true}), Spatial)
+	raiseMaxLimit(t)
+	newConfig := dbfinderConfig(testconfig.Options{UseMaterializedDepartures: true})
+	for _, g := range []caseGroup{
+		{name: "LocationResolver_StopTimes", cases: locationResolverStopTimesTestcases},
+		{name: "StopResolver", cases: stopResolverTestcases},
+		{name: "StopResolver_StopTimes", cases: stopResolverStopTimesTestcases},
+		{name: "StopResolver_StopTimes_Dates", cases: stopResolverStopTimesDatesTestcases},
+		{name: "StopResolver_StopTimes_DateWindows", cases: stopResolverStopTimesDateWindowsTestcases},
+	} {
+		runCaseGroup(t, newConfig, g)
+	}
+	for _, g := range []clockGroup{
+		{name: "StopResolver_StopTimes_RelativeDates", cases: stopResolverStopTimesRelativeDatesTestcases},
+		{name: "StopResolver_StopTimes_Next", cases: stopResolverStopTimesNextTestcases},
+		{name: "StopResolver_StopTimes_Frequencies", cases: stopResolverStopTimesFrequenciesTestcases},
+	} {
+		runClockGroup(t, newConfig, g)
+	}
+	runTestGroup(t, newConfig, testGroup{name: "StopResolver_ServiceWindowIsPerFeedVersion", run: stopResolverServiceWindowIsPerFeedVersionTest})
 }
 
 func BenchmarkDBFinder_StopResolver(b *testing.B) {
-	c, cfg := newTestClient(b, dbfinderConfig(testconfig.Options{}), "", nil)
-	benchmarkTestcases(b, c, stopResolverTestcases(b, cfg))
+	raiseMaxLimit(b)
+	c, cfg := newTestClient(b, dbfinderConfig(testconfig.Options{}), defaultWhen, nil)
+	gqlcase.BenchmarkTestcases(b, c, stopResolverTestcases(b, cfg))
 }
 
-// dbfinderConfig returns the test database's config with these options.
+// dbfinderConfig returns the test database's config with these options, with
+// its finders' clocks at now.
 func dbfinderConfig(opts testconfig.Options) NewConfig {
-	return func(t testing.TB) model.Config {
+	return func(t testing.TB, now time.Time) model.Config {
+		opts.WhenUtc = now.UTC().Format("2006-01-02T15:04:05Z")
 		return testconfig.Config(t, opts)
-	}
-}
-
-func benchmarkTestcases(b *testing.B, c *client.Client, tcs []testcase) {
-	for _, tc := range tcs {
-		b.Run(tc.name, func(b *testing.B) {
-			benchmarkTestcase(b, c, tc)
-		})
-	}
-}
-
-func benchmarkTestcase(b *testing.B, c *client.Client, tc testcase) {
-	opts := []client.Option{}
-	for k, v := range tc.vars {
-		opts = append(opts, client.Var(k, v))
-	}
-	var resp map[string]any
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		c.MustPost(tc.query, &resp, opts...)
 	}
 }

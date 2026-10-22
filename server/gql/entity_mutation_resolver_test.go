@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tt"
@@ -166,8 +167,8 @@ func TestStopUpdate_GraphQLBumpsUpdatedAt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		entID := int(gjson.Get(toJson(createResp), "stop_create.id").Int())
-		createdUpdatedAt := gjson.Get(toJson(createResp), "stop_create.updated_at").String()
+		entID := int(gjson.Get(gqlcase.ToJSON(createResp), "stop_create.id").Int())
+		createdUpdatedAt := gjson.Get(gqlcase.ToJSON(createResp), "stop_create.updated_at").String()
 		assert.NotEmpty(t, createdUpdatedAt, "updated_at should be returned on create")
 		// Sleep so the bump is observably later (microsecond precision in pg).
 		time.Sleep(2 * time.Millisecond)
@@ -183,7 +184,7 @@ func TestStopUpdate_GraphQLBumpsUpdatedAt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		updatedUpdatedAt := gjson.Get(toJson(updateResp), "stop_update.updated_at").String()
+		updatedUpdatedAt := gjson.Get(gqlcase.ToJSON(updateResp), "stop_update.updated_at").String()
 		assert.NotEmpty(t, updatedUpdatedAt, "updated_at should be returned on update")
 		assert.NotEqual(t, createdUpdatedAt, updatedUpdatedAt,
 			"updated_at returned via GraphQL should advance after stop_update (was %s, now %s)",
