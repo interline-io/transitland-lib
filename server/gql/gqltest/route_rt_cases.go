@@ -1,4 +1,4 @@
-package gql
+package gqltest
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func TestRouteRT_Alerts(t *testing.T) {
+func routeRTAlertsTest(t *testing.T, newConfig NewConfig) {
 	tripVars := rtTestStopQueryVars()
 	tripVars["include_route_trips"] = true
 	activeVars := rtTestStopQueryVars()
@@ -57,7 +57,7 @@ func TestRouteRT_Alerts(t *testing.T) {
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, tc)
+		testRt(t, newConfig, tc)
 	}
 }
 
@@ -66,7 +66,7 @@ func TestRouteRT_Alerts(t *testing.T) {
 // trips, but never one on another agency's route with the same route_id.
 // Stop.alerts and Trip.alerts return only the alerts on that stop or trip, and
 // none whose agency or route is another's.
-func TestRouteRT_AlertsAtStop(t *testing.T) {
+func routeRTAlertsAtStopTest(t *testing.T, newConfig NewConfig) {
 	rtfiles := []testconfig.RTJsonFile{
 		{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts-informed-entity.json"},
 	}
@@ -87,7 +87,7 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 	flagVars := rtTestStopQueryVars()
 	flagVars["include_route_modes"] = true
 	flagVars["include_route_trips"] = true
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "route at stop",
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
@@ -108,7 +108,7 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 			assert.ElementsMatch(t, []string{"Route 05 at Fruitvale", "Route 05 at 12th St"}, headers(tripAt(t, jj).Get("trip.route.alerts").Array()))
 		},
 	})
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "route at stop with modes and trips",
 		query:   rtTestStopQuery,
 		vars:    flagVars,
@@ -121,7 +121,7 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 	// BART's subway alert reaches route 05, and neither mode alert reaches BART.
 	modeVars := rtTestStopQueryVars()
 	modeVars["include_route_modes"] = true
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "route type",
 		query:   rtTestStopQuery,
 		vars:    modeVars,
@@ -138,7 +138,7 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 	idVars := rtTestStopQueryVars()
 	idVars["include_modes"] = true
 	idVars["include_route_trips"] = true
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "entity id",
 		query:   rtTestStopQuery,
 		vars:    idVars,
@@ -156,7 +156,7 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 			check("agency mode", st.Get("trip.route.agency.alerts.0"), "mode-subway")
 		},
 	})
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "informed entity",
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
@@ -182,7 +182,7 @@ func TestRouteRT_AlertsAtStop(t *testing.T) {
 // With include_trips, Route.alerts returns an alert on one of the route's trips,
 // but not one on another agency's; without it, none of them. Trip.alerts returns
 // only those naming the trip itself, and Stop.alerts none of them.
-func TestRouteRT_TripAlerts(t *testing.T) {
+func routeRTTripAlertsTest(t *testing.T, newConfig NewConfig) {
 	rtfiles := []testconfig.RTJsonFile{{Feed: "BA", Ftype: "realtime_alerts", Fname: "BA-alerts-trips.json"}}
 	headers := func(alerts []gjson.Result) []string {
 		var ret []string
@@ -203,7 +203,7 @@ func TestRouteRT_TripAlerts(t *testing.T) {
 	tripVars["include_route_trips"] = true
 	// The departures are the 2018-05-30 run, read that afternoon: the alerts
 	// name no start_date, so they are on the trips' current runs.
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "trip alerts",
 		query:   rtTestStopQuery,
 		vars:    tripVars,
@@ -225,7 +225,7 @@ func TestRouteRT_TripAlerts(t *testing.T) {
 			assert.Empty(t, headers(route05.Get("trip.route.agency.alerts").Array()))
 		},
 	})
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "trip alerts without include_trips",
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),

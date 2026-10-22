@@ -1,4 +1,4 @@
-package gql
+package gqltest
 
 import (
 	"testing"
@@ -65,7 +65,7 @@ func optionalInt(v gjson.Result) *int64 {
 	return &i
 }
 
-func TestTripRT_Runs_Departures(t *testing.T) {
+func tripRTRunsDeparturesTest(t *testing.T, newConfig NewConfig) {
 	// The departures at Fruitvale on a service date between two times, by default
 	// 4:00 to 4:05 pm.
 	window := func(serviceDate string, times ...int) hw {
@@ -86,8 +86,8 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: rtFixtureWhenUtc,
 			vars:    window("2018-05-30"),
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(60)), alerts: []string{"Run of May 30", "Current run"}, vehicle: "May 30 train"},
-				"2211533WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(120)), vehicle: "Undated train"},
+				"1031527WKDY": {serviceDate: "2018-05-30", delay: new(int64(60)), alerts: []string{"Run of May 30", "Current run"}, vehicle: "May 30 train"},
+				"2211533WKDY": {serviceDate: "2018-05-30", delay: new(int64(120)), vehicle: "Undated train"},
 				"1131530WKDY": {serviceDate: "2018-05-30"},
 			},
 		},
@@ -97,7 +97,7 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: rtFixtureWhenUtc,
 			vars:    window("2018-05-31"),
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2018-05-31", delay: ptr(int64(300)), alerts: []string{"Run of May 31"}},
+				"1031527WKDY": {serviceDate: "2018-05-31", delay: new(int64(300)), alerts: []string{"Run of May 31"}},
 				"2211533WKDY": {serviceDate: "2018-05-31"},
 				"1131530WKDY": {serviceDate: "2018-05-31"},
 			},
@@ -118,7 +118,7 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: "2018-05-31T07:10:00Z",
 			vars:    hw{"where": hw{"date": "2018-05-31", "start_time": 0, "end_time": 300}},
 			expect: map[string]runRT{
-				"5172328WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(180)), alerts: []string{"Late run, current", "Late run of May 30"}},
+				"5172328WKDY": {serviceDate: "2018-05-30", delay: new(int64(180)), alerts: []string{"Late run, current", "Late run of May 30"}},
 				"2232328WKDY": {serviceDate: "2018-05-30"},
 			},
 		},
@@ -129,7 +129,7 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: "2018-05-31T07:45:00Z",
 			vars:    hw{"where": hw{"date": "2018-05-31", "start_time": 0, "end_time": 300}},
 			expect: map[string]runRT{
-				"5172328WKDY": {serviceDate: "2018-05-30", delay: ptr(int64(180)), alerts: []string{"Late run, current", "Late run of May 30"}},
+				"5172328WKDY": {serviceDate: "2018-05-30", delay: new(int64(180)), alerts: []string{"Late run, current", "Late run of May 30"}},
 			},
 		},
 		{
@@ -148,7 +148,7 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: "2018-05-31T06:30:00Z",
 			vars:    window("2018-05-31", 16200, 16500),
 			expect: map[string]runRT{
-				"2290403WKDY": {serviceDate: "2018-05-31", delay: ptr(int64(240))},
+				"2290403WKDY": {serviceDate: "2018-05-31", delay: new(int64(240))},
 			},
 		},
 		{
@@ -166,14 +166,14 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 			whenUtc: "2030-05-28T23:00:00Z",
 			vars:    hw{"where": hw{"date": "2030-05-28", "start_time": 57600, "end_time": 57900, "use_service_window": true}},
 			expect: map[string]runRT{
-				"1031527WKDY": {serviceDate: "2030-05-28", delay: ptr(int64(90)), alerts: []string{"Run of May 28, 2030", "Current run"}},
-				"2211533WKDY": {serviceDate: "2030-05-28", delay: ptr(int64(120)), vehicle: "Undated train"},
+				"1031527WKDY": {serviceDate: "2030-05-28", delay: new(int64(90)), alerts: []string{"Run of May 28, 2030", "Current run"}},
+				"2211533WKDY": {serviceDate: "2030-05-28", delay: new(int64(120)), vehicle: "Undated train"},
 				"1131530WKDY": {serviceDate: "2030-05-28"},
 			},
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, rtTestCase{
+		testRt(t, newConfig, rtTestCase{
 			name:    tc.name,
 			query:   runsDeparturesQuery,
 			vars:    tc.vars,
@@ -198,8 +198,8 @@ func TestTripRT_Runs_Departures(t *testing.T) {
 
 // A fallback-week departure's scheduled time is on the requested date, not on
 // the fallback-week day that supplied its schedule.
-func TestTripRT_Runs_FallbackScheduledTime(t *testing.T) {
-	testRt(t, rtTestCase{
+func tripRTRunsFallbackScheduledTimeTest(t *testing.T, newConfig NewConfig) {
+	testRt(t, newConfig, rtTestCase{
 		name:    "scheduled on the requested date",
 		query:   runsDeparturesQuery,
 		vars:    hw{"where": hw{"date": "2030-05-28", "start_time": 57600, "end_time": 57900, "use_service_window": true}},
@@ -219,7 +219,7 @@ func TestTripRT_Runs_FallbackScheduledTime(t *testing.T) {
 
 // A trip found by its service date is that run, as the trip viewer finds one;
 // found without a date, it is its current run.
-func TestTripRT_Runs_Trips(t *testing.T) {
+func tripRTRunsTripsTest(t *testing.T, newConfig NewConfig) {
 	const query = `query($where: TripFilter!) {
 		trips(where: $where) {
 			trip_id
@@ -243,7 +243,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 			name:         "today's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-30"},
 			serviceDate:  "2018-05-30",
-			delay:        ptr(int64(60)),
+			delay:        new(int64(60)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 30", "Current run"},
 			vehicle:      "May 30 train",
@@ -252,7 +252,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 			name:         "tomorrow's run",
 			where:        hw{"trip_id": "1031527WKDY", "service_date": "2018-05-31"},
 			serviceDate:  "2018-05-31",
-			delay:        ptr(int64(300)),
+			delay:        new(int64(300)),
 			relationship: "SCHEDULED",
 			alerts:       []string{"Run of May 31"},
 		},
@@ -271,7 +271,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, rtTestCase{
+		testRt(t, newConfig, rtTestCase{
 			name:    tc.name,
 			query:   query,
 			vars:    hw{"where": tc.where},
@@ -301,7 +301,7 @@ func TestTripRT_Runs_Trips(t *testing.T) {
 
 // A trip added in real time is the run its trip update names. A feed reporting
 // two runs of one added trip lists it once, as the last update names it.
-func TestTripRT_Runs_AddedTrips(t *testing.T) {
+func tripRTRunsAddedTripsTest(t *testing.T, newConfig NewConfig) {
 	const query = `query($where: StopTimeFilter!) {
 		stops(where: {stop_id: "FTVL"}) {
 			stop_times(where: $where) {
@@ -309,7 +309,7 @@ func TestTripRT_Runs_AddedTrips(t *testing.T) {
 			}
 		}
 	}`
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "added trip",
 		query:   query,
 		vars:    hw{"where": hw{"service_date": "2018-05-30", "start_time": 57600, "end_time": 57900}},
@@ -331,7 +331,7 @@ func TestTripRT_Runs_AddedTrips(t *testing.T) {
 
 // A route pattern's representative trip, and its trips without a date, stand
 // for no run, so even an undated alert on the trip doesn't reach them.
-func TestTripRT_Runs_PatternTrips(t *testing.T) {
+func tripRTRunsPatternTripsTest(t *testing.T, newConfig NewConfig) {
 	const query = `query {
 		routes(where: {route_id: "05"}) {
 			patterns {
@@ -340,7 +340,7 @@ func TestTripRT_Runs_PatternTrips(t *testing.T) {
 			}
 		}
 	}`
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "pattern trips",
 		query:   query,
 		rtfiles: runsRTFiles,
@@ -364,7 +364,7 @@ func TestTripRT_Runs_PatternTrips(t *testing.T) {
 //
 // Each run's stop times fall on its own date, counted in the feed's timezone.
 // Through Route.trips, since the top-level trips query resolves no relative date.
-func TestTripRT_Runs_RelativeDates(t *testing.T) {
+func tripRTRunsRelativeDatesTest(t *testing.T, newConfig NewConfig) {
 	const query = `query($route_id: String!, $trip_id: String!) {
 		routes(where: {feed_onestop_id: "BA", route_id: $route_id}) {
 			yesterday: trips(where: {trip_id: $trip_id, relative_date: YESTERDAY}) { ...run }
@@ -389,7 +389,7 @@ func TestTripRT_Runs_RelativeDates(t *testing.T) {
 		{name: "late evening, a day behind UTC", whenUtc: "2018-05-31T06:30:00Z", routeId: "05", tripId: "1031527WKDY", vehicle: "May 30 train"},
 	}
 	for _, tc := range tcs {
-		testRt(t, rtTestCase{
+		testRt(t, newConfig, rtTestCase{
 			name:    tc.name,
 			query:   query,
 			vars:    hw{"route_id": tc.routeId, "trip_id": tc.tripId},

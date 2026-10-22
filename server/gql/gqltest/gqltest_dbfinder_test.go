@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestDBFinder(t *testing.T) {
-	Run(t, dbfinderConfig(testconfig.Options{}), Spatial)
+	Run(t, dbfinderConfig(testconfig.Options{}), Spatial, Realtime)
 }
 
 // TestDBFinder_MaterializedDepartures runs the groups that query stop times on
@@ -51,7 +51,7 @@ func TestDBFinder_MaterializedDepartures(t *testing.T) {
 
 func BenchmarkDBFinder_StopResolver(b *testing.B) {
 	raiseMaxLimit(b)
-	c, cfg := newTestClient(b, dbfinderConfig(testconfig.Options{}), defaultWhen, nil)
+	c, cfg := newTestClient(b, dbfinderConfig(testconfig.Options{}), defaultWhen, nil, testconfig.DefaultRTJson())
 	gqlcase.BenchmarkTestcases(b, c, stopResolverTestcases(b, cfg))
 }
 

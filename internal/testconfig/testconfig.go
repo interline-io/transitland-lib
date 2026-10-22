@@ -116,6 +116,14 @@ func DefaultRTJson() []RTJsonFile {
 	}
 }
 
+// BAVehiclePositionsRTJson is the BART vehicle positions fixture; see
+// testdata/server/rt/BA-vehicle-positions.json for the vehicles it contains.
+func BAVehiclePositionsRTJson() []RTJsonFile {
+	return []RTJsonFile{
+		{Feed: "BA", Ftype: "realtime_vehicle_positions", Fname: "BA-vehicle-positions.json"},
+	}
+}
+
 // AddRTJsons adds realtime fixtures from testdata/server/rt to an RTFinder.
 // Each is served as a live feed's payload: fetched its Age before now, with its
 // header stamped then.

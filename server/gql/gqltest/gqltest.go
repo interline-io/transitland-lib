@@ -36,6 +36,10 @@ type Capability string
 // within and near, against their polygon geometries.
 const Spatial Capability = "Spatial"
 
+// Realtime is matching GTFS-RT trip updates, alerts and vehicle positions to the
+// finder's static data, through the config's RTFinder.
+const Realtime Capability = "Realtime"
+
 // caseGroup is a named set of cases, run against one client. The cases are
 // built from the config of the finder under test, so they can look up ids, and
 // configure, if set, sets the config's options for the group.
@@ -56,6 +60,13 @@ type clockGroup struct {
 type testGroup struct {
 	name string
 	run  func(t *testing.T, c *client.Client, cfg model.Config)
+}
+
+// rtGroup is a named realtime test, which builds a client for each case with
+// that case's realtime fixtures and time.
+type rtGroup struct {
+	name string
+	run  func(t *testing.T, newConfig NewConfig)
 }
 
 // The case groups the suite runs.
@@ -145,6 +156,48 @@ var (
 		{name: "StopResolver_ServiceWindowIsPerFeedVersion", run: stopResolverServiceWindowIsPerFeedVersionTest},
 		{name: "FeedVersionResolver_TableCursors", run: feedVersionResolverTableCursorsTest},
 	}
+	rtGroups = []rtGroup{
+		{name: "AgencyRT_Alerts", run: agencyRTAlertsTest},
+		{name: "AgencyRT_AlertsIncludeModes", run: agencyRTAlertsIncludeModesTest},
+		{name: "RouteRT_Alerts", run: routeRTAlertsTest},
+		{name: "RouteRT_AlertsAtStop", run: routeRTAlertsAtStopTest},
+		{name: "RouteRT_TripAlerts", run: routeRTTripAlertsTest},
+		{name: "StopRT_Basic", run: stopRTBasicTest},
+		{name: "StopRT_BeforeMidnight", run: stopRTBeforeMidnightTest},
+		{name: "StopRT_AfterMidnight", run: stopRTAfterMidnightTest},
+		{name: "StopRT_ArrivalFallback", run: stopRTArrivalFallbackTest},
+		{name: "StopRT_DepartureFallback", run: stopRTDepartureFallbackTest},
+		{name: "StopRT_CarriedDelay", run: stopRTCarriedDelayTest},
+		{name: "StopRT_StopIDFallback", run: stopRTStopIDFallbackTest},
+		{name: "StopRT_StopIDFallback_DoubleVisit", run: stopRTStopIDFallbackDoubleVisitTest},
+		{name: "StopRT_SkippedAndNoData", run: stopRTSkippedAndNoDataTest},
+		{name: "StopRT_FrequencyInstances", run: stopRTFrequencyInstancesTest},
+		{name: "StopRT_NoRT", run: stopRTNoRTTest},
+		{name: "StopRT_AddedTrip", run: stopRTAddedTripTest},
+		{name: "StopRT_ScheduleRelationship", run: stopRTScheduleRelationshipTest},
+		{name: "StopRT_CanceledTrip", run: stopRTCanceledTripTest},
+		{name: "StopRT_Alerts", run: stopRTAlertsTest},
+		{name: "StopRT_ScheduleRelationshipWithoutArrivalDeparture", run: stopRTScheduleRelationshipWithoutArrivalDepartureTest},
+		{name: "StopRT_StalePayload", run: stopRTStalePayloadTest},
+		{name: "StopRT_AddedTripUnknownRoute", run: stopRTAddedTripUnknownRouteTest},
+		{name: "TripRT_Alerts", run: tripRTAlertsTest},
+		{name: "TripRT_StopTimes", run: tripRTStopTimesTest},
+		{name: "TripRT_ScheduleRelationshipWithoutArrivalDeparture", run: tripRTScheduleRelationshipWithoutArrivalDepartureTest},
+		{name: "TripRT_Runs_Departures", run: tripRTRunsDeparturesTest},
+		{name: "TripRT_Runs_FallbackScheduledTime", run: tripRTRunsFallbackScheduledTimeTest},
+		{name: "TripRT_Runs_Trips", run: tripRTRunsTripsTest},
+		{name: "TripRT_Runs_AddedTrips", run: tripRTRunsAddedTripsTest},
+		{name: "TripRT_Runs_PatternTrips", run: tripRTRunsPatternTripsTest},
+		{name: "TripRT_Runs_RelativeDates", run: tripRTRunsRelativeDatesTest},
+		{name: "VehiclePositionResolver", run: vehiclePositionResolverTest},
+		{name: "VehiclePositionResolver_OrderAndLimit", run: vehiclePositionResolverOrderAndLimitTest},
+		{name: "VehiclePositionResolver_Fields", run: vehiclePositionResolverFieldsTest},
+		{name: "VehiclePositionResolver_MatchedEntities", run: vehiclePositionResolverMatchedEntitiesTest},
+		{name: "VehiclePositionResolver_RouteFromTrip", run: vehiclePositionResolverRouteFromTripTest},
+		{name: "VehiclePositionResolver_Nested", run: vehiclePositionResolverNestedTest},
+		{name: "VehiclePositionResolver_BboxTooLarge", run: vehiclePositionResolverBboxTooLargeTest},
+		{name: "VehiclePositionResolver_TripCopies", run: vehiclePositionResolverTripCopiesTest},
+	}
 )
 
 // Run runs the suite against the finder that newConfig builds, skipping the
@@ -175,11 +228,21 @@ func Run(t *testing.T, newConfig NewConfig, supports ...Capability) {
 	for _, g := range testGroups {
 		runTestGroup(t, newConfig, g)
 	}
+	t.Run(string(Realtime), func(t *testing.T) {
+		if !slices.Contains(supports, Realtime) {
+			t.Skipf("finder does not support %s", Realtime)
+		}
+		for _, g := range rtGroups {
+			t.Run(g.name, func(t *testing.T) {
+				g.run(t, newConfig)
+			})
+		}
+	})
 }
 
 func runCaseGroup(t *testing.T, newConfig NewConfig, g caseGroup) {
 	t.Run(g.name, func(t *testing.T) {
-		c, cfg := newTestClient(t, newConfig, defaultWhen, g.configure)
+		c, cfg := newTestClient(t, newConfig, defaultWhen, g.configure, testconfig.DefaultRTJson())
 		gqlcase.QueryTestcases(t, c, g.cases(t, cfg))
 	})
 }
@@ -188,14 +251,7 @@ func runClockGroup(t *testing.T, newConfig NewConfig, g clockGroup) {
 	t.Run(g.name, func(t *testing.T) {
 		for _, tc := range g.cases() {
 			t.Run(tc.Name, func(t *testing.T) {
-				when := defaultWhen
-				if tc.whenUtc != "" {
-					var err error
-					if when, err = time.Parse(time.RFC3339, tc.whenUtc); err != nil {
-						t.Fatal(err)
-					}
-				}
-				c, _ := newTestClient(t, newConfig, when, nil)
+				c, _ := newTestClient(t, newConfig, caseTime(t, tc.whenUtc), nil, testconfig.DefaultRTJson())
 				gqlcase.QueryTestcase(t, c, tc.testcase)
 			})
 		}
@@ -204,7 +260,7 @@ func runClockGroup(t *testing.T, newConfig NewConfig, g clockGroup) {
 
 func runTestGroup(t *testing.T, newConfig NewConfig, g testGroup) {
 	t.Run(g.name, func(t *testing.T) {
-		c, cfg := newTestClient(t, newConfig, defaultWhen, nil)
+		c, cfg := newTestClient(t, newConfig, defaultWhen, nil, testconfig.DefaultRTJson())
 		g.run(t, c, cfg)
 	})
 }
@@ -217,16 +273,51 @@ func raiseMaxLimit(t testing.TB) {
 	t.Cleanup(func() { gql.RESOLVER_MAXLIMIT = limit })
 }
 
+// testRt runs a realtime case against a client whose realtime finder holds
+// only the case's fixtures, at the case's time.
+func testRt(t *testing.T, newConfig NewConfig, tc rtTestCase) {
+	t.Run(tc.name, func(t *testing.T) {
+		c, _ := newTestClient(t, newConfig, caseTime(t, tc.whenUtc), nil, tc.rtfiles)
+		var resp map[string]interface{}
+		opts := []client.Option{}
+		for k, v := range tc.vars {
+			opts = append(opts, client.Var(k, v))
+		}
+		if err := c.Post(tc.query, &resp, opts...); err != nil {
+			t.Error(err)
+			return
+		}
+		jj := gqlcase.ToJSON(resp)
+		if tc.cb != nil {
+			tc.cb(t, jj)
+		}
+	})
+}
+
+// caseTime returns when a case runs: whenUtc, or defaultWhen when the case
+// sets none.
+func caseTime(t testing.TB, whenUtc string) time.Time {
+	if whenUtc == "" {
+		return defaultWhen
+	}
+	when, err := time.Parse(time.RFC3339, whenUtc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return when
+}
+
 // newTestClient serves the config that newConfig builds at now through the
-// GraphQL handler, as a signed-in test user, and returns the config.
-func newTestClient(t testing.TB, newConfig NewConfig, now time.Time, configure func(*model.Config)) (*client.Client, model.Config) {
+// GraphQL handler, as a signed-in test user, and returns the config. The
+// config's realtime finder holds the fixtures rtfiles names.
+func newTestClient(t testing.TB, newConfig NewConfig, now time.Time, configure func(*model.Config), rtfiles []testconfig.RTJsonFile) (*client.Client, model.Config) {
 	cfg := newConfig(t, now)
 	cfg.Clock = &clock.Mock{T: now}
 	cfg.MaxRadius = maxRadius
 	if configure != nil {
 		configure(&cfg)
 	}
-	if err := testconfig.AddRTJsons(context.Background(), cfg.RTFinder, now, testconfig.DefaultRTJson()); err != nil {
+	if err := testconfig.AddRTJsons(context.Background(), cfg.RTFinder, now, rtfiles); err != nil {
 		t.Fatal(err)
 	}
 	srv := gql.NewDefaultHandler()
@@ -276,5 +367,16 @@ type testcase = gqlcase.Testcase
 
 type testcaseWithClock struct {
 	testcase
+	whenUtc string
+}
+
+// rtTestCase is a query run against its own realtime fixtures, at its own time,
+// and a callback that checks the result.
+type rtTestCase struct {
+	name    string
+	query   string
+	vars    map[string]interface{}
+	rtfiles []testconfig.RTJsonFile
+	cb      func(t *testing.T, jj string)
 	whenUtc string
 }

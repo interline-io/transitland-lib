@@ -1,4 +1,4 @@
-package gql
+package gqltest
 
 import (
 	"testing"
@@ -10,7 +10,139 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func TestStopRT_Basic(t *testing.T) {
+// rtTestStopQuery selects a stop's stop times with their realtime arrivals and
+// departures, and the alerts on the stop and on its trips, routes and agencies.
+var rtTestStopQuery = `
+fragment alert on Alert {
+	entity_id
+	rt_feed_onestop_id
+	cause
+	effect
+	severity_level
+	url {
+		language
+		text
+	}
+	header_text {
+		language
+		text
+	}
+	description_text {
+		language
+		text
+	}
+	tts_header_text {
+		language
+		text
+	}
+	tts_description_text {
+		language
+		text
+	}
+	active_period {
+		start
+		end
+	}
+	informed_entity {
+		agency_id
+		route_id
+		route_type
+		direction_id
+		stop_id
+		trip {
+			trip_id
+			start_date
+		}
+	}
+}
+
+query($stop_id:String!, $stf:StopTimeFilter!, $active:Boolean, $include_modes:Boolean, $include_route_modes:Boolean, $include_route_trips:Boolean) {
+	stops(where: { stop_id: $stop_id }) {
+	  id
+	  stop_id
+	  stop_name
+	  alerts(active:$active, limit:5) {
+		  ...alert
+	  }
+	  stop_times(where:$stf) {
+		stop_sequence
+		service_date
+		date
+		schedule_relationship
+		trip {
+		  alerts(active:$active) {
+			...alert
+		  }
+		  trip_id
+		  schedule_relationship
+		  timestamp
+		  route {
+			  route_id
+			  route_short_name
+			  route_long_name
+			  alerts(active:$active, include_modes:$include_route_modes, include_trips:$include_route_trips) {
+				  ...alert
+			  }
+			  agency {
+				  agency_id
+				  agency_name
+				  alerts(active:$active, include_modes:$include_modes) {
+					  ...alert
+				  }
+			  }
+		  }
+		}
+		arrival {
+			scheduled
+			scheduled_local
+			scheduled_utc
+			scheduled_unix
+			estimated
+			estimated_utc
+			estimated_unix
+			estimated_local
+			estimated_delay
+			stop_timezone
+			time_unix
+			delay
+			uncertainty
+		}
+		departure {
+			scheduled
+			scheduled_local
+			scheduled_utc
+			scheduled_unix
+			estimated
+			estimated_utc
+			estimated_unix
+			estimated_local
+			estimated_delay
+			stop_timezone
+			time_unix
+			delay
+			uncertainty
+		}
+	  }
+	}
+  }
+`
+
+// rtFixtureWhenUtc is when the BA and CT realtime fixtures were captured. Their
+// trip updates name no start_date, so they describe the runs current then.
+const rtFixtureWhenUtc = "2018-05-30T22:27:30Z"
+
+func rtTestStopQueryVars() hw {
+	return hw{
+		"stop_id": "FTVL",
+		"stf": hw{
+			"service_date": "2018-05-30",
+			"start_time":   57600,
+			"end_time":     57900,
+		},
+	}
+}
+
+func stopRTBasicTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "stop times basic",
 		query:   rtTestStopQuery,
@@ -64,10 +196,10 @@ func TestStopRT_Basic(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
-func TestStopRT_BeforeMidnight(t *testing.T) {
+func stopRTBeforeMidnightTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:  "just before midnight",
 		query: rtTestStopQuery,
@@ -104,10 +236,10 @@ func TestStopRT_BeforeMidnight(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
-func TestStopRT_AfterMidnight(t *testing.T) {
+func stopRTAfterMidnightTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:  "just after midnight",
 		query: rtTestStopQuery,
@@ -144,10 +276,10 @@ func TestStopRT_AfterMidnight(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
-func TestStopRT_ArrivalFallback(t *testing.T) {
+func stopRTArrivalFallbackTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "arrival will use departure if arrival is not present",
 		query:   rtTestStopQuery,
@@ -170,10 +302,10 @@ func TestStopRT_ArrivalFallback(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
-func TestStopRT_DepartureFallback(t *testing.T) {
+func stopRTDepartureFallbackTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "departure will use arrival if departure is not present",
 		query:   rtTestStopQuery,
@@ -196,12 +328,12 @@ func TestStopRT_DepartureFallback(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
 // A stop time the trip update doesn't name takes the delay given at the
 // nearest earlier stop, Lake Merritt's 45 seconds, not Coliseum's 90 after it.
-func TestStopRT_CarriedDelay(t *testing.T) {
+func stopRTCarriedDelayTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "the nearest earlier delay carries",
 		query:   rtTestStopQuery,
@@ -232,9 +364,9 @@ func TestStopRT_CarriedDelay(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
-func TestStopRT_StopIDFallback(t *testing.T) {
+func stopRTStopIDFallbackTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "use stop_id as fallback if no matching stop sequence",
 		query:   rtTestStopQuery,
@@ -258,13 +390,13 @@ func TestStopRT_StopIDFallback(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
 // Stop time updates naming stops by stop_id alone are placed in order along
 // the trip, so a stop the update names twice takes the first in order, and the
 // second, which no later stop time matches, is left out.
-func TestStopRT_StopIDFallback_DoubleVisit(t *testing.T) {
+func stopRTStopIDFallbackDoubleVisitTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "a stop named twice takes the update in order",
 		query:   rtTestStopQuery,
@@ -287,14 +419,14 @@ func TestStopRT_StopIDFallback_DoubleVisit(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
 // A skipped stop, or one the update has no data for, reports that relationship
 // and no estimate, while a stop the update doesn't name takes the carried
 // delay and reports SCHEDULED.
-func TestStopRT_SkippedAndNoData(t *testing.T) {
-	testRt(t, rtTestCase{
+func stopRTSkippedAndNoDataTest(t *testing.T, newConfig NewConfig) {
+	testRt(t, newConfig, rtTestCase{
 		name:    "skipped and no data stops",
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
@@ -307,7 +439,7 @@ func TestStopRT_SkippedAndNoData(t *testing.T) {
 			}{
 				"1031527WKDY": {"SKIPPED", nil},
 				"1131530WKDY": {"NO_DATA", nil},
-				"2211533WKDY": {"SCHEDULED", ptr(int64(32))},
+				"2211533WKDY": {"SCHEDULED", new(int64(32))},
 			}
 			found := map[string]bool{}
 			for _, st := range gjson.Get(jj, "stops.0.stop_times").Array() {
@@ -328,7 +460,7 @@ func TestStopRT_SkippedAndNoData(t *testing.T) {
 // An update naming a start_time describes that instance of a frequency-based
 // trip alone, and the instance's stop times, at the stop and on its trip, are
 // its own times with estimates counted from them.
-func TestStopRT_FrequencyInstances(t *testing.T) {
+func stopRTFrequencyInstancesTest(t *testing.T, newConfig NewConfig) {
 	// The example feed's version isn't its feed's active one, so the stop is
 	// found by the version's sha1.
 	const query = `query($stf: StopTimeFilter) {
@@ -345,7 +477,7 @@ func TestStopRT_FrequencyInstances(t *testing.T) {
 			}
 		}
 	}`
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "frequency instances",
 		query:   query,
 		vars:    hw{"stf": hw{"date": "2007-01-02", "start": "08:00:00", "end": "08:59:00"}},
@@ -375,9 +507,9 @@ func TestStopRT_FrequencyInstances(t *testing.T) {
 				case "08:30:00":
 					assert.Equal(t, "SCHEDULED", rel, start)
 					assert.Equal(t, "SCHEDULED", tripRel, start)
-					assert.Equal(t, ptr(int64(60)), delay, start)
+					assert.Equal(t, new(int64(60)), delay, start)
 					// The delay carries along the instance.
-					assert.Equal(t, ptr(int64(60)), optionalInt(st.Get("trip.stop_times.4.departure.estimated_delay")), "last stop")
+					assert.Equal(t, new(int64(60)), optionalInt(st.Get("trip.stop_times.4.departure.estimated_delay")), "last stop")
 					// A time window applies to the instance's own times: its stops
 					// from 08:33 on are the last four, which the template visits
 					// from 06:07.
@@ -396,7 +528,7 @@ func TestStopRT_FrequencyInstances(t *testing.T) {
 	})
 }
 
-func TestStopRT_NoRT(t *testing.T) {
+func stopRTNoRTTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "no rt matches for trip 2211533WKDY",
 		query:   rtTestStopQuery,
@@ -423,10 +555,10 @@ func TestStopRT_NoRT(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
-func TestStopRT_AddedTrip(t *testing.T) {
+func stopRTAddedTripTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "stop times added trip",
 		query:   rtTestStopQuery,
@@ -457,10 +589,10 @@ func TestStopRT_AddedTrip(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
-func TestStopRT_ScheduleRelationship(t *testing.T) {
+func stopRTScheduleRelationshipTest(t *testing.T, newConfig NewConfig) {
 	tcs := []rtTestCase{
 		{
 			name:    "static trip",
@@ -569,11 +701,11 @@ func TestStopRT_ScheduleRelationship(t *testing.T) {
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, tc)
+		testRt(t, newConfig, tc)
 	}
 }
 
-func TestStopRT_CanceledTrip(t *testing.T) {
+func stopRTCanceledTripTest(t *testing.T, newConfig NewConfig) {
 	tc := rtTestCase{
 		name:    "stop times canceled trip",
 		query:   rtTestStopQuery,
@@ -603,10 +735,10 @@ func TestStopRT_CanceledTrip(t *testing.T) {
 			}
 		},
 	}
-	testRt(t, tc)
+	testRt(t, newConfig, tc)
 }
 
-func TestStopRT_Alerts(t *testing.T) {
+func stopRTAlertsTest(t *testing.T, newConfig NewConfig) {
 	activeVars := rtTestStopQueryVars()
 	activeVars["active"] = true
 	tcs := []rtTestCase{
@@ -644,14 +776,14 @@ func TestStopRT_Alerts(t *testing.T) {
 		},
 	}
 	for _, tc := range tcs {
-		testRt(t, tc)
+		testRt(t, newConfig, tc)
 	}
 }
 
 // schedule_relationship must answer the same whether or not arrival and
 // departure are also selected. It once did not — population was gated on those
 // two, so asking for it alone reported STATIC for rescheduled stop times.
-func TestStopRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
+func stopRTScheduleRelationshipWithoutArrivalDepartureTest(t *testing.T, newConfig NewConfig) {
 	const query = `query($stop_id: String!, $stf: StopTimeFilter) {
 		stops(where: {stop_id: $stop_id}) {
 			stop_times(where: $stf) {
@@ -660,7 +792,7 @@ func TestStopRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
 			}
 		}
 	}`
-	testRt(t, rtTestCase{
+	testRt(t, newConfig, rtTestCase{
 		name:    "schedule_relationship alone",
 		query:   query,
 		vars:    rtTestStopQueryVars(),
@@ -685,7 +817,7 @@ func TestStopRT_ScheduleRelationshipWithoutArrivalDeparture(t *testing.T) {
 
 // Departures carry estimates from a trip updates payload fetched under an hour
 // ago, and none from one fetched over an hour ago.
-func TestStopRT_StalePayload(t *testing.T) {
+func stopRTStalePayloadTest(t *testing.T, newConfig NewConfig) {
 	for _, tc := range []struct {
 		name      string
 		age       time.Duration
@@ -694,7 +826,7 @@ func TestStopRT_StalePayload(t *testing.T) {
 		{"fetched 59 minutes ago", 59 * time.Minute, true},
 		{"fetched 61 minutes ago", 61 * time.Minute, false},
 	} {
-		testRt(t, rtTestCase{
+		testRt(t, newConfig, rtTestCase{
 			name:    tc.name,
 			query:   rtTestStopQuery,
 			vars:    rtTestStopQueryVars(),
@@ -715,8 +847,8 @@ func TestStopRT_StalePayload(t *testing.T) {
 
 // An added trip on a route the feed version doesn't have leaves the rest of
 // the stop's departures in place.
-func TestStopRT_AddedTripUnknownRoute(t *testing.T) {
-	testRt(t, rtTestCase{
+func stopRTAddedTripUnknownRouteTest(t *testing.T, newConfig NewConfig) {
+	testRt(t, newConfig, rtTestCase{
 		name:    "added trip on an unknown route",
 		query:   rtTestStopQuery,
 		vars:    rtTestStopQueryVars(),
