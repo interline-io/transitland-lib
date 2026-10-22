@@ -69,8 +69,6 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 			if v := input.Level; v != nil {
 				cols = scanRef(&ent.LevelID, v.ID, "level_id", cols, &err)
 			}
-			// Set some defaults
-			ent.LocationType.OrSet(0)
 			return cols, err
 		})
 	if err != nil {
@@ -281,6 +279,8 @@ func toAtx(ctx context.Context) tldb.Adapter {
 	return model.ForContext(ctx).Adapter
 }
 
+var notNullFilter = &tldb.NotNullFilter{}
+
 // ensure we have edit rights to fvid
 func createUpdateEnt[T hasTableName](
 	ctx context.Context,
@@ -319,6 +319,12 @@ func createUpdateEnt[T hasTableName](
 	cols, err := updateFunc(baseEnt)
 	if err != nil {
 		return 0, err
+	}
+	// Fill the not-null defaults the importer writes.
+	if ent, ok := any(baseEnt).(tt.Entity); ok {
+		if err := notNullFilter.Filter(ent, nil); err != nil {
+			return 0, err
+		}
 	}
 
 	// Validate

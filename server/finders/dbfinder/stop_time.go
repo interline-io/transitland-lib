@@ -1,9 +1,7 @@
 package dbfinder
 
 import (
-	"cmp"
 	"context"
-	"slices"
 	"time"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -129,38 +127,11 @@ func (f *Finder) stopTimesByEntityIDs(ctx context.Context, entityType stopTimeEn
 		// Each service day's departures query keeps each route's first stop
 		// times, so a window across days can hold more than RouteLimit of them.
 		if ranked && where != nil && where.RouteLimit != nil {
-			fvEnts = firstForRoutes(fvEnts, *where.RouteLimit)
+			fvEnts = model.FirstForRoutes(fvEnts, *where.RouteLimit)
 		}
 		ents = append(ents, fvEnts...)
 	}
 	return ents, nil
-}
-
-// firstForRoutes keeps each route's first n stop times at each entity, across
-// service days.
-func firstForRoutes(sts []*model.StopTime, n int) []*model.StopTime {
-	// The service days' times overlap, so order by when each stop time happens,
-	// as the resolver does.
-	slices.SortStableFunc(sts, func(a, b *model.StopTime) int {
-		return cmp.Compare(
-			a.ServiceDate.Val.Unix()+int64(a.DepartureTime.Int()),
-			b.ServiceDate.Val.Unix()+int64(b.DepartureTime.Int()),
-		)
-	})
-	type routeAtEntity struct {
-		stop, location, locationGroup string
-		route                         int64
-	}
-	seen := map[routeAtEntity]int{}
-	var ret []*model.StopTime
-	for _, st := range sts {
-		k := routeAtEntity{st.StopID.Val, st.LocationID.Val, st.LocationGroupID.Val, st.RouteID.Val}
-		if seen[k] < n {
-			seen[k]++
-			ret = append(ret, st)
-		}
-	}
-	return ret
 }
 
 // stopTimeEntityType specifies which entity type to filter stop_times by
