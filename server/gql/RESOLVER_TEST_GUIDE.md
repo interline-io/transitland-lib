@@ -2,6 +2,23 @@
 
 This guide documents the testing patterns used in the transitland-lib GraphQL resolver tests.
 
+## Where Cases Go
+
+Resolver cases live in two places:
+- `server/gql/gqltest` holds the cases every `model.Finder` must answer the same way. `gqltest.Run` runs them against a finder; `TestDBFinder` runs them against the test database. Write a new case here unless it needs something only the database finder has.
+- `server/gql` keeps the cases that need the database finder: census and places data, segments, stop observations, external references, route attributes, previous onestop ids, realtime and GBFS data, permissions, mutations and validation.
+
+In `gqltest`, a group of cases is a builder that returns them, registered by name in `caseGroups` in `gqltest.go`:
+
+```go
+func levelResolverTestcases(t testing.TB, cfg model.Config) []testcase {
+    testcases := []testcase{ ... }
+    return testcases
+}
+```
+
+A case that needs an optional finder capability, such as `Spatial`, goes in that capability's `optionalGroups` entry, and finders that lack the capability skip it. Time-dependent cases go in `clockGroups`. A check that spans several queries, such as one that reads ids and then queries by them, is a function in `testGroups`, which gets the client and config to query itself. `groupConfigs` turns on a config option for a group. Find ids through `cfg.Finder`, never with SQL, so the case runs against every finder.
+
 ## Test Infrastructure
 
 ### Core Types
@@ -51,10 +68,9 @@ queryTestcases(t, c, testcases)
 
 // Run single test case
 queryTestcase(t, c, tc)
-
-// Run benchmarks
-benchmarkTestcases(b, c, testcases)
 ```
+
+`gqltest` has its own copies of these types and helpers, and its own `newTestClient`, which serves the config a finder builds.
 
 ### Test File Naming Convention
 
@@ -63,9 +79,11 @@ Test files should follow this naming convention:
 - `<entity>_resolver_rt_test.go` - Real-time data tests
 
 Examples:
-- `booking_rule_resolver_test.go`
-- `location_resolver_test.go`
+- `agency_resolver_test.go`
+- `stop_resolver_test.go`
 - `agency_resolver_rt_test.go`
+
+In `gqltest`, each entity's cases go in `<entity>_cases.go`, such as `booking_rule_cases.go`, and the cases that need the `Spatial` capability go in `spatial_cases.go`.
 
 ---
 
@@ -214,7 +232,7 @@ Use when you need to validate multiple parts of the response independently.
 Use when the query result depends on the current time (e.g., `stop_times` with `next` filter).
 
 ```go
-func TestStopResolver_StopTimes_Next(t *testing.T) {
+func stopResolverStopTimesNextTestcases() []testcaseWithClock {
     testcases := []testcaseWithClock{
         {
             whenUtc: "2018-05-30T22:00:00Z",
@@ -226,20 +244,11 @@ func TestStopResolver_StopTimes_Next(t *testing.T) {
             },
         },
     }
-
-    for _, tc := range testcases {
-        t.Run(tc.name, func(t *testing.T) {
-            c, _ := newTestClientWithOpts(t, testconfig.Options{
-                RTJsons: testconfig.DefaultRTJson(),
-                WhenUtc: tc.whenUtc,
-            })
-            queryTestcase(t, c, tc.testcase)
-        })
-    }
+    return testcases
 }
 ```
 
-**Note:** These tests require manual iteration and `newTestClientWithOpts` to set the clock.
+**Note:** In `gqltest`, register the builder in `clockGroups`, and `Run` sets each case's clock. In `server/gql`, iterate the cases by hand and set the clock with `newTestClientWithOpts(t, testconfig.Options{WhenUtc: tc.whenUtc})`.
 
 ---
 
@@ -496,13 +505,13 @@ func TestStopResolver_AdminCache(t *testing.T) {
 For performance testing resolvers:
 
 ```go
-func BenchmarkStopResolver(b *testing.B) {
-    c, cfg := newTestClient(b)
+func BenchmarkDBFinder_StopResolver(b *testing.B) {
+    c, cfg := newTestClient(b, dbfinderConfig(testconfig.Options{}), "", nil)
     benchmarkTestcases(b, c, stopResolverTestcases(b, cfg))
 }
 ```
 
-**Note:** Benchmark functions use `testing.B` instead of `testing.T` and use `benchmarkTestcases` helper.
+**Note:** This benchmark lives in `gqltest`'s `gqltest_dbfinder_test.go`, with the `benchmarkTestcases` helper. Case builders take `testing.TB`, so a benchmark can build the same cases a test runs.
 
 ---
 
@@ -607,7 +616,7 @@ expect: `{"routes":[{"route_id":"Bu-130","route_name":"Bullet",...}]}`
 ## Example: Complete Resolver Test
 
 ```go
-func TestLocationGroupResolver(t *testing.T) {
+func locationGroupResolverTestcases(t testing.TB, cfg model.Config) []testcase {
     ctranFlexSha1 := "e8bc76c3c8602cad745f41a49ed5c5627ad6904c"
     testcases := []testcase{
         // 1. List all entities with IDs
@@ -652,10 +661,11 @@ func TestLocationGroupResolver(t *testing.T) {
             selectExpect: []string{"stop1", "stop2"},
         },
     }
-    c, _ := newTestClient(t)
-    queryTestcases(t, c, testcases)
+    return testcases
 }
 ```
+
+Then register it in `caseGroups`: `{"LocationGroupResolver", locationGroupResolverTestcases},`.
 
 ---
 
@@ -681,7 +691,7 @@ When adding tests for a new GTFS entity (e.g., BookingRule, Location, LocationGr
 ### Example: BookingRule Test Coverage
 
 ```go
-func TestBookingRuleResolver(t *testing.T) {
+func bookingRuleResolverTestcases(t testing.TB, cfg model.Config) []testcase {
     testcases := []testcase{
         // List all with count
         {
@@ -710,12 +720,7 @@ func TestBookingRuleResolver(t *testing.T) {
             expect: `{...exact JSON...}`,
         },
     }
-    c, _ := newTestClient(t)
-    for _, tc := range testcases {
-        t.Run(tc.name, func(t *testing.T) {
-            queryTestcase(t, c, tc)
-        })
-    }
+    return testcases
 }
 ```
 
@@ -728,7 +733,10 @@ func TestBookingRuleResolver(t *testing.T) {
 go test ./server/gql/... -v
 
 # Run specific resolver test
-go test ./server/gql/... -run TestBookingRuleResolver -v
+go test ./server/gql/... -run TestAgencyResolver -v
+
+# Run one gqltest group against the database finder
+go test ./server/gql/gqltest/ -run 'TestDBFinder/BookingRuleResolver' -v
 
 # Run tests with race detection
 go test ./server/gql/... -race -v
@@ -737,5 +745,5 @@ go test ./server/gql/... -race -v
 go test ./server/gql/... -bench=. -benchmem
 
 # Run specific benchmark
-go test ./server/gql/... -bench=BenchmarkStopResolver -benchmem
+go test ./server/gql/gqltest/ -run '^$' -bench=BenchmarkDBFinder_StopResolver -benchmem
 ```

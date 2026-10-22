@@ -53,11 +53,6 @@ type testcase struct {
 	selectExpectUniqueCount int      // convenience: wraps to sel[].expectUniqueCount
 }
 
-type testcaseWithClock struct {
-	testcase
-	whenUtc string
-}
-
 func TestMain(m *testing.M) {
 	// Increase default limit for testing purposes
 	RESOLVER_MAXLIMIT = 100_000
@@ -198,26 +193,6 @@ func queryTestcases(t *testing.T, c *client.Client, tcs []testcase) {
 		t.Run(tc.name, func(t *testing.T) {
 			queryTestcase(t, c, tc)
 		})
-	}
-}
-
-func benchmarkTestcases(b *testing.B, c *client.Client, tcs []testcase) {
-	for _, tc := range tcs {
-		b.Run(tc.name, func(b *testing.B) {
-			benchmarkTestcase(b, c, tc)
-		})
-	}
-}
-
-func benchmarkTestcase(b *testing.B, c *client.Client, tc testcase) {
-	opts := []client.Option{}
-	for k, v := range tc.vars {
-		opts = append(opts, client.Var(k, v))
-	}
-	var resp map[string]any
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		c.MustPost(tc.query, &resp, opts...)
 	}
 }
 
