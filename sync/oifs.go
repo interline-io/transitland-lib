@@ -10,6 +10,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
@@ -88,11 +89,15 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 		} else if err != nil {
 			return false, err
 		}
-		agencies, err := feedAgencies(ctx, atx, feedID)
-		if err != nil {
+		agencies := []gtfs.Agency{}
+		if err := atx.Select(ctx, &agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id where feed_states.feed_id = ?", feedID); err != nil {
 			return false, err
 		}
-		feeds[osid] = FeedAgencies{FeedID: feedID, Agencies: agencies}
+		feed := FeedAgencies{FeedID: feedID}
+		for _, agency := range agencies {
+			feed.Agencies = append(feed.Agencies, FeedAgency{Agency: agency})
+		}
+		feeds[osid] = feed
 	}
 	return writeOifPlan(ctx, atx, PlanOperatorOifs(operator, existing, feeds))
 }
@@ -123,7 +128,7 @@ func feedAgencies(ctx context.Context, atx tldb.Adapter, feedID int) ([]FeedAgen
 func writeOifPlan(ctx context.Context, atx tldb.Adapter, plan OifPlan) (bool, error) {
 	updated := false
 	for _, row := range plan.Refreshes {
-		places, err := getPlaces(ctx, atx, row.AgencyID)
+		places, err := getPlaces(ctx, atx, row.AgencyRowID)
 		if err != nil {
 			return false, err
 		}
@@ -135,7 +140,7 @@ func writeOifPlan(ctx context.Context, atx tldb.Adapter, plan OifPlan) (bool, er
 		updated = updated || changed
 	}
 	for _, row := range plan.Inserts {
-		places, err := getPlaces(ctx, atx, row.AgencyID)
+		places, err := getPlaces(ctx, atx, row.AgencyRowID)
 		if err != nil {
 			return false, err
 		}
@@ -223,5 +228,8 @@ func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool
 		return false, err
 	}
 	updated, err := writeOifPlan(ctx, atx, PlanFeedOifs(feed.ID, feed.FeedID, existing, agencies))
-	return hidden || updated, err
+	if err != nil {
+		return false, err
+	}
+	return hidden || updated, nil
 }

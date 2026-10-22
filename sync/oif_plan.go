@@ -1,9 +1,7 @@
 package sync
 
-// The rules that match operators to the agencies of their feeds, as pure
-// functions over the rows, operators and agencies a store holds. Database sync
-// is one store that applies their plans; any other store that keeps
-// operator-in-feed rows can apply them the same way and get the same rows.
+// The rules sync uses to match operators to the agencies of their feeds, as pure
+// functions over operator-in-feed rows, operators and agencies.
 
 import (
 	"github.com/interline-io/transitland-lib/dmfr"
@@ -11,8 +9,8 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// FeedAgency is an agency of a feed's active version, with the onestop id its
-// feed version's stats gave it, if any.
+// FeedAgency is an agency of a feed's active version, and the onestop id from
+// its feed version's stats, when there is one.
 type FeedAgency struct {
 	OnestopID tt.String
 	gtfs.Agency
@@ -24,21 +22,21 @@ type FeedAgencies struct {
 	Agencies []FeedAgency
 }
 
-// OifRow is an operator-in-feed row a plan writes, and the row id of the agency
-// it resolved to, or 0, which a store with agency places uses to fill in the
-// row's resolved places.
+// OifRow is an operator-in-feed row a plan writes. AgencyRowID is the row id of
+// its resolved agency, or 0 when it resolved none.
 type OifRow struct {
 	dmfr.OperatorAssociatedFeed
-	AgencyID int
+	AgencyRowID int
 }
 
-// OifPlan is how sync changes a store's operator-in-feed rows. Inserts are new
-// rows, in the order sync resolves them, so stores that number rows in insert
-// order agree on their ids. Refreshes set the resolved fields of the rows their
-// ids name, and Deletes are the ids of rows to remove.
+// OifPlan is how sync changes operator-in-feed rows: refreshes, then inserts,
+// then deletes.
+//
+// Refreshes set the resolved fields of the rows their ids name. Inserts are new
+// rows, in the order sync resolves them. Deletes are the ids of rows to remove.
 type OifPlan struct {
-	Inserts   []OifRow
 	Refreshes []OifRow
+	Inserts   []OifRow
 	Deletes   []int
 }
 
@@ -76,16 +74,16 @@ func PlanOperatorOifs(operator dmfr.Operator, existing []dmfr.OperatorAssociated
 		oif.ResolvedShortName.Set(operator.ShortName.Val)
 		oif.OperatorID.SetInt(operator.ID)
 		oif.FeedID = feed.FeedID
-		agencyID := 0
+		agencyRowID := 0
 		if len(feed.Agencies) == 1 {
 			// The only agency, whatever gtfs_agency_id the association names.
 			oif.ResolvedGtfsAgencyID.Set(feed.Agencies[0].AgencyID.Val)
-			agencyID = feed.Agencies[0].ID
+			agencyRowID = feed.Agencies[0].ID
 		} else {
 			for _, agency := range feed.Agencies {
 				if agency.AgencyID.Val == oif.GtfsAgencyID.Val {
 					oif.ResolvedGtfsAgencyID.Set(agency.AgencyID.Val)
-					agencyID = agency.ID
+					agencyRowID = agency.ID
 				}
 			}
 		}
@@ -95,9 +93,9 @@ func PlanOperatorOifs(operator dmfr.Operator, existing []dmfr.OperatorAssociated
 		if id, ok := lookup[matchOf(oif)]; ok {
 			matched[id] = true
 			oif.ID = id
-			plan.Refreshes = append(plan.Refreshes, OifRow{OperatorAssociatedFeed: oif, AgencyID: agencyID})
+			plan.Refreshes = append(plan.Refreshes, OifRow{OperatorAssociatedFeed: oif, AgencyRowID: agencyRowID})
 		} else {
-			plan.Inserts = append(plan.Inserts, OifRow{OperatorAssociatedFeed: oif, AgencyID: agencyID})
+			plan.Inserts = append(plan.Inserts, OifRow{OperatorAssociatedFeed: oif, AgencyRowID: agencyRowID})
 		}
 	}
 	plan.Deletes = unmatched(existing, matched)
@@ -108,15 +106,16 @@ func PlanOperatorOifs(operator dmfr.Operator, existing []dmfr.OperatorAssociated
 // that no row claims, and deletes the generated rows of agencies the version no
 // longer has.
 //
-// existing holds the feed's current rows. An Atlas operator's row owns its
-// agency and is never deleted here, so a generated row for the same agency goes
-// unmatched and is deleted. A generated operator takes the agency's onestop id,
-// or else one made from the feed's onestop id and the agency's name.
+// existing holds the feed's current rows, matched to agencies by resolved
+// agency_id. An Atlas operator's row owns its agency and is never deleted here,
+// so a generated row for the same agency goes unmatched and is deleted. A
+// generated operator takes the agency's onestop id, or else one made from the
+// feed's onestop id and the agency's name.
 func PlanFeedOifs(feedID int, feedOnestopID string, existing []dmfr.OperatorAssociatedFeed, agencies []FeedAgency) OifPlan {
-	lookup := map[oifmatch]int{}
+	lookup := map[string]int{} // resolved agency_id -> row id
 	matched := map[int]bool{}
 	for _, oif := range existing {
-		key := matchOf(oif)
+		key := oif.ResolvedGtfsAgencyID.Val
 		if oif.OperatorID.Valid {
 			matched[oif.ID] = true
 			lookup[key] = oif.ID
@@ -126,7 +125,7 @@ func PlanFeedOifs(feedID int, feedOnestopID string, existing []dmfr.OperatorAsso
 	}
 	var plan OifPlan
 	for _, agency := range agencies {
-		if id, ok := lookup[oifmatch{feedID: feedID, resolvedGtfsAgencyID: agency.AgencyID.Val}]; ok {
+		if id, ok := lookup[agency.AgencyID.Val]; ok {
 			matched[id] = true
 			continue
 		}
@@ -140,7 +139,7 @@ func PlanFeedOifs(feedID int, feedOnestopID string, existing []dmfr.OperatorAsso
 		} else {
 			oif.ResolvedOnestopID.Set(GeneratedOperatorOnestopID(feedOnestopID, agency.AgencyName.Val))
 		}
-		plan.Inserts = append(plan.Inserts, OifRow{OperatorAssociatedFeed: oif, AgencyID: agency.ID})
+		plan.Inserts = append(plan.Inserts, OifRow{OperatorAssociatedFeed: oif, AgencyRowID: agency.ID})
 	}
 	plan.Deletes = unmatched(existing, matched)
 	return plan
