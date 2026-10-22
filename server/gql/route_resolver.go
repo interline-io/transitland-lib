@@ -194,8 +194,8 @@ func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPa
 	// Without a date, every trip of the pattern, none of them a run.
 	// TODO: N+1 query
 	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, resolverCheckLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
-	for _, trip := range trips {
-		trip.NoRealtime = true
+	for i, trip := range trips {
+		trips[i] = noRun(trip)
 	}
 	return trips, err
 }
