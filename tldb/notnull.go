@@ -5,12 +5,12 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-// NotNullFilter sets some int fields to default zero values
-// where there is a 'not null' database constraint that can't be removed
-// but the spec allows empty values.
+// NotNullFilter sets the int and bool fields the spec allows to be empty, but
+// whose database columns are not null, to their zero values. A zero reads back
+// from the database as written, so readers see these defaults.
 type NotNullFilter struct{}
 
-// Validate .
+// Filter sets an entity's not-null defaults.
 func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
@@ -34,12 +34,16 @@ func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	return nil
 }
 
-// textSearchFilter sets the text fields the textsearch columns index to empty
-// strings when unset, since a null one would leave the row's whole vector null.
-// An empty string reads back as unset, so readers see no change.
-type textSearchFilter struct{}
+// emptyTextFilter sets the text fields the database needs non-null to empty
+// strings when unset. agency_id and agency_url have not-null constraints, and the
+// generated textsearch columns join the rest without COALESCE, so one null would
+// leave a row's whole vector null.
+//
+// An empty string reads back from the database as unset, so readers see no
+// change, unlike NotNullFilter's defaults.
+type emptyTextFilter struct{}
 
-func (e *textSearchFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+func (e *emptyTextFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		v.AgencyID.OrSet("")

@@ -340,11 +340,12 @@ func nilOr[T any](v *T, def T) T {
 	return *v
 }
 
-// FirstForRoutes keeps each route's first n stop times at each entity, across
-// service days.
+// FirstForRoutes returns each route's first n stop times at each entity, across
+// service days, in the order they happen. sts keeps its own order.
 func FirstForRoutes(sts []*StopTime, n int) []*StopTime {
 	// The service days' times overlap, so order by when each stop time happens,
 	// as the resolver does.
+	sts = slices.Clone(sts)
 	slices.SortStableFunc(sts, func(a, b *StopTime) int {
 		return cmp.Compare(
 			a.ServiceDate.Val.Unix()+int64(a.DepartureTime.Int()),

@@ -12,7 +12,7 @@ import (
 
 var notNullFilter = &NotNullFilter{}
 
-var textSearch = &textSearchFilter{}
+var emptyText = &emptyTextFilter{}
 
 // OpenWriter opens & creates a db writer
 func OpenWriter(dburl string, create bool) (*Writer, error) {
@@ -117,7 +117,7 @@ func (writer *Writer) AddEntities(ents []tt.Entity) ([]string, error) {
 	for i, ent := range ents {
 		// Set some fields to not null for compatibility
 		notNullFilter.Filter(ent, nil)
-		textSearch.Filter(ent, nil)
+		emptyText.Filter(ent, nil)
 
 		// Routes may need a default AgencyID set before writing to database.
 		if v, ok := ent.(*gtfs.Route); ok && !v.AgencyID.Valid {
