@@ -320,16 +320,6 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, []s
 		if len(pts) == 0 {
 			continue
 		}
-		// Check if we've already included this shape entirely
-		// This would probably work better if sorted from shortest to longest
-		// instead of most frequent to least frequent.
-		// A line will only be skipped if it's contained in a more frequent shape.
-		// TODO: TopoJson style only store unique segments.
-		for _, match := range matches {
-			if tlxy.LineContains(pts, match) {
-				continue
-			}
-		}
 		// Set if any selected shape is generated
 		if si.Generated {
 			ent.Generated = true
