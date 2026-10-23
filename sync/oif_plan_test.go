@@ -1,9 +1,11 @@
 package sync
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
@@ -110,24 +112,33 @@ func TestPlanOperatorOifs_NoAgencies(t *testing.T) {
 	assert.Equal(t, 0, plan.Inserts[0].AgencyRowID)
 }
 
-// Two associations that resolve to the same agency are both inserted, as
-// database sync has done.
+// Associations that resolve to the same agency make one row, the first one's,
+// whether the plan inserts or refreshes that row.
 func TestPlanOperatorOifs_RepeatedAssociation(t *testing.T) {
 	feeds := map[string]FeedAgencies{"f-one": {FeedID: 1, Agencies: []FeedAgency{feedAgency(10, "A", "Agency A", "")}}}
-	plan := PlanOperatorOifs(testOperator(5, association("f-one", "1"), association("f-one", "2")), nil, feeds)
-	assert.Equal(t, []string{"A", "A"}, resolvedAgencyIDs(plan.Inserts))
+	op := testOperator(5, association("f-one", "1"), association("f-one", "2"))
+	plan := PlanOperatorOifs(op, nil, feeds)
+	require.Len(t, plan.Inserts, 1)
+	assert.Equal(t, "1", plan.Inserts[0].GtfsAgencyID.Val)
+	plan = PlanOperatorOifs(op, []dmfr.OperatorAssociatedFeed{oifRow(100, 1, 5, "A")}, feeds)
+	require.Len(t, plan.Refreshes, 1)
+	assert.Equal(t, 100, plan.Refreshes[0].ID)
+	assert.Empty(t, plan.Inserts)
+	assert.Empty(t, plan.Deletes)
 }
 
-// Of an operator's rows that share a feed and agency, the last one is refreshed
-// and the others are deleted.
+// Of an operator's rows that share a feed and agency, the lowest id is
+// refreshed and the others are deleted, in whatever order the rows come.
 func TestPlanOperatorOifs_RowsShareKey(t *testing.T) {
 	feeds := map[string]FeedAgencies{"f-one": {FeedID: 1, Agencies: []FeedAgency{feedAgency(10, "A", "Agency A", "")}}}
-	existing := []dmfr.OperatorAssociatedFeed{oifRow(100, 1, 5, "A"), oifRow(101, 1, 5, "A")}
-	plan := PlanOperatorOifs(testOperator(5, association("f-one", "")), existing, feeds)
-	require.Len(t, plan.Refreshes, 1)
-	assert.Equal(t, 101, plan.Refreshes[0].ID)
-	assert.Empty(t, plan.Inserts)
-	assert.Equal(t, []int{100}, plan.Deletes)
+	existing := []dmfr.OperatorAssociatedFeed{oifRow(100, 1, 5, "A"), oifRow(101, 1, 5, "A"), oifRow(102, 1, 5, "A")}
+	for _, rows := range [][]dmfr.OperatorAssociatedFeed{existing, reversed(existing)} {
+		plan := PlanOperatorOifs(testOperator(5, association("f-one", "")), rows, feeds)
+		require.Len(t, plan.Refreshes, 1)
+		assert.Equal(t, 100, plan.Refreshes[0].ID)
+		assert.Empty(t, plan.Inserts)
+		assert.Equal(t, []int{101, 102}, plan.Deletes)
+	}
 }
 
 func TestPlanFeedOifs(t *testing.T) {
@@ -144,7 +155,7 @@ func TestPlanFeedOifs(t *testing.T) {
 		oifRow(103, 1, 0, "X"), // for an agency the version no longer has, so the plan deletes it
 		oifRow(104, 1, 8, "Y"), // an Atlas row, which this plan never deletes
 	}
-	plan := PlanFeedOifs(1, "f-9q9-test", existing, agencies)
+	plan := PlanFeedOifs(1, "f-9q9-test", existing, agencies, nil)
 	require.Len(t, plan.Inserts, 2)
 	assert.Equal(t, []string{"C", "D"}, resolvedAgencyIDs(plan.Inserts))
 	assert.Equal(t, "o-9q9-c", plan.Inserts[0].ResolvedOnestopID.Val)
@@ -160,13 +171,13 @@ func TestPlanFeedOifs(t *testing.T) {
 // generated ones.
 func TestPlanFeedOifs_NoAgencies(t *testing.T) {
 	existing := []dmfr.OperatorAssociatedFeed{oifRow(100, 1, 0, "A"), oifRow(101, 1, 7, "B")}
-	plan := PlanFeedOifs(1, "f-9q9-test", existing, nil)
+	plan := PlanFeedOifs(1, "f-9q9-test", existing, nil, nil)
 	assert.Empty(t, plan.Inserts)
 	assert.Equal(t, []int{100}, plan.Deletes)
 }
 
-// Of a feed's generated rows that share an agency, the first one is kept, and
-// an Atlas row owns the agency wherever it comes in the rows.
+// Of a feed's generated rows that share an agency, the lowest id is kept, and an
+// Atlas row owns its agency, in whatever order the rows come.
 func TestPlanFeedOifs_RowsShareAgency(t *testing.T) {
 	agencies := []FeedAgency{feedAgency(10, "A", "Agency A", ""), feedAgency(11, "B", "Agency B", "")}
 	existing := []dmfr.OperatorAssociatedFeed{
@@ -175,16 +186,64 @@ func TestPlanFeedOifs_RowsShareAgency(t *testing.T) {
 		oifRow(102, 1, 7, "B"),
 		oifRow(103, 1, 0, "B"),
 	}
-	plan := PlanFeedOifs(1, "f-9q9-test", existing, agencies)
-	assert.Empty(t, plan.Inserts)
-	assert.Equal(t, []int{101, 103}, plan.Deletes)
+	for _, rows := range [][]dmfr.OperatorAssociatedFeed{existing, reversed(existing)} {
+		plan := PlanFeedOifs(1, "f-9q9-test", rows, agencies, nil)
+		assert.Empty(t, plan.Inserts)
+		assert.Equal(t, []int{101, 103}, plan.Deletes)
+	}
+}
+
+// A deleted operator's row is deleted and claims no agency, so its agency gets
+// a generated row, or keeps the one it has.
+func TestPlanFeedOifs_DeletedOperator(t *testing.T) {
+	agencies := []FeedAgency{feedAgency(10, "A", "Agency A", ""), feedAgency(11, "B", "Agency B", "")}
+	existing := []dmfr.OperatorAssociatedFeed{
+		oifRow(100, 1, 7, "A"),
+		oifRow(101, 1, 7, "B"),
+		oifRow(102, 1, 0, "B"),
+		oifRow(103, 1, 8, "C"), // an Atlas row of an operator that isn't deleted
+	}
+	plan := PlanFeedOifs(1, "f-9q9-test", existing, agencies, []int{7})
+	assert.Equal(t, []string{"A"}, resolvedAgencyIDs(plan.Inserts))
+	assert.Equal(t, []int{100, 101}, plan.Deletes)
 }
 
 // Rows match agencies by resolved agency_id alone, so rows that don't carry
 // the feed's id still match.
 func TestPlanFeedOifs_RowsWithoutFeedID(t *testing.T) {
 	agencies := []FeedAgency{feedAgency(10, "A", "Agency A", "")}
-	plan := PlanFeedOifs(1, "f-9q9-test", []dmfr.OperatorAssociatedFeed{oifRow(100, 0, 0, "A")}, agencies)
+	plan := PlanFeedOifs(1, "f-9q9-test", []dmfr.OperatorAssociatedFeed{oifRow(100, 0, 0, "A")}, agencies, nil)
 	assert.Empty(t, plan.Inserts)
 	assert.Empty(t, plan.Deletes)
+}
+
+func TestFormatAgencyPlaces(t *testing.T) {
+	place := func(rank float64, name, adm1name string) builders.AgencyPlace {
+		p := builders.AgencyPlace{Rank: rank, Adm0name: tt.NewString("United States")}
+		if name != "" {
+			p.Name = tt.NewString(name)
+		}
+		if adm1name != "" {
+			p.Adm1name = tt.NewString(adm1name)
+		}
+		return p
+	}
+	// Ranked over 0.2, highest first, ties in the order given, each place once.
+	got := FormatAgencyPlaces([]builders.AgencyPlace{
+		place(0.3, "Oakland", "California"),
+		place(0.6, "San Francisco", "California"),
+		place(0.3, "Berkeley", "California"),
+		place(0.3, "Oakland", "California"),
+		place(0.2, "Alameda", "California"),
+		place(0.25, "", "Nevada"),
+	})
+	assert.Equal(t, "San Francisco, California, United States / Oakland, California, United States / Berkeley, California, United States / Nevada, United States", got)
+	assert.Equal(t, "", FormatAgencyPlaces(nil))
+}
+
+// reversed returns a copy of rows in reverse order.
+func reversed(rows []dmfr.OperatorAssociatedFeed) []dmfr.OperatorAssociatedFeed {
+	out := slices.Clone(rows)
+	slices.Reverse(out)
+	return out
 }
