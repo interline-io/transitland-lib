@@ -28,8 +28,7 @@ type FeedAgencies struct {
 }
 
 // OifRow is an operator-in-feed row a plan writes. AgencyRowID is the row id of
-// its resolved agency, or 0 when it resolved none; FormatAgencyPlaces turns that
-// agency's places into the row's resolved places.
+// its resolved agency, or 0 when it resolved none.
 type OifRow struct {
 	dmfr.OperatorAssociatedFeed
 	AgencyRowID int
@@ -69,8 +68,9 @@ func PlanOperatorOifs(operator dmfr.Operator, existing []dmfr.OperatorAssociated
 	existing = byID(existing)
 	lookup := map[oifmatch]int{}
 	for _, oif := range existing {
-		if _, ok := lookup[matchOf(oif)]; !ok {
-			lookup[matchOf(oif)] = oif.ID
+		key := matchOf(oif)
+		if _, ok := lookup[key]; !ok {
+			lookup[key] = oif.ID
 		}
 	}
 	matched := map[int]bool{}
@@ -129,10 +129,16 @@ func PlanOperatorOifs(operator dmfr.Operator, existing []dmfr.OperatorAssociated
 // operator's row owns its agency and is never deleted here, unless its operator
 // is deleted: then the row is deleted and claims no agency. A generated row for
 // an agency an Atlas row owns is deleted, and of generated rows that share an
-// agency, the lowest id is kept. A generated operator takes the agency's
-// onestop id, or else one made from the feed's onestop id and the agency's name.
+// agency, the lowest id is kept. Agencies that share an agency_id get one
+// generated row, and inserts follow the agencies' row ids. A generated
+// operator takes the agency's onestop id, or else one made from the feed's
+// onestop id and the agency's name.
 func PlanFeedOifs(feedID int, feedOnestopID string, existing []dmfr.OperatorAssociatedFeed, agencies []FeedAgency, deletedOperators []int) OifPlan {
 	existing = byID(existing)
+	deleted := map[int]bool{}
+	for _, id := range deletedOperators {
+		deleted[id] = true
+	}
 	lookup := map[string]int{} // resolved agency_id -> row id
 	matched := map[int]bool{}
 	for _, oif := range existing {
@@ -142,14 +148,21 @@ func PlanFeedOifs(feedID int, feedOnestopID string, existing []dmfr.OperatorAsso
 			if _, ok := lookup[key]; !ok {
 				lookup[key] = oif.ID
 			}
-		case !slices.Contains(deletedOperators, oif.OperatorID.Int()):
+		case !deleted[oif.OperatorID.Int()]:
 			matched[oif.ID] = true
 			lookup[key] = oif.ID
 		}
 	}
+	planned := map[string]bool{}
 	var plan OifPlan
-	for _, agency := range agencies {
-		if id, ok := lookup[agency.AgencyID.Val]; ok {
+	for _, agency := range byID(agencies) {
+		key := agency.AgencyID.Val
+		if planned[key] {
+			// A repeated agency_id: the agency with the lowest row id makes the row.
+			continue
+		}
+		planned[key] = true
+		if id, ok := lookup[key]; ok {
 			matched[id] = true
 			continue
 		}
@@ -170,9 +183,10 @@ func PlanFeedOifs(feedID int, feedOnestopID string, existing []dmfr.OperatorAsso
 }
 
 // FormatAgencyPlaces returns the resolved places of an operator-in-feed row from
-// its agency's places: those ranked over 0.2, highest rank first, each listed
-// once and joined with " / ". Places that tie in rank keep their order in
-// places.
+// its agency's places.
+//
+// It lists the places ranked over 0.2, highest rank first, each once, joined
+// with " / ". Places that tie in rank keep their order in places.
 func FormatAgencyPlaces(places []builders.AgencyPlace) string {
 	ranked := slices.DeleteFunc(slices.Clone(places), func(p builders.AgencyPlace) bool { return p.Rank <= 0.2 })
 	slices.SortStableFunc(ranked, func(a, b builders.AgencyPlace) int { return cmp.Compare(b.Rank, a.Rank) })
@@ -192,10 +206,10 @@ func FormatAgencyPlaces(places []builders.AgencyPlace) string {
 	return strings.Join(out, " / ")
 }
 
-// byID returns a copy of rows in id order, so the rows a plan keeps don't depend
-// on read order.
-func byID(rows []dmfr.OperatorAssociatedFeed) []dmfr.OperatorAssociatedFeed {
-	return slices.SortedFunc(slices.Values(rows), func(a, b dmfr.OperatorAssociatedFeed) int { return cmp.Compare(a.ID, b.ID) })
+// byID returns a copy of ents in id order, so a plan doesn't depend on read
+// order.
+func byID[T interface{ GetID() int }](ents []T) []T {
+	return slices.SortedFunc(slices.Values(ents), func(a, b T) int { return cmp.Compare(a.GetID(), b.GetID()) })
 }
 
 // unmatched returns the ids of the existing rows not in matched, in order.

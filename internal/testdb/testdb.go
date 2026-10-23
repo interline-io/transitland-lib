@@ -10,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tldb/sqlite"
@@ -125,6 +126,25 @@ func TempPostgres(dburl string, cb func(tldb.Adapter) error) error {
 		panic(err)
 	}
 	return writer.Adapter.Tx(cb)
+}
+
+// TempPostgresRollback runs cb in a transaction on the Postgres database at
+// dburl, and rolls the transaction back when the test ends.
+func TempPostgresRollback(t testing.TB, dburl string, cb func(tldb.Adapter)) {
+	t.Helper()
+	db, err := dbutil.OpenDB(dburl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Beginx()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = tx.Rollback()
+		_ = db.Close()
+	})
+	cb(postgres.NewPostgresAdapterFromDBX(tx))
 }
 
 // TempSqlite creates a temporary in-memory database and runs the callback inside a tx.

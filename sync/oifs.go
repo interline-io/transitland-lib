@@ -10,7 +10,6 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
-	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	sq "github.com/irees/squirrel"
 )
@@ -35,11 +34,12 @@ func filterName(name string) string {
 	return strings.ToLower(re2.ReplaceAllString(re1.ReplaceAllString(name, "~"), ""))
 }
 
-// getPlaces returns the resolved places of agency row id, as FormatAgencyPlaces
-// formats them.
+// getPlaces returns the resolved places of agency row id.
 func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
+	// FormatAgencyPlaces drops places ranked 0.2 or lower; the same filter here
+	// saves reading them.
 	places := []builders.AgencyPlace{}
-	if err := atx.Select(ctx, &places, "select name,adm0name,adm1name,rank from tl_agency_places where agency_id = ? order by id", id); err != nil {
+	if err := atx.Select(ctx, &places, "select name,adm0name,adm1name,rank from tl_agency_places where agency_id = ? and rank > 0.2 order by id", id); err != nil {
 		return "", err
 	}
 	return FormatAgencyPlaces(places), nil
@@ -65,15 +65,11 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 		} else if err != nil {
 			return false, err
 		}
-		agencies := []gtfs.Agency{}
-		if err := atx.Select(ctx, &agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id where feed_states.feed_id = ?", feedID); err != nil {
+		agencies, err := feedAgencies(ctx, atx, feedID)
+		if err != nil {
 			return false, err
 		}
-		feed := FeedAgencies{FeedID: feedID}
-		for _, agency := range agencies {
-			feed.Agencies = append(feed.Agencies, FeedAgency{Agency: agency})
-		}
-		feeds[osid] = feed
+		feeds[osid] = FeedAgencies{FeedID: feedID, Agencies: agencies}
 	}
 	return writeOifPlan(ctx, atx, PlanOperatorOifs(operator, existing, feeds))
 }

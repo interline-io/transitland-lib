@@ -194,18 +194,39 @@ func TestPlanFeedOifs_RowsShareAgency(t *testing.T) {
 }
 
 // A deleted operator's row is deleted and claims no agency, so its agency gets
-// a generated row, or keeps the one it has.
+// a generated row, keeps the one it has, or stays with a live Atlas row, in
+// whatever order the rows come.
 func TestPlanFeedOifs_DeletedOperator(t *testing.T) {
-	agencies := []FeedAgency{feedAgency(10, "A", "Agency A", ""), feedAgency(11, "B", "Agency B", "")}
+	agencies := []FeedAgency{feedAgency(10, "A", "Agency A", ""), feedAgency(11, "B", "Agency B", ""), feedAgency(12, "C", "Agency C", "")}
 	existing := []dmfr.OperatorAssociatedFeed{
 		oifRow(100, 1, 7, "A"),
 		oifRow(101, 1, 7, "B"),
 		oifRow(102, 1, 0, "B"),
 		oifRow(103, 1, 8, "C"), // an Atlas row of an operator that isn't deleted
+		oifRow(104, 1, 7, "C"),
 	}
-	plan := PlanFeedOifs(1, "f-9q9-test", existing, agencies, []int{7})
-	assert.Equal(t, []string{"A"}, resolvedAgencyIDs(plan.Inserts))
-	assert.Equal(t, []int{100, 101}, plan.Deletes)
+	for _, rows := range [][]dmfr.OperatorAssociatedFeed{existing, reversed(existing)} {
+		plan := PlanFeedOifs(1, "f-9q9-test", rows, agencies, []int{7})
+		assert.Equal(t, []string{"A"}, resolvedAgencyIDs(plan.Inserts))
+		assert.Equal(t, []int{100, 101, 104}, plan.Deletes)
+	}
+}
+
+// Agencies that share an agency_id get one generated row, from the agency with
+// the lowest row id.
+func TestPlanFeedOifs_RepeatedAgency(t *testing.T) {
+	agencies := []FeedAgency{feedAgency(11, "A", "Agency A", ""), feedAgency(10, "A", "Agency A", ""), feedAgency(10, "A", "Agency A", "")}
+	plan := PlanFeedOifs(1, "f-9q9-test", nil, agencies, nil)
+	assert.Equal(t, []int{10}, agencyRowIDs(plan.Inserts))
+}
+
+// Inserts follow the agencies' row ids, in whatever order the agencies come.
+func TestPlanFeedOifs_AgencyOrder(t *testing.T) {
+	agencies := []FeedAgency{feedAgency(10, "A", "Agency A", ""), feedAgency(11, "B", "Agency B", ""), feedAgency(12, "C", "Agency C", "")}
+	for _, list := range [][]FeedAgency{agencies, reversed(agencies)} {
+		plan := PlanFeedOifs(1, "f-9q9-test", nil, list, nil)
+		assert.Equal(t, []int{10, 11, 12}, agencyRowIDs(plan.Inserts))
+	}
 }
 
 // Rows match agencies by resolved agency_id alone, so rows that don't carry
@@ -241,9 +262,9 @@ func TestFormatAgencyPlaces(t *testing.T) {
 	assert.Equal(t, "", FormatAgencyPlaces(nil))
 }
 
-// reversed returns a copy of rows in reverse order.
-func reversed(rows []dmfr.OperatorAssociatedFeed) []dmfr.OperatorAssociatedFeed {
-	out := slices.Clone(rows)
+// reversed returns a copy of s in reverse order.
+func reversed[T any](s []T) []T {
+	out := slices.Clone(s)
 	slices.Reverse(out)
 	return out
 }
