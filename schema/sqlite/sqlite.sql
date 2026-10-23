@@ -500,6 +500,7 @@ CREATE TABLE IF NOT EXISTS "tl_agency_places" (
   "id" integer primary key autoincrement,
   "feed_version_id" integer not null,
   "agency_id" integer not null,
+  "count" integer not null,
   "rank" real not null,
   "name" varchar(255),
   "adm1name" varchar(255),

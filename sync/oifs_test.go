@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func oifTestFeed(t *testing.T, atx tldb.Adapter, agencyIDs ...string) dmfr.Feed 
 	fs := dmfr.FeedState{FeedID: fv.FeedID, MaterializedFeedVersionID: tt.NewInt(fv.ID)}
 	testdb.ShouldInsert(t, atx, &fs)
 	for _, id := range agencyIDs {
-		agency := gtfs.Agency{AgencyID: tt.NewString(id), AgencyName: tt.NewString("Agency " + id)}
+		agency := gtfs.Agency{AgencyID: tt.NewString(id), AgencyName: tt.NewString("Agency " + id), AgencyURL: tt.NewUrl("https://example.com"), AgencyTimezone: tt.NewTimezone("America/Los_Angeles")}
 		agency.FeedVersionID = fv.ID
 		testdb.ShouldInsert(t, atx, &agency)
 	}
@@ -30,9 +31,28 @@ func oifTestFeed(t *testing.T, atx tldb.Adapter, agencyIDs ...string) dmfr.Feed 
 	return feed
 }
 
+// oifTestDBs runs fn against an in-memory SQLite database, then against the
+// Postgres database at TL_TEST_DATABASE_URL, in a transaction it rolls back.
+func oifTestDBs(t *testing.T, fn func(t *testing.T, atx tldb.Adapter)) {
+	t.Run("sqlite", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			fn(t, atx)
+			return nil
+		})
+		require.NoError(t, err)
+	})
+	t.Run("postgres", func(t *testing.T) {
+		dburl := os.Getenv("TL_TEST_DATABASE_URL")
+		if dburl == "" {
+			t.Skip("TL_TEST_DATABASE_URL is not set")
+		}
+		testdb.TempPostgresRollback(t, dburl, func(atx tldb.Adapter) { fn(t, atx) })
+	})
+}
+
 // oifTestOperator inserts an Atlas operator associated with feed.
 func oifTestOperator(t *testing.T, atx tldb.Adapter, feed dmfr.Feed) dmfr.Operator {
-	operator := dmfr.Operator{OnestopID: tt.NewString("o-test"), Name: tt.NewString("Test")}
+	operator := dmfr.Operator{OnestopID: tt.NewString("o-test"), Name: tt.NewString("Test"), File: tt.NewString("test.dmfr.json")}
 	operator.AssociatedFeeds = dmfr.OperatorAssociatedFeeds{{FeedOnestopID: tt.NewString(feed.FeedID)}}
 	operator.ID = testdb.ShouldInsert(t, atx, &operator)
 	return operator
@@ -42,10 +62,10 @@ func TestGetPlaces(t *testing.T) {
 	// Places come back in rank order, each once, so a refreshed row holds the
 	// same string from one sync to the next.
 	ctx := context.Background()
-	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
-		oifTestFeed(t, atx, "MB")
+	oifTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
+		feed := oifTestFeed(t, atx, "MB")
 		agency := gtfs.Agency{}
-		testdb.ShouldGet(t, atx, &agency, "select * from gtfs_agencies where agency_id = ?", "MB")
+		testdb.ShouldGet(t, atx, &agency, "select gtfs_agencies.* from gtfs_agencies join feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id where feed_states.feed_id = ?", feed.ID)
 		places := []struct {
 			rank float64
 			name string
@@ -55,6 +75,7 @@ func TestGetPlaces(t *testing.T) {
 				"feed_version_id": agency.FeedVersionID,
 				"agency_id":       agency.ID,
 				"rank":            p.rank,
+				"count":           1,
 				"name":            p.name,
 				"adm1name":        "California",
 				"adm0name":        "United States",
@@ -67,9 +88,7 @@ func TestGetPlaces(t *testing.T) {
 		got, err := getPlaces(ctx, atx, agency.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "San Francisco, California, United States / Oakland, California, United States / Berkeley, California, United States", got)
-		return nil
 	})
-	require.NoError(t, err)
 }
 
 func TestUpdateOifs_NullAgencyID(t *testing.T) {
@@ -77,7 +96,7 @@ func TestUpdateOifs_NullAgencyID(t *testing.T) {
 	// agency id. Once the feed's only agency, which has no agency_id, resolves it
 	// to '', the row is rewritten in place, and a later sync changes nothing.
 	ctx := context.Background()
-	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+	oifTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
 		feed := oifTestFeed(t, atx, "")
 		operator := oifTestOperator(t, atx, feed)
 		prev := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feed.ID, ResolvedOnestopID: tt.NewString("o-test")}
@@ -95,15 +114,13 @@ func TestUpdateOifs_NullAgencyID(t *testing.T) {
 		updated, err = updateOifs(ctx, atx, operator)
 		require.NoError(t, err)
 		assert.False(t, updated, "a second sync finds nothing to change")
-		return nil
 	})
-	require.NoError(t, err)
 }
 
 func TestUpdateOifs_Rename(t *testing.T) {
 	// A matched row picks up its operator's new name after a rename in Atlas.
 	ctx := context.Background()
-	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+	oifTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
 		feed := oifTestFeed(t, atx, "MB")
 		operator := oifTestOperator(t, atx, feed)
 		prev := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feed.ID, ResolvedGtfsAgencyID: tt.NewString("MB"), ResolvedOnestopID: tt.NewString("o-test"), ResolvedName: tt.NewString("Old name")}
@@ -119,9 +136,7 @@ func TestUpdateOifs_Rename(t *testing.T) {
 		updated, err = updateOifs(ctx, atx, operator)
 		require.NoError(t, err)
 		assert.False(t, updated, "a second sync finds nothing to change")
-		return nil
 	})
-	require.NoError(t, err)
 }
 
 func TestFeedUpdateOifs_GeneratedRowBesideAtlasRow(t *testing.T) {
@@ -129,7 +144,7 @@ func TestFeedUpdateOifs_GeneratedRowBesideAtlasRow(t *testing.T) {
 	// the Atlas row kept. The generated row is inserted second, so it is also the
 	// one the database returns last.
 	ctx := context.Background()
-	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+	oifTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
 		feed := oifTestFeed(t, atx, "MB")
 		operator := oifTestOperator(t, atx, feed)
 		atlas := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feed.ID, ResolvedGtfsAgencyID: tt.NewString("MB"), ResolvedOnestopID: tt.NewString("o-test")}
@@ -143,19 +158,17 @@ func TestFeedUpdateOifs_GeneratedRowBesideAtlasRow(t *testing.T) {
 		ids := []int{}
 		testdb.ShouldSelect(t, atx, &ids, "select id from current_operators_in_feed where feed_id = ?", feed.ID)
 		assert.Equal(t, []int{atlasID}, ids)
-		return nil
 	})
-	require.NoError(t, err)
 }
 
 func TestFeedUpdateOifs_HiddenOperatorRow(t *testing.T) {
 	// A soft-deleted operator's row in the rebuilt feed gives way to a generated
 	// row. Its row in a feed this sync doesn't rebuild stays.
 	ctx := context.Background()
-	err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+	oifTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
 		feed := oifTestFeed(t, atx, "MB")
 		other := oifTestFeed(t, atx, "MB")
-		operator := dmfr.Operator{OnestopID: tt.NewString("o-gone"), Name: tt.NewString("Gone"), DeletedAt: tt.NewTime(time.Now())}
+		operator := dmfr.Operator{OnestopID: tt.NewString("o-gone"), Name: tt.NewString("Gone"), File: tt.NewString("test.dmfr.json"), DeletedAt: tt.NewTime(time.Now())}
 		operator.ID = testdb.ShouldInsert(t, atx, &operator)
 		for _, feedID := range []int{feed.ID, other.ID} {
 			hidden := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feedID, ResolvedGtfsAgencyID: tt.NewString("MB"), ResolvedOnestopID: tt.NewString("o-gone")}
@@ -174,7 +187,5 @@ func TestFeedUpdateOifs_HiddenOperatorRow(t *testing.T) {
 		count := 0
 		testdb.ShouldGet(t, atx, &count, "select count(*) from current_operators_in_feed where feed_id = ? and operator_id = ?", other.ID, operator.ID)
 		assert.Equal(t, 1, count, "the other feed's row stays")
-		return nil
 	})
-	require.NoError(t, err)
 }

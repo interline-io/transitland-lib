@@ -5,22 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
-	"github.com/interline-io/transitland-lib/gtfs"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 )
-
-type agencyPlace struct {
-	Name     tt.String
-	Adm1name tt.String
-	Adm0name tt.String
-}
 
 var nameTilde = "[-:&@/]"
 var nameFilter = "[^[:alnum:]~><]"
@@ -42,31 +34,15 @@ func filterName(name string) string {
 	return strings.ToLower(re2.ReplaceAllString(re1.ReplaceAllString(name, "~"), ""))
 }
 
+// getPlaces returns the resolved places of agency row id.
 func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
-	agencyPlaces := []agencyPlace{}
-	if err := atx.Select(ctx, &agencyPlaces, "select name,adm0name,adm1name from tl_agency_places where agency_id = ? AND rank > 0.2 order by rank desc, id", id); err != nil {
+	// FormatAgencyPlaces drops places ranked 0.2 or lower; the same filter here
+	// saves reading them.
+	places := []builders.AgencyPlace{}
+	if err := atx.Select(ctx, &places, "select name,adm0name,adm1name,rank from tl_agency_places where agency_id = ? and rank > 0.2 order by id", id); err != nil {
 		return "", err
 	}
-	// Places stay in rank order, each listed once, so the same rows always give
-	// the same string.
-	places := []string{}
-	for _, a := range agencyPlaces {
-		suba := []string{}
-		if a.Name.Valid {
-			suba = append(suba, a.Name.Val)
-		}
-		if a.Adm1name.Valid {
-			suba = append(suba, a.Adm1name.Val)
-		}
-		if a.Adm0name.Valid {
-			suba = append(suba, a.Adm0name.Val)
-		}
-		place := strings.Join(suba, ", ")
-		if len(suba) > 0 && !slices.Contains(places, place) {
-			places = append(places, place)
-		}
-	}
-	return strings.Join(places, " / "), nil
+	return FormatAgencyPlaces(places), nil
 }
 
 // updateOifs brings an operator's rows in line with its associated feeds, as
@@ -89,15 +65,11 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 		} else if err != nil {
 			return false, err
 		}
-		agencies := []gtfs.Agency{}
-		if err := atx.Select(ctx, &agencies, "select gtfs_agencies.* from gtfs_agencies inner join feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id where feed_states.feed_id = ?", feedID); err != nil {
+		agencies, err := feedAgencies(ctx, atx, feedID)
+		if err != nil {
 			return false, err
 		}
-		feed := FeedAgencies{FeedID: feedID}
-		for _, agency := range agencies {
-			feed.Agencies = append(feed.Agencies, FeedAgency{Agency: agency})
-		}
-		feeds[osid] = feed
+		feeds[osid] = FeedAgencies{FeedID: feedID, Agencies: agencies}
 	}
 	return writeOifPlan(ctx, atx, PlanOperatorOifs(operator, existing, feeds))
 }
@@ -109,9 +81,8 @@ func feedAgencies(ctx context.Context, atx tldb.Adapter, feedID int) ([]FeedAgen
 		Select("gtfs_agencies.*", "feed_version_agency_onestop_ids.onestop_id as onestop_id").
 		From("gtfs_agencies").
 		Join("feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id").
-		Join("current_feeds on current_feeds.id = feed_states.feed_id").
 		JoinClause("left join feed_version_agency_onestop_ids on feed_version_agency_onestop_ids.entity_id = gtfs_agencies.agency_id and feed_version_agency_onestop_ids.feed_version_id = gtfs_agencies.feed_version_id").
-		Where(sq.Eq{"current_feeds.id": feedID})
+		Where(sq.Eq{"feed_states.feed_id": feedID})
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
 		return nil, err
@@ -191,45 +162,40 @@ func refreshOif(ctx context.Context, atx tldb.Adapter, id int, oif dmfr.Operator
 	return n > 0, err
 }
 
-// deleteHiddenOifs removes a feed's rows of soft-deleted operators, which the
-// finders already hide, and says whether there were any.
-func deleteHiddenOifs(ctx context.Context, atx tldb.Adapter, feedID int) (bool, error) {
+// feedDeletedOperators returns the ids of the soft-deleted operators that have
+// rows in a feed.
+func feedDeletedOperators(ctx context.Context, atx tldb.Adapter, feedID int) ([]int, error) {
 	q := atx.Sqrl().
-		Delete("current_operators_in_feed").
-		Where(sq.Eq{"feed_id": feedID}).
-		Where("operator_id in (select id from current_operators where deleted_at is not null)")
+		Select("distinct current_operators.id").
+		From("current_operators").
+		Join("current_operators_in_feed on current_operators_in_feed.operator_id = current_operators.id").
+		Where(sq.Eq{"current_operators_in_feed.feed_id": feedID}).
+		Where("current_operators.deleted_at is not null")
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	r, err := atx.DBX().ExecContext(ctx, qstr, qargs...)
-	if err != nil {
-		return false, err
+	ids := []int{}
+	if err := atx.Select(ctx, &ids, qstr, qargs...); err != nil {
+		return nil, err
 	}
-	n, err := r.RowsAffected()
-	return n > 0, err
+	return ids, nil
 }
 
 // feedUpdateOifs brings a feed's generated rows in line with the agencies of its
 // active version, as PlanFeedOifs plans, and says whether any row changed.
 func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
-	// Rows of soft-deleted operators go first, so none of them keeps an agency
-	// from its generated row.
-	hidden, err := deleteHiddenOifs(ctx, atx, feed.ID)
-	if err != nil {
-		return false, err
-	}
 	existing := []dmfr.OperatorAssociatedFeed{}
 	if err := atx.Select(ctx, &existing, "select * from current_operators_in_feed where feed_id = ?", feed.ID); err != nil {
+		return false, err
+	}
+	deleted, err := feedDeletedOperators(ctx, atx, feed.ID)
+	if err != nil {
 		return false, err
 	}
 	agencies, err := feedAgencies(ctx, atx, feed.ID)
 	if err != nil {
 		return false, err
 	}
-	updated, err := writeOifPlan(ctx, atx, PlanFeedOifs(feed.ID, feed.FeedID, existing, agencies))
-	if err != nil {
-		return false, err
-	}
-	return hidden || updated, nil
+	return writeOifPlan(ctx, atx, PlanFeedOifs(feed.ID, feed.FeedID, existing, agencies, deleted))
 }
