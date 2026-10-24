@@ -861,7 +861,7 @@ type Route {
   "Fare networks from `route_networks.txt` that include this route; empty when the feed names networks in `routes.network_id` instead"
   networks(limit: Int): [Network!]!
 
-  "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`"
+  "Aggregated representative geometry for this route as a single LineString or MultiLineString; for each shape it combines, with its GTFS shape and direction, see `representative_shapes`"
   geometry: Geometry @goField(forceResolver: true)
   
   "Agency associated with this route"
@@ -894,8 +894,11 @@ type Route {
   "Typical service frequency for this route, by direction and day-of-week category"
   headways(limit: Int): [RouteHeadway!]!
   
-  "Per-direction representative geometries for this route, derived from GTFS shapes (or stop points if shapes are absent)"
-  geometries(limit: Int): [RouteGeometry!]!
+  "A single summary of this route's representative shapes; `limit` is ignored"
+  geometries(limit: Int): [RouteGeometry!]! @deprecated(reason: "Use `representative_shapes` for each of the route's shapes, or `geometry` for the combined line")
+
+  "The GTFS shapes this route's representative geometry is built from, in rank order: per direction, the longest shape and any shape carrying more than 20% of that direction's trips. Shapes generated from stop locations appear only for a route with no shapes from `shapes.txt`"
+  representative_shapes(limit: Int): [RouteRepresentativeShape!]!
   
   "Census geographies intersecting this route's stop locations; use with a `radius` filter and the `intersection_area` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
@@ -2554,26 +2557,52 @@ type RouteStopPatternTimetableTimeGrid {
 }
 
 """
-Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
+Summary of a route's representative shapes, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency. See `RouteRepresentativeShape` for each shape on its own.
 """
 type RouteGeometry {
-  "True if the source feed has no `shapes.txt` and this geometry was generated from straight lines between stop points"
+  "True if the route's representative shapes were generated from straight lines between stop points, because the route has no shapes from `shapes.txt`"
   generated: Boolean!
 
   "Single LineString representing the most common shape for this route"
   geometry: LineString
 
-  "MultiLineString ensemble combining the most common shape for each direction"
+  "MultiLineString combining every representative shape, in rank order"
   combined_geometry: Geometry
 
-  "Length of the `geometry` LineString, in meters"
+  "Length of the longest representative shape, in meters"
   length: Float
 
-  "Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps"
+  "Largest distance between consecutive points of any representative shape, in meters; useful for flagging shapes with large gaps"
   max_segment_length: Float
 
-  "Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route"
+  "Largest distance between a representative shape's first point and any of its other points, in meters; small values indicate a loop route"
   first_point_max_distance: Float
+}
+
+"""
+One of the GTFS shapes a route's representative geometry is built from, with its own metrics.
+"""
+type RouteRepresentativeShape {
+  "Position in the route's representative set; rank 0 is the most common shape"
+  rank: Int!
+
+  "The direction in which this shape carries the most of the route's trips"
+  direction_id: Int
+
+  "True if this shape was generated from straight lines between stop points, because the route has no shapes from `shapes.txt`"
+  generated: Boolean!
+
+  "Length of the shape, in meters"
+  length: Float
+
+  "Largest distance between consecutive points of the shape, in meters; useful for flagging shapes with large gaps"
+  max_segment_length: Float
+
+  "Largest distance between the shape's first point and any of its other points, in meters; small values indicate a loop"
+  first_point_max_distance: Float
+
+  "The GTFS shape"
+  shape: Shape!
 }
 
 """

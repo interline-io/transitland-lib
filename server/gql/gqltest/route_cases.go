@@ -390,6 +390,43 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
+			// The shapes the summary above is built from, each on its own, and the
+			// summary built from them: their lines in rank order, and the longest length.
+			Name:  "representative shapes (Bu-130)",
+			Query: `query { routes(where:{route_id:"Bu-130"}) { representative_shapes { rank direction_id generated length shape { shape_id geometry } } geometries { length combined_geometry } } }`,
+			F: func(t *testing.T, jj string) {
+				r := gjson.Get(jj, "routes.0")
+				shapes := r.Get("representative_shapes").Array()
+				var ids []string
+				var ranks, dirs []int64
+				maxLength := 0.0
+				for _, s := range shapes {
+					ids = append(ids, s.Get("shape.shape_id").String())
+					ranks = append(ranks, s.Get("rank").Int())
+					dirs = append(dirs, s.Get("direction_id").Int())
+					assert.False(t, s.Get("generated").Bool())
+					maxLength = max(maxLength, s.Get("length").Float())
+				}
+				assert.Equal(t, []string{"cal_sj_sf", "cal_sf_sj", "cal_sf_tam", "cal_tam_sf"}, ids)
+				assert.Equal(t, []int64{0, 1, 2, 3}, ranks)
+				assert.Equal(t, []int64{0, 1, 1, 0}, dirs)
+				parts := r.Get("geometries.0.combined_geometry.coordinates").Array()
+				if assert.Len(t, parts, len(shapes), "one combined part per representative shape") {
+					for i, s := range shapes {
+						assert.Len(t, parts[i].Array(), len(s.Get("shape.geometry.coordinates").Array()), "combined part %d is shape %d", i, i)
+					}
+				}
+				assert.InDelta(t, maxLength, r.Get("geometries.0.length").Float(), 1e-6, "summary length is the longest shape's")
+				assert.Greater(t, maxLength, shapes[0].Get("length").Float(), "the longest shape is not the rank 0 one")
+			},
+		},
+		{
+			Name:         "representative shapes limit",
+			Query:        `query { routes(where:{route_id:"Bu-130"}) { representative_shapes(limit: 1) { rank shape { shape_id } } } }`,
+			Selector:     "routes.0.representative_shapes.#.shape.shape_id",
+			SelectExpect: []string{"cal_sj_sf"},
+		},
+		{
 			// only check dow_category explicitly it's not a stable computation
 			Name:         "headways",
 			Query:        `query($route_id: String!) {  routes(where:{route_id:$route_id}) {headways{dow_category departures service_date stop_trip_count stop{stop_id}}} }`,

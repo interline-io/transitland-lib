@@ -6824,7 +6824,7 @@
                             "x-order": 206
                           },
                           "geometry": {
-                            "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`",
+                            "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for each shape it combines, with its GTFS shape and direction, see `representative_shapes`",
                             "nullable": true,
                             "title": "geometry",
                             "type": "object",
@@ -8113,7 +8113,7 @@
                             "x-order": 206
                           },
                           "geometry": {
-                            "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see `geometries`",
+                            "description": "Aggregated representative geometry for this route as a single LineString or MultiLineString; for each shape it combines, with its GTFS shape and direction, see `representative_shapes`",
                             "nullable": true,
                             "title": "geometry",
                             "type": "object",

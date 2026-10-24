@@ -38,7 +38,7 @@ func notImplErr() error {
 }
 
 // finderUnimpl builds the not-implemented error for the Finder method `up` frames
-// above it, naming it (e.g. "not implemented: RouteGeometriesByRouteIDs") so an
+// above it, naming it (e.g. "not implemented: RouteRepresentativeShapesByRouteIDs") so an
 // unimplemented loader identifies itself rather than surfacing a bare "not
 // implemented". It wraps ErrNotImplemented so errors.Is still matches.
 func finderUnimpl(up int) error {
@@ -358,7 +358,7 @@ func (UnimplementedFinder) RouteAttributesByRouteIDs(_ context.Context, ids []in
 func (UnimplementedFinder) RouteTypesByAgencyIDs(_ context.Context, ids []int) ([][]int, []error) {
 	return notImplBatch[[]int](ids)
 }
-func (UnimplementedFinder) RouteGeometriesByRouteIDs(context.Context, *int, []int) ([][]*RouteGeometry, error) {
+func (UnimplementedFinder) RouteRepresentativeShapesByRouteIDs(context.Context, *int, []int) ([][]*RouteRepresentativeShape, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) RouteHeadwaysByRouteIDs(context.Context, *int, []int) ([][]*RouteHeadway, error) {

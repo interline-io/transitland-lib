@@ -1148,19 +1148,19 @@ type RouteFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 }
 
-// Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
+// Summary of a route's representative shapes, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency. See `RouteRepresentativeShape` for each shape on its own.
 type RouteGeometry struct {
-	// True if the source feed has no `shapes.txt` and this geometry was generated from straight lines between stop points
+	// True if the route's representative shapes were generated from straight lines between stop points, because the route has no shapes from `shapes.txt`
 	Generated bool `json:"generated"`
 	// Single LineString representing the most common shape for this route
 	Geometry *tt.LineString `json:"geometry,omitempty"`
-	// MultiLineString ensemble combining the most common shape for each direction
+	// MultiLineString combining every representative shape, in rank order
 	CombinedGeometry *tt.Geometry `json:"combined_geometry,omitempty"`
-	// Length of the `geometry` LineString, in meters
+	// Length of the longest representative shape, in meters
 	Length *float64 `json:"length,omitempty"`
-	// Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps
+	// Largest distance between consecutive points of any representative shape, in meters; useful for flagging shapes with large gaps
 	MaxSegmentLength *float64 `json:"max_segment_length,omitempty"`
-	// Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route
+	// Largest distance between a representative shape's first point and any of its other points, in meters; small values indicate a loop route
 	FirstPointMaxDistance *float64 `json:"first_point_max_distance,omitempty"`
 	RouteID               int      `json:"-"`
 }

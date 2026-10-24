@@ -110,7 +110,7 @@ type Loaders struct {
 	PathwaysByIDs                                                 *dataloader.Loader[int, *model.Pathway]
 	PathwaysByToStopID                                            *dataloader.Loader[pathwayLoaderParam, []*model.Pathway]
 	RouteAttributesByRouteIDs                                     *dataloader.Loader[int, *model.RouteAttribute]
-	RouteGeometriesByRouteIDs                                     *dataloader.Loader[routeGeometryLoaderParam, []*model.RouteGeometry]
+	RouteRepresentativeShapesByRouteIDs                           *dataloader.Loader[routeRepresentativeShapeLoaderParam, []*model.RouteRepresentativeShape]
 	RouteHeadwaysByRouteIDs                                       *dataloader.Loader[routeHeadwayLoaderParam, []*model.RouteHeadway]
 	RoutesByAgencyIDs                                             *dataloader.Loader[routeLoaderParam, []*model.Route]
 	RoutesByFeedVersionIDs                                        *dataloader.Loader[routeLoaderParam, []*model.Route]
@@ -447,9 +447,9 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		),
 		RouteAttributesByRouteIDs: withWaitAndCapacity(waitTime, batchSize, dbf.RouteAttributesByRouteIDs),
 		RouteTypesByAgencyIDs:     withWaitAndCapacity(waitTime, batchSize, dbf.RouteTypesByAgencyIDs),
-		RouteGeometriesByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			paramGroupAdapter(dbf.RouteGeometriesByRouteIDs),
-			func(p routeGeometryLoaderParam) (int, bool, *int) {
+		RouteRepresentativeShapesByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,
+			paramGroupAdapter(dbf.RouteRepresentativeShapesByRouteIDs),
+			func(p routeRepresentativeShapeLoaderParam) (int, bool, *int) {
 				return p.RouteID, false, p.Limit
 			},
 		),

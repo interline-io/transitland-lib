@@ -193,6 +193,11 @@ func (r *Resolver) RouteStop() gqlout.RouteStopResolver { return &routeStopResol
 // RouteHeadway .
 func (r *Resolver) RouteHeadway() gqlout.RouteHeadwayResolver { return &routeHeadwayResolver{r} }
 
+// RouteRepresentativeShape .
+func (r *Resolver) RouteRepresentativeShape() gqlout.RouteRepresentativeShapeResolver {
+	return &routeRepresentativeShapeResolver{r}
+}
+
 // RouteStopPattern .
 func (r *Resolver) RouteStopPattern() gqlout.RouteStopPatternResolver {
 	return &routePatternResolver{r}

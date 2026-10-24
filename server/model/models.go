@@ -258,6 +258,22 @@ type Shape struct {
 	service.ShapeLine
 }
 
+// RouteRepresentativeShape is one of the shapes a route's representative geometry is
+// built from, with the shape's own metrics.
+type RouteRepresentativeShape struct {
+	RouteID               int
+	ShapeID               int
+	DirectionID           tt.Int
+	Rank                  int
+	Generated             bool
+	Length                tt.Float
+	MaxSegmentLength      tt.Float
+	FirstPointMaxDistance tt.Float
+	// Geometry is the shape's line in two dimensions, which the route's combined
+	// geometry is assembled from.
+	Geometry tt.LineString
+}
+
 type Level struct {
 	FeedOnestopID   string
 	FeedVersionSHA1 string

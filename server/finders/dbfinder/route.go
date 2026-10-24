@@ -223,28 +223,37 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 	}), nil
 }
 
-// RouteGeometriesByRouteIDs reconstructs each route's geometry from the shapes it
-// points at in tl_route_representative_shapes: rank 0 is the primary line, the ranked
-// set collected is the combined geometry, and the scalars are aggregates over the
-// pointed-at shapes. There is one geometry per route, so limit is unused.
-func (f *Finder) RouteGeometriesByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteGeometry, error) {
-	var ents []*model.RouteGeometry
+// RouteRepresentativeShapesByRouteIDs returns the shapes in tl_route_representative_shapes
+// for each route, in rank order, each with its line in two dimensions.
+func (f *Finder) RouteRepresentativeShapesByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteRepresentativeShape, error) {
+	var ents []*model.RouteRepresentativeShape
 	q := sq.StatementBuilder.
 		Select(
-			"tl_route_representative_shapes.route_id AS route_id",
-			"bool_or(tl_route_representative_shapes.generated) AS generated",
-			"max(tl_route_representative_shapes.length) AS length",
-			"max(tl_route_representative_shapes.max_segment_length) AS max_segment_length",
-			"max(tl_route_representative_shapes.first_point_max_distance) AS first_point_max_distance",
-			"ST_Force2D((array_agg(gtfs_shapes.geometry::geometry ORDER BY tl_route_representative_shapes.rank))[1]) AS geometry",
-			"ST_Multi(ST_Collect(ST_Force2D(gtfs_shapes.geometry::geometry) ORDER BY tl_route_representative_shapes.rank)) AS combined_geometry",
+			"tl_route_representative_shapes.route_id",
+			"tl_route_representative_shapes.shape_id",
+			"tl_route_representative_shapes.direction_id",
+			"tl_route_representative_shapes.rank",
+			"tl_route_representative_shapes.generated",
+			"tl_route_representative_shapes.length",
+			"tl_route_representative_shapes.max_segment_length",
+			"tl_route_representative_shapes.first_point_max_distance",
+			"ST_Force2D(gtfs_shapes.geometry::geometry) AS geometry",
 		).
 		From("tl_route_representative_shapes").
 		Join("gtfs_shapes ON gtfs_shapes.id = tl_route_representative_shapes.shape_id").
 		Where(In("tl_route_representative_shapes.route_id", keys)).
-		GroupBy("tl_route_representative_shapes.route_id")
+		OrderBy("tl_route_representative_shapes.route_id", "tl_route_representative_shapes.rank")
 	err := dbutil.Select(ctx, f.db, q, &ents)
-	return arrangeGroup(keys, ents, func(ent *model.RouteGeometry) int { return ent.RouteID }), queryErr(ctx, err)
+	groups := arrangeGroup(keys, ents, func(ent *model.RouteRepresentativeShape) int { return ent.RouteID })
+	// A route has a handful of representative shapes, so each route's are read whole
+	// and cut to the limit here rather than by a lateral join per route.
+	n := int(finderCheckLimit(limit))
+	for i, g := range groups {
+		if len(g) > n {
+			groups[i] = g[:n]
+		}
+	}
+	return groups, queryErr(ctx, err)
 }
 
 func (f *Finder) RoutesByAgencyIDs(ctx context.Context, limit *int, where *model.RouteFilter, keys []int) ([][]*model.Route, error) {

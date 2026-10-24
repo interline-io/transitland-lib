@@ -108,7 +108,7 @@ type routeHeadwayLoaderParam struct {
 	Limit   *int
 }
 
-type routeGeometryLoaderParam struct {
+type routeRepresentativeShapeLoaderParam struct {
 	RouteID int
 	Limit   *int
 }
