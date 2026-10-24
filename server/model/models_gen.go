@@ -1148,9 +1148,9 @@ type RouteFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 }
 
-// Summary of a route's representative shapes, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency. See `RouteRepresentativeShape` for each shape on its own.
+// Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 type RouteGeometry struct {
-	// True if the route's representative shapes were generated from straight lines between stop points, because the route has no shapes from `shapes.txt`
+	// True if this geometry was generated from straight lines between stop points
 	Generated bool `json:"generated"`
 	// Single LineString representing the most common shape for this route
 	Geometry *tt.LineString `json:"geometry,omitempty"`
@@ -1196,6 +1196,26 @@ type RouteLocationFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 	// Focus search on this point; results will be sorted by distance
 	Focus *FocusPoint `json:"focus,omitempty"`
+}
+
+// A GTFS shape that is part of a route's representative geometry.
+type RouteRepresentativeShape struct {
+	// Position among the route's representative shapes; 0 is the most common shape
+	Rank int `json:"rank"`
+	// The direction this shape mainly serves, as a GTFS `direction_id`
+	DirectionID *int `json:"direction_id,omitempty"`
+	// True if this shape was generated from straight lines between stop points
+	Generated bool `json:"generated"`
+	// Length of the shape, in meters
+	Length *float64 `json:"length,omitempty"`
+	// Largest distance between consecutive points of the shape, in meters; useful for flagging shapes with large gaps
+	MaxSegmentLength *float64 `json:"max_segment_length,omitempty"`
+	// Largest distance between the shape's first point and any of its other points, in meters; small values indicate a loop
+	FirstPointMaxDistance *float64 `json:"first_point_max_distance,omitempty"`
+	// The GTFS shape
+	Shape   *Shape `json:"shape"`
+	RouteID int    `json:"-"`
+	ShapeID int    `json:"-"`
 }
 
 // Association between a stop, the route that serves it, and the operating agency. Provides the route and agency context alongside each stop on a route.

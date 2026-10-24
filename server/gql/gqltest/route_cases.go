@@ -390,8 +390,8 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
-			// The shapes the summary above is built from, each on its own, and the
-			// summary built from them: their lines in rank order, and the longest length.
+			// Each representative shape on its own, and the summary geometry: its parts are
+			// the shapes' lines in rank order, and its length is the longest shape's.
 			Name:  "representative shapes (Bu-130)",
 			Query: `query { routes(where:{route_id:"Bu-130"}) { representative_shapes { rank direction_id generated length shape { shape_id geometry } } geometries { length combined_geometry } } }`,
 			F: func(t *testing.T, jj string) {

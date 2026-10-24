@@ -11948,7 +11948,7 @@ type Route {
   "Fare networks from ` + "`" + `route_networks.txt` + "`" + ` that include this route; empty when the feed names networks in ` + "`" + `routes.network_id` + "`" + ` instead"
   networks(limit: Int): [Network!]!
 
-  "Aggregated representative geometry for this route as a single LineString or MultiLineString; for each shape it combines, with its GTFS shape and direction, see ` + "`" + `representative_shapes` + "`" + `"
+  "Aggregated representative geometry for this route as a single LineString or MultiLineString"
   geometry: Geometry @goField(forceResolver: true)
   
   "Agency associated with this route"
@@ -11981,10 +11981,10 @@ type Route {
   "Typical service frequency for this route, by direction and day-of-week category"
   headways(limit: Int): [RouteHeadway!]!
   
-  "A single summary of this route's representative shapes; ` + "`" + `limit` + "`" + ` is ignored"
-  geometries(limit: Int): [RouteGeometry!]! @deprecated(reason: "Use ` + "`" + `representative_shapes` + "`" + ` for each of the route's shapes, or ` + "`" + `geometry` + "`" + ` for the combined line")
+  "Summary of this route's representative shapes"
+  geometries(limit: Int): [RouteGeometry!]! @deprecated(reason: "Use ` + "`" + `representative_shapes` + "`" + ` or ` + "`" + `geometry` + "`" + `")
 
-  "The GTFS shapes this route's representative geometry is built from, in rank order: per direction, the longest shape and any shape carrying more than 20% of that direction's trips. Shapes generated from stop locations appear only for a route with no shapes from ` + "`" + `shapes.txt` + "`" + `"
+  "The GTFS shapes that make up this route's representative geometry, in rank order"
   representative_shapes(limit: Int): [RouteRepresentativeShape!]!
   
   "Census geographies intersecting this route's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
@@ -13644,10 +13644,10 @@ type RouteStopPatternTimetableTimeGrid {
 }
 
 """
-Summary of a route's representative shapes, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency. See ` + "`" + `RouteRepresentativeShape` + "`" + ` for each shape on its own.
+Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 """
 type RouteGeometry {
-  "True if the route's representative shapes were generated from straight lines between stop points, because the route has no shapes from ` + "`" + `shapes.txt` + "`" + `"
+  "True if this geometry was generated from straight lines between stop points"
   generated: Boolean!
 
   "Single LineString representing the most common shape for this route"
@@ -13667,16 +13667,16 @@ type RouteGeometry {
 }
 
 """
-One of the GTFS shapes a route's representative geometry is built from, with its own metrics.
+A GTFS shape that is part of a route's representative geometry.
 """
 type RouteRepresentativeShape {
-  "Position in the route's representative set; rank 0 is the most common shape"
+  "Position among the route's representative shapes; 0 is the most common shape"
   rank: Int!
 
-  "The direction in which this shape carries the most of the route's trips"
+  "The direction this shape mainly serves, as a GTFS ` + "`" + `direction_id` + "`" + `"
   direction_id: Int
 
-  "True if this shape was generated from straight lines between stop points, because the route has no shapes from ` + "`" + `shapes.txt` + "`" + `"
+  "True if this shape was generated from straight lines between stop points"
   generated: Boolean!
 
   "Length of the shape, in meters"
@@ -45082,8 +45082,8 @@ func (ec *executionContext) _RouteRepresentativeShape_direction_id(ctx context.C
 			return obj.DirectionID, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Int) graphql.Marshaler {
-			return ec.marshalOInt2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐInt(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
 		},
 		true,
 		false,
@@ -45128,8 +45128,8 @@ func (ec *executionContext) _RouteRepresentativeShape_length(ctx context.Context
 			return obj.Length, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Float) graphql.Marshaler {
-			return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
 		},
 		true,
 		false,
@@ -45151,8 +45151,8 @@ func (ec *executionContext) _RouteRepresentativeShape_max_segment_length(ctx con
 			return obj.MaxSegmentLength, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Float) graphql.Marshaler {
-			return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
 		},
 		true,
 		false,
@@ -45174,8 +45174,8 @@ func (ec *executionContext) _RouteRepresentativeShape_first_point_max_distance(c
 			return obj.FirstPointMaxDistance, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v tt.Float) graphql.Marshaler {
-			return ec.marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
 		},
 		true,
 		false,

@@ -224,7 +224,7 @@ func (f *Finder) RouteStopPatternsByRouteIDs(ctx context.Context, limit *int, wh
 }
 
 // RouteRepresentativeShapesByRouteIDs returns the shapes in tl_route_representative_shapes
-// for each route, in rank order, each with its line in two dimensions.
+// for each route, in rank order.
 func (f *Finder) RouteRepresentativeShapesByRouteIDs(ctx context.Context, limit *int, keys []int) ([][]*model.RouteRepresentativeShape, error) {
 	var ents []*model.RouteRepresentativeShape
 	q := sq.StatementBuilder.
@@ -237,10 +237,8 @@ func (f *Finder) RouteRepresentativeShapesByRouteIDs(ctx context.Context, limit 
 			"tl_route_representative_shapes.length",
 			"tl_route_representative_shapes.max_segment_length",
 			"tl_route_representative_shapes.first_point_max_distance",
-			"ST_Force2D(gtfs_shapes.geometry::geometry) AS geometry",
 		).
 		From("tl_route_representative_shapes").
-		Join("gtfs_shapes ON gtfs_shapes.id = tl_route_representative_shapes.shape_id").
 		Where(In("tl_route_representative_shapes.route_id", keys)).
 		OrderBy("tl_route_representative_shapes.route_id", "tl_route_representative_shapes.rank")
 	err := dbutil.Select(ctx, f.db, q, &ents)

@@ -230,6 +230,15 @@ models:
     extraFields:
       RouteID:
         type: int
+  RouteRepresentativeShape:
+    fields:
+      shape:
+        resolver: true
+    extraFields:
+      RouteID:
+        type: int
+      ShapeID:
+        type: int
   AgencyPlace:
     extraFields:
       AgencyID:

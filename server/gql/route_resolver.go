@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"errors"
 	"math"
 	"sort"
 
@@ -57,40 +58,58 @@ func (r *routeResolver) RepresentativeShapes(ctx context.Context, obj *model.Rou
 // shape combined in rank order, and the largest of their metrics. A route with no
 // shapes has none.
 func routeGeometry(ctx context.Context, routeID int) (*model.RouteGeometry, error) {
-	shapes, err := LoaderFor(ctx).RouteRepresentativeShapesByRouteIDs.Load(ctx, routeRepresentativeShapeLoaderParam{RouteID: routeID})()
-	if err != nil || len(shapes) == 0 {
+	reps, err := LoaderFor(ctx).RouteRepresentativeShapesByRouteIDs.Load(ctx, routeRepresentativeShapeLoaderParam{RouteID: routeID})()
+	if err != nil || len(reps) == 0 {
+		return nil, err
+	}
+	shapeIDs := make([]int, len(reps))
+	for i, rep := range reps {
+		shapeIDs[i] = rep.ShapeID
+	}
+	shapes, errs := LoaderFor(ctx).ShapesByIDs.LoadMany(ctx, shapeIDs)()
+	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
 	rg := &model.RouteGeometry{RouteID: routeID}
 	combined := geom.NewMultiLineString(geom.XY).SetSRID(4326)
-	for _, s := range shapes {
-		if s.Geometry.Valid {
+	for i, rep := range reps {
+		if shp := shapes[i]; shp != nil && shp.Geometry.Valid {
+			line := lineXY(shp.Geometry.Val)
 			if rg.Geometry == nil {
-				g := s.Geometry
+				g := tt.NewLineString(line)
 				rg.Geometry = &g
 			}
-			if err := combined.Push(s.Geometry.Val); err != nil {
+			if err := combined.Push(line); err != nil {
 				return nil, err
 			}
 		}
-		rg.Generated = rg.Generated || s.Generated
-		rg.Length = maxFloat(rg.Length, s.Length)
-		rg.MaxSegmentLength = maxFloat(rg.MaxSegmentLength, s.MaxSegmentLength)
-		rg.FirstPointMaxDistance = maxFloat(rg.FirstPointMaxDistance, s.FirstPointMaxDistance)
+		rg.Generated = rg.Generated || rep.Generated
+		rg.Length = maxFloat(rg.Length, rep.Length)
+		rg.MaxSegmentLength = maxFloat(rg.MaxSegmentLength, rep.MaxSegmentLength)
+		rg.FirstPointMaxDistance = maxFloat(rg.FirstPointMaxDistance, rep.FirstPointMaxDistance)
 	}
 	cg := tt.NewGeometry(combined)
 	rg.CombinedGeometry = &cg
 	return rg, nil
 }
 
+// lineXY returns a shape's line in two dimensions, without its shape_dist_traveled
+// M values.
+func lineXY(ls *geom.LineString) *geom.LineString {
+	flat := make([]float64, 0, 2*ls.NumCoords())
+	for _, c := range ls.Coords() {
+		flat = append(flat, c.X(), c.Y())
+	}
+	return geom.NewLineStringFlat(geom.XY, flat).SetSRID(4326)
+}
+
 // maxFloat returns the larger of a running maximum and v, skipping a null v as SQL's
 // max() does.
-func maxFloat(cur *float64, v tt.Float) *float64 {
-	if !v.Valid || (cur != nil && *cur >= v.Val) {
+func maxFloat(cur, v *float64) *float64 {
+	if v == nil || (cur != nil && *cur >= *v) {
 		return cur
 	}
-	x := v.Val
-	return &x
+	return v
 }
 
 type routeRepresentativeShapeResolver struct{ *Resolver }
