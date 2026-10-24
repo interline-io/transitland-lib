@@ -1150,17 +1150,17 @@ type RouteFilter struct {
 
 // Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 type RouteGeometry struct {
-	// True if the source feed has no `shapes.txt` and this geometry was generated from straight lines between stop points
+	// True if this geometry was generated from straight lines between stop points
 	Generated bool `json:"generated"`
 	// Single LineString representing the most common shape for this route
 	Geometry *tt.LineString `json:"geometry,omitempty"`
-	// MultiLineString ensemble combining the most common shape for each direction
+	// MultiLineString combining every representative shape, in rank order
 	CombinedGeometry *tt.Geometry `json:"combined_geometry,omitempty"`
-	// Length of the `geometry` LineString, in meters
+	// Length of the longest representative shape, in meters
 	Length *float64 `json:"length,omitempty"`
-	// Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps
+	// Largest distance between consecutive points of any representative shape, in meters; useful for flagging shapes with large gaps
 	MaxSegmentLength *float64 `json:"max_segment_length,omitempty"`
-	// Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route
+	// Largest distance between a representative shape's first point and any of its other points, in meters; small values indicate a loop route
 	FirstPointMaxDistance *float64 `json:"first_point_max_distance,omitempty"`
 	RouteID               int      `json:"-"`
 }
@@ -1196,6 +1196,26 @@ type RouteLocationFilter struct {
 	Near *PointRadius `json:"near,omitempty"`
 	// Focus search on this point; results will be sorted by distance
 	Focus *FocusPoint `json:"focus,omitempty"`
+}
+
+// A GTFS shape that is part of a route's representative geometry.
+type RouteRepresentativeShape struct {
+	// Position among the route's representative shapes; 0 is the most common shape
+	Rank int `json:"rank"`
+	// The direction this shape mainly serves, as a GTFS `direction_id`
+	DirectionID *int `json:"direction_id,omitempty"`
+	// True if this shape was generated from straight lines between stop points
+	Generated bool `json:"generated"`
+	// Length of the shape, in meters
+	Length *float64 `json:"length,omitempty"`
+	// Largest distance between consecutive points of the shape, in meters; useful for flagging shapes with large gaps
+	MaxSegmentLength *float64 `json:"max_segment_length,omitempty"`
+	// Largest distance between the shape's first point and any of its other points, in meters; small values indicate a loop
+	FirstPointMaxDistance *float64 `json:"first_point_max_distance,omitempty"`
+	// The GTFS shape
+	Shape   *Shape `json:"shape"`
+	RouteID int    `json:"-"`
+	ShapeID int    `json:"-"`
 }
 
 // Association between a stop, the route that serves it, and the operating agency. Provides the route and agency context alongside each stop on a route.

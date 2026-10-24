@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"errors"
 	"math"
 	"sort"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
+	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-polyline"
 )
 
@@ -32,18 +34,88 @@ func (r *routeResolver) Geometry(ctx context.Context, obj *model.Route) (*tt.Geo
 		return &obj.Geometry, nil
 	}
 	// Defer geometry loading
-	geoms, err := LoaderFor(ctx).RouteGeometriesByRouteIDs.Load(ctx, routeGeometryLoaderParam{RouteID: obj.ID})()
-	if err != nil {
+	rg, err := routeGeometry(ctx, obj.ID)
+	if err != nil || rg == nil {
 		return nil, err
 	}
-	if len(geoms) > 0 {
-		return geoms[0].CombinedGeometry, nil
-	}
-	return nil, nil
+	return rg.CombinedGeometry, nil
 }
 
+// Geometries returns the route's one summary geometry, so limit never applies.
 func (r *routeResolver) Geometries(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteGeometry, error) {
-	return LoaderFor(ctx).RouteGeometriesByRouteIDs.Load(ctx, routeGeometryLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
+	rg, err := routeGeometry(ctx, obj.ID)
+	if err != nil || rg == nil {
+		return nil, err
+	}
+	return []*model.RouteGeometry{rg}, nil
+}
+
+func (r *routeResolver) RepresentativeShapes(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteRepresentativeShape, error) {
+	return LoaderFor(ctx).RouteRepresentativeShapesByRouteIDs.Load(ctx, routeRepresentativeShapeLoaderParam{RouteID: obj.ID, Limit: resolverCheckLimit(limit)})()
+}
+
+// routeGeometry summarizes a route's representative shapes: the rank 0 shape, every
+// shape combined in rank order, and the largest of their metrics. A route with no
+// shapes has none.
+func routeGeometry(ctx context.Context, routeID int) (*model.RouteGeometry, error) {
+	reps, err := LoaderFor(ctx).RouteRepresentativeShapesByRouteIDs.Load(ctx, routeRepresentativeShapeLoaderParam{RouteID: routeID})()
+	if err != nil || len(reps) == 0 {
+		return nil, err
+	}
+	shapeIDs := make([]int, len(reps))
+	for i, rep := range reps {
+		shapeIDs[i] = rep.ShapeID
+	}
+	shapes, errs := LoaderFor(ctx).ShapesByIDs.LoadMany(ctx, shapeIDs)()
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	rg := &model.RouteGeometry{RouteID: routeID}
+	combined := geom.NewMultiLineString(geom.XY).SetSRID(4326)
+	for i, rep := range reps {
+		if shp := shapes[i]; shp != nil && shp.Geometry.Valid {
+			line := lineXY(shp.Geometry.Val)
+			if rg.Geometry == nil {
+				g := tt.NewLineString(line)
+				rg.Geometry = &g
+			}
+			if err := combined.Push(line); err != nil {
+				return nil, err
+			}
+		}
+		rg.Generated = rg.Generated || rep.Generated
+		rg.Length = maxFloat(rg.Length, rep.Length)
+		rg.MaxSegmentLength = maxFloat(rg.MaxSegmentLength, rep.MaxSegmentLength)
+		rg.FirstPointMaxDistance = maxFloat(rg.FirstPointMaxDistance, rep.FirstPointMaxDistance)
+	}
+	cg := tt.NewGeometry(combined)
+	rg.CombinedGeometry = &cg
+	return rg, nil
+}
+
+// lineXY returns a shape's line in two dimensions, without its shape_dist_traveled
+// M values.
+func lineXY(ls *geom.LineString) *geom.LineString {
+	flat := make([]float64, 0, 2*ls.NumCoords())
+	for _, c := range ls.Coords() {
+		flat = append(flat, c.X(), c.Y())
+	}
+	return geom.NewLineStringFlat(geom.XY, flat).SetSRID(4326)
+}
+
+// maxFloat returns the larger of a running maximum and v, skipping a null v as SQL's
+// max() does.
+func maxFloat(cur, v *float64) *float64 {
+	if v == nil || (cur != nil && *cur >= *v) {
+		return cur
+	}
+	return v
+}
+
+type routeRepresentativeShapeResolver struct{ *Resolver }
+
+func (r *routeRepresentativeShapeResolver) Shape(ctx context.Context, obj *model.RouteRepresentativeShape) (*model.Shape, error) {
+	return LoaderFor(ctx).ShapesByIDs.Load(ctx, obj.ShapeID)()
 }
 
 func (r *routeResolver) Trips(ctx context.Context, obj *model.Route, limit *int, where *model.TripFilter) ([]*model.Trip, error) {

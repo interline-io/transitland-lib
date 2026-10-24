@@ -69,6 +69,7 @@ type ResolverRoot interface {
 	Route() RouteResolver
 	RouteHeadway() RouteHeadwayResolver
 	RouteNetwork() RouteNetworkResolver
+	RouteRepresentativeShape() RouteRepresentativeShapeResolver
 	RouteStop() RouteStopResolver
 	RouteStopPattern() RouteStopPatternResolver
 	RouteStopPatternTimetableGrid() RouteStopPatternTimetableGridResolver
@@ -1200,42 +1201,43 @@ type ComplexityRoot struct {
 	}
 
 	Route struct {
-		Agency            func(childComplexity int) int
-		Alerts            func(childComplexity int, active *bool, limit *int, includeModes *bool, includeTrips *bool) int
-		CEMVSupport       func(childComplexity int) int
-		CensusGeographies func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
-		ContinuousDropOff func(childComplexity int) int
-		ContinuousPickup  func(childComplexity int) int
-		FeedOnestopID     func(childComplexity int) int
-		FeedVersion       func(childComplexity int) int
-		FeedVersionSHA1   func(childComplexity int) int
-		Geometries        func(childComplexity int, limit *int) int
-		Geometry          func(childComplexity int) int
-		Headways          func(childComplexity int, limit *int) int
-		ID                func(childComplexity int) int
-		NetworkID         func(childComplexity int) int
-		Networks          func(childComplexity int, limit *int) int
-		OnestopID         func(childComplexity int) int
-		Patterns          func(childComplexity int, where *model.RouteStopPatternFilter) int
-		RouteAttribute    func(childComplexity int) int
-		RouteColor        func(childComplexity int) int
-		RouteDesc         func(childComplexity int) int
-		RouteID           func(childComplexity int) int
-		RouteLongName     func(childComplexity int) int
-		RouteShortName    func(childComplexity int) int
-		RouteSortOrder    func(childComplexity int) int
-		RouteStopBuffer   func(childComplexity int, radius *float64) int
-		RouteStops        func(childComplexity int, limit *int) int
-		RouteTextColor    func(childComplexity int) int
-		RouteType         func(childComplexity int) int
-		RouteTypeBasic    func(childComplexity int) int
-		RouteURL          func(childComplexity int) int
-		SearchRank        func(childComplexity int) int
-		SegmentPatterns   func(childComplexity int, limit *int, where *model.SegmentPatternFilter) int
-		Segments          func(childComplexity int, limit *int, where *model.SegmentFilter) int
-		Stops             func(childComplexity int, limit *int, where *model.StopFilter) int
-		Trips             func(childComplexity int, limit *int, where *model.TripFilter) int
-		VehiclePositions  func(childComplexity int, limit *int, where *model.VehiclePositionFilter) int
+		Agency               func(childComplexity int) int
+		Alerts               func(childComplexity int, active *bool, limit *int, includeModes *bool, includeTrips *bool) int
+		CEMVSupport          func(childComplexity int) int
+		CensusGeographies    func(childComplexity int, limit *int, where *model.CensusGeographyFilter) int
+		ContinuousDropOff    func(childComplexity int) int
+		ContinuousPickup     func(childComplexity int) int
+		FeedOnestopID        func(childComplexity int) int
+		FeedVersion          func(childComplexity int) int
+		FeedVersionSHA1      func(childComplexity int) int
+		Geometries           func(childComplexity int, limit *int) int
+		Geometry             func(childComplexity int) int
+		Headways             func(childComplexity int, limit *int) int
+		ID                   func(childComplexity int) int
+		NetworkID            func(childComplexity int) int
+		Networks             func(childComplexity int, limit *int) int
+		OnestopID            func(childComplexity int) int
+		Patterns             func(childComplexity int, where *model.RouteStopPatternFilter) int
+		RepresentativeShapes func(childComplexity int, limit *int) int
+		RouteAttribute       func(childComplexity int) int
+		RouteColor           func(childComplexity int) int
+		RouteDesc            func(childComplexity int) int
+		RouteID              func(childComplexity int) int
+		RouteLongName        func(childComplexity int) int
+		RouteShortName       func(childComplexity int) int
+		RouteSortOrder       func(childComplexity int) int
+		RouteStopBuffer      func(childComplexity int, radius *float64) int
+		RouteStops           func(childComplexity int, limit *int) int
+		RouteTextColor       func(childComplexity int) int
+		RouteType            func(childComplexity int) int
+		RouteTypeBasic       func(childComplexity int) int
+		RouteURL             func(childComplexity int) int
+		SearchRank           func(childComplexity int) int
+		SegmentPatterns      func(childComplexity int, limit *int, where *model.SegmentPatternFilter) int
+		Segments             func(childComplexity int, limit *int, where *model.SegmentFilter) int
+		Stops                func(childComplexity int, limit *int, where *model.StopFilter) int
+		Trips                func(childComplexity int, limit *int, where *model.TripFilter) int
+		VehiclePositions     func(childComplexity int, limit *int, where *model.VehiclePositionFilter) int
 	}
 
 	RouteAttribute struct {
@@ -1270,6 +1272,16 @@ type ComplexityRoot struct {
 		ID              func(childComplexity int) int
 		Network         func(childComplexity int) int
 		Route           func(childComplexity int) int
+	}
+
+	RouteRepresentativeShape struct {
+		DirectionID           func(childComplexity int) int
+		FirstPointMaxDistance func(childComplexity int) int
+		Generated             func(childComplexity int) int
+		Length                func(childComplexity int) int
+		MaxSegmentLength      func(childComplexity int) int
+		Rank                  func(childComplexity int) int
+		Shape                 func(childComplexity int) int
 	}
 
 	RouteStop struct {
@@ -1961,6 +1973,7 @@ type RouteResolver interface {
 	RouteStops(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteStop, error)
 	Headways(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteHeadway, error)
 	Geometries(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteGeometry, error)
+	RepresentativeShapes(ctx context.Context, obj *model.Route, limit *int) ([]*model.RouteRepresentativeShape, error)
 	CensusGeographies(ctx context.Context, obj *model.Route, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	RouteStopBuffer(ctx context.Context, obj *model.Route, radius *float64) (*model.RouteStopBuffer, error)
 	Patterns(ctx context.Context, obj *model.Route, where *model.RouteStopPatternFilter) ([]*model.RouteStopPattern, error)
@@ -1979,6 +1992,9 @@ type RouteNetworkResolver interface {
 	Route(ctx context.Context, obj *model.RouteNetwork) (*model.Route, error)
 
 	FeedVersion(ctx context.Context, obj *model.RouteNetwork) (*model.FeedVersion, error)
+}
+type RouteRepresentativeShapeResolver interface {
+	Shape(ctx context.Context, obj *model.RouteRepresentativeShape) (*model.Shape, error)
 }
 type RouteStopResolver interface {
 	Route(ctx context.Context, obj *model.RouteStop) (*model.Route, error)
@@ -7662,6 +7678,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Route.Patterns(childComplexity, args["where"].(*model.RouteStopPatternFilter)), true
+	case "Route.representative_shapes":
+		if e.ComplexityRoot.Route.RepresentativeShapes == nil {
+			break
+		}
+
+		args, err := ec.field_Route_representative_shapes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Route.RepresentativeShapes(childComplexity, args["limit"].(*int)), true
 	case "Route.route_attribute":
 		if e.ComplexityRoot.Route.RouteAttribute == nil {
 			break
@@ -7947,6 +7974,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteNetwork.Route(childComplexity), true
+
+	case "RouteRepresentativeShape.direction_id":
+		if e.ComplexityRoot.RouteRepresentativeShape.DirectionID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteRepresentativeShape.DirectionID(childComplexity), true
+	case "RouteRepresentativeShape.first_point_max_distance":
+		if e.ComplexityRoot.RouteRepresentativeShape.FirstPointMaxDistance == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteRepresentativeShape.FirstPointMaxDistance(childComplexity), true
+	case "RouteRepresentativeShape.generated":
+		if e.ComplexityRoot.RouteRepresentativeShape.Generated == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteRepresentativeShape.Generated(childComplexity), true
+	case "RouteRepresentativeShape.length":
+		if e.ComplexityRoot.RouteRepresentativeShape.Length == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteRepresentativeShape.Length(childComplexity), true
+	case "RouteRepresentativeShape.max_segment_length":
+		if e.ComplexityRoot.RouteRepresentativeShape.MaxSegmentLength == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteRepresentativeShape.MaxSegmentLength(childComplexity), true
+	case "RouteRepresentativeShape.rank":
+		if e.ComplexityRoot.RouteRepresentativeShape.Rank == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteRepresentativeShape.Rank(childComplexity), true
+	case "RouteRepresentativeShape.shape":
+		if e.ComplexityRoot.RouteRepresentativeShape.Shape == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteRepresentativeShape.Shape(childComplexity), true
 
 	case "RouteStop.agency":
 		if e.ComplexityRoot.RouteStop.Agency == nil {
@@ -11878,7 +11948,7 @@ type Route {
   "Fare networks from ` + "`" + `route_networks.txt` + "`" + ` that include this route; empty when the feed names networks in ` + "`" + `routes.network_id` + "`" + ` instead"
   networks(limit: Int): [Network!]!
 
-  "Aggregated representative geometry for this route as a single LineString or MultiLineString; for direction-specific shapes see ` + "`" + `geometries` + "`" + `"
+  "Aggregated representative geometry for this route as a single LineString or MultiLineString"
   geometry: Geometry @goField(forceResolver: true)
   
   "Agency associated with this route"
@@ -11911,8 +11981,11 @@ type Route {
   "Typical service frequency for this route, by direction and day-of-week category"
   headways(limit: Int): [RouteHeadway!]!
   
-  "Per-direction representative geometries for this route, derived from GTFS shapes (or stop points if shapes are absent)"
-  geometries(limit: Int): [RouteGeometry!]!
+  "Summary of this route's representative shapes"
+  geometries(limit: Int): [RouteGeometry!]! @deprecated(reason: "Use ` + "`" + `representative_shapes` + "`" + ` or ` + "`" + `geometry` + "`" + `")
+
+  "The GTFS shapes that make up this route's representative geometry, in rank order"
+  representative_shapes(limit: Int): [RouteRepresentativeShape!]!
   
   "Census geographies intersecting this route's stop locations; use with a ` + "`" + `radius` + "`" + ` filter and the ` + "`" + `intersection_area` + "`" + ` field to estimate population within the service area"
   census_geographies(limit: Int, where: CensusGeographyFilter): [CensusGeography!]
@@ -13574,23 +13647,49 @@ type RouteStopPatternTimetableTimeGrid {
 Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 """
 type RouteGeometry {
-  "True if the source feed has no ` + "`" + `shapes.txt` + "`" + ` and this geometry was generated from straight lines between stop points"
+  "True if this geometry was generated from straight lines between stop points"
   generated: Boolean!
 
   "Single LineString representing the most common shape for this route"
   geometry: LineString
 
-  "MultiLineString ensemble combining the most common shape for each direction"
+  "MultiLineString combining every representative shape, in rank order"
   combined_geometry: Geometry
 
-  "Length of the ` + "`" + `geometry` + "`" + ` LineString, in meters"
+  "Length of the longest representative shape, in meters"
   length: Float
 
-  "Maximum distance between consecutive points in the geometry, in meters; useful for flagging shapes with large gaps"
+  "Largest distance between consecutive points of any representative shape, in meters; useful for flagging shapes with large gaps"
   max_segment_length: Float
 
-  "Maximum distance from the first point of the geometry to any other point, in meters; small values indicate a loop route"
+  "Largest distance between a representative shape's first point and any of its other points, in meters; small values indicate a loop route"
   first_point_max_distance: Float
+}
+
+"""
+A GTFS shape that is part of a route's representative geometry.
+"""
+type RouteRepresentativeShape {
+  "Position among the route's representative shapes; 0 is the most common shape"
+  rank: Int!
+
+  "The direction this shape mainly serves, as a GTFS ` + "`" + `direction_id` + "`" + `"
+  direction_id: Int
+
+  "True if this shape was generated from straight lines between stop points"
+  generated: Boolean!
+
+  "Length of the shape, in meters"
+  length: Float
+
+  "Largest distance between consecutive points of the shape, in meters; useful for flagging shapes with large gaps"
+  max_segment_length: Float
+
+  "Largest distance between the shape's first point and any of its other points, in meters; small values indicate a loop"
+  first_point_max_distance: Float
+
+  "The GTFS shape"
+  shape: Shape!
 }
 
 """
@@ -17371,6 +17470,8 @@ func (ec *executionContext) childFields_Route(ctx context.Context, field graphql
 		return ec.fieldContext_Route_headways(ctx, field)
 	case "geometries":
 		return ec.fieldContext_Route_geometries(ctx, field)
+	case "representative_shapes":
+		return ec.fieldContext_Route_representative_shapes(ctx, field)
 	case "census_geographies":
 		return ec.fieldContext_Route_census_geographies(ctx, field)
 	case "route_stop_buffer":
@@ -17455,6 +17556,26 @@ func (ec *executionContext) childFields_RouteNetwork(ctx context.Context, field 
 		return ec.fieldContext_RouteNetwork_feed_version(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type RouteNetwork", field.Name)
+}
+
+func (ec *executionContext) childFields_RouteRepresentativeShape(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "rank":
+		return ec.fieldContext_RouteRepresentativeShape_rank(ctx, field)
+	case "direction_id":
+		return ec.fieldContext_RouteRepresentativeShape_direction_id(ctx, field)
+	case "generated":
+		return ec.fieldContext_RouteRepresentativeShape_generated(ctx, field)
+	case "length":
+		return ec.fieldContext_RouteRepresentativeShape_length(ctx, field)
+	case "max_segment_length":
+		return ec.fieldContext_RouteRepresentativeShape_max_segment_length(ctx, field)
+	case "first_point_max_distance":
+		return ec.fieldContext_RouteRepresentativeShape_first_point_max_distance(ctx, field)
+	case "shape":
+		return ec.fieldContext_RouteRepresentativeShape_shape(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RouteRepresentativeShape", field.Name)
 }
 
 func (ec *executionContext) childFields_RouteStop(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -20574,6 +20695,20 @@ func (ec *executionContext) field_Route_patterns_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["where"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Route_representative_shapes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -44018,6 +44153,50 @@ func (ec *executionContext) fieldContext_Route_geometries(ctx context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _Route_representative_shapes(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_representative_shapes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Route().RepresentativeShapes(ctx, obj, fc.Args["limit"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.RouteRepresentativeShape) graphql.Marshaler {
+			return ec.marshalNRouteRepresentativeShape2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteRepresentativeShapeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Route_representative_shapes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Route",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteRepresentativeShape(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Route_representative_shapes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Route_census_geographies(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -44863,6 +45042,176 @@ func (ec *executionContext) fieldContext_RouteNetwork_feed_version(_ context.Con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_FeedVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RouteRepresentativeShape_rank(ctx context.Context, field graphql.CollectedField, obj *model.RouteRepresentativeShape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteRepresentativeShape_rank(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Rank, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteRepresentativeShape_rank(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteRepresentativeShape", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteRepresentativeShape_direction_id(ctx context.Context, field graphql.CollectedField, obj *model.RouteRepresentativeShape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteRepresentativeShape_direction_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DirectionID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RouteRepresentativeShape_direction_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteRepresentativeShape", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteRepresentativeShape_generated(ctx context.Context, field graphql.CollectedField, obj *model.RouteRepresentativeShape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteRepresentativeShape_generated(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Generated, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteRepresentativeShape_generated(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteRepresentativeShape", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _RouteRepresentativeShape_length(ctx context.Context, field graphql.CollectedField, obj *model.RouteRepresentativeShape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteRepresentativeShape_length(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Length, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RouteRepresentativeShape_length(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteRepresentativeShape", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _RouteRepresentativeShape_max_segment_length(ctx context.Context, field graphql.CollectedField, obj *model.RouteRepresentativeShape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteRepresentativeShape_max_segment_length(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MaxSegmentLength, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RouteRepresentativeShape_max_segment_length(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteRepresentativeShape", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _RouteRepresentativeShape_first_point_max_distance(ctx context.Context, field graphql.CollectedField, obj *model.RouteRepresentativeShape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteRepresentativeShape_first_point_max_distance(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FirstPointMaxDistance, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RouteRepresentativeShape_first_point_max_distance(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteRepresentativeShape", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _RouteRepresentativeShape_shape(ctx context.Context, field graphql.CollectedField, obj *model.RouteRepresentativeShape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteRepresentativeShape_shape(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteRepresentativeShape().Shape(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Shape) graphql.Marshaler {
+			return ec.marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteRepresentativeShape_shape(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteRepresentativeShape",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Shape(ctx, field)
 		},
 	}
 	return fc, nil
@@ -69030,6 +69379,42 @@ func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "representative_shapes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Route_representative_shapes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "census_geographies":
 			field := field
 
@@ -69597,6 +69982,94 @@ func (ec *executionContext) _RouteNetwork(ctx context.Context, sel ast.Selection
 					}
 				}()
 				res = ec._RouteNetwork_feed_version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var routeRepresentativeShapeImplementors = []string{"RouteRepresentativeShape"}
+
+func (ec *executionContext) _RouteRepresentativeShape(ctx context.Context, sel ast.SelectionSet, obj *model.RouteRepresentativeShape) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, routeRepresentativeShapeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RouteRepresentativeShape")
+		case "rank":
+			out.Values[i] = ec._RouteRepresentativeShape_rank(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "direction_id":
+			out.Values[i] = ec._RouteRepresentativeShape_direction_id(ctx, field, obj)
+		case "generated":
+			out.Values[i] = ec._RouteRepresentativeShape_generated(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "length":
+			out.Values[i] = ec._RouteRepresentativeShape_length(ctx, field, obj)
+		case "max_segment_length":
+			out.Values[i] = ec._RouteRepresentativeShape_max_segment_length(ctx, field, obj)
+		case "first_point_max_distance":
+			out.Values[i] = ec._RouteRepresentativeShape_first_point_max_distance(ctx, field, obj)
+		case "shape":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteRepresentativeShape_shape(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -76335,6 +76808,32 @@ func (ec *executionContext) marshalNRouteNetwork2ᚖgithubᚗcomᚋinterlineᚑi
 		return graphql.Null
 	}
 	return ec._RouteNetwork(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRouteRepresentativeShape2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteRepresentativeShapeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteRepresentativeShape) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRouteRepresentativeShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteRepresentativeShape(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNRouteRepresentativeShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteRepresentativeShape(ctx context.Context, sel ast.SelectionSet, v *model.RouteRepresentativeShape) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RouteRepresentativeShape(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNRouteStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteStop) graphql.Marshaler {
