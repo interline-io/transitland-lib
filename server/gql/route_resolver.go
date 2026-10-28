@@ -229,6 +229,39 @@ func (r *routePatternResolver) RepresentativeTrip(ctx context.Context, obj *mode
 	return noRun(trip), err
 }
 
+// Stops returns the stops of the pattern's representative trip, in order.
+func (r *routePatternResolver) Stops(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Stop, error) {
+	stops := []*model.Stop{}
+	if obj.RepresentativeTripID == 0 {
+		return stops, nil
+	}
+	sts, err := LoaderFor(ctx).StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
+		FeedVersionID: obj.FeedVersionID,
+		TripID:        obj.RepresentativeTripID,
+		Limit:         ptr(RESOLVER_PATTERN_MAXLIMIT),
+	})()
+	if err != nil {
+		return nil, err
+	}
+	// A flex stop time can name a location or location group instead of a stop.
+	var loads []dataloader.Thunk[*model.Stop]
+	for _, st := range sts {
+		if st.StopID.IsPresent() {
+			loads = append(loads, LoaderFor(ctx).StopsByIDs.Load(ctx, st.StopID.Int()))
+		}
+	}
+	for _, load := range loads {
+		stop, err := load()
+		if err != nil {
+			return nil, err
+		}
+		if stop != nil {
+			stops = append(stops, stop)
+		}
+	}
+	return stops, nil
+}
+
 // noRun returns a trip that stands for no run, so no realtime data is matched to
 // it. A copy, as the loader shares one trip across every request.
 func noRun(trip *model.Trip) *model.Trip {
@@ -241,10 +274,12 @@ func noRun(trip *model.Trip) *model.Trip {
 }
 
 func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error) {
-	// On a date, the trips counted rather than every trip of the pattern.
+	// On a date, the trips counted rather than every trip of the pattern, up to
+	// the limit Route.trips allows: they are looked up by id, and the timetable
+	// already returns every one.
 	if len(obj.TripIDs.Val) > 0 {
 		ids := obj.TripIDs.Val
-		if n := *resolverCheckLimit(limit); n < len(ids) {
+		if n := *resolverCheckLimitMax(limit, RESOLVER_TRIP_MAXLIMIT); n < len(ids) {
 			ids = ids[:n]
 		}
 		var loads []dataloader.Thunk[*model.Trip]
@@ -495,7 +530,3 @@ func sameStops(a, b []*model.StopTime) bool {
 	}
 	return true
 }
-
-// func (r *routePatternResolver) Stops(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Stop, error) {
-// 	return nil, nil
-// }
