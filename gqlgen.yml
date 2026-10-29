@@ -222,6 +222,10 @@ models:
     fields:
       distances:
         resolver: true
+  StopTime:
+    fields:
+      shape_distance:
+        resolver: true
   RouteStopPatternTimetableGrid:
     fields:
       delta:

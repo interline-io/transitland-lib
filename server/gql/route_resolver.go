@@ -418,7 +418,7 @@ func (r *routePatternTimetableResolver) ShapeDistances(ctx context.Context, obj 
 		}
 		stops[i] = stop.ToPoint()
 	}
-	placed := map[string][]tlxy.StopPosition{}
+	placed := map[string][]tt.Int{}
 	for j, trip := range obj.Trips {
 		if !trip.ShapeID.Valid {
 			continue
@@ -430,26 +430,18 @@ func (r *routePatternTimetableResolver) ShapeDistances(ctx context.Context, obj 
 		if shape == nil {
 			continue
 		}
-		dists := make([]float64, nStops)
-		hinted := false
+		dists := make([]tt.Float, nStops)
 		for i := range dists {
-			d := obj.ShapeDistTraveled[i][j]
-			dists[i] = d.Val
-			if d.Valid {
-				hinted = true
-			}
-		}
-		if !hinted {
-			dists = nil
+			dists[i] = obj.ShapeDistTraveled[i][j]
 		}
 		key := fmt.Sprint(trip.ShapeID.Int(), dists)
-		positions, ok := placed[key]
+		distances, ok := placed[key]
 		if !ok {
-			positions = tlxy.StopPositions(shape.Geometry.ToPoints(), stops, dists)
-			placed[key] = positions
+			distances = stopShapeDistances(shape, stops, dists)
+			placed[key] = distances
 		}
-		for i, p := range positions {
-			grid.Values[i][j] = tt.NewInt(int(math.Round(p.Position)))
+		for i, d := range distances {
+			grid.Values[i][j] = d
 		}
 	}
 	return grid, nil

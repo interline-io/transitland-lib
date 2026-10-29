@@ -564,7 +564,7 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		},
 		{
 			Name:  "route patterns timetable shape distances",
-			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id timetable { stop_ids trips { trip_id shape { distances } } shape_distances { values delta polyline } } } } }`,
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id timetable { stop_ids trips { trip_id shape { distances } stop_times { shape_distance } } shape_distances { values delta polyline } } } } }`,
 			F: func(t *testing.T, jj string) {
 				pats := gjson.Get(jj, "routes.0.patterns").Array()
 				assert.NotEmpty(t, pats, "patterns returned")
@@ -574,6 +574,12 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 					assert.Len(t, rows, len(table.Get("stop_ids").Array()), "pattern %d has a row per stop", i)
 					assert.Len(t, table.Get("shape_distances.polyline").Array(), len(rows), "pattern %d", i)
 					for j, trip := range table.Get("trips").Array() {
+						// A trip's own stop times say the same as its column.
+						stopTimes := trip.Get("stop_times.#.shape_distance").Array()
+						assert.Len(t, stopTimes, len(rows), "pattern %d trip %d", i, j)
+						for k, st := range stopTimes {
+							assert.Equal(t, rows[k].Array()[j].Raw, st.Raw, "pattern %d trip %d stop %d", i, j, k)
+						}
 						dists := trip.Get("shape.distances").Array()
 						assert.NotEmpty(t, dists, "pattern %d trip %d has a measured shape", i, j)
 						end := dists[len(dists)-1].Float()

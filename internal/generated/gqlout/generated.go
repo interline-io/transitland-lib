@@ -1475,6 +1475,7 @@ type ComplexityRoot struct {
 		ScheduleRelationship     func(childComplexity int) int
 		ServiceDate              func(childComplexity int) int
 		ShapeDistTraveled        func(childComplexity int) int
+		ShapeDistance            func(childComplexity int) int
 		StartPickupDropOffWindow func(childComplexity int) int
 		Stop                     func(childComplexity int) int
 		StopHeadsign             func(childComplexity int) int
@@ -2066,6 +2067,8 @@ type StopExternalReferenceResolver interface {
 	TargetActiveStop(ctx context.Context, obj *model.StopExternalReference) (*model.Stop, error)
 }
 type StopTimeResolver interface {
+	ShapeDistance(ctx context.Context, obj *model.StopTime) (*int, error)
+
 	PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
 	DropOffBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error)
 	Stop(ctx context.Context, obj *model.StopTime) (*model.Stop, error)
@@ -8989,6 +8992,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.StopTime.ShapeDistTraveled(childComplexity), true
+	case "StopTime.shape_distance":
+		if e.ComplexityRoot.StopTime.ShapeDistance == nil {
+			break
+		}
+
+		return e.ComplexityRoot.StopTime.ShapeDistance(childComplexity), true
 	case "StopTime.start_pickup_drop_off_window":
 		if e.ComplexityRoot.StopTime.StartPickupDropOffWindow == nil {
 			break
@@ -12525,6 +12534,9 @@ type StopTime {
   
   "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
+
+  "This stop's distance along its trip's shape, in whole meters, as ` + "`" + `RouteStopPatternTimetable.shape_distances` + "`" + ` gives it and in the same measure as ` + "`" + `Shape.distances` + "`" + `. Transitland places the trip's stops in order along its shape, reading ` + "`" + `shape_dist_traveled` + "`" + ` only as a hint to which pass of a loop a stop is on. Null for a trip without a shape"
+  shape_distance: Int
 
   "GTFS ` + "`" + `stop_times.start_pickup_drop_off_window` + "`" + `; earliest time a rider may request service at this location (GTFS Flex)"
   start_pickup_drop_off_window: Seconds
@@ -17975,6 +17987,8 @@ func (ec *executionContext) childFields_StopTime(ctx context.Context, field grap
 		return ec.fieldContext_StopTime_shape_dist_traveled(ctx, field)
 	case "interpolated":
 		return ec.fieldContext_StopTime_interpolated(ctx, field)
+	case "shape_distance":
+		return ec.fieldContext_StopTime_shape_distance(ctx, field)
 	case "start_pickup_drop_off_window":
 		return ec.fieldContext_StopTime_start_pickup_drop_off_window(ctx, field)
 	case "end_pickup_drop_off_window":
@@ -49054,6 +49068,29 @@ func (ec *executionContext) fieldContext_StopTime_interpolated(_ context.Context
 	return graphql.NewScalarFieldContext("StopTime", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _StopTime_shape_distance(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_StopTime_shape_distance(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.StopTime().ShapeDistance(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_StopTime_shape_distance(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("StopTime", field, true, true, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _StopTime_start_pickup_drop_off_window(ctx context.Context, field graphql.CollectedField, obj *model.StopTime) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -72494,6 +72531,39 @@ func (ec *executionContext) _StopTime(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._StopTime_shape_dist_traveled(ctx, field, obj)
 		case "interpolated":
 			out.Values[i] = ec._StopTime_interpolated(ctx, field, obj)
+		case "shape_distance":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StopTime_shape_distance(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "start_pickup_drop_off_window":
 			out.Values[i] = ec._StopTime_start_pickup_drop_off_window(ctx, field, obj)
 		case "end_pickup_drop_off_window":

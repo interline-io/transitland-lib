@@ -1420,6 +1420,9 @@ type StopTime {
   "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
 
+  "This stop's distance along its trip's shape, in whole meters, as `RouteStopPatternTimetable.shape_distances` gives it and in the same measure as `Shape.distances`. Transitland places the trip's stops in order along its shape, reading `shape_dist_traveled` only as a hint to which pass of a loop a stop is on. Null for a trip without a shape"
+  shape_distance: Int
+
   "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex)"
   start_pickup_drop_off_window: Seconds
 
