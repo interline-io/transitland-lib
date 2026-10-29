@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	dataloader "github.com/graph-gophers/dataloader/v7"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tt"
@@ -18,6 +19,70 @@ type stopTimeResolver struct {
 
 func (r *stopTimeResolver) Stop(ctx context.Context, obj *model.StopTime) (*model.Stop, error) {
 	return LoaderFor(ctx).StopsByIDs.Load(ctx, obj.StopID.Int())()
+}
+
+// ShapeDistance is the stop's distance along its trip's shape, placed with the
+// trip's other stops.
+func (r *stopTimeResolver) ShapeDistance(ctx context.Context, obj *model.StopTime) (*int, error) {
+	// A trip added in real time has no shape to place it on.
+	if obj.RTTrip != nil {
+		return nil, nil
+	}
+	dists, err := LoaderFor(ctx).ShapeDistancesByTripIDs.Load(ctx, model.FVPair{FeedVersionID: obj.FeedVersionID, EntityID: obj.TripID.Int()})()
+	if err != nil {
+		return nil, err
+	}
+	if d := dists[obj.StopSequence.Int()]; d.Valid {
+		return ptr(d.Int()), nil
+	}
+	return nil, nil
+}
+
+// shapeDistancesByTripIDs places each trip's stops along its shape, as a
+// pattern timetable does, by stop_sequence.
+func (ldr *Loaders) shapeDistancesByTripIDs(ctx context.Context, params []model.FVPair) ([]map[int]tt.Int, []error) {
+	// Every load is asked for before any is read, so the loaders batch them.
+	tripLoads := make([]dataloader.Thunk[*model.Trip], len(params))
+	stopTimeLoads := make([]dataloader.Thunk[[]*model.StopTime], len(params))
+	for i, p := range params {
+		tripLoads[i] = ldr.TripsByIDs.Load(ctx, p.EntityID)
+		stopTimeLoads[i] = ldr.StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
+			FeedVersionID: p.FeedVersionID,
+			TripID:        p.EntityID,
+			Limit:         ptr(RESOLVER_PATTERN_MAXLIMIT),
+		})
+	}
+	errs := make([]error, len(params))
+	trips := make([]tripStops, len(params))
+	stopTimes := make([][]*model.StopTime, len(params))
+	for i := range params {
+		trip, err := tripLoads[i]()
+		if err == nil {
+			stopTimes[i], err = stopTimeLoads[i]()
+		}
+		if err != nil || trip == nil {
+			errs[i] = err
+			continue
+		}
+		trips[i].ShapeID = trip.ShapeID
+		for _, st := range stopTimes[i] {
+			trips[i].StopIDs = append(trips[i].StopIDs, st.StopID.Int())
+			trips[i].Dists = append(trips[i].Dists, st.ShapeDistTraveled)
+		}
+	}
+	placed, placeErrs := ldr.placeTrips(ctx, trips)
+	ret := make([]map[int]tt.Int, len(params))
+	for i, dists := range placed {
+		errs[i] = errors.Join(errs[i], placeErrs[i])
+		if dists == nil {
+			continue
+		}
+		ret[i] = map[int]tt.Int{}
+		for k, d := range dists {
+			ret[i][stopTimes[i][k].StopSequence.Int()] = d
+		}
+	}
+	return ret, errs
 }
 
 func (r *stopTimeResolver) PickupBookingRule(ctx context.Context, obj *model.StopTime) (*model.BookingRule, error) {

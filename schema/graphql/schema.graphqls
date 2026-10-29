@@ -1290,6 +1290,9 @@ type Shape {
   "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`"
   generated: Boolean!
 
+  "Distance along the shape at each point of `geometry`, in meters, in the same measure as `RouteRepresentativeShape.length` and `RouteStopPatternTimetable.shape_distances`. Transitland measures these itself rather than taking the feed's `shapes.shape_dist_traveled`. Null when a point of `geometry` lacks finite coordinates"
+  distances: [Float!]
+
   "Trips that use this shape"
   trips(limit: Int, where: TripFilter): [Trip!]
 }
@@ -1416,6 +1419,9 @@ type StopTime {
   
   "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
+
+  "This stop's distance along its trip's shape, in whole meters, the same as its cell in `RouteStopPatternTimetable.shape_distances` and in the measure of `Shape.distances`. Transitland places the trip's stops in order along its shape, reading `shape_dist_traveled` only as a hint to which pass each stop takes on a loop. Null for a trip without a shape, or for a stop that has no place on its shape within 500 m"
+  shape_distance: Int
 
   "GTFS `stop_times.start_pickup_drop_off_window`; earliest time a rider may request service at this location (GTFS Flex)"
   start_pickup_drop_off_window: Seconds
@@ -2526,6 +2532,11 @@ type RouteStopPatternTimetable {
 
   "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]"
   timepoints: RouteStopPatternTimetableGrid!
+
+  """
+  Each stop's distance along its trip's shape, in whole meters, in the same measure as `Shape.distances`. Transitland places each stop on the shape after the one before, reading the trip's `stop_times.shape_dist_traveled` only as a hint to which pass each stop takes on a loop. Null for a trip without a shape, or for a stop that has no place on its shape within 500 m.
+  """
+  shape_distances: RouteStopPatternTimetableGrid!
 }
 
 """

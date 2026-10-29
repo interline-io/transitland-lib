@@ -203,6 +203,11 @@ func (r *Resolver) RouteStopPattern() gqlout.RouteStopPatternResolver {
 	return &routePatternResolver{r}
 }
 
+// RouteStopPatternTimetable .
+func (r *Resolver) RouteStopPatternTimetable() gqlout.RouteStopPatternTimetableResolver {
+	return &routePatternTimetableResolver{r}
+}
+
 // RouteStopPatternTimetableGrid .
 func (r *Resolver) RouteStopPatternTimetableGrid() gqlout.RouteStopPatternTimetableGridResolver {
 	return &routePatternGridResolver{r}
