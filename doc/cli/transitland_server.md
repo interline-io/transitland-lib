@@ -25,6 +25,8 @@ transitland server [flags]
       --port string                        (default "8080")
       --redisurl string                   Redis URL (default: $TL_REDIS_URL)
       --rest-prefix string                Public URL prefix for generated links (e.g. https://transit.land/api/v2)
+      --rt-spool string                   Store receiving every fetched RT message of --rt-spool-url-types, for every feed, as input to batch jobs
+      --rt-spool-url-types strings        RT URL types written to --rt-spool (default [realtime_vehicle_positions])
       --rt-storage string                 RT storage backend
       --secrets string                    DMFR file containing secrets
       --storage string                    Static storage backend

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/interline-io/log"
@@ -100,6 +101,12 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 		}
 	}
 
+	// Spool every fetch of a spooled URL type, whatever the feed's archive policy.
+	spool := ""
+	if cfg.RTSpool != "" && slices.Contains(cfg.RTSpoolURLTypes, urlType) {
+		spool = cfg.RTSpool
+	}
+
 	// Prepare
 	fetchOpts := fetch.RTFetchOptions{
 		Options: fetch.Options{
@@ -111,6 +118,7 @@ func RTFetch(ctx context.Context, target string, feedId string, feedUrl string, 
 			FetchedAt:                time.Now().In(time.UTC),
 			AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
 		},
+		Spool: spool,
 	}
 
 	// Make request

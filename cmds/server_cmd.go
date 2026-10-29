@@ -61,6 +61,8 @@ type ServerCommand struct {
 	SecretsFile               string
 	Storage                   string
 	RTStorage                 string
+	RTSpool                   string
+	RTSpoolURLTypes           []string
 	DBURL                     string
 	RedisURL                  string
 	MaxRadius                 float64
@@ -80,6 +82,8 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.RedisURL, "redisurl", "", "Redis URL (default: $TL_REDIS_URL)")
 	fl.StringVar(&cmd.Storage, "storage", "", "Static storage backend")
 	fl.StringVar(&cmd.RTStorage, "rt-storage", "", "RT storage backend")
+	fl.StringVar(&cmd.RTSpool, "rt-spool", "", "Store receiving every fetched RT message of --rt-spool-url-types, for every feed, as input to batch jobs")
+	fl.StringSliceVar(&cmd.RTSpoolURLTypes, "rt-spool-url-types", []string{"realtime_vehicle_positions"}, "RT URL types written to --rt-spool")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
 	fl.StringVar(&cmd.RestPrefix, "rest-prefix", "", "Public URL prefix for generated links (e.g. https://transit.land/api/v2)")
 	fl.StringVar(&cmd.Port, "port", "8080", "")
@@ -196,6 +200,8 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		Secrets:                   cmd.secrets,
 		Storage:                   cmd.Storage,
 		RTStorage:                 cmd.RTStorage,
+		RTSpool:                   cmd.RTSpool,
+		RTSpoolURLTypes:           cmd.RTSpoolURLTypes,
 		ValidateLargeFiles:        cmd.ValidateLargeFiles,
 		UseMaterialized:           cmd.UseMaterialized,
 		UseMaterializedDepartures: cmd.UseMaterializedDepartures,
