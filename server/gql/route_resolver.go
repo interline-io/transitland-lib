@@ -3,12 +3,14 @@ package gql
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 
 	dataloader "github.com/graph-gophers/dataloader/v7"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-polyline"
@@ -360,13 +362,14 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 
 	nStops, nTrips := len(header), len(kept)
 	ret := &model.RouteStopPatternTimetable{
-		StopIds:        make([]int, nStops),
-		Trips:          make([]*model.Trip, nTrips),
-		DepartureTimes: &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
-		ArrivalTimes:   &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
-		PickupTypes:    &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
-		DropOffTypes:   &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
-		Timepoints:     &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		StopIds:           make([]int, nStops),
+		Trips:             make([]*model.Trip, nTrips),
+		DepartureTimes:    &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
+		ArrivalTimes:      &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
+		PickupTypes:       &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		DropOffTypes:      &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		Timepoints:        &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		ShapeDistTraveled: newCells[tt.Float](nStops, nTrips),
 	}
 	for i, st := range header {
 		ret.StopIds[i] = st.StopID.Int()
@@ -379,9 +382,77 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 			ret.PickupTypes.Values[i][j] = st.PickupType
 			ret.DropOffTypes.Values[i][j] = st.DropOffType
 			ret.Timepoints.Values[i][j] = st.Timepoint
+			ret.ShapeDistTraveled[i][j] = st.ShapeDistTraveled
 		}
 	}
 	return ret, nil
+}
+
+type routePatternTimetableResolver struct{ *Resolver }
+
+// ShapeDistances places each trip's stops along its shape. Trips with the
+// same shape and the same feed distances are placed once.
+func (r *routePatternTimetableResolver) ShapeDistances(ctx context.Context, obj *model.RouteStopPatternTimetable) (*model.RouteStopPatternTimetableGrid, error) {
+	nStops := len(obj.StopIds)
+	grid := &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, len(obj.Trips))}
+	// Every load is asked for before any is read, so the loaders batch them.
+	var stopLoads []dataloader.Thunk[*model.Stop]
+	for _, id := range obj.StopIds {
+		stopLoads = append(stopLoads, LoaderFor(ctx).StopsByIDs.Load(ctx, id))
+	}
+	shapeLoads := map[int]dataloader.Thunk[*model.Shape]{}
+	for _, trip := range obj.Trips {
+		if id := trip.ShapeID.Int(); trip.ShapeID.Valid && shapeLoads[id] == nil {
+			shapeLoads[id] = LoaderFor(ctx).ShapesByIDs.Load(ctx, id)
+		}
+	}
+	stops := make([]tlxy.Point, nStops)
+	for i, load := range stopLoads {
+		stop, err := load()
+		if err != nil {
+			return nil, err
+		}
+		// Without every stop there is no order to place the others in.
+		if stop == nil {
+			return grid, nil
+		}
+		stops[i] = stop.ToPoint()
+	}
+	placed := map[string][]tlxy.StopPosition{}
+	for j, trip := range obj.Trips {
+		if !trip.ShapeID.Valid {
+			continue
+		}
+		shape, err := shapeLoads[trip.ShapeID.Int()]()
+		if err != nil {
+			return nil, err
+		}
+		if shape == nil {
+			continue
+		}
+		dists := make([]float64, nStops)
+		hinted := false
+		for i := range dists {
+			d := obj.ShapeDistTraveled[i][j]
+			dists[i] = d.Val
+			if d.Valid {
+				hinted = true
+			}
+		}
+		if !hinted {
+			dists = nil
+		}
+		key := fmt.Sprint(trip.ShapeID.Int(), dists)
+		positions, ok := placed[key]
+		if !ok {
+			positions = tlxy.StopPositions(shape.Geometry.ToPoints(), stops, dists)
+			placed[key] = positions
+		}
+		for i, p := range positions {
+			grid.Values[i][j] = tt.NewInt(int(math.Round(p.Position)))
+		}
+	}
+	return grid, nil
 }
 
 type routePatternGridResolver struct{ *Resolver }

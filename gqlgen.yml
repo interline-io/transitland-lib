@@ -214,6 +214,14 @@ models:
         type: "github.com/interline-io/transitland-lib/tt.Ints"
         overrideTags: db:"trip_ids"
         description: "The trips counted, when Route.patterns was given a date; unset without one."
+  RouteStopPatternTimetable:
+    fields:
+      shape_distances:
+        resolver: true
+  Shape:
+    fields:
+      distances:
+        resolver: true
   RouteStopPatternTimetableGrid:
     fields:
       delta:

@@ -72,6 +72,7 @@ type ResolverRoot interface {
 	RouteRepresentativeShape() RouteRepresentativeShapeResolver
 	RouteStop() RouteStopResolver
 	RouteStopPattern() RouteStopPatternResolver
+	RouteStopPatternTimetable() RouteStopPatternTimetableResolver
 	RouteStopPatternTimetableGrid() RouteStopPatternTimetableGridResolver
 	RouteStopPatternTimetableTimeGrid() RouteStopPatternTimetableTimeGridResolver
 	Segment() SegmentResolver
@@ -1315,6 +1316,7 @@ type ComplexityRoot struct {
 		DepartureTimes func(childComplexity int) int
 		DropOffTypes   func(childComplexity int) int
 		PickupTypes    func(childComplexity int) int
+		ShapeDistances func(childComplexity int) int
 		StopIds        func(childComplexity int) int
 		Timepoints     func(childComplexity int) int
 		Trips          func(childComplexity int) int
@@ -1352,6 +1354,7 @@ type ComplexityRoot struct {
 	}
 
 	Shape struct {
+		Distances func(childComplexity int) int
 		Generated func(childComplexity int) int
 		Geometry  func(childComplexity int) int
 		ID        func(childComplexity int) int
@@ -2006,6 +2009,9 @@ type RouteStopPatternResolver interface {
 	Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error)
 	Timetable(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternTimetable, error)
 }
+type RouteStopPatternTimetableResolver interface {
+	ShapeDistances(ctx context.Context, obj *model.RouteStopPatternTimetable) (*model.RouteStopPatternTimetableGrid, error)
+}
 type RouteStopPatternTimetableGridResolver interface {
 	Delta(ctx context.Context, obj *model.RouteStopPatternTimetableGrid) ([][]*int, error)
 	Polyline(ctx context.Context, obj *model.RouteStopPatternTimetableGrid) ([]string, error)
@@ -2024,6 +2030,7 @@ type SegmentPatternResolver interface {
 	Segment(ctx context.Context, obj *model.SegmentPattern) (*model.Segment, error)
 }
 type ShapeResolver interface {
+	Distances(ctx context.Context, obj *model.Shape) ([]float64, error)
 	Trips(ctx context.Context, obj *model.Shape, limit *int, where *model.TripFilter) ([]*model.Trip, error)
 }
 type StopResolver interface {
@@ -8152,6 +8159,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteStopPatternTimetable.PickupTypes(childComplexity), true
+	case "RouteStopPatternTimetable.shape_distances":
+		if e.ComplexityRoot.RouteStopPatternTimetable.ShapeDistances == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPatternTimetable.ShapeDistances(childComplexity), true
 	case "RouteStopPatternTimetable.stop_ids":
 		if e.ComplexityRoot.RouteStopPatternTimetable.StopIds == nil {
 			break
@@ -8289,6 +8302,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.SegmentPattern.WayID(childComplexity), true
 
+	case "Shape.distances":
+		if e.ComplexityRoot.Shape.Distances == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Shape.Distances(childComplexity), true
 	case "Shape.generated":
 		if e.ComplexityRoot.Shape.Generated == nil {
 			break
@@ -12377,6 +12396,9 @@ type Shape {
   "True if this geometry was generated from stop locations because the source feed lacks a ` + "`" + `shapes.txt` + "`" + `"
   generated: Boolean!
 
+  "Distance along the shape at each point of ` + "`" + `geometry` + "`" + `, in meters. Transitland measures these itself rather than taking the feed's ` + "`" + `shapes.shape_dist_traveled` + "`" + `, in the same measure as ` + "`" + `RouteStopPatternTimetable.shape_distances` + "`" + `"
+  distances: [Float!]!
+
   "Trips that use this shape"
   trips(limit: Int, where: TripFilter): [Trip!]
 }
@@ -13613,6 +13635,11 @@ type RouteStopPatternTimetable {
 
   "GTFS ` + "`" + `stop_times.timepoint` + "`" + ` [0=times are approximate, 1=times are exact]"
   timepoints: RouteStopPatternTimetableGrid!
+
+  """
+  Each stop's distance along its trip's shape, in whole meters, in the same measure as ` + "`" + `Shape.distances` + "`" + `. Transitland places each stop on the shape after the one before, reading the feed's ` + "`" + `stop_times.shape_dist_traveled` + "`" + ` only as a hint to which pass of a loop a stop is on. Null for a trip without a shape.
+  """
+  shape_distances: RouteStopPatternTimetableGrid!
 }
 
 """
@@ -17646,6 +17673,8 @@ func (ec *executionContext) childFields_RouteStopPatternTimetable(ctx context.Co
 		return ec.fieldContext_RouteStopPatternTimetable_drop_off_types(ctx, field)
 	case "timepoints":
 		return ec.fieldContext_RouteStopPatternTimetable_timepoints(ctx, field)
+	case "shape_distances":
+		return ec.fieldContext_RouteStopPatternTimetable_shape_distances(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type RouteStopPatternTimetable", field.Name)
 }
@@ -17722,6 +17751,8 @@ func (ec *executionContext) childFields_Shape(ctx context.Context, field graphql
 		return ec.fieldContext_Shape_geometry(ctx, field)
 	case "generated":
 		return ec.fieldContext_Shape_generated(ctx, field)
+	case "distances":
+		return ec.fieldContext_Shape_distances(ctx, field)
 	case "trips":
 		return ec.fieldContext_Shape_trips(ctx, field)
 	}
@@ -45889,6 +45920,38 @@ func (ec *executionContext) fieldContext_RouteStopPatternTimetable_timepoints(_ 
 	return fc, nil
 }
 
+func (ec *executionContext) _RouteStopPatternTimetable_shape_distances(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetable) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPatternTimetable_shape_distances(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPatternTimetable().ShapeDistances(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteStopPatternTimetableGrid) graphql.Marshaler {
+			return ec.marshalNRouteStopPatternTimetableGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableGrid(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPatternTimetable_shape_distances(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPatternTimetable",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteStopPatternTimetableGrid(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _RouteStopPatternTimetableGrid_values(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPatternTimetableGrid) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -46452,6 +46515,29 @@ func (ec *executionContext) _Shape_generated(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Shape_generated(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Shape", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _Shape_distances(ctx context.Context, field graphql.CollectedField, obj *model.Shape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Shape_distances(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Shape().Distances(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []float64) graphql.Marshaler {
+			return ec.marshalNFloat2ᚕfloat64ᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Shape_distances(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Shape", field, true, true, errors.New("field of type Float does not have child fields"))
 }
 
 func (ec *executionContext) _Shape_trips(ctx context.Context, field graphql.CollectedField, obj *model.Shape) (ret graphql.Marshaler) {
@@ -70485,38 +70571,74 @@ func (ec *executionContext) _RouteStopPatternTimetable(ctx context.Context, sel 
 		case "stop_ids":
 			out.Values[i] = ec._RouteStopPatternTimetable_stop_ids(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "trips":
 			out.Values[i] = ec._RouteStopPatternTimetable_trips(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "departure_times":
 			out.Values[i] = ec._RouteStopPatternTimetable_departure_times(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "arrival_times":
 			out.Values[i] = ec._RouteStopPatternTimetable_arrival_times(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "pickup_types":
 			out.Values[i] = ec._RouteStopPatternTimetable_pickup_types(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "drop_off_types":
 			out.Values[i] = ec._RouteStopPatternTimetable_drop_off_types(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "timepoints":
 			out.Values[i] = ec._RouteStopPatternTimetable_timepoints(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "shape_distances":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPatternTimetable_shape_distances(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -71044,6 +71166,42 @@ func (ec *executionContext) _Shape(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "distances":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Shape_distances(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "trips":
 			field := field
 
@@ -75868,6 +76026,36 @@ func (ec *executionContext) marshalNFloat2githubᚗcomᚋinterlineᚑioᚋtransi
 	return v
 }
 
+func (ec *executionContext) unmarshalNFloat2ᚕfloat64ᚄ(ctx context.Context, v any) ([]float64, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]float64, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNFloat2float64(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNFloat2ᚕfloat64ᚄ(ctx context.Context, sel ast.SelectionSet, v []float64) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNFloat2float64(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequencyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Frequency) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -76884,6 +77072,10 @@ func (ec *executionContext) marshalNRouteStopPattern2ᚖgithubᚗcomᚋinterline
 		return graphql.Null
 	}
 	return ec._RouteStopPattern(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRouteStopPatternTimetableGrid2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableGrid(ctx context.Context, sel ast.SelectionSet, v model.RouteStopPatternTimetableGrid) graphql.Marshaler {
+	return ec._RouteStopPatternTimetableGrid(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNRouteStopPatternTimetableGrid2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternTimetableGrid(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopPatternTimetableGrid) graphql.Marshaler {

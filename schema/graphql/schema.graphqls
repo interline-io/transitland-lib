@@ -1290,6 +1290,9 @@ type Shape {
   "True if this geometry was generated from stop locations because the source feed lacks a `shapes.txt`"
   generated: Boolean!
 
+  "Distance along the shape at each point of `geometry`, in meters. Transitland measures these itself rather than taking the feed's `shapes.shape_dist_traveled`, in the same measure as `RouteStopPatternTimetable.shape_distances`"
+  distances: [Float!]!
+
   "Trips that use this shape"
   trips(limit: Int, where: TripFilter): [Trip!]
 }
@@ -2526,6 +2529,11 @@ type RouteStopPatternTimetable {
 
   "GTFS `stop_times.timepoint` [0=times are approximate, 1=times are exact]"
   timepoints: RouteStopPatternTimetableGrid!
+
+  """
+  Each stop's distance along its trip's shape, in whole meters, in the same measure as `Shape.distances`. Transitland places each stop on the shape after the one before, reading the feed's `stop_times.shape_dist_traveled` only as a hint to which pass of a loop a stop is on. Null for a trip without a shape.
+  """
+  shape_distances: RouteStopPatternTimetableGrid!
 }
 
 """

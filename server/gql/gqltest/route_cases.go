@@ -563,6 +563,35 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
+			Name:  "route patterns timetable shape distances",
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id timetable { stop_ids trips { trip_id shape { distances } } shape_distances { values delta polyline } } } } }`,
+			F: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					table := pat.Get("timetable")
+					rows := table.Get("shape_distances.values").Array()
+					assert.Len(t, rows, len(table.Get("stop_ids").Array()), "pattern %d has a row per stop", i)
+					assert.Len(t, table.Get("shape_distances.polyline").Array(), len(rows), "pattern %d", i)
+					for j, trip := range table.Get("trips").Array() {
+						dists := trip.Get("shape.distances").Array()
+						assert.NotEmpty(t, dists, "pattern %d trip %d has a measured shape", i, j)
+						end := dists[len(dists)-1].Float()
+						// Each stop is at or after the one before, and on the shape.
+						prev := 0.0
+						for k, row := range rows {
+							cell := row.Array()[j]
+							assert.Equal(t, gjson.Number, cell.Type, "pattern %d trip %d stop %d", i, j, k)
+							assert.GreaterOrEqual(t, cell.Float(), prev, "pattern %d trip %d stop %d", i, j, k)
+							assert.LessOrEqual(t, cell.Float(), end+1, "pattern %d trip %d stop %d", i, j, k)
+							prev = cell.Float()
+						}
+						assert.Greater(t, prev, 0.0, "pattern %d trip %d goes somewhere", i, j)
+					}
+				}
+			},
+		},
+		{
 			Name:  "route patterns timetable without a date",
 			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date timetable { stop_ids } } } }`,
 			F: func(t *testing.T, jj string) {

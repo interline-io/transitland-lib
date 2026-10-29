@@ -136,6 +136,9 @@ type RouteStopPatternTimetable struct {
 	PickupTypes    *RouteStopPatternTimetableGrid
 	DropOffTypes   *RouteStopPatternTimetableGrid
 	Timepoints     *RouteStopPatternTimetableGrid
+	// internal: each trip's stop_times.shape_dist_traveled by stop and trip,
+	// read as the hint for its shape distances.
+	ShapeDistTraveled [][]tt.Float
 }
 
 // RouteStopPatternTimetableGrid is one of a timetable's grids of numbers, by stop
