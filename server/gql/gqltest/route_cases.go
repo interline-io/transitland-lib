@@ -674,6 +674,47 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
+			Name:  "route patterns stops",
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stops { id } timetable { stop_ids } } } }`,
+			F: func(t *testing.T, jj string) {
+				// Every trip of a pattern calls at the same stops, so the
+				// representative trip's are the timetable's.
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					stops := pat.Get("stops.#.id").Array()
+					assert.NotEmpty(t, stops, "pattern %d has stops", i)
+					assert.Equal(t, pat.Get("timetable.stop_ids").Raw, pat.Get("stops.#.id").Raw, "pattern %d", i)
+				}
+			},
+		},
+		{
+			Name:  "route patterns stops without a date",
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { stops { id } representative_trip { stop_times { stop { id } } } } } }`,
+			F: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					assert.NotEmpty(t, pat.Get("stops.#.id").Array(), "pattern %d has stops", i)
+					assert.Equal(t, pat.Get("representative_trip.stop_times.#.stop.id").Raw, pat.Get("stops.#.id").Raw, "pattern %d", i)
+				}
+			},
+		},
+		{
+			// Its trips call at location groups and locations, never at a stop, which
+			// StopTime.stop answers with an error.
+			Name:  "route patterns stops flex",
+			Query: `{ routes(where:{feed_onestop_id:"ctran-flex", route_id:"2bc6804f-9e24-4b91-8947-c73a2363e7b6"}) { patterns(where:{service_date:"2026-01-06"}) { count stops { id } } } }`,
+			F: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					assert.Positive(t, pat.Get("count").Int(), "pattern %d runs on the date", i)
+					assert.Equal(t, "[]", pat.Get("stops").Raw, "pattern %d", i)
+				}
+			},
+		},
+		{
 			Name: "route patterns inactive fv",
 			Query: `{
 				routes(where: {feed_onestop_id: "EX", feed_version_sha1: "43e2278aa272879c79460582152b04e7487f0493", route_id: "AAMV"}) {

@@ -1307,6 +1307,7 @@ type ComplexityRoot struct {
 		RepresentativeTrip func(childComplexity int) int
 		ServiceDate        func(childComplexity int) int
 		StopPatternID      func(childComplexity int) int
+		Stops              func(childComplexity int) int
 		Timetable          func(childComplexity int) int
 		Trips              func(childComplexity int, limit *int) int
 	}
@@ -2007,6 +2008,7 @@ type RouteStopResolver interface {
 }
 type RouteStopPatternResolver interface {
 	RepresentativeTrip(ctx context.Context, obj *model.RouteStopPattern) (*model.Trip, error)
+	Stops(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Stop, error)
 	Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error)
 	Timetable(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternTimetable, error)
 }
@@ -8120,6 +8122,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteStopPattern.StopPatternID(childComplexity), true
+	case "RouteStopPattern.stops":
+		if e.ComplexityRoot.RouteStopPattern.Stops == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPattern.Stops(childComplexity), true
 	case "RouteStopPattern.timetable":
 		if e.ComplexityRoot.RouteStopPattern.Timetable == nil {
 			break
@@ -13614,6 +13622,9 @@ type RouteStopPattern {
   """
   representative_trip: Trip
 
+  "The pattern's stops in order, as ` + "`" + `representative_trip` + "`" + ` calls at them; a stop called at twice appears twice. A flex stop time that names a location or location group, rather than a stop, has no entry"
+  stops: [Stop!]!
+
   "Trips that follow this stop pattern, only those counted on ` + "`" + `service_date` + "`" + ` when it is set; useful for fetching full stop_times. Without a ` + "`" + `service_date` + "`" + `, they carry no GTFS-RT data"
   trips(limit: Int): [Trip!]
 
@@ -17661,6 +17672,8 @@ func (ec *executionContext) childFields_RouteStopPattern(ctx context.Context, fi
 		return ec.fieldContext_RouteStopPattern_service_date(ctx, field)
 	case "representative_trip":
 		return ec.fieldContext_RouteStopPattern_representative_trip(ctx, field)
+	case "stops":
+		return ec.fieldContext_RouteStopPattern_stops(ctx, field)
 	case "trips":
 		return ec.fieldContext_RouteStopPattern_trips(ctx, field)
 	case "timetable":
@@ -45643,6 +45656,38 @@ func (ec *executionContext) fieldContext_RouteStopPattern_representative_trip(_ 
 	return fc, nil
 }
 
+func (ec *executionContext) _RouteStopPattern_stops(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPattern_stops(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPattern().Stops(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Stop) graphql.Marshaler {
+			return ec.marshalNStop2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPattern_stops(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPattern",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _RouteStopPattern_trips(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -70482,6 +70527,42 @@ func (ec *executionContext) _RouteStopPattern(ctx context.Context, sel ast.Selec
 					}
 				}()
 				res = ec._RouteStopPattern_representative_trip(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "stops":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPattern_stops(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 

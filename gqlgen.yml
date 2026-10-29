@@ -201,6 +201,8 @@ models:
         resolver: true
       representative_trip:
         resolver: true
+      stops:
+        resolver: true
       timetable:
         resolver: true
     extraFields:
