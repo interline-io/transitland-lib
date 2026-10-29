@@ -9,10 +9,17 @@ import (
 // earlier pass.
 const stopLapTolerance = 15.0
 
-// Passes farther than this many meters from a stop are not considered its.
-// The first stop also takes its earliest pass within this distance of the
-// nearest, since a loop's shape can end nearer its terminal than it starts.
+// Two passes by a stop count as two only when the shape moves this many
+// meters farther from the stop between them, rather than turning a corner.
+const stopPassRise = 30.0
+
+// The hint takes only a pass within this many meters of its stop. A trip's
+// first stop takes its earliest pass within this distance of its nearest,
+// since a loop's shape can start farther from its terminal than it ends.
 const stopSearchRadius = 50.0
+
+// A stop farther than this many meters from its shape has no position.
+const stopMaxDistance = 500.0
 
 // StopPosition is where a stop sits along a shape.
 type StopPosition struct {
@@ -22,128 +29,254 @@ type StopPosition struct {
 	Distance float64
 	// True when the trip's shape_dist_traveled values chose the pass.
 	Hinted bool
+	// False for a stop too far from the shape, or without finite coordinates;
+	// the other fields are then zero.
+	Placed bool
 }
 
 // StopPositions places a trip's stops along its shape, in order: each stop is
 // at or after the one before, so a loop that calls at a stop twice places it
-// on each pass in turn. It returns nil for a shape of fewer than two points.
+// on each pass in turn. It returns nil for a shape of fewer than two points,
+// without length, or with a point without finite coordinates.
 //
 // dists are the trip's stop_times.shape_dist_traveled values, in the feed's
-// own units, or nil. They are a hint to which pass of the shape each stop is
-// on: the first stop's value as its distance from the shape's start, and each
-// later one by its gap from the one before. They need not match the shape's
-// own distances, and values that fall, or never rise, are ignored.
+// own units, or nil. They hint at each stop's pass, by its gap in dists from
+// the stop before, or for the first stop by its value from the shape's start.
+// They need not match the shape's own distances, and values that fall, or
+// never rise, are ignored. Geometry alone places each stop the hint can't,
+// but not past the stretch where the hint finds the next stop.
 func StopPositions(shape []Point, stops []Point, dists []float64) []StopPosition {
-	if len(shape) < 2 {
-		return nil
-	}
-	frame := newPlanarFrame(shape[0])
-	line := newMeasuredLine(frame.line(shape))
-	pts := frame.line(stops)
-	// Geometry alone first, which measures the hint's scale.
-	geo := placeStops(line, pts, nil, 0)
-	scale, ok := hintScale(geo, dists)
+	line, ok := newMeasuredLine(shape)
 	if !ok {
-		return geo
-	}
-	return placeStops(line, pts, dists, scale)
-}
-
-// ShapeDistances is the distance along a shape at each of its points, in
-// meters, in the measure StopPositions places stops by.
-func ShapeDistances(shape []Point) []float64 {
-	if len(shape) == 0 {
 		return nil
 	}
-	return newMeasuredLine(newPlanarFrame(shape[0]).line(shape)).cum
-}
-
-// placeStops places each stop after the one before. With dists, each stop
-// takes its pass nearest where dists put it, and falls back to geometry alone
-// where no pass is near there.
-func placeStops(line measuredLine, pts []planarPoint, dists []float64, scale float64) []StopPosition {
-	ret := make([]StopPosition, len(pts))
-	for i, p := range pts {
-		minPos, tol := 0.0, stopSearchRadius
-		if i > 0 {
-			minPos, tol = ret[i-1].Position, stopLapTolerance
+	n := len(stops)
+	scale, hinted := 0.0, false
+	if len(dists) == n && rising(dists) {
+		scale, hinted = line.hintScale(stops[0], stops[n-1], dists[n-1]-dists[0])
+	}
+	ret := make([]StopPosition, n)
+	// The last stop placed is at minPos, with prevDist its value in dists, or
+	// before any is placed, the shape's start.
+	minPos, prevDist := 0.0, 0.0
+	for i, p := range stops {
+		if !finitePoint(p) {
+			continue
 		}
-		if dists != nil {
-			gap := scale * dists[i]
-			if i > 0 {
-				gap = scale * (dists[i] - dists[i-1])
-			}
-			if c, ok := line.nearestPass(p, minPos, gap); ok {
-				ret[i] = StopPosition{Position: c.pos, Distance: c.dist, Hinted: true}
+		maxPos := line.length()
+		if hinted {
+			if c, ok := line.nearestPass(p, minPos, minPos+scale*(dists[i]-prevDist)); ok {
+				ret[i] = StopPosition{Position: c.pos, Distance: c.dist, Hinted: true, Placed: true}
+				minPos, prevDist = c.pos, dists[i]
 				continue
 			}
+			// Keep this stop off the stretch past where the hint finds the next
+			// one, so a pass far along can't drag the stops after it.
+			if i+1 < n && finitePoint(stops[i+1]) {
+				expected := minPos + scale*(dists[i+1]-prevDist)
+				if _, ok := line.nearestPass(stops[i+1], minPos, expected); ok {
+					_, maxPos = hintWindow(minPos, expected)
+				}
+			}
 		}
-		pos, dist := line.lapGuard(p, minPos, tol)
-		ret[i] = StopPosition{Position: pos, Distance: dist}
+		c := line.geometryPass(p, i, n, minPos, maxPos)
+		if c.dist > stopMaxDistance {
+			continue
+		}
+		ret[i] = StopPosition{Position: c.pos, Distance: c.dist, Placed: true}
+		if hinted {
+			prevDist = dists[i]
+		}
+		minPos = c.pos
 	}
 	return ret
 }
 
-// hintScale is meters per unit of dists: the span geometry alone measured
-// from the first stop to the last, over the same span in dists. Only the two
-// end stops count, so a stop on the wrong pass in between can't skew it.
-func hintScale(geo []StopPosition, dists []float64) (float64, bool) {
-	n := len(dists)
-	if n != len(geo) || n < 2 {
+// ShapeDistances is the distance along a shape at each of its points, in
+// meters: LengthHaversine of the shape up to each point. It returns nil for a
+// shape with a point without finite coordinates.
+func ShapeDistances(shape []Point) []float64 {
+	cum, ok := shapeCum(shape)
+	if !ok || len(cum) == 0 {
+		return nil
+	}
+	return cum
+}
+
+// hintScale is meters per unit of dists: the meters from the first stop's
+// earliest pass to the last stop's latest, each within stopMaxDistance of its
+// stop, over span. Only the end stops count, each placed along the whole
+// shape on its own, so no stop between them can skew the scale.
+func (l measuredLine) hintScale(first, last Point, span float64) (float64, bool) {
+	if !finitePoint(first) || !finitePoint(last) {
 		return 0, false
 	}
-	for i := 1; i < n; i++ {
-		if d := dists[i] - dists[i-1]; math.IsNaN(d) || d < 0 {
-			return 0, false
+	start, end := 0.0, 0.0
+	foundStart, foundEnd := false, false
+	for _, c := range l.passes(first, 0, l.length()) {
+		if c.dist <= stopMaxDistance {
+			start, foundStart = c.pos, true
+			break
 		}
 	}
-	span := dists[n-1] - dists[0]
-	if span <= 0 {
-		return 0, false
+	for _, c := range l.passes(last, 0, l.length()) {
+		if c.dist <= stopMaxDistance {
+			end, foundEnd = c.pos, true
+		}
 	}
-	scale := (geo[n-1].Position - geo[0].Position) / span
-	return scale, scale > 0
+	scale := (end - start) / span
+	return scale, foundStart && foundEnd && scale > 0
 }
 
-// planarFrame maps lon/lat to meters east and north of an origin. Over the
-// extent of one shape it is close enough, and cheap enough to scan every
-// segment for every stop.
-type planarFrame struct {
-	origin     Point
-	lonM, latM float64
+// hintWindow is the stretch of the shape where the hint looks for a stop it
+// expects at expected, after the last stop placed at minPos: within the
+// search radius of expected, or half the gap from minPos if that is larger.
+func hintWindow(minPos, expected float64) (float64, float64) {
+	slack := math.Max(stopSearchRadius, (expected-minPos)/2)
+	return expected - slack, expected + slack
 }
 
-type planarPoint struct{ x, y float64 }
-
-func newPlanarFrame(origin Point) planarFrame {
-	ap := NewApprox(origin)
-	return planarFrame{origin: origin, lonM: ap.LonMeters(), latM: ap.LatMeters()}
-}
-
-func (f planarFrame) line(pts []Point) []planarPoint {
-	out := make([]planarPoint, len(pts))
-	for i, p := range pts {
-		out[i] = planarPoint{(p.Lon - f.origin.Lon) * f.lonM, (p.Lat - f.origin.Lat) * f.latM}
+// geometryPass is the pass that geometry alone gives stop i of n, between
+// minPos and maxPos. A trip's last stop takes its latest pass within the lap
+// tolerance of its nearest, so on a shape that loops at its terminal the stop
+// sits at the loop's end.
+func (l measuredLine) geometryPass(p Point, i, n int, minPos, maxPos float64) measuredPass {
+	cands := l.passes(p, minPos, maxPos)
+	switch i {
+	case 0:
+		return pick(cands, stopSearchRadius, false)
+	case n - 1:
+		return pick(cands, stopLapTolerance, true)
 	}
-	return out
+	return pick(cands, stopLapTolerance, false)
 }
 
-func planarDist(a, b planarPoint) float64 {
-	return math.Hypot(a.x-b.x, a.y-b.y)
+// nearestPass is p's pass at or after minPos nearest expected, of those within
+// the search radius of p and the hint's window. Only passes within the lap
+// tolerance of the nearest such pass to p compete, so the tip of a spike in
+// the shape can't win.
+func (l measuredLine) nearestPass(p Point, minPos, expected float64) (measuredPass, bool) {
+	lo, hi := hintWindow(minPos, expected)
+	var near []measuredPass
+	for _, c := range l.passes(p, minPos, l.length()) {
+		if c.dist <= stopSearchRadius && c.pos >= lo && c.pos <= hi {
+			near = append(near, c)
+		}
+	}
+	if len(near) == 0 {
+		return measuredPass{}, false
+	}
+	nearest := near[0].dist
+	for _, c := range near[1:] {
+		nearest = math.Min(nearest, c.dist)
+	}
+	best := -1
+	for i, c := range near {
+		if c.dist > nearest+stopLapTolerance {
+			continue
+		}
+		if best < 0 || math.Abs(c.pos-expected) < math.Abs(near[best].pos-expected) {
+			best = i
+		}
+	}
+	return near[best], true
 }
 
-// measuredLine is a planar line with the meters from its start at each point.
+// pick is the earliest of cands, or with latest the last one, whose distance
+// is within tol of the nearest one's.
+func pick(cands []measuredPass, tol float64, latest bool) measuredPass {
+	best := 0
+	for i, c := range cands {
+		if c.dist < cands[best].dist {
+			best = i
+		}
+	}
+	limit := cands[best].dist + tol
+	if latest {
+		for i := len(cands) - 1; i > best; i-- {
+			if cands[i].dist <= limit {
+				return cands[i]
+			}
+		}
+		return cands[best]
+	}
+	for _, c := range cands[:best] {
+		if c.dist <= limit {
+			return c
+		}
+	}
+	return cands[best]
+}
+
+// rising reports whether dists are finite and never fall, and the last is
+// greater than the first.
+func rising(dists []float64) bool {
+	for i, d := range dists {
+		if math.IsNaN(d) || math.IsInf(d, 0) || (i > 0 && d < dists[i-1]) {
+			return false
+		}
+	}
+	return len(dists) > 1 && dists[len(dists)-1] > dists[0]
+}
+
+func finitePoint(p Point) bool {
+	return !math.IsNaN(p.Lon) && !math.IsInf(p.Lon, 0) && !math.IsNaN(p.Lat) && !math.IsInf(p.Lat, 0)
+}
+
+// shapeCum is LengthHaversine of shape up to each of its points, or false for
+// a shape with a point without finite coordinates.
+func shapeCum(shape []Point) ([]float64, bool) {
+	cum := make([]float64, len(shape))
+	for i, p := range shape {
+		if !finitePoint(p) {
+			return nil, false
+		}
+		if i > 0 {
+			cum[i] = cum[i-1] + DistanceHaversine(shape[i-1], p)
+		}
+	}
+	return cum, true
+}
+
+// measuredLine is a shape with the meters along it at each point, and each
+// segment in a planar frame of its own.
 type measuredLine struct {
-	pts []planarPoint
-	cum []float64
+	pts  []Point
+	cum  []float64
+	segs []segment
 }
 
-func newMeasuredLine(pts []planarPoint) measuredLine {
-	cum := make([]float64, len(pts))
-	for i := 1; i < len(pts); i++ {
-		cum[i] = cum[i-1] + planarDist(pts[i-1], pts[i])
+// segment is the segment from one point of a measuredLine to the next, in
+// meters east and north of its start, at the scale of its middle latitude.
+type segment struct {
+	lonM   float64 // meters per degree of longitude
+	dx, dy float64
+}
+
+// newMeasuredLine measures shape, or returns false for a shape of fewer than
+// two points, without length, or with a point without finite coordinates.
+func newMeasuredLine(shape []Point) (measuredLine, bool) {
+	cum, ok := shapeCum(shape)
+	if !ok || len(shape) < 2 || cum[len(cum)-1] == 0 {
+		return measuredLine{}, false
 	}
-	return measuredLine{pts: pts, cum: cum}
+	segs := make([]segment, len(shape)-1)
+	for i := range segs {
+		a, b := shape[i], shape[i+1]
+		lonM := latMeter * math.Cos(deg2rad((a.Lat+b.Lat)/2))
+		segs[i] = segment{lonM: lonM, dx: wrapLon(b.Lon-a.Lon) * lonM, dy: (b.Lat - a.Lat) * latMeter}
+	}
+	return measuredLine{pts: shape, cum: cum, segs: segs}, true
+}
+
+func (l measuredLine) length() float64 {
+	return l.cum[len(l.cum)-1]
+}
+
+// wrapLon wraps a difference in longitude into [-180, 180], so a segment
+// across the antimeridian stays short.
+func wrapLon(d float64) float64 {
+	return d - 360*math.Round(d/360)
 }
 
 // measuredPass is the nearest point of one pass of a line to a stop.
@@ -151,96 +284,64 @@ type measuredPass struct {
 	pos, dist float64
 }
 
-// passes returns each pass of the line by a point at or after minPos, in order
-// along the line. A pass is a local minimum of distance from the point: a
-// straight road has one, a loop one per lap.
-func (l measuredLine) passes(p planarPoint, minPos float64) []measuredPass {
-	type seg struct {
-		measuredPass
-		ok bool
-	}
-	segs := make([]seg, len(l.pts)-1)
-	for i := 1; i < len(l.pts); i++ {
-		if l.cum[i] < minPos {
-			continue
-		}
-		pos, dist := l.projectSegment(i, p, minPos)
-		segs[i-1] = seg{measuredPass{pos, dist}, true}
-	}
+// passes returns each pass of the line by p between positions lo and hi, in
+// order along the line. A pass is a local minimum of the line's distance from
+// p, kept apart from the next by a rise of stopPassRise: a straight road has
+// one, a loop one per lap, and a road out and back one each way. A minimum at
+// lo or hi is always a pass of its own, so the ends of the range stay
+// choices.
+func (l measuredLine) passes(p Point, lo, hi float64) []measuredPass {
 	var ret []measuredPass
-	for i, s := range segs {
-		if !s.ok {
+	// The farthest the line gets from p since the last pass, and whether that
+	// pass is at an end of the range.
+	peak, atEnd := 0.0, false
+	add := func(c measuredPass, end bool) {
+		n := len(ret)
+		switch {
+		case n == 0 || end || atEnd || peak-math.Max(ret[n-1].dist, c.dist) >= stopPassRise:
+			ret = append(ret, c)
+		case c.dist < ret[n-1].dist:
+			// The same pass, nearer here.
+			ret[n-1] = c
+		default:
+			return
+		}
+		peak, atEnd = c.dist, end
+	}
+	first, prevAt, last := true, 0, measuredPass{}
+	for i, s := range l.segs {
+		segLen := l.cum[i+1] - l.cum[i]
+		// Skip repeated points, segments outside [lo, hi], and segments that
+		// only touch it, unless it is a single point.
+		overlap := math.Min(l.cum[i+1], hi) - math.Max(l.cum[i], lo)
+		if segLen == 0 || overlap < 0 || (overlap == 0 && hi > lo) {
 			continue
 		}
-		prev, next := math.Inf(1), math.Inf(1)
-		if i > 0 && segs[i-1].ok {
-			prev = segs[i-1].dist
+		a := l.pts[i]
+		px, py := wrapLon(p.Lon-a.Lon)*s.lonM, (p.Lat-a.Lat)*latMeter
+		dist := func(t float64) float64 { return math.Hypot(px-t*s.dx, py-t*s.dy) }
+		// p's foot on the part of the segment within [lo, hi]; at is -1 or 1
+		// where the foot clamps to that part's start or end.
+		t0, t1 := math.Max(0, (lo-l.cum[i])/segLen), math.Min(1, (hi-l.cum[i])/segLen)
+		t, at := (px*s.dx+py*s.dy)/(s.dx*s.dx+s.dy*s.dy), 0
+		if t <= t0 {
+			t, at = t0, -1
+		} else if t >= t1 {
+			t, at = t1, 1
 		}
-		if i+1 < len(segs) && segs[i+1].ok {
-			next = segs[i+1].dist
+		c := measuredPass{pos: l.cum[i] + t*segLen, dist: dist(t)}
+		peak = math.Max(peak, dist(t0))
+		// A foot inside the segment is a pass, and so is one at its start where
+		// the range starts or the segment before ends at the same point.
+		if at == 0 || (at < 0 && (first || prevAt > 0)) {
+			add(c, at < 0 && first)
 		}
-		if s.dist <= prev && s.dist <= next {
-			ret = append(ret, s.measuredPass)
-		}
+		peak = math.Max(peak, dist(t1))
+		first, prevAt, last = false, at, c
+	}
+	// So is a foot at the end of the range.
+	if prevAt > 0 {
+		add(last, true)
 	}
 	return ret
-}
-
-// lapGuard is the earliest pass at or after minPos whose distance is within
-// tol of the nearest pass's.
-func (l measuredLine) lapGuard(p planarPoint, minPos, tol float64) (float64, float64) {
-	cands := l.passes(p, minPos)
-	if len(cands) == 0 {
-		return minPos, math.Inf(1)
-	}
-	nearest := cands[0].dist
-	for _, c := range cands[1:] {
-		nearest = math.Min(nearest, c.dist)
-	}
-	for _, c := range cands {
-		if c.dist <= nearest+tol {
-			return c.pos, c.dist
-		}
-	}
-	// Unreachable: the nearest pass is itself within tol.
-	return cands[0].pos, cands[0].dist
-}
-
-// nearestPass is the pass at or after minPos, within the search radius of p,
-// nearest to minPos+gap; none when every such pass is farther from there than
-// half the gap, or the search radius if that is larger.
-func (l measuredLine) nearestPass(p planarPoint, minPos, gap float64) (measuredPass, bool) {
-	expected := minPos + gap
-	slack := math.Max(stopSearchRadius, gap/2)
-	best, found := measuredPass{}, false
-	for _, c := range l.passes(p, minPos) {
-		off := math.Abs(c.pos - expected)
-		if c.dist > stopSearchRadius || off > slack {
-			continue
-		}
-		if !found || off < math.Abs(best.pos-expected) {
-			best, found = c, true
-		}
-	}
-	return best, found
-}
-
-// projectSegment projects p onto segment i, clamped to positions at or after
-// minPos.
-func (l measuredLine) projectSegment(i int, p planarPoint, minPos float64) (float64, float64) {
-	a, b := l.pts[i-1], l.pts[i]
-	segLen := l.cum[i] - l.cum[i-1]
-	t := 0.0
-	if segLen > 0 {
-		t = ((p.x-a.x)*(b.x-a.x) + (p.y-a.y)*(b.y-a.y)) / (segLen * segLen)
-		t = math.Max(0, math.Min(1, t))
-	}
-	pos := l.cum[i-1] + t*segLen
-	if pos < minPos {
-		// The foot lies before minPos: clamp to minPos within this segment.
-		t = (minPos - l.cum[i-1]) / segLen
-		pos = minPos
-	}
-	q := planarPoint{a.x + t*(b.x-a.x), a.y + t*(b.y-a.y)}
-	return pos, planarDist(q, p)
 }

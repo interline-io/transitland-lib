@@ -12405,8 +12405,8 @@ type Shape {
   "True if this geometry was generated from stop locations because the source feed lacks a ` + "`" + `shapes.txt` + "`" + `"
   generated: Boolean!
 
-  "Distance along the shape at each point of ` + "`" + `geometry` + "`" + `, in meters. Transitland measures these itself rather than taking the feed's ` + "`" + `shapes.shape_dist_traveled` + "`" + `, in the same measure as ` + "`" + `RouteStopPatternTimetable.shape_distances` + "`" + `"
-  distances: [Float!]!
+  "Distance along the shape at each point of ` + "`" + `geometry` + "`" + `, in meters, in the same measure as ` + "`" + `RouteRepresentativeShape.length` + "`" + ` and ` + "`" + `RouteStopPatternTimetable.shape_distances` + "`" + `. Transitland measures these itself rather than taking the feed's ` + "`" + `shapes.shape_dist_traveled` + "`" + `. Null when a point of ` + "`" + `geometry` + "`" + ` lacks finite coordinates"
+  distances: [Float!]
 
   "Trips that use this shape"
   trips(limit: Int, where: TripFilter): [Trip!]
@@ -12535,7 +12535,7 @@ type StopTime {
   "1 if this arrival/departure time was filled in by interpolation during import; 0 or null otherwise"
   interpolated: Int
 
-  "This stop's distance along its trip's shape, in whole meters, as ` + "`" + `RouteStopPatternTimetable.shape_distances` + "`" + ` gives it and in the same measure as ` + "`" + `Shape.distances` + "`" + `. Transitland places the trip's stops in order along its shape, reading ` + "`" + `shape_dist_traveled` + "`" + ` only as a hint to which pass of a loop a stop is on. Null for a trip without a shape"
+  "This stop's distance along its trip's shape, in whole meters, the same as its cell in ` + "`" + `RouteStopPatternTimetable.shape_distances` + "`" + ` and in the measure of ` + "`" + `Shape.distances` + "`" + `. Transitland places the trip's stops in order along its shape, reading ` + "`" + `shape_dist_traveled` + "`" + ` only as a hint to which pass each stop takes on a loop. Null for a trip without a shape, or for a stop that has no place on its shape within 500 m"
   shape_distance: Int
 
   "GTFS ` + "`" + `stop_times.start_pickup_drop_off_window` + "`" + `; earliest time a rider may request service at this location (GTFS Flex)"
@@ -13649,7 +13649,7 @@ type RouteStopPatternTimetable {
   timepoints: RouteStopPatternTimetableGrid!
 
   """
-  Each stop's distance along its trip's shape, in whole meters, in the same measure as ` + "`" + `Shape.distances` + "`" + `. Transitland places each stop on the shape after the one before, reading the feed's ` + "`" + `stop_times.shape_dist_traveled` + "`" + ` only as a hint to which pass of a loop a stop is on. Null for a trip without a shape.
+  Each stop's distance along its trip's shape, in whole meters, in the same measure as ` + "`" + `Shape.distances` + "`" + `. Transitland places each stop on the shape after the one before, reading the feed's ` + "`" + `stop_times.shape_dist_traveled` + "`" + ` only as a hint to which pass each stop takes on a loop. Null for a trip without a shape, or for a stop that has no place on its shape within 500 m.
   """
   shape_distances: RouteStopPatternTimetableGrid!
 }
@@ -46544,10 +46544,10 @@ func (ec *executionContext) _Shape_distances(ctx context.Context, field graphql.
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []float64) graphql.Marshaler {
-			return ec.marshalNFloat2ᚕfloat64ᚄ(ctx, selections, v)
+			return ec.marshalOFloat2ᚕfloat64ᚄ(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_Shape_distances(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -71206,16 +71206,13 @@ func (ec *executionContext) _Shape(ctx context.Context, sel ast.SelectionSet, ob
 		case "distances":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._Shape_distances(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
@@ -76096,36 +76093,6 @@ func (ec *executionContext) marshalNFloat2githubᚗcomᚋinterlineᚑioᚋtransi
 	return v
 }
 
-func (ec *executionContext) unmarshalNFloat2ᚕfloat64ᚄ(ctx context.Context, v any) ([]float64, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]float64, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNFloat2float64(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNFloat2ᚕfloat64ᚄ(ctx context.Context, sel ast.SelectionSet, v []float64) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalNFloat2float64(ctx, sel, v[i])
-	}
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
 func (ec *executionContext) marshalNFrequency2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐFrequencyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Frequency) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -78741,6 +78708,42 @@ func (ec *executionContext) unmarshalOFloat2githubᚗcomᚋinterlineᚑioᚋtran
 
 func (ec *executionContext) marshalOFloat2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐFloat(ctx context.Context, sel ast.SelectionSet, v tt.Float) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalOFloat2ᚕfloat64ᚄ(ctx context.Context, v any) ([]float64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]float64, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNFloat2float64(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOFloat2ᚕfloat64ᚄ(ctx context.Context, sel ast.SelectionSet, v []float64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNFloat2float64(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v any) (*float64, error) {
