@@ -2,6 +2,7 @@ package tlxy
 
 import (
 	"math"
+	"sort"
 )
 
 // A pass this many meters farther from a stop than the nearest one still
@@ -63,31 +64,30 @@ func StopPositions(shape []Point, stops []Point, dists []float64) []StopPosition
 		if !finitePoint(p) {
 			continue
 		}
-		maxPos := line.length()
+		c, fromHint := measuredPass{}, false
 		if hinted {
-			if c, ok := line.nearestPass(p, minPos, minPos+scale*(dists[i]-prevDist)); ok {
-				ret[i] = StopPosition{Position: c.pos, Distance: c.dist, Hinted: true, Placed: true}
-				minPos, prevDist = c.pos, dists[i]
-				continue
-			}
+			c, fromHint = line.nearestPass(p, minPos, minPos+scale*(dists[i]-prevDist))
+		}
+		if !fromHint {
+			maxPos := line.length()
 			// Keep this stop off the stretch past where the hint finds the next
 			// one, so a pass far along can't drag the stops after it.
-			if i+1 < n && finitePoint(stops[i+1]) {
+			if hinted && i+1 < n && finitePoint(stops[i+1]) {
 				expected := minPos + scale*(dists[i+1]-prevDist)
 				if _, ok := line.nearestPass(stops[i+1], minPos, expected); ok {
 					_, maxPos = hintWindow(minPos, expected)
 				}
 			}
+			c = line.geometryPass(p, i, n, minPos, maxPos)
+			if c.dist > stopMaxDistance {
+				continue
+			}
 		}
-		c := line.geometryPass(p, i, n, minPos, maxPos)
-		if c.dist > stopMaxDistance {
-			continue
-		}
-		ret[i] = StopPosition{Position: c.pos, Distance: c.dist, Placed: true}
+		ret[i] = StopPosition{Position: c.pos, Distance: c.dist, Hinted: fromHint, Placed: true}
+		minPos = c.pos
 		if hinted {
 			prevDist = dists[i]
 		}
-		minPos = c.pos
 	}
 	return ret
 }
@@ -96,11 +96,18 @@ func StopPositions(shape []Point, stops []Point, dists []float64) []StopPosition
 // meters: LengthHaversine of the shape up to each point. It returns nil for a
 // shape with a point without finite coordinates.
 func ShapeDistances(shape []Point) []float64 {
-	cum, ok := shapeCum(shape)
-	if !ok || len(cum) == 0 {
-		return nil
+	var ret []float64
+	total := 0.0
+	for i, p := range shape {
+		if !finitePoint(p) {
+			return nil
+		}
+		if i > 0 {
+			total += DistanceHaversine(shape[i-1], p)
+		}
+		ret = append(ret, total)
 	}
-	return cum
+	return ret
 }
 
 // hintScale is meters per unit of dists: the meters from the first stop's
@@ -144,11 +151,12 @@ func (l measuredLine) geometryPass(p Point, i, n int, minPos, maxPos float64) me
 	cands := l.passes(p, minPos, maxPos)
 	switch i {
 	case 0:
-		return pick(cands, stopSearchRadius, false)
+		return nearOnes(cands, stopSearchRadius)[0]
 	case n - 1:
-		return pick(cands, stopLapTolerance, true)
+		near := nearOnes(cands, stopLapTolerance)
+		return near[len(near)-1]
 	}
-	return pick(cands, stopLapTolerance, false)
+	return nearOnes(cands, stopLapTolerance)[0]
 }
 
 // nearestPass is p's pass at or after minPos nearest expected, of those within
@@ -166,46 +174,29 @@ func (l measuredLine) nearestPass(p Point, minPos, expected float64) (measuredPa
 	if len(near) == 0 {
 		return measuredPass{}, false
 	}
-	nearest := near[0].dist
+	near = nearOnes(near, stopLapTolerance)
+	best := near[0]
 	for _, c := range near[1:] {
-		nearest = math.Min(nearest, c.dist)
-	}
-	best := -1
-	for i, c := range near {
-		if c.dist > nearest+stopLapTolerance {
-			continue
-		}
-		if best < 0 || math.Abs(c.pos-expected) < math.Abs(near[best].pos-expected) {
-			best = i
+		if math.Abs(c.pos-expected) < math.Abs(best.pos-expected) {
+			best = c
 		}
 	}
-	return near[best], true
+	return best, true
 }
 
-// pick is the earliest of cands, or with latest the last one, whose distance
-// is within tol of the nearest one's.
-func pick(cands []measuredPass, tol float64, latest bool) measuredPass {
-	best := 0
-	for i, c := range cands {
-		if c.dist < cands[best].dist {
-			best = i
+// nearOnes is cands within tol of the nearest one's distance, in order.
+func nearOnes(cands []measuredPass, tol float64) []measuredPass {
+	nearest := math.Inf(1)
+	for _, c := range cands {
+		nearest = math.Min(nearest, c.dist)
+	}
+	var ret []measuredPass
+	for _, c := range cands {
+		if c.dist <= nearest+tol {
+			ret = append(ret, c)
 		}
 	}
-	limit := cands[best].dist + tol
-	if latest {
-		for i := len(cands) - 1; i > best; i-- {
-			if cands[i].dist <= limit {
-				return cands[i]
-			}
-		}
-		return cands[best]
-	}
-	for _, c := range cands[:best] {
-		if c.dist <= limit {
-			return c
-		}
-	}
-	return cands[best]
+	return ret
 }
 
 // rising reports whether dists are finite and never fall, and the last is
@@ -221,21 +212,6 @@ func rising(dists []float64) bool {
 
 func finitePoint(p Point) bool {
 	return !math.IsNaN(p.Lon) && !math.IsInf(p.Lon, 0) && !math.IsNaN(p.Lat) && !math.IsInf(p.Lat, 0)
-}
-
-// shapeCum is LengthHaversine of shape up to each of its points, or false for
-// a shape with a point without finite coordinates.
-func shapeCum(shape []Point) ([]float64, bool) {
-	cum := make([]float64, len(shape))
-	for i, p := range shape {
-		if !finitePoint(p) {
-			return nil, false
-		}
-		if i > 0 {
-			cum[i] = cum[i-1] + DistanceHaversine(shape[i-1], p)
-		}
-	}
-	return cum, true
 }
 
 // measuredLine is a shape with the meters along it at each point, and each
@@ -256,8 +232,8 @@ type segment struct {
 // newMeasuredLine measures shape, or returns false for a shape of fewer than
 // two points, without length, or with a point without finite coordinates.
 func newMeasuredLine(shape []Point) (measuredLine, bool) {
-	cum, ok := shapeCum(shape)
-	if !ok || len(shape) < 2 || cum[len(cum)-1] == 0 {
+	cum := ShapeDistances(shape)
+	if len(cum) < 2 || cum[len(cum)-1] == 0 {
 		return measuredLine{}, false
 	}
 	segs := make([]segment, len(shape)-1)
@@ -291,14 +267,17 @@ type measuredPass struct {
 // lo or hi is always a pass of its own, so the ends of the range stay
 // choices.
 func (l measuredLine) passes(p Point, lo, hi float64) []measuredPass {
-	var ret []measuredPass
-	// The farthest the line gets from p since the last pass, and whether that
-	// pass is at an end of the range.
-	peak, atEnd := 0.0, false
-	add := func(c measuredPass, end bool) {
+	// The range ends with the line, so one that starts at the line's end is a
+	// single point.
+	hi = math.Min(hi, l.length())
+	// The pass at the range's start, if any, and the passes after it.
+	var start, ret []measuredPass
+	// The farthest the line gets from p since the last pass.
+	peak := 0.0
+	add := func(c measuredPass) {
 		n := len(ret)
 		switch {
-		case n == 0 || end || atEnd || peak-math.Max(ret[n-1].dist, c.dist) >= stopPassRise:
+		case n == 0 || peak-math.Max(ret[n-1].dist, c.dist) >= stopPassRise:
 			ret = append(ret, c)
 		case c.dist < ret[n-1].dist:
 			// The same pass, nearer here.
@@ -306,10 +285,12 @@ func (l measuredLine) passes(p Point, lo, hi float64) []measuredPass {
 		default:
 			return
 		}
-		peak, atEnd = c.dist, end
+		peak = c.dist
 	}
 	first, prevAt, last := true, 0, measuredPass{}
-	for i, s := range l.segs {
+	// Segments that end before lo can't reach the range.
+	for i := sort.SearchFloat64s(l.cum[1:], lo); i < len(l.segs); i++ {
+		s := l.segs[i]
 		segLen := l.cum[i+1] - l.cum[i]
 		// Skip repeated points, segments outside [lo, hi], and segments that
 		// only touch it, unless it is a single point.
@@ -333,15 +314,18 @@ func (l measuredLine) passes(p Point, lo, hi float64) []measuredPass {
 		peak = math.Max(peak, dist(t0))
 		// A foot inside the segment is a pass, and so is one at its start where
 		// the range starts or the segment before ends at the same point.
-		if at == 0 || (at < 0 && (first || prevAt > 0)) {
-			add(c, at < 0 && first)
+		switch {
+		case at < 0 && first:
+			start = append(start, c)
+		case at == 0 || (at < 0 && prevAt > 0):
+			add(c)
 		}
 		peak = math.Max(peak, dist(t1))
 		first, prevAt, last = false, at, c
 	}
 	// So is a foot at the end of the range.
 	if prevAt > 0 {
-		add(last, true)
+		ret = append(ret, last)
 	}
-	return ret
+	return append(start, ret...)
 }

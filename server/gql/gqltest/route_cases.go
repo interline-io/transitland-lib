@@ -564,15 +564,12 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		},
 		{
 			Name:  "route patterns timetable shape distances",
-			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id timetable { stop_ids trips { trip_id shape { distances } stop_times { shape_distance } } shape_distances { values delta polyline } } } } }`,
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count timetable { stop_ids trips { trip_id shape { distances } stop_times { shape_distance } } shape_distances { values delta polyline } } } } }`,
 			F: func(t *testing.T, jj string) {
-				pats := gjson.Get(jj, "routes.0.patterns").Array()
-				assert.NotEmpty(t, pats, "patterns returned")
-				for i, pat := range pats {
+				checkPatternTimetable(t, jj)
+				for i, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
 					table := pat.Get("timetable")
 					rows := table.Get("shape_distances.values").Array()
-					assert.Len(t, rows, len(table.Get("stop_ids").Array()), "pattern %d has a row per stop", i)
-					assert.Len(t, table.Get("shape_distances.polyline").Array(), len(rows), "pattern %d", i)
 					for j, trip := range table.Get("trips").Array() {
 						// A trip's own stop times say the same as its column.
 						stopTimes := trip.Get("stop_times.#.shape_distance").Array()
@@ -919,7 +916,7 @@ func checkPatternTimetable(t *testing.T, jj string) {
 		stops := len(table.Get("stop_ids").Array())
 		assert.NotZero(t, stops, "pattern %d has stops", i)
 		assert.Len(t, table.Get("trips").Array(), count, "pattern %d: a column per trip", i)
-		for _, name := range []string{"departure_times", "arrival_times", "pickup_types", "drop_off_types", "timepoints"} {
+		for _, name := range []string{"departure_times", "arrival_times", "pickup_types", "drop_off_types", "timepoints", "shape_distances"} {
 			grid := table.Get(name)
 			if !grid.Exists() {
 				continue

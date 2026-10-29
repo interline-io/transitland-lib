@@ -13649,7 +13649,7 @@ type RouteStopPatternTimetable {
   timepoints: RouteStopPatternTimetableGrid!
 
   """
-  Each stop's distance along its trip's shape, in whole meters, in the same measure as ` + "`" + `Shape.distances` + "`" + `. Transitland places each stop on the shape after the one before, reading the feed's ` + "`" + `stop_times.shape_dist_traveled` + "`" + ` only as a hint to which pass each stop takes on a loop. Null for a trip without a shape, or for a stop that has no place on its shape within 500 m.
+  Each stop's distance along its trip's shape, in whole meters, in the same measure as ` + "`" + `Shape.distances` + "`" + `. Transitland places each stop on the shape after the one before, reading the trip's ` + "`" + `stop_times.shape_dist_traveled` + "`" + ` only as a hint to which pass each stop takes on a loop. Null for a trip without a shape, or for a stop that has no place on its shape within 500 m.
   """
   shape_distances: RouteStopPatternTimetableGrid!
 }

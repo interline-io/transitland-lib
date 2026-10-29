@@ -84,6 +84,17 @@ func assertInOrder(t *testing.T, got []StopPosition) {
 	}
 }
 
+// assertPositions checks that each stop sits at want, and that the hint placed
+// every stop but those in unhinted.
+func assertPositions(t *testing.T, got []StopPosition, want []float64, unhinted ...int) {
+	t.Helper()
+	require.Len(t, got, len(want))
+	for i := range got {
+		assert.InDelta(t, want[i], got[i].Position, fixtureDelta, "stop %d", i)
+		assert.Equal(t, !slices.Contains(unhinted, i), got[i].Hinted, "stop %d", i)
+	}
+}
+
 func TestStopPositions_Laps(t *testing.T) {
 	stops := metersLine([2]float64{10, 3}, [2]float64{50, 3}, [2]float64{100, 50}, [2]float64{50, 103}, [2]float64{0, 50}, [2]float64{50, 3}, [2]float64{100, 50})
 	got := StopPositions(twoLaps(), stops, nil)
@@ -204,11 +215,7 @@ func TestStopPositions_Hint(t *testing.T) {
 	assertInOrder(t, geo)
 
 	got := StopPositions(shape, stops, dists)
-	require.Len(t, got, len(stops))
-	for i := range got {
-		assert.InDelta(t, dists[i], got[i].Position, fixtureDelta, "stop %d", i)
-		assert.True(t, got[i].Hinted, "stop %d", i)
-	}
+	assertPositions(t, got, dists)
 	assert.InDelta(t, 25, got[5].Distance, fixtureDelta)
 }
 
@@ -226,10 +233,7 @@ func TestStopPositions_HintFirstStop(t *testing.T) {
 	geo := StopPositions(shape, stops, nil)
 	assert.InDelta(t, 0, geo[0].Position, fixtureDelta)
 	got := StopPositions(shape, stops, dists)
-	for i := range got {
-		assert.InDelta(t, dists[i], got[i].Position, fixtureDelta, "stop %d", i)
-		assert.True(t, got[i].Hinted, "stop %d", i)
-	}
+	assertPositions(t, got, dists)
 	assert.InDelta(t, 5, got[0].Distance, fixtureDelta)
 }
 
@@ -257,11 +261,7 @@ func TestStopPositions_HintScale(t *testing.T) {
 	stops[3] = metersLine([2]float64{300, 40})[0]
 	geo := StopPositions(shape, stops, nil)
 	assert.Greater(t, geo[3].Position, 10000.0)
-	got := StopPositions(shape, stops, dists)
-	for i := range got {
-		assert.InDelta(t, dists[i], got[i].Position, fixtureDelta, "stop %d", i)
-		assert.True(t, got[i].Hinted, "stop %d", i)
-	}
+	assertPositions(t, StopPositions(shape, stops, dists), dists)
 }
 
 func TestStopPositions_HintUnits(t *testing.T) {
@@ -289,32 +289,20 @@ func TestStopPositions_UnusableHint(t *testing.T) {
 func TestStopPositions_HintFallsBack(t *testing.T) {
 	// The feed puts the sixth stop 1 m past the fifth rather than 100 m, so no
 	// pass is near where it says; that stop falls back to geometry alone.
-	shape, stops, dists := straightLine()
+	shape, stops, want := straightLine()
+	dists := slices.Clone(want)
 	dists[5] = dists[4] + 1
-	got := StopPositions(shape, stops, dists)
-	for i := range got {
-		assert.InDelta(t, float64(i)*100, got[i].Position, fixtureDelta, "stop %d", i)
-	}
-	assert.True(t, got[4].Hinted)
-	assert.False(t, got[5].Hinted)
-	assert.True(t, got[6].Hinted)
+	assertPositions(t, StopPositions(shape, stops, dists), want, 5)
 }
 
 func TestStopPositions_HintFallbackBetween(t *testing.T) {
 	// As in the boulevard, with the stop at x=500 put 1 m past the one before.
 	// Geometry alone would take its pass on the way back, but the stop stays
 	// short of where the hint finds the next one, on the way out.
-	shape, stops, dists := boulevard()
+	shape, stops, want := boulevard()
+	dists := slices.Clone(want)
 	dists[5] = dists[4] + 1
-	got := StopPositions(shape, stops, dists)
-	for i := range got {
-		want := dists[i]
-		if i == 5 {
-			want = 500
-		}
-		assert.InDelta(t, want, got[i].Position, fixtureDelta, "stop %d", i)
-		assert.Equal(t, i != 5, got[i].Hinted, "stop %d", i)
-	}
+	assertPositions(t, StopPositions(shape, stops, dists), want, 5)
 }
 
 func TestStopPositions_HintFallbackHolds(t *testing.T) {
@@ -330,6 +318,22 @@ func TestStopPositions_HintFallbackHolds(t *testing.T) {
 	assert.False(t, got[2].Hinted)
 	assert.InDelta(t, 1210, got[3].Position, fixtureDelta)
 	assert.InDelta(t, 2010, got[4].Position, fixtureDelta)
+}
+
+func TestStopPositions_PastShapeEnd(t *testing.T) {
+	// The shape ends at the third stop, and the last two lie 80 m north of
+	// its end and 20 m past it. The hint can't place the fourth stop, and the
+	// stretch where it finds the fifth runs past the shape's end.
+	shape := metersLine([2]float64{0, 0}, [2]float64{1000, 0})
+	stops := metersLine([2]float64{0, 0}, [2]float64{500, 0}, [2]float64{1000, 0}, [2]float64{1000, 80}, [2]float64{1020, 0})
+	for _, dists := range [][]float64{nil, {0, 500, 1000, 1010, 1020}} {
+		got := StopPositions(shape, stops, dists)
+		require.Len(t, got, len(stops))
+		for i, want := range []float64{0, 500, 1000, 1000, 1000} {
+			assert.True(t, got[i].Placed, "stop %d", i)
+			assert.InDelta(t, want, got[i].Position, fixtureDelta, "stop %d", i)
+		}
+	}
 }
 
 func TestStopPositions_FarStop(t *testing.T) {

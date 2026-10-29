@@ -74,12 +74,6 @@ type stopTimeLoaderParam struct {
 	Where           *model.StopTimeFilter
 }
 
-// tripShapeDistanceLoaderParam is a trip whose stops are placed along its shape.
-type tripShapeDistanceLoaderParam struct {
-	FeedVersionID int
-	TripID        int
-}
-
 type tripStopTimeLoaderParam struct {
 	TripID        int
 	FeedVersionID int

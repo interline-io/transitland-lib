@@ -8,7 +8,6 @@ import (
 	dataloader "github.com/graph-gophers/dataloader/v7"
 	"github.com/interline-io/transitland-lib/rt/pb"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -29,10 +28,7 @@ func (r *stopTimeResolver) ShapeDistance(ctx context.Context, obj *model.StopTim
 	if obj.RTTrip != nil {
 		return nil, nil
 	}
-	dists, err := LoaderFor(ctx).ShapeDistancesByTripIDs.Load(ctx, tripShapeDistanceLoaderParam{
-		FeedVersionID: obj.FeedVersionID,
-		TripID:        obj.TripID.Int(),
-	})()
+	dists, err := LoaderFor(ctx).ShapeDistancesByTripIDs.Load(ctx, model.FVPair{FeedVersionID: obj.FeedVersionID, EntityID: obj.TripID.Int()})()
 	if err != nil {
 		return nil, err
 	}
@@ -43,82 +39,46 @@ func (r *stopTimeResolver) ShapeDistance(ctx context.Context, obj *model.StopTim
 }
 
 // shapeDistancesByTripIDs places each trip's stops along its shape, as a
-// pattern timetable does, by stop_sequence. A trip without a shape, or with a
-// stop that can't be loaded, has none.
-func shapeDistancesByTripIDs(ctx context.Context, params []tripShapeDistanceLoaderParam) ([]map[int]tt.Int, []error) {
-	ldr := LoaderFor(ctx)
-	ret := make([]map[int]tt.Int, len(params))
-	errs := make([]error, len(params))
-	// Every load is asked for before any is read, so the loaders batch them:
-	// the trips and their stop times first, then their shapes and stops.
+// pattern timetable does, by stop_sequence.
+func (ldr *Loaders) shapeDistancesByTripIDs(ctx context.Context, params []model.FVPair) ([]map[int]tt.Int, []error) {
+	// Every load is asked for before any is read, so the loaders batch them.
 	tripLoads := make([]dataloader.Thunk[*model.Trip], len(params))
 	stopTimeLoads := make([]dataloader.Thunk[[]*model.StopTime], len(params))
 	for i, p := range params {
-		tripLoads[i] = ldr.TripsByIDs.Load(ctx, p.TripID)
+		tripLoads[i] = ldr.TripsByIDs.Load(ctx, p.EntityID)
 		stopTimeLoads[i] = ldr.StopTimesByTripIDs.Load(ctx, tripStopTimeLoaderParam{
 			FeedVersionID: p.FeedVersionID,
-			TripID:        p.TripID,
+			TripID:        p.EntityID,
 			Limit:         ptr(RESOLVER_PATTERN_MAXLIMIT),
 		})
 	}
-	trips := make([]*model.Trip, len(params))
+	errs := make([]error, len(params))
+	trips := make([]tripStops, len(params))
 	stopTimes := make([][]*model.StopTime, len(params))
-	shapeLoads := map[int]dataloader.Thunk[*model.Shape]{}
-	stopLoads := map[int]dataloader.Thunk[*model.Stop]{}
 	for i := range params {
 		trip, err := tripLoads[i]()
 		if err == nil {
 			stopTimes[i], err = stopTimeLoads[i]()
 		}
-		if err != nil {
+		if err != nil || trip == nil {
 			errs[i] = err
 			continue
 		}
-		if trip == nil || !trip.ShapeID.Valid || len(stopTimes[i]) == 0 {
-			continue
-		}
-		trips[i] = trip
-		if id := trip.ShapeID.Int(); shapeLoads[id] == nil {
-			shapeLoads[id] = ldr.ShapesByIDs.Load(ctx, id)
-		}
+		trips[i].ShapeID = trip.ShapeID
 		for _, st := range stopTimes[i] {
-			if id := st.StopID.Int(); stopLoads[id] == nil {
-				stopLoads[id] = ldr.StopsByIDs.Load(ctx, id)
-			}
+			trips[i].StopIDs = append(trips[i].StopIDs, st.StopID.Int())
+			trips[i].Dists = append(trips[i].Dists, st.ShapeDistTraveled)
 		}
 	}
-	for i, trip := range trips {
-		if trip == nil {
-			continue
-		}
-		shape, err := shapeLoads[trip.ShapeID.Int()]()
-		if err != nil {
-			errs[i] = err
-			continue
-		}
-		if shape == nil {
-			continue
-		}
-		stops := make([]tlxy.Point, len(stopTimes[i]))
-		dists := make([]tt.Float, len(stopTimes[i]))
-		complete := true
-		for k, st := range stopTimes[i] {
-			stop, err := stopLoads[st.StopID.Int()]()
-			if err != nil {
-				errs[i] = err
-			}
-			if stop == nil {
-				complete = false
-				break
-			}
-			stops[k] = stop.ToPoint()
-			dists[k] = st.ShapeDistTraveled
-		}
-		if !complete {
+	placed, placeErrs := ldr.placeTrips(ctx, trips)
+	ret := make([]map[int]tt.Int, len(params))
+	for i, dists := range placed {
+		errs[i] = errors.Join(errs[i], placeErrs[i])
+		if dists == nil {
 			continue
 		}
 		ret[i] = map[int]tt.Int{}
-		for k, d := range stopShapeDistances(shape, stops, dists) {
+		for k, d := range dists {
 			ret[i][stopTimes[i][k].StopSequence.Int()] = d
 		}
 	}

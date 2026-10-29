@@ -3,14 +3,12 @@ package gql
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"sort"
 
 	dataloader "github.com/graph-gophers/dataloader/v7"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	geom "github.com/twpayne/go-geom"
 	"github.com/twpayne/go-polyline"
@@ -369,7 +367,7 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 		PickupTypes:       &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
 		DropOffTypes:      &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
 		Timepoints:        &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
-		ShapeDistTraveled: newCells[tt.Float](nStops, nTrips),
+		ShapeDistTraveled: newCells[tt.Float](nTrips, nStops),
 	}
 	for i, st := range header {
 		ret.StopIds[i] = st.StopID.Int()
@@ -382,7 +380,7 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 			ret.PickupTypes.Values[i][j] = st.PickupType
 			ret.DropOffTypes.Values[i][j] = st.DropOffType
 			ret.Timepoints.Values[i][j] = st.Timepoint
-			ret.ShapeDistTraveled[i][j] = st.ShapeDistTraveled
+			ret.ShapeDistTraveled[j][i] = st.ShapeDistTraveled
 		}
 	}
 	return ret, nil
@@ -390,57 +388,19 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 
 type routePatternTimetableResolver struct{ *Resolver }
 
-// ShapeDistances places each trip's stops along its shape. Trips with the
-// same shape and the same feed distances are placed once.
+// ShapeDistances places each trip's stops along its shape.
 func (r *routePatternTimetableResolver) ShapeDistances(ctx context.Context, obj *model.RouteStopPatternTimetable) (*model.RouteStopPatternTimetableGrid, error) {
-	nStops := len(obj.StopIds)
-	grid := &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, len(obj.Trips))}
-	// Every load is asked for before any is read, so the loaders batch them.
-	var stopLoads []dataloader.Thunk[*model.Stop]
-	for _, id := range obj.StopIds {
-		stopLoads = append(stopLoads, LoaderFor(ctx).StopsByIDs.Load(ctx, id))
-	}
-	shapeLoads := map[int]dataloader.Thunk[*model.Shape]{}
-	for _, trip := range obj.Trips {
-		if id := trip.ShapeID.Int(); trip.ShapeID.Valid && shapeLoads[id] == nil {
-			shapeLoads[id] = LoaderFor(ctx).ShapesByIDs.Load(ctx, id)
-		}
-	}
-	stops := make([]tlxy.Point, nStops)
-	for i, load := range stopLoads {
-		stop, err := load()
-		if err != nil {
-			return nil, err
-		}
-		// Without every stop there is no order to place the others in.
-		if stop == nil {
-			return grid, nil
-		}
-		stops[i] = stop.ToPoint()
-	}
-	placed := map[string][]tt.Int{}
+	trips := make([]tripStops, len(obj.Trips))
 	for j, trip := range obj.Trips {
-		if !trip.ShapeID.Valid {
-			continue
-		}
-		shape, err := shapeLoads[trip.ShapeID.Int()]()
-		if err != nil {
-			return nil, err
-		}
-		if shape == nil {
-			continue
-		}
-		dists := make([]tt.Float, nStops)
-		for i := range dists {
-			dists[i] = obj.ShapeDistTraveled[i][j]
-		}
-		key := fmt.Sprint(trip.ShapeID.Int(), dists)
-		distances, ok := placed[key]
-		if !ok {
-			distances = stopShapeDistances(shape, stops, dists)
-			placed[key] = distances
-		}
-		for i, d := range distances {
+		trips[j] = tripStops{ShapeID: trip.ShapeID, StopIDs: obj.StopIds, Dists: obj.ShapeDistTraveled[j]}
+	}
+	placed, errs := LoaderFor(ctx).placeTrips(ctx, trips)
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	grid := &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](len(obj.StopIds), len(obj.Trips))}
+	for j, dists := range placed {
+		for i, d := range dists {
 			grid.Values[i][j] = d
 		}
 	}

@@ -126,7 +126,7 @@ type Loaders struct {
 	SegmentsByIDs                                                 *dataloader.Loader[int, *model.Segment]
 	SegmentsByRouteIDs                                            *dataloader.Loader[segmentLoaderParam, []*model.Segment]
 	ShapesByIDs                                                   *dataloader.Loader[int, *model.Shape]
-	ShapeDistancesByTripIDs                                       *dataloader.Loader[tripShapeDistanceLoaderParam, map[int]tt.Int]
+	ShapeDistancesByTripIDs                                       *dataloader.Loader[model.FVPair, map[int]tt.Int]
 	StopExternalReferencesByStopIDs                               *dataloader.Loader[int, *model.StopExternalReference]
 	StopObservationsByStopIDs                                     *dataloader.Loader[stopObservationLoaderParam, []*model.StopObservation]
 	StopPlacesByStopID                                            *dataloader.Loader[model.StopPlaceParam, *model.StopPlace]
@@ -511,7 +511,6 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		ShapesByIDs:                     withWaitAndCapacity(waitTime, batchSize, dbf.ShapesByIDs),
-		ShapeDistancesByTripIDs:         withWaitAndCapacity(waitTime, batchSize, shapeDistancesByTripIDs),
 		StopExternalReferencesByStopIDs: withWaitAndCapacity(waitTime, batchSize, dbf.StopExternalReferencesByStopIDs),
 		StopObservationsByStopIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.StopObservationsByStopIDs,
 			func(p stopObservationLoaderParam) (int, *model.StopObservationFilter, *int) {
@@ -596,6 +595,7 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 	}
+	loaders.ShapeDistancesByTripIDs = withWaitAndCapacity(waitTime, batchSize, loaders.shapeDistancesByTripIDs)
 	return loaders
 }
 
