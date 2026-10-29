@@ -395,13 +395,14 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 
 	nStops, nTrips := len(header), len(kept)
 	ret := &model.RouteStopPatternTimetable{
-		StopIds:        make([]int, nStops),
-		Trips:          make([]*model.Trip, nTrips),
-		DepartureTimes: &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
-		ArrivalTimes:   &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
-		PickupTypes:    &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
-		DropOffTypes:   &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
-		Timepoints:     &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		StopIds:           make([]int, nStops),
+		Trips:             make([]*model.Trip, nTrips),
+		DepartureTimes:    &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
+		ArrivalTimes:      &model.RouteStopPatternTimetableTimeGrid{Values: newCells[tt.Seconds](nStops, nTrips)},
+		PickupTypes:       &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		DropOffTypes:      &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		Timepoints:        &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](nStops, nTrips)},
+		ShapeDistTraveled: newCells[tt.Float](nTrips, nStops),
 	}
 	for i, st := range header {
 		ret.StopIds[i] = st.StopID.Int()
@@ -414,9 +415,31 @@ func (r *routePatternResolver) Timetable(ctx context.Context, obj *model.RouteSt
 			ret.PickupTypes.Values[i][j] = st.PickupType
 			ret.DropOffTypes.Values[i][j] = st.DropOffType
 			ret.Timepoints.Values[i][j] = st.Timepoint
+			ret.ShapeDistTraveled[j][i] = st.ShapeDistTraveled
 		}
 	}
 	return ret, nil
+}
+
+type routePatternTimetableResolver struct{ *Resolver }
+
+// ShapeDistances places each trip's stops along its shape.
+func (r *routePatternTimetableResolver) ShapeDistances(ctx context.Context, obj *model.RouteStopPatternTimetable) (*model.RouteStopPatternTimetableGrid, error) {
+	trips := make([]tripStops, len(obj.Trips))
+	for j, trip := range obj.Trips {
+		trips[j] = tripStops{ShapeID: trip.ShapeID, StopIDs: obj.StopIds, Dists: obj.ShapeDistTraveled[j]}
+	}
+	placed, errs := LoaderFor(ctx).placeTrips(ctx, trips)
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	grid := &model.RouteStopPatternTimetableGrid{Values: newCells[tt.Int](len(obj.StopIds), len(obj.Trips))}
+	for j, dists := range placed {
+		for i, d := range dists {
+			grid.Values[i][j] = d
+		}
+	}
+	return grid, nil
 }
 
 type routePatternGridResolver struct{ *Resolver }

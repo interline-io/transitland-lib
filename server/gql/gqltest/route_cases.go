@@ -563,6 +563,38 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
+			Name:  "route patterns timetable shape distances",
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id count timetable { stop_ids trips { trip_id shape { distances } stop_times { shape_distance } } shape_distances { values delta polyline } } } } }`,
+			F: func(t *testing.T, jj string) {
+				checkPatternTimetable(t, jj)
+				for i, pat := range gjson.Get(jj, "routes.0.patterns").Array() {
+					table := pat.Get("timetable")
+					rows := table.Get("shape_distances.values").Array()
+					for j, trip := range table.Get("trips").Array() {
+						// A trip's own stop times say the same as its column.
+						stopTimes := trip.Get("stop_times.#.shape_distance").Array()
+						assert.Len(t, stopTimes, len(rows), "pattern %d trip %d", i, j)
+						for k, st := range stopTimes {
+							assert.Equal(t, rows[k].Array()[j].Raw, st.Raw, "pattern %d trip %d stop %d", i, j, k)
+						}
+						dists := trip.Get("shape.distances").Array()
+						assert.NotEmpty(t, dists, "pattern %d trip %d has a measured shape", i, j)
+						end := dists[len(dists)-1].Float()
+						// Each stop is at or after the one before, and on the shape.
+						prev := 0.0
+						for k, row := range rows {
+							cell := row.Array()[j]
+							assert.Equal(t, gjson.Number, cell.Type, "pattern %d trip %d stop %d", i, j, k)
+							assert.GreaterOrEqual(t, cell.Float(), prev, "pattern %d trip %d stop %d", i, j, k)
+							assert.LessOrEqual(t, cell.Float(), end+1, "pattern %d trip %d stop %d", i, j, k)
+							prev = cell.Float()
+						}
+						assert.Greater(t, prev, 0.0, "pattern %d trip %d goes somewhere", i, j)
+					}
+				}
+			},
+		},
+		{
 			Name:  "route patterns timetable without a date",
 			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date timetable { stop_ids } } } }`,
 			F: func(t *testing.T, jj string) {
@@ -925,7 +957,7 @@ func checkPatternTimetable(t *testing.T, jj string) {
 		stops := len(table.Get("stop_ids").Array())
 		assert.NotZero(t, stops, "pattern %d has stops", i)
 		assert.Len(t, table.Get("trips").Array(), count, "pattern %d: a column per trip", i)
-		for _, name := range []string{"departure_times", "arrival_times", "pickup_types", "drop_off_types", "timepoints"} {
+		for _, name := range []string{"departure_times", "arrival_times", "pickup_types", "drop_off_types", "timepoints", "shape_distances"} {
 			grid := table.Get(name)
 			if !grid.Exists() {
 				continue

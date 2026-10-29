@@ -65,7 +65,12 @@ func unmarshalGql(v canUnmarshalJson, d any) error {
 	return v.Scan(d)
 }
 
+// marshalGql writes v as JSON, or null when JSON can't encode it, such as a
+// NaN float, so one bad value can't break the whole response.
 func marshalGql(v canMarshalJson, w io.Writer) {
-	b, _ := v.MarshalJSON()
+	b, err := v.MarshalJSON()
+	if err != nil {
+		b = jsonNull()
+	}
 	w.Write(b)
 }
