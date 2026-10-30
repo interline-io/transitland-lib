@@ -203,6 +203,8 @@ models:
         resolver: true
       stops:
         resolver: true
+      shapes:
+        resolver: true
       timetable:
         resolver: true
     extraFields:
@@ -223,6 +225,10 @@ models:
   Shape:
     fields:
       distances:
+        resolver: true
+      polyline:
+        resolver: true
+      polyline6:
         resolver: true
   StopTime:
     fields:

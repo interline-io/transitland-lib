@@ -1262,6 +1262,8 @@ type RouteStopPattern struct {
 	RepresentativeTrip *Trip `json:"representative_trip,omitempty"`
 	// The pattern's stops in order, as `representative_trip` calls at them; a stop called at twice appears twice. A flex stop time that names a location or location group, rather than a stop, has no entry
 	Stops []*Stop `json:"stops"`
+	// The shapes this pattern's trips follow, each once, in order of how many of the trips follow each, most first, then by `id`. On `service_date` they are the shapes of the trips `count` counted, so each `timetable` trip's `shape` is among them; without a date, of every trip of the pattern. A trip without a shape adds none
+	Shapes []*Shape `json:"shapes"`
 	// Trips that follow this stop pattern, only those counted on `service_date` when it is set; useful for fetching full stop_times. Without a `service_date`, they carry no GTFS-RT data
 	Trips []*Trip `json:"trips,omitempty"`
 	// The trips `count` counted on `service_date`, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.

@@ -1,11 +1,13 @@
 package tlxy
 
 import (
+	"math"
 	"os"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/stretchr/testify/assert"
+	"github.com/twpayne/go-polyline"
 )
 
 func TestDecodePolyline(t *testing.T) {
@@ -53,6 +55,29 @@ func TestEncodePolyline(t *testing.T) {
 	}
 	p := EncodePolyline(check)
 	assert.Equal(t, expect, string(p))
+}
+
+func TestEncodePolylinePrecision(t *testing.T) {
+	check := []Point{
+		{Lon: -122.4194155, Lat: 37.7749295},
+		{Lon: -122.4183872, Lat: 37.7756012},
+		{Lon: -122.2711137, Lat: 37.8043637},
+	}
+	assert.Equal(t, string(EncodePolyline(check)), string(EncodePolylinePrecision(check, 5)), "precision 5 is the original form")
+	for _, precision := range []int{5, 6} {
+		scale := math.Pow(10, float64(precision))
+		coords, rest, err := polyline.Codec{Dim: 2, Scale: scale}.DecodeCoords(EncodePolylinePrecision(check, precision))
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Empty(t, rest)
+		assert.Len(t, coords, len(check))
+		for i, c := range coords {
+			// Latitude first, then longitude, each within a unit of the last digit.
+			assert.InDelta(t, check[i].Lat, c[0], 1/scale, "precision %d point %d", precision, i)
+			assert.InDelta(t, check[i].Lon, c[1], 1/scale, "precision %d point %d", precision, i)
+		}
+	}
 }
 
 func TestPolylinesToGeojson(t *testing.T) {
