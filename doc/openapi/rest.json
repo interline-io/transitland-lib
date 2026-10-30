@@ -8621,6 +8621,579 @@
         "summary": "Search for routes"
       }
     },
+    "/routes/{route_key}/patterns": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Route lookup key; can be an integer ID, a '\u003cfeed onestop_id\u003e:\u003cgtfs route_id\u003e' key, or a Onestop ID",
+            "in": "path",
+            "name": "route_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return only the patterns that trips run on this date, counting their trips and building their timetables from this date's service. Required unless relative_date is given.",
+            "in": "query",
+            "name": "service_date",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/relativeDateParam"
+          },
+          {
+            "description": "Use a fall-back service date if the requested date is outside the active service period of the feed version: the matching day of the week in the week with the most scheduled service. Defaults to true.",
+            "in": "query",
+            "name": "use_service_window",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Include each pattern's timetable: its trips, and grids of their arrival times, departure times and distances along their shapes. Needs a date.",
+            "in": "query",
+            "name": "include_timetable",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Include the shapes each pattern's trips follow, each once, with the distance along it at each point",
+            "in": "query",
+            "name": "include_shapes",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Include each pattern's stops, in order",
+            "in": "query",
+            "name": "include_stops",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "How timetable grids and shape geometries are written: plain arrays, or encoded polylines. polyline6 encodes shape geometries at six digits of precision rather than five; timetable grids hold whole numbers either way. Defaults to array.",
+            "in": "query",
+            "name": "encoding",
+            "schema": {
+              "enum": [
+                "array",
+                "polyline",
+                "polyline6"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/licenseCommercialUseAllowedParam"
+          },
+          {
+            "$ref": "#/components/parameters/licenseShareAlikeOptionalParam"
+          },
+          {
+            "$ref": "#/components/parameters/licenseCreateDerivedProductParam"
+          },
+          {
+            "$ref": "#/components/parameters/licenseRedistributionAllowedParam"
+          },
+          {
+            "$ref": "#/components/parameters/licenseUseWithoutAttributionParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "routes": {
+                      "description": "List or search for Routes",
+                      "items": {
+                        "properties": {
+                          "feed_version": {
+                            "description": "Source feed version for this entity",
+                            "properties": {
+                              "feed": {
+                                "description": "Feed associated with this feed version",
+                                "properties": {
+                                  "onestop_id": {
+                                    "description": "Onestop ID for this feed.\nFormat: `f-geohash-name`.\nExample: `f-9q9-bart`.",
+                                    "title": "onestop_id",
+                                    "type": "string",
+                                    "x-order": 16
+                                  }
+                                },
+                                "title": "feed",
+                                "type": "object",
+                                "x-graphql-type": "Feed",
+                                "x-order": 17
+                              },
+                              "sha1": {
+                                "description": "SHA1 hash of the zip file",
+                                "example": "ab5bdc8b6cedd06792d42186a9b542504c5eef9a",
+                                "title": "sha1",
+                                "type": "string",
+                                "x-order": 13
+                              }
+                            },
+                            "title": "feed_version",
+                            "type": "object",
+                            "x-graphql-type": "FeedVersion",
+                            "x-order": 18
+                          },
+                          "id": {
+                            "description": "Internal integer ID",
+                            "title": "id",
+                            "type": "integer",
+                            "x-order": 2
+                          },
+                          "onestop_id": {
+                            "description": "Onestop ID for this route",
+                            "nullable": true,
+                            "title": "onestop_id",
+                            "type": "string",
+                            "x-order": 4
+                          },
+                          "patterns": {
+                            "description": "Unique stop sequences operated on this route",
+                            "items": {
+                              "properties": {
+                                "count": {
+                                  "description": "Number of trips that operate this stop pattern",
+                                  "title": "count",
+                                  "type": "integer",
+                                  "x-order": 25
+                                },
+                                "direction_id": {
+                                  "description": "GTFS direction_id (0 or 1) of the trips using this pattern",
+                                  "title": "direction_id",
+                                  "type": "integer",
+                                  "x-order": 23
+                                },
+                                "service_date": {
+                                  "description": "The service date given to `Route.patterns`, on which the trips are counted. Null when it was given no date, or a `relative_date` the feed version has no service window to resolve",
+                                  "example": "2019-11-15",
+                                  "format": "date",
+                                  "nullable": true,
+                                  "title": "service_date",
+                                  "type": "string",
+                                  "x-order": 27
+                                },
+                                "shapes": {
+                                  "description": "The shapes this pattern's trips follow, each once, in order of how many of the trips follow each, most first, then by `id`. On `service_date` they are the shapes of the trips `count` counted, so each `timetable` trip's `shape` is among them; without a date, of every trip of the pattern. A trip without a shape adds none",
+                                  "items": {
+                                    "properties": {
+                                      "distances": {
+                                        "description": "Distance along the shape at each point of `geometry`, in meters, in the same measure as `RouteRepresentativeShape.length` and `RouteStopPatternTimetable.shape_distances`. Transitland measures these itself rather than taking the feed's `shapes.shape_dist_traveled`. Null when a point of `geometry` lacks finite coordinates",
+                                        "items": {
+                                          "type": "number"
+                                        },
+                                        "nullable": true,
+                                        "title": "distances",
+                                        "type": "array",
+                                        "x-order": 50
+                                      },
+                                      "geometry": {
+                                        "description": "Path geometry for this shape as a LineString",
+                                        "title": "geometry",
+                                        "type": "object",
+                                        "x-graphql-type": "LineString",
+                                        "x-order": 44
+                                      },
+                                      "id": {
+                                        "description": "Internal integer ID",
+                                        "title": "id",
+                                        "type": "integer",
+                                        "x-order": 40
+                                      },
+                                      "polyline": {
+                                        "description": "`geometry` as an encoded polyline at five digits of precision, the encoded polyline algorithm's original form: latitude then longitude at each point, with no other dimension. Null when a point of `geometry` lacks finite coordinates",
+                                        "nullable": true,
+                                        "title": "polyline",
+                                        "type": "string",
+                                        "x-order": 46
+                                      },
+                                      "polyline6": {
+                                        "description": "`geometry` as an encoded polyline at six digits of precision, the form known as polyline6: latitude then longitude at each point, with no other dimension. Null when a point of `geometry` lacks finite coordinates",
+                                        "nullable": true,
+                                        "title": "polyline6",
+                                        "type": "string",
+                                        "x-order": 48
+                                      },
+                                      "shape_id": {
+                                        "description": "GTFS `shapes.shape_id`",
+                                        "title": "shape_id",
+                                        "type": "string",
+                                        "x-order": 42
+                                      }
+                                    },
+                                    "type": "object",
+                                    "x-graphql-type": "Shape"
+                                  },
+                                  "title": "shapes",
+                                  "type": "array",
+                                  "x-order": 51
+                                },
+                                "stop_pattern_id": {
+                                  "description": "Identifier for this stop pattern; an integer scoped to a single feed version",
+                                  "title": "stop_pattern_id",
+                                  "type": "integer",
+                                  "x-order": 21
+                                },
+                                "stops": {
+                                  "description": "The pattern's stops in order, as `representative_trip` calls at them; a stop called at twice appears twice. A flex stop time that names a location or location group, rather than a stop, has no entry",
+                                  "items": {
+                                    "properties": {
+                                      "geometry": {
+                                        "description": "Geographic location of this stop as a GeoJSON Point",
+                                        "title": "geometry",
+                                        "type": "object",
+                                        "x-graphql-type": "Point",
+                                        "x-order": 36
+                                      },
+                                      "id": {
+                                        "description": "Internal integer ID",
+                                        "title": "id",
+                                        "type": "integer",
+                                        "x-order": 30
+                                      },
+                                      "stop_id": {
+                                        "description": "GTFS `stops.stop_id`",
+                                        "example": "400029",
+                                        "title": "stop_id",
+                                        "type": "string",
+                                        "x-order": 32
+                                      },
+                                      "stop_name": {
+                                        "description": "GTFS `stops.stop_name`",
+                                        "example": "MADISON AV/E 68 ST",
+                                        "nullable": true,
+                                        "title": "stop_name",
+                                        "type": "string",
+                                        "x-order": 34
+                                      }
+                                    },
+                                    "type": "object",
+                                    "x-graphql-type": "Stop"
+                                  },
+                                  "title": "stops",
+                                  "type": "array",
+                                  "x-order": 37
+                                },
+                                "timetable": {
+                                  "description": "The trips `count` counted on `service_date`, as a timetable: grids of their stop times by stop and trip. Scheduled times from the static GTFS feed only; realtime updates are not merged in. Null when `Route.patterns` was given no date, or when the pattern's trips are all flex service, which runs to locations or within time windows rather than at set times.",
+                                  "nullable": true,
+                                  "properties": {
+                                    "arrival_times": {
+                                      "description": "GTFS `stop_times.arrival_time`. A stop the feed left untimed may carry an estimate the import interpolated",
+                                      "properties": {
+                                        "polyline": {
+                                          "description": "Each row of `delta` as one string, in the encoded polyline algorithm applied to single unscaled integers rather than coordinate pairs: each value as the difference from the last one present before it in the row, the first from 0. A `.` marks a missing value",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "title": "polyline",
+                                          "type": "array",
+                                          "x-order": 81
+                                        },
+                                        "values": {
+                                          "description": "The times, unencoded",
+                                          "items": {
+                                            "items": {
+                                              "example": "15:21:04",
+                                              "format": "hms",
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "type": "array"
+                                          },
+                                          "title": "values",
+                                          "type": "array",
+                                          "x-order": 79
+                                        }
+                                      },
+                                      "title": "arrival_times",
+                                      "type": "object",
+                                      "x-graphql-type": "RouteStopPatternTimetableTimeGrid",
+                                      "x-order": 82
+                                    },
+                                    "departure_times": {
+                                      "description": "GTFS `stop_times.departure_time`. A stop the feed left untimed may carry an estimate the import interpolated",
+                                      "properties": {
+                                        "polyline": {
+                                          "description": "Each row of `delta` as one string, in the encoded polyline algorithm applied to single unscaled integers rather than coordinate pairs: each value as the difference from the last one present before it in the row, the first from 0. A `.` marks a missing value",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "title": "polyline",
+                                          "type": "array",
+                                          "x-order": 87
+                                        },
+                                        "values": {
+                                          "description": "The times, unencoded",
+                                          "items": {
+                                            "items": {
+                                              "example": "15:21:04",
+                                              "format": "hms",
+                                              "nullable": true,
+                                              "type": "string"
+                                            },
+                                            "type": "array"
+                                          },
+                                          "title": "values",
+                                          "type": "array",
+                                          "x-order": 85
+                                        }
+                                      },
+                                      "title": "departure_times",
+                                      "type": "object",
+                                      "x-graphql-type": "RouteStopPatternTimetableTimeGrid",
+                                      "x-order": 88
+                                    },
+                                    "shape_distances": {
+                                      "description": "Each stop's distance along its trip's shape, in whole meters, in the same measure as `Shape.distances`. Transitland places each stop on the shape after the one before, reading the trip's `stop_times.shape_dist_traveled` only as a hint to which pass each stop takes on a loop. Null for a trip without a shape, or for a stop that has no place on its shape within 500 m.",
+                                      "properties": {
+                                        "polyline": {
+                                          "description": "Each row of `delta` as one string, in the encoded polyline algorithm applied to single unscaled integers rather than coordinate pairs: each value as the difference from the last one present before it in the row, the first from 0. A `.` marks a missing value",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "title": "polyline",
+                                          "type": "array",
+                                          "x-order": 93
+                                        },
+                                        "values": {
+                                          "description": "The values, unencoded",
+                                          "items": {
+                                            "items": {
+                                              "nullable": true,
+                                              "type": "integer"
+                                            },
+                                            "type": "array"
+                                          },
+                                          "title": "values",
+                                          "type": "array",
+                                          "x-order": 91
+                                        }
+                                      },
+                                      "title": "shape_distances",
+                                      "type": "object",
+                                      "x-graphql-type": "RouteStopPatternTimetableGrid",
+                                      "x-order": 94
+                                    },
+                                    "stop_ids": {
+                                      "description": "The pattern's stops in order, by internal ID. A stop the trips call at twice appears twice",
+                                      "items": {
+                                        "type": "integer"
+                                      },
+                                      "title": "stop_ids",
+                                      "type": "array",
+                                      "x-order": 54
+                                    },
+                                    "trips": {
+                                      "description": "The trips, by their time at the first stop. A trip run from frequencies.txt appears once, as its template, and its `frequencies` say when it repeats. Flex trips, and trips whose stored stop times do not match the pattern's stops, are left out",
+                                      "items": {
+                                        "properties": {
+                                          "frequencies": {
+                                            "description": "Frequencies for this trip",
+                                            "items": {
+                                              "properties": {
+                                                "end_time": {
+                                                  "description": "GTFS `frequencies.end_time`",
+                                                  "example": "15:21:04",
+                                                  "format": "hms",
+                                                  "title": "end_time",
+                                                  "type": "string",
+                                                  "x-order": 70
+                                                },
+                                                "exact_times": {
+                                                  "description": "GTFS `frequencies.exact_times` [0=frequency-based, not exactly scheduled; 1=schedule-based, same headway throughout]",
+                                                  "nullable": true,
+                                                  "title": "exact_times",
+                                                  "type": "integer",
+                                                  "x-order": 74
+                                                },
+                                                "headway_secs": {
+                                                  "description": "GTFS `frequencies.headway_secs`; time in seconds between departures from the same stop for this trip",
+                                                  "title": "headway_secs",
+                                                  "type": "integer",
+                                                  "x-order": 72
+                                                },
+                                                "start_time": {
+                                                  "description": "GTFS `frequencies.start_time`",
+                                                  "example": "15:21:04",
+                                                  "format": "hms",
+                                                  "title": "start_time",
+                                                  "type": "string",
+                                                  "x-order": 68
+                                                }
+                                              },
+                                              "type": "object",
+                                              "x-graphql-type": "Frequency"
+                                            },
+                                            "title": "frequencies",
+                                            "type": "array",
+                                            "x-order": 75
+                                          },
+                                          "id": {
+                                            "description": "Internal integer ID",
+                                            "title": "id",
+                                            "type": "integer",
+                                            "x-order": 57
+                                          },
+                                          "shape": {
+                                            "description": "Shape for this trip",
+                                            "nullable": true,
+                                            "properties": {
+                                              "id": {
+                                                "description": "Internal integer ID",
+                                                "title": "id",
+                                                "type": "integer",
+                                                "x-order": 64
+                                              }
+                                            },
+                                            "title": "shape",
+                                            "type": "object",
+                                            "x-graphql-type": "Shape",
+                                            "x-order": 65
+                                          },
+                                          "trip_headsign": {
+                                            "description": "GTFS `trips.trip_headsign`; text that appears on signage identifying the trip's destination to riders",
+                                            "nullable": true,
+                                            "title": "trip_headsign",
+                                            "type": "string",
+                                            "x-order": 61
+                                          },
+                                          "trip_id": {
+                                            "description": "GTFS `trips.trip_id`",
+                                            "title": "trip_id",
+                                            "type": "string",
+                                            "x-order": 59
+                                          }
+                                        },
+                                        "type": "object",
+                                        "x-graphql-type": "Trip"
+                                      },
+                                      "title": "trips",
+                                      "type": "array",
+                                      "x-order": 76
+                                    }
+                                  },
+                                  "title": "timetable",
+                                  "type": "object",
+                                  "x-graphql-type": "RouteStopPatternTimetable",
+                                  "x-order": 95
+                                }
+                              },
+                              "type": "object",
+                              "x-graphql-type": "RouteStopPattern"
+                            },
+                            "nullable": true,
+                            "title": "patterns",
+                            "type": "array",
+                            "x-order": 96
+                          },
+                          "route_id": {
+                            "description": "GTFS `routes.route_id`",
+                            "title": "route_id",
+                            "type": "string",
+                            "x-order": 6
+                          },
+                          "route_long_name": {
+                            "description": "GTFS `routes.route_long_name`; full descriptive name of a route",
+                            "nullable": true,
+                            "title": "route_long_name",
+                            "type": "string",
+                            "x-order": 10
+                          },
+                          "route_short_name": {
+                            "description": "GTFS `routes.route_short_name`; short name of a route, such as a line number or abbreviation",
+                            "nullable": true,
+                            "title": "route_short_name",
+                            "type": "string",
+                            "x-order": 8
+                          }
+                        },
+                        "type": "object",
+                        "x-graphql-type": "Route"
+                      },
+                      "title": "routes",
+                      "type": "array",
+                      "x-order": 97
+                    }
+                  },
+                  "title": "data"
+                }
+              }
+            },
+            "description": "ok"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Bad request - invalid parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Internal server error"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Unexpected error"
+          }
+        },
+        "summary": "Stop patterns for a route, with their timetables and shapes"
+      }
+    },
     "/routes/{route_key}/trips": {
       "get": {
         "parameters": [

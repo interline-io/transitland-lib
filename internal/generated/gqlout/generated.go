@@ -1306,6 +1306,7 @@ type ComplexityRoot struct {
 		DirectionID        func(childComplexity int) int
 		RepresentativeTrip func(childComplexity int) int
 		ServiceDate        func(childComplexity int) int
+		Shapes             func(childComplexity int) int
 		StopPatternID      func(childComplexity int) int
 		Stops              func(childComplexity int) int
 		Timetable          func(childComplexity int) int
@@ -1359,6 +1360,8 @@ type ComplexityRoot struct {
 		Generated func(childComplexity int) int
 		Geometry  func(childComplexity int) int
 		ID        func(childComplexity int) int
+		Polyline  func(childComplexity int) int
+		Polyline6 func(childComplexity int) int
 		ShapeID   func(childComplexity int) int
 		Trips     func(childComplexity int, limit *int, where *model.TripFilter) int
 	}
@@ -2009,6 +2012,7 @@ type RouteStopResolver interface {
 type RouteStopPatternResolver interface {
 	RepresentativeTrip(ctx context.Context, obj *model.RouteStopPattern) (*model.Trip, error)
 	Stops(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Stop, error)
+	Shapes(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Shape, error)
 	Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error)
 	Timetable(ctx context.Context, obj *model.RouteStopPattern) (*model.RouteStopPatternTimetable, error)
 }
@@ -2034,6 +2038,8 @@ type SegmentPatternResolver interface {
 }
 type ShapeResolver interface {
 	Distances(ctx context.Context, obj *model.Shape) ([]float64, error)
+	Polyline(ctx context.Context, obj *model.Shape) (*string, error)
+	Polyline6(ctx context.Context, obj *model.Shape) (*string, error)
 	Trips(ctx context.Context, obj *model.Shape, limit *int, where *model.TripFilter) ([]*model.Trip, error)
 }
 type StopResolver interface {
@@ -8116,6 +8122,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteStopPattern.ServiceDate(childComplexity), true
+	case "RouteStopPattern.shapes":
+		if e.ComplexityRoot.RouteStopPattern.Shapes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopPattern.Shapes(childComplexity), true
 	case "RouteStopPattern.stop_pattern_id":
 		if e.ComplexityRoot.RouteStopPattern.StopPatternID == nil {
 			break
@@ -8337,6 +8349,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Shape.ID(childComplexity), true
+	case "Shape.polyline":
+		if e.ComplexityRoot.Shape.Polyline == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Shape.Polyline(childComplexity), true
+	case "Shape.polyline6":
+		if e.ComplexityRoot.Shape.Polyline6 == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Shape.Polyline6(childComplexity), true
 	case "Shape.shape_id":
 		if e.ComplexityRoot.Shape.ShapeID == nil {
 			break
@@ -12416,6 +12440,12 @@ type Shape {
   "Distance along the shape at each point of ` + "`" + `geometry` + "`" + `, in meters, in the same measure as ` + "`" + `RouteRepresentativeShape.length` + "`" + ` and ` + "`" + `RouteStopPatternTimetable.shape_distances` + "`" + `. Transitland measures these itself rather than taking the feed's ` + "`" + `shapes.shape_dist_traveled` + "`" + `. Null when a point of ` + "`" + `geometry` + "`" + ` lacks finite coordinates"
   distances: [Float!]
 
+  "` + "`" + `geometry` + "`" + ` as an encoded polyline at five digits of precision, the encoded polyline algorithm's original form: latitude then longitude at each point, with no other dimension. Null when a point of ` + "`" + `geometry` + "`" + ` lacks finite coordinates"
+  polyline: String
+
+  "` + "`" + `geometry` + "`" + ` as an encoded polyline at six digits of precision, the form known as polyline6: latitude then longitude at each point, with no other dimension. Null when a point of ` + "`" + `geometry` + "`" + ` lacks finite coordinates"
+  polyline6: String
+
   "Trips that use this shape"
   trips(limit: Int, where: TripFilter): [Trip!]
 }
@@ -13624,6 +13654,9 @@ type RouteStopPattern {
 
   "The pattern's stops in order, as ` + "`" + `representative_trip` + "`" + ` calls at them; a stop called at twice appears twice. A flex stop time that names a location or location group, rather than a stop, has no entry"
   stops: [Stop!]!
+
+  "The shapes this pattern's trips follow, each once, in order of how many of the trips follow each, most first, then by ` + "`" + `id` + "`" + `. On ` + "`" + `service_date` + "`" + ` they are the shapes of the trips ` + "`" + `count` + "`" + ` counted, so each ` + "`" + `timetable` + "`" + ` trip's ` + "`" + `shape` + "`" + ` is among them; without a date, of every trip of the pattern. A trip without a shape adds none"
+  shapes: [Shape!]!
 
   "Trips that follow this stop pattern, only those counted on ` + "`" + `service_date` + "`" + ` when it is set; useful for fetching full stop_times. Without a ` + "`" + `service_date` + "`" + `, they carry no GTFS-RT data"
   trips(limit: Int): [Trip!]
@@ -17674,6 +17707,8 @@ func (ec *executionContext) childFields_RouteStopPattern(ctx context.Context, fi
 		return ec.fieldContext_RouteStopPattern_representative_trip(ctx, field)
 	case "stops":
 		return ec.fieldContext_RouteStopPattern_stops(ctx, field)
+	case "shapes":
+		return ec.fieldContext_RouteStopPattern_shapes(ctx, field)
 	case "trips":
 		return ec.fieldContext_RouteStopPattern_trips(ctx, field)
 	case "timetable":
@@ -17778,6 +17813,10 @@ func (ec *executionContext) childFields_Shape(ctx context.Context, field graphql
 		return ec.fieldContext_Shape_generated(ctx, field)
 	case "distances":
 		return ec.fieldContext_Shape_distances(ctx, field)
+	case "polyline":
+		return ec.fieldContext_Shape_polyline(ctx, field)
+	case "polyline6":
+		return ec.fieldContext_Shape_polyline6(ctx, field)
 	case "trips":
 		return ec.fieldContext_Shape_trips(ctx, field)
 	}
@@ -45688,6 +45727,38 @@ func (ec *executionContext) fieldContext_RouteStopPattern_stops(_ context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _RouteStopPattern_shapes(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopPattern_shapes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopPattern().Shapes(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Shape) graphql.Marshaler {
+			return ec.marshalNShape2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShapeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopPattern_shapes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopPattern",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Shape(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _RouteStopPattern_trips(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -46597,6 +46668,52 @@ func (ec *executionContext) _Shape_distances(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Shape_distances(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Shape", field, true, true, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _Shape_polyline(ctx context.Context, field graphql.CollectedField, obj *model.Shape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Shape_polyline(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Shape().Polyline(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Shape_polyline(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Shape", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Shape_polyline6(ctx context.Context, field graphql.CollectedField, obj *model.Shape) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Shape_polyline6(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Shape().Polyline6(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Shape_polyline6(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Shape", field, true, true, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Shape_trips(ctx context.Context, field graphql.CollectedField, obj *model.Shape) (ret graphql.Marshaler) {
@@ -70586,6 +70703,42 @@ func (ec *executionContext) _RouteStopPattern(ctx context.Context, sel ast.Selec
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "shapes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopPattern_shapes(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "trips":
 			field := field
 
@@ -71294,6 +71447,72 @@ func (ec *executionContext) _Shape(ctx context.Context, sel ast.SelectionSet, ob
 					}
 				}()
 				res = ec._Shape_distances(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "polyline":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Shape_polyline(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "polyline6":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Shape_polyline6(ctx, field, obj)
 				return res
 			}
 
@@ -77322,6 +77541,22 @@ func (ec *executionContext) marshalNSegmentPattern2ᚖgithubᚗcomᚋinterline�
 
 func (ec *executionContext) marshalNShape2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v model.Shape) graphql.Marshaler {
 	return ec._Shape(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNShape2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShapeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Shape) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐShape(ctx context.Context, sel ast.SelectionSet, v *model.Shape) graphql.Marshaler {

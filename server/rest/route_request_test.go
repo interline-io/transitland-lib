@@ -111,6 +111,19 @@ func TestRouteRequest(t *testing.T) {
 			expectSelect: []string{"01"},
 		},
 		{
+			// A key in none of the three forms matches no route rather than every one.
+			name:         "route key 0",
+			h:            RouteRequest{RouteKey: "0"},
+			selector:     "routes.#.route_id",
+			expectLength: 0,
+		},
+		{
+			name:         "route key is a feed without a route id",
+			h:            RouteRequest{RouteKey: "BA:"},
+			selector:     "routes.#.route_id",
+			expectLength: 0,
+		},
+		{
 			name: "include_alerts:true",
 			h:    RouteRequest{RouteKey: "BA:05", IncludeAlerts: true},
 			f: func(t *testing.T, jj string) {

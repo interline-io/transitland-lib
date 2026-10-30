@@ -1,0 +1,64 @@
+query ($ids: [Int!], $where: RouteFilter, $pattern_where: RouteStopPatternFilter, $include_timetable: Boolean!, $include_shapes: Boolean!, $include_stops: Boolean!, $array: Boolean!, $polyline: Boolean!, $polyline6: Boolean!) {
+  routes(ids: $ids, where: $where) {
+    id
+    onestop_id
+    route_id
+    route_short_name
+    route_long_name
+    feed_version {
+      sha1
+      feed {
+        onestop_id
+      }
+    }
+    patterns(where: $pattern_where) {
+      stop_pattern_id
+      direction_id
+      count
+      service_date
+      stops @include(if: $include_stops) {
+        id
+        stop_id
+        stop_name
+        geometry
+      }
+      shapes @include(if: $include_shapes) {
+        id
+        shape_id
+        geometry @include(if: $array)
+        polyline @include(if: $polyline)
+        polyline6 @include(if: $polyline6)
+        distances
+      }
+      timetable @include(if: $include_timetable) {
+        stop_ids
+        trips {
+          id
+          trip_id
+          trip_headsign
+          shape {
+            id
+          }
+          frequencies {
+            start_time
+            end_time
+            headway_secs
+            exact_times
+          }
+        }
+        arrival_times {
+          values @include(if: $array)
+          polyline @skip(if: $array)
+        }
+        departure_times {
+          values @include(if: $array)
+          polyline @skip(if: $array)
+        }
+        shape_distances {
+          values @include(if: $array)
+          polyline @skip(if: $array)
+        }
+      }
+    }
+  }
+}

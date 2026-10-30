@@ -24,6 +24,7 @@ var RestHandlersList = []RestHandlers{
 	&AgencyRequest{},        // /agencies
 	&RouteRequest{},         // /routes
 	&TripRequest{},          // /routes/{route_key}/trips
+	&RoutePatternRequest{},  // /routes/{route_key}/patterns
 	&StopRequest{},          // /stops
 	&StopDepartureRequest{}, // /stops/{stop_key}/departures
 

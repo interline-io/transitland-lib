@@ -87,6 +87,11 @@ func NewTripEntityHandler(graphqlHandler http.Handler) http.HandlerFunc {
 	return makeEntityHandler[TripEntityRequest](graphqlHandler)
 }
 
+// NewRoutePatternHandler serves one route's stop patterns. Reads {route_key}.
+func NewRoutePatternHandler(graphqlHandler http.Handler) http.HandlerFunc {
+	return makeIndexHandler[RoutePatternRequest](graphqlHandler)
+}
+
 // NewStopIndexHandler serves the stop index. Reads {format}.
 func NewStopIndexHandler(graphqlHandler http.Handler) http.HandlerFunc {
 	return makeIndexHandler[StopRequest](graphqlHandler)
@@ -196,6 +201,7 @@ func NewServer(graphqlHandler http.Handler) (http.Handler, error) {
 	r.HandleFunc("/routes/{route_key}/trips", NewTripIndexHandler(graphqlHandler))
 	r.HandleFunc("/routes/{route_key}/trips/{id}", NewTripEntityHandler(graphqlHandler))
 	r.HandleFunc("/routes/{route_key}/trips/{id}.{format}", NewTripEntityHandler(graphqlHandler))
+	r.HandleFunc("/routes/{route_key}/patterns", NewRoutePatternHandler(graphqlHandler))
 
 	r.HandleFunc("/stops.{format}", NewStopIndexHandler(graphqlHandler))
 	r.HandleFunc("/stops", NewStopIndexHandler(graphqlHandler))
@@ -233,6 +239,12 @@ type canIncludeNext interface {
 // A type that defines a per-page limit
 type canLimit interface {
 	CheckLimit() int
+}
+
+// A type that checks its parameters before its query is made. An error is a bad
+// request, unless it carries a status of its own.
+type canValidate interface {
+	Validate() error
 }
 
 type WithCursor struct {
@@ -420,10 +432,19 @@ func makeHandler[T any, PT apiHandlerPtr[T]](graphqlHandler http.Handler, notFou
 			util.WriteJsonError(w, "parameter error", http.StatusInternalServerError)
 			return
 		}
+		// A parameter that doesn't parse, or that the request type refuses, is a bad
+		// request.
 		if err := json.Unmarshal(s, handler); err != nil {
-			log.For(ctx).Error().Err(err).Msg("failed to unmarshal request params")
-			util.WriteJsonError(w, "parameter error", http.StatusInternalServerError)
+			log.For(ctx).Info().Err(err).Msg("invalid request params")
+			util.WriteJsonError(w, "parameter error: "+err.Error(), http.StatusBadRequest)
 			return
+		}
+		if v, ok := handler.(canValidate); ok {
+			if err := v.Validate(); err != nil {
+				log.For(ctx).Info().Err(err).Msg("invalid request params")
+				util.WriteError(w, err, http.StatusBadRequest)
+				return
+			}
 		}
 
 		// Make the request
