@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -39,18 +40,81 @@ func ValidateRTSpool(spool string, urlTypes []string) error {
 	return err
 }
 
-// spoolKey builds a spool object key. Partitioned by URL type, date and hour
-// rather than by feed, so a batch job reads one hour of every feed from one
-// place. The feed, time and sha1 make the file name, in that order; the time
-// has no dashes, so the name splits from the right.
+// spoolKey builds a spool object key: SpoolHourPrefix, then the file name.
+// Partitioned by URL type, date and hour rather than by feed, so a batch job
+// reads one hour of every feed from one place.
 //
 // The hour is the fetch's start, so a fetch running across the hour lands in
 // the hour it began, after that hour has ended: a reader should allow a grace
 // period, or reread recent hours.
 func spoolKey(onestopID, urlType, sha1 string, fetchedAt time.Time) string {
 	t := fetchedAt.UTC()
-	return fmt.Sprintf("url_type=%s/date=%s/hour=%s/%s-%s-%s.pb",
-		urlType, t.Format("2006-01-02"), t.Format("15"), escapeKeySegment(onestopID), t.Format("20060102T150405Z"), sha1)
+	return fmt.Sprintf("%s/%s-%s-%s.pb", SpoolHourPrefix(urlType, t), escapeKeySegment(onestopID), t.Format(spoolTimeFormat), sha1)
+}
+
+// spoolTimeFormat has no dashes, so a spool file name splits from the right
+// even though feed ids contain them.
+const spoolTimeFormat = "20060102T150405Z"
+
+// SpoolHourPrefix is where the spool keeps one URL type's messages fetched in
+// an hour, relative to its root.
+func SpoolHourPrefix(urlType string, hour time.Time) string {
+	t := hour.UTC()
+	return fmt.Sprintf("url_type=%s/date=%s/hour=%s", urlType, t.Format("2006-01-02"), t.Format("15"))
+}
+
+// ParseSpoolHourPrefix reverses SpoolHourPrefix.
+func ParseSpoolHourPrefix(prefix string) (string, time.Time, error) {
+	parts := strings.Split(prefix, "/")
+	if len(parts) != 3 {
+		return "", time.Time{}, fmt.Errorf("not a spool hour: %q", prefix)
+	}
+	urlType, ok1 := strings.CutPrefix(parts[0], "url_type=")
+	date, ok2 := strings.CutPrefix(parts[1], "date=")
+	hour, ok3 := strings.CutPrefix(parts[2], "hour=")
+	if !ok1 || !ok2 || !ok3 {
+		return "", time.Time{}, fmt.Errorf("not a spool hour: %q", prefix)
+	}
+	t, err := time.Parse("2006-01-02T15", date+"T"+hour)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("not a spool hour: %q: %w", prefix, err)
+	}
+	return urlType, t, nil
+}
+
+// SpoolName is what a spooled message's file name records.
+type SpoolName struct {
+	FeedID    string
+	FetchedAt time.Time
+	SHA1      string
+}
+
+// ParseSpoolName reverses the file name spoolKey gives a message.
+func ParseSpoolName(name string) (SpoolName, error) {
+	bad := fmt.Errorf("not a spool file name: %q", name)
+	rest, ok := strings.CutSuffix(name, ".pb")
+	if !ok {
+		return SpoolName{}, bad
+	}
+	i := strings.LastIndex(rest, "-")
+	if i < 0 {
+		return SpoolName{}, bad
+	}
+	rest, sha1 := rest[:i], rest[i+1:]
+	i = strings.LastIndex(rest, "-")
+	if i < 0 {
+		return SpoolName{}, bad
+	}
+	escaped, ts := rest[:i], rest[i+1:]
+	fetchedAt, err := time.Parse(spoolTimeFormat, ts)
+	if err != nil {
+		return SpoolName{}, bad
+	}
+	feed, err := url.PathUnescape(escaped)
+	if err != nil || feed == "" || sha1 == "" {
+		return SpoolName{}, bad
+	}
+	return SpoolName{FeedID: feed, FetchedAt: fetchedAt, SHA1: sha1}, nil
 }
 
 // escapeKeySegment percent-encodes every byte outside [A-Za-z0-9~._-], so a

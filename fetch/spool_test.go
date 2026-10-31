@@ -5,7 +5,9 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,8 +34,27 @@ func TestSpoolKey(t *testing.T) {
 			unescaped, err := url.PathUnescape(escapeKeySegment(tc.feed))
 			assert.NoError(t, err)
 			assert.Equal(t, tc.feed, unescaped)
+
+			// The key parses back into what made it.
+			dir, name := path.Split(key)
+			urlType, hour, err := ParseSpoolHourPrefix(strings.TrimSuffix(dir, "/"))
+			assert.NoError(t, err)
+			assert.Equal(t, "realtime_vehicle_positions", urlType)
+			assert.Equal(t, time.Date(2026, 10, 28, 21, 0, 0, 0, time.UTC), hour)
+			parsed, err := ParseSpoolName(name)
+			assert.NoError(t, err)
+			assert.Equal(t, SpoolName{FeedID: tc.feed, FetchedAt: at.UTC(), SHA1: "abc"}, parsed)
 		})
 	}
+}
+
+func TestParseSpoolNameRejects(t *testing.T) {
+	for _, name := range []string{"x.pb", "feed-abc.pb", "feed-2026-abc.pb", "feed-20261028T215958Z-abc.tmp", "-20261028T215958Z-abc.pb", ".upload-123"} {
+		_, err := ParseSpoolName(name)
+		assert.Error(t, err, name)
+	}
+	_, _, err := ParseSpoolHourPrefix("url_type=x/date=2026-10-28")
+	assert.Error(t, err)
 }
 
 func TestValidateRTSpool(t *testing.T) {
