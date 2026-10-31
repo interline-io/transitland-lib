@@ -21,8 +21,8 @@ type RTFetchOptions struct {
 	// Spool, when set, receives a copy of every downloaded message, partitioned
 	// by URL type and hour: the input to batch jobs that read a whole hour of
 	// every feed. Unlike Storage, the per-feed archive recorded on the
-	// feed_fetch row, it applies to every feed, and a failed write is logged
-	// rather than failing the fetch.
+	// feed_fetch row, it applies to every feed, and a failed or slow write is
+	// logged rather than failing or holding up the fetch. See spoolKey.
 	Spool string
 }
 
@@ -47,6 +47,11 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 	var dur fetchDurations
 	var storageKey string
 	if out.FetchError == nil {
+		// Spooled first, and even on parse failure, so a batch job sees every
+		// message that arrived whatever happens to the archive upload below.
+		if opts.Spool != "" {
+			spoolFile(ctx, opts.Spool, spoolKey(feed.FeedID, opts.URLType, resp.ResponseSHA1, opts.FetchedAt), tmpfile)
+		}
 		// The protobuf parse is the RT analogue of validation; record its duration
 		// on the feed_fetch row, as the pre-rewrite fetch did.
 		validationStart := time.Now()
@@ -66,14 +71,6 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 			return out, uerr
 		}
 		dur.uploadMs = uploadMs
-		// Spooled even on parse failure, like the archive, so a batch job sees
-		// every message that arrived.
-		if opts.Spool != "" {
-			key := spoolKey(feed.FeedID, opts.URLType, resp.ResponseSHA1, opts.FetchedAt)
-			if _, err := uploadFile(ctx, opts.Spool, tmpfile, key); err != nil {
-				log.For(ctx).Error().Err(err).Str("key", key).Msg("rt fetch: spool write failed")
-			}
-		}
 	}
 	if err := recordFeedFetch(ctx, fm, feed, opts.Options, out.Result, dur, storageKey); err != nil {
 		return out, err

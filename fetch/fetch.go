@@ -126,16 +126,6 @@ func archiveKey(onestopID, urlType, sha1 string, fetchedAt time.Time, ext string
 		onestopID, urlType, t.Format("2006-01-02"), t.Format("2006-01-02-15-04-05"), sha1, ext)
 }
 
-// spoolKey builds a spool object key. Partitioned by URL type, date and hour
-// rather than by feed, so a batch job reads one hour of every feed from one
-// place. The feed, time and sha1 make the file name, in that order; the time
-// has no dashes, so the name splits from the right.
-func spoolKey(onestopID, urlType, sha1 string, fetchedAt time.Time) string {
-	t := fetchedAt.UTC()
-	return fmt.Sprintf("url_type=%s/date=%s/hour=%s/%s-%s-%s.pb",
-		urlType, t.Format("2006-01-02"), t.Format("15"), onestopID, t.Format("20060102T150405Z"), sha1)
-}
-
 // recordFeedFetch writes the feed_fetch audit row for a completed attempt.
 func recordFeedFetch(ctx context.Context, fm feedmanager.FeedManager, feed *dmfr.Feed, opts Options, result Result, dur fetchDurations, storageKey string) error {
 	tlfetch := dmfr.FeedFetch{}

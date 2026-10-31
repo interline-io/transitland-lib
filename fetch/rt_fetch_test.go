@@ -58,7 +58,7 @@ func TestRTFetch(t *testing.T) {
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := RTFetch(ctx, feedmanager.NewDBFeedManager(atx), RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}, Spool: spooldir})
+				fr, err := RTFetch(ctx, feedmanager.NewDBFeedManager(atx), RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, URLType: "realtime_vehicle_positions", Storage: tmpdir, AllowHTTPFetchUnfiltered: true}, Spool: spooldir})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -90,22 +90,25 @@ func TestRTFetch(t *testing.T) {
 				} else {
 					assert.Empty(t, tlff.StorageKey.Val, "expected no storage_key when nothing was archived")
 				}
-				// The spool gets every message that arrived, under its hour, and
-				// nothing for a 404.
-				// The test feed's id is its URL, so the file name nests further.
+				// The spool gets every message that arrived, even one that failed
+				// to parse, under the hour it was fetched in; nothing for a 404.
 				var spooled []string
-				filepath.WalkDir(spooldir, func(p string, d fs.DirEntry, err error) error {
-					if err == nil && !d.IsDir() {
+				err = filepath.WalkDir(spooldir, func(p string, d fs.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if !d.IsDir() {
 						rel, _ := filepath.Rel(spooldir, p)
-						spooled = append(spooled, rel)
+						spooled = append(spooled, filepath.ToSlash(rel))
 					}
 					return nil
 				})
+				assert.NoError(t, err)
 				if tc.responseCode == 200 {
-					if assert.Len(t, spooled, 1) {
-						assert.True(t, strings.HasPrefix(spooled[0], "url_type=/date="), "spooled file should be partitioned by url type, date and hour, got %q", spooled[0])
-						assert.True(t, strings.HasSuffix(spooled[0], "-"+tlff.ResponseSHA1.Val+".pb"), "spooled file should end with the response sha1, got %q", spooled[0])
-					}
+					// The test feed's id is its URL, which the key escapes into one name.
+					want := spoolKey(feed.FeedID, "realtime_vehicle_positions", tlff.ResponseSHA1.Val, tlff.FetchedAt.Val)
+					assert.Equal(t, []string{want}, spooled)
+					assert.Regexp(t, `^url_type=realtime_vehicle_positions/date=\d{4}-\d{2}-\d{2}/hour=\d{2}/[^/]+-\d{8}T\d{6}Z-`+tlff.ResponseSHA1.Val+`\.pb$`, want)
 				} else {
 					assert.Empty(t, spooled)
 				}

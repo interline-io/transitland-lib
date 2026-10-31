@@ -16,6 +16,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/feedmanager"
+	"github.com/interline-io/transitland-lib/fetch"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
@@ -106,6 +107,9 @@ func (cmd *ServerCommand) Parse(args []string) error {
 	}
 	if cmd.RedisURL == "" {
 		cmd.RedisURL = os.Getenv("TL_REDIS_URL")
+	}
+	if err := fetch.ValidateRTSpool(cmd.RTSpool, cmd.RTSpoolURLTypes); err != nil {
+		return err
 	}
 
 	// Load secrets
