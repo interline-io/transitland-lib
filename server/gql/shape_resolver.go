@@ -20,6 +20,29 @@ func (r *shapeResolver) Distances(ctx context.Context, obj *model.Shape) ([]floa
 	return tlxy.ShapeDistances(obj.Geometry.ToPoints()), nil
 }
 
+// Polyline is the shape's geometry as a polyline at five digits of precision.
+func (r *shapeResolver) Polyline(ctx context.Context, obj *model.Shape) (*string, error) {
+	return shapePolyline(obj, 5), nil
+}
+
+// Polyline6 is the shape's geometry as a polyline at six digits of precision.
+func (r *shapeResolver) Polyline6(ctx context.Context, obj *model.Shape) (*string, error) {
+	return shapePolyline(obj, 6), nil
+}
+
+// shapePolyline encodes a shape's geometry at precision digits, or returns nil
+// for a geometry with a point without finite coordinates.
+func shapePolyline(obj *model.Shape, precision int) *string {
+	pts := obj.Geometry.ToPoints()
+	for _, p := range pts {
+		if math.IsNaN(p.Lon) || math.IsInf(p.Lon, 0) || math.IsNaN(p.Lat) || math.IsInf(p.Lat, 0) {
+			return nil
+		}
+	}
+	s := string(tlxy.EncodePolylinePrecision(pts, precision))
+	return &s
+}
+
 // stopShapeDistances places a trip's stops along its shape in order, in whole
 // meters, with hint as their shape_dist_traveled. A stop with no place on the
 // shape has none.

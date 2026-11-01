@@ -274,37 +274,85 @@ func noRun(trip *model.Trip) *model.Trip {
 }
 
 func (r *routePatternResolver) Trips(ctx context.Context, obj *model.RouteStopPattern, limit *int) ([]*model.Trip, error) {
-	// On a date, the trips counted rather than every trip of the pattern, up to
-	// the limit Route.trips allows: they are looked up by id, and the timetable
-	// already returns every one.
+	// On a date, the trips counted, up to the limit Route.trips allows: they are
+	// looked up by id, and the timetable already returns every one.
 	if len(obj.TripIDs.Val) > 0 {
-		ids := obj.TripIDs.Val
-		if n := *resolverCheckLimitMax(limit, RESOLVER_TRIP_MAXLIMIT); n < len(ids) {
-			ids = ids[:n]
+		trips, err := patternTrips(ctx, obj, *resolverCheckLimitMax(limit, RESOLVER_TRIP_MAXLIMIT))
+		for i, trip := range trips {
+			trips[i] = tripRun(trip, patternDate(obj), tt.Seconds{}, tt.Int{})
 		}
-		var loads []dataloader.Thunk[*model.Trip]
-		for _, id := range ids {
-			loads = append(loads, LoaderFor(ctx).TripsByIDs.Load(ctx, int(id)))
-		}
-		var trips []*model.Trip
-		for _, load := range loads {
-			trip, err := load()
-			if err != nil {
-				return nil, err
-			}
-			if trip != nil {
-				trips = append(trips, tripRun(trip, patternDate(obj), tt.Seconds{}, tt.Int{}))
-			}
-		}
-		return trips, nil
+		return trips, err
 	}
-	// Without a date, every trip of the pattern, none of them a run.
-	// TODO: N+1 query
-	trips, err := model.ForContext(ctx).Finder.FindTrips(ctx, resolverCheckLimit(limit), nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
+	// Without a date, none of the trips is a run.
+	trips, err := patternTrips(ctx, obj, *resolverCheckLimit(limit))
 	for i, trip := range trips {
 		trips[i] = noRun(trip)
 	}
 	return trips, err
+}
+
+// patternTrips returns up to limit of a pattern's trips: on a date, the trips
+// count counted, and otherwise every trip of the pattern.
+func patternTrips(ctx context.Context, obj *model.RouteStopPattern, limit int) ([]*model.Trip, error) {
+	if len(obj.TripIDs.Val) == 0 {
+		// TODO: N+1 query
+		return model.ForContext(ctx).Finder.FindTrips(ctx, &limit, nil, nil, &model.TripFilter{StopPatternID: &obj.StopPatternID, RouteIds: []int{obj.RouteID}})
+	}
+	ids := obj.TripIDs.Val
+	if limit < len(ids) {
+		ids = ids[:limit]
+	}
+	keys := make([]int, len(ids))
+	for i, id := range ids {
+		keys[i] = int(id)
+	}
+	loaded, errs := LoaderFor(ctx).TripsByIDs.LoadMany(ctx, keys)()
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	var trips []*model.Trip
+	for _, trip := range loaded {
+		if trip != nil {
+			trips = append(trips, trip)
+		}
+	}
+	return trips, nil
+}
+
+// Shapes returns the shapes the pattern's trips follow, each once, in order of
+// how many of the trips follow each, most first, then by ID.
+func (r *routePatternResolver) Shapes(ctx context.Context, obj *model.RouteStopPattern) ([]*model.Shape, error) {
+	trips, err := patternTrips(ctx, obj, RESOLVER_TRIP_MAXLIMIT)
+	if err != nil {
+		return nil, err
+	}
+	counts := map[int]int{}
+	for _, trip := range trips {
+		if trip.ShapeID.Valid {
+			counts[trip.ShapeID.Int()]++
+		}
+	}
+	ids := make([]int, 0, len(counts))
+	for id := range counts {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(a, b int) bool {
+		if counts[ids[a]] != counts[ids[b]] {
+			return counts[ids[a]] > counts[ids[b]]
+		}
+		return ids[a] < ids[b]
+	})
+	loaded, errs := LoaderFor(ctx).ShapesByIDs.LoadMany(ctx, ids)()
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	shapes := []*model.Shape{}
+	for _, shape := range loaded {
+		if shape != nil {
+			shapes = append(shapes, shape)
+		}
+	}
+	return shapes, nil
 }
 
 // patternDate is the service date whose trips a pattern counts: the date of

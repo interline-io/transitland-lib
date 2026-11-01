@@ -12,6 +12,29 @@ import (
 //go:embed route_request.gql
 var routeQuery string
 
+// routeKey is a route lookup key in the one form it takes: a feed and GTFS route
+// ID, an integer ID, or a Onestop ID.
+type routeKey struct {
+	FeedOnestopID string
+	RouteID       string
+	ID            int
+	OnestopID     string
+}
+
+// parseRouteKey reads a route lookup key: '<feed onestop_id>:<gtfs route_id>', a
+// positive integer ID, or otherwise a Onestop ID. A key that is none of the first
+// two, such as 0 or a feed with no route ID, is taken as a Onestop ID, which
+// matches no route rather than every one.
+func parseRouteKey(key string) routeKey {
+	if fsid, eid, ok := strings.Cut(key, ":"); ok && fsid != "" && eid != "" {
+		return routeKey{FeedOnestopID: fsid, RouteID: eid}
+	}
+	if v, err := strconv.Atoi(key); err == nil && v > 0 {
+		return routeKey{ID: v}
+	}
+	return routeKey{OnestopID: key}
+}
+
 // RouteRequest holds options for a Route request
 type RouteRequest struct {
 	ID                  int       `json:"id,string"`
@@ -151,19 +174,15 @@ func (r RouteRequest) Query(ctx context.Context) (string, map[string]interface{}
 		r.OperatorOnestopID = r.AgencyKey
 	}
 	// Handle route key
-	if r.RouteKey == "" {
-		// pass
-	} else if fsid, eid, ok := strings.Cut(r.RouteKey, ":"); ok {
-		r.FeedOnestopID = fsid
-		r.RouteID = eid
-		r.IncludeGeometry = true
-		r.IncludeStops = true
-	} else if v, err := strconv.Atoi(r.RouteKey); err == nil {
-		r.ID = v
-		r.IncludeGeometry = true
-		r.IncludeStops = true
-	} else {
-		r.OnestopID = r.RouteKey
+	if r.RouteKey != "" {
+		k := parseRouteKey(r.RouteKey)
+		if k.FeedOnestopID != "" {
+			r.FeedOnestopID, r.RouteID = k.FeedOnestopID, k.RouteID
+		} else if k.ID > 0 {
+			r.ID = k.ID
+		} else {
+			r.OnestopID = k.OnestopID
+		}
 		r.IncludeGeometry = true
 		r.IncludeStops = true
 	}

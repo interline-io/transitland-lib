@@ -42,16 +42,25 @@ func DecodePolyline(p []byte) ([]Point, error) {
 	return ret, nil
 }
 
+// EncodePolyline encodes coords as a polyline at five digits of precision, the
+// encoded polyline algorithm's original form.
 func EncodePolyline(coords []Point) []byte {
-	// Encode directly with go-polyline's integer primitive (scale 1e5, matching its
-	// default Codec) instead of building a [][]float64 with a throwaway 2-float64
-	// slice per point. That intermediate is a heavy transient allocation when caching
-	// millions of shape points and shows up as a multi-GB heap spike during import.
+	return EncodePolylinePrecision(coords, 5)
+}
+
+// EncodePolylinePrecision encodes coords as a polyline at precision digits: 5 for
+// the original form, 6 for polyline6.
+func EncodePolylinePrecision(coords []Point, precision int) []byte {
+	// Encode directly with go-polyline's integer primitive instead of building a
+	// [][]float64 with a throwaway 2-float64 slice per point. That intermediate is a
+	// heavy transient allocation when caching millions of shape points and shows up
+	// as a multi-GB heap spike during import.
+	scale := math.Pow(10, float64(precision))
 	buf := make([]byte, 0, len(coords)*4)
 	var lastLat, lastLon int
 	for _, c := range coords {
-		lat := polylineRound(1e5 * c.Lat)
-		lon := polylineRound(1e5 * c.Lon)
+		lat := polylineRound(scale * c.Lat)
+		lon := polylineRound(scale * c.Lon)
 		buf = polyline.EncodeInt(buf, lat-lastLat)
 		buf = polyline.EncodeInt(buf, lon-lastLon)
 		lastLat, lastLon = lat, lon

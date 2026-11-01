@@ -595,6 +595,73 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
+			Name:  "route patterns shapes",
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns(where:{service_date:"2018-05-30"}) { stop_pattern_id trips(limit:1000) { shape { id } } timetable { trips { shape { id } } } shapes { id geometry distances polyline polyline6 } } } }`,
+			F: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					// The shapes are the counted trips' shapes, each once, the one
+					// the most trips follow first and then by id.
+					counts := map[int64]int{}
+					for _, id := range pat.Get("trips.#.shape.id").Array() {
+						counts[id.Int()]++
+					}
+					var ids []int64
+					for _, id := range pat.Get("shapes.#.id").Array() {
+						ids = append(ids, id.Int())
+					}
+					assert.Len(t, ids, len(counts), "pattern %d has each trip shape once", i)
+					for k, id := range ids {
+						assert.Contains(t, counts, id, "pattern %d shape %d is a trip's", i, k)
+						if k > 0 {
+							prev := ids[k-1]
+							assert.True(t, counts[prev] > counts[id] || (counts[prev] == counts[id] && prev < id), "pattern %d shapes in order at %d", i, k)
+						}
+					}
+					for j, id := range pat.Get("timetable.trips.#.shape.id").Array() {
+						assert.Contains(t, ids, id.Int(), "pattern %d timetable trip %d finds its shape", i, j)
+					}
+					for k, shape := range pat.Get("shapes").Array() {
+						coords := shape.Get("geometry.coordinates").Array()
+						assert.NotEmpty(t, coords, "pattern %d shape %d", i, k)
+						assert.Len(t, shape.Get("distances").Array(), len(coords), "pattern %d shape %d: a distance per point", i, k)
+						// Each polyline decodes to the geometry, latitude first, within a unit of
+						// its last digit: a coordinate halfway between two rounds away from zero.
+						for _, enc := range []struct {
+							field string
+							scale float64
+						}{{"polyline", 1e5}, {"polyline6", 1e6}} {
+							decoded, _, err := polyline.Codec{Dim: 2, Scale: enc.scale}.DecodeCoords([]byte(shape.Get(enc.field).String()))
+							assert.NoError(t, err, "pattern %d shape %d %s", i, k, enc.field)
+							assert.Len(t, decoded, len(coords), "pattern %d shape %d %s", i, k, enc.field)
+							for m := 0; m < len(decoded) && m < len(coords); m++ {
+								lonlat := coords[m].Array()
+								assert.InDelta(t, lonlat[1].Float(), decoded[m][0], 1/enc.scale, "pattern %d shape %d %s point %d", i, k, enc.field, m)
+								assert.InDelta(t, lonlat[0].Float(), decoded[m][1], 1/enc.scale, "pattern %d shape %d %s point %d", i, k, enc.field, m)
+							}
+						}
+					}
+				}
+			},
+		},
+		{
+			Name:  "route patterns shapes without a date",
+			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date representative_trip { shape { id } } shapes { id } } } }`,
+			F: func(t *testing.T, jj string) {
+				pats := gjson.Get(jj, "routes.0.patterns").Array()
+				assert.NotEmpty(t, pats, "patterns returned")
+				for i, pat := range pats {
+					assert.Equal(t, gjson.Null, pat.Get("service_date").Type, "pattern %d", i)
+					var ids []int64
+					for _, id := range pat.Get("shapes.#.id").Array() {
+						ids = append(ids, id.Int())
+					}
+					assert.Contains(t, ids, pat.Get("representative_trip.shape.id").Int(), "pattern %d has its trips' shapes", i)
+				}
+			},
+		},
+		{
 			Name:  "route patterns timetable without a date",
 			Query: `{ routes(where:{feed_onestop_id:"BA", route_id:"03"}) { patterns { service_date timetable { stop_ids } } } }`,
 			F: func(t *testing.T, jj string) {
