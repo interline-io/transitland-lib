@@ -6,6 +6,8 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/xy"
+	"maps"
+	"slices"
 )
 
 //////////
@@ -128,9 +130,10 @@ func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 			r[stopid] = sg
 		}
 	}
-	for aid, v := range agencyStops {
+	// In agency id order, so the output doesn't depend on map order.
+	for _, aid := range slices.Sorted(maps.Keys(agencyStops)) {
 		coords := []float64{}
-		for _, sg := range v {
+		for _, sg := range agencyStops[aid] {
 			coords = append(coords, sg.lon, sg.lat)
 		}
 		ch := xy.ConvexHullFlat(geom.XY, coords)

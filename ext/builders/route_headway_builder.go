@@ -1,6 +1,8 @@
 package builders
 
 import (
+	"maps"
+	"slices"
 	"sort"
 	"time"
 
@@ -90,7 +92,9 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 }
 
 func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
-	for rid, routeDepartures := range pp.routeDepartures {
+	// In route id order, so the output doesn't depend on map order.
+	for _, rid := range slices.Sorted(maps.Keys(pp.routeDepartures)) {
+		routeDepartures := pp.routeDepartures[rid]
 		// Both directions will use the same day
 		departuresByService := map[string]int{}
 		for k, v := range routeDepartures {

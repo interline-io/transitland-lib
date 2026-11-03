@@ -3,6 +3,8 @@ package builders
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
 	"sort"
 
 	"github.com/interline-io/log"
@@ -187,7 +189,8 @@ func (pp *RouteGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.E
 // time keeps the whole set from being held in memory at once.
 func (pp *RouteGeometryBuilder) eachRouteGeometry(fn func(*RouteGeometry, []selectedShape) error) error {
 	ctx := context.TODO()
-	for rid := range pp.shapeCounts {
+	// In route id order, so the output doesn't depend on map order.
+	for _, rid := range slices.Sorted(maps.Keys(pp.shapeCounts)) {
 		ent, selected, err := pp.buildRouteShape(rid)
 		if err != nil {
 			log.For(ctx).Info().Err(err).Str("route_id", rid).Msg("failed to build route geometry")
