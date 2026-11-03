@@ -2,6 +2,8 @@ package builders
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
@@ -128,8 +130,10 @@ func (pp *OnestopIDBuilder) AgencyOnestopIDs() []AgencyOnestopID {
 			r[stopid] = sg
 		}
 	}
-	// generate agency onestop id's
-	for aid, sgs := range agencyStops {
+	// generate agency onestop id's, in agency id order so the output doesn't
+	// depend on map order
+	for _, aid := range slices.Sorted(maps.Keys(agencyStops)) {
+		sgs := agencyStops[aid]
 		name := pp.agencyNames[aid]
 		if name == "" {
 			name = aid
@@ -150,9 +154,10 @@ func (pp *OnestopIDBuilder) AgencyOnestopIDs() []AgencyOnestopID {
 }
 
 func (pp *OnestopIDBuilder) StopOnestopIDs() []StopOnestopID {
-	// generate stop onestop id's
+	// generate stop onestop id's, in stop id order
 	var ret []StopOnestopID
-	for stopid, sg := range pp.stops {
+	for _, stopid := range slices.Sorted(maps.Keys(pp.stops)) {
+		sg := pp.stops[stopid]
 		if gh := geohash.EncodeWithPrecision(sg.lat, sg.lon, 10); len(gh) > 0 {
 			ent := StopOnestopID{
 				StopID:    stopid,
@@ -165,8 +170,10 @@ func (pp *OnestopIDBuilder) StopOnestopIDs() []StopOnestopID {
 }
 
 func (pp *OnestopIDBuilder) RouteOnestopIDs() []RouteOnestopID {
+	// in route id order
 	var ret []RouteOnestopID
-	for rid, rsg := range pp.routeStopGeoms {
+	for _, rid := range slices.Sorted(maps.Keys(pp.routeStopGeoms)) {
+		rsg := pp.routeStopGeoms[rid]
 		pts := []point{}
 		for _, sg := range rsg.stopGeoms {
 			pts = append(pts, point{Lon: sg.lon, Lat: sg.lat})
