@@ -4,6 +4,8 @@ import (
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tt"
+	"maps"
+	"slices"
 )
 
 type RouteStop struct {
@@ -68,12 +70,13 @@ func (pp *RouteStopBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Entit
 
 func (pp *RouteStopBuilder) Copy(copier adapters.EntityCopier) error {
 	bt := []tt.Entity{}
-	for rid, v := range pp.routeStops {
+	// In route and stop id order, so the output doesn't depend on map order.
+	for _, rid := range slices.Sorted(maps.Keys(pp.routeStops)) {
 		aid, ok := pp.routeAgencies[rid]
 		if !ok {
 			continue
 		}
-		for stopid := range v {
+		for _, stopid := range slices.Sorted(maps.Keys(pp.routeStops[rid])) {
 			bt = append(bt, &RouteStop{RouteID: rid, StopID: stopid, AgencyID: aid})
 		}
 	}
