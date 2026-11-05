@@ -154,7 +154,7 @@ func TestRouteGeometryBuilder_RepresentativeShapes(t *testing.T) {
 					assert.GreaterOrEqual(t, s.Rank, 0, "route %s", rid)
 					assert.Less(t, s.Rank, len(sel), "route %s", rid)
 					assert.True(t, s.DirectionID.Valid, "route %s: direction_id not set", rid)
-					assert.NotEmpty(t, s.ShapeID, "route %s: shape_id not set", rid)
+					assert.NotEmpty(t, s.ShapeID.Val, "route %s: shape_id not set", rid)
 				}
 
 				// Route-level scalars as aggregates over the pointers. Phase 3 drops the
