@@ -40,10 +40,11 @@ func (ent *RouteGeometry) TableName() string {
 
 // RouteRepresentativeShape points a route at one of the shapes selected to represent it.
 // Rank 0 is the route's primary shape; the full set spans its combined geometry.
-// The metrics describe the shape itself, not the route.
+// The metrics describe the shape itself, not the route. ShapeID is a reference the
+// copier resolves like a trip's, so a writer sees the shape's id in its own terms.
 type RouteRepresentativeShape struct {
 	RouteID               string
-	ShapeID               string
+	ShapeID               tt.Key `target:"shapes.txt"`
 	DirectionID           tt.Int
 	Rank                  int
 	Generated             bool
@@ -226,7 +227,7 @@ func (pp *RouteGeometryBuilder) Copy(copier adapters.EntityCopier) error {
 		for rank, sel := range selected {
 			if err := copier.CopyEntity(&RouteRepresentativeShape{
 				RouteID:               ent.RouteID,
-				ShapeID:               sel.shapeID,
+				ShapeID:               tt.NewKey(sel.info.sourceID),
 				DirectionID:           sel.directionID,
 				Rank:                  rank,
 				Generated:             sel.info.Generated,
