@@ -50,12 +50,16 @@ type RouteHeadwayBuilder struct {
 	// deferred to Copy and scoped to each route's own services there, instead of
 	// expanding every service into a feed-wide date->services map up front.
 	services map[string]*service.Service
+	// sourceStopIDs maps each stop's writer id to its source stop_id, which breaks
+	// ties between stops so the selection doesn't depend on the writer's ids.
+	sourceStopIDs map[string]string
 }
 
 func NewRouteHeadwayBuilder() *RouteHeadwayBuilder {
 	return &RouteHeadwayBuilder{
 		routeDepartures: map[string]map[riKey][]int32{},
 		services:        map[string]*service.Service{},
+		sourceStopIDs:   map[string]string{},
 	}
 }
 
@@ -67,6 +71,8 @@ func (pp *RouteHeadwayBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.En
 		pp.services[eid] = service.NewService(*v, v.CalendarDates...)
 	case *gtfs.Route:
 		pp.routeDepartures[eid] = map[riKey][]int32{}
+	case *gtfs.Stop:
+		pp.sourceStopIDs[eid] = v.StopID.Val
 	case *gtfs.Trip:
 		// Process StopTimes assuming they will all be written
 		// otherwise this breaks on journey pattern deduplication.
@@ -115,7 +121,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 			}
 		}
 		// Stable sort
-		tripsByDaySorted := sortMap(tripsByDay)
+		tripsByDaySorted := sortMap(tripsByDay, func(day string) string { return day })
 		// Get the highest trip count for each dow category
 		dowCatDay := map[int]string{}
 		for _, day := range tripsByDaySorted {
@@ -144,7 +150,7 @@ func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 						stopDepartures[k.StopID] = append(stopDepartures[k.StopID], v...)
 					}
 				}
-				stopsByVisits := sortMapSlice(stopDepartures)
+				stopsByVisits := sortMapSlice(stopDepartures, func(eid string) string { return pp.sourceStopIDs[eid] })
 				if len(stopsByVisits) == 0 {
 					continue
 				}
@@ -237,26 +243,11 @@ func serviceWindowDays(svc *service.Service) map[string]bool {
 	return days
 }
 
-func sortMapSlice(value map[string][]int32) []string {
-	type kv struct {
-		Key   string
-		Value int
-	}
-	var ss []kv
+// sortMapSlice orders the keys by the length of their slices, as sortMap does.
+func sortMapSlice(value map[string][]int32, tieKey func(string) string) []string {
+	counts := make(map[string]int, len(value))
 	for k, v := range value {
-		ss = append(ss, kv{k, len(v)})
+		counts[k] = len(v)
 	}
-	sort.Slice(ss, func(i, j int) bool {
-		a := ss[i]
-		b := ss[j]
-		if a.Value == b.Value {
-			return a.Key < b.Key
-		}
-		return a.Value > b.Value
-	})
-	ret := []string{}
-	for _, k := range ss {
-		ret = append(ret, k.Key)
-	}
-	return ret
+	return sortMap(counts, tieKey)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/internal/testreader"
@@ -12,21 +13,22 @@ import (
 )
 
 func newMockCopier(url string, exts ...any) (*copier.Result, *direct.Writer, error) {
+	writer := direct.NewWriter()
+	cpResult, err := copyFeed(url, writer, exts...)
+	return cpResult, writer, err
+}
+
+// copyFeed copies the feed at url into writer with the given extensions.
+func copyFeed(url string, writer adapters.Writer, exts ...any) (*copier.Result, error) {
 	reader, err := tlcsv.NewReader(url)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	writer := direct.NewWriter()
 	cpOpts := copier.Options{}
 	for _, e := range exts {
 		cpOpts.AddExtension(e)
 	}
-	// cp, err := copier.NewCopier(reader, writer, cpOpts)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-	cpResult, err := copier.CopyWithOptions(context.Background(), reader, writer, cpOpts)
-	return cpResult, writer, err
+	return copier.CopyWithOptions(context.Background(), reader, writer, cpOpts)
 }
 
 func TestRouteStopBuilder(t *testing.T) {

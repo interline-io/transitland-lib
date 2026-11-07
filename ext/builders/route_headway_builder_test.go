@@ -2,10 +2,13 @@ package builders
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -99,4 +102,42 @@ func TestRouteHeadwayBuilder(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A route's headways select the same stops whatever ids the writer hands out. Every
+// BART trip on a route serves the same stops, so the selection there is a tie.
+func TestRouteHeadwayBuilder_WriterIDs(t *testing.T) {
+	urls := []string{
+		testreader.ExampleFeedBART.URL,
+		testreader.ExampleFeedCaltrain.URL,
+		testpath.RelPath("testdata/gtfs-external/trimet-2routes.zip"),
+	}
+	for _, url := range urls {
+		t.Run(filepath.Base(url), func(t *testing.T) {
+			plain := direct.NewWriter()
+			if _, err := copyFeed(url, plain, NewRouteHeadwayBuilder()); err != nil {
+				t.Fatal(err)
+			}
+			renumbered := newRenumberingWriter()
+			if _, err := copyFeed(url, renumbered, NewRouteHeadwayBuilder()); err != nil {
+				t.Fatal(err)
+			}
+			expect := selectedStops(plain.Reader.OtherList, func(eid string) string { return eid })
+			assert.NotEmpty(t, expect)
+			assert.Equal(t, expect, selectedStops(renumbered.Reader.OtherList, func(eid string) string { return renumbered.entityID[eid] }))
+		})
+	}
+}
+
+// selectedStops gives each route headway's selected stop, by its id in the feed,
+// with the headway measured there.
+func selectedStops(ents []tt.Entity, entityID func(string) string) map[string]string {
+	ret := map[string]string{}
+	for _, ent := range ents {
+		if v, ok := ent.(*RouteHeadway); ok {
+			key := fmt.Sprintf("%s dir %d dow %d", entityID(v.RouteID), v.DirectionID.Val, v.DowCategory.Val)
+			ret[key] = fmt.Sprintf("%s on %s every %d", entityID(v.SelectedStopID), v.ServiceDate.Format("2006-01-02"), v.HeadwaySecs.Val)
+		}
+	}
+	return ret
 }

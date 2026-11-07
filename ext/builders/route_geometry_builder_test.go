@@ -2,6 +2,8 @@ package builders
 
 import (
 	"context"
+	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
@@ -10,12 +12,12 @@ import (
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 	"github.com/twpayne/go-geom"
 )
 
 func Test_sortMap(t *testing.T) {
-	// Sorted by highest int first, then by key
 	tc := map[string]int{
 		"f": 10,
 		"a": 10,
@@ -23,7 +25,86 @@ func Test_sortMap(t *testing.T) {
 		"x": 5,
 		"c": 100,
 	}
-	assert.Equal(t, []string{"c", "a", "f", "x", "y"}, sortMap(tc))
+	// Sorted by highest int first, then by tie key
+	byKey := func(k string) string { return k }
+	assert.Equal(t, []string{"c", "a", "f", "x", "y"}, sortMap(tc, byKey))
+	reversed := map[string]string{"a": "2", "f": "1", "x": "2", "y": "1"}
+	assert.Equal(t, []string{"c", "f", "a", "y", "x"}, sortMap(tc, func(k string) string { return reversed[k] }))
+	// Equal tie keys fall back to the key
+	assert.Equal(t, []string{"c", "a", "f", "x", "y"}, sortMap(tc, func(string) string { return "" }))
+}
+
+// renumberingWriter is a direct.Writer that hands out ids of its own, counting
+// down, so they sort against the order the feed lists its entities.
+type renumberingWriter struct {
+	*direct.Writer
+	next     int
+	entityID map[string]string // writer id to the entity's id in the feed
+}
+
+func newRenumberingWriter() *renumberingWriter {
+	return &renumberingWriter{Writer: direct.NewWriter(), next: 1_000_000_000, entityID: map[string]string{}}
+}
+
+func (w *renumberingWriter) AddEntity(ent tt.Entity) (string, error) {
+	if _, err := w.Writer.AddEntity(ent); err != nil {
+		return "", err
+	}
+	w.next--
+	eid := strconv.Itoa(w.next)
+	w.entityID[eid] = ent.EntityID()
+	return eid, nil
+}
+
+func (w *renumberingWriter) AddEntities(ents []tt.Entity) ([]string, error) {
+	var eids []string
+	for _, ent := range ents {
+		eid, err := w.AddEntity(ent)
+		if err != nil {
+			return eids, err
+		}
+		eids = append(eids, eid)
+	}
+	return eids, nil
+}
+
+// A route's shapes rank the same whatever ids the writer hands out, as each
+// writer numbers entities its own way.
+func TestRouteGeometryBuilder_WriterIDs(t *testing.T) {
+	// Route 7 of hart.zip runs four shapes with the same number of trips.
+	urls := []string{
+		testpath.RelPath("testdata/server/gtfs/hart.zip"),
+		testreader.ExampleFeedBART.URL,
+		testreader.ExampleFeedCaltrain.URL,
+	}
+	for _, url := range urls {
+		t.Run(filepath.Base(url), func(t *testing.T) {
+			plain := direct.NewWriter()
+			if _, err := copyFeed(url, plain, NewRouteGeometryBuilder()); err != nil {
+				t.Fatal(err)
+			}
+			renumbered := newRenumberingWriter()
+			if _, err := copyFeed(url, renumbered, NewRouteGeometryBuilder()); err != nil {
+				t.Fatal(err)
+			}
+			expect := rankedShapes(plain.Reader.OtherList, func(eid string) string { return eid })
+			assert.NotEmpty(t, expect)
+			assert.Equal(t, expect, rankedShapes(renumbered.Reader.OtherList, func(eid string) string { return renumbered.entityID[eid] }))
+		})
+	}
+}
+
+// rankedShapes lists each route's representative shapes by their ids in the feed,
+// in the order the builder writes them, which is rank order.
+func rankedShapes(ents []tt.Entity, entityID func(string) string) map[string][]string {
+	ret := map[string][]string{}
+	for _, ent := range ents {
+		if v, ok := ent.(*RouteRepresentativeShape); ok {
+			rid := entityID(v.RouteID)
+			ret[rid] = append(ret[rid], entityID(v.ShapeID.Val))
+		}
+	}
+	return ret
 }
 
 func TestRouteGeometryBuilder(t *testing.T) {
