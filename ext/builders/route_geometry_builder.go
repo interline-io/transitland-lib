@@ -256,7 +256,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, []s
 		longestShapeLength := 0.0
 		// Sort by trip count to ensure stable selection of longest shape
 		// (most trips wins for equal length).
-		for _, shapeId := range sortMap(dirShapes) {
+		for _, shapeId := range sortMap(dirShapes, pp.sourceID) {
 			// Check shape info and if this is the longest shape
 			if si, ok := pp.shapeInfos[shapeId]; ok {
 				dirCount += dirShapes[shapeId]
@@ -292,7 +292,7 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, []s
 	// Prefer to use real shapes; only use generated if no real shapes exist.
 	var routeSelectedReal []string
 	var routeSelectedGenerated []string
-	for _, v := range sortMap(candidateShapes) {
+	for _, v := range sortMap(candidateShapes, pp.sourceID) {
 		if pp.shapeInfos[v].Generated {
 			routeSelectedGenerated = append(routeSelectedGenerated, v)
 		} else {
@@ -380,9 +380,17 @@ func (pp *RouteGeometryBuilder) buildRouteShape(rid string) (*RouteGeometry, []s
 	return &ent, selected, nil
 }
 
+// sourceID returns a shape's source shape_id, which breaks ties between shapes so
+// the ranking doesn't depend on the ids a writer assigns.
+func (pp *RouteGeometryBuilder) sourceID(eid string) string {
+	return pp.shapeInfos[eid].sourceID
+}
+
 ///////
 
-func sortMap(value map[string]int) []string {
+// sortMap orders the keys by value, highest first. Ties break by tieKey, then by
+// the key itself.
+func sortMap(value map[string]int, tieKey func(string) string) []string {
 	type kv struct {
 		Key   string
 		Value int
@@ -394,10 +402,13 @@ func sortMap(value map[string]int) []string {
 	sort.Slice(ss, func(i, j int) bool {
 		a := ss[i]
 		b := ss[j]
-		if a.Value == b.Value {
-			return a.Key < b.Key
+		if a.Value != b.Value {
+			return a.Value > b.Value
 		}
-		return a.Value > b.Value
+		if ta, tb := tieKey(a.Key), tieKey(b.Key); ta != tb {
+			return ta < tb
+		}
+		return a.Key < b.Key
 	})
 	ret := []string{}
 	for _, k := range ss {
