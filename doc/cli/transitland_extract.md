@@ -79,7 +79,7 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
       --prefix-files-include stringArray   Prefix files to use for entity matching
       --set stringArray                    Set values on output; format is filename,id,key,value
       --simplify-calendars                 Attempt to simplify CalendarDates into regular Calendars
-      --simplify-shapes float              Simplify shapes with this tolerance (ex. 0.000005)
+      --simplify-shapes float              Simplify shapes with this tolerance, in millionths of a degree (ex. 5, about half a meter)
       --use-basic-route-types              Collapse extended route_type's into basic GTFS values
       --write-extra-columns                Include extra columns in output
       --write-extra-files                  Copy additional files found in source to destination

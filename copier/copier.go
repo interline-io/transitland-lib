@@ -120,7 +120,7 @@ type Options struct {
 	UseBasicRouteTypes bool
 	// Copy extra files (requires CSV input)
 	CopyExtraFiles bool
-	// Simplify shapes
+	// Simplify shapes with this tolerance, in millionths of a degree
 	SimplifyShapes float64
 	// Convert route network_id to networks.txt/route_networks.txt
 	NormalizeNetworks bool

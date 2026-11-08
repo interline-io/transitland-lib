@@ -96,23 +96,26 @@ psql -v ON_ERROR_STOP=1 -d "$TL_TEST_SERVER_DATABASE_URL" -f "$SCRIPTDIR/../sche
 # Populate data
 #########################
 
+# Imports simplify shapes at production's tolerance, 5 millionths of a degree,
+# so the fixtures hold shapes as production stores them.
+
 # Remove import files
 transitland sync --dburl="$TL_TEST_SERVER_DATABASE_URL" "$SCRIPTDIR/server/server-test.dmfr.json"
 
 # Older data and forced error
 transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch --feed-url="$SCRIPTDIR/server/gtfs/bart-errors.zip" BA # error data
 transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch --feed-url="$SCRIPTDIR/server/gtfs/bart-old.zip" BA # old data
-transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" 
+transitland import --simplify-shapes 5 --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE"
 
 # Current data
 transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch 
-transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --activate
+transitland import --simplify-shapes 5 --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --activate
 
 # Supplemental feed: GTFS tables no real fixture has. It is fetched last and never
 # activated, so it shifts no other ids and stays out of active-version queries. Its
 # early fetched_at lists it after the real fixtures' versions.
 transitland fetch --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE" --validation-report --validation-report-storage="$TL_TEST_STORAGE" --allow-local-fetch --fetched-at=2020-01-01T00:00:00Z --feed-url="$SCRIPTDIR/server/gtfs/supplemental.zip" supplemental
-transitland import --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE"
+transitland import --simplify-shapes 5 --dburl="$TL_TEST_SERVER_DATABASE_URL" --storage="$TL_TEST_STORAGE"
 
 # Sync again
 transitland sync --dburl="$TL_TEST_SERVER_DATABASE_URL" "$SCRIPTDIR/server/server-test.dmfr.json"

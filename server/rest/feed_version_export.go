@@ -42,7 +42,7 @@ type ExportTransforms struct {
 	PrefixFiles []string `json:"prefix_files,omitempty"`
 	// Normalize timezones (e.g., US/Pacific -> America/Los_Angeles)
 	NormalizeTimezones bool `json:"normalize_timezones,omitempty"`
-	// Simplify shapes with this tolerance value
+	// Simplify shapes with this tolerance, in millionths of a degree
 	SimplifyShapes *float64 `json:"simplify_shapes,omitempty"`
 	// Use basic route types (convert extended to primitive)
 	UseBasicRouteTypes bool `json:"use_basic_route_types,omitempty"`

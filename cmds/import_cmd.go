@@ -74,7 +74,7 @@ func (cmd *ImportCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.Options.Activate, "activate", false, "Set as active feed version after import")
 	fl.StringVar(&cmd.dmfrFile, "dmfr", "", "Filter by feed IDs in DMFR file; equivalent to specifying feed IDs as arguments")
 	// Copy options
-	fl.Float64Var(&cmd.Options.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
+	fl.Float64Var(&cmd.Options.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance, in millionths of a degree (ex. 5, about half a meter)")
 	fl.BoolVar(&cmd.Options.InterpolateStopTimes, "interpolate-stop-times", false, "Interpolate missing StopTime arrival/departure values")
 	fl.BoolVar(&cmd.Options.DeduplicateJourneyPatterns, "deduplicate-stop-times", false, "Deduplicate StopTimes using Journey Patterns")
 	fl.BoolVar(&cmd.Options.CreateMissingShapes, "create-missing-shapes", false, "Create missing Shapes from Trip stop-to-stop geometries")
