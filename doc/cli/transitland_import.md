@@ -34,7 +34,7 @@ transitland import [flags] [feeds...]
       --limit int                 Import at most n feeds
       --normalize-timezones       Normalize timezones and apply default stop timezones based on agency and parent stops
       --simplify-calendars        Attempt to simplify CalendarDates into regular Calendars
-      --simplify-shapes float     Simplify shapes with this tolerance (ex. 0.000005)
+      --simplify-shapes float     Simplify shapes with this tolerance, in millionths of a degree (ex. 5, about half a meter)
       --storage string            Storage location; can be s3://... az://... or path to a directory (default ".")
       --workers int               Worker threads (default 1)
 ```

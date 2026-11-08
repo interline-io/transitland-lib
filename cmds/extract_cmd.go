@@ -97,7 +97,7 @@ func (cmd *ExtractCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&cmd.create, "create", false, "Create a basic database schema if none exists")
 
 	// Copy options
-	fl.Float64Var(&cmd.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance (ex. 0.000005)")
+	fl.Float64Var(&cmd.SimplifyShapes, "simplify-shapes", 0.0, "Simplify shapes with this tolerance, in millionths of a degree (ex. 5, about half a meter)")
 	fl.BoolVar(&cmd.AllowEntityErrors, "allow-entity-errors", false, "Allow entities with errors to be copied")
 	fl.IntVar(&cmd.Options.ErrorLimit, "error-limit", 10, "Max number of detailed errors per error group")
 	fl.BoolVar(&cmd.AllowReferenceErrors, "allow-reference-errors", false, "Allow entities with reference errors to be copied")

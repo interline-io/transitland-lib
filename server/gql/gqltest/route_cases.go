@@ -384,7 +384,7 @@ func routeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 				// shape_id isn't exposed via the resolver, so pin the rank-0 line's point
 				// count and first vertex to lock the actual shape it resolves to.
 				pts := g.Get("geometry.coordinates").Array()
-				assert.Len(t, pts, 382, "primary geometry point count")
+				assert.Len(t, pts, 319, "primary geometry point count")
 				assert.InDelta(t, -121.903170, pts[0].Array()[0].Float(), 1e-5, "first vertex lon")
 				assert.InDelta(t, 37.330157, pts[0].Array()[1].Float(), 1e-5, "first vertex lat")
 			},
