@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -57,6 +58,8 @@ type Options struct {
 	// If any file exceeds its threshold, the validation is considered failed.
 	// Example: {"*": 10, "stops.txt": 5} means 10% default, 5% for stops.txt.
 	ErrorThreshold map[string]float64
+	// RequestHeaders replace default headers when fetching GTFS-RT messages.
+	RequestHeaders http.Header
 	copier.Options
 }
 
@@ -331,7 +334,7 @@ func (v *Validator) ValidateRT(ctx context.Context, fn string, evaluateAt time.T
 		Url: fn,
 	}
 	var rterrs []error
-	rtOpts := []request.RequestOption{request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal}
+	rtOpts := []request.RequestOption{request.WithMaxSize(v.Options.MaxRTMessageSize), request.WithAllowLocal, request.WithHeaders(v.Options.RequestHeaders)}
 	if v.Options.AllowHTTPFetchUnfiltered {
 		rtOpts = append(rtOpts, request.WithAllowHTTPUnfiltered)
 	}

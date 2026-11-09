@@ -16,6 +16,7 @@ import (
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/feedmanager"
+	"github.com/interline-io/transitland-lib/request"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
@@ -65,6 +66,8 @@ type ServerCommand struct {
 	RedisURL                  string
 	MaxRadius                 float64
 	secrets                   []dmfr.Secret
+	fetchHeaders              []string
+	fetchHeadersParsed        http.Header
 }
 
 func (cmd *ServerCommand) HelpDesc() (string, string) {
@@ -80,6 +83,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.RedisURL, "redisurl", "", "Redis URL (default: $TL_REDIS_URL)")
 	fl.StringVar(&cmd.Storage, "storage", "", "Static storage backend")
 	fl.StringVar(&cmd.RTStorage, "rt-storage", "", "RT storage backend")
+	fl.StringArrayVar(&cmd.fetchHeaders, "fetch-header", nil, "Header sent with outbound feed fetches as 'Name: value', e.g. a User-Agent; may be repeated")
 	fl.BoolVar(&cmd.ValidateLargeFiles, "validate-large-files", false, "Allow validation of large files")
 	fl.StringVar(&cmd.RestPrefix, "rest-prefix", "", "Public URL prefix for generated links (e.g. https://transit.land/api/v2)")
 	fl.StringVar(&cmd.Port, "port", "8080", "")
@@ -100,6 +104,11 @@ func (cmd *ServerCommand) Parse(args []string) error {
 	if cmd.DBURL == "" {
 		cmd.DBURL = os.Getenv("TL_DATABASE_URL")
 	}
+	fetchHeaders, err := request.ParseHeaders(cmd.fetchHeaders)
+	if err != nil {
+		return err
+	}
+	cmd.fetchHeadersParsed = fetchHeaders
 	if cmd.RedisURL == "" {
 		cmd.RedisURL = os.Getenv("TL_REDIS_URL")
 	}
@@ -196,6 +205,7 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 		Secrets:                   cmd.secrets,
 		Storage:                   cmd.Storage,
 		RTStorage:                 cmd.RTStorage,
+		FetchHeaders:              cmd.fetchHeadersParsed,
 		ValidateLargeFiles:        cmd.ValidateLargeFiles,
 		UseMaterialized:           cmd.UseMaterialized,
 		UseMaterializedDepartures: cmd.UseMaterializedDepartures,

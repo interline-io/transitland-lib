@@ -152,7 +152,7 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 		}
 	} else if feedURL != nil {
 		var err error
-		var reqOpts []request.RequestOption
+		reqOpts := []request.RequestOption{request.WithURLType("static_current"), request.WithHeaders(cfg.FetchHeaders)}
 		if cfg.AllowHTTPFetchUnfiltered {
 			reqOpts = append(reqOpts, request.WithAllowHTTPUnfiltered)
 		}
@@ -183,6 +183,7 @@ func ValidateUpload(ctx context.Context, src io.Reader, feedURL *string, rturls 
 		IncludeEntitiesLimit:     10_000,
 		MaxRTMessageSize:         10_000_000,
 		AllowHTTPFetchUnfiltered: cfg.AllowHTTPFetchUnfiltered,
+		RequestHeaders:           cfg.FetchHeaders,
 		ValidateRealtimeMessages: rturls,
 		Options:                  copier.Options{Quiet: true},
 	}
