@@ -21,13 +21,21 @@ func stopPatternKey(stoptimes []gtfs.StopTime) string {
 }
 
 func journeyPatternKey(trip *gtfs.Trip) string {
-	// Skip flex trips - return empty key to prevent deduplication
+	// Skip flex trips - return empty key to prevent deduplication. A stop time
+	// with a pickup and drop-off window is flex too, even one from midnight to
+	// midnight.
 	if !gtfs.CheckFlexStopTimes(trip.StopTimes).AllStopsHaveStopID {
 		return ""
 	}
+	for i := range trip.StopTimes {
+		if trip.StopTimes[i].StartPickupDropOffWindow.Valid || trip.StopTimes[i].EndPickupDropOffWindow.Valid {
+			return ""
+		}
+	}
 	m := sha1.New()
+	// Departures are keyed from the first arrival, as arrivals are, because the
+	// copier offsets each trip by its first arrival.
 	a := trip.StopTimes[0].ArrivalTime
-	b := trip.StopTimes[0].DepartureTime
 	m.Write([]byte(fmt.Sprintf(
 		"%s-%s-%s-%s-%s-%d-%d-%d-%d-%s",
 		trip.RouteID.Val,
@@ -48,14 +56,15 @@ func journeyPatternKey(trip *gtfs.Trip) string {
 			stopID = st.StopID.Val
 		}
 		m.Write([]byte(fmt.Sprintf(
-			"%d-%d-%s-%s-%d-%d-%d",
+			"%d-%d-%s-%s-%d-%d-%d-%d",
 			st.ArrivalTime.Val-a.Val,
-			st.DepartureTime.Val-b.Val,
+			st.DepartureTime.Val-a.Val,
 			stopID,
 			st.StopHeadsign.Val,
 			st.PickupType.Val,
 			st.DropOffType.Val,
 			st.Timepoint.Val,
+			st.StopSequence.Val,
 		)))
 	}
 	return fmt.Sprintf("%x", m.Sum(nil))
