@@ -49,6 +49,31 @@ func TestJourneyPatternKey(t *testing.T) {
 		renumbered.StopTimes[1].StopSequence = tt.NewInt(5)
 		assert.NotEqual(t, journeyPatternKey(base), journeyPatternKey(renumbered))
 	})
+	t.Run("a trip's own fields don't split patterns", func(t *testing.T) {
+		own := keyTrip([2]int{0, 0}, [2]int{600, 600})
+		own.TripHeadsign = tt.NewString("Downtown")
+		own.TripShortName = tt.NewString("101")
+		own.DirectionID = tt.NewInt(1)
+		own.BlockID = tt.NewString("b7")
+		own.WheelchairAccessible = tt.NewInt(1)
+		own.BikesAllowed = tt.NewInt(2)
+		own.CarsAllowed = tt.NewInt(1)
+		assert.Equal(t, journeyPatternKey(base), journeyPatternKey(own))
+	})
+	t.Run("every stored stop time field splits patterns", func(t *testing.T) {
+		for name, set := range map[string]func(*gtfs.StopTime){
+			"shape_dist_traveled": func(st *gtfs.StopTime) { st.ShapeDistTraveled = tt.NewFloat(0) },
+			"continuous_pickup":   func(st *gtfs.StopTime) { st.ContinuousPickup = tt.NewInt(0) },
+			"continuous_drop_off": func(st *gtfs.StopTime) { st.ContinuousDropOff = tt.NewInt(0) },
+			"timepoint":           func(st *gtfs.StopTime) { st.Timepoint = tt.NewInt(0) },
+			"interpolated":        func(st *gtfs.StopTime) { st.Interpolated = tt.NewInt(1) },
+		} {
+			// Set to 0 where 0 differs from unset, as for these fields.
+			other := keyTrip([2]int{0, 0}, [2]int{600, 600})
+			set(&other.StopTimes[1])
+			assert.NotEqual(t, journeyPatternKey(base), journeyPatternKey(other), name)
+		}
+	})
 }
 
 func Benchmark_stopPatternKey(b *testing.B) {
