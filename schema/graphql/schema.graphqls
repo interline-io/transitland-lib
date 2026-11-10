@@ -912,7 +912,7 @@ type Route {
   """
   Routes in other feeds that may be copies of this one: active routes, in their feeds' current versions, that share this route's Onestop ID. The same route is often published by more than one feed, such as an agency feed and an aggregator or a regional feed that repeats it, so these are candidates, not confirmed copies.
 
-  Given `service_dates` or `relative_date`, each candidate's trips are compared with this route's on those dates: a trip of one is matched to at most one trip of the other that starts within 60 seconds of it, at a first stop within 500 meters. Start times count from each trip's service date, so a trip written as 24:15 on one date matches one written as 00:15 on the next. The stops that matched trips use at the same place are paired in `stop_correspondences`. The comparison is reported, and choosing which copy to show is left to the client.
+  Given `service_dates` or `relative_date`, each candidate's trips are compared with this route's on those dates: a trip of one is matched to at most one trip of the other that starts within 60 seconds of it, at a first stop within 500 meters, pairing as many trips as possible. Starts are compared as moments in time, from each trip's service date in its agency's timezone, so copies published in different timezones match, and a trip written as 24:15 on one date matches one written as 00:15 on the next, which is compared as a partner even when that date is not. The stops that matched trips use at the same place are paired in `stop_correspondences`. The comparison is reported, and choosing which copy to show is left to the client.
   """
   similar_routes(limit: Int, where: SimilarRouteFilter): [SimilarRoute!]
 
@@ -2599,13 +2599,13 @@ type SimilarRoute {
   "True when the two routes' basic route types (`route_type_basic`) are the same, or both in the rail family: tram or light rail, subway or metro, rail, and monorail. Feeds can type one service differently, such as tram in one feed and rail in another"
   route_type_basic_match: Boolean!
 
-  "Trips the route it was found from runs on the compared dates"
+  "Trips the route it was found from runs on the compared dates: each run of a frequency-based trip counts as one, and trips with no timed stop, such as flex trips that serve locations or time windows, are not counted"
   trips: Int
 
-  "Trips the candidate runs on the compared dates"
+  "Trips the candidate runs on the compared dates, counted as for `trips`"
   other_trips: Int
 
-  "Matched trip pairs: trips of the route it was found from that the candidate also runs, matched one to one"
+  "Trips of the route it was found from that are matched one to one with the candidate's trips"
   matched_trips: Int
 
   "How the two routes' trips compare on the compared dates"

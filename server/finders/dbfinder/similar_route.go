@@ -18,6 +18,9 @@ import (
 // dates when it gives any. See Route.similar_routes.
 func (f *Finder) SimilarRoutesByRouteIDs(ctx context.Context, limit *int, where *model.SimilarRouteFilter, keys []int) ([][]*model.SimilarRoute, error) {
 	ret := make([][]*model.SimilarRoute, len(keys))
+	for i := range ret {
+		ret[i] = []*model.SimilarRoute{}
+	}
 	sources, errs := f.RoutesByIDs(ctx, keys)
 	for _, err := range errs {
 		if err != nil {
@@ -48,14 +51,19 @@ func (f *Finder) SimilarRoutesByRouteIDs(ctx context.Context, limit *int, where 
 	}
 	otherFeedsOnly := where == nil || where.OtherFeedsOnly == nil || *where.OtherFeedsOnly
 
-	// Pair each route with its candidates, and note the dates each needs.
+	// Pair each route with its candidates and the dates to compare them on.
+	// Each route's trips are compared over its own dates; a candidate's runs on
+	// the days either side count as partners for runs past midnight, but not
+	// toward its trips.
 	type job struct {
-		src   *model.Route
-		cands []*model.Route
-		dates []time.Time
+		src     *model.Route
+		cands   []*model.Route
+		dates   map[time.Time]bool
+		partner map[time.Time]bool
 	}
-	jobs := make([]job, len(keys))
-	dateRoutes := map[time.Time]map[int]bool{}
+	jobs := make([]*job, len(keys))
+	involved := map[int]bool{}
+	allDays := map[time.Time]bool{}
 	for i, src := range sources {
 		if src == nil || src.OnestopID == nil {
 			continue
@@ -70,54 +78,50 @@ func (f *Finder) SimilarRoutesByRouteIDs(ctx context.Context, limit *int, where 
 		if len(cs) == 0 {
 			continue
 		}
-		dates, err := f.similarRouteDates(ctx, src, where)
-		if err != nil {
-			return nil, err
-		}
-		jobs[i] = job{src: src, cands: cs, dates: dates}
-		for _, d := range dates {
-			if dateRoutes[d] == nil {
-				dateRoutes[d] = map[int]bool{}
+		j := &job{src: src, cands: cs}
+		dates := f.similarRouteDates(ctx, src, where)
+		if len(dates) > 0 {
+			j.dates, j.partner = map[time.Time]bool{}, map[time.Time]bool{}
+			for _, d := range dates {
+				j.dates[d] = true
+				for _, p := range []time.Time{d.AddDate(0, 0, -1), d, d.AddDate(0, 0, 1)} {
+					j.partner[p] = true
+					allDays[p] = true
+				}
 			}
-			dateRoutes[d][src.ID] = true
+			involved[src.ID] = true
 			for _, c := range cs {
-				dateRoutes[d][c.ID] = true
+				involved[c.ID] = true
 			}
 		}
+		jobs[i] = j
 	}
 
-	// Each involved route's runs on each date, and its stop patterns' stops.
-	runs := map[int][]routematch.TripStart{}
-	patternTrips := map[similarRoutePatternKey]similarRoutePatternTrip{}
-	allDates := make([]time.Time, 0, len(dateRoutes))
-	for d := range dateRoutes {
-		allDates = append(allDates, d)
-	}
-	sort.Slice(allDates, func(i, j int) bool { return allDates[i].Before(allDates[j]) })
-	for _, d := range allDates {
-		routeSet := dateRoutes[d]
-		routeIDs := make([]int, 0, len(routeSet))
-		for id := range routeSet {
-			routeIDs = append(routeIDs, id)
-		}
-		sort.Ints(routeIDs)
-		dayRuns, err := f.similarRouteRuns(ctx, routeIDs, d, patternTrips)
-		if err != nil {
-			return nil, err
-		}
-		for rid, rs := range dayRuns {
-			runs[rid] = append(runs[rid], rs...)
-		}
-	}
-	patternStops, err := f.similarRoutePatternStops(ctx, patternTrips)
+	runs, patternTrips, err := f.similarRouteRuns(ctx, involved, allDays)
 	if err != nil {
 		return nil, err
 	}
+	onDays := func(routeID int, days map[time.Time]bool) []routematch.TripStart {
+		var out []routematch.TripStart
+		for _, r := range runs[routeID] {
+			if days[r.day] {
+				out = append(out, r.start)
+			}
+		}
+		return out
+	}
 
+	// Compare each route with its candidates; stop correspondences wait until
+	// every pairing is known, so only patterns that matched load their stops.
+	type pending struct {
+		sr    *model.SimilarRoute
+		pairs []routematch.Pair
+	}
 	opt := routematch.DefaultOptions()
+	var toAlign []pending
+	usedPatterns := map[int]bool{}
 	for i, j := range jobs {
-		if j.src == nil {
-			ret[i] = []*model.SimilarRoute{}
+		if j == nil {
 			continue
 		}
 		var out []*model.SimilarRoute
@@ -127,20 +131,17 @@ func (f *Finder) SimilarRoutesByRouteIDs(ctx context.Context, limit *int, where 
 				SameOnestopID:       true,
 				RouteTypeBasicMatch: routeTypeBasicMatch(j.src.RouteType.Int(), c.RouteType.Int()),
 			}
-			if len(j.dates) > 0 {
-				a, b := runs[j.src.ID], runs[c.ID]
-				pairs := routematch.MatchTrips(a, b, opt)
-				rel := model.RouteTripRelationship(routematch.Relate(len(a), len(b), len(pairs), opt))
+			if j.dates != nil {
+				a, b := onDays(j.src.ID, j.dates), onDays(c.ID, j.dates)
+				pairs := routematch.MatchTrips(a, onDays(c.ID, j.partner), opt)
+				otherMatched := len(routematch.MatchTrips(b, onDays(j.src.ID, j.partner), opt))
+				rel := model.RouteTripRelationship(routematch.Relate(len(a), len(b), len(pairs), otherMatched, opt))
 				sr.Trips, sr.OtherTrips, sr.MatchedTrips, sr.Relationship = ptr(len(a)), ptr(len(b)), ptr(len(pairs)), &rel
-				sr.StopCorrespondences = []*model.RouteStopCorrespondence{}
-				for _, c := range routematch.StopCorrespondences(pairs, patternStops, patternStops, opt) {
-					sr.StopCorrespondences = append(sr.StopCorrespondences, &model.RouteStopCorrespondence{
-						StopID:       c.StopID,
-						OtherStopID:  c.OtherStopID,
-						MatchedTrips: c.MatchedTrips,
-						Distance:     c.Distance,
-					})
+				for _, p := range pairs {
+					usedPatterns[p.A.PatternKey] = true
+					usedPatterns[p.B.PatternKey] = true
 				}
+				toAlign = append(toAlign, pending{sr: sr, pairs: pairs})
 			}
 			out = append(out, sr)
 		}
@@ -161,71 +162,80 @@ func (f *Finder) SimilarRoutesByRouteIDs(ctx context.Context, limit *int, where 
 		if n := finderCheckLimit(limit); uint64(len(out)) > n {
 			out = out[:n]
 		}
-		if out == nil {
-			out = []*model.SimilarRoute{}
-		}
 		ret[i] = out
+	}
+
+	patternStops, err := f.similarRoutePatternStops(ctx, patternTrips, usedPatterns)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range toAlign {
+		p.sr.StopCorrespondences = []*model.RouteStopCorrespondence{}
+		for _, corr := range routematch.StopCorrespondences(p.pairs, patternStops, patternStops, opt) {
+			p.sr.StopCorrespondences = append(p.sr.StopCorrespondences, &model.RouteStopCorrespondence{
+				StopID:       corr.StopID,
+				OtherStopID:  corr.OtherStopID,
+				MatchedTrips: corr.MatchedTrips,
+				Distance:     corr.Distance,
+			})
+		}
 	}
 	return ret, nil
 }
 
 // The dates to compare a route's candidates on: the filter's service dates as
 // given, or its relative date resolved in the route's feed version's timezone
-// and the days after it. Neither moves into a fallback week.
-func (f *Finder) similarRouteDates(ctx context.Context, src *model.Route, where *model.SimilarRouteFilter) ([]time.Time, error) {
+// and the days after it. Neither moves into a fallback week. A feed version
+// with no service window resolves a relative date against the clock, as
+// Route.patterns does, rather than failing the batch.
+func (f *Finder) similarRouteDates(ctx context.Context, src *model.Route, where *model.SimilarRouteFilter) []time.Time {
 	if where == nil {
-		return nil, nil
+		return nil
 	}
 	var ret []time.Time
 	if len(where.ServiceDates) > 0 {
 		for _, d := range where.ServiceDates {
 			if d != nil && d.Valid {
-				ret = append(ret, civilDay(d.Val))
+				ret = append(ret, model.CivilDate(d.Val))
 			}
 		}
-		return ret, nil
+		return ret
 	}
 	if where.RelativeDate == nil {
-		return nil, nil
-	}
-	fvsw, err := f.FindFeedVersionServiceWindow(ctx, src.FeedVersionID)
-	if err != nil {
-		return nil, err
+		return nil
 	}
 	now := model.Now(ctx)
-	if fvsw != nil {
+	if fvsw, err := f.FindFeedVersionServiceWindow(ctx, src.FeedVersionID); err == nil && fvsw != nil {
 		now = fvsw.NowLocal
 	}
 	start, err := model.ResolveRelativeDate(*where.RelativeDate, now)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	days := 1
 	if where.Days != nil {
 		days = *where.Days
 	}
 	for i := 0; i < days; i++ {
-		ret = append(ret, civilDay(start.AddDate(0, 0, i)))
+		ret = append(ret, model.CivilDate(start.AddDate(0, 0, i)))
 	}
-	return ret, nil
-}
-
-// civilDay is a date's calendar day as midnight UTC, so dates from different
-// sources compare and key alike.
-func civilDay(t time.Time) time.Time {
-	y, m, d := t.Date()
-	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	return ret
 }
 
 // routeTypeBasicMatch reports whether two route types have the same basic type,
-// or are both in the rail family.
+// or are both in the rail family: tram or light rail, subway or metro, rail,
+// and monorail.
 func routeTypeBasicMatch(a, b int) bool {
 	ba, bb := tt.BasicRouteType(a), tt.BasicRouteType(b)
-	if ba == bb {
+	return ba == bb || (railFamily(ba) && railFamily(bb))
+}
+
+func railFamily(basic int) bool {
+	switch basic {
+	case 0, 1, 2, 12:
 		return true
 	}
-	rail := map[int]bool{0: true, 1: true, 2: true, 12: true}
-	return rail[ba] && rail[bb]
+	return false
 }
 
 // A route's stop pattern: stop_pattern_id is scoped to a feed version, and a
@@ -235,22 +245,36 @@ type similarRoutePatternKey struct {
 	StopPatternID int
 }
 
-// The trip a stop pattern's stops are read from: the lowest-numbered trip of
-// the route following it on the first date it was seen. Its id is also the
-// pattern's key in routematch.
+// The trip a stop pattern's stops are read from: the base trip, holding the
+// stop times, of the lowest-numbered trip following the pattern. Its id is
+// also the pattern's key in routematch.
 type similarRoutePatternTrip struct {
 	TripID        int
 	FeedVersionID int
 }
 
-type similarRouteRunRow struct {
-	TripID        int
-	FeedVersionID int
-	RouteID       int
-	StopPatternID int
-	DepartureTime tt.Int
-	Lon           float64
-	Lat           float64
+// A run with its service date, so each comparison can take the dates it asked
+// for.
+type similarRouteRun struct {
+	day   time.Time
+	start routematch.TripStart
+}
+
+type similarRouteTripDayRow struct {
+	TripID      int
+	ServiceDate tt.Date
+}
+
+type similarRouteTripRow struct {
+	TripID         int
+	RouteID        int
+	StopPatternID  int
+	BaseTripID     int
+	FeedVersionID  int
+	DepartureTime  int
+	Lon            float64
+	Lat            float64
+	AgencyTimezone string
 }
 
 type similarRouteFrequencyRow struct {
@@ -260,83 +284,165 @@ type similarRouteFrequencyRow struct {
 	HeadwaySecs int
 }
 
-// similarRouteRuns returns each route's runs on a date: a trip's start and first
-// stop, and one run per departure of a frequency-based trip. Each route's stop
-// patterns are added to patterns, keeping the trip already chosen for one.
-func (f *Finder) similarRouteRuns(ctx context.Context, routeIDs []int, date time.Time, patterns map[similarRoutePatternKey]similarRoutePatternTrip) (map[int][]routematch.TripStart, error) {
-	q := sq.StatementBuilder.Select(
+// similarRouteRuns returns each route's runs on the given days, and the trip
+// each stop pattern's stops are read from.
+//
+// A run starts at its trip's first timed stop. Stop times are read through the
+// trip's journey pattern, from its base trip plus its offset, as every other
+// stop time query reads them, since an import that deduplicates journey
+// patterns stores them only for the base trip. A trip in frequencies.txt runs
+// once per headway from start_time up to end_time, at headways of at least
+// minExpandedHeadwaySecs, as departure queries expand it. Trips with no timed
+// stop, such as flex trips that serve locations or time windows, have no runs.
+func (f *Finder) similarRouteRuns(ctx context.Context, routeSet map[int]bool, daySet map[time.Time]bool) (map[int][]similarRouteRun, map[int]similarRoutePatternTrip, error) {
+	runs := map[int][]similarRouteRun{}
+	patterns := map[int]similarRoutePatternTrip{}
+	if len(routeSet) == 0 || len(daySet) == 0 {
+		return runs, patterns, nil
+	}
+	routeIDs := sortedIntKeys(routeSet)
+	days := make([]string, 0, len(daySet))
+	for d := range daySet {
+		days = append(days, d.Format("2006-01-02"))
+	}
+	sort.Strings(days)
+
+	// The days each trip runs on.
+	dq := serviceDatesJoin(
+		sq.StatementBuilder.Select("gtfs_trips.id AS trip_id", "service_dates.service_date").
+			From("gtfs_trips").
+			Where(In("gtfs_trips.route_id", routeIDs)),
+		days,
+	).OrderBy("gtfs_trips.id", "service_dates.service_date")
+	var dayRows []similarRouteTripDayRow
+	if err := dbutil.Select(ctx, f.db, dq, &dayRows); err != nil {
+		return nil, nil, queryErr(ctx, err)
+	}
+	tripSet := map[int]bool{}
+	for _, r := range dayRows {
+		tripSet[r.TripID] = true
+	}
+	if len(tripSet) == 0 {
+		return runs, patterns, nil
+	}
+	tripIDs := sortedIntKeys(tripSet)
+
+	// Each trip's first timed stop, once, whatever the number of days.
+	tq := sq.StatementBuilder.Select(
 		"gtfs_trips.id AS trip_id",
-		"gtfs_trips.feed_version_id",
 		"gtfs_trips.route_id",
 		"gtfs_trips.stop_pattern_id",
-		"first_st.departure_time",
+		"base_trip.id AS base_trip_id",
+		"base_trip.feed_version_id",
+		"first_st.departure_time + gtfs_trips.journey_pattern_offset AS departure_time",
 		"ST_X(first_stop.geometry::geometry) AS lon",
 		"ST_Y(first_stop.geometry::geometry) AS lat",
+		"gtfs_agencies.agency_timezone",
 	).
 		From("gtfs_trips").
+		Join("gtfs_trips base_trip ON base_trip.trip_id::text = gtfs_trips.journey_pattern_id AND gtfs_trips.feed_version_id = base_trip.feed_version_id").
 		JoinClause(`join lateral (
 			select st.departure_time, st.stop_id
 			from gtfs_stop_times st
-			where st.feed_version_id = gtfs_trips.feed_version_id
-				and st.trip_id = gtfs_trips.id
+			where st.feed_version_id = base_trip.feed_version_id
+				and st.trip_id = base_trip.id
 				and st.stop_id is not null
 				and st.departure_time is not null
 			order by st.stop_sequence
 			limit 1
 		) first_st on true`).
 		Join("gtfs_stops first_stop ON first_stop.id = first_st.stop_id").
-		Where(In("gtfs_trips.route_id", routeIDs)).
+		Join("gtfs_routes ON gtfs_routes.id = gtfs_trips.route_id").
+		Join("gtfs_agencies ON gtfs_agencies.id = gtfs_routes.agency_id").
+		Where(In("gtfs_trips.id", tripIDs)).
 		OrderBy("gtfs_trips.id")
-	q = serviceDateLateral(q, tt.NewDate(date))
-	var rows []similarRouteRunRow
-	if err := dbutil.Select(ctx, f.db, q, &rows); err != nil {
-		return nil, queryErr(ctx, err)
+	var tripRows []similarRouteTripRow
+	if err := dbutil.Select(ctx, f.db, tq, &tripRows); err != nil {
+		return nil, nil, queryErr(ctx, err)
 	}
-	tripIDs := make([]int, 0, len(rows))
-	for _, r := range rows {
-		tripIDs = append(tripIDs, r.TripID)
+
+	// Every frequency row, so a trip whose headways are all under the minimum
+	// is still known to be frequency-based, and adds no runs.
+	fq := sq.StatementBuilder.Select("trip_id", "start_time", "end_time", "headway_secs").
+		From("gtfs_frequencies").
+		Where(In("trip_id", tripIDs)).
+		OrderBy("trip_id", "start_time")
+	var freqRows []similarRouteFrequencyRow
+	if err := dbutil.Select(ctx, f.db, fq, &freqRows); err != nil {
+		return nil, nil, queryErr(ctx, err)
 	}
 	freqs := map[int][]similarRouteFrequencyRow{}
-	if len(tripIDs) > 0 {
-		fq := sq.StatementBuilder.Select("trip_id", "start_time", "end_time", "headway_secs").
-			From("gtfs_frequencies").
-			Where(In("trip_id", tripIDs)).
-			OrderBy("trip_id", "start_time")
-		var frows []similarRouteFrequencyRow
-		if err := dbutil.Select(ctx, f.db, fq, &frows); err != nil {
-			return nil, queryErr(ctx, err)
+	for _, fr := range freqRows {
+		freqs[fr.TripID] = append(freqs[fr.TripID], fr)
+	}
+
+	locs := map[string]*time.Location{}
+	location := func(name string) *time.Location {
+		if loc, ok := locs[name]; ok {
+			return loc
 		}
-		for _, fr := range frows {
-			freqs[fr.TripID] = append(freqs[fr.TripID], fr)
+		loc, err := time.LoadLocation(name)
+		if err != nil || name == "" {
+			loc = time.UTC
+		}
+		locs[name] = loc
+		return loc
+	}
+	patternOf := map[similarRoutePatternKey]int{}
+	trips := map[int]similarRouteTripRow{}
+	for _, t := range tripRows {
+		trips[t.TripID] = t
+		pk := similarRoutePatternKey{RouteID: t.RouteID, StopPatternID: t.StopPatternID}
+		if _, ok := patternOf[pk]; !ok {
+			// Rows come in trip id order, so this is the pattern's lowest trip.
+			patternOf[pk] = t.BaseTripID
+			patterns[t.BaseTripID] = similarRoutePatternTrip{TripID: t.BaseTripID, FeedVersionID: t.FeedVersionID}
 		}
 	}
-	ret := map[int][]routematch.TripStart{}
-	for _, r := range rows {
-		pk := similarRoutePatternKey{RouteID: r.RouteID, StopPatternID: r.StopPatternID}
-		rep, ok := patterns[pk]
-		if !ok {
-			// Rows come in trip id order, so this is the pattern's lowest trip today.
-			rep = similarRoutePatternTrip{TripID: r.TripID, FeedVersionID: r.FeedVersionID}
-			patterns[pk] = rep
+	for _, r := range dayRows {
+		t, ok := trips[r.TripID]
+		if !ok || !r.ServiceDate.Valid {
+			continue
 		}
-		first := tlxy.Point{Lon: r.Lon, Lat: r.Lat}
-		if fs := freqs[r.TripID]; len(fs) > 0 {
+		day := model.CivilDate(r.ServiceDate.Val)
+		loc := location(t.AgencyTimezone)
+		run := routematch.TripStart{
+			FirstStop:  tlxy.Point{Lon: t.Lon, Lat: t.Lat},
+			PatternKey: patternOf[similarRoutePatternKey{RouteID: t.RouteID, StopPatternID: t.StopPatternID}],
+		}
+		if fs, ok := freqs[t.TripID]; ok {
 			for _, fr := range fs {
-				if fr.HeadwaySecs <= 0 {
+				if fr.HeadwaySecs < minExpandedHeadwaySecs {
 					continue
 				}
-				for t := fr.StartTime; t < fr.EndTime; t += fr.HeadwaySecs {
-					ret[r.RouteID] = append(ret[r.RouteID], routematch.TripStart{Date: date, Start: t, FirstStop: first, PatternKey: rep.TripID})
+				for s := fr.StartTime; s < fr.EndTime; s += fr.HeadwaySecs {
+					run.Instant = serviceInstant(day, s, loc)
+					runs[t.RouteID] = append(runs[t.RouteID], similarRouteRun{day: day, start: run})
 				}
 			}
 			continue
 		}
-		if !r.DepartureTime.Valid {
-			continue
-		}
-		ret[r.RouteID] = append(ret[r.RouteID], routematch.TripStart{Date: date, Start: r.DepartureTime.Int(), FirstStop: first, PatternKey: rep.TripID})
+		run.Instant = serviceInstant(day, t.DepartureTime, loc)
+		runs[t.RouteID] = append(runs[t.RouteID], similarRouteRun{day: day, start: run})
 	}
-	return ret, nil
+	return runs, patterns, nil
+}
+
+// serviceInstant is the moment a GTFS time on a service date happens: seconds
+// from noon minus 12 hours, local time, which is midnight except on days a
+// daylight saving change falls in the night.
+func serviceInstant(day time.Time, secs int, loc *time.Location) int64 {
+	y, m, d := day.Date()
+	return time.Date(y, m, d, 12, 0, 0, 0, loc).Add(-12*time.Hour).Unix() + int64(secs)
+}
+
+func sortedIntKeys(set map[int]bool) []int {
+	ret := make([]int, 0, len(set))
+	for k := range set {
+		ret = append(ret, k)
+	}
+	sort.Ints(ret)
+	return ret
 }
 
 type similarRoutePatternStopRow struct {
@@ -347,24 +453,20 @@ type similarRoutePatternStopRow struct {
 	Lat          float64
 }
 
-// similarRoutePatternStops returns each stop pattern's stops in order, keyed by
-// the trip they were read from.
-func (f *Finder) similarRoutePatternStops(ctx context.Context, patterns map[similarRoutePatternKey]similarRoutePatternTrip) (map[int][]routematch.PatternStop, error) {
+// similarRoutePatternStops returns the stops, in order, of each pattern in use,
+// keyed by the base trip they are read from.
+func (f *Finder) similarRoutePatternStops(ctx context.Context, patterns map[int]similarRoutePatternTrip, used map[int]bool) (map[int][]routematch.PatternStop, error) {
 	ret := map[int][]routematch.PatternStop{}
-	if len(patterns) == 0 {
-		return ret, nil
-	}
-	var tripIDs, fvids []int
-	seenFv := map[int]bool{}
-	for _, p := range patterns {
-		tripIDs = append(tripIDs, p.TripID)
-		if !seenFv[p.FeedVersionID] {
-			seenFv[p.FeedVersionID] = true
-			fvids = append(fvids, p.FeedVersionID)
+	tripSet, fvSet := map[int]bool{}, map[int]bool{}
+	for key := range used {
+		if p, ok := patterns[key]; ok {
+			tripSet[p.TripID] = true
+			fvSet[p.FeedVersionID] = true
 		}
 	}
-	sort.Ints(tripIDs)
-	sort.Ints(fvids)
+	if len(tripSet) == 0 {
+		return ret, nil
+	}
 	q := sq.StatementBuilder.Select(
 		"st.trip_id",
 		"st.stop_sequence",
@@ -374,8 +476,8 @@ func (f *Finder) similarRoutePatternStops(ctx context.Context, patterns map[simi
 	).
 		From("gtfs_stop_times st").
 		Join("gtfs_stops s ON s.id = st.stop_id").
-		Where(In("st.feed_version_id", fvids)).
-		Where(In("st.trip_id", tripIDs)).
+		Where(In("st.feed_version_id", sortedIntKeys(fvSet))).
+		Where(In("st.trip_id", sortedIntKeys(tripSet))).
 		OrderBy("st.trip_id", "st.stop_sequence")
 	var rows []similarRoutePatternStopRow
 	if err := dbutil.Select(ctx, f.db, q, &rows); err != nil {

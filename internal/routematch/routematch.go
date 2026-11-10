@@ -9,7 +9,6 @@ package routematch
 
 import (
 	"sort"
-	"time"
 
 	"github.com/interline-io/transitland-lib/tlxy"
 )
@@ -43,23 +42,15 @@ func DefaultOptions() Options {
 // TripStart is one run of a trip on one service date. A frequency-based trip
 // gives one TripStart per run.
 type TripStart struct {
-	// Service date of the run.
-	Date time.Time
-	// Seconds since midnight of the service date; may be 24:00:00 or later.
-	Start int
+	// When the run starts, in Unix seconds. The finder works it out from the
+	// run's service date and time in its agency's timezone, so a run written as
+	// 24:15 on one date and one written as 00:15 on the next start together,
+	// as do copies published in different timezones.
+	Instant int64
 	// Where the run's first stop is.
 	FirstStop tlxy.Point
 	// Identifies the run's stop pattern, for StopCorrespondences.
 	PatternKey int
-}
-
-// abs is the run's start as seconds since the Unix epoch day of its service
-// date, so a run written as 24:15 on one date and one written as 00:15 on the
-// next compare as the same time.
-func (t TripStart) abs() int64 {
-	y, m, d := t.Date.Date()
-	day := time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Unix() / 86400
-	return day*86400 + int64(t.Start)
 }
 
 // Pair is a matched trip of each route.
@@ -69,9 +60,10 @@ type Pair struct {
 }
 
 // MatchTrips pairs trips of a with trips of b, each trip with at most one
-// other: for each trip of a, in start order, the unmatched trip of b that
-// starts closest in time within the tolerance and whose first stop is close
-// enough.
+// other, as many pairs as it can. Taking a's trips in start order, each is
+// paired with the earliest unmatched trip of b within the start tolerance whose
+// first stop is close enough. With windows of one width this pairs as many
+// trips as any matching could, so swapping a and b gives the same count.
 func MatchTrips(a, b []TripStart, opt Options) []Pair {
 	as := sortedByStart(a)
 	bs := sortedByStart(b)
@@ -80,30 +72,16 @@ func MatchTrips(a, b []TripStart, opt Options) []Pair {
 	var pairs []Pair
 	lo := 0
 	for _, ta := range as {
-		at := ta.abs()
-		for lo < len(bs) && bs[lo].abs() < at-tol {
+		for lo < len(bs) && (used[lo] || bs[lo].Instant < ta.Instant-tol) {
 			lo++
 		}
-		best := -1
-		var bestDiff int64
-		for k := lo; k < len(bs) && bs[k].abs() <= at+tol; k++ {
-			if used[k] {
+		for k := lo; k < len(bs) && bs[k].Instant <= ta.Instant+tol; k++ {
+			if used[k] || tlxy.DistanceHaversine(ta.FirstStop, bs[k].FirstStop) > opt.FirstStopMaxMeters {
 				continue
 			}
-			if tlxy.DistanceHaversine(ta.FirstStop, bs[k].FirstStop) > opt.FirstStopMaxMeters {
-				continue
-			}
-			diff := bs[k].abs() - at
-			if diff < 0 {
-				diff = -diff
-			}
-			if best < 0 || diff < bestDiff {
-				best, bestDiff = k, diff
-			}
-		}
-		if best >= 0 {
-			used[best] = true
-			pairs = append(pairs, Pair{A: ta, B: bs[best]})
+			used[k] = true
+			pairs = append(pairs, Pair{A: ta, B: bs[k]})
+			break
 		}
 	}
 	return pairs
@@ -111,7 +89,7 @@ func MatchTrips(a, b []TripStart, opt Options) []Pair {
 
 func sortedByStart(ts []TripStart) []TripStart {
 	ret := append([]TripStart(nil), ts...)
-	sort.SliceStable(ret, func(i, j int) bool { return ret[i].abs() < ret[j].abs() })
+	sort.SliceStable(ret, func(i, j int) bool { return ret[i].Instant < ret[j].Instant })
 	return ret
 }
 
@@ -130,18 +108,21 @@ const (
 )
 
 // Relate says how a route with `trips` trips compares with one with
-// `otherTrips`, given `matched` one-to-one pairs between them.
-func Relate(trips, otherTrips, matched int, opt Options) Relationship {
+// `otherTrips`. `matched` is how many of the first route's trips are matched to
+// the other's, and `otherMatched` how many of the other's are matched to the
+// first's; they differ when one side's trips also match runs on the days around
+// the compared dates.
+func Relate(trips, otherTrips, matched, otherMatched int, opt Options) Relationship {
 	switch {
 	case trips == 0:
 		return NoTrips
 	case otherTrips == 0:
 		return OtherNoTrips
-	case matched == 0:
+	case matched == 0 && otherMatched == 0:
 		return Disjoint
 	}
 	runsIn := float64(matched)/float64(trips) >= opt.RunInFraction
-	otherRunsIn := float64(matched)/float64(otherTrips) >= opt.RunInFraction
+	otherRunsIn := float64(otherMatched)/float64(otherTrips) >= opt.RunInFraction
 	switch {
 	case runsIn && otherRunsIn:
 		return SameTrips
@@ -214,10 +195,11 @@ func StopCorrespondences(pairs []Pair, patternsA, patternsB map[int][]PatternSto
 
 // alignPatterns pairs the stops of two patterns in order, as many pairs within
 // maxMeters as possible and, among alignments with the most pairs, the closest.
-// Each pair scores between 0.5 and 1, more the closer the stops, so one more
-// pair always outweighs closeness. A stop only one pattern serves pairs with
-// nothing, and the alignment never crosses itself, so a loop that passes a stop
-// twice pairs each visit with its own counterpart.
+// Each pair scores 1, plus up to 1/(k+1) for closeness where k is the most pairs
+// possible, so k pairs' closeness together never reaches one more pair. A stop
+// only one pattern serves pairs with nothing, and the alignment never crosses
+// itself, so a loop that passes a stop twice pairs each visit with its own
+// counterpart.
 func alignPatterns(a, b []PatternStop, maxMeters float64) []Correspondence {
 	n, m := len(a), len(b)
 	if n == 0 || m == 0 || maxMeters <= 0 {
@@ -234,12 +216,13 @@ func alignPatterns(a, b []PatternStop, maxMeters float64) []Correspondence {
 			dist[i][j] = tlxy.DistanceHaversine(a[i].Point, b[j].Point)
 		}
 	}
+	closenessWeight := 1 / float64(min(n, m)+1)
 	pairScore := func(i, j int) (float64, bool) {
 		d := dist[i][j]
 		if d > maxMeters {
 			return 0, false
 		}
-		return 1 - d/(2*maxMeters), true
+		return 1 + closenessWeight*(1-d/maxMeters), true
 	}
 	for i := 1; i <= n; i++ {
 		for j := 1; j <= m; j++ {

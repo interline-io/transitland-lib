@@ -67,8 +67,8 @@ func mapIntoServiceWindow(s time.Time, fvsw *ServiceWindow) *tt.Date {
 	// parses as midnight UTC, and comparing instants misplaces the window's
 	// first or last day.
 	local := tzTruncate(s, loc)
-	day := civilDate(local.Val)
-	if !day.Before(civilDate(fvsw.StartDate)) && !day.After(civilDate(fvsw.EndDate)) {
+	day := CivilDate(local.Val)
+	if !day.Before(CivilDate(fvsw.StartDate)) && !day.After(CivilDate(fvsw.EndDate)) {
 		return local
 	}
 	dow := int(local.Val.Weekday()) - 1
@@ -78,9 +78,9 @@ func mapIntoServiceWindow(s time.Time, fvsw *ServiceWindow) *tt.Date {
 	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
 }
 
-// civilDate returns t's calendar date in its own location, as midnight UTC, so
+// CivilDate returns t's calendar date in its own location, as midnight UTC, so
 // dates compare as dates whatever their time of day.
-func civilDate(t time.Time) time.Time {
+func CivilDate(t time.Time) time.Time {
 	y, m, d := t.Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }

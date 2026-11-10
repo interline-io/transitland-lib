@@ -141,6 +141,37 @@ func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilde
 	`, sd, sd, sd, sd, sd)
 }
 
+// Pair each trip of a query over gtfs_trips with each of the service dates it
+// runs on, as service_dates.service_date: serviceDateLateral for a list of
+// dates in one query. A trip running on none of the dates drops out.
+func serviceDatesJoin(q sq.SelectBuilder, dates []string) sq.SelectBuilder {
+	return q.JoinClause(`cross join unnest(?::date[]) AS service_dates(service_date)`, dates).
+		JoinClause(`
+	join lateral (
+		select gc.id
+		from gtfs_calendars gc
+		left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = service_dates.service_date
+		left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = service_dates.service_date
+		where
+			gc.id = gtfs_trips.service_id
+			AND ((
+				gc.start_date <= service_dates.service_date AND gc.end_date >= service_dates.service_date
+				AND (CASE EXTRACT(isodow FROM service_dates.service_date)
+				WHEN 1 THEN monday = 1
+				WHEN 2 THEN tuesday = 1
+				WHEN 3 THEN wednesday = 1
+				WHEN 4 THEN thursday = 1
+				WHEN 5 THEN friday = 1
+				WHEN 6 THEN saturday = 1
+				WHEN 7 THEN sunday = 1
+				END)
+			) OR gcda.date IS NOT NULL)
+			AND gcdb.date is null
+		LIMIT 1
+	) gc on true
+	`)
+}
+
 // Record each trip's runs from the aggregated service_dates column, which holds
 // each query date on which its service ran.
 func expandTripServiceDates(ents []*model.Trip, dates []model.TripDate) {

@@ -1387,11 +1387,11 @@ type SimilarRoute struct {
 	SameOnestopID bool `json:"same_onestop_id"`
 	// True when the two routes' basic route types (`route_type_basic`) are the same, or both in the rail family: tram or light rail, subway or metro, rail, and monorail. Feeds can type one service differently, such as tram in one feed and rail in another
 	RouteTypeBasicMatch bool `json:"route_type_basic_match"`
-	// Trips the route it was found from runs on the compared dates
+	// Trips the route it was found from runs on the compared dates: each run of a frequency-based trip counts as one, and trips with no timed stop, such as flex trips that serve locations or time windows, are not counted
 	Trips *int `json:"trips,omitempty"`
-	// Trips the candidate runs on the compared dates
+	// Trips the candidate runs on the compared dates, counted as for `trips`
 	OtherTrips *int `json:"other_trips,omitempty"`
-	// Matched trip pairs: trips of the route it was found from that the candidate also runs, matched one to one
+	// Trips of the route it was found from that are matched one to one with the candidate's trips
 	MatchedTrips *int `json:"matched_trips,omitempty"`
 	// How the two routes' trips compare on the compared dates
 	Relationship *RouteTripRelationship `json:"relationship,omitempty"`
