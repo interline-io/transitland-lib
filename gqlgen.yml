@@ -195,6 +195,24 @@ models:
         type: int
       SelectedStopID:
         type: int
+  SimilarRoute:
+    fields:
+      route:
+        resolver: true
+    extraFields:
+      OtherRouteID:
+        type: int
+  RouteStopCorrespondence:
+    fields:
+      stop:
+        resolver: true
+      other_stop:
+        resolver: true
+    extraFields:
+      StopID:
+        type: int
+      OtherStopID:
+        type: int
   RouteStopPattern:
     fields:
       trips:

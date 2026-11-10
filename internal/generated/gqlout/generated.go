@@ -71,6 +71,7 @@ type ResolverRoot interface {
 	RouteNetwork() RouteNetworkResolver
 	RouteRepresentativeShape() RouteRepresentativeShapeResolver
 	RouteStop() RouteStopResolver
+	RouteStopCorrespondence() RouteStopCorrespondenceResolver
 	RouteStopPattern() RouteStopPatternResolver
 	RouteStopPatternTimetable() RouteStopPatternTimetableResolver
 	RouteStopPatternTimetableGrid() RouteStopPatternTimetableGridResolver
@@ -78,6 +79,7 @@ type ResolverRoot interface {
 	Segment() SegmentResolver
 	SegmentPattern() SegmentPatternResolver
 	Shape() ShapeResolver
+	SimilarRoute() SimilarRouteResolver
 	Stop() StopResolver
 	StopArea() StopAreaResolver
 	StopExternalReference() StopExternalReferenceResolver
@@ -1236,6 +1238,7 @@ type ComplexityRoot struct {
 		SearchRank           func(childComplexity int) int
 		SegmentPatterns      func(childComplexity int, limit *int, where *model.SegmentPatternFilter) int
 		Segments             func(childComplexity int, limit *int, where *model.SegmentFilter) int
+		SimilarRoutes        func(childComplexity int, limit *int, where *model.SimilarRouteFilter) int
 		Stops                func(childComplexity int, limit *int, where *model.StopFilter) int
 		Trips                func(childComplexity int, limit *int, where *model.TripFilter) int
 		VehiclePositions     func(childComplexity int, limit *int, where *model.VehiclePositionFilter) int
@@ -1301,6 +1304,13 @@ type ComplexityRoot struct {
 		StopPoints     func(childComplexity int) int
 	}
 
+	RouteStopCorrespondence struct {
+		Distance     func(childComplexity int) int
+		MatchedTrips func(childComplexity int) int
+		OtherStop    func(childComplexity int) int
+		Stop         func(childComplexity int) int
+	}
+
 	RouteStopPattern struct {
 		Count              func(childComplexity int) int
 		DirectionID        func(childComplexity int) int
@@ -1364,6 +1374,17 @@ type ComplexityRoot struct {
 		Polyline6 func(childComplexity int) int
 		ShapeID   func(childComplexity int) int
 		Trips     func(childComplexity int, limit *int, where *model.TripFilter) int
+	}
+
+	SimilarRoute struct {
+		MatchedTrips        func(childComplexity int) int
+		OtherTrips          func(childComplexity int) int
+		Relationship        func(childComplexity int) int
+		Route               func(childComplexity int) int
+		RouteTypeBasicMatch func(childComplexity int) int
+		SameOnestopID       func(childComplexity int) int
+		StopCorrespondences func(childComplexity int) int
+		Trips               func(childComplexity int) int
 	}
 
 	Step struct {
@@ -1985,6 +2006,7 @@ type RouteResolver interface {
 	CensusGeographies(ctx context.Context, obj *model.Route, limit *int, where *model.CensusGeographyFilter) ([]*model.CensusGeography, error)
 	RouteStopBuffer(ctx context.Context, obj *model.Route, radius *float64) (*model.RouteStopBuffer, error)
 	Patterns(ctx context.Context, obj *model.Route, where *model.RouteStopPatternFilter) ([]*model.RouteStopPattern, error)
+	SimilarRoutes(ctx context.Context, obj *model.Route, limit *int, where *model.SimilarRouteFilter) ([]*model.SimilarRoute, error)
 	Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int, includeModes *bool, includeTrips *bool) ([]*model.Alert, error)
 	VehiclePositions(ctx context.Context, obj *model.Route, limit *int, where *model.VehiclePositionFilter) ([]*model.VehiclePosition, error)
 	Segments(ctx context.Context, obj *model.Route, limit *int, where *model.SegmentFilter) ([]*model.Segment, error)
@@ -2008,6 +2030,10 @@ type RouteStopResolver interface {
 	Route(ctx context.Context, obj *model.RouteStop) (*model.Route, error)
 	Stop(ctx context.Context, obj *model.RouteStop) (*model.Stop, error)
 	Agency(ctx context.Context, obj *model.RouteStop) (*model.Agency, error)
+}
+type RouteStopCorrespondenceResolver interface {
+	Stop(ctx context.Context, obj *model.RouteStopCorrespondence) (*model.Stop, error)
+	OtherStop(ctx context.Context, obj *model.RouteStopCorrespondence) (*model.Stop, error)
 }
 type RouteStopPatternResolver interface {
 	RepresentativeTrip(ctx context.Context, obj *model.RouteStopPattern) (*model.Trip, error)
@@ -2041,6 +2067,9 @@ type ShapeResolver interface {
 	Polyline(ctx context.Context, obj *model.Shape) (*string, error)
 	Polyline6(ctx context.Context, obj *model.Shape) (*string, error)
 	Trips(ctx context.Context, obj *model.Shape, limit *int, where *model.TripFilter) ([]*model.Trip, error)
+}
+type SimilarRouteResolver interface {
+	Route(ctx context.Context, obj *model.SimilarRoute) (*model.Route, error)
 }
 type StopResolver interface {
 	FeedVersion(ctx context.Context, obj *model.Stop) (*model.FeedVersion, error)
@@ -7823,6 +7852,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Route.Segments(childComplexity, args["limit"].(*int), args["where"].(*model.SegmentFilter)), true
+	case "Route.similar_routes":
+		if e.ComplexityRoot.Route.SimilarRoutes == nil {
+			break
+		}
+
+		args, err := ec.field_Route_similar_routes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Route.SimilarRoutes(childComplexity, args["limit"].(*int), args["where"].(*model.SimilarRouteFilter)), true
 	case "Route.stops":
 		if e.ComplexityRoot.Route.Stops == nil {
 			break
@@ -8097,6 +8137,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RouteStopBuffer.StopPoints(childComplexity), true
+
+	case "RouteStopCorrespondence.distance":
+		if e.ComplexityRoot.RouteStopCorrespondence.Distance == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopCorrespondence.Distance(childComplexity), true
+	case "RouteStopCorrespondence.matched_trips":
+		if e.ComplexityRoot.RouteStopCorrespondence.MatchedTrips == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopCorrespondence.MatchedTrips(childComplexity), true
+	case "RouteStopCorrespondence.other_stop":
+		if e.ComplexityRoot.RouteStopCorrespondence.OtherStop == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopCorrespondence.OtherStop(childComplexity), true
+	case "RouteStopCorrespondence.stop":
+		if e.ComplexityRoot.RouteStopCorrespondence.Stop == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RouteStopCorrespondence.Stop(childComplexity), true
 
 	case "RouteStopPattern.count":
 		if e.ComplexityRoot.RouteStopPattern.Count == nil {
@@ -8378,6 +8443,55 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Shape.Trips(childComplexity, args["limit"].(*int), args["where"].(*model.TripFilter)), true
+
+	case "SimilarRoute.matched_trips":
+		if e.ComplexityRoot.SimilarRoute.MatchedTrips == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.MatchedTrips(childComplexity), true
+	case "SimilarRoute.other_trips":
+		if e.ComplexityRoot.SimilarRoute.OtherTrips == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.OtherTrips(childComplexity), true
+	case "SimilarRoute.relationship":
+		if e.ComplexityRoot.SimilarRoute.Relationship == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.Relationship(childComplexity), true
+	case "SimilarRoute.route":
+		if e.ComplexityRoot.SimilarRoute.Route == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.Route(childComplexity), true
+	case "SimilarRoute.route_type_basic_match":
+		if e.ComplexityRoot.SimilarRoute.RouteTypeBasicMatch == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.RouteTypeBasicMatch(childComplexity), true
+	case "SimilarRoute.same_onestop_id":
+		if e.ComplexityRoot.SimilarRoute.SameOnestopID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.SameOnestopID(childComplexity), true
+	case "SimilarRoute.stop_correspondences":
+		if e.ComplexityRoot.SimilarRoute.StopCorrespondences == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.StopCorrespondences(childComplexity), true
+	case "SimilarRoute.trips":
+		if e.ComplexityRoot.SimilarRoute.Trips == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.Trips(childComplexity), true
 
 	case "Step.distance":
 		if e.ComplexityRoot.Step.Distance == nil {
@@ -10144,6 +10258,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSegmentPatternFilter,
 		ec.unmarshalInputServiceCoversFilter,
 		ec.unmarshalInputShapeFilter,
+		ec.unmarshalInputSimilarRouteFilter,
 		ec.unmarshalInputStopAreaFilter,
 		ec.unmarshalInputStopBuffer,
 		ec.unmarshalInputStopExternalReferenceSetInput,
@@ -12055,7 +12170,14 @@ type Route {
 
   "Unique stop sequences operated on this route"
   patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
-  
+
+  """
+  Routes in other feeds that may be copies of this one: active routes, in their feeds' current versions, that share this route's Onestop ID. The same route is often published by more than one feed, such as an agency feed and an aggregator or a regional feed that repeats it, so these are candidates, not confirmed copies.
+
+  Given ` + "`" + `service_dates` + "`" + ` or ` + "`" + `relative_date` + "`" + `, each candidate's trips are compared with this route's on those dates: a trip of one is matched to at most one trip of the other that starts within 60 seconds of it, at a first stop within 500 meters. Start times count from each trip's service date, so a trip written as 24:15 on one date matches one written as 00:15 on the next. The stops that matched trips use at the same place are paired in ` + "`" + `stop_correspondences` + "`" + `. The comparison is reported, and choosing which copy to show is left to the client.
+  """
+  similar_routes(limit: Int, where: SimilarRouteFilter): [SimilarRoute!]
+
   "GTFS-RT service alerts on this route, as a whole or at one of its stops, whose agency and mode, if given, are the route's; pass ` + "`" + `active: true` + "`" + ` to return only currently active alerts, ` + "`" + `include_modes: true` + "`" + ` to also return alerts on the route's mode, such as all of its agency's subway service, and ` + "`" + `include_trips: true` + "`" + ` to also return alerts on the route's trips"
   alerts(active: Boolean, limit: Int, include_modes: Boolean = false, include_trips: Boolean = false): [Alert!]
 
@@ -13727,6 +13849,72 @@ type RouteStopPatternTimetableTimeGrid {
 }
 
 """
+A route in another feed that may be a copy of the route it was found from; see ` + "`" + `Route.similar_routes` + "`" + `. The trip fields are null unless the query gave ` + "`" + `service_dates` + "`" + ` or ` + "`" + `relative_date` + "`" + `.
+"""
+type SimilarRoute {
+  "The candidate route"
+  route: Route!
+
+  "True when the candidate has the same Onestop ID as the route it was found from; always true for now, as candidates are found by Onestop ID"
+  same_onestop_id: Boolean!
+
+  "True when the two routes' basic route types (` + "`" + `route_type_basic` + "`" + `) are the same, or both in the rail family: tram or light rail, subway or metro, rail, and monorail. Feeds can type one service differently, such as tram in one feed and rail in another"
+  route_type_basic_match: Boolean!
+
+  "Trips the route it was found from runs on the compared dates"
+  trips: Int
+
+  "Trips the candidate runs on the compared dates"
+  other_trips: Int
+
+  "Matched trip pairs: trips of the route it was found from that the candidate also runs, matched one to one"
+  matched_trips: Int
+
+  "How the two routes' trips compare on the compared dates"
+  relationship: RouteTripRelationship
+
+  "Stops that the two routes' matched trips use at the same place, with how many matched trips use each pair, most first. Null without compared dates"
+  stop_correspondences: [RouteStopCorrespondence!]
+}
+
+"""
+A stop of one route paired with the stop of a similar route that matched trips use at the same place; see ` + "`" + `SimilarRoute.stop_correspondences` + "`" + `.
+"""
+type RouteStopCorrespondence {
+  "The stop of the route the similar route was found from"
+  stop: Stop!
+
+  "The stop of the similar route"
+  other_stop: Stop!
+
+  "Matched trip pairs that call at these two stops at the same point in their trips"
+  matched_trips: Int!
+
+  "Distance between the two stops, in meters"
+  distance: Float!
+}
+
+"""
+How the trips of a route compare with those of a similar route (` + "`" + `SimilarRoute` + "`" + `) on the compared dates. A route's trips "run in" the other route when at least 90% of them are matched. Values may be added; clients should handle values they don't recognize.
+"""
+enum RouteTripRelationship {
+  "Each route's trips run in the other"
+  SAME_TRIPS
+  "This route's trips run in the similar route, which runs more"
+  SUBSET
+  "The similar route's trips run in this route, which runs more"
+  SUPERSET
+  "Some trips are matched, but neither route's run in the other"
+  PARTIAL
+  "No trips are matched"
+  DISJOINT
+  "This route runs no trips on the compared dates"
+  NO_TRIPS
+  "The similar route runs no trips on the compared dates, and this route does"
+  OTHER_NO_TRIPS
+}
+
+"""
 Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 """
 type RouteGeometry {
@@ -15025,6 +15213,18 @@ input RouteStopPatternFilter {
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's ` + "`" + `fallback_week` + "`" + ` instead"
   use_service_window: Boolean
+}
+
+"""Search options for ` + "`" + `Route.similar_routes` + "`" + `"""
+input SimilarRouteFilter {
+  "GTFS service dates to compare the routes' trips on, at most 7. Dates are used as given, without a fallback week, so a feed with no service on them shows as having no trips"
+  service_dates: [Date!]
+  "Compare trips from this date, relative to today in the timezone of the route the candidates are found from, and on the days after it given by ` + "`" + `days` + "`" + `. Without a fallback week, like ` + "`" + `service_dates` + "`" + `. Ignored if ` + "`" + `service_dates` + "`" + ` is set"
+  relative_date: RelativeDate
+  "Number of consecutive days to compare from ` + "`" + `relative_date` + "`" + `, 1 to 7; default 1"
+  days: Int
+  "Only candidates from feeds other than the route's own; default true"
+  other_feeds_only: Boolean
 }
 
 """Search options for census datasets"""
@@ -17561,6 +17761,8 @@ func (ec *executionContext) childFields_Route(ctx context.Context, field graphql
 		return ec.fieldContext_Route_route_stop_buffer(ctx, field)
 	case "patterns":
 		return ec.fieldContext_Route_patterns(ctx, field)
+	case "similar_routes":
+		return ec.fieldContext_Route_similar_routes(ctx, field)
 	case "alerts":
 		return ec.fieldContext_Route_alerts(ctx, field)
 	case "vehicle_positions":
@@ -17693,6 +17895,20 @@ func (ec *executionContext) childFields_RouteStopBuffer(ctx context.Context, fie
 	return nil, fmt.Errorf("no field named %q was found under type RouteStopBuffer", field.Name)
 }
 
+func (ec *executionContext) childFields_RouteStopCorrespondence(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "stop":
+		return ec.fieldContext_RouteStopCorrespondence_stop(ctx, field)
+	case "other_stop":
+		return ec.fieldContext_RouteStopCorrespondence_other_stop(ctx, field)
+	case "matched_trips":
+		return ec.fieldContext_RouteStopCorrespondence_matched_trips(ctx, field)
+	case "distance":
+		return ec.fieldContext_RouteStopCorrespondence_distance(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RouteStopCorrespondence", field.Name)
+}
+
 func (ec *executionContext) childFields_RouteStopPattern(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "stop_pattern_id":
@@ -17821,6 +18037,28 @@ func (ec *executionContext) childFields_Shape(ctx context.Context, field graphql
 		return ec.fieldContext_Shape_trips(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Shape", field.Name)
+}
+
+func (ec *executionContext) childFields_SimilarRoute(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "route":
+		return ec.fieldContext_SimilarRoute_route(ctx, field)
+	case "same_onestop_id":
+		return ec.fieldContext_SimilarRoute_same_onestop_id(ctx, field)
+	case "route_type_basic_match":
+		return ec.fieldContext_SimilarRoute_route_type_basic_match(ctx, field)
+	case "trips":
+		return ec.fieldContext_SimilarRoute_trips(ctx, field)
+	case "other_trips":
+		return ec.fieldContext_SimilarRoute_other_trips(ctx, field)
+	case "matched_trips":
+		return ec.fieldContext_SimilarRoute_matched_trips(ctx, field)
+	case "relationship":
+		return ec.fieldContext_SimilarRoute_relationship(ctx, field)
+	case "stop_correspondences":
+		return ec.fieldContext_SimilarRoute_stop_correspondences(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type SimilarRoute", field.Name)
 }
 
 func (ec *executionContext) childFields_Step(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -20873,6 +21111,28 @@ func (ec *executionContext) field_Route_segments_args(ctx context.Context, rawAr
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
 		func(ctx context.Context, v any) (*model.SegmentFilter, error) {
 			return ec.unmarshalOSegmentFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSegmentFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Route_similar_routes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "where",
+		func(ctx context.Context, v any) (*model.SimilarRouteFilter, error) {
+			return ec.unmarshalOSimilarRouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSimilarRouteFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -44426,6 +44686,50 @@ func (ec *executionContext) fieldContext_Route_patterns(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Route_similar_routes(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Route_similar_routes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Route().SimilarRoutes(ctx, obj, fc.Args["limit"].(*int), fc.Args["where"].(*model.SimilarRouteFilter))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.SimilarRoute) graphql.Marshaler {
+			return ec.marshalOSimilarRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSimilarRouteᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Route_similar_routes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Route",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_SimilarRoute(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Route_similar_routes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Route_alerts(ctx context.Context, field graphql.CollectedField, obj *model.Route) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -45569,6 +45873,116 @@ func (ec *executionContext) _RouteStopBuffer_stop_convexhull(ctx context.Context
 }
 func (ec *executionContext) fieldContext_RouteStopBuffer_stop_convexhull(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RouteStopBuffer", field, false, false, errors.New("field of type Polygon does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopCorrespondence_stop(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopCorrespondence) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopCorrespondence_stop(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopCorrespondence().Stop(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+			return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopCorrespondence_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopCorrespondence",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RouteStopCorrespondence_other_stop(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopCorrespondence) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopCorrespondence_other_stop(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.RouteStopCorrespondence().OtherStop(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Stop) graphql.Marshaler {
+			return ec.marshalNStop2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStop(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopCorrespondence_other_stop(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RouteStopCorrespondence",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Stop(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RouteStopCorrespondence_matched_trips(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopCorrespondence) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopCorrespondence_matched_trips(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MatchedTrips, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopCorrespondence_matched_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopCorrespondence", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RouteStopCorrespondence_distance(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopCorrespondence) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RouteStopCorrespondence_distance(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Distance, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RouteStopCorrespondence_distance(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RouteStopCorrespondence", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
 func (ec *executionContext) _RouteStopPattern_stop_pattern_id(ctx context.Context, field graphql.CollectedField, obj *model.RouteStopPattern) (ret graphql.Marshaler) {
@@ -46756,6 +47170,208 @@ func (ec *executionContext) fieldContext_Shape_trips(ctx context.Context, field 
 	if fc.Args, err = ec.field_Shape_trips_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarRoute_route(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_route(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.SimilarRoute().Route(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Route) graphql.Marshaler {
+			return ec.marshalNRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRoute(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_route(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarRoute",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Route(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SimilarRoute_same_onestop_id(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_same_onestop_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SameOnestopID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_same_onestop_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_route_type_basic_match(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_route_type_basic_match(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RouteTypeBasicMatch, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_route_type_basic_match(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_trips(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_trips(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Trips, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_other_trips(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_other_trips(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OtherTrips, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_other_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_matched_trips(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_matched_trips(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MatchedTrips, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_matched_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_relationship(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_relationship(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Relationship, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteTripRelationship) graphql.Marshaler {
+			return ec.marshalORouteTripRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteTripRelationship(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_relationship(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type RouteTripRelationship does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_stop_correspondences(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_stop_correspondences(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StopCorrespondences, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.RouteStopCorrespondence) graphql.Marshaler {
+			return ec.marshalORouteStopCorrespondence2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopCorrespondenceᚄ(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_stop_correspondences(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SimilarRoute",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RouteStopCorrespondence(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -57255,6 +57871,57 @@ func (ec *executionContext) unmarshalInputShapeFilter(ctx context.Context, obj a
 				return it, err
 			}
 			it.RouteType = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSimilarRouteFilter(ctx context.Context, obj any) (model.SimilarRouteFilter, error) {
+	var it model.SimilarRouteFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"service_dates", "relative_date", "days", "other_feeds_only"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "service_dates":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("service_dates"))
+			data, err := ec.unmarshalODate2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐDateᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServiceDates = data
+		case "relative_date":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relative_date"))
+			data, err := ec.unmarshalORelativeDate2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRelativeDate(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RelativeDate = data
+		case "days":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("days"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Days = data
+		case "other_feeds_only":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("other_feeds_only"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OtherFeedsOnly = data
 		}
 	}
 	return it, nil
@@ -69802,6 +70469,39 @@ func (ec *executionContext) _Route(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "similar_routes":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Route_similar_routes(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "alerts":
 			field := field
 
@@ -70583,6 +71283,122 @@ func (ec *executionContext) _RouteStopBuffer(ctx context.Context, sel ast.Select
 			out.Values[i] = ec._RouteStopBuffer_stop_points(ctx, field, obj)
 		case "stop_convexhull":
 			out.Values[i] = ec._RouteStopBuffer_stop_convexhull(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var routeStopCorrespondenceImplementors = []string{"RouteStopCorrespondence"}
+
+func (ec *executionContext) _RouteStopCorrespondence(ctx context.Context, sel ast.SelectionSet, obj *model.RouteStopCorrespondence) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, routeStopCorrespondenceImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RouteStopCorrespondence")
+		case "stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopCorrespondence_stop(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "other_stop":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RouteStopCorrespondence_other_stop(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "matched_trips":
+			out.Values[i] = ec._RouteStopCorrespondence_matched_trips(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "distance":
+			out.Values[i] = ec._RouteStopCorrespondence_distance(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -71569,6 +72385,96 @@ func (ec *executionContext) _Shape(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var similarRouteImplementors = []string{"SimilarRoute"}
+
+func (ec *executionContext) _SimilarRoute(ctx context.Context, sel ast.SelectionSet, obj *model.SimilarRoute) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, similarRouteImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SimilarRoute")
+		case "route":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SimilarRoute_route(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "same_onestop_id":
+			out.Values[i] = ec._SimilarRoute_same_onestop_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "route_type_basic_match":
+			out.Values[i] = ec._SimilarRoute_route_type_basic_match(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "trips":
+			out.Values[i] = ec._SimilarRoute_trips(ctx, field, obj)
+		case "other_trips":
+			out.Values[i] = ec._SimilarRoute_other_trips(ctx, field, obj)
+		case "matched_trips":
+			out.Values[i] = ec._SimilarRoute_matched_trips(ctx, field, obj)
+		case "relationship":
+			out.Values[i] = ec._SimilarRoute_relationship(ctx, field, obj)
+		case "stop_correspondences":
+			out.Values[i] = ec._SimilarRoute_stop_correspondences(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -77401,6 +78307,16 @@ func (ec *executionContext) marshalNRouteStopBuffer2ᚖgithubᚗcomᚋinterline�
 	return ec._RouteStopBuffer(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRouteStopCorrespondence2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopCorrespondence(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopCorrespondence) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RouteStopCorrespondence(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNRouteStopPattern2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPattern(ctx context.Context, sel ast.SelectionSet, v *model.RouteStopPattern) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -77567,6 +78483,16 @@ func (ec *executionContext) marshalNShape2ᚖgithubᚗcomᚋinterlineᚑioᚋtra
 		return graphql.Null
 	}
 	return ec._Shape(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSimilarRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSimilarRoute(ctx context.Context, sel ast.SelectionSet, v *model.SimilarRoute) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SimilarRoute(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNStep2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStep(ctx context.Context, sel ast.SelectionSet, v *model.Step) graphql.Marshaler {
@@ -80024,6 +80950,25 @@ func (ec *executionContext) unmarshalORouteLocationFilter2ᚖgithubᚗcomᚋinte
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalORouteStopCorrespondence2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopCorrespondenceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteStopCorrespondence) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRouteStopCorrespondence2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopCorrespondence(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalORouteStopPattern2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteStopPatternᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RouteStopPattern) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -80056,6 +81001,22 @@ func (ec *executionContext) marshalORouteStopPatternTimetable2ᚖgithubᚗcomᚋ
 		return graphql.Null
 	}
 	return ec._RouteStopPatternTimetable(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalORouteTripRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteTripRelationship(ctx context.Context, v any) (*model.RouteTripRelationship, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.RouteTripRelationship)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalORouteTripRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteTripRelationship(ctx context.Context, sel ast.SelectionSet, v *model.RouteTripRelationship) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOScheduleRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐScheduleRelationship(ctx context.Context, v any) (*model.ScheduleRelationship, error) {
@@ -80229,6 +81190,33 @@ func (ec *executionContext) unmarshalOShapeFilter2ᚖgithubᚗcomᚋinterlineᚑ
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputShapeFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOSimilarRoute2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSimilarRouteᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SimilarRoute) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNSimilarRoute2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSimilarRoute(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOSimilarRouteFilter2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐSimilarRouteFilter(ctx context.Context, v any) (*model.SimilarRouteFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputSimilarRouteFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

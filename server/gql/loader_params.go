@@ -250,6 +250,12 @@ type censusSourceTableLoaderParam struct {
 	Where    *model.CensusTableFilter
 }
 
+type similarRouteLoaderParam struct {
+	RouteID int
+	Limit   *int
+	Where   *model.SimilarRouteFilter
+}
+
 type routeStopPatternLoaderParam struct {
 	FeedVersionID int
 	RouteID       int

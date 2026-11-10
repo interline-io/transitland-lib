@@ -31,6 +31,10 @@ const (
 	// pathways, transfers or translations; clients can fetch each of these
 	// tables in one request.
 	RESOLVER_GTFS_TABLE_MAXLIMIT = 100_000
+	// Route.similar_routes compares each candidate's trips, so it returns few
+	// candidates and compares at most a week of dates.
+	RESOLVER_SIMILAR_ROUTE_MAXLIMIT = 20
+	RESOLVER_SIMILAR_ROUTE_MAXDATES = 7
 )
 
 // RESOLVER_MAXLIMIT is the API limit maximum
@@ -201,6 +205,16 @@ func (r *Resolver) RouteRepresentativeShape() gqlout.RouteRepresentativeShapeRes
 // RouteStopPattern .
 func (r *Resolver) RouteStopPattern() gqlout.RouteStopPatternResolver {
 	return &routePatternResolver{r}
+}
+
+// SimilarRoute .
+func (r *Resolver) SimilarRoute() gqlout.SimilarRouteResolver {
+	return &similarRouteResolver{r}
+}
+
+// RouteStopCorrespondence .
+func (r *Resolver) RouteStopCorrespondence() gqlout.RouteStopCorrespondenceResolver {
+	return &routeStopCorrespondenceResolver{r}
 }
 
 // RouteStopPatternTimetable .
