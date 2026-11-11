@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/testdata"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,13 +63,69 @@ func TestGbfsFetch(t *testing.T) {
 	opts := Options{}
 	opts.FeedURL = fmt.Sprintf("%s/%s", ts.URL, "gbfs.json")
 	opts.AllowHTTPFetchUnfiltered = true
-	feeds, _, err := Fetch(context.Background(), nil, opts)
+	feed, _, err := Fetch(context.Background(), nil, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fids := []string{}
-	for _, ent := range feeds {
-		fids = append(fids, ent.SystemInformation.Name.Val)
+	if assert.NotNil(t, feed) {
+		assert.Equal(t, "Bay Wheels", feed.SystemInformation.Name.Val)
 	}
-	assert.ElementsMatch(t, []string{"Bay Wheels"}, fids)
+}
+
+// A feed publishes the same system once per language, and one is fetched: the
+// first in order whose files load, whatever order discovery's map comes back in.
+func TestFetch_FirstLanguage(t *testing.T) {
+	files := httptest.NewServer(NewTestGbfsServer("en", testdata.Path("server/gbfs")))
+	defer files.Close()
+	resp, err := http.Get(files.URL + "/gbfs.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var listed SystemFile
+	if err := json.NewDecoder(resp.Body).Decode(&listed); err != nil {
+		t.Fatal(err)
+	}
+
+	// Every language lists the test system's files, with a system_information
+	// of its own naming the language. "ca" sorts first but has none, so it is
+	// passed over.
+	mux := http.NewServeMux()
+	discovery := httptest.NewServer(mux)
+	defer discovery.Close()
+	sf := SystemFile{Data: map[string]*SystemFeeds{}}
+	for _, lang := range []string{"nl", "de", "fr", "it", "es", "pt", "ja", "zh", "ko", "sv", "da", "ca"} {
+		feeds := &SystemFeeds{}
+		for _, f := range listed.Data["en"].Feeds {
+			url := f.URL
+			if f.Name.Val == "system_information" {
+				url = tt.NewString(discovery.URL + "/" + lang + "/system_information.json")
+			}
+			feeds.Feeds = append(feeds.Feeds, &SystemFeed{Name: f.Name, URL: url})
+		}
+		sf.Data[lang] = feeds
+		if lang == "ca" {
+			continue
+		}
+		mux.HandleFunc("/"+lang+"/system_information.json", func(w http.ResponseWriter, r *http.Request) {
+			json.NewEncoder(w).Encode(SystemInformationFile{Data: &SystemInformation{Language: tt.NewString(lang)}})
+		})
+	}
+	mux.HandleFunc("/gbfs.json", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(sf)
+	})
+
+	opts := Options{}
+	opts.FeedURL = discovery.URL + "/gbfs.json"
+	opts.AllowHTTPFetchUnfiltered = true
+	// Map order varies between fetches, so a choice that follows it shows up.
+	for range 3 {
+		feed, _, err := Fetch(context.Background(), nil, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if assert.NotNil(t, feed) {
+			assert.Equal(t, "da", feed.SystemInformation.Language.Val)
+		}
+	}
 }
