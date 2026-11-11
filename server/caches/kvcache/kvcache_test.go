@@ -541,6 +541,45 @@ func TestCache_RecheckConvergence(t *testing.T) {
 	assert.Equal(t, "v2", v)
 }
 
+func TestCache_Sync(t *testing.T) {
+	// Sync is the scan for one key: it adopts another process's newer write,
+	// and never replaces a local copy with an older one.
+	ctx := context.Background()
+	clockA, clockB := newTestClock(), newTestClock()
+	store := &recordingStore{Store: kvcache.NewMemoryStore()}
+	a := kvcache.NewCache[string, string](store, "topic")
+	a.Clock = clockA.Now
+	b := kvcache.NewCache[string, string](store, "topic")
+	b.Clock = clockB.Now
+
+	assert.NoError(t, a.SetTTL(ctx, "k", "v1", 5*time.Minute, 24*time.Hour))
+	v, _ := b.Get(ctx, "k")
+	assert.Equal(t, "v1", v)
+
+	clockA.Advance(10 * time.Minute)
+	clockB.Advance(10 * time.Minute)
+	assert.NoError(t, a.SetTTL(ctx, "k", "v2", 5*time.Minute, 24*time.Hour))
+	v, _ = b.Get(ctx, "k")
+	assert.Equal(t, "v1", v, "a plain Get serves the local copy")
+
+	b.Sync(ctx, "k")
+	v, _ = b.Get(ctx, "k")
+	assert.Equal(t, "v2", v, "the adopted value is what later reads see")
+
+	// B writes v3 locally, then the shared tier goes back to an older envelope.
+	clockB.Advance(10 * time.Minute)
+	assert.NoError(t, b.SetTTL(ctx, "k", "v3", 5*time.Minute, 24*time.Hour))
+	assert.NoError(t, a.SetTTL(ctx, "k", "old", 5*time.Minute, 24*time.Hour))
+	b.Sync(ctx, "k")
+	v, _ = b.Get(ctx, "k")
+	assert.Equal(t, "v3", v, "an older shared envelope does not replace a newer local one")
+
+	// A key the shared tier does not have is left as it is.
+	b.Sync(ctx, "absent")
+	assert.False(t, b.Contains("absent"))
+	assert.Equal(t, 0, store.getMultiCount(), "one key is one read, not a scan")
+}
+
 func TestCache_ExpiredEntryPrunedOnMiss(t *testing.T) {
 	// An expired local entry whose key no longer resolves anywhere is
 	// removed on read rather than retained until a scan.
