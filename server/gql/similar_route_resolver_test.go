@@ -38,6 +38,12 @@ const (
 // trips keep the source's calendars, shapes and stops, and point at the copies
 // of their journey patterns' base trips.
 func cloneSimilarRoute(t *testing.T, db sqlx.Ext, srcID, targetFv int, prefix string, shift int, half bool) int {
+	return cloneSimilarRouteDirection(t, db, srcID, targetFv, prefix, shift, half, -1)
+}
+
+// cloneSimilarRouteDirection is cloneSimilarRoute for the trips of one
+// direction, or all with a negative direction.
+func cloneSimilarRouteDirection(t *testing.T, db sqlx.Ext, srcID, targetFv int, prefix string, shift int, half bool, direction int) int {
 	t.Helper()
 	var agencyID, newID int
 	require.NoError(t, sqlx.Get(db, &agencyID, `select id from gtfs_agencies where feed_version_id = $1 order by id limit 1`, targetFv))
@@ -57,9 +63,9 @@ func cloneSimilarRoute(t *testing.T, db sqlx.Ext, srcID, targetFv int, prefix st
 		insert into gtfs_trips (trip_id, trip_headsign, trip_short_name, direction_id, block_id, wheelchair_accessible, bikes_allowed, feed_version_id, route_id, shape_id, stop_pattern_id, service_id, journey_pattern_id, journey_pattern_offset, safe_duration_factor, safe_duration_offset, cars_allowed)
 		select $1 || trip_id, trip_headsign, trip_short_name, direction_id, block_id, wheelchair_accessible, bikes_allowed, $2, $3, shape_id, stop_pattern_id, service_id, $1 || journey_pattern_id, journey_pattern_offset, safe_duration_factor, safe_duration_offset, cars_allowed
 		from gtfs_trips src
-		where route_id = $4 and (not $5 or id % 2 = 0 or exists (
+		where route_id = $4 and ($6 < 0 or direction_id = $6) and (not $5 or id % 2 = 0 or exists (
 			select 1 from gtfs_trips t where t.route_id = $4 and t.id % 2 = 0 and t.journey_pattern_id = src.trip_id
-		))`, prefix, targetFv, newID, srcID, half)
+		))`, prefix, targetFv, newID, srcID, half, direction)
 	require.NoError(t, err)
 	_, err = db.Exec(`
 		insert into gtfs_stop_times (feed_version_id, trip_id, stop_id, arrival_time, departure_time, stop_sequence, shape_dist_traveled, pickup_type, drop_off_type, timepoint, interpolated, stop_headsign)
@@ -264,6 +270,61 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 			require.NoError(t, err)
 			assert.Empty(t, got[0], "expected no candidates from a private feed")
 		})
+	})
+}
+
+func TestSimilarRoutesSplitRows(t *testing.T) {
+	// A feed that splits the route into one row per direction, as feeds split
+	// a line by branch: neither row covers the route, but the two together do.
+	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
+		ctx := model.WithConfig(context.Background(), cfg)
+		db := cfg.Adapter.DBX()
+		var srcID, baFv int
+		require.NoError(t, sqlx.Get(db, &srcID, `select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) where route_id = $1`, similarRouteSource))
+		require.NoError(t, sqlx.Get(db, &baFv, `select feed_states.feed_version_id from feed_states join current_feeds on current_feeds.id = feed_states.feed_id where current_feeds.onestop_id = 'BA'`))
+		// BART's agency, like Caltrain's, runs on Los Angeles time.
+		dir0 := cloneSimilarRouteDirection(t, db, srcID, baFv, "similar-dir0-", 0, false, 0)
+		dir1 := cloneSimilarRouteDirection(t, db, srcID, baFv, "similar-dir1-", 0, false, 1)
+		filter := &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}
+
+		got, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, filter, []int{srcID})
+		require.NoError(t, err)
+		rows := map[int]*model.SimilarRoute{}
+		for _, sr := range got[0] {
+			rows[sr.OtherRouteID] = sr
+		}
+		require.Contains(t, rows, dir0)
+		require.Contains(t, rows, dir1)
+		a, b := rows[dir0], rows[dir1]
+		require.Greater(t, *a.OtherTrips, 0)
+		require.Greater(t, *b.OtherTrips, 0)
+		// Each row alone: its trips run in the route, which runs more.
+		assert.Equal(t, model.RouteTripRelationshipSuperset, *a.Relationship)
+		assert.Equal(t, model.RouteTripRelationshipSuperset, *b.Relationship)
+		// Both rows together are the route, and each row reports it.
+		for _, sr := range []*model.SimilarRoute{a, b} {
+			assert.Equal(t, *a.OtherTrips+*b.OtherTrips, *sr.FeedTrips)
+			assert.Equal(t, *sr.Trips, *sr.FeedTrips)
+			assert.Equal(t, *sr.Trips, *sr.FeedMatchedTrips)
+			assert.Equal(t, model.RouteTripRelationshipSameTrips, *sr.FeedRelationship)
+		}
+
+		// From a row's side, the other feed has one row, so the feed fields
+		// agree with the pair's.
+		back, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, filter, []int{dir0})
+		require.NoError(t, err)
+		require.Len(t, back[0], 1)
+		assert.Equal(t, model.RouteTripRelationshipSubset, *back[0][0].Relationship)
+		assert.Equal(t, model.RouteTripRelationshipSubset, *back[0][0].FeedRelationship)
+		assert.Equal(t, *back[0][0].MatchedTrips, *back[0][0].FeedMatchedTrips)
+
+		// Without dates the feed fields are null, like the others.
+		none, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, nil, []int{srcID})
+		require.NoError(t, err)
+		for _, sr := range none[0] {
+			assert.Nil(t, sr.FeedTrips)
+			assert.Nil(t, sr.FeedRelationship)
+		}
 	})
 }
 

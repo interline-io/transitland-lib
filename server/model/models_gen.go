@@ -1395,6 +1395,12 @@ type SimilarRoute struct {
 	MatchedTrips *int `json:"matched_trips,omitempty"`
 	// How the two routes' trips compare on the compared dates
 	Relationship *RouteTripRelationship `json:"relationship,omitempty"`
+	// Trips that all of the candidate feed's similar routes run on the compared dates, together. A feed can split one route into several rows, such as one per branch, which no single row covers; the `feed_` fields compare the route this was found from with all of that feed's rows at once, and are the same on each of them
+	FeedTrips *int `json:"feed_trips,omitempty"`
+	// Trips of the route it was found from that are matched one to one with the trips of all of the candidate feed's similar routes, together
+	FeedMatchedTrips *int `json:"feed_matched_trips,omitempty"`
+	// How the trips of the route it was found from compare with those of all of the candidate feed's similar routes, together
+	FeedRelationship *RouteTripRelationship `json:"feed_relationship,omitempty"`
 	// Stops that the two routes' matched trips use at the same place, with how many matched trips use each pair, most first. Null without compared dates
 	StopCorrespondences []*RouteStopCorrespondence `json:"stop_correspondences,omitempty"`
 	OtherRouteID        int                        `json:"-"`

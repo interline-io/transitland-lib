@@ -1377,6 +1377,9 @@ type ComplexityRoot struct {
 	}
 
 	SimilarRoute struct {
+		FeedMatchedTrips    func(childComplexity int) int
+		FeedRelationship    func(childComplexity int) int
+		FeedTrips           func(childComplexity int) int
 		MatchedTrips        func(childComplexity int) int
 		OtherTrips          func(childComplexity int) int
 		Relationship        func(childComplexity int) int
@@ -8444,6 +8447,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Shape.Trips(childComplexity, args["limit"].(*int), args["where"].(*model.TripFilter)), true
 
+	case "SimilarRoute.feed_matched_trips":
+		if e.ComplexityRoot.SimilarRoute.FeedMatchedTrips == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.FeedMatchedTrips(childComplexity), true
+	case "SimilarRoute.feed_relationship":
+		if e.ComplexityRoot.SimilarRoute.FeedRelationship == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.FeedRelationship(childComplexity), true
+	case "SimilarRoute.feed_trips":
+		if e.ComplexityRoot.SimilarRoute.FeedTrips == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SimilarRoute.FeedTrips(childComplexity), true
 	case "SimilarRoute.matched_trips":
 		if e.ComplexityRoot.SimilarRoute.MatchedTrips == nil {
 			break
@@ -13873,6 +13894,15 @@ type SimilarRoute {
   "How the two routes' trips compare on the compared dates"
   relationship: RouteTripRelationship
 
+  "Trips that all of the candidate feed's similar routes run on the compared dates, together. A feed can split one route into several rows, such as one per branch, which no single row covers; the ` + "`" + `feed_` + "`" + ` fields compare the route this was found from with all of that feed's rows at once, and are the same on each of them"
+  feed_trips: Int
+
+  "Trips of the route it was found from that are matched one to one with the trips of all of the candidate feed's similar routes, together"
+  feed_matched_trips: Int
+
+  "How the trips of the route it was found from compare with those of all of the candidate feed's similar routes, together"
+  feed_relationship: RouteTripRelationship
+
   "Stops that the two routes' matched trips use at the same place, with how many matched trips use each pair, most first. Null without compared dates"
   stop_correspondences: [RouteStopCorrespondence!]
 }
@@ -18055,6 +18085,12 @@ func (ec *executionContext) childFields_SimilarRoute(ctx context.Context, field 
 		return ec.fieldContext_SimilarRoute_matched_trips(ctx, field)
 	case "relationship":
 		return ec.fieldContext_SimilarRoute_relationship(ctx, field)
+	case "feed_trips":
+		return ec.fieldContext_SimilarRoute_feed_trips(ctx, field)
+	case "feed_matched_trips":
+		return ec.fieldContext_SimilarRoute_feed_matched_trips(ctx, field)
+	case "feed_relationship":
+		return ec.fieldContext_SimilarRoute_feed_relationship(ctx, field)
 	case "stop_correspondences":
 		return ec.fieldContext_SimilarRoute_stop_correspondences(ctx, field)
 	}
@@ -47344,6 +47380,75 @@ func (ec *executionContext) fieldContext_SimilarRoute_relationship(_ context.Con
 	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type RouteTripRelationship does not have child fields"))
 }
 
+func (ec *executionContext) _SimilarRoute_feed_trips(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_feed_trips(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedTrips, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_feed_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_feed_matched_trips(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_feed_matched_trips(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedMatchedTrips, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_feed_matched_trips(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SimilarRoute_feed_relationship(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SimilarRoute_feed_relationship(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FeedRelationship, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RouteTripRelationship) graphql.Marshaler {
+			return ec.marshalORouteTripRelationship2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐRouteTripRelationship(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_SimilarRoute_feed_relationship(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SimilarRoute", field, false, false, errors.New("field of type RouteTripRelationship does not have child fields"))
+}
+
 func (ec *executionContext) _SimilarRoute_stop_correspondences(ctx context.Context, field graphql.CollectedField, obj *model.SimilarRoute) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -72473,6 +72578,12 @@ func (ec *executionContext) _SimilarRoute(ctx context.Context, sel ast.Selection
 			out.Values[i] = ec._SimilarRoute_matched_trips(ctx, field, obj)
 		case "relationship":
 			out.Values[i] = ec._SimilarRoute_relationship(ctx, field, obj)
+		case "feed_trips":
+			out.Values[i] = ec._SimilarRoute_feed_trips(ctx, field, obj)
+		case "feed_matched_trips":
+			out.Values[i] = ec._SimilarRoute_feed_matched_trips(ctx, field, obj)
+		case "feed_relationship":
+			out.Values[i] = ec._SimilarRoute_feed_relationship(ctx, field, obj)
 		case "stop_correspondences":
 			out.Values[i] = ec._SimilarRoute_stop_correspondences(ctx, field, obj)
 		default:

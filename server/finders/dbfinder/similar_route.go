@@ -124,6 +124,34 @@ func (f *Finder) SimilarRoutesByRouteIDs(ctx context.Context, limit *int, where 
 		if j == nil {
 			continue
 		}
+		// The route against all of each candidate feed's rows together, since a
+		// feed can split one route into rows that no single one covers.
+		type feedCompare struct {
+			trips, matched int
+			rel            model.RouteTripRelationship
+		}
+		byFeed := map[string]*feedCompare{}
+		if j.dates != nil {
+			feedRoutes := map[string][]int{}
+			for _, c := range j.cands {
+				feedRoutes[c.FeedOnestopID] = append(feedRoutes[c.FeedOnestopID], c.ID)
+			}
+			a, aPartner := onDays(j.src.ID, j.dates), onDays(j.src.ID, j.partner)
+			for feed, ids := range feedRoutes {
+				var b, bPartner []routematch.TripStart
+				for _, id := range ids {
+					b = append(b, onDays(id, j.dates)...)
+					bPartner = append(bPartner, onDays(id, j.partner)...)
+				}
+				matched := len(routematch.MatchTrips(a, bPartner, opt))
+				otherMatched := len(routematch.MatchTrips(b, aPartner, opt))
+				byFeed[feed] = &feedCompare{
+					trips:   len(b),
+					matched: matched,
+					rel:     model.RouteTripRelationship(routematch.Relate(len(a), len(b), matched, otherMatched, opt)),
+				}
+			}
+		}
 		var out []*model.SimilarRoute
 		for _, c := range j.cands {
 			sr := &model.SimilarRoute{
@@ -137,6 +165,10 @@ func (f *Finder) SimilarRoutesByRouteIDs(ctx context.Context, limit *int, where 
 				otherMatched := len(routematch.MatchTrips(b, onDays(j.src.ID, j.partner), opt))
 				rel := model.RouteTripRelationship(routematch.Relate(len(a), len(b), len(pairs), otherMatched, opt))
 				sr.Trips, sr.OtherTrips, sr.MatchedTrips, sr.Relationship = ptr(len(a)), ptr(len(b)), ptr(len(pairs)), &rel
+				if fc := byFeed[c.FeedOnestopID]; fc != nil {
+					feedRel := fc.rel
+					sr.FeedTrips, sr.FeedMatchedTrips, sr.FeedRelationship = ptr(fc.trips), ptr(fc.matched), &feedRel
+				}
 				for _, p := range pairs {
 					usedPatterns[p.A.PatternKey] = true
 					usedPatterns[p.B.PatternKey] = true
