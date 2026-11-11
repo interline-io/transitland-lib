@@ -479,8 +479,8 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		SimilarRoutesByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.SimilarRoutesByRouteIDs,
-			func(p similarRouteLoaderParam) (int, *model.SimilarRouteFilter, *int) {
-				return p.RouteID, p.Where, p.Limit
+			func(p similarRouteLoaderParam) (int, model.SimilarRouteQuery, *int) {
+				return p.RouteID, model.SimilarRouteQuery{Where: p.Where, StopCorrespondences: p.StopCorrespondences}, p.Limit
 			},
 		),
 		RouteStopsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,

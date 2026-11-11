@@ -379,7 +379,7 @@ func (UnimplementedFinder) RoutesByIDs(_ context.Context, ids []int) ([]*Route, 
 func (UnimplementedFinder) RouteStopPatternsByRouteIDs(context.Context, *int, *RouteStopPatternFilter, []FVPair) ([][]*RouteStopPattern, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) SimilarRoutesByRouteIDs(context.Context, *int, *SimilarRouteFilter, []int) ([][]*SimilarRoute, error) {
+func (UnimplementedFinder) SimilarRoutesByRouteIDs(context.Context, *int, SimilarRouteQuery, []int) ([][]*SimilarRoute, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) RouteStopsByRouteIDs(context.Context, *int, []int) ([][]*RouteStop, error) {

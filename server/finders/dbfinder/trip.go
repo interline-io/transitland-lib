@@ -108,24 +108,20 @@ func frequencySelect(limit *int, after *model.Cursor, permFilter *model.PermFilt
 	return q.OrderBy("gtfs_frequencies.id ASC").Limit(finderCheckLimit(limit))
 }
 
-// Restrict a query over gtfs_trips to the trips running on a service date.
-//
-// The join is inner, so a trip whose calendar does not cover the date drops out.
-// LIMIT 1 keeps a service with several calendar_dates rows from multiplying the
-// trip, which is what makes the result safe to aggregate over.
-func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilder {
-	sd := serviceDate.Val
-	return q.JoinClause(`
-	join lateral (
-		select gc.id
-		from gtfs_calendars gc
-		left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = ?::date
-		left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = ?::date
-		where
-			gc.id = gtfs_trips.service_id
-			AND ((
-				gc.start_date <= ?::date AND gc.end_date >= ?::date
-				AND (CASE EXTRACT(isodow FROM ?::date)
+// calendarRunsOn returns the joins and the condition for service gc running on
+// the date the SQL expression date gives: in its calendar's range on one of its
+// weekdays, or added by calendar_dates, and not removed by them. The joins go
+// after gtfs_calendars gc and the condition in the WHERE clause, so a date bound
+// as a parameter is bound five times: twice in the joins, then three times in
+// the condition.
+func calendarRunsOn(date string) (joins string, cond string) {
+	r := strings.NewReplacer("{date}", date)
+	joins = r.Replace(`
+		left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = {date}
+		left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = {date}`)
+	cond = r.Replace(`((
+				gc.start_date <= {date} AND gc.end_date >= {date}
+				AND (CASE EXTRACT(isodow FROM {date})
 				WHEN 1 THEN monday = 1
 				WHEN 2 THEN tuesday = 1
 				WHEN 3 THEN wednesday = 1
@@ -135,41 +131,44 @@ func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilde
 				WHEN 7 THEN sunday = 1
 				END)
 			) OR gcda.date IS NOT NULL)
-			AND gcdb.date is null
+			AND gcdb.date is null`)
+	return joins, cond
+}
+
+// Restrict a query over gtfs_trips to the trips whose service runs on the date
+// the SQL expression date gives.
+//
+// The join is inner, so a trip whose calendar does not cover the date drops out.
+// LIMIT 1 keeps a service with several calendar_dates rows from multiplying the
+// trip, which is what makes the result safe to aggregate over.
+func calendarLateral(q sq.SelectBuilder, date string, args ...any) sq.SelectBuilder {
+	joins, cond := calendarRunsOn(date)
+	return q.JoinClause(`
+	join lateral (
+		select gc.id
+		from gtfs_calendars gc`+joins+`
+		where
+			gc.id = gtfs_trips.service_id
+			AND `+cond+`
 		LIMIT 1
 	) gc on true
-	`, sd, sd, sd, sd, sd)
+	`, args...)
+}
+
+// Restrict a query over gtfs_trips to the trips running on a service date.
+func serviceDateLateral(q sq.SelectBuilder, serviceDate tt.Date) sq.SelectBuilder {
+	sd := serviceDate.Val
+	return calendarLateral(q, "?::date", sd, sd, sd, sd, sd)
 }
 
 // Pair each trip of a query over gtfs_trips with each of the service dates it
 // runs on, as service_dates.service_date: serviceDateLateral for a list of
 // dates in one query. A trip running on none of the dates drops out.
 func serviceDatesJoin(q sq.SelectBuilder, dates []string) sq.SelectBuilder {
-	return q.JoinClause(`cross join unnest(?::date[]) AS service_dates(service_date)`, dates).
-		JoinClause(`
-	join lateral (
-		select gc.id
-		from gtfs_calendars gc
-		left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = service_dates.service_date
-		left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = service_dates.service_date
-		where
-			gc.id = gtfs_trips.service_id
-			AND ((
-				gc.start_date <= service_dates.service_date AND gc.end_date >= service_dates.service_date
-				AND (CASE EXTRACT(isodow FROM service_dates.service_date)
-				WHEN 1 THEN monday = 1
-				WHEN 2 THEN tuesday = 1
-				WHEN 3 THEN wednesday = 1
-				WHEN 4 THEN thursday = 1
-				WHEN 5 THEN friday = 1
-				WHEN 6 THEN saturday = 1
-				WHEN 7 THEN sunday = 1
-				END)
-			) OR gcda.date IS NOT NULL)
-			AND gcdb.date is null
-		LIMIT 1
-	) gc on true
-	`)
+	return calendarLateral(
+		q.JoinClause(`cross join unnest(?::date[]) AS service_dates(service_date)`, dates),
+		"service_dates.service_date",
+	)
 }
 
 // Record each trip's runs from the aggregated service_dates column, which holds
@@ -379,26 +378,13 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 			for _, d := range tripDates {
 				dates = append(dates, d.Query.Format("2006-01-02"))
 			}
+			joins, cond := calendarRunsOn("d.day")
 			q = q.Column("svc.service_dates_agg").JoinClause(`
 			join lateral (
 				select string_agg(to_char(d.day, 'YYYY-MM-DD'), ',' order by d.day) as service_dates_agg
 				from unnest(string_to_array(?, ',')::date[]) as d(day)
-				join gtfs_calendars gc on gc.id = gtfs_trips.service_id
-				left join gtfs_calendar_dates gcda on gcda.service_id = gc.id and gcda.exception_type = 1 and gcda.date = d.day
-				left join gtfs_calendar_dates gcdb on gcdb.service_id = gc.id and gcdb.exception_type = 2 and gcdb.date = d.day
-				where ((
-						gc.start_date <= d.day AND gc.end_date >= d.day
-						AND (CASE EXTRACT(isodow FROM d.day)
-						WHEN 1 THEN monday = 1
-						WHEN 2 THEN tuesday = 1
-						WHEN 3 THEN wednesday = 1
-						WHEN 4 THEN thursday = 1
-						WHEN 5 THEN friday = 1
-						WHEN 6 THEN saturday = 1
-						WHEN 7 THEN sunday = 1
-						END)
-					) OR gcda.date IS NOT NULL)
-					AND gcdb.date is null
+				join gtfs_calendars gc on gc.id = gtfs_trips.service_id`+joins+`
+				where `+cond+`
 			) svc on true
 			`, strings.Join(dates, ",")).Where("svc.service_dates_agg is not null")
 		}

@@ -85,6 +85,41 @@ func CivilDate(t time.Time) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
+// SimilarRouteDates returns the dates Route.similar_routes compares trips on:
+// the filter's service dates as given, or its relative date counted from
+// nowLocal and the days after it, one by default. Neither moves into a fallback
+// week. Nil when the filter gives no dates, or its relative date does not
+// resolve.
+func SimilarRouteDates(where *SimilarRouteFilter, nowLocal time.Time) []time.Time {
+	if where == nil {
+		return nil
+	}
+	var ret []time.Time
+	if len(where.ServiceDates) > 0 {
+		for _, d := range where.ServiceDates {
+			if d != nil && d.Valid {
+				ret = append(ret, CivilDate(d.Val))
+			}
+		}
+		return ret
+	}
+	if where.RelativeDate == nil {
+		return nil
+	}
+	start, err := ResolveRelativeDate(*where.RelativeDate, nowLocal)
+	if err != nil {
+		return nil
+	}
+	days := 1
+	if where.Days != nil {
+		days = *where.Days
+	}
+	for i := 0; i < days; i++ {
+		ret = append(ret, CivilDate(start.AddDate(0, 0, i)))
+	}
+	return ret
+}
+
 // ResolveServiceDate resolves a filter's date inputs into the service date to
 // match, and the requested date before any relocation.
 //

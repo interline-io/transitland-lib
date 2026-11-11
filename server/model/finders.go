@@ -23,6 +23,13 @@ type FVEntityID struct {
 	EntityID      string
 }
 
+// SimilarRouteQuery is a similar_routes lookup: its filter, and whether to pair
+// stops, which only the stop_correspondences field reads.
+type SimilarRouteQuery struct {
+	Where               *SimilarRouteFilter
+	StopCorrespondences bool
+}
+
 // Finder provides all necessary database methods
 type Finder interface {
 	PermFinder
@@ -145,7 +152,7 @@ type EntityLoader interface {
 	RoutesByIDs(context.Context, []int) ([]*Route, []error)
 	RouteStopPatternsByRouteIDs(context.Context, *int, *RouteStopPatternFilter, []FVPair) ([][]*RouteStopPattern, error)
 	RouteStopsByRouteIDs(context.Context, *int, []int) ([][]*RouteStop, error)
-	SimilarRoutesByRouteIDs(context.Context, *int, *SimilarRouteFilter, []int) ([][]*SimilarRoute, error)
+	SimilarRoutesByRouteIDs(context.Context, *int, SimilarRouteQuery, []int) ([][]*SimilarRoute, error)
 	RouteStopsByStopIDs(context.Context, *int, []int) ([][]*RouteStop, error)
 	RouteTypesByAgencyIDs(context.Context, []int) ([][]int, []error)
 	SegmentPatternsByRouteIDs(context.Context, *int, *SegmentPatternFilter, []int) ([][]*SegmentPattern, error)

@@ -8,6 +8,8 @@
 package routematch
 
 import (
+	"cmp"
+	"slices"
 	"sort"
 
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -88,8 +90,8 @@ func MatchTrips(a, b []TripStart, opt Options) []Pair {
 }
 
 func sortedByStart(ts []TripStart) []TripStart {
-	ret := append([]TripStart(nil), ts...)
-	sort.SliceStable(ret, func(i, j int) bool { return ret[i].Instant < ret[j].Instant })
+	ret := slices.Clone(ts)
+	slices.SortStableFunc(ret, func(x, y TripStart) int { return cmp.Compare(x.Instant, y.Instant) })
 	return ret
 }
 
@@ -134,6 +136,30 @@ func Relate(trips, otherTrips, matched, otherMatched int, opt Options) Relations
 	return Partial
 }
 
+// Comparison is how one set of trips compares with another.
+type Comparison struct {
+	Trips      int
+	OtherTrips int
+	// The first set's trips matched in the other, one pair each.
+	Pairs        []Pair
+	Relationship Relationship
+}
+
+// Compare matches each side's trips in the other's and says how the two relate.
+// a and b are each side's runs on the compared dates; aPartner and bPartner add
+// the days either side, which a run may match but which do not count as trips,
+// so a run past midnight on one side meets its copy written on the next date.
+func Compare(a, aPartner, b, bPartner []TripStart, opt Options) Comparison {
+	pairs := MatchTrips(a, bPartner, opt)
+	otherMatched := len(MatchTrips(b, aPartner, opt))
+	return Comparison{
+		Trips:        len(a),
+		OtherTrips:   len(b),
+		Pairs:        pairs,
+		Relationship: Relate(len(a), len(b), len(pairs), otherMatched, opt),
+	}
+}
+
 // PatternStop is a stop in a stop pattern, in order.
 type PatternStop struct {
 	StopID int
@@ -151,8 +177,8 @@ type Correspondence struct {
 
 // StopCorrespondences pairs the stops that matched trips use at the same place.
 // Pairs that follow the same two stop patterns are aligned once and counted for
-// each pair. patternsA and patternsB give each pattern's stops by PatternKey.
-func StopCorrespondences(pairs []Pair, patternsA, patternsB map[int][]PatternStop, opt Options) []Correspondence {
+// each pair. patterns gives each pattern's stops by PatternKey.
+func StopCorrespondences(pairs []Pair, patterns map[int][]PatternStop, opt Options) []Correspondence {
 	type patternPair struct{ a, b int }
 	counts := map[patternPair]int{}
 	for _, p := range pairs {
@@ -163,7 +189,7 @@ func StopCorrespondences(pairs []Pair, patternsA, patternsB map[int][]PatternSto
 	for pp, n := range counts {
 		// A loop can pair the same two stops twice; each trip counts once.
 		seen := map[stopPair]bool{}
-		for _, al := range alignPatterns(patternsA[pp.a], patternsB[pp.b], opt.CorrespondenceMaxMeters) {
+		for _, al := range alignPatterns(patterns[pp.a], patterns[pp.b], opt.CorrespondenceMaxMeters) {
 			key := stopPair{al.StopID, al.OtherStopID}
 			if seen[key] {
 				continue
@@ -245,8 +271,6 @@ func alignPatterns(a, b []PatternStop, maxMeters float64) []Correspondence {
 			j--
 		}
 	}
-	for l, r := 0, len(ret)-1; l < r; l, r = l+1, r-1 {
-		ret[l], ret[r] = ret[r], ret[l]
-	}
+	slices.Reverse(ret)
 	return ret
 }

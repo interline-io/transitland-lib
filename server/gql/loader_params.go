@@ -251,9 +251,10 @@ type censusSourceTableLoaderParam struct {
 }
 
 type similarRouteLoaderParam struct {
-	RouteID int
-	Limit   *int
-	Where   *model.SimilarRouteFilter
+	RouteID             int
+	Limit               *int
+	Where               *model.SimilarRouteFilter
+	StopCorrespondences bool
 }
 
 type routeStopPatternLoaderParam struct {

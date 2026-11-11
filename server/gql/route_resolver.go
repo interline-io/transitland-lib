@@ -180,10 +180,13 @@ func (r *routeResolver) SimilarRoutes(ctx context.Context, obj *model.Route, lim
 			return nil, fmt.Errorf("similar_routes: days must be 1 to %d", RESOLVER_SIMILAR_ROUTE_MAXDATES)
 		}
 	}
+	// Pairing stops loads every matched pattern's stops, so it runs only for a
+	// query that reads them.
 	return LoaderFor(ctx).SimilarRoutesByRouteIDs.Load(ctx, similarRouteLoaderParam{
-		RouteID: obj.ID,
-		Limit:   resolverCheckLimitDefault(limit, RESOLVER_SIMILAR_ROUTE_MAXLIMIT, RESOLVER_SIMILAR_ROUTE_MAXLIMIT),
-		Where:   where,
+		RouteID:             obj.ID,
+		Limit:               resolverCheckLimitDefault(limit, RESOLVER_SIMILAR_ROUTE_MAXLIMIT, RESOLVER_SIMILAR_ROUTE_MAXLIMIT),
+		Where:               where,
+		StopCorrespondences: containsField(ctx, "stop_correspondences"),
 	})()
 }
 

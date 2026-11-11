@@ -3,7 +3,6 @@ package gql
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
@@ -30,21 +29,32 @@ const (
 	similarRouteSource = "Bu-130"
 	// A Tuesday inside the Caltrain feed version's calendars.
 	similarRouteDate = "2018-06-05"
+	// New York's clock is three hours ahead of Los Angeles' on that date.
+	similarRouteTzShift = 3 * 3600
 )
 
-// cloneSimilarRoute copies the route into the target feed version under the
-// same Onestop ID, with its trips (every other one when half is set) and their
-// stop times shifted by shift seconds, and returns the copy's id. The copy's
-// trips keep the source's calendars, shapes and stops, and point at the copies
-// of their journey patterns' base trips.
-func cloneSimilarRoute(t *testing.T, db sqlx.Ext, srcID, targetFv int, prefix string, shift int, half bool) int {
-	return cloneSimilarRouteDirection(t, db, srcID, targetFv, prefix, shift, half, -1)
+// How cloneSimilarRoute copies a route.
+type similarRouteCopy struct {
+	// Prefixes the copy's route and trip ids.
+	prefix string
+	// Seconds added to every stop time.
+	shift int
+	// Copies every other trip only.
+	half bool
+	// Copies one direction's trips only.
+	direction *int
 }
 
-// cloneSimilarRouteDirection is cloneSimilarRoute for the trips of one
-// direction, or all with a negative direction.
-func cloneSimilarRouteDirection(t *testing.T, db sqlx.Ext, srcID, targetFv int, prefix string, shift int, half bool, direction int) int {
+// cloneSimilarRoute copies the route into the target feed version under the
+// same Onestop ID, with its trips and their stop times as c says, and returns
+// the copy's id. The copy's trips keep the source's calendars, shapes and stops,
+// and point at the copies of their journey patterns' base trips.
+func cloneSimilarRoute(t *testing.T, db sqlx.Ext, srcID, targetFv int, c similarRouteCopy) int {
 	t.Helper()
+	prefix, shift, half, direction := c.prefix, c.shift, c.half, -1
+	if c.direction != nil {
+		direction = *c.direction
+	}
 	var agencyID, newID int
 	require.NoError(t, sqlx.Get(db, &agencyID, `select id from gtfs_agencies where feed_version_id = $1 order by id limit 1`, targetFv))
 	require.NoError(t, sqlx.Get(db, &newID, `
@@ -83,31 +93,35 @@ type similarRouteFixture struct {
 	srcFv, haFv, haFeedID                          int
 }
 
-// The seconds New York's clock is ahead of Los Angeles' on the test date.
-func similarRouteTzShift(t *testing.T) int {
-	ny, err := time.LoadLocation("America/New_York")
-	require.NoError(t, err)
-	la, err := time.LoadLocation("America/Los_Angeles")
-	require.NoError(t, err)
-	noon := time.Date(2018, 6, 5, 19, 0, 0, 0, time.UTC)
-	_, offNY := noon.In(ny).Zone()
-	_, offLA := noon.In(la).Zone()
-	return offNY - offLA
+// The id of the route in its feed's active feed version.
+func activeRouteID(t *testing.T, db sqlx.Ext, routeID string) int {
+	t.Helper()
+	var id int
+	require.NoError(t, sqlx.Get(db, &id, `select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) where route_id = $1`, routeID))
+	return id
+}
+
+// The active feed version of the feed.
+func activeFeedVersionID(t *testing.T, db sqlx.Ext, feedOnestopID string) int {
+	t.Helper()
+	var id int
+	require.NoError(t, sqlx.Get(db, &id, `select feed_states.feed_version_id from feed_states join current_feeds on current_feeds.id = feed_states.feed_id where current_feeds.onestop_id = $1`, feedOnestopID))
+	return id
 }
 
 func makeSimilarRoutes(t *testing.T, cfg model.Config) similarRouteFixture {
 	t.Helper()
 	db := cfg.Adapter.DBX()
 	var fx similarRouteFixture
-	require.NoError(t, sqlx.Get(db, &fx.srcID, `select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) where route_id = $1`, similarRouteSource))
+	fx.srcID = activeRouteID(t, db, similarRouteSource)
 	require.NoError(t, sqlx.Get(db, &fx.srcFv, `select feed_version_id from gtfs_routes where id = $1`, fx.srcID))
-	require.NoError(t, sqlx.Get(db, &fx.haFv, `select feed_states.feed_version_id from feed_states join current_feeds on current_feeds.id = feed_states.feed_id where current_feeds.onestop_id = 'HA'`))
+	fx.haFv = activeFeedVersionID(t, db, "HA")
 	require.NoError(t, sqlx.Get(db, &fx.haFeedID, `select feed_id from feed_versions where id = $1`, fx.haFv))
-	tz := similarRouteTzShift(t)
-	fx.exactID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, "similar-exact-", tz, false)
-	fx.halfID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, "similar-half-", tz, true)
-	fx.shiftedID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, "similar-shifted-", tz+7*60, false)
-	fx.sameLocalID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, "similar-samelocal-", 0, false)
+	tz := similarRouteTzShift
+	fx.exactID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, similarRouteCopy{prefix: "similar-exact-", shift: tz})
+	fx.halfID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, similarRouteCopy{prefix: "similar-half-", shift: tz, half: true})
+	fx.shiftedID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, similarRouteCopy{prefix: "similar-shifted-", shift: tz + 7*60})
+	fx.sameLocalID = cloneSimilarRoute(t, db, fx.srcID, fx.haFv, similarRouteCopy{prefix: "similar-samelocal-"})
 	return fx
 }
 
@@ -117,25 +131,32 @@ func similarRouteDates(t *testing.T) []*tt.Date {
 	return []*tt.Date{&d}
 }
 
+// A finder query with stop correspondences, which the resolver asks for when
+// the query selects them.
+func similarQuery(where *model.SimilarRouteFilter) model.SimilarRouteQuery {
+	return model.SimilarRouteQuery{Where: where, StopCorrespondences: true}
+}
+
+// Candidates by their route id.
+func similarByOther(srs []*model.SimilarRoute) map[int]*model.SimilarRoute {
+	ret := map[int]*model.SimilarRoute{}
+	for _, sr := range srs {
+		ret[sr.OtherRouteID] = sr
+	}
+	return ret
+}
+
 func TestSimilarRoutesByRouteIDs(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
 		fx := makeSimilarRoutes(t, cfg)
 		f := cfg.Finder
 
-		byOther := func(srs []*model.SimilarRoute) map[int]*model.SimilarRoute {
-			ret := map[int]*model.SimilarRoute{}
-			for _, sr := range srs {
-				ret[sr.OtherRouteID] = sr
-			}
-			return ret
-		}
-
 		t.Run("candidates without dates", func(t *testing.T) {
-			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, nil, []int{fx.srcID})
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(nil), []int{fx.srcID})
 			require.NoError(t, err)
 			require.Len(t, got, 1)
-			cands := byOther(got[0])
+			cands := similarByOther(got[0])
 			assert.Len(t, cands, 4)
 			for _, id := range []int{fx.exactID, fx.halfID, fx.shiftedID, fx.sameLocalID} {
 				if assert.Contains(t, cands, id) {
@@ -149,13 +170,22 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 			}
 		})
 
+		t.Run("stop correspondences only when asked", func(t *testing.T) {
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, model.SimilarRouteQuery{Where: &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}}, []int{fx.srcID})
+			require.NoError(t, err)
+			exact := similarByOther(got[0])[fx.exactID]
+			require.NotNil(t, exact)
+			assert.Equal(t, model.RouteTripRelationshipSameTrips, *exact.Relationship)
+			assert.Nil(t, exact.StopCorrespondences)
+		})
+
 		t.Run("trips compared on a date", func(t *testing.T) {
-			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}, []int{fx.srcID})
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}), []int{fx.srcID})
 			require.NoError(t, err)
 			require.Len(t, got[0], 4)
 			// Most matched trips first.
 			assert.Equal(t, fx.exactID, got[0][0].OtherRouteID)
-			cands := byOther(got[0])
+			cands := similarByOther(got[0])
 
 			exact := cands[fx.exactID]
 			require.NotNil(t, exact.Trips)
@@ -191,7 +221,7 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 
 		t.Run("journey patterns deduplicated at import", func(t *testing.T) {
 			filter := &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}
-			before, err := f.SimilarRoutesByRouteIDs(ctx, nil, filter, []int{fx.srcID})
+			before, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(filter), []int{fx.srcID})
 			require.NoError(t, err)
 			// An import that deduplicates journey patterns keeps stop times only
 			// for each pattern's base trip; do the same to both feeds.
@@ -203,9 +233,9 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 			n, err := res.RowsAffected()
 			require.NoError(t, err)
 			require.Greater(t, n, int64(0), "no trips share a journey pattern, so the test checks nothing")
-			after, err := f.SimilarRoutesByRouteIDs(ctx, nil, filter, []int{fx.srcID})
+			after, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(filter), []int{fx.srcID})
 			require.NoError(t, err)
-			b, a := byOther(before[0]), byOther(after[0])
+			b, a := similarByOther(before[0]), similarByOther(after[0])
 			for _, id := range []int{fx.exactID, fx.halfID, fx.shiftedID} {
 				assert.Equal(t, *b[id].Trips, *a[id].Trips)
 				assert.Equal(t, *b[id].OtherTrips, *a[id].OtherTrips)
@@ -216,14 +246,14 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 		})
 
 		t.Run("from the copy's side", func(t *testing.T) {
-			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}, []int{fx.halfID})
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}), []int{fx.halfID})
 			require.NoError(t, err)
 			// The other copies are in the same feed, so only the source is a candidate.
 			require.Len(t, got[0], 1)
 			assert.Equal(t, fx.srcID, got[0][0].OtherRouteID)
 			assert.Equal(t, model.RouteTripRelationshipSubset, *got[0][0].Relationship)
 
-			all, err := f.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{OtherFeedsOnly: ptr(false)}, []int{fx.halfID})
+			all, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{OtherFeedsOnly: ptr(false)}), []int{fx.halfID})
 			require.NoError(t, err)
 			assert.Len(t, all[0], 4)
 		})
@@ -231,7 +261,7 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 		t.Run("a date with no service", func(t *testing.T) {
 			d, err := tt.ParseDate("2030-01-01")
 			require.NoError(t, err)
-			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{ServiceDates: []*tt.Date{&d}}, []int{fx.srcID})
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{ServiceDates: []*tt.Date{&d}}), []int{fx.srcID})
 			require.NoError(t, err)
 			for _, sr := range got[0] {
 				assert.Equal(t, 0, *sr.Trips)
@@ -241,7 +271,7 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 
 		t.Run("limit and batching", func(t *testing.T) {
 			one := 1
-			got, err := f.SimilarRoutesByRouteIDs(ctx, &one, &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}, []int{fx.srcID, fx.exactID})
+			got, err := f.SimilarRoutesByRouteIDs(ctx, &one, similarQuery(&model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}), []int{fx.srcID, fx.exactID})
 			require.NoError(t, err)
 			require.Len(t, got, 2)
 			if assert.Len(t, got[0], 1) {
@@ -253,20 +283,19 @@ func TestSimilarRoutesByRouteIDs(t *testing.T) {
 		})
 
 		t.Run("a route with no copies", func(t *testing.T) {
-			var otherID int
-			require.NoError(t, sqlx.Get(cfg.Adapter.DBX(), &otherID, `select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) where route_id = 'Lo-130'`))
-			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, nil, []int{otherID})
+			otherID := activeRouteID(t, cfg.Adapter.DBX(), "Lo-130")
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(nil), []int{otherID})
 			require.NoError(t, err)
 			assert.Empty(t, got[0])
 		})
 
 		t.Run("private feeds", func(t *testing.T) {
-			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, nil, []int{fx.srcID})
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(nil), []int{fx.srcID})
 			require.NoError(t, err)
 			require.NotEmpty(t, got[0], "no candidates while the feeds are public")
 			_, err = cfg.Adapter.DBX().Exec(`update feed_states set public = false where feed_id = $1`, fx.haFeedID)
 			require.NoError(t, err)
-			got, err = f.SimilarRoutesByRouteIDs(ctx, nil, nil, []int{fx.srcID})
+			got, err = f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(nil), []int{fx.srcID})
 			require.NoError(t, err)
 			assert.Empty(t, got[0], "expected no candidates from a private feed")
 		})
@@ -279,20 +308,16 @@ func TestSimilarRoutesSplitRows(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{}, func(cfg model.Config) {
 		ctx := model.WithConfig(context.Background(), cfg)
 		db := cfg.Adapter.DBX()
-		var srcID, baFv int
-		require.NoError(t, sqlx.Get(db, &srcID, `select gtfs_routes.id from gtfs_routes join feed_states using(feed_version_id) where route_id = $1`, similarRouteSource))
-		require.NoError(t, sqlx.Get(db, &baFv, `select feed_states.feed_version_id from feed_states join current_feeds on current_feeds.id = feed_states.feed_id where current_feeds.onestop_id = 'BA'`))
+		srcID := activeRouteID(t, db, similarRouteSource)
+		baFv := activeFeedVersionID(t, db, "BA")
 		// BART's agency, like Caltrain's, runs on Los Angeles time.
-		dir0 := cloneSimilarRouteDirection(t, db, srcID, baFv, "similar-dir0-", 0, false, 0)
-		dir1 := cloneSimilarRouteDirection(t, db, srcID, baFv, "similar-dir1-", 0, false, 1)
+		dir0 := cloneSimilarRoute(t, db, srcID, baFv, similarRouteCopy{prefix: "similar-dir0-", direction: ptr(0)})
+		dir1 := cloneSimilarRoute(t, db, srcID, baFv, similarRouteCopy{prefix: "similar-dir1-", direction: ptr(1)})
 		filter := &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}
 
-		got, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, filter, []int{srcID})
+		got, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(filter), []int{srcID})
 		require.NoError(t, err)
-		rows := map[int]*model.SimilarRoute{}
-		for _, sr := range got[0] {
-			rows[sr.OtherRouteID] = sr
-		}
+		rows := similarByOther(got[0])
 		require.Contains(t, rows, dir0)
 		require.Contains(t, rows, dir1)
 		a, b := rows[dir0], rows[dir1]
@@ -311,7 +336,7 @@ func TestSimilarRoutesSplitRows(t *testing.T) {
 
 		// From a row's side, the other feed has one row, so the feed fields
 		// agree with the pair's.
-		back, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, filter, []int{dir0})
+		back, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(filter), []int{dir0})
 		require.NoError(t, err)
 		require.Len(t, back[0], 1)
 		assert.Equal(t, model.RouteTripRelationshipSubset, *back[0][0].Relationship)
@@ -319,7 +344,7 @@ func TestSimilarRoutesSplitRows(t *testing.T) {
 		assert.Equal(t, *back[0][0].MatchedTrips, *back[0][0].FeedMatchedTrips)
 
 		// Without dates the feed fields are null, like the others.
-		none, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, nil, []int{srcID})
+		none, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(nil), []int{srcID})
 		require.NoError(t, err)
 		for _, sr := range none[0] {
 			assert.Nil(t, sr.FeedTrips)
@@ -338,12 +363,12 @@ func TestSimilarRoutesRelativeDates(t *testing.T) {
 			fx := makeSimilarRoutes(t, cfg)
 			f := cfg.Finder
 			today := model.RelativeDateToday
-			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{RelativeDate: &today}, []int{fx.srcID, fx.exactID})
+			got, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{RelativeDate: &today}), []int{fx.srcID, fx.exactID})
 			require.NoError(t, err)
 			onDate := func(routeID int, date string) *model.SimilarRoute {
 				d, err := tt.ParseDate(date)
 				require.NoError(t, err)
-				one, err := f.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{ServiceDates: []*tt.Date{&d}}, []int{routeID})
+				one, err := f.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{ServiceDates: []*tt.Date{&d}}), []int{routeID})
 				require.NoError(t, err)
 				for _, sr := range one[0] {
 					if sr.OtherRouteID == fx.exactID || sr.OtherRouteID == fx.srcID {
@@ -353,18 +378,11 @@ func TestSimilarRoutesRelativeDates(t *testing.T) {
 				t.Fatalf("no candidate for route %d on %s", routeID, date)
 				return nil
 			}
-			pick := func(srs []*model.SimilarRoute, id int) *model.SimilarRoute {
-				for _, sr := range srs {
-					if sr.OtherRouteID == id {
-						return sr
-					}
-				}
-				t.Fatalf("no candidate %d", id)
-				return nil
-			}
 			monday := onDate(fx.srcID, "2018-06-04")
 			tuesday := onDate(fx.exactID, "2018-06-05")
-			fromSrc, fromCopy := pick(got[0], fx.exactID), pick(got[1], fx.srcID)
+			fromSrc, fromCopy := similarByOther(got[0])[fx.exactID], similarByOther(got[1])[fx.srcID]
+			require.NotNil(t, fromSrc)
+			require.NotNil(t, fromCopy)
 			assert.Equal(t, *monday.Trips, *fromSrc.Trips)
 			assert.Equal(t, *monday.MatchedTrips, *fromSrc.MatchedTrips)
 			assert.Equal(t, *tuesday.Trips, *fromCopy.Trips)
@@ -379,9 +397,9 @@ func TestSimilarRoutesRelativeDates(t *testing.T) {
 			_, err := cfg.Adapter.DBX().Exec(`delete from feed_version_service_windows where feed_version_id = $1`, fx.srcFv)
 			require.NoError(t, err)
 			tomorrow := model.RelativeDateTomorrow
-			got, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{RelativeDate: &tomorrow}, []int{fx.srcID})
+			got, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{RelativeDate: &tomorrow}), []int{fx.srcID})
 			require.NoError(t, err)
-			want, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, &model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}, []int{fx.srcID})
+			want, err := cfg.Finder.SimilarRoutesByRouteIDs(ctx, nil, similarQuery(&model.SimilarRouteFilter{ServiceDates: similarRouteDates(t)}), []int{fx.srcID})
 			require.NoError(t, err)
 			require.Len(t, got[0], len(want[0]))
 			for i := range want[0] {
@@ -434,12 +452,9 @@ func TestSimilarRoutesResolver(t *testing.T) {
 			err := c.Post(q, &resp, vars...)
 			return gqlcase.ToJSON(resp), err
 		}
-		post := func(t *testing.T, where any, limit any) (string, error) {
-			return postQuery(qRoutes, where, limit)
-		}
 
 		t.Run("service dates", func(t *testing.T) {
-			js, err := post(t, map[string]any{"service_dates": []string{similarRouteDate}}, nil)
+			js, err := postQuery(qRoutes, map[string]any{"service_dates": []string{similarRouteDate}}, nil)
 			require.NoError(t, err)
 			assert.Equal(t, int64(4), gjson.Get(js, "routes.0.similar_routes.#").Int())
 			first := gjson.Get(js, "routes.0.similar_routes.0")
@@ -453,15 +468,15 @@ func TestSimilarRoutesResolver(t *testing.T) {
 		})
 
 		t.Run("relative date", func(t *testing.T) {
-			viaDate, err := post(t, map[string]any{"service_dates": []string{similarRouteDate}}, nil)
+			viaDate, err := postQuery(qRoutes, map[string]any{"service_dates": []string{similarRouteDate}}, nil)
 			require.NoError(t, err)
-			viaRelative, err := post(t, map[string]any{"relative_date": "TOMORROW", "days": 1}, nil)
+			viaRelative, err := postQuery(qRoutes, map[string]any{"relative_date": "TOMORROW", "days": 1}, nil)
 			require.NoError(t, err)
 			assert.JSONEq(t, gjson.Get(viaDate, "routes.0.similar_routes").Raw, gjson.Get(viaRelative, "routes.0.similar_routes").Raw)
 		})
 
 		t.Run("no dates", func(t *testing.T) {
-			js, err := post(t, nil, 1)
+			js, err := postQuery(qRoutes, nil, 1)
 			require.NoError(t, err)
 			assert.Equal(t, int64(1), gjson.Get(js, "routes.0.similar_routes.#").Int())
 			assert.Equal(t, "null", gjson.Get(js, "routes.0.similar_routes.0.relationship").Raw)
@@ -472,9 +487,9 @@ func TestSimilarRoutesResolver(t *testing.T) {
 
 		t.Run("too many dates", func(t *testing.T) {
 			dates := []string{"2018-06-04", "2018-06-05", "2018-06-06", "2018-06-07", "2018-06-08", "2018-06-09", "2018-06-10", "2018-06-11"}
-			_, err := post(t, map[string]any{"service_dates": dates}, nil)
+			_, err := postQuery(qRoutes, map[string]any{"service_dates": dates}, nil)
 			assert.ErrorContains(t, err, "at most 7 service_dates")
-			_, err = post(t, map[string]any{"relative_date": "TODAY", "days": 0}, nil)
+			_, err = postQuery(qRoutes, map[string]any{"relative_date": "TODAY", "days": 0}, nil)
 			assert.ErrorContains(t, err, "days must be 1 to 7")
 		})
 	})

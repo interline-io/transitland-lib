@@ -87,13 +87,35 @@ func TestRelate(t *testing.T) {
 	}
 }
 
+func TestCompare(t *testing.T) {
+	t.Run("a run past midnight matches its copy on the next date", func(t *testing.T) {
+		// b writes a's 24:15 run as 00:15 on the day after the compared date,
+		// which b may match but which is not one of its trips.
+		a := []TripStart{at(8, 0, 0, endA), at(24, 15, 0, endA)}
+		b := []TripStart{at(8, 0, 0, endA30m)}
+		bPartner := []TripStart{at(8, 0, 0, endA30m), at(24, 15, 20, endA30m)}
+		c := Compare(a, a, b, bPartner, opts)
+		assert.Equal(t, 2, c.Trips)
+		assert.Equal(t, 1, c.OtherTrips)
+		assert.Len(t, c.Pairs, 2)
+		assert.Equal(t, SameTrips, c.Relationship)
+	})
+	t.Run("a subset from the smaller side", func(t *testing.T) {
+		a := []TripStart{at(8, 0, 0, endA)}
+		b := []TripStart{at(8, 0, 0, endA), at(9, 0, 0, endA)}
+		c := Compare(a, a, b, b, opts)
+		assert.Len(t, c.Pairs, 1)
+		assert.Equal(t, Subset, c.Relationship)
+	})
+}
+
 func TestStopCorrespondences(t *testing.T) {
 	one := func(pa, pb []PatternStop, n int) []Correspondence {
 		var pairs []Pair
 		for i := 0; i < n; i++ {
 			pairs = append(pairs, Pair{A: TripStart{PatternKey: 1}, B: TripStart{PatternKey: 2}})
 		}
-		return StopCorrespondences(pairs, map[int][]PatternStop{1: pa}, map[int][]PatternStop{2: pb}, opts)
+		return StopCorrespondences(pairs, map[int][]PatternStop{1: pa, 2: pb}, opts)
 	}
 	t.Run("pairs stops with different ids by place, counting matched trips", func(t *testing.T) {
 		// Two publishers' copies of one route: different stop ids, a few meters
