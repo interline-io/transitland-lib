@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"context"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -53,10 +54,11 @@ func TestRTFetch(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(tmpdir) // clean up
+			spooldir := t.TempDir()
 			testdb.TempSqlite(func(atx tldb.Adapter) error {
 				url := ts.URL + "/" + tc.requestPath
 				feed := testdb.CreateTestFeed(atx, url)
-				fr, err := RTFetch(ctx, feedmanager.NewDBFeedManager(atx), RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, Storage: tmpdir, AllowHTTPFetchUnfiltered: true}})
+				fr, err := RTFetch(ctx, feedmanager.NewDBFeedManager(atx), RTFetchOptions{Options: Options{FeedID: feed.ID, FeedURL: url, URLType: "realtime_vehicle_positions", Storage: tmpdir, AllowHTTPFetchUnfiltered: true}, Spool: spooldir})
 				if err != nil {
 					t.Error(err)
 					return err
@@ -87,6 +89,28 @@ func TestRTFetch(t *testing.T) {
 					}
 				} else {
 					assert.Empty(t, tlff.StorageKey.Val, "expected no storage_key when nothing was archived")
+				}
+				// The spool gets every message that arrived, even one that failed
+				// to parse, under the hour it was fetched in; nothing for a 404.
+				var spooled []string
+				err = filepath.WalkDir(spooldir, func(p string, d fs.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if !d.IsDir() {
+						rel, _ := filepath.Rel(spooldir, p)
+						spooled = append(spooled, filepath.ToSlash(rel))
+					}
+					return nil
+				})
+				assert.NoError(t, err)
+				if tc.responseCode == 200 {
+					// The test feed's id is its URL, which the key escapes into one name.
+					want := spoolKey(feed.FeedID, "realtime_vehicle_positions", tlff.ResponseSHA1.Val, tlff.FetchedAt.Val)
+					assert.Equal(t, []string{want}, spooled)
+					assert.Regexp(t, `^url_type=realtime_vehicle_positions/date=\d{4}-\d{2}-\d{2}/hour=\d{2}/[^/]+-\d{8}T\d{6}Z-`+tlff.ResponseSHA1.Val+`\.pb$`, want)
+				} else {
+					assert.Empty(t, spooled)
 				}
 				return nil
 			})

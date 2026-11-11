@@ -18,6 +18,12 @@ type RTFetchResult struct {
 
 type RTFetchOptions struct {
 	Options
+	// Spool, when set, receives a copy of every downloaded message, partitioned
+	// by URL type and hour: the input to batch jobs that read a whole hour of
+	// every feed. Unlike Storage, the per-feed archive recorded on the
+	// feed_fetch row, it applies to every feed, and a failed or slow write is
+	// logged rather than failing or holding up the fetch. See spoolKey.
+	Spool string
 }
 
 // RTFetch downloads a GTFS-RT feed, parses the protobuf, uploads it, and records
@@ -41,6 +47,11 @@ func RTFetch(ctx context.Context, fm feedmanager.FeedManager, opts RTFetchOption
 	var dur fetchDurations
 	var storageKey string
 	if out.FetchError == nil {
+		// Spooled first, and even on parse failure, so a batch job sees every
+		// message that arrived whatever happens to the archive upload below.
+		if opts.Spool != "" {
+			spoolFile(ctx, opts.Spool, spoolKey(feed.FeedID, opts.URLType, resp.ResponseSHA1, opts.FetchedAt), tmpfile)
+		}
 		// The protobuf parse is the RT analogue of validation; record its duration
 		// on the feed_fetch row, as the pre-rewrite fetch did.
 		validationStart := time.Now()
