@@ -29,28 +29,14 @@ func (ent *AgencyGeometry) TableName() string {
 
 //////////
 
-type FeedVersionGeometry struct {
-	Geometry tt.Polygon
-	tt.MinEntity
-	tt.FeedVersionEntity
-}
-
-func (ent *FeedVersionGeometry) Filename() string {
-	return "tl_feed_version_geometries.txt"
-}
-
-func (ent *FeedVersionGeometry) TableName() string {
-	return "tl_feed_version_geometries"
-}
-
-//////////
-
+// ConvexHullBuilder builds each agency's convex hull, from the stops its routes'
+// trips visit.
 type ConvexHullBuilder struct {
-	stops              map[string]*stopGeom
-	routeStopGeoms     map[string]*routeStopGeoms
-	locationGeometries []tt.Geometry
+	stops          map[string]*stopGeom
+	routeStopGeoms map[string]*routeStopGeoms
 }
 
+// NewConvexHullBuilder returns a ConvexHullBuilder.
 func NewConvexHullBuilder() *ConvexHullBuilder {
 	return &ConvexHullBuilder{
 		stops:          map[string]*stopGeom{},
@@ -66,9 +52,6 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 			lon: v.Geometry.X(),
 			lat: v.Geometry.Y(),
 		}
-	case *gtfs.Location:
-		// Include location geometries in feed version convex hull
-		pp.locationGeometries = append(pp.locationGeometries, v.Geometry)
 	case *gtfs.Route:
 		pp.routeStopGeoms[eid] = &routeStopGeoms{
 			agency:    v.AgencyID.Val,
@@ -100,25 +83,6 @@ func (pp *ConvexHullBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Enti
 }
 
 func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
-	// build feed version convex hulls
-	coords := []float64{}
-	for _, v := range pp.stops {
-		coords = append(coords, v.lon, v.lat)
-	}
-	for _, v := range pp.locationGeometries {
-		coords = append(coords, v.FlatCoords()...)
-	}
-	ch := xy.ConvexHullFlat(geom.XY, coords)
-	if v, ok := ch.(*geom.Polygon); ok {
-		ent := FeedVersionGeometry{
-			Geometry: tt.NewPolygon(v),
-		}
-		if err := copier.CopyEntity(&ent); err != nil {
-			return err
-		}
-	}
-
-	// now build agency convex hulls
 	agencyStops := map[string]map[string]*stopGeom{}
 	for _, rsg := range pp.routeStopGeoms {
 		r, ok := agencyStops[rsg.agency]

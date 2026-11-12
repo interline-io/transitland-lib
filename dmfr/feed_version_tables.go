@@ -51,9 +51,9 @@ func GetFeedVersionTables() FeedVersionTables {
 			"feed_version_route_onestop_ids",
 			"feed_version_stop_onestop_ids",
 			"tl_feed_version_geohashes",
+			"tl_feed_version_geometries",
 		},
 		ImportDerivedTables: []string{
-			"tl_feed_version_geometries",
 			"tl_route_headways",
 			"tl_agency_places",
 			"tl_route_representative_shapes",

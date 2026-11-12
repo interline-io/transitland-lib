@@ -119,6 +119,10 @@ func (m *DBFeedManager) WriteFeedVersionStats(ctx context.Context, fvid int, fvs
 	return stats.WriteFeedVersionStats(ctx, m.adapter, fvstats, fvid, stats.WriteOptions{})
 }
 
+func (m *DBFeedManager) GetFeedVersionStats(ctx context.Context, fvid int) (stats.FeedVersionStats, error) {
+	return stats.ReadFeedVersionStats(ctx, m.adapter, fvid)
+}
+
 func (m *DBFeedManager) SaveValidationReport(ctx context.Context, fvid int, result *validator.Result, reportStorage string) error {
 	return validator.SaveValidationReport(ctx, m.adapter, result, fvid, reportStorage)
 }

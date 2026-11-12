@@ -58,3 +58,8 @@ func (fvi *FeedVersionImport) EntityID() string {
 func (FeedVersionImport) TableName() string {
 	return "feed_version_gtfs_imports"
 }
+
+// Filename returns feed_version_gtfs_imports.txt.
+func (fvi *FeedVersionImport) Filename() string {
+	return "feed_version_gtfs_imports.txt"
+}

@@ -147,7 +147,7 @@ func TestUnimportFeedVersion(t *testing.T) {
 			},
 			{
 				table:  "tl_feed_version_geometries",
-				expect: 0,
+				expect: 1,
 			},
 			{
 				table:  "feed_version_gtfs_imports",

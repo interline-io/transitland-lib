@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
+	sq "github.com/irees/squirrel"
 )
 
 // Stat names accepted by WriteOptions.Stats. Each maps to one or more
@@ -23,6 +24,7 @@ const (
 	StatServiceWindows = "service_windows"
 	StatOnestopIDs     = "onestop_ids"
 	StatGeohash        = "geohash"
+	StatGeometry       = "geometry"
 )
 
 // AllStats lists every supported stat name in the order they are written.
@@ -32,6 +34,7 @@ var AllStats = []string{
 	StatServiceWindows,
 	StatOnestopIDs,
 	StatGeohash,
+	StatGeometry,
 }
 
 // statTables maps a stat name to the FetchStatDerivedTables it writes. The
@@ -46,7 +49,8 @@ var statTables = map[string][]string{
 		"feed_version_route_onestop_ids",
 		"feed_version_stop_onestop_ids",
 	},
-	StatGeohash: {"tl_feed_version_geohashes"},
+	StatGeohash:  {"tl_feed_version_geohashes"},
+	StatGeometry: {"tl_feed_version_geometries"},
 }
 
 // WriteOptions configures which stats WriteFeedVersionStats persists. Builders
@@ -91,6 +95,7 @@ type FeedVersionStats struct {
 	StopOnestopIDs   []dmfr.FeedVersionStopOnestopID
 	FileInfos        []dmfr.FeedVersionFileInfo
 	GeohashCells     map[string]int
+	Geometry         tt.Polygon
 }
 
 func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
@@ -110,6 +115,7 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 	fvswBuilder := NewFeedVersionServiceWindowBuilder()
 	osidBuilder := NewFeedVersionOnestopIDBuilder()
 	geohashBuilder := builders.NewFeedVersionGeohashBuilder()
+	geometryBuilder := builders.NewFeedVersionGeometryBuilder()
 	if _, err := copier.QuietCopy(
 		context.TODO(),
 		reader, &empty.Writer{},
@@ -120,11 +126,13 @@ func NewFeedStatsFromReader(reader adapters.Reader) (FeedVersionStats, error) {
 			o.AddExtension(fvswBuilder)
 			o.AddExtension(osidBuilder)
 			o.AddExtension(geohashBuilder)
+			o.AddExtension(geometryBuilder)
 		},
 	); err != nil {
 		return ret, err
 	}
 	ret.GeohashCells = geohashBuilder.Cells()
+	ret.Geometry = geometryBuilder.Geometry()
 
 	// Service levels
 	ret.ServiceLevels, err = fvslBuilder.ServiceLevels()
@@ -246,7 +254,74 @@ func WriteFeedVersionStats(ctx context.Context, atx tldb.Adapter, stats FeedVers
 			return err
 		}
 	}
+
+	if enabled[StatGeometry] && stats.Geometry.Valid {
+		ent := builders.FeedVersionGeometry{Geometry: stats.Geometry}
+		if _, err := atx.MultiInsert(ctx, setFvid([]any{&ent}, fvid)); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// ReadFeedVersionStats returns the stats WriteFeedVersionStats wrote for a feed
+// version.
+func ReadFeedVersionStats(ctx context.Context, atx tldb.Adapter, fvid int) (FeedVersionStats, error) {
+	ret := FeedVersionStats{GeohashCells: map[string]int{}}
+	where := sq.Eq{"feed_version_id": fvid}
+	windows := []dmfr.FeedVersionServiceWindow{}
+	if err := selectStats(ctx, atx, &windows, atx.Sqrl().Select("*").From("feed_version_service_windows").Where(where)); err != nil {
+		return ret, err
+	}
+	if len(windows) > 0 {
+		ret.ServiceWindow = windows[0]
+	}
+	// FeedVersionServiceLevel has no fields for the Postgres table's route columns.
+	levels := atx.Sqrl().
+		Select("id", "feed_version_id", "start_date", "end_date", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday").
+		From("feed_version_service_levels").
+		Where(where).
+		OrderBy("id")
+	if err := selectStats(ctx, atx, &ret.ServiceLevels, levels); err != nil {
+		return ret, err
+	}
+	if err := selectStats(ctx, atx, &ret.AgencyOnestopIDs, atx.Sqrl().Select("*").From("feed_version_agency_onestop_ids").Where(where).OrderBy("entity_id")); err != nil {
+		return ret, err
+	}
+	if err := selectStats(ctx, atx, &ret.RouteOnestopIDs, atx.Sqrl().Select("*").From("feed_version_route_onestop_ids").Where(where).OrderBy("entity_id")); err != nil {
+		return ret, err
+	}
+	if err := selectStats(ctx, atx, &ret.StopOnestopIDs, atx.Sqrl().Select("*").From("feed_version_stop_onestop_ids").Where(where).OrderBy("entity_id")); err != nil {
+		return ret, err
+	}
+	if err := selectStats(ctx, atx, &ret.FileInfos, atx.Sqrl().Select("*").From("feed_version_file_infos").Where(where).OrderBy("id")); err != nil {
+		return ret, err
+	}
+	cells := []builders.FeedVersionGeohash{}
+	if err := selectStats(ctx, atx, &cells, atx.Sqrl().Select("*").From("tl_feed_version_geohashes").Where(where)); err != nil {
+		return ret, err
+	}
+	for _, cell := range cells {
+		ret.GeohashCells[cell.Geohash.Val] = cell.StopCount
+	}
+	// FeedVersionGeometry has no field for the table's centroid column.
+	geoms := []builders.FeedVersionGeometry{}
+	if err := selectStats(ctx, atx, &geoms, atx.Sqrl().Select("feed_version_id", "geometry").From("tl_feed_version_geometries").Where(where)); err != nil {
+		return ret, err
+	}
+	if len(geoms) > 0 {
+		ret.Geometry = geoms[0].Geometry
+	}
+	return ret, nil
+}
+
+// selectStats runs q and scans its rows into dest.
+func selectStats(ctx context.Context, atx tldb.Adapter, dest any, q sq.SelectBuilder) error {
+	qstr, qargs, err := q.ToSql()
+	if err != nil {
+		return err
+	}
+	return atx.Select(ctx, dest, qstr, qargs...)
 }
 
 func writeFeedVersionGeohashInserts(ctx context.Context, atx tldb.Adapter, fvid int, cells map[string]int) error {

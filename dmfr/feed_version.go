@@ -35,3 +35,8 @@ func (ent *FeedVersion) EntityID() string {
 func (ent *FeedVersion) TableName() string {
 	return "feed_versions"
 }
+
+// Filename returns feed_versions.txt.
+func (ent *FeedVersion) Filename() string {
+	return "feed_versions.txt"
+}
