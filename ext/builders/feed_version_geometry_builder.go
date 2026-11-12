@@ -39,7 +39,11 @@ func NewFeedVersionGeometryBuilder() *FeedVersionGeometryBuilder {
 func (pp *FeedVersionGeometryBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Stop:
-		pp.coords = append(pp.coords, v.Geometry.X(), v.Geometry.Y())
+		// A stop without coordinates, such as a generic node, has none to add;
+		// its zero values would pull the hull to (0,0).
+		if v.Geometry.Valid {
+			pp.coords = append(pp.coords, v.Geometry.X(), v.Geometry.Y())
+		}
 	case *gtfs.Location:
 		pp.coords = append(pp.coords, v.Geometry.FlatCoords()...)
 	}

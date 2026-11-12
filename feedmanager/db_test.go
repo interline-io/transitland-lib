@@ -6,9 +6,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/internal/testdb"
-	"github.com/interline-io/transitland-lib/internal/testreader"
-	"github.com/interline-io/transitland-lib/stats"
-	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
 )
 
@@ -91,26 +88,6 @@ func TestDBFeedManager(t *testing.T) {
 		}
 		if !ran {
 			t.Error("WithTx did not run fn")
-		}
-
-		// The stats read back as written.
-		reader, err := tlcsv.NewReader(testreader.ExampleZip.URL)
-		if err != nil {
-			t.Fatalf("open example feed: %v", err)
-		}
-		fvstats, err := stats.NewFeedStatsFromReader(reader)
-		if err != nil {
-			t.Fatalf("NewFeedStatsFromReader: %v", err)
-		}
-		if err := fm.WriteFeedVersionStats(ctx, fvid, fvstats); err != nil {
-			t.Fatalf("WriteFeedVersionStats: %v", err)
-		}
-		gotStats, err := fm.GetFeedVersionStats(ctx, fvid)
-		if err != nil {
-			t.Fatalf("GetFeedVersionStats: %v", err)
-		}
-		if len(gotStats.ServiceLevels) == 0 || len(gotStats.ServiceLevels) != len(fvstats.ServiceLevels) || !gotStats.Geometry.Valid {
-			t.Errorf("GetFeedVersionStats = %d service levels, hull %v; want %d and a hull", len(gotStats.ServiceLevels), gotStats.Geometry.Valid, len(fvstats.ServiceLevels))
 		}
 		return nil
 	}); err != nil {

@@ -1,11 +1,15 @@
 package builders
 
 import (
+	"strconv"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFeedVersionGeometryBuilder(t *testing.T) {
@@ -52,5 +56,23 @@ func TestFeedVersionGeometryBuilder(t *testing.T) {
 				assert.InEpsilonSlice(t, tc.expect, got.FlatCoords(), 0.001)
 			}
 		})
+	}
+}
+
+func TestFeedVersionGeometryBuilder_StopWithoutCoordinates(t *testing.T) {
+	// A stop without coordinates stays out of the hull instead of pulling it to
+	// (0,0).
+	e := NewFeedVersionGeometryBuilder()
+	for i, lonlat := range [][2]float64{{-122.0, 37.0}, {-122.1, 37.1}, {-122.0, 37.2}} {
+		stop := gtfs.Stop{Geometry: tt.NewPoint(lonlat[0], lonlat[1])}
+		require.NoError(t, e.AfterWrite(strconv.Itoa(i), &stop, nil))
+	}
+	require.NoError(t, e.AfterWrite("node", &gtfs.Stop{}, nil))
+	require.NoError(t, e.Copy(nil))
+	got := e.Geometry()
+	require.True(t, got.Valid, "a hull")
+	coords := got.FlatCoords()
+	for i := 0; i < len(coords); i += 2 {
+		assert.Less(t, coords[i], -121.0, "every vertex is one of the three stops")
 	}
 }
