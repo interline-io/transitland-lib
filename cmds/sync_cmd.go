@@ -100,7 +100,11 @@ func (cmd *SyncCommand) Run(ctx context.Context) error {
 		defer writer.Close()
 	}
 	return cmd.Adapter.Tx(func(atx tldb.Adapter) error {
-		_, err := sync.Sync(ctx, atx, cmd.Options)
+		agencies, err := sync.ActiveFeedAgencies(ctx, atx)
+		if err != nil {
+			return err
+		}
+		_, err = sync.Sync(ctx, atx, agencies, cmd.Options)
 		return err
 	})
 }

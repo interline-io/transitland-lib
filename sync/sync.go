@@ -29,11 +29,18 @@ type Result struct {
 	HiddenOperators int
 }
 
-func MainSync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
-	return Sync(ctx, atx, opts)
+// MainSync calls Sync.
+func MainSync(ctx context.Context, atx tldb.Adapter, agencies map[int][]FeedAgency, opts Options) (Result, error) {
+	return Sync(ctx, atx, agencies, opts)
 }
 
-func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
+// Sync writes the feeds and operators of DMFR registries to the database, and
+// brings their operator-in-feed rows in line with each feed's agencies.
+//
+// agencies maps each feed id to the agencies of the feed's active version, as
+// ActiveFeedAgencies reads them from the database; a feed with no entry has
+// none.
+func Sync(ctx context.Context, atx tldb.Adapter, agencies map[int][]FeedAgency, opts Options) (Result, error) {
 	sr := Result{}
 
 	// Collect all registries to process
@@ -87,7 +94,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 			osid := operator.OnestopID.Val
 			operator.File.Set(rs.name)
 			operator.DeletedAt.Unset()
-			operatorid, found, updated, err := UpdateOperator(ctx, atx, operator)
+			operatorid, found, updated, err := UpdateOperator(ctx, atx, operator, agencies)
 			if err != nil {
 				log.For(ctx).Error().Msgf("%s: error on operator %s: %s", rs.name, osid, err)
 				sr.Errors = append(sr.Errors, err)
@@ -132,7 +139,7 @@ func Sync(ctx context.Context, atx tldb.Adapter, opts Options) (Result, error) {
 		}
 	}
 	// Update any automatically generated agency-operator associations
-	if err := UpdateFeedGeneratedOperators(ctx, atx, sr.FeedIDs); err != nil {
+	if err := UpdateFeedGeneratedOperators(ctx, atx, sr.FeedIDs, agencies); err != nil {
 		sr.Errors = append(sr.Errors, err)
 	}
 	// Rollback on any errors

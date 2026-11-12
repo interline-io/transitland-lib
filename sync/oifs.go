@@ -46,8 +46,9 @@ func getPlaces(ctx context.Context, atx tldb.Adapter, id int) (string, error) {
 }
 
 // updateOifs brings an operator's rows in line with its associated feeds, as
-// PlanOperatorOifs plans, and says whether any row changed.
-func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (bool, error) {
+// PlanOperatorOifs plans, and says whether any row changed. agencies holds each
+// feed's active agencies, by feed id.
+func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator, agencies map[int][]FeedAgency) (bool, error) {
 	existing := []dmfr.OperatorAssociatedFeed{}
 	if err := atx.Select(ctx, &existing, "select * from current_operators_in_feed where operator_id = ?", operator.ID); err != nil {
 		return false, err
@@ -65,31 +66,33 @@ func updateOifs(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (
 		} else if err != nil {
 			return false, err
 		}
-		agencies, err := feedAgencies(ctx, atx, feedID)
-		if err != nil {
-			return false, err
-		}
-		feeds[osid] = FeedAgencies{FeedID: feedID, Agencies: agencies}
+		feeds[osid] = FeedAgencies{FeedID: feedID, Agencies: agencies[feedID]}
 	}
 	return writeOifPlan(ctx, atx, PlanOperatorOifs(operator, existing, feeds))
 }
 
-// feedAgencies returns the agencies of a feed's active version, with their
-// onestop ids.
-func feedAgencies(ctx context.Context, atx tldb.Adapter, feedID int) ([]FeedAgency, error) {
+// ActiveFeedAgencies returns the agencies of every feed's active version, with
+// their onestop ids, by feed id.
+func ActiveFeedAgencies(ctx context.Context, atx tldb.Adapter) (map[int][]FeedAgency, error) {
 	q := atx.Sqrl().
-		Select("gtfs_agencies.*", "feed_version_agency_onestop_ids.onestop_id as onestop_id").
+		Select("feed_states.feed_id", "gtfs_agencies.*", "feed_version_agency_onestop_ids.onestop_id as onestop_id").
 		From("gtfs_agencies").
 		Join("feed_states on feed_states.materialized_feed_version_id = gtfs_agencies.feed_version_id").
-		JoinClause("left join feed_version_agency_onestop_ids on feed_version_agency_onestop_ids.entity_id = gtfs_agencies.agency_id and feed_version_agency_onestop_ids.feed_version_id = gtfs_agencies.feed_version_id").
-		Where(sq.Eq{"feed_states.feed_id": feedID})
+		JoinClause("left join feed_version_agency_onestop_ids on feed_version_agency_onestop_ids.entity_id = gtfs_agencies.agency_id and feed_version_agency_onestop_ids.feed_version_id = gtfs_agencies.feed_version_id")
 	qstr, qargs, err := q.ToSql()
 	if err != nil {
 		return nil, err
 	}
-	agencies := []FeedAgency{}
-	if err := atx.Select(ctx, &agencies, qstr, qargs...); err != nil {
+	rows := []struct {
+		FeedID int
+		FeedAgency
+	}{}
+	if err := atx.Select(ctx, &rows, qstr, qargs...); err != nil {
 		return nil, err
+	}
+	agencies := map[int][]FeedAgency{}
+	for _, row := range rows {
+		agencies[row.FeedID] = append(agencies[row.FeedID], row.FeedAgency)
 	}
 	return agencies, nil
 }
@@ -182,18 +185,15 @@ func feedDeletedOperators(ctx context.Context, atx tldb.Adapter, feedID int) ([]
 	return ids, nil
 }
 
-// feedUpdateOifs brings a feed's generated rows in line with the agencies of its
-// active version, as PlanFeedOifs plans, and says whether any row changed.
-func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed) (bool, error) {
+// feedUpdateOifs brings a feed's generated rows in line with agencies, the
+// agencies of its active version, as PlanFeedOifs plans, and says whether any
+// row changed.
+func feedUpdateOifs(ctx context.Context, atx tldb.Adapter, feed dmfr.Feed, agencies []FeedAgency) (bool, error) {
 	existing := []dmfr.OperatorAssociatedFeed{}
 	if err := atx.Select(ctx, &existing, "select * from current_operators_in_feed where feed_id = ?", feed.ID); err != nil {
 		return false, err
 	}
 	deleted, err := feedDeletedOperators(ctx, atx, feed.ID)
-	if err != nil {
-		return false, err
-	}
-	agencies, err := feedAgencies(ctx, atx, feed.ID)
 	if err != nil {
 		return false, err
 	}
