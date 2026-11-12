@@ -11,8 +11,9 @@ import (
 	sq "github.com/irees/squirrel"
 )
 
-// UpdateOperator updates or inserts a single operator, as well as managing associated operator-in-feed records
-func UpdateOperator(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator) (int, bool, bool, error) {
+// UpdateOperator updates or inserts a single operator, as well as managing associated operator-in-feed records.
+// agencies holds each feed's active agencies, by feed id.
+func UpdateOperator(ctx context.Context, atx tldb.Adapter, operator dmfr.Operator, agencies map[int][]FeedAgency) (int, bool, bool, error) {
 	// Check if we have the existing operator
 	found := false
 	updated := false
@@ -42,7 +43,7 @@ func UpdateOperator(ctx context.Context, atx tldb.Adapter, operator dmfr.Operato
 	}
 	// Update operator in feeds
 	// This happens even if the entity did not change.
-	oifUpdate, err := updateOifs(ctx, atx, operator)
+	oifUpdate, err := updateOifs(ctx, atx, operator, agencies)
 	if err != nil {
 		return 0, false, false, err
 	}

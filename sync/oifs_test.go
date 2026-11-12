@@ -58,6 +58,13 @@ func oifTestOperator(t *testing.T, atx tldb.Adapter, feed dmfr.Feed) dmfr.Operat
 	return operator
 }
 
+// oifTestAgencies returns the database's active agencies of every feed.
+func oifTestAgencies(t *testing.T, atx tldb.Adapter) map[int][]FeedAgency {
+	agencies, err := ActiveFeedAgencies(context.Background(), atx)
+	require.NoError(t, err)
+	return agencies
+}
+
 func TestGetPlaces(t *testing.T) {
 	// Places come back in rank order, each once, so a refreshed row holds the
 	// same string from one sync to the next.
@@ -102,7 +109,7 @@ func TestUpdateOifs_NullAgencyID(t *testing.T) {
 		prev := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feed.ID, ResolvedOnestopID: tt.NewString("o-test")}
 		prevID := testdb.ShouldInsert(t, atx, &prev)
 
-		updated, err := updateOifs(ctx, atx, operator)
+		updated, err := updateOifs(ctx, atx, operator, oifTestAgencies(t, atx))
 		require.NoError(t, err)
 		assert.True(t, updated)
 		count := 0
@@ -111,7 +118,7 @@ func TestUpdateOifs_NullAgencyID(t *testing.T) {
 		testdb.ShouldGet(t, atx, &count, "select count(*) from current_operators_in_feed where operator_id = ?", operator.ID)
 		assert.Equal(t, 1, count, "rewritten rather than replaced")
 
-		updated, err = updateOifs(ctx, atx, operator)
+		updated, err = updateOifs(ctx, atx, operator, oifTestAgencies(t, atx))
 		require.NoError(t, err)
 		assert.False(t, updated, "a second sync finds nothing to change")
 	})
@@ -126,16 +133,55 @@ func TestUpdateOifs_Rename(t *testing.T) {
 		prev := dmfr.OperatorAssociatedFeed{OperatorID: tt.NewInt(operator.ID), FeedID: feed.ID, ResolvedGtfsAgencyID: tt.NewString("MB"), ResolvedOnestopID: tt.NewString("o-test"), ResolvedName: tt.NewString("Old name")}
 		prevID := testdb.ShouldInsert(t, atx, &prev)
 
-		updated, err := updateOifs(ctx, atx, operator)
+		updated, err := updateOifs(ctx, atx, operator, oifTestAgencies(t, atx))
 		require.NoError(t, err)
 		assert.True(t, updated)
 		names := []string{}
 		testdb.ShouldSelect(t, atx, &names, "select resolved_name from current_operators_in_feed where id = ?", prevID)
 		assert.Equal(t, []string{"Test"}, names)
 
-		updated, err = updateOifs(ctx, atx, operator)
+		updated, err = updateOifs(ctx, atx, operator, oifTestAgencies(t, atx))
 		require.NoError(t, err)
 		assert.False(t, updated, "a second sync finds nothing to change")
+	})
+}
+
+func TestActiveFeedAgencies(t *testing.T) {
+	// A feed's agencies come from its materialized version alone, each with the
+	// onestop id its version's stats gave it, if any.
+	ctx := context.Background()
+	oifTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
+		feed := oifTestFeed(t, atx, "MB", "CT")
+		other := oifTestFeed(t, atx, "AC")
+		bare := testdb.CreateTestFeed(atx, feed.FeedID+"-bare")
+		fvid := 0
+		testdb.ShouldGet(t, atx, &fvid, "select materialized_feed_version_id from feed_states where feed_id = ?", feed.ID)
+		osid := dmfr.FeedVersionAgencyOnestopID{EntityID: "MB", OnestopID: "o-test-mb"}
+		osid.FeedVersionID = fvid
+		_, err := atx.MultiInsert(ctx, []any{&osid})
+		require.NoError(t, err)
+		// An older version of the feed, which isn't materialized.
+		old := dmfr.FeedVersion{SHA1: feed.FeedID + "-old"}
+		old.FeedID = feed.ID
+		old.EarliestCalendarDate = tt.NewDate(time.Now())
+		old.LatestCalendarDate = tt.NewDate(time.Now())
+		old.ID = testdb.ShouldInsert(t, atx, &old)
+		oldAgency := gtfs.Agency{AgencyID: tt.NewString("OLD"), AgencyName: tt.NewString("Old"), AgencyURL: tt.NewUrl("https://example.com"), AgencyTimezone: tt.NewTimezone("America/Los_Angeles")}
+		oldAgency.FeedVersionID = old.ID
+		testdb.ShouldInsert(t, atx, &oldAgency)
+
+		agencies, err := ActiveFeedAgencies(ctx, atx)
+		require.NoError(t, err)
+		got := map[string]string{}
+		for _, a := range agencies[feed.ID] {
+			got[a.AgencyID.Val] = a.OnestopID.Val
+		}
+		assert.Equal(t, map[string]string{"MB": "o-test-mb", "CT": ""}, got)
+		if assert.Len(t, agencies[other.ID], 1) {
+			assert.Equal(t, "AC", agencies[other.ID][0].AgencyID.Val)
+		}
+		_, ok := agencies[bare.ID]
+		assert.False(t, ok, "a feed with no active version has no entry")
 	})
 }
 
@@ -152,7 +198,7 @@ func TestFeedUpdateOifs_GeneratedRowBesideAtlasRow(t *testing.T) {
 		generated := dmfr.OperatorAssociatedFeed{FeedID: feed.ID, ResolvedGtfsAgencyID: tt.NewString("MB"), ResolvedOnestopID: tt.NewString("o-test")}
 		testdb.ShouldInsert(t, atx, &generated)
 
-		updated, err := feedUpdateOifs(ctx, atx, feed)
+		updated, err := feedUpdateOifs(ctx, atx, feed, oifTestAgencies(t, atx)[feed.ID])
 		require.NoError(t, err)
 		assert.True(t, updated)
 		ids := []int{}
@@ -175,7 +221,7 @@ func TestFeedUpdateOifs_HiddenOperatorRow(t *testing.T) {
 			testdb.ShouldInsert(t, atx, &hidden)
 		}
 
-		updated, err := feedUpdateOifs(ctx, atx, feed)
+		updated, err := feedUpdateOifs(ctx, atx, feed, oifTestAgencies(t, atx)[feed.ID])
 		require.NoError(t, err)
 		assert.True(t, updated)
 		rows := []dmfr.OperatorAssociatedFeed{}

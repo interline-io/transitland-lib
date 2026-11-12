@@ -5,11 +5,14 @@ import (
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testdb"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testutil"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Full tests
@@ -27,7 +30,7 @@ func TestSync(t *testing.T) {
 			Filenames:  regs,
 			HideUnseen: true,
 		}
-		found, err := Sync(ctx, atx, opts)
+		found, err := Sync(ctx, atx, oifTestAgencies(t, atx), opts)
 		if err != nil {
 			t.Error(err)
 		}
@@ -73,7 +76,7 @@ func TestSync_Update(t *testing.T) {
 		opts := Options{
 			Filenames: regs,
 		}
-		if _, err = Sync(ctx, atx, opts); err != nil {
+		if _, err = Sync(ctx, atx, oifTestAgencies(t, atx), opts); err != nil {
 			t.Error(err)
 		}
 		// Check Updated values
@@ -96,6 +99,26 @@ func TestSync_Update(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+func TestSync_SuppliedAgencies(t *testing.T) {
+	// A feed's generated operators come from the agencies Sync is given, even
+	// when the database holds none for the feed.
+	ctx := context.Background()
+	oifTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
+		feed := oifTestFeed(t, atx)
+		require.Empty(t, oifTestAgencies(t, atx)[feed.ID], "the database holds no agencies for the feed")
+		agency := FeedAgency{Agency: gtfs.Agency{AgencyID: tt.NewString("MB"), AgencyName: tt.NewString("Agency MB")}}
+		opts := Options{Registries: []*dmfr.Registry{{Feeds: []dmfr.Feed{feed}}}}
+		_, err := Sync(ctx, atx, map[int][]FeedAgency{feed.ID: {agency}}, opts)
+		require.NoError(t, err)
+		rows := []dmfr.OperatorAssociatedFeed{}
+		testdb.ShouldSelect(t, atx, &rows, "select * from current_operators_in_feed where feed_id = ?", feed.ID)
+		if assert.Len(t, rows, 1) {
+			assert.False(t, rows[0].OperatorID.Valid, "a generated row")
+			assert.Equal(t, "MB", rows[0].ResolvedGtfsAgencyID.Val)
+		}
+	})
 }
 
 // Unit tests
@@ -244,7 +267,7 @@ func TestUpdateOperator(t *testing.T) {
 				Filenames:  regs,
 				HideUnseen: true,
 			}
-			found, err := Sync(ctx, atx, opts)
+			found, err := Sync(ctx, atx, oifTestAgencies(t, atx), opts)
 			if err != nil {
 				t.Error(err)
 			}
@@ -278,7 +301,7 @@ func TestUpdateOperator(t *testing.T) {
 				testpath.RelPath("testdata/dmfr/rtfeeds.dmfr.json"),
 			}
 			opts := Options{Filenames: regs}
-			found, err := Sync(ctx, atx, opts)
+			found, err := Sync(ctx, atx, oifTestAgencies(t, atx), opts)
 			if err != nil {
 				t.Error(err)
 			}
@@ -298,7 +321,7 @@ func TestUpdateOperator(t *testing.T) {
 				t.Errorf("did not get updated file value, got '%s' expected '%s'", tlops[0].File.Val, newFile)
 			}
 			// Resync and check updated file
-			if _, err := Sync(ctx, atx, opts); err != nil {
+			if _, err := Sync(ctx, atx, oifTestAgencies(t, atx), opts); err != nil {
 				t.Error(err)
 			}
 			newOps := []dmfr.Operator{}

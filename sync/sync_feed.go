@@ -67,14 +67,15 @@ func HideUnseedFeeds(ctx context.Context, atx tldb.Adapter, found []int) (int, e
 	return int(c), err
 }
 
-// UpdateFeedGeneratedOperators creates OperatorInFeed records for agencies that are not associated with an operator
-func UpdateFeedGeneratedOperators(ctx context.Context, atx tldb.Adapter, found []int) error {
+// UpdateFeedGeneratedOperators creates OperatorInFeed records for agencies that are not associated with an operator.
+// agencies holds each feed's active agencies, by feed id.
+func UpdateFeedGeneratedOperators(ctx context.Context, atx tldb.Adapter, found []int, agencies map[int][]FeedAgency) error {
 	for _, id := range found {
 		feed := dmfr.Feed{}
 		if err := atx.Get(ctx, &feed, "select * from current_feeds where id = ?", id); err != nil {
 			return err
 		}
-		if _, err := feedUpdateOifs(ctx, atx, feed); err != nil {
+		if _, err := feedUpdateOifs(ctx, atx, feed, agencies[id]); err != nil {
 			return err
 		}
 	}
