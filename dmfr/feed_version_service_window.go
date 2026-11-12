@@ -26,3 +26,8 @@ func (fvi *FeedVersionServiceWindow) EntityID() string {
 func (FeedVersionServiceWindow) TableName() string {
 	return "feed_version_service_windows"
 }
+
+// Filename returns feed_version_service_windows.txt.
+func (fvi *FeedVersionServiceWindow) Filename() string {
+	return "feed_version_service_windows.txt"
+}

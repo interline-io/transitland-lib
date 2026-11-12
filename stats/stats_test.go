@@ -1,11 +1,89 @@
 package stats
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/internal/testdb"
+	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestReadFeedVersionStats(t *testing.T) {
+	// A version's stats read back as WriteFeedVersionStats wrote them.
+	reader, err := tlcsv.NewReader(testreader.ExampleZip.URL)
+	require.NoError(t, err)
+	want, err := NewFeedStatsFromReader(reader)
+	require.NoError(t, err)
+	require.NotEmpty(t, want.ServiceLevels)
+	require.NotEmpty(t, want.GeohashCells)
+	require.True(t, want.Geometry.Valid, "the example feed has a hull")
+	statsTestDBs(t, func(t *testing.T, atx tldb.Adapter) {
+		ctx := context.Background()
+		fv := testdb.CreateTestFeedVersion(atx, "")
+		require.NoError(t, WriteFeedVersionStats(ctx, atx, want, fv.ID, WriteOptions{}))
+		got, err := ReadFeedVersionStats(ctx, atx, fv.ID)
+		require.NoError(t, err)
+		assert.Equal(t, statsSummary(want), statsSummary(got))
+	})
+}
+
+// statsSummary renders the stats a test compares, without the ids and
+// timestamps a database assigns.
+func statsSummary(s FeedVersionStats) map[string]any {
+	w := s.ServiceWindow
+	levels := []string{}
+	for _, l := range s.ServiceLevels {
+		levels = append(levels, fmt.Sprintf("%s %s %d %d %d %d %d %d %d", l.StartDate, l.EndDate, l.Monday, l.Tuesday, l.Wednesday, l.Thursday, l.Friday, l.Saturday, l.Sunday))
+	}
+	osids := map[string]string{}
+	for _, v := range s.AgencyOnestopIDs {
+		osids["agency "+v.EntityID] = v.OnestopID
+	}
+	for _, v := range s.RouteOnestopIDs {
+		osids["route "+v.EntityID] = v.OnestopID
+	}
+	for _, v := range s.StopOnestopIDs {
+		osids["stop "+v.EntityID] = v.OnestopID
+	}
+	files := map[string]string{}
+	for _, v := range s.FileInfos {
+		files[v.Name] = fmt.Sprintf("%d %d %s", v.Size, v.Rows, v.SHA1)
+	}
+	return map[string]any{
+		"window":   fmt.Sprintf("%s %s %s %s %s %s", w.FeedStartDate, w.FeedEndDate, w.EarliestCalendarDate, w.LatestCalendarDate, w.FallbackWeek, w.DefaultTimezone),
+		"levels":   levels,
+		"osids":    osids,
+		"files":    files,
+		"geohash":  s.GeohashCells,
+		"geometry": s.Geometry.FlatCoords(),
+	}
+}
+
+// statsTestDBs runs fn against an in-memory SQLite database, then against the
+// Postgres database at TL_TEST_DATABASE_URL, in a transaction it rolls back.
+func statsTestDBs(t *testing.T, fn func(t *testing.T, atx tldb.Adapter)) {
+	t.Run("sqlite", func(t *testing.T) {
+		err := testdb.TempSqlite(func(atx tldb.Adapter) error {
+			fn(t, atx)
+			return nil
+		})
+		require.NoError(t, err)
+	})
+	t.Run("postgres", func(t *testing.T) {
+		dburl := os.Getenv("TL_TEST_DATABASE_URL")
+		if dburl == "" {
+			t.Skip("TL_TEST_DATABASE_URL is not set")
+		}
+		testdb.TempPostgresRollback(t, dburl, func(atx tldb.Adapter) { fn(t, atx) })
+	})
+}
 
 // TestStatRegistrationConsistency guards against drift between three lists
 // that must stay aligned: statTables (stat-name → tables), AllStats (write

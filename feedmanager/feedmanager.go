@@ -49,8 +49,11 @@ type FeedManager interface {
 	CreateFeedFetch(ctx context.Context, ff *dmfr.FeedFetch) error
 
 	// Persists the computed feed-version stats (service levels/window, file infos,
-	// onestop ids).
+	// onestop ids, geohash cells, hull).
 	WriteFeedVersionStats(ctx context.Context, fvid int, fvstats stats.FeedVersionStats) error
+
+	// Returns the stats WriteFeedVersionStats persisted for a feed version.
+	GetFeedVersionStats(ctx context.Context, fvid int) (stats.FeedVersionStats, error)
 
 	// Persists a validation report.
 	SaveValidationReport(ctx context.Context, fvid int, result *validator.Result, reportStorage string) error

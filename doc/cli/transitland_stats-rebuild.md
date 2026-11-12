@@ -19,7 +19,7 @@ transitland stats-rebuild [flags] [fvid...]
       --dry-run                            Dry run; log the feed versions that would be rebuilt and exit
       --fvid-file string                   Read feed version IDs from a csv-like file (the feed_version_id column if the header names it, otherwise the first column of a header-less list of ids)
   -h, --help                               help for stats-rebuild
-      --stats strings                      Subset of stats to rebuild (default all); valid: file_infos,service_levels,service_windows,onestop_ids,geohash
+      --stats strings                      Subset of stats to rebuild (default all); valid: file_infos,service_levels,service_windows,onestop_ids,geohash,geometry
       --storage string                     Storage destination; can be s3://... az://... or path to a directory
       --validation-report                  Save validation report
       --validation-report-storage string   Storage path for saving validation report JSON

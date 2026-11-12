@@ -31,6 +31,11 @@ func (FeedVersionServiceLevel) TableName() string {
 	return "feed_version_service_levels"
 }
 
+// Filename returns feed_version_service_levels.txt.
+func (fvi *FeedVersionServiceLevel) Filename() string {
+	return "feed_version_service_levels.txt"
+}
+
 func (fvsl *FeedVersionServiceLevel) Total() int {
 	return fvsl.Monday + fvsl.Tuesday + fvsl.Wednesday + fvsl.Thursday + fvsl.Friday + fvsl.Saturday + fvsl.Sunday
 }

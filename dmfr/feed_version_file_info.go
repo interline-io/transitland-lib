@@ -31,3 +31,8 @@ func (fvi *FeedVersionFileInfo) EntityID() string {
 func (FeedVersionFileInfo) TableName() string {
 	return "feed_version_file_infos"
 }
+
+// Filename returns feed_version_file_infos.txt.
+func (fvi *FeedVersionFileInfo) Filename() string {
+	return "feed_version_file_infos.txt"
+}
