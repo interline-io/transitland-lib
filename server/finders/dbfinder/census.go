@@ -88,6 +88,11 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		// below can bucket results back to the right stop without needing a
 		// loop-then-tag pass.
 		fields.perStopAttribution = true
+		located, err := f.locateStops(ctx, entityIds)
+		if err != nil {
+			return nil, err
+		}
+		fields.located = located
 		var ents []*model.CensusGeography
 		q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(entityIds), fields)
 		if err != nil {
@@ -102,13 +107,20 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		// want (avoids double-counting tracts hit by multiple stops). One
 		// query per entity; tag MatchEntityID after scan since the SQL emits
 		// 0 for the unioned buffer.
-		for _, entityId := range entityIds {
-			stopIds, err := getBufferStopIds(ctx, f.db, entityType, entityId)
-			if err != nil {
-				return nil, queryErr(ctx, err)
+		stopIds, located, err := f.entityBufferStops(ctx, entityType, entityIds)
+		if err != nil {
+			return nil, err
+		}
+		for i, entityId := range entityIds {
+			// An entity with no stops has no buffer, so it matches no
+			// geographies. A stop buffer with no stops would filter nothing.
+			if len(stopIds[i]) == 0 {
+				continue
 			}
+			entityFields := fields
+			entityFields.located = located[i]
 			var ents []*model.CensusGeography
-			q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(stopIds), fields)
+			q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(stopIds[i]), entityFields)
 			if err != nil {
 				return nil, err
 			}
@@ -123,6 +135,23 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 	}
 	ret := arrangeGroup(entityIds, entityGeogs, func(ent *model.CensusGeography) int { return ent.MatchEntityID })
 	return ret, nil
+}
+
+// entityBufferStops returns each route's or agency's stop ids, with the stops
+// the stop locator found for each, or nil ones when the finder reads gtfs_stops.
+func (f *Finder) entityBufferStops(ctx context.Context, entityType string, entityIds []int) ([][]int, []*locatedStops, error) {
+	if f.stopLocator != nil {
+		return f.locateEntityStops(ctx, entityType, entityIds)
+	}
+	stopIds := make([][]int, len(entityIds))
+	for i, entityId := range entityIds {
+		ids, err := getBufferStopIds(ctx, f.db, entityType, entityId)
+		if err != nil {
+			return nil, nil, queryErr(ctx, err)
+		}
+		stopIds[i] = ids
+	}
+	return stopIds, make([]*locatedStops, len(entityIds)), nil
 }
 
 func (f *Finder) CensusValuesByGeographyIDs(ctx context.Context, limit *int, datasetName string, tableNames []string, keys []string) ([][]*model.CensusValue, error) {
@@ -246,9 +275,25 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 	return ret, nil
 }
 
+// geographySelectFields returns the select fields of a geography search, with
+// the stops its stop buffer names when the finder has a stop locator.
+func (f *Finder) geographySelectFields(ctx context.Context, sel model.CensusGeographySelect, where *model.CensusDatasetGeographyFilter) (censusGeographySelectFields, error) {
+	fields := censusGeographySelectFields{CensusGeographySelect: sel}
+	if where == nil {
+		return fields, nil
+	}
+	located, err := f.locateStopBuffer(ctx, where.Location)
+	fields.located = located
+	return fields, err
+}
+
 func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, sel model.CensusGeographySelect, keys []int) ([][]*model.CensusGeography, error) {
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), p, censusGeographySelectFields{CensusGeographySelect: sel})
+	fields, err := f.geographySelectFields(ctx, sel, p)
+	if err != nil {
+		return nil, err
+	}
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), p, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +313,11 @@ func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, wh
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, censusGeographySelectFields{CensusGeographySelect: sel})
+	fields, err := f.geographySelectFields(ctx, sel, w)
+	if err != nil {
+		return nil, err
+	}
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +344,11 @@ func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, w
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, censusGeographySelectFields{CensusGeographySelect: sel})
+	fields, err := f.geographySelectFields(ctx, sel, w)
+	if err != nil {
+		return nil, err
+	}
+	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -394,6 +447,9 @@ type censusGeographySelectFields struct {
 	// Used by CensusGeographiesByEntityIDs for entityType == "stop" so a
 	// single batched query can be grouped back per requesting stop.
 	perStopAttribution bool
+	// The stops a StopLocator found for the `stop_buffer` filter, read in place
+	// of gtfs_stops when set.
+	located *locatedStops
 }
 
 // censusClipMaxVertices is the most vertices in a piece of a subdivided search
@@ -489,13 +545,17 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 		// Gating gtfs_stops directly let the planner pick a plan that took minutes
 		// for tens of thousands of ids, against seconds when the ids are read first.
 		if stopBufferClip {
+			var requested sq.Sqlizer = sq.StatementBuilder.
+				Select("gtfs_stops.id", "gtfs_stops.feed_version_id", "gtfs_stops.geometry").
+				From("gtfs_stops").
+				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
+			if fields.located != nil {
+				requested = fields.located.selectStops()
+			}
 			q = q.WithCTE(sq.CTE{
 				Alias:        "requested_stops",
 				Materialized: true,
-				Expression: sq.StatementBuilder.
-					Select("gtfs_stops.id", "gtfs_stops.feed_version_id", "gtfs_stops.geometry").
-					From("gtfs_stops").
-					Where(In("gtfs_stops.id", loc.StopBuffer.StopIds)),
+				Expression:   requested,
 			})
 		}
 		stopsSelect := func() sq.SelectBuilder {

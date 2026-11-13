@@ -6,7 +6,7 @@ This guide documents the testing patterns used in the transitland-lib GraphQL re
 
 Resolver cases live in two places:
 - `server/gql/gqltest` holds the cases every `model.Finder` must answer the same way. `gqltest.Run` runs them against a finder; `TestDBFinder` runs them against the test database. Write a new case here unless it needs something only the database finder has.
-- `server/gql` keeps the cases that need the database finder: census and places data, segments, stop observations, external references, route attributes, previous onestop ids, GBFS data, permissions, mutations and validation. Realtime tests that change the database's feed and agency rows also stay.
+- `server/gql` keeps the cases that need the database finder: places data, segments, stop observations, external references, route attributes, previous onestop ids, GBFS data, permissions, mutations and validation. Realtime tests that change the database's feed and agency rows also stay.
 
 In `gqltest`, a group of cases is a builder that returns them, registered by name in `caseGroups` in `gqltest.go`:
 
@@ -17,7 +17,7 @@ func levelResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 }
 ```
 
-A case that needs an optional finder capability, such as `Spatial`, goes in that capability's `optionalGroups` entry, and finders that lack the capability skip it. Time-dependent cases go in `clockGroups`. A check that spans several queries, such as one that reads ids and then queries by them, is a function in `testGroups`, which gets the client and config to query itself. A case group's `configure` field sets config options for that group alone. Each client `Run` builds reads the case's time and holds the default realtime fixtures. Realtime tests, which load their own fixtures for each case, are functions in `rtGroups`, and run only against finders that claim the `Realtime` capability. Find ids through `cfg.Finder`, never with SQL, so the case runs against every finder.
+A case that needs an optional finder capability, such as `Spatial` or `Census`, goes in that capability's `optionalGroups` entry, and finders that lack the capability skip it. Time-dependent cases go in `clockGroups`. A check that spans several queries, such as one that reads ids and then queries by them, is a function in `testGroups`, which gets the client and config to query itself. A case group's `configure` field sets config options for that group alone. Each client `Run` builds reads the case's time and holds the default realtime fixtures. Realtime tests, which load their own fixtures for each case, are functions in `rtGroups`, and run only against finders that claim the `Realtime` capability. Find ids through `cfg.Finder`, never with SQL, so the case runs against every finder.
 
 ## Test Infrastructure
 
@@ -97,7 +97,7 @@ Examples:
 - `stop_resolver_test.go`
 - `agency_resolver_rt_test.go`
 
-In `gqltest`, each entity's cases go in `<entity>_cases.go`, such as `booking_rule_cases.go`, and the cases that need the `Spatial` capability go in `spatial_cases.go`.
+In `gqltest`, each entity's cases go in `<entity>_cases.go`, such as `booking_rule_cases.go`, the cases that need the `Spatial` capability go in `spatial_cases.go`, and the cases that need `Census` go in `census_cases.go`.
 
 ---
 

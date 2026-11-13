@@ -29,6 +29,7 @@ type Finder interface {
 	EntityFinder
 	EntityLoader
 	EntityMutator
+	CensusFinder
 }
 
 type PermFinder interface {
@@ -46,22 +47,15 @@ type EntityFinder interface {
 	FindFeeds(context.Context, *int, *Cursor, []int, *FeedFilter) ([]*Feed, error)
 	FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error)
 	FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter, PlaceGeometrySelect) ([]*Place, error)
-	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
-	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
 	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)
 	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
 }
 
-type EntityLoader interface {
-	AgenciesByFeedVersionIDs(ctx context.Context, limit *int, where *AgencyFilter, feedVersionIds []int) ([][]*Agency, error)
-	AgenciesByIDs(context.Context, []int) ([]*Agency, []error)
-	AgenciesByOnestopIDs(context.Context, *int, *AgencyFilter, []string) ([][]*Agency, error)
-	AgencyPlacesByAgencyIDs(context.Context, *int, *AgencyPlaceFilter, []int) ([][]*AgencyPlace, error)
-	AttributionsByFeedVersionIDs(context.Context, *int, *Cursor, *AttributionFilter, []int) ([][]*Attribution, error)
-	BookingRulesByFeedVersionIDs(context.Context, *int, *BookingRuleFilter, []int) ([][]*BookingRule, error)
-	BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
-	CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error)
-	CalendarsByIDs(context.Context, []int) ([]*Calendar, []error)
+// CensusFinder answers census queries: datasets and their sources, layers,
+// tables and fields, and their geographies and values.
+type CensusFinder interface {
+	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
+	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
 	CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error)
 	CensusFieldsByTableIDs(context.Context, *int, []int) ([][]*CensusField, error)
 	CensusGeographiesByDatasetIDs(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
@@ -76,6 +70,18 @@ type EntityLoader interface {
 	CensusTablesBySourceIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error)
 	CensusTableByIDs(context.Context, []int) ([]*CensusTable, []error)
 	CensusValuesByGeographyIDs(context.Context, *int, string, []string, []string) ([][]*CensusValue, error)
+}
+
+type EntityLoader interface {
+	AgenciesByFeedVersionIDs(ctx context.Context, limit *int, where *AgencyFilter, feedVersionIds []int) ([][]*Agency, error)
+	AgenciesByIDs(context.Context, []int) ([]*Agency, []error)
+	AgenciesByOnestopIDs(context.Context, *int, *AgencyFilter, []string) ([][]*Agency, error)
+	AgencyPlacesByAgencyIDs(context.Context, *int, *AgencyPlaceFilter, []int) ([][]*AgencyPlace, error)
+	AttributionsByFeedVersionIDs(context.Context, *int, *Cursor, *AttributionFilter, []int) ([][]*Attribution, error)
+	BookingRulesByFeedVersionIDs(context.Context, *int, *BookingRuleFilter, []int) ([][]*BookingRule, error)
+	BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
+	CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error)
+	CalendarsByIDs(context.Context, []int) ([]*Calendar, []error)
 	// GTFS Fares v1 and v2
 	FareAttributesByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*FareAttribute, error)
 	FareAttributesByIDs(context.Context, []int) ([]*FareAttribute, []error)

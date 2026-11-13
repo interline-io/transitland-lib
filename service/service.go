@@ -202,15 +202,20 @@ func (s *Service) Exception(t time.Time) (int, bool) {
 	return 0, false
 }
 
-// IsActive returns if this Service period is active on a specified date.
+// IsActive returns if this Service period is active on a specified date: t's
+// calendar date, in t's location.
 func (s *Service) IsActive(t time.Time) bool {
 	if v, ok := s.Exception(t); ok {
 		return v == 1
 	}
-	if t.Before(s.StartDate.Val) {
+	// Compared as calendar dates, as Exception compares them. The start and end
+	// dates are midnight UTC, so comparing instants read a later time on the
+	// last day as past the end.
+	day := newYMD(t)
+	if day.Before(newYMD(s.StartDate.Val)) {
 		return false
 	}
-	if t.After(s.EndDate.Val) {
+	if day.After(newYMD(s.EndDate.Val)) {
 		return false
 	}
 	v, err := s.GetWeekday(int(t.Weekday()))

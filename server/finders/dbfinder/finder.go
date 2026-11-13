@@ -48,10 +48,11 @@ func finderCheckLimitMax(limit *int, maxLimit int) uint64 {
 }
 
 type Finder struct {
-	Clock      clock.Clock
-	db         tldb.Ext
-	adminCache *adminCache
-	fvslCache  *serviceWindowCache
+	Clock       clock.Clock
+	db          tldb.Ext
+	adminCache  *adminCache
+	fvslCache   *serviceWindowCache
+	stopLocator StopLocator // the stops that stop buffers read, or nil for gtfs_stops
 }
 
 func NewFinder(db tldb.Ext) *Finder {

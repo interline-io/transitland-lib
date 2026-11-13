@@ -7,6 +7,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
+	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
 	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
@@ -21,7 +22,26 @@ func TestMain(m *testing.M) {
 }
 
 func TestDBFinder(t *testing.T) {
-	Run(t, dbfinderConfig(testconfig.Options{}), Spatial, Realtime)
+	Run(t, dbfinderConfig(testconfig.Options{}), Spatial, Realtime, Census)
+}
+
+// TestDBFinder_StopLocator runs the census groups again with a finder that
+// reads the stops of stop buffers through a stop locator. The locator is the
+// finder itself, so the results must not change.
+func TestDBFinder_StopLocator(t *testing.T) {
+	raiseMaxLimit(t)
+	newConfig := func(t testing.TB, now time.Time) model.Config {
+		cfg := dbfinderConfig(testconfig.Options{})(t, now)
+		f, ok := cfg.Finder.(*dbfinder.Finder)
+		if !ok {
+			t.Fatalf("finder is %T, want *dbfinder.Finder", cfg.Finder)
+		}
+		f.SetStopLocator(f)
+		return cfg
+	}
+	for _, g := range optionalGroups[Census] {
+		runCaseGroup(t, newConfig, g)
+	}
 }
 
 // TestDBFinder_MaterializedDepartures runs the groups that query stop times on
