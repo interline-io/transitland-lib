@@ -47,6 +47,8 @@ func NewDefaultHandler() http.Handler {
 	})
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
 	srv.Use(extension.Introspection{})
+	// A field given as a variable the request didn't provide is left out
+	srv.AroundFields(unsetMissingVariables)
 
 	return LoaderMiddleware(srv)
 }

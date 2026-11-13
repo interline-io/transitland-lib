@@ -15289,7 +15289,7 @@ input FeedVersionInput {
   id: Int
 }
 
-"""Create or update a stop entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
+"""Create or update a stop entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value. A text or number field set to null is cleared, except ` + "`" + `stop_id` + "`" + ` and ` + "`" + `location_type` + "`" + `, which can't be. ` + "`" + `parent` + "`" + ` and ` + "`" + `level` + "`" + ` are cleared with ` + "`" + `{id: null}` + "`" + `, and ` + "`" + `external_reference` + "`" + ` with null. ` + "`" + `geometry` + "`" + ` can't be cleared."""
 input StopSetInput {
   "Integer ID of the stop to update; omit when creating a new stop"
   id: Int
@@ -15325,7 +15325,7 @@ input StopSetInput {
   parent: StopSetInput
   "Reference to an existing level; only the ` + "`" + `id` + "`" + ` is used (the level must already exist)"
   level: LevelSetInput
-  "Set or update the cross-feed external reference for this stop"
+  "Set or update the cross-feed external reference for this stop; null, or a null ` + "`" + `target_feed_onestop_id` + "`" + `, removes it"
   external_reference: StopExternalReferenceSetInput
 }
 
@@ -15337,7 +15337,7 @@ input StopExternalReferenceSetInput {
   target_stop_id: String
 }
 
-"""Create or update a level entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
+"""Create or update a level entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value, and ` + "`" + `level_name` + "`" + ` set to null is cleared; ` + "`" + `level_id` + "`" + ` and ` + "`" + `level_index` + "`" + ` can't be. ` + "`" + `parent` + "`" + ` is cleared with ` + "`" + `{id: null}` + "`" + `. ` + "`" + `geometry` + "`" + ` can't be cleared."""
 input LevelSetInput {
   "Integer ID of the level to update; omit when creating a new level"
   id: Int
@@ -15355,7 +15355,7 @@ input LevelSetInput {
   parent: StopSetInput
 }
 
-"""Create or update a pathway entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `"""
+"""Create or update a pathway entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value, and a measurement or sign set to null is cleared; ` + "`" + `pathway_id` + "`" + `, ` + "`" + `pathway_mode` + "`" + ` and ` + "`" + `is_bidirectional` + "`" + ` can't be. ` + "`" + `from_stop` + "`" + ` and ` + "`" + `to_stop` + "`" + ` take another stop's ` + "`" + `id` + "`" + `."""
 input PathwaySetInput {
   "Integer ID of the pathway to update; omit when creating a new pathway"
   id: Int
@@ -56235,21 +56235,21 @@ func (ec *executionContext) unmarshalInputLevelSetInput(ctx context.Context, obj
 			if err != nil {
 				return it, err
 			}
-			it.LevelID = data
+			it.LevelID = graphql.OmittableOf(data)
 		case "level_name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("level_name"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.LevelName = data
+			it.LevelName = graphql.OmittableOf(data)
 		case "level_index":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("level_index"))
 			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.LevelIndex = data
+			it.LevelIndex = graphql.OmittableOf(data)
 		case "geometry":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geometry"))
 			data, err := ec.unmarshalOMultiPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMultiPolygon(ctx, v)
@@ -56648,70 +56648,70 @@ func (ec *executionContext) unmarshalInputPathwaySetInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
-			it.PathwayID = data
+			it.PathwayID = graphql.OmittableOf(data)
 		case "pathway_mode":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pathway_mode"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.PathwayMode = data
+			it.PathwayMode = graphql.OmittableOf(data)
 		case "is_bidirectional":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("is_bidirectional"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.IsBidirectional = data
+			it.IsBidirectional = graphql.OmittableOf(data)
 		case "length":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("length"))
 			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Length = data
+			it.Length = graphql.OmittableOf(data)
 		case "traversal_time":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("traversal_time"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.TraversalTime = data
+			it.TraversalTime = graphql.OmittableOf(data)
 		case "stair_count":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stair_count"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StairCount = data
+			it.StairCount = graphql.OmittableOf(data)
 		case "max_slope":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("max_slope"))
 			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.MaxSlope = data
+			it.MaxSlope = graphql.OmittableOf(data)
 		case "min_width":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("min_width"))
 			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.MinWidth = data
+			it.MinWidth = graphql.OmittableOf(data)
 		case "signposted_as":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("signposted_as"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.SignpostedAs = data
+			it.SignpostedAs = graphql.OmittableOf(data)
 		case "reverse_signposted_as":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reverse_signposted_as"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ReverseSignpostedAs = data
+			it.ReverseSignpostedAs = graphql.OmittableOf(data)
 		case "from_stop":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("from_stop"))
 			data, err := ec.unmarshalOStopSetInput2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐStopSetInput(ctx, v)
@@ -57674,84 +57674,84 @@ func (ec *executionContext) unmarshalInputStopSetInput(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
-			it.LocationType = data
+			it.LocationType = graphql.OmittableOf(data)
 		case "stop_code":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_code"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StopCode = data
+			it.StopCode = graphql.OmittableOf(data)
 		case "stop_desc":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_desc"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StopDesc = data
+			it.StopDesc = graphql.OmittableOf(data)
 		case "stop_id":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_id"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StopID = data
+			it.StopID = graphql.OmittableOf(data)
 		case "stop_name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_name"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StopName = data
+			it.StopName = graphql.OmittableOf(data)
 		case "stop_timezone":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_timezone"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StopTimezone = data
+			it.StopTimezone = graphql.OmittableOf(data)
 		case "stop_url":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_url"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StopURL = data
+			it.StopURL = graphql.OmittableOf(data)
 		case "wheelchair_boarding":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("wheelchair_boarding"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.WheelchairBoarding = data
+			it.WheelchairBoarding = graphql.OmittableOf(data)
 		case "zone_id":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("zone_id"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ZoneID = data
+			it.ZoneID = graphql.OmittableOf(data)
 		case "platform_code":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("platform_code"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.PlatformCode = data
+			it.PlatformCode = graphql.OmittableOf(data)
 		case "tts_stop_name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tts_stop_name"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.TtsStopName = data
+			it.TtsStopName = graphql.OmittableOf(data)
 		case "stop_access":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_access"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.StopAccess = data
+			it.StopAccess = graphql.OmittableOf(data)
 		case "geometry":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geometry"))
 			data, err := ec.unmarshalOPoint2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐPoint(ctx, v)
@@ -57779,7 +57779,7 @@ func (ec *executionContext) unmarshalInputStopSetInput(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
-			it.ExternalReference = data
+			it.ExternalReference = graphql.OmittableOf(data)
 		}
 	}
 	return it, nil

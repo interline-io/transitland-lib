@@ -34,16 +34,17 @@ func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	return nil
 }
 
-// emptyTextFilter sets the text fields the database needs non-null to empty
+// EmptyTextFilter sets the text fields the database needs non-null to empty
 // strings when unset. agency_id and agency_url have not-null constraints, and the
 // generated textsearch columns join the rest without COALESCE, so one null would
 // leave a row's whole vector null.
 //
 // An empty string reads back from the database as unset, so readers see no
 // change, unlike NotNullFilter's defaults.
-type emptyTextFilter struct{}
+type EmptyTextFilter struct{}
 
-func (e *emptyTextFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
+// Filter sets an entity's empty text fields.
+func (e *EmptyTextFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
 		v.AgencyID.OrSet("")

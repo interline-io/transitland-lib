@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -13,7 +14,6 @@ import (
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
-	"github.com/jmoiron/sqlx"
 )
 
 func (f *Finder) StopCreate(ctx context.Context, input model.StopSetInput) (int, error) {
@@ -40,26 +40,56 @@ func (f *Finder) StopDelete(ctx context.Context, id int) error {
 }
 
 func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error) {
-	stopId, err := createUpdateEnt(
+	if !input.ExternalReference.IsSet() {
+		id, _, err := saveStop(ctx, input)
+		return id, err
+	}
+	// The stop and its external reference are saved together, or not at all
+	stopId := 0
+	cfg := model.ForContext(ctx)
+	err := cfg.Adapter.Tx(func(atx tldb.Adapter) error {
+		txcfg := cfg
+		txcfg.Adapter = atx
+		ctx := model.WithConfig(ctx, txcfg)
+		id, fvid, err := saveStop(ctx, input)
+		if err != nil {
+			return err
+		}
+		stopId = id
+		return setStopExternalReference(ctx, id, fvid, input.ExternalReference.Value())
+	})
+	if err != nil {
+		return 0, err
+	}
+	return stopId, nil
+}
+
+// saveStop creates or updates a stop's own row, and returns its id and feed version
+func saveStop(ctx context.Context, input model.StopSetInput) (int, int, error) {
+	update := isUpdate(input.ID)
+	stop := &gtfs.Stop{}
+	id, err := createUpdateEnt(
 		ctx,
 		input.ID,
 		fvint(input.FeedVersion),
-		&gtfs.Stop{},
+		stop,
 		func(ent *gtfs.Stop) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanCol(&ent.StopID, input.StopID, "stop_id", cols, &err)
-			cols = scanCol(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
-			cols = scanCol(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
-			cols = scanCol(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
-			cols = scanCol(&ent.StopName, input.StopName, "stop_name", cols, &err)
-			cols = scanCol(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
-			cols = scanCol(&ent.LocationType, input.LocationType, "location_type", cols, &err)
-			cols = scanCol(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
-			cols = scanCol(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
-			cols = scanCol(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
-			cols = scanCol(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
-			cols = scanCol(&ent.StopAccess, input.StopAccess, "stop_access", cols, &err)
+			cols = scanOpt(&ent.StopID, input.StopID, "stop_id", cols, &err)
+			cols = scanOpt(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
+			cols = scanOpt(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
+			cols = scanOpt(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
+			cols = scanOpt(&ent.StopName, input.StopName, "stop_name", cols, &err)
+			cols = scanOpt(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
+			// Cleared, it would take its not-null default, 0, and a station
+			// would become a platform; the other required fields fail validation
+			cols = scanReq(&ent.LocationType, input.LocationType, "location_type", update, cols, &err)
+			cols = scanOpt(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
+			cols = scanOpt(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
+			cols = scanOpt(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
+			cols = scanOpt(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
+			cols = scanOpt(&ent.StopAccess, input.StopAccess, "stop_access", cols, &err)
 			if input.Geometry != nil && input.Geometry.Valid {
 				cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			}
@@ -72,42 +102,46 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 			return cols, err
 		})
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	if refInput := input.ExternalReference; refInput != nil {
-		// Check if we have an existing stop external reference for this stop
-		var stopRefCheck model.StopExternalReference
-		var fvidCheck *int
-		sqlx.GetContext(ctx, toAtx(ctx).DBX(), &stopRefCheck, `select id from tl_stop_external_references where stop_id = $1`, stopId)
-		sqlx.GetContext(ctx, toAtx(ctx).DBX(), &fvidCheck, `select feed_version_id from gtfs_stops where id = $1`, stopId)
-		if refInput.TargetFeedOnestopID != nil {
-			// Update using normal method
-			if _, err := createUpdateEnt(
-				ctx,
-				&stopRefCheck.ID,
-				fvidCheck,
-				&model.StopExternalReference{},
-				func(ent *model.StopExternalReference) ([]string, error) {
-					var cols []string
-					var err error
-					ent.StopID.SetInt(stopId)
-					cols = scanCol(&ent.StopID, &stopId, "stop_id", cols, &err)
-					cols = scanCol(&ent.TargetFeedOnestopID, refInput.TargetFeedOnestopID, "target_feed_onestop_id", cols, &err)
-					cols = scanCol(&ent.TargetStopID, refInput.TargetStopID, "target_stop_id", cols, &err)
-					// cols = scanCol(&ent.Inactive, refInput.Inactive, "inactive", cols, &err)
-					return cols, err
-				},
-			); err != nil {
-				return 0, fmt.Errorf("failed to create or update stop external reference for stop %d: %w", stopId, err)
-			}
-		} else if stopRefCheck.ID > 0 {
-			// Delete
-			if err := deleteEnt(ctx, &stopRefCheck); err != nil {
-				return 0, fmt.Errorf("failed to delete stop external reference for stop %d: %w", stopId, err)
-			}
+	return id, stop.GetFeedVersionID(), nil
+}
+
+// setStopExternalReference sets a stop's external reference, replacing its
+// target feed and stop, or removes it when ref or its target feed is nil.
+func setStopExternalReference(ctx context.Context, stopId int, fvid int, ref *model.StopExternalReferenceSetInput) error {
+	db := toAtx(ctx).DBX()
+	var existing model.StopExternalReference
+	if err := dbutil.Get(ctx, db, sq.StatementBuilder.Select("id").From("tl_stop_external_references").Where(sq.Eq{"stop_id": stopId}), &existing); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("failed to find the stop external reference for stop %d: %w", stopId, err)
+	}
+	if ref == nil || ref.TargetFeedOnestopID == nil {
+		if existing.ID == 0 {
+			return nil
 		}
+		if err := deleteEnt(ctx, &existing); err != nil {
+			return fmt.Errorf("failed to delete stop external reference for stop %d: %w", stopId, err)
+		}
+		return nil
 	}
-	return stopId, err
+	if _, err := createUpdateEnt(
+		ctx,
+		&existing.ID,
+		&fvid,
+		&model.StopExternalReference{},
+		func(ent *model.StopExternalReference) ([]string, error) {
+			var cols []string
+			var err error
+			cols = scanRef(&ent.StopID, &stopId, "stop_id", cols, &err)
+			// The target is the one given, whole: a null target stop clears the old one
+			cols = scanRef(&ent.TargetFeedOnestopID, ref.TargetFeedOnestopID, "target_feed_onestop_id", cols, &err)
+			cols = scanRef(&ent.TargetStopID, ref.TargetStopID, "target_stop_id", cols, &err)
+			return cols, err
+		},
+	); err != nil {
+		return fmt.Errorf("failed to create or update stop external reference for stop %d: %w", stopId, err)
+	}
+	return nil
 }
 
 ///////////
@@ -141,16 +175,16 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 		func(ent *gtfs.Pathway) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanCol(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
-			cols = scanCol(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
-			cols = scanCol(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
-			cols = scanCol(&ent.Length, input.Length, "length", cols, &err)
-			cols = scanCol(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols, &err)
-			cols = scanCol(&ent.StairCount, input.StairCount, "stair_count", cols, &err)
-			cols = scanCol(&ent.MaxSlope, input.MaxSlope, "max_slope", cols, &err)
-			cols = scanCol(&ent.MinWidth, input.MinWidth, "min_width", cols, &err)
-			cols = scanCol(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols, &err)
-			cols = scanCol(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols, &err)
+			cols = scanOpt(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
+			cols = scanOpt(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
+			cols = scanOpt(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
+			cols = scanOpt(&ent.Length, input.Length, "length", cols, &err)
+			cols = scanOpt(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols, &err)
+			cols = scanOpt(&ent.StairCount, input.StairCount, "stair_count", cols, &err)
+			cols = scanOpt(&ent.MaxSlope, input.MaxSlope, "max_slope", cols, &err)
+			cols = scanOpt(&ent.MinWidth, input.MinWidth, "min_width", cols, &err)
+			cols = scanOpt(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols, &err)
+			cols = scanOpt(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols, &err)
 			if v := input.FromStop; v != nil {
 				cols = scanRef(&ent.FromStopID, v.ID, "from_stop_id", cols, &err)
 			}
@@ -200,9 +234,9 @@ func createUpdateLevel(ctx context.Context, input model.LevelSetInput) (int, err
 		func(ent *levelRow) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanCol(&ent.LevelID, input.LevelID, "level_id", cols, &err)
-			cols = scanCol(&ent.LevelName, input.LevelName, "level_name", cols, &err)
-			cols = scanCol(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
+			cols = scanOpt(&ent.LevelID, input.LevelID, "level_id", cols, &err)
+			cols = scanOpt(&ent.LevelName, input.LevelName, "level_name", cols, &err)
+			cols = scanOpt(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
 			cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			if v := input.Parent; v != nil {
 				cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
@@ -225,39 +259,49 @@ type canScan interface {
 	Scan(any) error
 }
 
-// scanCol assigns inval into val (via val.Scan) and appends colname to cols
-// when inval is non-nil. Any Scan error is reported through errp, which must be
-// non-nil; once *errp is set, subsequent scanCol calls short-circuit so
-// callers can chain several and inspect a single error at the end.
-func scanCol[T any, PT *T](val canScan, inval PT, colname string, cols []string, errp *error) []string {
-	if *errp != nil {
-		return cols
-	}
-	if inval != nil {
-		if err := val.Scan(*inval); err != nil {
-			*errp = fmt.Errorf("scan %s: %w", colname, err)
-			return cols
-		}
-		cols = append(cols, colname)
-	}
-	return cols
-}
-
-// scanRef sets a reference column to id, or clears it when id is nil, and
-// appends colname to cols. Errors are reported through errp, as with scanCol.
-func scanRef(val canScan, id *int, colname string, cols []string, errp *error) []string {
-	if *errp != nil {
+// scanOpt sets a column from an input field that tells null from left out,
+// appending colname to cols: a field left out keeps the column as it was, a
+// null clears it, and a value sets it. Any Scan error is reported through
+// errp, which must be non-nil; once *errp is set, later calls short-circuit,
+// so callers can chain several and check one error at the end.
+func scanOpt[T any](val canScan, inval graphql.Omittable[*T], colname string, cols []string, errp *error) []string {
+	if *errp != nil || !inval.IsSet() {
 		return cols
 	}
 	var v any
-	if id != nil {
-		v = *id
+	if p := inval.Value(); p != nil {
+		v = *p
 	}
 	if err := val.Scan(v); err != nil {
 		*errp = fmt.Errorf("scan %s: %w", colname, err)
 		return cols
 	}
 	return append(cols, colname)
+}
+
+// scanReq is scanOpt for a field whose cleared value validation can't catch.
+// In an update a null is an error, rather than a clear that would leave a
+// not-null column its default; in a create, where there's nothing to clear,
+// it's left out.
+func scanReq[T any](val canScan, inval graphql.Omittable[*T], colname string, update bool, cols []string, errp *error) []string {
+	if inval.IsSet() && inval.Value() == nil {
+		if update && *errp == nil {
+			*errp = fmt.Errorf("%s can't be cleared", colname)
+		}
+		return cols
+	}
+	return scanOpt(val, inval, colname, cols, errp)
+}
+
+// scanRef sets a column to id, or clears it when id is nil, and appends
+// colname to cols.
+func scanRef[T any](val canScan, id *T, colname string, cols []string, errp *error) []string {
+	return scanOpt(val, graphql.OmittableOf(id), colname, cols, errp)
+}
+
+// isUpdate says whether an input's id names a record to update
+func isUpdate(id *int) bool {
+	return id != nil && *id > 0
 }
 
 type hasTableName interface {
@@ -280,6 +324,7 @@ func toAtx(ctx context.Context) tldb.Adapter {
 }
 
 var notNullFilter = &tldb.NotNullFilter{}
+var emptyTextFilter = &tldb.EmptyTextFilter{}
 
 // ensure we have edit rights to fvid
 func createUpdateEnt[T hasTableName](
@@ -289,7 +334,7 @@ func createUpdateEnt[T hasTableName](
 	baseEnt T,
 	updateFunc func(baseEnt T) ([]string, error),
 ) (int, error) {
-	update := (entId != nil && *entId > 0)
+	update := isUpdate(entId)
 	atx := toAtx(ctx)
 	retId := 0
 
@@ -320,16 +365,23 @@ func createUpdateEnt[T hasTableName](
 	if err != nil {
 		return 0, err
 	}
-	// Fill the not-null defaults the importer writes.
-	if ent, ok := any(baseEnt).(tt.Entity); ok {
+	// Fill the not-null defaults the importer writes, validate, and then, as
+	// the importer does after validation, write cleared text as an empty
+	// string: a null stop name or description would void the stop's text
+	// search vector.
+	ent, isEntity := any(baseEnt).(tt.Entity)
+	if isEntity {
 		if err := notNullFilter.Filter(ent, nil); err != nil {
 			return 0, err
 		}
 	}
-
-	// Validate
 	if errs := tt.CheckErrors(baseEnt); len(errs) > 0 {
 		return 0, errs[0]
+	}
+	if isEntity {
+		if err := emptyTextFilter.Filter(ent, nil); err != nil {
+			return 0, err
+		}
 	}
 	// Save
 	err = nil
