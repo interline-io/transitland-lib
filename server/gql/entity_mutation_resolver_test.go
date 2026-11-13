@@ -3,6 +3,8 @@ package gql
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,10 +13,12 @@ import (
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
+	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
 	"github.com/interline-io/transitland-lib/tt"
+	sq "github.com/irees/squirrel"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -270,6 +274,31 @@ func postSet(c *client.Client, mutation string, input string, set map[string]any
 	return gjson.Get(gqlcase.ToJSON(resp), mutation), err
 }
 
+// createTestStop creates a stop in feed version 1 and returns its id.
+func createTestStop(t *testing.T, ctx context.Context, finder model.Finder, name string) int {
+	t.Helper()
+	id, err := finder.StopCreate(ctx, model.StopSetInput{
+		FeedVersion: &model.FeedVersionInput{ID: toPtr(1)},
+		StopID:      toOpt(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())),
+		StopName:    toOpt(name),
+		Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// countStopRefs counts a stop's external references.
+func countStopRefs(t *testing.T, ctx context.Context, cfg model.Config, stopID int64) int {
+	t.Helper()
+	n := 0
+	if err := dbutil.Get(ctx, cfg.Adapter.DBX(), sq.StatementBuilder.Select("count(*)").From("tl_stop_external_references").Where(sq.Eq{"stop_id": stopID}), &n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
 // In an update, a field left out keeps its value, a null clears it, and a
 // value sets it, through the GraphQL mutation.
 func TestPathwayUpdate_GraphQLNullClears(t *testing.T) {
@@ -278,21 +307,7 @@ func TestPathwayUpdate_GraphQLNullClears(t *testing.T) {
 		ctx := model.WithConfig(context.Background(), cfg)
 		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
 		c := gqlClient(cfg)
-		fv := model.FeedVersionInput{ID: toPtr(1)}
-		newStop := func(name string) int {
-			t.Helper()
-			id, err := finder.StopCreate(ctx, model.StopSetInput{
-				FeedVersion: &fv,
-				StopID:      toOpt(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())),
-				StopName:    toOpt(name),
-				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			return id
-		}
-		fromStopID, toStopID := newStop("from"), newStop("to")
+		fromStopID, toStopID := createTestStop(t, ctx, finder, "from"), createTestStop(t, ctx, finder, "to")
 		const fields = `id traversal_time stair_count min_width signposted_as`
 		created, err := postSet(c, "pathway_create", "PathwaySetInput", map[string]any{
 			"feed_version":     map[string]any{"id": 1},
@@ -345,9 +360,10 @@ func TestPathwayUpdate_GraphQLNullClears(t *testing.T) {
 		assert.Equal(t, int64(24), ent.StairCount.Val)
 		assert.Equal(t, 1.5, ent.MinWidth.Val)
 
-		// A field that must keep a value can't be cleared
+		// A required field can't be cleared
 		_, err = postSet(c, "pathway_update", "PathwaySetInput", map[string]any{"id": id, "pathway_mode": nil}, fields)
-		assert.ErrorContains(t, err, "pathway_mode can't be cleared")
+		assert.ErrorContains(t, err, "pathway_mode")
+		assert.ErrorContains(t, err, "required")
 	})
 }
 
@@ -360,21 +376,14 @@ func TestPathwayUpdate_GraphQLMissingVariable(t *testing.T) {
 		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
 		c := gqlClient(cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
-		stopID := func(name string) int {
-			id, err := finder.StopCreate(ctx, model.StopSetInput{FeedVersion: &fv, StopID: toOpt(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())), StopName: toOpt(name), Geometry: toPtr(tt.NewPoint(-122.27, 37.80))})
-			if err != nil {
-				t.Fatal(err)
-			}
-			return id
-		}
 		eid, err := finder.PathwayCreate(ctx, model.PathwaySetInput{
 			FeedVersion:     &fv,
 			PathwayID:       toOpt(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
 			PathwayMode:     toOpt(1),
 			IsBidirectional: toOpt(1),
 			TraversalTime:   toOpt(30),
-			FromStop:        &model.StopSetInput{ID: toPtr(stopID("from"))},
-			ToStop:          &model.StopSetInput{ID: toPtr(stopID("to"))},
+			FromStop:        &model.StopSetInput{ID: toPtr(createTestStop(t, ctx, finder, "from"))},
+			ToStop:          &model.StopSetInput{ID: toPtr(createTestStop(t, ctx, finder, "to"))},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -430,11 +439,7 @@ func TestStopUpdate_GraphQLMissingNestedVariables(t *testing.T) {
 		}
 		assert.Equal(t, "renamed", ent.StopName.Val)
 		assert.Equal(t, fmt.Sprintf("%d", parentID), ent.ParentStation.Val, "parent, its variable not provided, should be unchanged")
-		n := 0
-		if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &n, `select count(*) from tl_stop_external_references where stop_id = $1`, eid); err != nil {
-			t.Fatal(err)
-		}
-		assert.Equal(t, 1, n, "the external reference, its variables not provided, should be kept")
+		assert.Equal(t, 1, countStopRefs(t, ctx, cfg, int64(eid)), "the external reference, its variables not provided, should be kept")
 	})
 }
 
@@ -513,14 +518,7 @@ func TestStopUpdate_GraphQLNullClears(t *testing.T) {
 			t.Fatal(err)
 		}
 		id := created.Get("id").Int()
-		refCount := func() int {
-			n := 0
-			if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &n, `select count(*) from tl_stop_external_references where stop_id = $1`, id); err != nil {
-				t.Fatal(err)
-			}
-			return n
-		}
-		assert.Equal(t, 1, refCount())
+		assert.Equal(t, 1, countStopRefs(t, ctx, cfg, id))
 
 		if _, err := postSet(c, "stop_update", "StopSetInput", map[string]any{"id": id, "stop_desc": nil, "wheelchair_boarding": nil, "external_reference": nil}, fields); err != nil {
 			t.Fatal(err)
@@ -538,7 +536,7 @@ func TestStopUpdate_GraphQLNullClears(t *testing.T) {
 		}
 		assert.Nil(t, row.WheelchairBoarding, "wheelchair_boarding should be NULL")
 		assert.True(t, row.Searchable, "the stop's text search vector should survive")
-		assert.Equal(t, 0, refCount(), "the external reference should be removed")
+		assert.Equal(t, 0, countStopRefs(t, ctx, cfg, id), "the external reference should be removed")
 		ent := gtfs.Stop{}
 		ent.ID = int(id)
 		if err := atx.Find(ctx, &ent); err != nil {
@@ -585,7 +583,7 @@ func TestStopUpdate_NullClears(t *testing.T) {
 	})
 }
 
-// A level's name can be cleared; its index can't.
+// A level's name can be cleared; its index, required, can't.
 func TestLevelUpdate_GraphQLNullClears(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		c := gqlClient(cfg)
@@ -607,7 +605,8 @@ func TestLevelUpdate_GraphQLNullClears(t *testing.T) {
 		assert.Equal(t, gjson.Null, cleared.Get("level_name").Type)
 		assert.Equal(t, -1.0, cleared.Get("level_index").Float())
 		_, err = postSet(c, "level_update", "LevelSetInput", map[string]any{"id": id, "level_index": nil}, fields)
-		assert.ErrorContains(t, err, "level_index can't be cleared")
+		assert.ErrorContains(t, err, "level_index")
+		assert.ErrorContains(t, err, "required")
 	})
 }
 
@@ -976,4 +975,23 @@ func toOpt[T any](v T) graphql.Omittable[*T] {
 // toNull is an input field set to null, which clears it
 func toNull[T any]() graphql.Omittable[*T] {
 	return graphql.OmittableOf[*T](nil)
+}
+
+// Every field of the stop, level and pathway inputs that sets a column tells
+// null from left out: a new field that isn't Omittable in gqlgen.yml would
+// quietly keep its value when sent null.
+func TestSetInputsAreOmittable(t *testing.T) {
+	refs := map[string]bool{"ID": true, "FeedVersion": true, "Geometry": true, "Parent": true, "Level": true, "FromStop": true, "ToStop": true}
+	for _, input := range []any{model.StopSetInput{}, model.LevelSetInput{}, model.PathwaySetInput{}} {
+		typ := reflect.TypeOf(input)
+		for i := 0; i < typ.NumField(); i++ {
+			f := typ.Field(i)
+			if refs[f.Name] {
+				continue
+			}
+			if !strings.HasPrefix(f.Type.Name(), "Omittable[") {
+				t.Errorf("%s.%s is %s: make it omittable in gqlgen.yml", typ.Name(), f.Name, f.Type)
+			}
+		}
+	}
 }

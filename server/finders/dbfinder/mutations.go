@@ -40,6 +40,10 @@ func (f *Finder) StopDelete(ctx context.Context, id int) error {
 }
 
 func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error) {
+	if !input.ExternalReference.IsSet() {
+		id, _, err := saveStop(ctx, input)
+		return id, err
+	}
 	// The stop and its external reference are saved together, or not at all
 	stopId := 0
 	cfg := model.ForContext(ctx)
@@ -47,46 +51,12 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 		txcfg := cfg
 		txcfg.Adapter = atx
 		ctx := model.WithConfig(ctx, txcfg)
-		update := isUpdate(input.ID)
-		var err error
-		stopId, err = createUpdateEnt(
-			ctx,
-			input.ID,
-			fvint(input.FeedVersion),
-			&gtfs.Stop{},
-			func(ent *gtfs.Stop) ([]string, error) {
-				var cols []string
-				var err error
-				cols = scanReq(&ent.StopID, input.StopID, "stop_id", update, cols, &err)
-				cols = scanOpt(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
-				cols = scanOpt(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
-				cols = scanOpt(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
-				cols = scanOpt(&ent.StopName, input.StopName, "stop_name", cols, &err)
-				cols = scanOpt(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
-				cols = scanReq(&ent.LocationType, input.LocationType, "location_type", update, cols, &err)
-				cols = scanOpt(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
-				cols = scanOpt(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
-				cols = scanOpt(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
-				cols = scanOpt(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
-				cols = scanOpt(&ent.StopAccess, input.StopAccess, "stop_access", cols, &err)
-				if input.Geometry != nil && input.Geometry.Valid {
-					cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
-				}
-				if v := input.Parent; v != nil {
-					cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
-				}
-				if v := input.Level; v != nil {
-					cols = scanRef(&ent.LevelID, v.ID, "level_id", cols, &err)
-				}
-				return cols, err
-			})
+		id, fvid, err := saveStop(ctx, input)
 		if err != nil {
 			return err
 		}
-		if input.ExternalReference.IsSet() {
-			return setStopExternalReference(ctx, stopId, input.ExternalReference.Value())
-		}
-		return nil
+		stopId = id
+		return setStopExternalReference(ctx, id, fvid, input.ExternalReference.Value())
 	})
 	if err != nil {
 		return 0, err
@@ -94,9 +64,52 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 	return stopId, nil
 }
 
+// saveStop creates or updates a stop's own row, and returns its id and feed version
+func saveStop(ctx context.Context, input model.StopSetInput) (int, int, error) {
+	update := isUpdate(input.ID)
+	stop := &gtfs.Stop{}
+	id, err := createUpdateEnt(
+		ctx,
+		input.ID,
+		fvint(input.FeedVersion),
+		stop,
+		func(ent *gtfs.Stop) ([]string, error) {
+			var cols []string
+			var err error
+			cols = scanOpt(&ent.StopID, input.StopID, "stop_id", cols, &err)
+			cols = scanOpt(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
+			cols = scanOpt(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
+			cols = scanOpt(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
+			cols = scanOpt(&ent.StopName, input.StopName, "stop_name", cols, &err)
+			cols = scanOpt(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
+			// Cleared, it would take its not-null default, 0, and a station
+			// would become a platform; the other required fields fail validation
+			cols = scanReq(&ent.LocationType, input.LocationType, "location_type", update, cols, &err)
+			cols = scanOpt(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
+			cols = scanOpt(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
+			cols = scanOpt(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
+			cols = scanOpt(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
+			cols = scanOpt(&ent.StopAccess, input.StopAccess, "stop_access", cols, &err)
+			if input.Geometry != nil && input.Geometry.Valid {
+				cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
+			}
+			if v := input.Parent; v != nil {
+				cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
+			}
+			if v := input.Level; v != nil {
+				cols = scanRef(&ent.LevelID, v.ID, "level_id", cols, &err)
+			}
+			return cols, err
+		})
+	if err != nil {
+		return 0, 0, err
+	}
+	return id, stop.GetFeedVersionID(), nil
+}
+
 // setStopExternalReference sets a stop's external reference, replacing its
 // target feed and stop, or removes it when ref or its target feed is nil.
-func setStopExternalReference(ctx context.Context, stopId int, ref *model.StopExternalReferenceSetInput) error {
+func setStopExternalReference(ctx context.Context, stopId int, fvid int, ref *model.StopExternalReferenceSetInput) error {
 	db := toAtx(ctx).DBX()
 	var existing model.StopExternalReference
 	if err := dbutil.Get(ctx, db, sq.StatementBuilder.Select("id").From("tl_stop_external_references").Where(sq.Eq{"stop_id": stopId}), &existing); err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -111,19 +124,15 @@ func setStopExternalReference(ctx context.Context, stopId int, ref *model.StopEx
 		}
 		return nil
 	}
-	var fvid *int
-	if err := dbutil.Get(ctx, db, sq.StatementBuilder.Select("feed_version_id").From("gtfs_stops").Where(sq.Eq{"id": stopId}), &fvid); err != nil {
-		return fmt.Errorf("failed to find the feed version of stop %d: %w", stopId, err)
-	}
 	if _, err := createUpdateEnt(
 		ctx,
 		&existing.ID,
-		fvid,
+		&fvid,
 		&model.StopExternalReference{},
 		func(ent *model.StopExternalReference) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanCol(&ent.StopID, &stopId, "stop_id", cols, &err)
+			cols = scanRef(&ent.StopID, &stopId, "stop_id", cols, &err)
 			// The target is the one given, whole: a null target stop clears the old one
 			cols = scanRef(&ent.TargetFeedOnestopID, ref.TargetFeedOnestopID, "target_feed_onestop_id", cols, &err)
 			cols = scanRef(&ent.TargetStopID, ref.TargetStopID, "target_stop_id", cols, &err)
@@ -166,9 +175,9 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 		func(ent *gtfs.Pathway) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanReq(&ent.PathwayID, input.PathwayID, "pathway_id", isUpdate(input.ID), cols, &err)
-			cols = scanReq(&ent.PathwayMode, input.PathwayMode, "pathway_mode", isUpdate(input.ID), cols, &err)
-			cols = scanReq(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", isUpdate(input.ID), cols, &err)
+			cols = scanOpt(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
+			cols = scanOpt(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
+			cols = scanOpt(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
 			cols = scanOpt(&ent.Length, input.Length, "length", cols, &err)
 			cols = scanOpt(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols, &err)
 			cols = scanOpt(&ent.StairCount, input.StairCount, "stair_count", cols, &err)
@@ -225,9 +234,9 @@ func createUpdateLevel(ctx context.Context, input model.LevelSetInput) (int, err
 		func(ent *levelRow) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanReq(&ent.LevelID, input.LevelID, "level_id", isUpdate(input.ID), cols, &err)
+			cols = scanOpt(&ent.LevelID, input.LevelID, "level_id", cols, &err)
 			cols = scanOpt(&ent.LevelName, input.LevelName, "level_name", cols, &err)
-			cols = scanReq(&ent.LevelIndex, input.LevelIndex, "level_index", isUpdate(input.ID), cols, &err)
+			cols = scanOpt(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
 			cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			if v := input.Parent; v != nil {
 				cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
@@ -250,20 +259,11 @@ type canScan interface {
 	Scan(any) error
 }
 
-// scanCol sets val from inval and appends colname to cols when inval is
-// non-nil, and leaves both alone when it's nil. Any Scan error is reported
-// through errp, which must be non-nil; once *errp is set, later calls
-// short-circuit, so callers can chain several and check one error at the end.
-func scanCol[T any](val canScan, inval *T, colname string, cols []string, errp *error) []string {
-	if inval == nil {
-		return cols
-	}
-	return scanOpt(val, graphql.OmittableOf(inval), colname, cols, errp)
-}
-
-// scanOpt is scanCol for an input field that tells null from left out: a
-// field left out keeps the column as it was, a null clears it, and a value
-// sets it.
+// scanOpt sets a column from an input field that tells null from left out,
+// appending colname to cols: a field left out keeps the column as it was, a
+// null clears it, and a value sets it. Any Scan error is reported through
+// errp, which must be non-nil; once *errp is set, later calls short-circuit,
+// so callers can chain several and check one error at the end.
 func scanOpt[T any](val canScan, inval graphql.Omittable[*T], colname string, cols []string, errp *error) []string {
 	if *errp != nil || !inval.IsSet() {
 		return cols
@@ -279,9 +279,10 @@ func scanOpt[T any](val canScan, inval graphql.Omittable[*T], colname string, co
 	return append(cols, colname)
 }
 
-// scanReq is scanOpt for a field that must keep a value. In an update a null
-// is an error, rather than a clear that would leave a not-null column its
-// default; in a create, where there's nothing to clear, it's left out.
+// scanReq is scanOpt for a field whose cleared value validation can't catch.
+// In an update a null is an error, rather than a clear that would leave a
+// not-null column its default; in a create, where there's nothing to clear,
+// it's left out.
 func scanReq[T any](val canScan, inval graphql.Omittable[*T], colname string, update bool, cols []string, errp *error) []string {
 	if inval.IsSet() && inval.Value() == nil {
 		if update && *errp == nil {
@@ -333,7 +334,7 @@ func createUpdateEnt[T hasTableName](
 	baseEnt T,
 	updateFunc func(baseEnt T) ([]string, error),
 ) (int, error) {
-	update := (entId != nil && *entId > 0)
+	update := isUpdate(entId)
 	atx := toAtx(ctx)
 	retId := 0
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/vektah/gqlparser/v2/ast"
@@ -14,12 +15,14 @@ import (
 // GraphQL spec says such a field is not provided, but gqlparser builds the
 // input object with it as null, which an Omittable field takes as a clear:
 // set:{id: $id, traversal_time: $tt} without $tt would clear traversal_time.
-// An input object whose fields are all such variables is left out too, so
-// parent:{id: $p} without $p doesn't clear the parent. A variable's default
-// counts as provided.
+// An input object whose fields are all such variables is left out too: the
+// stop, level and pathway inputs clear a reference with {id: null}, so
+// parent:{id: $p} without $p would otherwise clear the parent. A variable's
+// default counts as provided. Only mutations take Omittable inputs, so other
+// fields pass straight through.
 func unsetMissingVariables(ctx context.Context, next graphql.Resolver) (any, error) {
 	fc := graphql.GetFieldContext(ctx)
-	if fc == nil || fc.Field.Field == nil || len(fc.Field.Arguments) == 0 || !graphql.HasOperationContext(ctx) {
+	if fc == nil || fc.Object != "Mutation" || fc.Field.Field == nil || len(fc.Field.Arguments) == 0 || !graphql.HasOperationContext(ctx) {
 		return next(ctx)
 	}
 	vars := graphql.GetOperationContext(ctx).Variables
@@ -54,6 +57,22 @@ func hasMissingVariable(v *ast.Value, vars map[string]any) bool {
 
 var omittablePkg = reflect.TypeOf(graphql.Omittable[*int]{}).PkgPath()
 
+// An input struct's fields by their json names, by type
+var jsonFieldsByType sync.Map
+
+func jsonFields(t reflect.Type) map[string]int {
+	if f, ok := jsonFieldsByType.Load(t); ok {
+		return f.(map[string]int)
+	}
+	fields := map[string]int{}
+	for i := 0; i < t.NumField(); i++ {
+		name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")
+		fields[name] = i
+	}
+	jsonFieldsByType.Store(t, fields)
+	return fields
+}
+
 func isOmittable(t reflect.Type) bool {
 	return t.PkgPath() == omittablePkg && strings.HasPrefix(t.Name(), "Omittable[")
 }
@@ -71,11 +90,7 @@ func dropMissing(v reflect.Value, obj *ast.Value, vars map[string]any) bool {
 	if v.Kind() != reflect.Struct || len(obj.Children) == 0 {
 		return false
 	}
-	fields := map[string]int{}
-	for i := 0; i < v.NumField(); i++ {
-		name, _, _ := strings.Cut(v.Type().Field(i).Tag.Get("json"), ",")
-		fields[name] = i
-	}
+	fields := jsonFields(v.Type())
 	all := true
 	for _, child := range obj.Children {
 		i, ok := fields[child.Name]
