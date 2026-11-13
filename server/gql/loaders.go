@@ -117,6 +117,7 @@ type Loaders struct {
 	RoutesByFeedVersionRouteIDs                                   *dataloader.Loader[model.FVEntityID, *model.Route]
 	RoutesByIDs                                                   *dataloader.Loader[int, *model.Route]
 	RouteStopPatternsByRouteIDs                                   *dataloader.Loader[routeStopPatternLoaderParam, []*model.RouteStopPattern]
+	SimilarRoutesByRouteIDs                                       *dataloader.Loader[similarRouteLoaderParam, []*model.SimilarRoute]
 	RouteStopsByRouteIDs                                          *dataloader.Loader[routeStopLoaderParam, []*model.RouteStop]
 	RouteStopsByStopIDs                                           *dataloader.Loader[routeStopLoaderParam, []*model.RouteStop]
 	RouteTypesByAgencyIDs                                         *dataloader.Loader[int, []int]
@@ -475,6 +476,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		RouteStopPatternsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.RouteStopPatternsByRouteIDs,
 			func(p routeStopPatternLoaderParam) (model.FVPair, *model.RouteStopPatternFilter, *int) {
 				return model.FVPair{FeedVersionID: p.FeedVersionID, EntityID: p.RouteID}, p.Where, &routeStopPatternLimit
+			},
+		),
+		SimilarRoutesByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.SimilarRoutesByRouteIDs,
+			func(p similarRouteLoaderParam) (int, model.SimilarRouteQuery, *int) {
+				return p.RouteID, model.SimilarRouteQuery{Where: p.Where, StopCorrespondences: p.StopCorrespondences}, p.Limit
 			},
 		),
 		RouteStopsByRouteIDs: withWaitAndCapacityGroup(waitTime, batchSize,

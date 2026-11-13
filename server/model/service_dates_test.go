@@ -421,3 +421,34 @@ func TestExpandStopTimeFilter(t *testing.T) {
 		assert.Nil(t, where.StartTime)
 	})
 }
+
+func TestSimilarRouteDates(t *testing.T) {
+	// A Friday evening in Los Angeles, already Saturday in UTC.
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2018, 6, 8, 22, 0, 0, 0, la)
+	ymd := func(ds []time.Time) []string {
+		var out []string
+		for _, d := range ds {
+			out = append(out, d.Format("2006-01-02"))
+		}
+		return out
+	}
+	t.Run("no filter or no dates", func(t *testing.T) {
+		assert.Nil(t, SimilarRouteDates(nil, now))
+		assert.Nil(t, SimilarRouteDates(&SimilarRouteFilter{}, now))
+	})
+	t.Run("service dates as given", func(t *testing.T) {
+		got := SimilarRouteDates(&SimilarRouteFilter{ServiceDates: testDates(t, "2018-06-04", "2018-06-05")}, now)
+		assert.Equal(t, []string{"2018-06-04", "2018-06-05"}, ymd(got))
+	})
+	t.Run("a relative date in the local calendar, and the days after it", func(t *testing.T) {
+		rd := RelativeDateNextMonday
+		got := SimilarRouteDates(&SimilarRouteFilter{RelativeDate: &rd, Days: ptr(2)}, now)
+		assert.Equal(t, []string{"2018-06-11", "2018-06-12"}, ymd(got))
+		today := RelativeDateToday
+		assert.Equal(t, []string{"2018-06-08"}, ymd(SimilarRouteDates(&SimilarRouteFilter{RelativeDate: &today}, now)))
+	})
+}

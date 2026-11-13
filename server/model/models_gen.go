@@ -1246,6 +1246,20 @@ type RouteStopBuffer struct {
 	StopConvexhull *tt.Polygon `json:"stop_convexhull,omitempty"`
 }
 
+// A stop of one route paired with the stop of a similar route that matched trips use at the same place; see `SimilarRoute.stop_correspondences`.
+type RouteStopCorrespondence struct {
+	// The stop of the route the similar route was found from
+	Stop *Stop `json:"stop"`
+	// The stop of the similar route
+	OtherStop *Stop `json:"other_stop"`
+	// Matched trip pairs that call at these two stops at the same point in their trips
+	MatchedTrips int `json:"matched_trips"`
+	// Distance between the two stops, in meters
+	Distance    float64 `json:"distance"`
+	OtherStopID int     `json:"-"`
+	StopID      int     `json:"-"`
+}
+
 // A unique sequence of stops served by trips on a route, in a single direction. Multiple trips may share the same RouteStopPattern.
 type RouteStopPattern struct {
 	// Identifier for this stop pattern; an integer scoped to a single feed version
@@ -1363,6 +1377,45 @@ type ShapeFilter struct {
 	ShapeID *string `json:"shape_id,omitempty"`
 	// Search for shapes used by a trip on a route of this GTFS route_type
 	RouteType *int `json:"route_type,omitempty"`
+}
+
+// A route in another feed that may be a copy of the route it was found from; see `Route.similar_routes`. The trip fields are null unless the query gave `service_dates` or `relative_date`.
+type SimilarRoute struct {
+	// The candidate route
+	Route *Route `json:"route"`
+	// True when the candidate has the same Onestop ID as the route it was found from; always true for now, as candidates are found by Onestop ID
+	SameOnestopID bool `json:"same_onestop_id"`
+	// True when the two routes' basic route types (`route_type_basic`) are the same, or both in the rail family: tram or light rail, subway or metro, rail, and monorail. Feeds can type one service differently, such as tram in one feed and rail in another
+	RouteTypeBasicMatch bool `json:"route_type_basic_match"`
+	// Trips the route it was found from runs on the compared dates: each run of a frequency-based trip counts as one, and trips with no timed stop, such as flex trips that serve locations or time windows, are not counted
+	Trips *int `json:"trips,omitempty"`
+	// Trips the candidate runs on the compared dates, counted as for `trips`
+	OtherTrips *int `json:"other_trips,omitempty"`
+	// Trips of the route it was found from that are matched one to one with the candidate's trips
+	MatchedTrips *int `json:"matched_trips,omitempty"`
+	// How the two routes' trips compare on the compared dates
+	Relationship *RouteTripRelationship `json:"relationship,omitempty"`
+	// Trips that all of the candidate feed's similar routes run on the compared dates, together. A feed can split one route into several rows, such as one per branch, which no single row covers; the `feed_` fields compare the route this was found from with all of that feed's rows at once, and are the same on each of them
+	FeedTrips *int `json:"feed_trips,omitempty"`
+	// Trips of the route it was found from that are matched one to one with the trips of all of the candidate feed's similar routes, together
+	FeedMatchedTrips *int `json:"feed_matched_trips,omitempty"`
+	// How the trips of the route it was found from compare with those of all of the candidate feed's similar routes, together
+	FeedRelationship *RouteTripRelationship `json:"feed_relationship,omitempty"`
+	// Stops that the two routes' matched trips use at the same place, with how many matched trips use each pair, most first. Null without compared dates
+	StopCorrespondences []*RouteStopCorrespondence `json:"stop_correspondences,omitempty"`
+	OtherRouteID        int                        `json:"-"`
+}
+
+// Search options for `Route.similar_routes`
+type SimilarRouteFilter struct {
+	// GTFS service dates to compare the routes' trips on, at most 7. Dates are used as given, without a fallback week, so a feed with no service on them shows as having no trips
+	ServiceDates []*tt.Date `json:"service_dates,omitempty"`
+	// Compare trips from this date, relative to today in the timezone of the route the candidates are found from, and on the days after it given by `days`. Without a fallback week, like `service_dates`. Ignored if `service_dates` is set
+	RelativeDate *RelativeDate `json:"relative_date,omitempty"`
+	// Number of consecutive days to compare from `relative_date`, 1 to 7; default 1
+	Days *int `json:"days,omitempty"`
+	// Only candidates from feeds other than the route's own; default true
+	OtherFeedsOnly *bool `json:"other_feeds_only,omitempty"`
 }
 
 // A single turn-by-turn navigation instruction within a walking or cycling leg.
@@ -2519,6 +2572,79 @@ func (e *RelativeDate) UnmarshalJSON(b []byte) error {
 }
 
 func (e RelativeDate) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+// How the trips of a route compare with those of a similar route (`SimilarRoute`) on the compared dates. A route's trips "run in" the other route when at least 90% of them are matched. Values may be added; clients should handle values they don't recognize.
+type RouteTripRelationship string
+
+const (
+	// Each route's trips run in the other
+	RouteTripRelationshipSameTrips RouteTripRelationship = "SAME_TRIPS"
+	// This route's trips run in the similar route, which runs more
+	RouteTripRelationshipSubset RouteTripRelationship = "SUBSET"
+	// The similar route's trips run in this route, which runs more
+	RouteTripRelationshipSuperset RouteTripRelationship = "SUPERSET"
+	// Some trips are matched, but neither route's run in the other
+	RouteTripRelationshipPartial RouteTripRelationship = "PARTIAL"
+	// No trips are matched
+	RouteTripRelationshipDisjoint RouteTripRelationship = "DISJOINT"
+	// This route runs no trips on the compared dates
+	RouteTripRelationshipNoTrips RouteTripRelationship = "NO_TRIPS"
+	// The similar route runs no trips on the compared dates, and this route does
+	RouteTripRelationshipOtherNoTrips RouteTripRelationship = "OTHER_NO_TRIPS"
+)
+
+var AllRouteTripRelationship = []RouteTripRelationship{
+	RouteTripRelationshipSameTrips,
+	RouteTripRelationshipSubset,
+	RouteTripRelationshipSuperset,
+	RouteTripRelationshipPartial,
+	RouteTripRelationshipDisjoint,
+	RouteTripRelationshipNoTrips,
+	RouteTripRelationshipOtherNoTrips,
+}
+
+func (e RouteTripRelationship) IsValid() bool {
+	switch e {
+	case RouteTripRelationshipSameTrips, RouteTripRelationshipSubset, RouteTripRelationshipSuperset, RouteTripRelationshipPartial, RouteTripRelationshipDisjoint, RouteTripRelationshipNoTrips, RouteTripRelationshipOtherNoTrips:
+		return true
+	}
+	return false
+}
+
+func (e RouteTripRelationship) String() string {
+	return string(e)
+}
+
+func (e *RouteTripRelationship) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RouteTripRelationship(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RouteTripRelationship", str)
+	}
+	return nil
+}
+
+func (e RouteTripRelationship) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *RouteTripRelationship) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e RouteTripRelationship) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

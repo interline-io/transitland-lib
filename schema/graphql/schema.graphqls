@@ -908,7 +908,14 @@ type Route {
 
   "Unique stop sequences operated on this route"
   patterns(where: RouteStopPatternFilter): [RouteStopPattern!]
-  
+
+  """
+  Routes in other feeds that may be copies of this one: active routes, in their feeds' current versions, that share this route's Onestop ID. The same route is often published by more than one feed, such as an agency feed and an aggregator or a regional feed that repeats it, so these are candidates, not confirmed copies.
+
+  Given `service_dates` or `relative_date`, each candidate's trips are compared with this route's on those dates: a trip of one is matched to at most one trip of the other that starts within 60 seconds of it, at a first stop within 500 meters, pairing as many trips as possible. Starts are compared as moments in time, from each trip's service date in its agency's timezone, so copies published in different timezones match, and a trip written as 24:15 on one date matches one written as 00:15 on the next, which is compared as a partner even when that date is not. The stops that matched trips use at the same place are paired in `stop_correspondences`. The comparison is reported, and choosing which copy to show is left to the client.
+  """
+  similar_routes(limit: Int, where: SimilarRouteFilter): [SimilarRoute!]
+
   "GTFS-RT service alerts on this route, as a whole or at one of its stops, whose agency and mode, if given, are the route's; pass `active: true` to return only currently active alerts, `include_modes: true` to also return alerts on the route's mode, such as all of its agency's subway service, and `include_trips: true` to also return alerts on the route's trips"
   alerts(active: Boolean, limit: Int, include_modes: Boolean = false, include_trips: Boolean = false): [Alert!]
 
@@ -2580,6 +2587,81 @@ type RouteStopPatternTimetableTimeGrid {
 }
 
 """
+A route in another feed that may be a copy of the route it was found from; see `Route.similar_routes`. The trip fields are null unless the query gave `service_dates` or `relative_date`.
+"""
+type SimilarRoute {
+  "The candidate route"
+  route: Route!
+
+  "True when the candidate has the same Onestop ID as the route it was found from; always true for now, as candidates are found by Onestop ID"
+  same_onestop_id: Boolean!
+
+  "True when the two routes' basic route types (`route_type_basic`) are the same, or both in the rail family: tram or light rail, subway or metro, rail, and monorail. Feeds can type one service differently, such as tram in one feed and rail in another"
+  route_type_basic_match: Boolean!
+
+  "Trips the route it was found from runs on the compared dates: each run of a frequency-based trip counts as one, and trips with no timed stop, such as flex trips that serve locations or time windows, are not counted"
+  trips: Int
+
+  "Trips the candidate runs on the compared dates, counted as for `trips`"
+  other_trips: Int
+
+  "Trips of the route it was found from that are matched one to one with the candidate's trips"
+  matched_trips: Int
+
+  "How the two routes' trips compare on the compared dates"
+  relationship: RouteTripRelationship
+
+  "Trips that all of the candidate feed's similar routes run on the compared dates, together. A feed can split one route into several rows, such as one per branch, which no single row covers; the `feed_` fields compare the route this was found from with all of that feed's rows at once, and are the same on each of them"
+  feed_trips: Int
+
+  "Trips of the route it was found from that are matched one to one with the trips of all of the candidate feed's similar routes, together"
+  feed_matched_trips: Int
+
+  "How the trips of the route it was found from compare with those of all of the candidate feed's similar routes, together"
+  feed_relationship: RouteTripRelationship
+
+  "Stops that the two routes' matched trips use at the same place, with how many matched trips use each pair, most first. Null without compared dates"
+  stop_correspondences: [RouteStopCorrespondence!]
+}
+
+"""
+A stop of one route paired with the stop of a similar route that matched trips use at the same place; see `SimilarRoute.stop_correspondences`.
+"""
+type RouteStopCorrespondence {
+  "The stop of the route the similar route was found from"
+  stop: Stop!
+
+  "The stop of the similar route"
+  other_stop: Stop!
+
+  "Matched trip pairs that call at these two stops at the same point in their trips"
+  matched_trips: Int!
+
+  "Distance between the two stops, in meters"
+  distance: Float!
+}
+
+"""
+How the trips of a route compare with those of a similar route (`SimilarRoute`) on the compared dates. A route's trips "run in" the other route when at least 90% of them are matched. Values may be added; clients should handle values they don't recognize.
+"""
+enum RouteTripRelationship {
+  "Each route's trips run in the other"
+  SAME_TRIPS
+  "This route's trips run in the similar route, which runs more"
+  SUBSET
+  "The similar route's trips run in this route, which runs more"
+  SUPERSET
+  "Some trips are matched, but neither route's run in the other"
+  PARTIAL
+  "No trips are matched"
+  DISJOINT
+  "This route runs no trips on the compared dates"
+  NO_TRIPS
+  "The similar route runs no trips on the compared dates, and this route does"
+  OTHER_NO_TRIPS
+}
+
+"""
 Representative geometry for a route, derived from GTFS shapes (or stop coordinates as a fallback) and ranked by trip frequency.
 """
 type RouteGeometry {
@@ -3878,6 +3960,18 @@ input RouteStopPatternFilter {
   relative_date: RelativeDate
   "If true and the requested date falls outside the feed version's normal service window, use the feed version's `fallback_week` instead"
   use_service_window: Boolean
+}
+
+"""Search options for `Route.similar_routes`"""
+input SimilarRouteFilter {
+  "GTFS service dates to compare the routes' trips on, at most 7. Dates are used as given, without a fallback week, so a feed with no service on them shows as having no trips"
+  service_dates: [Date!]
+  "Compare trips from this date, relative to today in the timezone of the route the candidates are found from, and on the days after it given by `days`. Without a fallback week, like `service_dates`. Ignored if `service_dates` is set"
+  relative_date: RelativeDate
+  "Number of consecutive days to compare from `relative_date`, 1 to 7; default 1"
+  days: Int
+  "Only candidates from feeds other than the route's own; default true"
+  other_feeds_only: Boolean
 }
 
 """Search options for census datasets"""

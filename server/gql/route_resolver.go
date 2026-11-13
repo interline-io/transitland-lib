@@ -3,6 +3,7 @@ package gql
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 
@@ -167,6 +168,25 @@ func (r *routeResolver) Patterns(ctx context.Context, obj *model.Route, where *m
 		FeedVersionID: obj.FeedVersionID,
 		RouteID:       obj.ID,
 		Where:         where,
+	})()
+}
+
+func (r *routeResolver) SimilarRoutes(ctx context.Context, obj *model.Route, limit *int, where *model.SimilarRouteFilter) ([]*model.SimilarRoute, error) {
+	if where != nil {
+		if len(where.ServiceDates) > RESOLVER_SIMILAR_ROUTE_MAXDATES {
+			return nil, fmt.Errorf("similar_routes: at most %d service_dates", RESOLVER_SIMILAR_ROUTE_MAXDATES)
+		}
+		if where.Days != nil && (*where.Days < 1 || *where.Days > RESOLVER_SIMILAR_ROUTE_MAXDATES) {
+			return nil, fmt.Errorf("similar_routes: days must be 1 to %d", RESOLVER_SIMILAR_ROUTE_MAXDATES)
+		}
+	}
+	// Pairing stops loads every matched pattern's stops, so it runs only for a
+	// query that reads them.
+	return LoaderFor(ctx).SimilarRoutesByRouteIDs.Load(ctx, similarRouteLoaderParam{
+		RouteID:             obj.ID,
+		Limit:               resolverCheckLimitDefault(limit, RESOLVER_SIMILAR_ROUTE_MAXLIMIT, RESOLVER_SIMILAR_ROUTE_MAXLIMIT),
+		Where:               where,
+		StopCorrespondences: containsField(ctx, "stop_correspondences"),
 	})()
 }
 
