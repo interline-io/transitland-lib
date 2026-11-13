@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/client"
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
@@ -29,9 +30,9 @@ func TestStopCreate(t *testing.T) {
 		// stop_access is only valid on a platform with a parent_station, so create a parent station first
 		parentID, err := finder.StopCreate(ctx, model.StopSetInput{
 			FeedVersion:  &fv,
-			StopID:       toPtr(fmt.Sprintf("station-%d", time.Now().UnixNano())),
-			StopName:     toPtr("station"),
-			LocationType: toPtr(1),
+			StopID:       toOpt(fmt.Sprintf("station-%d", time.Now().UnixNano())),
+			StopName:     toOpt("station"),
+			LocationType: toOpt(1),
 			Geometry:     toPtr(tt.NewPoint(-122.271604, 37.803664)),
 		})
 		if err != nil {
@@ -39,11 +40,11 @@ func TestStopCreate(t *testing.T) {
 		}
 		stopInput := model.StopSetInput{
 			FeedVersion: &fv,
-			StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-			StopName:    toPtr("hello"),
+			StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+			StopName:    toOpt("hello"),
 			Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 			Parent:      &model.StopSetInput{ID: toPtr(parentID)},
-			StopAccess:  toPtr(1),
+			StopAccess:  toOpt(1),
 		}
 		eid, err := finder.StopCreate(ctx, stopInput)
 		if err != nil {
@@ -55,8 +56,8 @@ func TestStopCreate(t *testing.T) {
 		if err := atx.Find(ctx, &checkEnt); err != nil {
 			t.Fatal(err)
 		}
-		assert.Equal(t, stopInput.StopID, &checkEnt.StopID.Val)
-		assert.Equal(t, stopInput.StopName, &checkEnt.StopName.Val)
+		assert.Equal(t, stopInput.StopID.Value(), &checkEnt.StopID.Val)
+		assert.Equal(t, stopInput.StopName.Value(), &checkEnt.StopName.Val)
 		assert.Equal(t, stopInput.Geometry.FlatCoords(), checkEnt.Geometry.FlatCoords())
 		assert.EqualValues(t, 1, checkEnt.StopAccess.Val)
 		assert.True(t, checkEnt.StopAccess.Valid)
@@ -70,8 +71,8 @@ func TestStopUpdate(t *testing.T) {
 		fv := model.FeedVersionInput{ID: toPtr(1)}
 		stopInput := model.StopSetInput{
 			FeedVersion: &fv,
-			StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-			StopName:    toPtr("hello"),
+			StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+			StopName:    toOpt("hello"),
 			Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 		}
 		eid, err := finder.StopCreate(ctx, stopInput)
@@ -80,7 +81,7 @@ func TestStopUpdate(t *testing.T) {
 		}
 		stopUpdate := model.StopSetInput{
 			ID:       toPtr(eid),
-			StopID:   toPtr(fmt.Sprintf("update-%d", time.Now().UnixNano())),
+			StopID:   toOpt(fmt.Sprintf("update-%d", time.Now().UnixNano())),
 			Geometry: toPtr(tt.NewPoint(-122.0, 38.0)),
 		}
 		if _, err := finder.StopUpdate(ctx, stopUpdate); err != nil {
@@ -92,7 +93,7 @@ func TestStopUpdate(t *testing.T) {
 		if err := atx.Find(ctx, &checkEnt); err != nil {
 			t.Fatal(err)
 		}
-		assert.Equal(t, stopUpdate.StopID, &checkEnt.StopID.Val)
+		assert.Equal(t, stopUpdate.StopID.Value(), &checkEnt.StopID.Val)
 		assert.Equal(t, stopUpdate.Geometry.FlatCoords(), checkEnt.Geometry.FlatCoords())
 	})
 }
@@ -105,8 +106,8 @@ func TestStopUpdate_BumpsUpdatedAt(t *testing.T) {
 		fv := model.FeedVersionInput{ID: toPtr(1)}
 		stopInput := model.StopSetInput{
 			FeedVersion: &fv,
-			StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-			StopName:    toPtr("hello"),
+			StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+			StopName:    toOpt("hello"),
 			Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 		}
 		eid, err := finder.StopCreate(ctx, stopInput)
@@ -124,7 +125,7 @@ func TestStopUpdate_BumpsUpdatedAt(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 		stopUpdate := model.StopSetInput{
 			ID:       toPtr(eid),
-			StopName: toPtr("hello again"),
+			StopName: toOpt("hello again"),
 		}
 		if _, err := finder.StopUpdate(ctx, stopUpdate); err != nil {
 			t.Fatal(err)
@@ -201,8 +202,8 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 		// Create two stops to use as endpoints
 		fromStopID, err := finder.StopCreate(ctx, model.StopSetInput{
 			FeedVersion: &fv,
-			StopID:      toPtr(fmt.Sprintf("from-%d", time.Now().UnixNano())),
-			StopName:    toPtr("from"),
+			StopID:      toOpt(fmt.Sprintf("from-%d", time.Now().UnixNano())),
+			StopName:    toOpt("from"),
 			Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 		})
 		if err != nil {
@@ -210,8 +211,8 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 		}
 		toStopID, err := finder.StopCreate(ctx, model.StopSetInput{
 			FeedVersion: &fv,
-			StopID:      toPtr(fmt.Sprintf("to-%d", time.Now().UnixNano())),
-			StopName:    toPtr("to"),
+			StopID:      toOpt(fmt.Sprintf("to-%d", time.Now().UnixNano())),
+			StopName:    toOpt("to"),
 			Geometry:    toPtr(tt.NewPoint(-122.271, 37.803)),
 		})
 		if err != nil {
@@ -219,9 +220,9 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 		}
 		eid, err := finder.PathwayCreate(ctx, model.PathwaySetInput{
 			FeedVersion:     &fv,
-			PathwayID:       toPtr(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
-			PathwayMode:     toPtr(1),
-			IsBidirectional: toPtr(0),
+			PathwayID:       toOpt(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
+			PathwayMode:     toOpt(1),
+			IsBidirectional: toOpt(0),
 			FromStop:        &model.StopSetInput{ID: &fromStopID},
 			ToStop:          &model.StopSetInput{ID: &toStopID},
 		})
@@ -236,7 +237,7 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 		if _, err := finder.PathwayUpdate(ctx, model.PathwaySetInput{
 			ID:        toPtr(eid),
-			PathwayID: toPtr(fmt.Sprintf("pw-update-%d", time.Now().UnixNano())),
+			PathwayID: toOpt(fmt.Sprintf("pw-update-%d", time.Now().UnixNano())),
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -250,6 +251,99 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 		assert.True(t, afterUpdate.UpdatedAt.After(afterCreate.UpdatedAt),
 			"updated_at should advance on pathway update (was %s, now %s)",
 			afterCreate.UpdatedAt, afterUpdate.UpdatedAt)
+	})
+}
+
+// In an update, a field left out keeps its value, a null clears it, and a
+// value sets it, through the GraphQL mutation as Station Editor sends it.
+func TestPathwayUpdate_GraphQLNullClears(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		finder := cfg.Finder
+		ctx := model.WithConfig(context.Background(), cfg)
+		srv := NewDefaultHandler()
+		srv = model.AddConfigAndPerms(cfg, srv)
+		srv = usercheck.AdminDefaultMiddleware("test")(srv)
+		c := client.New(srv)
+		fv := model.FeedVersionInput{ID: toPtr(1)}
+		newStop := func(name string) int {
+			t.Helper()
+			id, err := finder.StopCreate(ctx, model.StopSetInput{
+				FeedVersion: &fv,
+				StopID:      toOpt(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())),
+				StopName:    toOpt(name),
+				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return id
+		}
+		fromStopID, toStopID := newStop("from"), newStop("to")
+		const fields = `id traversal_time stair_count min_width signposted_as`
+		post := func(mutation string, set map[string]interface{}) gjson.Result {
+			t.Helper()
+			resp := make(map[string]interface{})
+			if err := c.Post(fmt.Sprintf(`mutation($set: PathwaySetInput!) { %s(set: $set) { %s } }`, mutation, fields), &resp, client.Var("set", set)); err != nil {
+				t.Fatal(err)
+			}
+			return gjson.Get(gqlcase.ToJSON(resp), mutation)
+		}
+		created := post("pathway_create", map[string]interface{}{
+			"feed_version":     map[string]interface{}{"id": 1},
+			"pathway_id":       fmt.Sprintf("pw-%d", time.Now().UnixNano()),
+			"pathway_mode":     2,
+			"is_bidirectional": 1,
+			"traversal_time":   30,
+			"min_width":        1.5,
+			"signposted_as":    "Trains",
+			"from_stop":        map[string]interface{}{"id": fromStopID},
+			"to_stop":          map[string]interface{}{"id": toStopID},
+		})
+		id := created.Get("id").Int()
+
+		// Left out: unchanged
+		updated := post("pathway_update", map[string]interface{}{"id": id, "stair_count": 24})
+		assert.Equal(t, int64(24), updated.Get("stair_count").Int())
+		assert.Equal(t, int64(30), updated.Get("traversal_time").Int())
+		assert.Equal(t, "Trains", updated.Get("signposted_as").String())
+
+		// Null: cleared, and the rest unchanged
+		cleared := post("pathway_update", map[string]interface{}{"id": id, "traversal_time": nil, "signposted_as": nil})
+		assert.Equal(t, gjson.Null, cleared.Get("traversal_time").Type, "traversal_time should be cleared")
+		assert.Empty(t, cleared.Get("signposted_as").String(), "signposted_as should be cleared")
+		assert.Equal(t, int64(24), cleared.Get("stair_count").Int())
+		assert.Equal(t, 1.5, cleared.Get("min_width").Float())
+	})
+}
+
+// A null clears a stop's field, as Station Editor sends for "no information".
+func TestStopUpdate_NullClears(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		finder := cfg.Finder
+		ctx := model.WithConfig(context.Background(), cfg)
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
+		fv := model.FeedVersionInput{ID: toPtr(1)}
+		eid, err := finder.StopCreate(ctx, model.StopSetInput{
+			FeedVersion:        &fv,
+			StopID:             toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+			StopName:           toOpt("hello"),
+			StopCode:           toOpt("A1"),
+			WheelchairBoarding: toOpt(1),
+			Geometry:           toPtr(tt.NewPoint(-122.271604, 37.803664)),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := finder.StopUpdate(ctx, model.StopSetInput{ID: toPtr(eid), WheelchairBoarding: toNull[int]()}); err != nil {
+			t.Fatal(err)
+		}
+		ent := gtfs.Stop{}
+		ent.ID = eid
+		if err := atx.Find(ctx, &ent); err != nil {
+			t.Fatal(err)
+		}
+		assert.False(t, ent.WheelchairBoarding.Valid, "wheelchair_boarding should be cleared")
+		assert.Equal(t, "A1", ent.StopCode.Val, "stop_code, left out, should be unchanged")
 	})
 }
 
@@ -272,8 +366,8 @@ func TestPathwayUpdate_Stops(t *testing.T) {
 			t.Helper()
 			id, err := finder.StopCreate(ctx, model.StopSetInput{
 				FeedVersion: &fv,
-				StopID:      toPtr(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())),
-				StopName:    toPtr(name),
+				StopID:      toOpt(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())),
+				StopName:    toOpt(name),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 			})
 			if err != nil {
@@ -284,9 +378,9 @@ func TestPathwayUpdate_Stops(t *testing.T) {
 		fromStopID, toStopID := newStop("from"), newStop("to")
 		eid, err := finder.PathwayCreate(ctx, model.PathwaySetInput{
 			FeedVersion:     &fv,
-			PathwayID:       toPtr(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
-			PathwayMode:     toPtr(1),
-			IsBidirectional: toPtr(0),
+			PathwayID:       toOpt(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
+			PathwayMode:     toOpt(1),
+			IsBidirectional: toOpt(0),
 			FromStop:        &model.StopSetInput{ID: &fromStopID},
 			ToStop:          &model.StopSetInput{ID: &toStopID},
 		})
@@ -328,9 +422,9 @@ func TestLevelUpdate_BumpsUpdatedAt(t *testing.T) {
 		fv := model.FeedVersionInput{ID: toPtr(1)}
 		eid, err := finder.LevelCreate(ctx, model.LevelSetInput{
 			FeedVersion: &fv,
-			LevelID:     toPtr(fmt.Sprintf("L-%d", time.Now().UnixNano())),
-			LevelIndex:  toPtr(0.0),
-			LevelName:   toPtr("ground"),
+			LevelID:     toOpt(fmt.Sprintf("L-%d", time.Now().UnixNano())),
+			LevelIndex:  toOpt(0.0),
+			LevelName:   toOpt("ground"),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -343,7 +437,7 @@ func TestLevelUpdate_BumpsUpdatedAt(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 		if _, err := finder.LevelUpdate(ctx, model.LevelSetInput{
 			ID:        toPtr(eid),
-			LevelName: toPtr("ground floor"),
+			LevelName: toOpt("ground floor"),
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -377,9 +471,9 @@ func TestLevelUpdate_Parent(t *testing.T) {
 		fv := model.FeedVersionInput{ID: toPtr(fvs[0].ID)}
 		stationID, err := finder.StopCreate(ctx, model.StopSetInput{
 			FeedVersion:  &fv,
-			StopID:       toPtr(fmt.Sprintf("station-%d", time.Now().UnixNano())),
-			StopName:     toPtr("station"),
-			LocationType: toPtr(1),
+			StopID:       toOpt(fmt.Sprintf("station-%d", time.Now().UnixNano())),
+			StopName:     toOpt("station"),
+			LocationType: toOpt(1),
 			Geometry:     toPtr(tt.NewPoint(-122.271604, 37.803664)),
 		})
 		if err != nil {
@@ -387,8 +481,8 @@ func TestLevelUpdate_Parent(t *testing.T) {
 		}
 		eid, err := finder.LevelCreate(ctx, model.LevelSetInput{
 			FeedVersion: &fv,
-			LevelID:     toPtr(fmt.Sprintf("L-%d", time.Now().UnixNano())),
-			LevelIndex:  toPtr(0.0),
+			LevelID:     toOpt(fmt.Sprintf("L-%d", time.Now().UnixNano())),
+			LevelIndex:  toOpt(0.0),
 			Parent:      &model.StopSetInput{ID: &stationID},
 		})
 		if err != nil {
@@ -433,8 +527,8 @@ func TestStopReference(t *testing.T) {
 			valueB := testStr(t)
 			stopInput := model.StopSetInput{
 				FeedVersion: &fv,
-				StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-				StopName:    toPtr("hello"),
+				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 				ExternalReference: &model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
@@ -458,8 +552,8 @@ func TestStopReference(t *testing.T) {
 			valueB := testStr(t)
 			stopInput := model.StopSetInput{
 				FeedVersion: &fv,
-				StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-				StopName:    toPtr("hello"),
+				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 			}
 			eid, err := finder.StopCreate(ctx, stopInput)
@@ -499,8 +593,8 @@ func TestStopReference(t *testing.T) {
 			valueB := testStr(t)
 			stopInput := model.StopSetInput{
 				FeedVersion: &fv,
-				StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-				StopName:    toPtr("hello"),
+				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 			}
 			eid, err := finder.StopCreate(ctx, stopInput)
@@ -535,8 +629,8 @@ func TestStopReference(t *testing.T) {
 			valueB := testStr(t)
 			stopInput := model.StopSetInput{
 				FeedVersion: &fv,
-				StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-				StopName:    toPtr("hello"),
+				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 				ExternalReference: &model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
@@ -570,8 +664,8 @@ func TestStopReference(t *testing.T) {
 			valueB := testStr(t)
 			stopInput := model.StopSetInput{
 				FeedVersion: &fv,
-				StopID:      toPtr(fmt.Sprintf("%d", time.Now().UnixNano())),
-				StopName:    toPtr("hello"),
+				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
 				ExternalReference: &model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
@@ -608,4 +702,14 @@ func TestStopReference(t *testing.T) {
 func toPtr[T any, P *T](v T) P {
 	vcopy := v
 	return &vcopy
+}
+
+// toOpt is an input field set to v
+func toOpt[T any](v T) graphql.Omittable[*T] {
+	return graphql.OmittableOf(&v)
+}
+
+// toNull is an input field set to null, which clears it
+func toNull[T any]() graphql.Omittable[*T] {
+	return graphql.OmittableOf[*T](nil)
 }

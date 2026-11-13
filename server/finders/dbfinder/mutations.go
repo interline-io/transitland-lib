@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -48,18 +49,18 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 		func(ent *gtfs.Stop) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanCol(&ent.StopID, input.StopID, "stop_id", cols, &err)
-			cols = scanCol(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
-			cols = scanCol(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
-			cols = scanCol(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
-			cols = scanCol(&ent.StopName, input.StopName, "stop_name", cols, &err)
-			cols = scanCol(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
-			cols = scanCol(&ent.LocationType, input.LocationType, "location_type", cols, &err)
-			cols = scanCol(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
-			cols = scanCol(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
-			cols = scanCol(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
-			cols = scanCol(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
-			cols = scanCol(&ent.StopAccess, input.StopAccess, "stop_access", cols, &err)
+			cols = scanOpt(&ent.StopID, input.StopID, "stop_id", cols, &err)
+			cols = scanOpt(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
+			cols = scanOpt(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
+			cols = scanOpt(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
+			cols = scanOpt(&ent.StopName, input.StopName, "stop_name", cols, &err)
+			cols = scanOpt(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
+			cols = scanOpt(&ent.LocationType, input.LocationType, "location_type", cols, &err)
+			cols = scanOpt(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
+			cols = scanOpt(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
+			cols = scanOpt(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
+			cols = scanOpt(&ent.PlatformCode, input.PlatformCode, "platform_code", cols, &err)
+			cols = scanOpt(&ent.StopAccess, input.StopAccess, "stop_access", cols, &err)
 			if input.Geometry != nil && input.Geometry.Valid {
 				cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			}
@@ -141,16 +142,16 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 		func(ent *gtfs.Pathway) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanCol(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
-			cols = scanCol(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
-			cols = scanCol(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
-			cols = scanCol(&ent.Length, input.Length, "length", cols, &err)
-			cols = scanCol(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols, &err)
-			cols = scanCol(&ent.StairCount, input.StairCount, "stair_count", cols, &err)
-			cols = scanCol(&ent.MaxSlope, input.MaxSlope, "max_slope", cols, &err)
-			cols = scanCol(&ent.MinWidth, input.MinWidth, "min_width", cols, &err)
-			cols = scanCol(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols, &err)
-			cols = scanCol(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols, &err)
+			cols = scanOpt(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
+			cols = scanOpt(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
+			cols = scanOpt(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
+			cols = scanOpt(&ent.Length, input.Length, "length", cols, &err)
+			cols = scanOpt(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols, &err)
+			cols = scanOpt(&ent.StairCount, input.StairCount, "stair_count", cols, &err)
+			cols = scanOpt(&ent.MaxSlope, input.MaxSlope, "max_slope", cols, &err)
+			cols = scanOpt(&ent.MinWidth, input.MinWidth, "min_width", cols, &err)
+			cols = scanOpt(&ent.SignpostedAs, input.SignpostedAs, "signposted_as", cols, &err)
+			cols = scanOpt(&ent.ReverseSignpostedAs, input.ReverseSignpostedAs, "reverse_signposted_as", cols, &err)
 			if v := input.FromStop; v != nil {
 				cols = scanRef(&ent.FromStopID, v.ID, "from_stop_id", cols, &err)
 			}
@@ -200,9 +201,9 @@ func createUpdateLevel(ctx context.Context, input model.LevelSetInput) (int, err
 		func(ent *levelRow) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanCol(&ent.LevelID, input.LevelID, "level_id", cols, &err)
-			cols = scanCol(&ent.LevelName, input.LevelName, "level_name", cols, &err)
-			cols = scanCol(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
+			cols = scanOpt(&ent.LevelID, input.LevelID, "level_id", cols, &err)
+			cols = scanOpt(&ent.LevelName, input.LevelName, "level_name", cols, &err)
+			cols = scanOpt(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
 			cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			if v := input.Parent; v != nil {
 				cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
@@ -241,6 +242,24 @@ func scanCol[T any, PT *T](val canScan, inval PT, colname string, cols []string,
 		cols = append(cols, colname)
 	}
 	return cols
+}
+
+// scanOpt is scanCol for an input field that tells null from left out: a
+// field left out keeps the column as it was, a null clears it, and a value
+// sets it. Errors are reported through errp, as with scanCol.
+func scanOpt[T any](val canScan, inval graphql.Omittable[*T], colname string, cols []string, errp *error) []string {
+	if *errp != nil || !inval.IsSet() {
+		return cols
+	}
+	var v any
+	if p := inval.Value(); p != nil {
+		v = *p
+	}
+	if err := val.Scan(v); err != nil {
+		*errp = fmt.Errorf("scan %s: %w", colname, err)
+		return cols
+	}
+	return append(cols, colname)
 }
 
 // scanRef sets a reference column to id, or clears it when id is nil, and

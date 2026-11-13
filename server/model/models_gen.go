@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/interline-io/transitland-lib/tt"
 )
 
@@ -802,18 +803,18 @@ type LevelFilter struct {
 	LevelID *string `json:"level_id,omitempty"`
 }
 
-// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`
+// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a field set to null is cleared
 type LevelSetInput struct {
 	// Integer ID of the level to update; omit when creating a new level
 	ID *int `json:"id,omitempty"`
 	// Feed version this level belongs to (required when creating a new level)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS level_id
-	LevelID *string `json:"level_id,omitempty"`
+	LevelID graphql.Omittable[*string] `json:"level_id,omitempty"`
 	// Set GTFS level_name
-	LevelName *string `json:"level_name,omitempty"`
+	LevelName graphql.Omittable[*string] `json:"level_name,omitempty"`
 	// Set GTFS level_index
-	LevelIndex *float64 `json:"level_index,omitempty"`
+	LevelIndex graphql.Omittable[*float64] `json:"level_index,omitempty"`
 	// Set level geometry
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
 	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
@@ -922,32 +923,32 @@ type PathwayFilter struct {
 	PathwayMode *int `json:"pathway_mode,omitempty"`
 }
 
-// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`
+// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a field set to null is cleared
 type PathwaySetInput struct {
 	// Integer ID of the pathway to update; omit when creating a new pathway
 	ID *int `json:"id,omitempty"`
 	// Feed version this pathway belongs to (required when creating a new pathway)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS pathway_id
-	PathwayID *string `json:"pathway_id,omitempty"`
+	PathwayID graphql.Omittable[*string] `json:"pathway_id,omitempty"`
 	// Set GTFS pathway_mode
-	PathwayMode *int `json:"pathway_mode,omitempty"`
+	PathwayMode graphql.Omittable[*int] `json:"pathway_mode,omitempty"`
 	// Set GTFS is_bidirectional
-	IsBidirectional *int `json:"is_bidirectional,omitempty"`
+	IsBidirectional graphql.Omittable[*int] `json:"is_bidirectional,omitempty"`
 	// Set GTFS length
-	Length *float64 `json:"length,omitempty"`
+	Length graphql.Omittable[*float64] `json:"length,omitempty"`
 	// Set GTFS traversal_time
-	TraversalTime *int `json:"traversal_time,omitempty"`
+	TraversalTime graphql.Omittable[*int] `json:"traversal_time,omitempty"`
 	// Set GTFS stair_count
-	StairCount *int `json:"stair_count,omitempty"`
+	StairCount graphql.Omittable[*int] `json:"stair_count,omitempty"`
 	// Set GTFS max_slope
-	MaxSlope *float64 `json:"max_slope,omitempty"`
+	MaxSlope graphql.Omittable[*float64] `json:"max_slope,omitempty"`
 	// Set GTFS min_width
-	MinWidth *float64 `json:"min_width,omitempty"`
+	MinWidth graphql.Omittable[*float64] `json:"min_width,omitempty"`
 	// Set GTFS signposted_as
-	SignpostedAs *string `json:"signposted_as,omitempty"`
+	SignpostedAs graphql.Omittable[*string] `json:"signposted_as,omitempty"`
 	// Set GTFS reverse_signposted_as
-	ReverseSignpostedAs *string `json:"reverse_signposted_as,omitempty"`
+	ReverseSignpostedAs graphql.Omittable[*string] `json:"reverse_signposted_as,omitempty"`
 	// Reference to an existing origin stop; only the `id` is used (the stop must already exist)
 	FromStop *StopSetInput `json:"from_stop,omitempty"`
 	// Reference to an existing destination stop; only the `id` is used (the stop must already exist)
@@ -1523,36 +1524,36 @@ type StopPlace struct {
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
 }
 
-// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`
+// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a field set to null is cleared
 type StopSetInput struct {
 	// Integer ID of the stop to update; omit when creating a new stop
 	ID *int `json:"id,omitempty"`
 	// Feed version this stop belongs to (required when creating a new stop)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS location_type
-	LocationType *int `json:"location_type,omitempty"`
+	LocationType graphql.Omittable[*int] `json:"location_type,omitempty"`
 	// Set GTFS stop_code
-	StopCode *string `json:"stop_code,omitempty"`
+	StopCode graphql.Omittable[*string] `json:"stop_code,omitempty"`
 	// Set GTFS stop_desc
-	StopDesc *string `json:"stop_desc,omitempty"`
+	StopDesc graphql.Omittable[*string] `json:"stop_desc,omitempty"`
 	// Set GTFS stop_id
-	StopID *string `json:"stop_id,omitempty"`
+	StopID graphql.Omittable[*string] `json:"stop_id,omitempty"`
 	// Set GTFS stop_name
-	StopName *string `json:"stop_name,omitempty"`
+	StopName graphql.Omittable[*string] `json:"stop_name,omitempty"`
 	// Set GTFS stop_timezone
-	StopTimezone *string `json:"stop_timezone,omitempty"`
+	StopTimezone graphql.Omittable[*string] `json:"stop_timezone,omitempty"`
 	// Set GTFS stop_url
-	StopURL *string `json:"stop_url,omitempty"`
+	StopURL graphql.Omittable[*string] `json:"stop_url,omitempty"`
 	// Set GTFS wheelchair_boarding
-	WheelchairBoarding *int `json:"wheelchair_boarding,omitempty"`
+	WheelchairBoarding graphql.Omittable[*int] `json:"wheelchair_boarding,omitempty"`
 	// Set GTFS zone_id
-	ZoneID *string `json:"zone_id,omitempty"`
+	ZoneID graphql.Omittable[*string] `json:"zone_id,omitempty"`
 	// Set GTFS platform_code
-	PlatformCode *string `json:"platform_code,omitempty"`
+	PlatformCode graphql.Omittable[*string] `json:"platform_code,omitempty"`
 	// Set GTFS tts_stop_name
-	TtsStopName *string `json:"tts_stop_name,omitempty"`
+	TtsStopName graphql.Omittable[*string] `json:"tts_stop_name,omitempty"`
 	// Set GTFS stop_access
-	StopAccess *int `json:"stop_access,omitempty"`
+	StopAccess graphql.Omittable[*int] `json:"stop_access,omitempty"`
 	// Set stop geometry
 	Geometry *tt.Point `json:"geometry,omitempty"`
 	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
