@@ -10,7 +10,6 @@ import (
 // Entity editing
 func (r *mutationResolver) StopCreate(ctx context.Context, obj model.StopSetInput) (*model.Stop, error) {
 	finder := model.ForContext(ctx).Finder
-	unsetMissingVariables(ctx, "set", &obj)
 	entId, err := finder.StopCreate(ctx, obj)
 	if err != nil {
 		return nil, err
@@ -21,7 +20,6 @@ func (r *mutationResolver) StopCreate(ctx context.Context, obj model.StopSetInpu
 
 func (r *mutationResolver) StopUpdate(ctx context.Context, obj model.StopSetInput) (*model.Stop, error) {
 	finder := model.ForContext(ctx).Finder
-	unsetMissingVariables(ctx, "set", &obj)
 	entId, err := finder.StopUpdate(ctx, obj)
 	if err != nil {
 		return nil, err
@@ -40,7 +38,6 @@ func (r *mutationResolver) StopDelete(ctx context.Context, id int) (*model.Entit
 
 func (r *mutationResolver) LevelCreate(ctx context.Context, obj model.LevelSetInput) (*model.Level, error) {
 	finder := model.ForContext(ctx).Finder
-	unsetMissingVariables(ctx, "set", &obj)
 	entId, err := finder.LevelCreate(ctx, obj)
 	if err != nil {
 		return nil, err
@@ -51,7 +48,6 @@ func (r *mutationResolver) LevelCreate(ctx context.Context, obj model.LevelSetIn
 
 func (r *mutationResolver) LevelUpdate(ctx context.Context, obj model.LevelSetInput) (*model.Level, error) {
 	finder := model.ForContext(ctx).Finder
-	unsetMissingVariables(ctx, "set", &obj)
 	entId, err := finder.LevelUpdate(ctx, obj)
 	if err != nil {
 		return nil, err
@@ -70,7 +66,6 @@ func (r *mutationResolver) LevelDelete(ctx context.Context, id int) (*model.Enti
 
 func (r *mutationResolver) PathwayCreate(ctx context.Context, obj model.PathwaySetInput) (*model.Pathway, error) {
 	finder := model.ForContext(ctx).Finder
-	unsetMissingVariables(ctx, "set", &obj)
 	entId, err := finder.PathwayCreate(ctx, obj)
 	if err != nil {
 		return nil, err
@@ -81,7 +76,6 @@ func (r *mutationResolver) PathwayCreate(ctx context.Context, obj model.PathwayS
 
 func (r *mutationResolver) PathwayUpdate(ctx context.Context, obj model.PathwaySetInput) (*model.Pathway, error) {
 	finder := model.ForContext(ctx).Finder
-	unsetMissingVariables(ctx, "set", &obj)
 	entId, err := finder.PathwayUpdate(ctx, obj)
 	if err != nil {
 		return nil, err

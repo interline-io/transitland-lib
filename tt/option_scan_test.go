@@ -22,3 +22,14 @@ func TestOptionScanClears(t *testing.T) {
 		t.Errorf("Scan(nil): got %#v, want unset and zero", n)
 	}
 }
+
+// A value it can't convert clears it too.
+func TestOptionScanClearsOnError(t *testing.T) {
+	b := NewBool(true)
+	if err := b.Scan("maybe"); err == nil {
+		t.Fatal("expected an error")
+	}
+	if b.Valid || b.Val {
+		t.Errorf("Scan(\"maybe\"): got %#v, want unset and false", b)
+	}
+}

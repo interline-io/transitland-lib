@@ -66,12 +66,13 @@ func (r Option[T]) String() string {
 	return out
 }
 
-// Scan sets the value from src. A nil or empty src unsets it, and clears
-// the value it held, so nothing reading Val sees a value that's gone.
+// Scan sets the value from src. A nil or empty src, or one it can't
+// convert, unsets it and clears the value it held, so nothing reading Val
+// sees a value that's gone.
 func (r *Option[T]) Scan(src interface{}) error {
 	r.Valid = false
 	ok, err := convertAssign(&r.Val, src)
-	if !ok {
+	if !ok || err != nil {
 		var zero T
 		r.Val = zero
 	}

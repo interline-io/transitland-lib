@@ -393,6 +393,102 @@ func TestPathwayUpdate_GraphQLMissingVariable(t *testing.T) {
 	})
 }
 
+// Nested too: a reference or an external reference given only as variables
+// the request didn't provide is left out, not cleared.
+func TestStopUpdate_GraphQLMissingNestedVariables(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		finder := cfg.Finder
+		ctx := model.WithConfig(context.Background(), cfg)
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
+		c := gqlClient(cfg)
+		fv := model.FeedVersionInput{ID: toPtr(1)}
+		parentID, err := finder.StopCreate(ctx, model.StopSetInput{FeedVersion: &fv, StopID: toOpt(fmt.Sprintf("station-%d", time.Now().UnixNano())), StopName: toOpt("station"), LocationType: toOpt(1), Geometry: toPtr(tt.NewPoint(-122.27, 37.80))})
+		if err != nil {
+			t.Fatal(err)
+		}
+		eid, err := finder.StopCreate(ctx, model.StopSetInput{
+			FeedVersion:       &fv,
+			StopID:            toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
+			StopName:          toOpt("platform"),
+			Geometry:          toPtr(tt.NewPoint(-122.27, 37.80)),
+			Parent:            &model.StopSetInput{ID: toPtr(parentID)},
+			ExternalReference: toOpt(model.StopExternalReferenceSetInput{TargetFeedOnestopID: toPtr("f-test"), TargetStopID: toPtr("x")}),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp := make(map[string]any)
+		if err := c.Post(`mutation($id: Int!, $name: String, $p: Int, $f: String, $s: String) {
+			stop_update(set: {id: $id, stop_name: $name, parent: {id: $p}, external_reference: {target_feed_onestop_id: $f, target_stop_id: $s}}) { id }
+		}`, &resp, client.Var("id", eid), client.Var("name", "renamed")); err != nil {
+			t.Fatal(err)
+		}
+		ent := gtfs.Stop{}
+		ent.ID = eid
+		if err := atx.Find(ctx, &ent); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, "renamed", ent.StopName.Val)
+		assert.Equal(t, fmt.Sprintf("%d", parentID), ent.ParentStation.Val, "parent, its variable not provided, should be unchanged")
+		n := 0
+		if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &n, `select count(*) from tl_stop_external_references where stop_id = $1`, eid); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, 1, n, "the external reference, its variables not provided, should be kept")
+	})
+}
+
+// In a create, where there's nothing to clear, a null for a field that must
+// keep a value is left out: location_type takes its default.
+func TestStopCreate_NullRequiredIsLeftOut(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		c := gqlClient(cfg)
+		created, err := postSet(c, "stop_create", "StopSetInput", map[string]any{
+			"feed_version":  map[string]any{"id": 1},
+			"stop_id":       fmt.Sprintf("s-%d", time.Now().UnixNano()),
+			"stop_name":     "Platform",
+			"location_type": nil,
+			"geometry":      map[string]any{"type": "Point", "coordinates": []float64{-122.27, 37.80}},
+		}, `id location_type`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, int64(0), created.Get("location_type").Int())
+	})
+}
+
+// A stop's external reference given again replaces its target whole: a null
+// target stop doesn't keep the old feed's stop.
+func TestStopUpdate_ExternalReferenceReplacesTarget(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		ctx := model.WithConfig(context.Background(), cfg)
+		c := gqlClient(cfg)
+		created, err := postSet(c, "stop_create", "StopSetInput", map[string]any{
+			"feed_version":       map[string]any{"id": 1},
+			"stop_id":            fmt.Sprintf("s-%d", time.Now().UnixNano()),
+			"stop_name":          "Platform",
+			"geometry":           map[string]any{"type": "Point", "coordinates": []float64{-122.27, 37.80}},
+			"external_reference": map[string]any{"target_feed_onestop_id": "f-a", "target_stop_id": "x"},
+		}, `id`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := created.Get("id").Int()
+		if _, err := postSet(c, "stop_update", "StopSetInput", map[string]any{"id": id, "external_reference": map[string]any{"target_feed_onestop_id": "f-b", "target_stop_id": nil}}, `id`); err != nil {
+			t.Fatal(err)
+		}
+		var ref struct {
+			Feed string  `db:"target_feed_onestop_id"`
+			Stop *string `db:"target_stop_id"`
+		}
+		if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &ref, `select target_feed_onestop_id, target_stop_id from tl_stop_external_references where stop_id = $1`, id); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, "f-b", ref.Feed)
+		assert.Nil(t, ref.Stop, "the old feed's target stop shouldn't be kept")
+	})
+}
+
 // A stop's fields cleared through GraphQL: text to an empty string, which
 // keeps its text search; a number to NULL; and its external reference
 // removed. A required field, or a name its location type needs, can't be.
@@ -452,7 +548,7 @@ func TestStopUpdate_GraphQLNullClears(t *testing.T) {
 
 		// A platform needs a name; location_type can't be cleared
 		_, err = postSet(c, "stop_update", "StopSetInput", map[string]any{"id": id, "stop_name": nil}, fields)
-		assert.ErrorContains(t, err, "stop_name")
+		assert.ErrorContains(t, err, "no value for required field stop_name")
 		_, err = postSet(c, "stop_update", "StopSetInput", map[string]any{"id": id, "location_type": nil}, fields)
 		assert.ErrorContains(t, err, "location_type can't be cleared")
 	})
