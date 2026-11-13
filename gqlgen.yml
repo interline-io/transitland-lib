@@ -146,6 +146,66 @@ models:
     fields:
       permissions:
         resolver: true
+  # In an update, these input fields tell null (clear it) from left out (keep
+  # it), so they're Omittable; see server/finders/dbfinder/mutations.go
+  StopSetInput:
+    fields:
+      location_type:
+        omittable: true
+      stop_code:
+        omittable: true
+      stop_desc:
+        omittable: true
+      stop_id:
+        omittable: true
+      stop_name:
+        omittable: true
+      stop_timezone:
+        omittable: true
+      stop_url:
+        omittable: true
+      wheelchair_boarding:
+        omittable: true
+      zone_id:
+        omittable: true
+      platform_code:
+        omittable: true
+      tts_stop_name:
+        omittable: true
+      stop_access:
+        omittable: true
+      external_reference:
+        omittable: true
+  LevelSetInput:
+    fields:
+      level_id:
+        omittable: true
+      level_name:
+        omittable: true
+      level_index:
+        omittable: true
+  PathwaySetInput:
+    fields:
+      pathway_id:
+        omittable: true
+      pathway_mode:
+        omittable: true
+      is_bidirectional:
+        omittable: true
+      length:
+        omittable: true
+      traversal_time:
+        omittable: true
+      stair_count:
+        omittable: true
+      max_slope:
+        omittable: true
+      min_width:
+        omittable: true
+      signposted_as:
+        omittable: true
+      reverse_signposted_as:
+        omittable: true
   # Force resolvers
   StopObservation:
     extraFields:

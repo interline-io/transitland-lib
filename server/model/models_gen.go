@@ -803,7 +803,7 @@ type LevelFilter struct {
 	LevelID *string `json:"level_id,omitempty"`
 }
 
-// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a field set to null is cleared
+// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and `level_name` set to null is cleared; `level_id` and `level_index` can't be. `parent` is cleared with `{id: null}`. `geometry` can't be cleared.
 type LevelSetInput struct {
 	// Integer ID of the level to update; omit when creating a new level
 	ID *int `json:"id,omitempty"`
@@ -923,7 +923,7 @@ type PathwayFilter struct {
 	PathwayMode *int `json:"pathway_mode,omitempty"`
 }
 
-// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a field set to null is cleared
+// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a measurement or sign set to null is cleared; `pathway_id`, `pathway_mode` and `is_bidirectional` can't be. `from_stop` and `to_stop` take another stop's `id`.
 type PathwaySetInput struct {
 	// Integer ID of the pathway to update; omit when creating a new pathway
 	ID *int `json:"id,omitempty"`
@@ -1524,7 +1524,7 @@ type StopPlace struct {
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
 }
 
-// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a field set to null is cleared
+// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value. A text or number field set to null is cleared, except `stop_id` and `location_type`, which can't be. `parent` and `level` are cleared with `{id: null}`, and `external_reference` with null. `geometry` can't be cleared.
 type StopSetInput struct {
 	// Integer ID of the stop to update; omit when creating a new stop
 	ID *int `json:"id,omitempty"`
@@ -1560,8 +1560,8 @@ type StopSetInput struct {
 	Parent *StopSetInput `json:"parent,omitempty"`
 	// Reference to an existing level; only the `id` is used (the level must already exist)
 	Level *LevelSetInput `json:"level,omitempty"`
-	// Set or update the cross-feed external reference for this stop
-	ExternalReference *StopExternalReferenceSetInput `json:"external_reference,omitempty"`
+	// Set or update the cross-feed external reference for this stop; null, or a null `target_feed_onestop_id`, removes it
+	ExternalReference graphql.Omittable[*StopExternalReferenceSetInput] `json:"external_reference,omitempty"`
 }
 
 // StopTimeEvent combines scheduled arrival/departure data with data sourced from GTFS-RT.

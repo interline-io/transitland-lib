@@ -254,16 +254,30 @@ func TestPathwayUpdate_BumpsUpdatedAt(t *testing.T) {
 	})
 }
 
+// gqlClient is a GraphQL client against the handler, as an admin.
+func gqlClient(cfg model.Config) *client.Client {
+	srv := NewDefaultHandler()
+	srv = model.AddConfigAndPerms(cfg, srv)
+	srv = usercheck.AdminDefaultMiddleware("test")(srv)
+	return client.New(srv)
+}
+
+// postSet runs a create or update mutation with its input as the $set
+// variable, and returns the mutation's result.
+func postSet(c *client.Client, mutation string, input string, set map[string]any, fields string) (gjson.Result, error) {
+	resp := make(map[string]any)
+	err := c.Post(fmt.Sprintf(`mutation($set: %s!) { %s(set: $set) { %s } }`, input, mutation, fields), &resp, client.Var("set", set))
+	return gjson.Get(gqlcase.ToJSON(resp), mutation), err
+}
+
 // In an update, a field left out keeps its value, a null clears it, and a
-// value sets it, through the GraphQL mutation as Station Editor sends it.
+// value sets it, through the GraphQL mutation.
 func TestPathwayUpdate_GraphQLNullClears(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
 		ctx := model.WithConfig(context.Background(), cfg)
-		srv := NewDefaultHandler()
-		srv = model.AddConfigAndPerms(cfg, srv)
-		srv = usercheck.AdminDefaultMiddleware("test")(srv)
-		c := client.New(srv)
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
+		c := gqlClient(cfg)
 		fv := model.FeedVersionInput{ID: toPtr(1)}
 		newStop := func(name string) int {
 			t.Helper()
@@ -280,43 +294,171 @@ func TestPathwayUpdate_GraphQLNullClears(t *testing.T) {
 		}
 		fromStopID, toStopID := newStop("from"), newStop("to")
 		const fields = `id traversal_time stair_count min_width signposted_as`
-		post := func(mutation string, set map[string]interface{}) gjson.Result {
-			t.Helper()
-			resp := make(map[string]interface{})
-			if err := c.Post(fmt.Sprintf(`mutation($set: PathwaySetInput!) { %s(set: $set) { %s } }`, mutation, fields), &resp, client.Var("set", set)); err != nil {
-				t.Fatal(err)
-			}
-			return gjson.Get(gqlcase.ToJSON(resp), mutation)
-		}
-		created := post("pathway_create", map[string]interface{}{
-			"feed_version":     map[string]interface{}{"id": 1},
+		created, err := postSet(c, "pathway_create", "PathwaySetInput", map[string]any{
+			"feed_version":     map[string]any{"id": 1},
 			"pathway_id":       fmt.Sprintf("pw-%d", time.Now().UnixNano()),
 			"pathway_mode":     2,
 			"is_bidirectional": 1,
 			"traversal_time":   30,
 			"min_width":        1.5,
 			"signposted_as":    "Trains",
-			"from_stop":        map[string]interface{}{"id": fromStopID},
-			"to_stop":          map[string]interface{}{"id": toStopID},
-		})
+			"from_stop":        map[string]any{"id": fromStopID},
+			"to_stop":          map[string]any{"id": toStopID},
+		}, fields)
+		if err != nil {
+			t.Fatal(err)
+		}
 		id := created.Get("id").Int()
+		stored := func() gtfs.Pathway {
+			t.Helper()
+			ent := gtfs.Pathway{}
+			ent.ID = int(id)
+			if err := atx.Find(ctx, &ent); err != nil {
+				t.Fatal(err)
+			}
+			return ent
+		}
 
 		// Left out: unchanged
-		updated := post("pathway_update", map[string]interface{}{"id": id, "stair_count": 24})
-		assert.Equal(t, int64(24), updated.Get("stair_count").Int())
-		assert.Equal(t, int64(30), updated.Get("traversal_time").Int())
-		assert.Equal(t, "Trains", updated.Get("signposted_as").String())
+		if _, err := postSet(c, "pathway_update", "PathwaySetInput", map[string]any{"id": id, "stair_count": 24}, fields); err != nil {
+			t.Fatal(err)
+		}
+		ent := stored()
+		assert.Equal(t, int64(24), ent.StairCount.Val)
+		assert.Equal(t, int64(30), ent.TraversalTime.Val)
+		assert.Equal(t, "Trains", ent.SignpostedAs.Val)
 
-		// Null: cleared, and the rest unchanged
-		cleared := post("pathway_update", map[string]interface{}{"id": id, "traversal_time": nil, "signposted_as": nil})
-		assert.Equal(t, gjson.Null, cleared.Get("traversal_time").Type, "traversal_time should be cleared")
-		assert.Empty(t, cleared.Get("signposted_as").String(), "signposted_as should be cleared")
-		assert.Equal(t, int64(24), cleared.Get("stair_count").Int())
-		assert.Equal(t, 1.5, cleared.Get("min_width").Float())
+		// Null: cleared, to NULL in the database, and the rest unchanged
+		if _, err := postSet(c, "pathway_update", "PathwaySetInput", map[string]any{"id": id, "traversal_time": nil, "signposted_as": nil}, fields); err != nil {
+			t.Fatal(err)
+		}
+		var nulls struct {
+			TraversalTime bool `db:"traversal_time"`
+			SignpostedAs  bool `db:"signposted_as"`
+		}
+		if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &nulls, `select traversal_time is null as traversal_time, signposted_as is null as signposted_as from gtfs_pathways where id = $1`, id); err != nil {
+			t.Fatal(err)
+		}
+		assert.True(t, nulls.TraversalTime, "traversal_time should be NULL")
+		assert.True(t, nulls.SignpostedAs, "signposted_as should be NULL")
+		ent = stored()
+		assert.Equal(t, int64(24), ent.StairCount.Val)
+		assert.Equal(t, 1.5, ent.MinWidth.Val)
+
+		// A field that must keep a value can't be cleared
+		_, err = postSet(c, "pathway_update", "PathwaySetInput", map[string]any{"id": id, "pathway_mode": nil}, fields)
+		assert.ErrorContains(t, err, "pathway_mode can't be cleared")
 	})
 }
 
-// A null clears a stop's field, as Station Editor sends for "no information".
+// A field written as a variable the request didn't provide is left out, as
+// the GraphQL spec says, not cleared.
+func TestPathwayUpdate_GraphQLMissingVariable(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		finder := cfg.Finder
+		ctx := model.WithConfig(context.Background(), cfg)
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
+		c := gqlClient(cfg)
+		fv := model.FeedVersionInput{ID: toPtr(1)}
+		stopID := func(name string) int {
+			id, err := finder.StopCreate(ctx, model.StopSetInput{FeedVersion: &fv, StopID: toOpt(fmt.Sprintf("%s-%d", name, time.Now().UnixNano())), StopName: toOpt(name), Geometry: toPtr(tt.NewPoint(-122.27, 37.80))})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return id
+		}
+		eid, err := finder.PathwayCreate(ctx, model.PathwaySetInput{
+			FeedVersion:     &fv,
+			PathwayID:       toOpt(fmt.Sprintf("pw-%d", time.Now().UnixNano())),
+			PathwayMode:     toOpt(1),
+			IsBidirectional: toOpt(1),
+			TraversalTime:   toOpt(30),
+			FromStop:        &model.StopSetInput{ID: toPtr(stopID("from"))},
+			ToStop:          &model.StopSetInput{ID: toPtr(stopID("to"))},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp := make(map[string]any)
+		if err := c.Post(`mutation($id: Int!, $sc: Int, $tt: Int) { pathway_update(set: {id: $id, stair_count: $sc, traversal_time: $tt}) { id } }`, &resp, client.Var("id", eid), client.Var("sc", 12)); err != nil {
+			t.Fatal(err)
+		}
+		ent := gtfs.Pathway{}
+		ent.ID = eid
+		if err := atx.Find(ctx, &ent); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, int64(12), ent.StairCount.Val)
+		assert.Equal(t, int64(30), ent.TraversalTime.Val, "traversal_time, its variable not provided, should be unchanged")
+	})
+}
+
+// A stop's fields cleared through GraphQL: text to an empty string, which
+// keeps its text search; a number to NULL; and its external reference
+// removed. A required field, or a name its location type needs, can't be.
+func TestStopUpdate_GraphQLNullClears(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		ctx := model.WithConfig(context.Background(), cfg)
+		atx := postgres.NewPostgresAdapterFromDBX(cfg.Adapter.DBX())
+		c := gqlClient(cfg)
+		const fields = `id`
+		created, err := postSet(c, "stop_create", "StopSetInput", map[string]any{
+			"feed_version":        map[string]any{"id": 1},
+			"stop_id":             fmt.Sprintf("s-%d", time.Now().UnixNano()),
+			"stop_name":           "Platform 1",
+			"stop_desc":           "By the stairs",
+			"stop_code":           "A1",
+			"location_type":       0,
+			"wheelchair_boarding": 1,
+			"geometry":            map[string]any{"type": "Point", "coordinates": []float64{-122.27, 37.80}},
+			"external_reference":  map[string]any{"target_feed_onestop_id": "f-test", "target_stop_id": "x"},
+		}, fields)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := created.Get("id").Int()
+		refCount := func() int {
+			n := 0
+			if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &n, `select count(*) from tl_stop_external_references where stop_id = $1`, id); err != nil {
+				t.Fatal(err)
+			}
+			return n
+		}
+		assert.Equal(t, 1, refCount())
+
+		if _, err := postSet(c, "stop_update", "StopSetInput", map[string]any{"id": id, "stop_desc": nil, "wheelchair_boarding": nil, "external_reference": nil}, fields); err != nil {
+			t.Fatal(err)
+		}
+		var row struct {
+			StopDesc           *string `db:"stop_desc"`
+			WheelchairBoarding *int    `db:"wheelchair_boarding"`
+			Searchable         bool    `db:"searchable"`
+		}
+		if err := sqlx.GetContext(ctx, cfg.Adapter.DBX(), &row, `select stop_desc, wheelchair_boarding, textsearch is not null as searchable from gtfs_stops where id = $1`, id); err != nil {
+			t.Fatal(err)
+		}
+		if assert.NotNil(t, row.StopDesc) {
+			assert.Equal(t, "", *row.StopDesc, "stop_desc should be an empty string, not NULL")
+		}
+		assert.Nil(t, row.WheelchairBoarding, "wheelchair_boarding should be NULL")
+		assert.True(t, row.Searchable, "the stop's text search vector should survive")
+		assert.Equal(t, 0, refCount(), "the external reference should be removed")
+		ent := gtfs.Stop{}
+		ent.ID = int(id)
+		if err := atx.Find(ctx, &ent); err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, "A1", ent.StopCode.Val, "stop_code, left out, should be unchanged")
+
+		// A platform needs a name; location_type can't be cleared
+		_, err = postSet(c, "stop_update", "StopSetInput", map[string]any{"id": id, "stop_name": nil}, fields)
+		assert.ErrorContains(t, err, "stop_name")
+		_, err = postSet(c, "stop_update", "StopSetInput", map[string]any{"id": id, "location_type": nil}, fields)
+		assert.ErrorContains(t, err, "location_type can't be cleared")
+	})
+}
+
+// A null clears a stop's field through the finder too.
 func TestStopUpdate_NullClears(t *testing.T) {
 	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
 		finder := cfg.Finder
@@ -344,6 +486,32 @@ func TestStopUpdate_NullClears(t *testing.T) {
 		}
 		assert.False(t, ent.WheelchairBoarding.Valid, "wheelchair_boarding should be cleared")
 		assert.Equal(t, "A1", ent.StopCode.Val, "stop_code, left out, should be unchanged")
+	})
+}
+
+// A level's name can be cleared; its index can't.
+func TestLevelUpdate_GraphQLNullClears(t *testing.T) {
+	testconfig.ConfigTxRollback(t, testconfig.Options{AllowAll: true}, func(cfg model.Config) {
+		c := gqlClient(cfg)
+		const fields = `id level_name level_index`
+		created, err := postSet(c, "level_create", "LevelSetInput", map[string]any{
+			"feed_version": map[string]any{"id": 1},
+			"level_id":     fmt.Sprintf("l-%d", time.Now().UnixNano()),
+			"level_name":   "Mezzanine",
+			"level_index":  -1,
+		}, fields)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := created.Get("id").Int()
+		cleared, err := postSet(c, "level_update", "LevelSetInput", map[string]any{"id": id, "level_name": nil}, fields)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, gjson.Null, cleared.Get("level_name").Type)
+		assert.Equal(t, -1.0, cleared.Get("level_index").Float())
+		_, err = postSet(c, "level_update", "LevelSetInput", map[string]any{"id": id, "level_index": nil}, fields)
+		assert.ErrorContains(t, err, "level_index can't be cleared")
 	})
 }
 
@@ -530,10 +698,10 @@ func TestStopReference(t *testing.T) {
 				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
 				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
-				ExternalReference: &model.StopExternalReferenceSetInput{
+				ExternalReference: toOpt(model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
 					TargetStopID:        toPtr(valueB),
-				},
+				}),
 			}
 			eid, err := finder.StopCreate(ctx, stopInput)
 			if err != nil {
@@ -568,10 +736,10 @@ func TestStopReference(t *testing.T) {
 			//////////
 			if _, err := finder.StopUpdate(ctx, model.StopSetInput{
 				ID: &eid,
-				ExternalReference: &model.StopExternalReferenceSetInput{
+				ExternalReference: toOpt(model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
 					TargetStopID:        toPtr(valueB),
-				},
+				}),
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -609,10 +777,10 @@ func TestStopReference(t *testing.T) {
 			//////////
 			if _, err := finder.StopUpdate(ctx, model.StopSetInput{
 				ID: &eid,
-				ExternalReference: &model.StopExternalReferenceSetInput{
+				ExternalReference: toOpt(model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
 					TargetStopID:        toPtr(valueB),
-				},
+				}),
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -632,10 +800,10 @@ func TestStopReference(t *testing.T) {
 				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
 				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
-				ExternalReference: &model.StopExternalReferenceSetInput{
+				ExternalReference: toOpt(model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
 					TargetStopID:        toPtr(valueB),
-				},
+				}),
 			}
 			eid, err := finder.StopCreate(ctx, stopInput)
 			if err != nil {
@@ -667,10 +835,10 @@ func TestStopReference(t *testing.T) {
 				StopID:      toOpt(fmt.Sprintf("%d", time.Now().UnixNano())),
 				StopName:    toOpt("hello"),
 				Geometry:    toPtr(tt.NewPoint(-122.271604, 37.803664)),
-				ExternalReference: &model.StopExternalReferenceSetInput{
+				ExternalReference: toOpt(model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: toPtr(valueA),
 					TargetStopID:        toPtr(valueB),
-				},
+				}),
 			}
 			eid, err := finder.StopCreate(ctx, stopInput)
 			if err != nil {
@@ -684,9 +852,9 @@ func TestStopReference(t *testing.T) {
 			//////////
 			if _, err := finder.StopUpdate(ctx, model.StopSetInput{
 				ID: &eid,
-				ExternalReference: &model.StopExternalReferenceSetInput{
+				ExternalReference: toOpt(model.StopExternalReferenceSetInput{
 					TargetFeedOnestopID: nil,
-				},
+				}),
 			}); err != nil {
 				t.Fatal(err)
 			}

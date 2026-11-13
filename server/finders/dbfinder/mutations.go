@@ -49,13 +49,13 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 		func(ent *gtfs.Stop) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanOpt(&ent.StopID, input.StopID, "stop_id", cols, &err)
+			cols = scanReq(&ent.StopID, input.StopID, "stop_id", cols, &err)
 			cols = scanOpt(&ent.StopCode, input.StopCode, "stop_code", cols, &err)
 			cols = scanOpt(&ent.StopDesc, input.StopDesc, "stop_desc", cols, &err)
 			cols = scanOpt(&ent.StopTimezone, input.StopTimezone, "stop_timezone", cols, &err)
 			cols = scanOpt(&ent.StopName, input.StopName, "stop_name", cols, &err)
 			cols = scanOpt(&ent.StopURL, input.StopURL, "stop_url", cols, &err)
-			cols = scanOpt(&ent.LocationType, input.LocationType, "location_type", cols, &err)
+			cols = scanReq(&ent.LocationType, input.LocationType, "location_type", cols, &err)
 			cols = scanOpt(&ent.WheelchairBoarding, input.WheelchairBoarding, "wheelchair_boarding", cols, &err)
 			cols = scanOpt(&ent.ZoneID, input.ZoneID, "zone_id", cols, &err)
 			cols = scanOpt(&ent.TtsStopName, input.TtsStopName, "tts_stop_name", cols, &err)
@@ -75,13 +75,20 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 	if err != nil {
 		return 0, err
 	}
-	if refInput := input.ExternalReference; refInput != nil {
-		// Check if we have an existing stop external reference for this stop
+	// The stop's external reference: set, or removed by a null or a null
+	// target_feed_onestop_id; left out, unchanged
+	if input.ExternalReference.IsSet() {
+		refInput := input.ExternalReference.Value()
+		db := toAtx(ctx).DBX()
 		var stopRefCheck model.StopExternalReference
-		var fvidCheck *int
-		sqlx.GetContext(ctx, toAtx(ctx).DBX(), &stopRefCheck, `select id from tl_stop_external_references where stop_id = $1`, stopId)
-		sqlx.GetContext(ctx, toAtx(ctx).DBX(), &fvidCheck, `select feed_version_id from gtfs_stops where id = $1`, stopId)
-		if refInput.TargetFeedOnestopID != nil {
+		if err := sqlx.GetContext(ctx, db, &stopRefCheck, `select id from tl_stop_external_references where stop_id = $1`, stopId); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("failed to find the stop external reference for stop %d: %w", stopId, err)
+		}
+		if refInput != nil && refInput.TargetFeedOnestopID != nil {
+			var fvidCheck *int
+			if err := sqlx.GetContext(ctx, db, &fvidCheck, `select feed_version_id from gtfs_stops where id = $1`, stopId); err != nil {
+				return 0, fmt.Errorf("failed to find the feed version of stop %d: %w", stopId, err)
+			}
 			// Update using normal method
 			if _, err := createUpdateEnt(
 				ctx,
@@ -95,7 +102,6 @@ func createUpdateStop(ctx context.Context, input model.StopSetInput) (int, error
 					cols = scanCol(&ent.StopID, &stopId, "stop_id", cols, &err)
 					cols = scanCol(&ent.TargetFeedOnestopID, refInput.TargetFeedOnestopID, "target_feed_onestop_id", cols, &err)
 					cols = scanCol(&ent.TargetStopID, refInput.TargetStopID, "target_stop_id", cols, &err)
-					// cols = scanCol(&ent.Inactive, refInput.Inactive, "inactive", cols, &err)
 					return cols, err
 				},
 			); err != nil {
@@ -142,9 +148,9 @@ func createUpdatePathway(ctx context.Context, input model.PathwaySetInput) (int,
 		func(ent *gtfs.Pathway) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanOpt(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
-			cols = scanOpt(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
-			cols = scanOpt(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
+			cols = scanReq(&ent.PathwayID, input.PathwayID, "pathway_id", cols, &err)
+			cols = scanReq(&ent.PathwayMode, input.PathwayMode, "pathway_mode", cols, &err)
+			cols = scanReq(&ent.IsBidirectional, input.IsBidirectional, "is_bidirectional", cols, &err)
 			cols = scanOpt(&ent.Length, input.Length, "length", cols, &err)
 			cols = scanOpt(&ent.TraversalTime, input.TraversalTime, "traversal_time", cols, &err)
 			cols = scanOpt(&ent.StairCount, input.StairCount, "stair_count", cols, &err)
@@ -201,9 +207,9 @@ func createUpdateLevel(ctx context.Context, input model.LevelSetInput) (int, err
 		func(ent *levelRow) ([]string, error) {
 			var cols []string
 			var err error
-			cols = scanOpt(&ent.LevelID, input.LevelID, "level_id", cols, &err)
+			cols = scanReq(&ent.LevelID, input.LevelID, "level_id", cols, &err)
 			cols = scanOpt(&ent.LevelName, input.LevelName, "level_name", cols, &err)
-			cols = scanOpt(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
+			cols = scanReq(&ent.LevelIndex, input.LevelIndex, "level_index", cols, &err)
 			cols = checkCol(&ent.Geometry, input.Geometry, "geometry", cols)
 			if v := input.Parent; v != nil {
 				cols = scanRef(&ent.ParentStation, v.ID, "parent_station", cols, &err)
@@ -262,21 +268,20 @@ func scanOpt[T any](val canScan, inval graphql.Omittable[*T], colname string, co
 	return append(cols, colname)
 }
 
+// scanReq is scanOpt for a field that must keep a value: a null is an error
+// rather than a clear, so a not-null column isn't quietly given its default.
+func scanReq[T any](val canScan, inval graphql.Omittable[*T], colname string, cols []string, errp *error) []string {
+	if *errp == nil && inval.IsSet() && inval.Value() == nil {
+		*errp = fmt.Errorf("%s can't be cleared", colname)
+		return cols
+	}
+	return scanOpt(val, inval, colname, cols, errp)
+}
+
 // scanRef sets a reference column to id, or clears it when id is nil, and
 // appends colname to cols. Errors are reported through errp, as with scanCol.
 func scanRef(val canScan, id *int, colname string, cols []string, errp *error) []string {
-	if *errp != nil {
-		return cols
-	}
-	var v any
-	if id != nil {
-		v = *id
-	}
-	if err := val.Scan(v); err != nil {
-		*errp = fmt.Errorf("scan %s: %w", colname, err)
-		return cols
-	}
-	return append(cols, colname)
+	return scanOpt(val, graphql.OmittableOf(id), colname, cols, errp)
 }
 
 type hasTableName interface {
@@ -299,6 +304,7 @@ func toAtx(ctx context.Context) tldb.Adapter {
 }
 
 var notNullFilter = &tldb.NotNullFilter{}
+var emptyTextFilter = &tldb.EmptyTextFilter{}
 
 // ensure we have edit rights to fvid
 func createUpdateEnt[T hasTableName](
@@ -349,6 +355,14 @@ func createUpdateEnt[T hasTableName](
 	// Validate
 	if errs := tt.CheckErrors(baseEnt); len(errs) > 0 {
 		return 0, errs[0]
+	}
+	// Then the empty text the importer writes, as it does, after validation:
+	// a cleared stop name or description is an empty string, which keeps the
+	// stop's text search vector, rather than a null, which would void it.
+	if ent, ok := any(baseEnt).(tt.Entity); ok {
+		if err := emptyTextFilter.Filter(ent, nil); err != nil {
+			return 0, err
+		}
 	}
 	// Save
 	err = nil
