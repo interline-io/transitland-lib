@@ -19,29 +19,7 @@ import (
 )
 
 func TestRouteResolver(t *testing.T) {
-	vars := hw{"route_id": "03"}
 	testcases := []testcase{
-		{
-			Name:         "route_stop_buffer stop_points 10m",
-			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
-			Vars:         vars,
-			Selector:     "routes.0.route_stop_buffer.stop_points.type",
-			SelectExpect: []string{"MultiPoint"},
-		},
-		{
-			Name:         "route_stop_buffer stop_buffer 10m",
-			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
-			Vars:         vars,
-			Selector:     "routes.0.route_stop_buffer.stop_buffer.type",
-			SelectExpect: []string{"MultiPolygon"},
-		},
-		{
-			Name:         "route_stop_buffer stop_convexhull 10m",
-			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
-			Vars:         vars,
-			Selector:     "routes.0.route_stop_buffer.stop_convexhull.type",
-			SelectExpect: []string{"Polygon"},
-		},
 		// route attributes
 		{
 			Name: "route attributes",

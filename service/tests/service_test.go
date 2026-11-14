@@ -68,6 +68,37 @@ func TestService_IsActive(t *testing.T) {
 	}
 }
 
+// A time on the first or last day of service is active at any hour, in any
+// location.
+func TestService_IsActive_Bounds(t *testing.T) {
+	s := newTestService()
+	la, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokyo, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	times := []struct {
+		name  string
+		t     time.Time
+		value bool
+	}{
+		{"first day, noon in Los Angeles", time.Date(2019, 1, 1, 12, 0, 0, 0, la), true},
+		{"first day, after midnight in Tokyo", time.Date(2019, 1, 1, 0, 30, 0, 0, tokyo), true},
+		{"last day, noon in Los Angeles", time.Date(2019, 1, 31, 12, 0, 0, 0, la), true},
+		{"last day, just before midnight UTC", time.Date(2019, 1, 31, 23, 59, 0, 0, time.UTC), true},
+		{"day before, noon in Los Angeles", time.Date(2018, 12, 31, 12, 0, 0, 0, la), false},
+		{"day after, noon in Los Angeles", time.Date(2019, 2, 1, 12, 0, 0, 0, la), false},
+	}
+	for _, exp := range times {
+		if got := s.IsActive(exp.t); got != exp.value {
+			t.Errorf("%s: got %t, expect %t", exp.name, got, exp.value)
+		}
+	}
+}
+
 func TestService_Simplify(t *testing.T) {
 	type testcase struct {
 		name    string

@@ -11,6 +11,8 @@ import (
 
 func tripResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	vars := hw{"trip_id": "3850526WKDY"}
+	twelfthStreetID := findActiveStopID(t, cfg, "BA", "12TH")
+	macArthurID := findActiveStopID(t, cfg, "BA", "MCAR")
 	testcases := []testcase{
 		{
 			Name:   "basic fields",
@@ -69,6 +71,14 @@ func tripResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			Vars:         vars,
 			Selector:     "trips.0.stop_times.#.arrival_time",
 			SelectExpect: []string{"06:05:00", "06:08:00", "06:11:00", "06:15:00", "06:17:00", "06:23:00", "06:27:00"},
+		},
+		{
+			// Only the stop times at the filter's stops.
+			Name:         "stop_times stop_ids",
+			Query:        `query($trip_id: String!, $stop_ids: [Int!]) {  trips(where:{trip_id:$trip_id}) {stop_times(where:{stop_ids:$stop_ids}) {stop {stop_id}} }}`,
+			Vars:         hw{"trip_id": "3850526WKDY", "stop_ids": []int{macArthurID, twelfthStreetID}},
+			Selector:     "trips.0.stop_times.#.stop.stop_id",
+			SelectExpect: []string{"12TH", "MCAR"},
 		},
 		{
 			Name:         "stop_times multiple 1",
@@ -135,6 +145,19 @@ func tripResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			Name:   "where dates takes precedence over service_dates",
 			Query:  `query{trips(where:{trip_id:"101",dates:["2018-05-29"],service_dates:["2018-05-31"]}){service_dates}}`,
 			Expect: `{"trips":[{"service_dates":["2018-05-28","2018-05-29"]}]}`,
+		},
+		// A trip runs on its calendar's end date. BART's WKDY calendar ends on
+		// Monday 2019-07-01, the last day of the service window, which
+		// use_service_window keeps in place. A route's trips apply the window.
+		{
+			Name:   "where service_dates on the calendar's end date",
+			Query:  `query{routes(where:{feed_onestop_id:"BA",route_id:"01"}){trips(where:{trip_id:"3850526WKDY",service_dates:["2019-07-01"],use_service_window:true}){service_dates}}}`,
+			Expect: `{"routes":[{"trips":[{"service_dates":["2019-07-01"]}]}]}`,
+		},
+		{
+			Name:   "where dates on the calendar's end date",
+			Query:  `query{routes(where:{feed_onestop_id:"BA",route_id:"01"}){trips(where:{trip_id:"3850526WKDY",dates:["2019-07-01"],use_service_window:true}){service_dates}}}`,
+			Expect: `{"routes":[{"trips":[{"service_dates":["2019-07-01"]}]}]}`,
 		},
 		// license
 		{

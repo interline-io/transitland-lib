@@ -148,14 +148,20 @@ func (r *routeResolver) Headways(ctx context.Context, obj *model.Route, limit *i
 
 func (r *routeResolver) RouteStopBuffer(ctx context.Context, obj *model.Route, radius *float64) (*model.RouteStopBuffer, error) {
 	// TODO: remove n+1 (which is tricky, what if multiple radius specified in different parts of query)
-	ents, err := model.ForContext(ctx).Finder.RouteStopBuffer(ctx, nil, radius, obj.ID)
+	finder := model.ForContext(ctx).Finder
+	groups, err := finder.StopsByRouteIDs(ctx, nil, nil, []int{obj.ID})
 	if err != nil {
 		return nil, err
 	}
-	if len(ents) > 0 {
-		return ents[0], nil
+	var points []*model.BufferPoint
+	for _, stops := range groups {
+		for _, stop := range stops {
+			if p := stopBufferPoint(stop); p != nil {
+				points = append(points, p)
+			}
+		}
 	}
-	return nil, nil
+	return finder.RouteStopBuffer(ctx, radius, points)
 }
 
 func (r *routeResolver) Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int, includeModes *bool, includeTrips *bool) ([]*model.Alert, error) {

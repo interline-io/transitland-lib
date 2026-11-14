@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestDBFinder(t *testing.T) {
-	Run(t, dbfinderConfig(testconfig.Options{}), Spatial, Realtime)
+	Run(t, dbfinderConfig(testconfig.Options{}), Spatial, Realtime, Census)
 }
 
 // TestDBFinder_MaterializedDepartures runs the groups that query stop times on

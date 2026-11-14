@@ -40,6 +40,10 @@ const Spatial Capability = "Spatial"
 // finder's static data, through the config's RTFinder.
 const Realtime Capability = "Realtime"
 
+// Census is answering census queries, against the census data that
+// testdata/test_setup.sh loads, and buffering a route's stops.
+const Census Capability = "Census"
+
 // caseGroup is a named set of cases, run against one client. The cases are
 // built from the config of the finder under test, so they can look up ids, and
 // configure, if set, sets the config's options for the group.
@@ -141,6 +145,13 @@ var (
 			{name: "AgencyResolver_Location", cases: agencyResolverLocationSpatialTestcases},
 			{name: "FeedResolver_GeohashFilter", cases: feedResolverGeohashFilterSpatialTestcases, configure: useGeohashFilter},
 			{name: "FeedVersionResolver_GeohashFilter", cases: feedVersionResolverGeohashFilterSpatialTestcases, configure: useGeohashFilter},
+		},
+		Census: {
+			{name: "CensusResolver", cases: censusResolverTestcases},
+			{name: "CensusResolver_DatasetValuesRelay", cases: censusResolverDatasetValuesRelayTestcases},
+			{name: "CensusResolver_Antimeridian", cases: censusResolverAntimeridianTestcases},
+			{name: "StopResolver_Census", cases: stopResolverCensusTestcases},
+			{name: "RouteResolver_StopBuffer", cases: routeResolverStopBufferTestcases},
 		},
 	}
 	clockGroups = []clockGroup{
@@ -340,6 +351,26 @@ func needAtLeast[T any](t testing.TB, n int, what string, ents []T) {
 	if len(ents) < n {
 		t.Fatalf("found %d %s, need at least %d", len(ents), what, n)
 	}
+}
+
+// findActiveStop returns the stop with a stop_id in a feed's active version.
+func findActiveStop(t testing.TB, cfg model.Config, feedOnestopID string, stopID string) *model.Stop {
+	t.Helper()
+	stops, err := cfg.Finder.FindStops(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.StopFilter{FeedOnestopID: &feedOnestopID, StopID: &stopID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stops) != 1 {
+		t.Fatalf("found %d active stops with stop_id %s in %s, want 1", len(stops), stopID, feedOnestopID)
+	}
+	return stops[0]
+}
+
+// findActiveStopID returns the id of the stop with a stop_id in a feed's active
+// version.
+func findActiveStopID(t testing.TB, cfg model.Config, feedOnestopID string, stopID string) int {
+	t.Helper()
+	return findActiveStop(t, cfg, feedOnestopID, stopID).ID
 }
 
 // decodeGeojson decodes a GeoJSON feature for a query variable.
