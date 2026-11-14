@@ -3,6 +3,7 @@ package gqltest
 import (
 	"context"
 	"math"
+	"strconv"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
@@ -35,6 +36,20 @@ func censusResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	circle := hw{"type": "Polygon", "coordinates": [][][]float64{circleRing}}
 	circleArea := 27638158.48917035 // Derived by direct SQL, without subdivision
 	tractOutline := firstPolygon(t, censusGeography(t, tracts, "1400000US06001450701"))
+
+	// The stop buffer point cases share one query, and place points at stops.
+	pointsQuery := `query($stop_buffer:StopBuffer) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{stop_buffer:$stop_buffer}}) { geoid match_id match_label } } }`
+	pointAt := func(stopID string, keys hw) hw {
+		stop := findActiveStop(t, cfg, "BA", stopID)
+		point := hw{"lon": stop.Geometry.X(), "lat": stop.Geometry.Y()}
+		for k, v := range keys {
+			point[k] = v
+		}
+		return point
+	}
+	// The tracts within 300 m of the 12TH and 19TH stops.
+	tracts12th := []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"}
+	tracts19th := []string{"1400000US06001402801", "1400000US06001402900"}
 
 	// The stop buffer exclude error cases share one query and bbox.
 	excludeQuery := `query($bbox:BoundingBox, $stop_buffer:StopBuffer) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:$stop_buffer}}) { geoid } } }`
@@ -947,6 +962,65 @@ func censusResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 				})
 			},
 		},
+		// Stop buffer points, at BART stops whose own buffers the stop cases
+		// search.
+		{
+			Name:     "stop_buffer points without keys",
+			Query:    pointsQuery,
+			Vars:     hw{"stop_buffer": hw{"points": []hw{pointAt("FTVL", nil)}, "radius": 100.0}},
+			Selector: "census_datasets.0.geographies.#.geoid",
+			// The FTVL stop's own tract, from its census_geographies.
+			SelectExpect: []string{"1400000US06001406100"},
+		},
+		{
+			Name:  "stop_buffer points keyed by id",
+			Query: pointsQuery,
+			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"id": 12}), pointAt("19TH", hw{"id": 19})}, "radius": 300.0}},
+			Sel: []testcaseSelector{
+				{Selector: "census_datasets.0.geographies.#(match_id==12)#.geoid", Expect: tracts12th},
+				{Selector: "census_datasets.0.geographies.#(match_id==19)#.geoid", Expect: tracts19th},
+			},
+		},
+		{
+			Name:  "stop_buffer points keyed by label",
+			Query: pointsQuery,
+			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"label": "12th"}), pointAt("19TH", hw{"label": "19th"})}, "radius": 300.0}},
+			Sel: []testcaseSelector{
+				{Selector: `census_datasets.0.geographies.#(match_label=="12th")#.geoid`, Expect: tracts12th},
+				{Selector: `census_datasets.0.geographies.#(match_label=="19th")#.geoid`, Expect: tracts19th},
+			},
+		},
+		{
+			// Points with the same key share one buffer, so each tract is
+			// listed once. 19TH's tracts are all among 12TH's.
+			Name:  "stop_buffer points sharing a key",
+			Query: pointsQuery,
+			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"id": 7}), pointAt("19TH", hw{"id": 7})}, "radius": 300.0}},
+			Sel: []testcaseSelector{
+				{Selector: "census_datasets.0.geographies.#.geoid", Expect: tracts12th},
+				{Selector: "census_datasets.0.geographies.#.match_id", Expect: []string{"7", "7", "7", "7", "7"}},
+			},
+		},
+		{
+			// Stops share a buffer with the points that carry no key.
+			Name:         "stop_buffer stops and points without keys",
+			Query:        pointsQuery,
+			Vars:         hw{"stop_buffer": hw{"stop_ids": []int{findActiveStopID(t, cfg, "BA", "12TH")}, "points": []hw{pointAt("19TH", nil)}, "radius": 300.0}},
+			Selector:     "census_datasets.0.geographies.#.geoid",
+			SelectExpect: tracts12th,
+		},
+		{
+			Name:                "stop_buffer point latitude out of range",
+			Query:               pointsQuery,
+			Vars:                hw{"stop_buffer": hw{"points": []hw{{"lon": 0.0, "lat": 100.0}}, "radius": 100.0}},
+			ExpectErrorContains: "latitude",
+		},
+		{
+			Name:                "stop_buffer point buffer across 180",
+			Query:               pointsQuery,
+			Vars:                hw{"stop_buffer": hw{"points": []hw{{"lon": 179.999, "lat": 51.9}}, "radius": 1000.0}},
+			ExpectErrorContains: "antimeridian",
+		},
 		// Entities without stops
 		{
 			// A route with no stops has no buffer, so it matches no
@@ -1135,6 +1209,12 @@ func stopResolverCensusTestcases(t testing.TB, cfg model.Config) []testcase {
 					Expect:   []string{"1400000US06001402801", "1400000US06001402900"},
 				},
 			},
+		},
+		{
+			Name:         "census_geographies match_id is the stop's id",
+			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid match_id } } }`,
+			Selector:     "stops.0.census_geographies.#.match_id",
+			SelectExpect: []string{strconv.Itoa(findActiveStopID(t, cfg, "BA", "FTVL"))},
 		},
 		// within geography ids
 		{

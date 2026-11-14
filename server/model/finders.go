@@ -47,7 +47,7 @@ type EntityFinder interface {
 	FindFeeds(context.Context, *int, *Cursor, []int, *FeedFilter) ([]*Feed, error)
 	FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error)
 	FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter, PlaceGeometrySelect) ([]*Place, error)
-	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)
+	RouteStopBuffer(context.Context, *float64, []*BufferPoint) (*RouteStopBuffer, error)
 	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
 }
 
@@ -56,10 +56,10 @@ type EntityFinder interface {
 type CensusFinder interface {
 	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
 	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
+	FindCensusGeographies(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect) ([]*CensusGeography, error)
 	CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error)
 	CensusFieldsByTableIDs(context.Context, *int, []int) ([][]*CensusField, error)
 	CensusGeographiesByDatasetIDs(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
-	CensusGeographiesByEntityIDs(context.Context, *int, *CensusGeographyFilter, CensusGeographySelect, string, []int) ([][]*CensusGeography, error)
 	CensusGeographiesByLayerIDs(context.Context, *int, *CensusSourceGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
 	CensusGeographiesBySourceIDs(context.Context, *int, *CensusSourceGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
 	CensusLayersByIDs(context.Context, []int) ([]*CensusLayer, []error)

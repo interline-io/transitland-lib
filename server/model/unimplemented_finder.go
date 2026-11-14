@@ -87,7 +87,7 @@ func (UnimplementedFinder) FindOperators(context.Context, *int, *Cursor, []int, 
 func (UnimplementedFinder) FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter, PlaceGeometrySelect) ([]*Place, error) {
 	return nil, notImplErr()
 }
-func (UnimplementedFinder) RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error) {
+func (UnimplementedFinder) RouteStopBuffer(context.Context, *float64, []*BufferPoint) (*RouteStopBuffer, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error) {
@@ -435,6 +435,9 @@ func (UnimplementedFinder) FindCensusDatasets(context.Context, *int, *Cursor, []
 func (UnimplementedFinder) FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error) {
 	return nil, notImplErr()
 }
+func (UnimplementedFinder) FindCensusGeographies(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect) ([]*CensusGeography, error) {
+	return nil, notImplErr()
+}
 func (UnimplementedFinder) CensusDatasetLayersByDatasetIDs(_ context.Context, ids []int) ([][]*CensusLayer, []error) {
 	return notImplBatch[[]*CensusLayer](ids)
 }
@@ -442,9 +445,6 @@ func (UnimplementedFinder) CensusFieldsByTableIDs(context.Context, *int, []int) 
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) CensusGeographiesByDatasetIDs(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error) {
-	return nil, notImplErr()
-}
-func (UnimplementedFinder) CensusGeographiesByEntityIDs(context.Context, *int, *CensusGeographyFilter, CensusGeographySelect, string, []int) ([][]*CensusGeography, error) {
 	return nil, notImplErr()
 }
 func (UnimplementedFinder) CensusGeographiesByLayerIDs(context.Context, *int, *CensusSourceGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error) {

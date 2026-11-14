@@ -67,17 +67,16 @@ func previousRouteIDsSelect(osids []string) sq.SelectBuilder {
 		Join("gtfs_routes on gtfs_routes.feed_version_id = feed_states.materialized_feed_version_id and gtfs_routes.route_id = hist.entity_id")
 }
 
-func (f *Finder) RouteStopBuffer(ctx context.Context, limit *int, radius *float64, routeId int) ([]*model.RouteStopBuffer, error) {
-	located, err := f.locateEntityStops(ctx, "route", routeId)
-	if err != nil {
-		return nil, err
-	}
+// RouteStopBuffer buffers a route's stops, given as points.
+func (f *Finder) RouteStopBuffer(ctx context.Context, radius *float64, points []*model.BufferPoint) (*model.RouteStopBuffer, error) {
 	var ents []*model.RouteStopBuffer
-	q := routeStopBufferSelect(limit, radius, located)
-	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
+	if err := dbutil.Select(ctx, f.db, routeStopBufferSelect(radius, points), &ents); err != nil {
 		return nil, queryErr(ctx, err)
 	}
-	return ents, nil
+	if len(ents) == 0 {
+		return nil, nil
+	}
+	return ents[0], nil
 }
 
 func (f *Finder) RouteAttributesByRouteIDs(ctx context.Context, ids []int) ([]*model.RouteAttribute, []error) {
@@ -567,16 +566,16 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	return q
 }
 
-// routeStopBufferSelect buffers a route's located stops.
-func routeStopBufferSelect(_ *int, radius *float64, routeStops *locatedStops) sq.SelectBuilder {
+// routeStopBufferSelect buffers points.
+func routeStopBufferSelect(radius *float64, points bufferPoints) sq.SelectBuilder {
 	r := checkFloat(radius, 0, 2000.0)
 	q := sq.StatementBuilder.
 		Select(
-			"ST_Collect(route_stops.geometry::geometry)::geography AS stop_points",
-			"ST_ConvexHull(ST_Collect(route_stops.geometry::geometry))::geography AS stop_convexhull",
+			"ST_Collect(buffer_points.geometry::geometry)::geography AS stop_points",
+			"ST_ConvexHull(ST_Collect(buffer_points.geometry::geometry))::geography AS stop_convexhull",
 		).
-		Column(sq.Expr("ST_Buffer(ST_Collect(route_stops.geometry::geometry)::geography, ?, 4)::geography AS stop_buffer", r)). // column expr
-		From("route_stops").
-		WithCTE(sq.CTE{Alias: "route_stops", Expression: routeStops})
+		Column(sq.Expr("ST_Buffer(ST_Collect(buffer_points.geometry::geometry)::geography, ?, 4)::geography AS stop_buffer", r)). // column expr
+		From("buffer_points").
+		WithCTE(sq.CTE{Alias: "buffer_points", Expression: points})
 	return q
 }

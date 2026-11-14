@@ -212,15 +212,19 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		// queries.
 		CensusGeographiesByDatasetIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			func(ctx context.Context, limit *int, param *censusDatasetGeographyLoaderParam, keys []int) ([][]*model.CensusGeography, error) {
-				return dbf.CensusGeographiesByDatasetIDs(ctx, limit, param.Where, param.Select, keys)
+				where, err := datasetGeographyFilterWithStops(ctx, dbf, param.Where)
+				if err != nil {
+					return nil, err
+				}
+				return dbf.CensusGeographiesByDatasetIDs(ctx, limit, where, param.Select, keys)
 			},
 			func(p censusDatasetGeographyLoaderParam) (int, *censusDatasetGeographyLoaderParam, *int) {
 				return p.DatasetID, &censusDatasetGeographyLoaderParam{Where: p.Where, Select: p.Select}, p.Limit
 			},
 		),
 		CensusGeographiesByEntityIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			func(ctx context.Context, limit *int, param *censusGeographyLoaderParam, keys []int) (ents [][]*model.CensusGeography, err error) {
-				return dbf.CensusGeographiesByEntityIDs(ctx, limit, param.Where, param.Select, param.EntityType, keys)
+			func(ctx context.Context, limit *int, param *censusGeographyLoaderParam, keys []int) ([][]*model.CensusGeography, error) {
+				return censusGeographiesByEntityIDs(ctx, dbf, limit, param.Where, param.Select, param.EntityType, keys)
 			},
 			func(p censusGeographyLoaderParam) (int, *censusGeographyLoaderParam, *int) {
 				rp := censusGeographyLoaderParam{
@@ -251,7 +255,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		CensusSourcesByIDs: withWaitAndCapacity(waitTime, batchSize, dbf.CensusSourcesByIDs),
 		CensusGeographiesBySourceIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			func(ctx context.Context, limit *int, param *censusSourceGeographyLoaderParam, keys []int) ([][]*model.CensusGeography, error) {
-				return dbf.CensusGeographiesBySourceIDs(ctx, limit, param.Where, param.Select, keys)
+				where, err := sourceGeographyFilterWithStops(ctx, dbf, param.Where)
+				if err != nil {
+					return nil, err
+				}
+				return dbf.CensusGeographiesBySourceIDs(ctx, limit, where, param.Select, keys)
 			},
 			func(p censusSourceGeographyLoaderParam) (int, *censusSourceGeographyLoaderParam, *int) {
 				return p.SourceID, &censusSourceGeographyLoaderParam{Where: p.Where, Select: p.Select}, p.Limit
@@ -259,7 +267,11 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 		),
 		CensusGeographiesByLayerIDs: withWaitAndCapacityGroup(waitTime, batchSize,
 			func(ctx context.Context, limit *int, param *censusSourceGeographyLoaderParam, keys []int) ([][]*model.CensusGeography, error) {
-				return dbf.CensusGeographiesByLayerIDs(ctx, limit, param.Where, param.Select, keys)
+				where, err := sourceGeographyFilterWithStops(ctx, dbf, param.Where)
+				if err != nil {
+					return nil, err
+				}
+				return dbf.CensusGeographiesByLayerIDs(ctx, limit, where, param.Select, keys)
 			},
 			func(p censusSourceGeographyLoaderParam) (int, *censusSourceGeographyLoaderParam, *int) {
 				return p.LayerID, &censusSourceGeographyLoaderParam{Where: p.Where, Select: p.Select}, p.Limit

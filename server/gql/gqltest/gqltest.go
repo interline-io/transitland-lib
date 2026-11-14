@@ -353,9 +353,8 @@ func needAtLeast[T any](t testing.TB, n int, what string, ents []T) {
 	}
 }
 
-// findActiveStopID returns the id of the stop with a stop_id in a feed's active
-// version.
-func findActiveStopID(t testing.TB, cfg model.Config, feedOnestopID string, stopID string) int {
+// findActiveStop returns the stop with a stop_id in a feed's active version.
+func findActiveStop(t testing.TB, cfg model.Config, feedOnestopID string, stopID string) *model.Stop {
 	t.Helper()
 	stops, err := cfg.Finder.FindStops(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.StopFilter{FeedOnestopID: &feedOnestopID, StopID: &stopID})
 	if err != nil {
@@ -364,7 +363,14 @@ func findActiveStopID(t testing.TB, cfg model.Config, feedOnestopID string, stop
 	if len(stops) != 1 {
 		t.Fatalf("found %d active stops with stop_id %s in %s, want 1", len(stops), stopID, feedOnestopID)
 	}
-	return stops[0].ID
+	return stops[0]
+}
+
+// findActiveStopID returns the id of the stop with a stop_id in a feed's active
+// version.
+func findActiveStopID(t testing.TB, cfg model.Config, feedOnestopID string, stopID string) int {
+	t.Helper()
+	return findActiveStop(t, cfg, feedOnestopID, stopID).ID
 }
 
 // decodeGeojson decodes a GeoJSON feature for a query variable.
