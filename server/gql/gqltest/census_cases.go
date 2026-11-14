@@ -1099,6 +1099,7 @@ func censusResolverAntimeridianTestcases(t testing.TB, cfg model.Config) []testc
 }
 
 func stopResolverCensusTestcases(t testing.TB, cfg model.Config) []testcase {
+	geographyId := censusGeography(t, findCensusGeographies(t, cfg, "tract"), "1400000US06001402900").ID
 	return []testcase{
 		// census_geographies (per-stop buffer attribution)
 		{
@@ -1135,12 +1136,6 @@ func stopResolverCensusTestcases(t testing.TB, cfg model.Config) []testcase {
 				},
 			},
 		},
-	}
-}
-
-func stopResolverCensusLocationTestcases(t testing.TB, cfg model.Config) []testcase {
-	geographyId := censusGeography(t, findCensusGeographies(t, cfg, "tract"), "1400000US06001402900").ID
-	return []testcase{
 		// within geography ids
 		{
 			Name:         "where within geography ids 1",

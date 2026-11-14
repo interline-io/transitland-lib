@@ -7,7 +7,6 @@ import (
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
-	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tlxy"
 	sq "github.com/irees/squirrel"
 	"github.com/twpayne/go-geom/encoding/geojson"
@@ -88,13 +87,8 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		// below can bucket results back to the right stop without needing a
 		// loop-then-tag pass.
 		fields.perStopAttribution = true
-		located, err := f.locateStops(ctx, entityIds)
-		if err != nil {
-			return nil, err
-		}
-		fields.located = located
 		var ents []*model.CensusGeography
-		q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(entityIds), fields)
+		q, err := f.geographySelect(ctx, limit, forStopids(entityIds), fields)
 		if err != nil {
 			return nil, err
 		}
@@ -107,20 +101,23 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 		// want (avoids double-counting tracts hit by multiple stops). One
 		// query per entity; tag MatchEntityID after scan since the SQL emits
 		// 0 for the unioned buffer.
-		stopIds, located, err := f.entityBufferStops(ctx, entityType, entityIds)
-		if err != nil {
-			return nil, err
-		}
-		for i, entityId := range entityIds {
+		for _, entityId := range entityIds {
+			located, err := f.locateEntityStops(ctx, entityType, entityId)
+			if err != nil {
+				return nil, err
+			}
 			// An entity with no stops has no buffer, so it matches no
 			// geographies. A stop buffer with no stops would filter nothing.
-			if len(stopIds[i]) == 0 {
+			if len(located.stops) == 0 {
 				continue
 			}
-			entityFields := fields
-			entityFields.located = located[i]
+			stopIds := make([]int, len(located.stops))
+			for i, stop := range located.stops {
+				stopIds[i] = stop.ID
+			}
+			fields.located = located
 			var ents []*model.CensusGeography
-			q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(stopIds[i]), entityFields)
+			q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), forStopids(stopIds), fields)
 			if err != nil {
 				return nil, err
 			}
@@ -135,23 +132,6 @@ func (f *Finder) CensusGeographiesByEntityIDs(ctx context.Context, limit *int, w
 	}
 	ret := arrangeGroup(entityIds, entityGeogs, func(ent *model.CensusGeography) int { return ent.MatchEntityID })
 	return ret, nil
-}
-
-// entityBufferStops returns each route's or agency's stop ids, with the stops
-// the stop locator found for each, or nil ones when the finder reads gtfs_stops.
-func (f *Finder) entityBufferStops(ctx context.Context, entityType string, entityIds []int) ([][]int, []*locatedStops, error) {
-	if f.stopLocator != nil {
-		return f.locateEntityStops(ctx, entityType, entityIds)
-	}
-	stopIds := make([][]int, len(entityIds))
-	for i, entityId := range entityIds {
-		ids, err := getBufferStopIds(ctx, f.db, entityType, entityId)
-		if err != nil {
-			return nil, nil, queryErr(ctx, err)
-		}
-		stopIds[i] = ids
-	}
-	return stopIds, make([]*locatedStops, len(entityIds)), nil
 }
 
 func (f *Finder) CensusValuesByGeographyIDs(ctx context.Context, limit *int, datasetName string, tableNames []string, keys []string) ([][]*model.CensusValue, error) {
@@ -275,25 +255,23 @@ func (f *Finder) CensusTablesBySourceIDs(ctx context.Context, limit *int, where 
 	return ret, nil
 }
 
-// geographySelectFields returns the select fields of a geography search, with
-// the stops its stop buffer names when the finder has a stop locator.
-func (f *Finder) geographySelectFields(ctx context.Context, sel model.CensusGeographySelect, where *model.CensusDatasetGeographyFilter) (censusGeographySelectFields, error) {
-	fields := censusGeographySelectFields{CensusGeographySelect: sel}
-	if where == nil {
-		return fields, nil
+// geographySelect builds a geography search, with the stops its stop buffer
+// names found through the stop locator.
+func (f *Finder) geographySelect(ctx context.Context, limit *int, where *model.CensusDatasetGeographyFilter, fields censusGeographySelectFields) (sq.SelectBuilder, error) {
+	// The search reads a stop buffer's stops only when it names some.
+	if where != nil && where.Location != nil && where.Location.StopBuffer != nil && len(where.Location.StopBuffer.StopIds) > 0 {
+		located, err := f.locateStops(ctx, where.Location.StopBuffer.StopIds)
+		if err != nil {
+			return sq.SelectBuilder{}, err
+		}
+		fields.located = located
 	}
-	located, err := f.locateStopBuffer(ctx, where.Location)
-	fields.located = located
-	return fields, err
+	return censusDatasetGeographySelect(limit, f.PermFilter(ctx), where, fields)
 }
 
 func (f *Finder) CensusGeographiesByDatasetIDs(ctx context.Context, limit *int, p *model.CensusDatasetGeographyFilter, sel model.CensusGeographySelect, keys []int) ([][]*model.CensusGeography, error) {
 	var ents []*model.CensusGeography
-	fields, err := f.geographySelectFields(ctx, sel, p)
-	if err != nil {
-		return nil, err
-	}
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), p, fields)
+	q, err := f.geographySelect(ctx, limit, p, censusGeographySelectFields{CensusGeographySelect: sel})
 	if err != nil {
 		return nil, err
 	}
@@ -313,11 +291,7 @@ func (f *Finder) CensusGeographiesByLayerIDs(ctx context.Context, limit *int, wh
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	fields, err := f.geographySelectFields(ctx, sel, w)
-	if err != nil {
-		return nil, err
-	}
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, fields)
+	q, err := f.geographySelect(ctx, limit, w, censusGeographySelectFields{CensusGeographySelect: sel})
 	if err != nil {
 		return nil, err
 	}
@@ -344,11 +318,7 @@ func (f *Finder) CensusGeographiesBySourceIDs(ctx context.Context, limit *int, w
 		w.Location = where.Location
 	}
 	var ents []*model.CensusGeography
-	fields, err := f.geographySelectFields(ctx, sel, w)
-	if err != nil {
-		return nil, err
-	}
-	q, err := censusDatasetGeographySelect(limit, f.PermFilter(ctx), w, fields)
+	q, err := f.geographySelect(ctx, limit, w, censusGeographySelectFields{CensusGeographySelect: sel})
 	if err != nil {
 		return nil, err
 	}
@@ -443,12 +413,11 @@ type censusGeographySelectFields struct {
 	model.CensusGeographySelect
 	// Caller flag (not GraphQL-driven): when true, the buffer CTE for the
 	// `stop_buffer` filter emits one row per stop with match_entity_id =
-	// gtfs_stops.id instead of unioning all stops into a single polygon.
+	// the stop's id instead of unioning all stops into a single polygon.
 	// Used by CensusGeographiesByEntityIDs for entityType == "stop" so a
 	// single batched query can be grouped back per requesting stop.
 	perStopAttribution bool
-	// The stops a StopLocator found for the `stop_buffer` filter, read in place
-	// of gtfs_stops when set.
+	// The stops the StopLocator found for the `stop_buffer` filter.
 	located *locatedStops
 }
 
@@ -539,23 +508,14 @@ func censusDatasetGeographySelect(limit *int, permFilter *model.PermFilter, wher
 			return q, err
 		}
 
-		// A request names the stops to buffer by id, read by primary key into a
-		// materialized CTE. Every read of the stops in this select starts there.
-		//
-		// Gating gtfs_stops directly let the planner pick a plan that took minutes
-		// for tens of thousands of ids, against seconds when the ids are read first.
+		// The stop locator finds the stops a request names. A materialized CTE
+		// holds their rows, and every read of the stops in this select starts
+		// there.
 		if stopBufferClip {
-			var requested sq.Sqlizer = sq.StatementBuilder.
-				Select("gtfs_stops.id", "gtfs_stops.feed_version_id", "gtfs_stops.geometry").
-				From("gtfs_stops").
-				Where(In("gtfs_stops.id", loc.StopBuffer.StopIds))
-			if fields.located != nil {
-				requested = fields.located.selectStops()
-			}
 			q = q.WithCTE(sq.CTE{
 				Alias:        "requested_stops",
 				Materialized: true,
-				Expression:   requested,
+				Expression:   fields.located,
 			})
 		}
 		stopsSelect := func() sq.SelectBuilder {
@@ -824,26 +784,6 @@ func checkCensusAntimeridian(loc *model.CensusDatasetGeographyLocationFilter, st
 		}
 	}
 	return nil
-}
-
-func getBufferStopIds(ctx context.Context, db tldb.Ext, entityType string, entityId int) ([]int, error) {
-	// Handle aggregation by entity type
-	q := sq.StatementBuilder.
-		Select("id").
-		Distinct().Options("on (gtfs_stops.id)").
-		From("gtfs_stops")
-	switch entityType {
-	case "route":
-		q = q.Join("tl_route_stops ON tl_route_stops.stop_id = gtfs_stops.id").Where(sq.Eq{"tl_route_stops.route_id": entityId})
-	case "agency":
-		q = q.Join("tl_route_stops ON tl_route_stops.stop_id = gtfs_stops.id").Where(sq.Eq{"tl_route_stops.agency_id": entityId})
-	case "stop":
-		// No need to query, just return the single stop ID
-		return []int{entityId}, nil
-	}
-	var stopIds []int
-	err := dbutil.Select(ctx, db, q, &stopIds)
-	return stopIds, err
 }
 
 func censusValueSelect(limit *int, datasetName string, tnames []string, geoids []string) sq.SelectBuilder {

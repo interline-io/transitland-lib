@@ -159,8 +159,6 @@ func (c *Coster) inTimeframe(groupID string, stopID string, t time.Time) (bool, 
 		return false, err
 	}
 	local := t.In(loc)
-	// Services compare dates at midnight UTC.
-	day := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
 	secs := local.Hour()*3600 + local.Minute()*60 + local.Second()
 	for _, tf := range c.timeframes[groupID] {
 		// An empty start_time means 00:00:00, and an empty end_time means 24:00:00.
@@ -171,7 +169,7 @@ func (c *Coster) inTimeframe(groupID string, stopID string, t time.Time) (bool, 
 		if tf.EndTime.Valid {
 			end = tf.EndTime.Int()
 		}
-		if svc := c.services[tf.ServiceID.Val]; svc != nil && svc.IsActive(day) && secs >= start && secs < end {
+		if svc := c.services[tf.ServiceID.Val]; svc != nil && svc.IsActive(local) && secs >= start && secs < end {
 			return true, nil
 		}
 	}

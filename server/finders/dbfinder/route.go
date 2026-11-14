@@ -68,22 +68,12 @@ func previousRouteIDsSelect(osids []string) sq.SelectBuilder {
 }
 
 func (f *Finder) RouteStopBuffer(ctx context.Context, limit *int, radius *float64, routeId int) ([]*model.RouteStopBuffer, error) {
-	var located *locatedStops
-	if f.stopLocator != nil {
-		groups, err := f.stopLocator.StopsByRouteIDs(ctx, nil, nil, []int{routeId})
-		if err != nil {
-			return nil, err
-		}
-		var stops []*model.Stop
-		if len(groups) > 0 {
-			stops = groups[0]
-		}
-		if located, err = newLocatedStops(stops); err != nil {
-			return nil, err
-		}
+	located, err := f.locateEntityStops(ctx, "route", routeId)
+	if err != nil {
+		return nil, err
 	}
 	var ents []*model.RouteStopBuffer
-	q := routeStopBufferSelect(limit, radius, routeId, located)
+	q := routeStopBufferSelect(limit, radius, located)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, queryErr(ctx, err)
 	}
@@ -577,18 +567,9 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	return q
 }
 
-// routeStopBufferSelect buffers a route's stops: the stops in located when set,
-// otherwise the route's stops in gtfs_stops.
-func routeStopBufferSelect(_ *int, radius *float64, routeId int, located *locatedStops) sq.SelectBuilder {
+// routeStopBufferSelect buffers a route's located stops.
+func routeStopBufferSelect(_ *int, radius *float64, routeStops *locatedStops) sq.SelectBuilder {
 	r := checkFloat(radius, 0, 2000.0)
-	var routeStops sq.Sqlizer = sq.StatementBuilder.
-		Select("gtfs_stops.geometry").
-		From("gtfs_stops").
-		InnerJoin("tl_route_stops on tl_route_stops.stop_id = gtfs_stops.id").
-		Where(sq.Eq{"tl_route_stops.route_id": routeId})
-	if located != nil {
-		routeStops = located.selectStops()
-	}
 	q := sq.StatementBuilder.
 		Select(
 			"ST_Collect(route_stops.geometry::geometry)::geography AS stop_points",

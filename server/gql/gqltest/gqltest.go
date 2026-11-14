@@ -40,10 +40,8 @@ const Spatial Capability = "Spatial"
 // finder's static data, through the config's RTFinder.
 const Realtime Capability = "Realtime"
 
-// Census is answering census queries from the census data testdata/test_setup.sh
-// loads: datasets and their geographies and values, geography searches by stop
-// buffer, the census geographies of stops, routes and agencies, stops within
-// census geographies, and route stop buffers.
+// Census is answering census queries, against the census data that
+// testdata/test_setup.sh loads, and buffering a route's stops.
 const Census Capability = "Census"
 
 // caseGroup is a named set of cases, run against one client. The cases are
@@ -153,7 +151,6 @@ var (
 			{name: "CensusResolver_DatasetValuesRelay", cases: censusResolverDatasetValuesRelayTestcases},
 			{name: "CensusResolver_Antimeridian", cases: censusResolverAntimeridianTestcases},
 			{name: "StopResolver_Census", cases: stopResolverCensusTestcases},
-			{name: "StopResolver_CensusLocation", cases: stopResolverCensusLocationTestcases},
 			{name: "RouteResolver_StopBuffer", cases: routeResolverStopBufferTestcases},
 		},
 	}
