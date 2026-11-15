@@ -3,6 +3,7 @@ package dbfinder
 import (
 	"context"
 	"encoding/json"
+	"slices"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -111,10 +112,18 @@ func (f *Finder) StopObservationsByStopIDs(ctx context.Context, limit *int, wher
 	return arrangeGroup(keys, ents, func(ent *model.StopObservation) int { return ent.StopID }), queryErr(ctx, err)
 }
 
+// StopsByIDs returns the stops with these ids, in the order of the ids.
 func (f *Finder) StopsByIDs(ctx context.Context, ids []int) ([]*model.Stop, []error) {
-	ents, err := f.FindStops(ctx, nil, nil, ids, nil)
-	if err != nil {
-		return nil, queryErrs(ctx, len(ids), err)
+	// A query reads at most FINDER_MAXLIMIT stops, so a longer list of ids is
+	// read in parts.
+	var ents []*model.Stop
+	for part := range slices.Chunk(ids, FINDER_MAXLIMIT) {
+		limit := len(part)
+		found, err := f.FindStops(ctx, &limit, nil, part, nil)
+		if err != nil {
+			return nil, queryErrs(ctx, len(ids), err)
+		}
+		ents = append(ents, found...)
 	}
 	return arrangeBy(ids, ents, func(ent *model.Stop) int { return ent.ID }), nil
 }

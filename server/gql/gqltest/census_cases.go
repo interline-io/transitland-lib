@@ -1,41 +1,29 @@
-package gql
+package gqltest
 
 import (
-	"encoding/json"
+	"context"
 	"math"
+	"strconv"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
+	"github.com/twpayne/go-geom/encoding/geojson"
 )
 
-func TestCensusResolver(t *testing.T) {
-	c, cfg := newTestClient(t)
+func censusResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	// Define checks and get IDs for tests
 	countyArea := 2126920949.9718297 // Area of Alameda County in m^2
-	geographyId := 0
-	if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001403000'`).Scan(&geographyId); err != nil {
-		t.Errorf("could not get geography id for test: %s", err.Error())
-	}
-	bartFtvlStopId := 0
-	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'FTVL'`).Scan(&bartFtvlStopId); err != nil {
-		t.Errorf("could not get stop id for test: %s", err.Error())
-	}
-	bartMcarStopId := 0
-	if err := cfg.Adapter.DBX().QueryRowx(`select gtfs_stops.id from gtfs_stops join feed_states using(feed_version_id) where stop_id = 'MCAR'`).Scan(&bartMcarStopId); err != nil {
-		t.Errorf("could not get stop id for test: %s", err.Error())
-	}
-	geographyIdFor := func(geoid string) int {
-		id := 0
-		if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = $1`, geoid).Scan(&id); err != nil {
-			t.Errorf("could not get geography id for %s: %s", geoid, err.Error())
-		}
-		return id
-	}
-	alamedaCountyId := geographyIdFor("0500000US06001")
-	kingCountyId := geographyIdFor("0500000US53033")
-	ftvlTractId := geographyIdFor("1400000US06001406100") // Contains the FTVL stop
+	tracts := findCensusGeographies(t, cfg, "tract")
+	counties := findCensusGeographies(t, cfg, "county")
+	geographyId := censusGeography(t, tracts, "1400000US06001403000").ID
+	bartFtvlStopId := findActiveStopID(t, cfg, "BA", "FTVL")
+	bartMcarStopId := findActiveStopID(t, cfg, "BA", "MCAR")
+	alamedaCountyId := censusGeography(t, counties, "0500000US06001").ID
+	kingCountyId := censusGeography(t, counties, "0500000US53033").ID
+	ftvlTractId := censusGeography(t, tracts, "1400000US06001406100").ID // Contains the FTVL stop
 
 	// Search areas with more vertices than the finder intersects whole, so
 	// they are subdivided: a 600-vertex circle inside Alameda County, and the
@@ -47,14 +35,21 @@ func TestCensusResolver(t *testing.T) {
 	}
 	circle := hw{"type": "Polygon", "coordinates": [][][]float64{circleRing}}
 	circleArea := 27638158.48917035 // Derived by direct SQL, without subdivision
-	tractOutline := hw{}
-	var tractOutlineJson string
-	if err := cfg.Adapter.DBX().QueryRowx(`select ST_AsGeoJSON(ST_GeometryN(geometry::geometry, 1)) from tl_census_geographies where geoid = '1400000US06001450701'`).Scan(&tractOutlineJson); err != nil {
-		t.Errorf("could not get tract outline for test: %s", err.Error())
+	tractOutline := firstPolygon(t, censusGeography(t, tracts, "1400000US06001450701"))
+
+	// The stop buffer point cases share one query, and place points at stops.
+	pointsQuery := `query($stop_buffer:StopBuffer) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{stop_buffer:$stop_buffer}}) { geoid match_id match_label } } }`
+	pointAt := func(stopID string, keys hw) hw {
+		stop := findActiveStop(t, cfg, "BA", stopID)
+		point := hw{"lon": stop.Geometry.X(), "lat": stop.Geometry.Y()}
+		for k, v := range keys {
+			point[k] = v
+		}
+		return point
 	}
-	if err := json.Unmarshal([]byte(tractOutlineJson), &tractOutline); err != nil {
-		t.Errorf("could not parse tract outline for test: %s", err.Error())
-	}
+	// The tracts within 300 m of the 12TH and 19TH stops.
+	tracts12th := []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"}
+	tracts19th := []string{"1400000US06001402801", "1400000US06001402900"}
 
 	// The stop buffer exclude error cases share one query and bbox.
 	excludeQuery := `query($bbox:BoundingBox, $stop_buffer:StopBuffer) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:$stop_buffer}}) { geoid } } }`
@@ -967,12 +962,91 @@ func TestCensusResolver(t *testing.T) {
 				})
 			},
 		},
+		// Stop buffer points, at BART stops whose own buffers the stop cases
+		// search.
+		{
+			Name:     "stop_buffer points without keys",
+			Query:    pointsQuery,
+			Vars:     hw{"stop_buffer": hw{"points": []hw{pointAt("FTVL", nil)}, "radius": 100.0}},
+			Selector: "census_datasets.0.geographies.#.geoid",
+			// The FTVL stop's own tract, from its census_geographies.
+			SelectExpect: []string{"1400000US06001406100"},
+		},
+		{
+			Name:  "stop_buffer points keyed by id",
+			Query: pointsQuery,
+			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"id": 12}), pointAt("19TH", hw{"id": 19})}, "radius": 300.0}},
+			Sel: []testcaseSelector{
+				{Selector: "census_datasets.0.geographies.#(match_id==12)#.geoid", Expect: tracts12th},
+				{Selector: "census_datasets.0.geographies.#(match_id==19)#.geoid", Expect: tracts19th},
+			},
+		},
+		{
+			Name:  "stop_buffer points keyed by label",
+			Query: pointsQuery,
+			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"label": "12th"}), pointAt("19TH", hw{"label": "19th"})}, "radius": 300.0}},
+			Sel: []testcaseSelector{
+				{Selector: `census_datasets.0.geographies.#(match_label=="12th")#.geoid`, Expect: tracts12th},
+				{Selector: `census_datasets.0.geographies.#(match_label=="19th")#.geoid`, Expect: tracts19th},
+			},
+		},
+		{
+			// Points with the same key share one buffer, so each tract is
+			// listed once. 19TH's tracts are all among 12TH's.
+			Name:  "stop_buffer points sharing a key",
+			Query: pointsQuery,
+			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"id": 7}), pointAt("19TH", hw{"id": 7})}, "radius": 300.0}},
+			Sel: []testcaseSelector{
+				{Selector: "census_datasets.0.geographies.#.geoid", Expect: tracts12th},
+				{Selector: "census_datasets.0.geographies.#.match_id", Expect: []string{"7", "7", "7", "7", "7"}},
+			},
+		},
+		{
+			// Stops share a buffer with the points that carry no key.
+			Name:         "stop_buffer stops and points without keys",
+			Query:        pointsQuery,
+			Vars:         hw{"stop_buffer": hw{"stop_ids": []int{findActiveStopID(t, cfg, "BA", "12TH")}, "points": []hw{pointAt("19TH", nil)}, "radius": 300.0}},
+			Selector:     "census_datasets.0.geographies.#.geoid",
+			SelectExpect: tracts12th,
+		},
+		{
+			Name:                "stop_buffer point latitude out of range",
+			Query:               pointsQuery,
+			Vars:                hw{"stop_buffer": hw{"points": []hw{{"lon": 0.0, "lat": 100.0}}, "radius": 100.0}},
+			ExpectErrorContains: "latitude",
+		},
+		{
+			Name:                "stop_buffer point buffer across 180",
+			Query:               pointsQuery,
+			Vars:                hw{"stop_buffer": hw{"points": []hw{{"lon": 179.999, "lat": 51.9}}, "radius": 1000.0}},
+			ExpectErrorContains: "antimeridian",
+		},
+		// Entities without stops
+		{
+			// A route with no stops has no buffer, so it matches no
+			// geographies rather than every geography in the layer.
+			Name:  "route geographies for a route without stops",
+			Query: `query { routes(where:{feed_onestop_id:"ctran-flex", route_id:"0553af3e-53b8-4f98-ba47-0fc03d2404de"}) { route_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			Vars:  vars,
+			Sel: []testcaseSelector{
+				{Selector: "routes.#.route_id", Expect: []string{"0553af3e-53b8-4f98-ba47-0fc03d2404de"}},
+				{Selector: "routes.0.census_geographies.#.geoid", Expect: []string{}},
+			},
+		},
+		{
+			Name:  "agency geographies for an agency without stops",
+			Query: `query { agencies(where:{feed_onestop_id:"ctran-flex", agency_id:"a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6"}) { agency_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			Vars:  vars,
+			Sel: []testcaseSelector{
+				{Selector: "agencies.#.agency_id", Expect: []string{"a8b6ef46-7d4d-45f8-8200-cf4f5ce9d5a6"}},
+				{Selector: "agencies.0.census_geographies.#.geoid", Expect: []string{}},
+			},
+		},
 	}
-	gqlcase.QueryTestcases(t, c, testcases)
+	return testcases
 }
 
-func TestCensusResolver_DatasetValuesRelay(t *testing.T) {
-	c, _ := newTestClient(t)
+func censusResolverDatasetValuesRelayTestcases(t testing.TB, cfg model.Config) []testcase {
 	vars := hw{}
 	testcases := []testcase{
 		// Census dataset values tests
@@ -1084,11 +1158,10 @@ func TestCensusResolver_DatasetValuesRelay(t *testing.T) {
 			},
 		},
 	}
-	gqlcase.QueryTestcases(t, c, testcases)
+	return testcases
 }
 
-func TestCensusResolver_Antimeridian(t *testing.T) {
-	c, _ := newTestClient(t)
+func censusResolverAntimeridianTestcases(t testing.TB, cfg model.Config) []testcase {
 	q := `query($bbox:BoundingBox, $within:Polygon, $near:PointRadius) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:$bbox, within:$within, near:$near}}) { geoid intersection_area } } }`
 	testcases := []testcase{
 		{Name: "bbox past 180", Query: q, Vars: hw{"bbox": hw{"min_lon": 178.0, "min_lat": 51.0, "max_lon": 182.0, "max_lat": 53.0}}, ExpectErrorContains: "antimeridian"},
@@ -1096,7 +1169,89 @@ func TestCensusResolver_Antimeridian(t *testing.T) {
 		{Name: "within drawn across 180", Query: q, Vars: hw{"within": hw{"type": "Polygon", "coordinates": [][][]float64{{{179, 51}, {-179, 51}, {-179, 53}, {179, 53}, {179, 51}}}}}, ExpectErrorContains: "antimeridian"},
 		{Name: "near circle across 180", Query: q, Vars: hw{"near": hw{"lon": 179.99, "lat": 51.9, "radius": 5000.0}}, ExpectErrorContains: "antimeridian"},
 	}
-	gqlcase.QueryTestcases(t, c, testcases)
+	return testcases
+}
+
+func stopResolverCensusTestcases(t testing.TB, cfg model.Config) []testcase {
+	geographyId := censusGeography(t, findCensusGeographies(t, cfg, "tract"), "1400000US06001402900").ID
+	return []testcase{
+		// census_geographies (per-stop buffer attribution)
+		{
+			Name:         "census_geographies tract by stop buffer",
+			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			Selector:     "stops.0.census_geographies.#.geoid",
+			SelectExpect: []string{"1400000US06001406100"},
+		},
+		{
+			Name:         "census_geographies county by stop buffer",
+			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"MCAR"}) { stop_id census_geographies(where:{layer:"county", radius:1000.0}) { geoid } } }`,
+			Selector:     "stops.0.census_geographies.#.geoid",
+			SelectExpect: []string{"0500000US06001"},
+		},
+		{
+			// Two stops resolved in one request batch into a single
+			// CensusGeographiesByEntityIDs call; each must get its own
+			// geographies (including the tracts shared by both buffers).
+			// Before per-stop attribution every row carried match_entity_id=0
+			// and both stops resolved to empty lists.
+			Name: "census_geographies per-stop attribution across batch",
+			Query: `query{
+				s12: stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+				s19: stops(where:{feed_onestop_id:"BA", stop_id:"19TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
+			}`,
+			Sel: []testcaseSelector{
+				{
+					Selector: "s12.0.census_geographies.#.geoid",
+					Expect:   []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"},
+				},
+				{
+					Selector: "s19.0.census_geographies.#.geoid",
+					Expect:   []string{"1400000US06001402801", "1400000US06001402900"},
+				},
+			},
+		},
+		{
+			Name:         "census_geographies match_id is the stop's id",
+			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid match_id } } }`,
+			Selector:     "stops.0.census_geographies.#.match_id",
+			SelectExpect: []string{strconv.Itoa(findActiveStopID(t, cfg, "BA", "FTVL"))},
+		},
+		// within geography ids
+		{
+			Name:         "where within geography ids 1",
+			Query:        `query($geographyIds:[Int!]){stops(where:{location:{geography_ids:$geographyIds}}){id stop_id}}`,
+			Selector:     "stops.#.stop_id",
+			Vars:         hw{"geographyIds": []int{geographyId}},
+			SelectExpect: []string{"19TH", "19TH_N"},
+		},
+	}
+}
+
+func routeResolverStopBufferTestcases(t testing.TB, cfg model.Config) []testcase {
+	vars := hw{"route_id": "03"}
+	return []testcase{
+		{
+			Name:         "route_stop_buffer stop_points 10m",
+			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
+			Vars:         vars,
+			Selector:     "routes.0.route_stop_buffer.stop_points.type",
+			SelectExpect: []string{"MultiPoint"},
+		},
+		{
+			Name:         "route_stop_buffer stop_buffer 10m",
+			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
+			Vars:         vars,
+			Selector:     "routes.0.route_stop_buffer.stop_buffer.type",
+			SelectExpect: []string{"MultiPolygon"},
+		},
+		{
+			Name:         "route_stop_buffer stop_convexhull 10m",
+			Query:        `query($route_id: String!) { routes(where:{route_id:$route_id}) {route_stop_buffer(radius: 100.0) {stop_points	stop_buffer	stop_convexhull}}}`,
+			Vars:         vars,
+			Selector:     "routes.0.route_stop_buffer.stop_convexhull.type",
+			SelectExpect: []string{"Polygon"},
+		},
+	}
 }
 
 // testStopBufferSplit checks that a response's `inside` and `outside`
@@ -1161,4 +1316,53 @@ func testSelectedFields(t *testing.T, jj string, fields map[string]string) {
 		}
 		assert.Zero(t, nulls, "expected %s on every row at %s", field, path)
 	}
+}
+
+// findCensusGeographies returns the tiger2024 geographies in a layer by geoid,
+// with their geometries.
+func findCensusGeographies(t testing.TB, cfg model.Config, layer string) map[string]*model.CensusGeography {
+	t.Helper()
+	ctx := model.WithConfig(context.Background(), cfg)
+	dataset := "tiger2024"
+	datasets, err := cfg.Finder.FindCensusDatasets(ctx, nil, nil, nil, &model.CensusDatasetFilter{Name: &dataset})
+	if err != nil {
+		t.Fatal(err)
+	}
+	needAtLeast(t, 1, "census datasets named "+dataset, datasets)
+	groups, err := cfg.Finder.CensusGeographiesByDatasetIDs(ctx, nil, &model.CensusDatasetGeographyFilter{Layer: &layer}, model.CensusGeographySelect{Geometry: true}, []int{datasets[0].ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	needAtLeast(t, 1, "groups of "+layer+" geographies", groups)
+	ret := map[string]*model.CensusGeography{}
+	for _, g := range groups[0] {
+		if g.Geoid != nil {
+			ret[*g.Geoid] = g
+		}
+	}
+	return ret
+}
+
+// censusGeography returns the geography with a geoid.
+func censusGeography(t testing.TB, geographies map[string]*model.CensusGeography, geoid string) *model.CensusGeography {
+	t.Helper()
+	g, ok := geographies[geoid]
+	if !ok {
+		t.Fatalf("no census geography %s", geoid)
+	}
+	return g
+}
+
+// firstPolygon returns the first polygon of a geography, as a Polygon query
+// variable.
+func firstPolygon(t testing.TB, g *model.CensusGeography) hw {
+	t.Helper()
+	if g.Geometry == nil || !g.Geometry.Valid || g.Geometry.Val.NumPolygons() == 0 {
+		t.Fatalf("census geography %d has no polygon", g.ID)
+	}
+	data, err := geojson.Marshal(g.Geometry.Val.Polygon(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decodeGeojson(t, string(data))
 }

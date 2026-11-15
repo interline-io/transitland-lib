@@ -169,11 +169,6 @@ func TestStopResolver_OnestopID_PreviousFiltered(t *testing.T) {
 	}
 }
 
-func TestStopResolverLocation(t *testing.T) {
-	c, cfg := newTestClient(t)
-	gqlcase.QueryTestcases(t, c, stopResolverLocationTestcases(t, cfg))
-}
-
 func TestStopResolver_PreviousOnestopID(t *testing.T) {
 	c, cfg := newTestClient(t)
 	gqlcase.QueryTestcases(t, c, stopResolverPreviousOnestopIDTestcases(t, cfg))
@@ -238,7 +233,6 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		t.Errorf("could not get fvid for stop observation test: %s", err.Error())
 	}
 	testcases := []testcase{
-		// census_geographies: see per-stop buffer cases below
 		// stop external references
 		{
 			Name: "external reference: working",
@@ -316,63 +310,8 @@ func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			Selector:     "stops.0.observations.#.trip_id",
 			SelectExpect: []string{},
 		},
-		// census_geographies (per-stop buffer attribution)
-		{
-			Name:         "census_geographies tract by stop buffer",
-			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"FTVL"}) { stop_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
-			Selector:     "stops.0.census_geographies.#.geoid",
-			SelectExpect: []string{"1400000US06001406100"},
-		},
-		{
-			Name:         "census_geographies county by stop buffer",
-			Query:        `query{stops(where:{feed_onestop_id:"BA", stop_id:"MCAR"}) { stop_id census_geographies(where:{layer:"county", radius:1000.0}) { geoid } } }`,
-			Selector:     "stops.0.census_geographies.#.geoid",
-			SelectExpect: []string{"0500000US06001"},
-		},
-		{
-			// Two stops resolved in one request batch into a single
-			// CensusGeographiesByEntityIDs call; each must get its own
-			// geographies (including the tracts shared by both buffers).
-			// Before per-stop attribution every row carried match_entity_id=0
-			// and both stops resolved to empty lists.
-			Name: "census_geographies per-stop attribution across batch",
-			Query: `query{
-				s12: stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
-				s19: stops(where:{feed_onestop_id:"BA", stop_id:"19TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
-			}`,
-			Sel: []testcaseSelector{
-				{
-					Selector: "s12.0.census_geographies.#.geoid",
-					Expect:   []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"},
-				},
-				{
-					Selector: "s19.0.census_geographies.#.geoid",
-					Expect:   []string{"1400000US06001402801", "1400000US06001402900"},
-				},
-			},
-		},
 	}
 	return testcases
-}
-
-func stopResolverLocationTestcases(t *testing.T, cfg model.Config) []testcase {
-	geographyId := 0
-	if err := cfg.Adapter.DBX().QueryRowx(`select id from tl_census_geographies where geoid = '1400000US06001402900'`).Scan(&geographyId); err != nil {
-		t.Errorf("could not get geography id for test: %s", err.Error())
-	}
-
-	testcases := []testcase{
-		// within geography ids
-		{
-			Name:         "where within geography ids 1",
-			Query:        `query($geographyIds:[Int!]){stops(where:{location:{geography_ids:$geographyIds}}){id stop_id}}`,
-			Selector:     "stops.#.stop_id",
-			Vars:         hw{"geographyIds": []int{geographyId}},
-			SelectExpect: []string{"19TH", "19TH_N"},
-		},
-	}
-	return testcases
-
 }
 
 func stopResolverPreviousOnestopIDTestcases(t testing.TB, cfg model.Config) []testcase {

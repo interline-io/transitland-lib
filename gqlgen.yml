@@ -360,8 +360,6 @@ models:
         type: int
       SourceID:
         type: int
-      MatchEntityID:
-        type: int      
   CensusValue:
     fields:
       table:

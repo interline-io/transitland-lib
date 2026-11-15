@@ -646,15 +646,7 @@ func stopResolverLocationTestcases(t testing.TB, cfg model.Config) []testcase {
 	sanJoseFocus := tlxy.Point{Lat: 37.3382, Lon: -121.8863}
 	sanJoseRadiusMeters := 10_000.0 // 10km
 
-	testStopCode := "70252"
-	testStops, err := cfg.Finder.FindStops(model.WithConfig(context.Background(), cfg), nil, nil, nil, &model.StopFilter{StopID: &testStopCode})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(testStops) != 1 {
-		t.Fatalf("found %d active stops with stop_id %s, expected 1", len(testStops), testStopCode)
-	}
-	testStopID := testStops[0].ID
+	testStopID := findActiveStopID(t, cfg, "CT", "70252")
 
 	testcases := []testcase{
 		{

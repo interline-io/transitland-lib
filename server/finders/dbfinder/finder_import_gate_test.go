@@ -2,6 +2,8 @@ package dbfinder
 
 import (
 	"context"
+	"errors"
+	"slices"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/dbutil"
@@ -33,21 +35,11 @@ func TestFinder_ImportGate(t *testing.T) {
 	require.Len(t, fvs, 1, "expected the bart test feed version")
 	fvid := fvs[0].ID
 
-	// A census stop buffer around FTVL, looked up while the import is complete.
+	// FTVL, looked up while the import is complete.
 	ftvlID := "FTVL"
 	ftvl, err := f.FindStops(ctx, nil, nil, nil, &model.StopFilter{FeedVersionSha1: &sha1, StopID: &ftvlID})
 	require.NoError(t, err)
 	require.Len(t, ftvl, 1, "expected the bart FTVL stop")
-	datasetName := "tiger2024"
-	datasets, err := f.FindCensusDatasets(ctx, nil, nil, nil, &model.CensusDatasetFilter{Name: &datasetName})
-	require.NoError(t, err)
-	require.Len(t, datasets, 1, "expected the tiger2024 census dataset")
-	tract := "tract"
-	radius := 100.0
-	stopBuffer := &model.CensusDatasetGeographyFilter{
-		Layer:    &tract,
-		Location: &model.CensusDatasetGeographyLocationFilter{StopBuffer: &model.StopBuffer{StopIds: []int{ftvl[0].ID}, Radius: &radius}},
-	}
 
 	setImport := func(t *testing.T, success bool, inProgress bool) {
 		t.Helper()
@@ -58,7 +50,7 @@ func TestFinder_ImportGate(t *testing.T) {
 	}
 
 	// counts returns what the finders that read raw imported tables can see of this feed
-	// version: its entities, and the census tracts around its FTVL stop.
+	// version: its entities, and FTVL by id, the lookup a census stop buffer makes.
 	counts := func(t *testing.T) map[string]int {
 		t.Helper()
 		out := map[string]int{}
@@ -74,9 +66,9 @@ func TestFinder_ImportGate(t *testing.T) {
 		agencies, err := f.FindAgencies(ctx, nil, nil, nil, &model.AgencyFilter{FeedVersionSha1: &sha1})
 		require.NoError(t, err)
 		out["agencies"] = len(agencies)
-		tracts, err := f.CensusGeographiesByDatasetIDs(ctx, nil, stopBuffer, model.CensusGeographySelect{}, []int{datasets[0].ID})
-		require.NoError(t, err)
-		out["census tracts"] = len(tracts[0])
+		byID, errs := f.StopsByIDs(ctx, []int{ftvl[0].ID})
+		require.NoError(t, errors.Join(errs...))
+		out["stops by id"] = len(slices.DeleteFunc(byID, func(s *model.Stop) bool { return s == nil }))
 		return out
 	}
 

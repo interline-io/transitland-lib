@@ -29,6 +29,7 @@ type Finder interface {
 	EntityFinder
 	EntityLoader
 	EntityMutator
+	CensusFinder
 }
 
 type PermFinder interface {
@@ -46,10 +47,29 @@ type EntityFinder interface {
 	FindFeeds(context.Context, *int, *Cursor, []int, *FeedFilter) ([]*Feed, error)
 	FindOperators(context.Context, *int, *Cursor, []int, *OperatorFilter) ([]*Operator, error)
 	FindPlaces(context.Context, *int, *Cursor, []int, *PlaceAggregationLevel, *PlaceFilter, PlaceGeometrySelect) ([]*Place, error)
+	RouteStopBuffer(context.Context, *float64, []*BufferPoint) (*RouteStopBuffer, error)
+	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
+}
+
+// CensusFinder answers census queries: datasets and their sources, layers,
+// tables and fields, and their geographies and values.
+type CensusFinder interface {
 	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
 	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)
-	RouteStopBuffer(context.Context, *int, *float64, int) ([]*RouteStopBuffer, error)
-	FindFeedVersionServiceWindow(context.Context, int) (*ServiceWindow, error)
+	FindCensusGeographies(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect) ([]*CensusGeography, error)
+	CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error)
+	CensusFieldsByTableIDs(context.Context, *int, []int) ([][]*CensusField, error)
+	CensusGeographiesByDatasetIDs(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
+	CensusGeographiesByLayerIDs(context.Context, *int, *CensusSourceGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
+	CensusGeographiesBySourceIDs(context.Context, *int, *CensusSourceGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
+	CensusLayersByIDs(context.Context, []int) ([]*CensusLayer, []error)
+	CensusSourcesByIDs(context.Context, []int) ([]*CensusSource, []error)
+	CensusSourceLayersBySourceIDs(context.Context, []int) ([][]*CensusLayer, []error)
+	CensusSourcesByDatasetIDs(context.Context, *int, *CensusSourceFilter, []int) ([][]*CensusSource, error)
+	CensusTablesByDatasetIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error)
+	CensusTablesBySourceIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error)
+	CensusTableByIDs(context.Context, []int) ([]*CensusTable, []error)
+	CensusValuesByGeographyIDs(context.Context, *int, string, []string, []string) ([][]*CensusValue, error)
 }
 
 type EntityLoader interface {
@@ -62,20 +82,6 @@ type EntityLoader interface {
 	BookingRulesByIDs(context.Context, []int) ([]*BookingRule, []error)
 	CalendarDatesByServiceIDs(context.Context, *int, *CalendarDateFilter, []int) ([][]*CalendarDate, error)
 	CalendarsByIDs(context.Context, []int) ([]*Calendar, []error)
-	CensusDatasetLayersByDatasetIDs(context.Context, []int) ([][]*CensusLayer, []error)
-	CensusFieldsByTableIDs(context.Context, *int, []int) ([][]*CensusField, error)
-	CensusGeographiesByDatasetIDs(context.Context, *int, *CensusDatasetGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
-	CensusGeographiesByEntityIDs(context.Context, *int, *CensusGeographyFilter, CensusGeographySelect, string, []int) ([][]*CensusGeography, error)
-	CensusGeographiesByLayerIDs(context.Context, *int, *CensusSourceGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
-	CensusGeographiesBySourceIDs(context.Context, *int, *CensusSourceGeographyFilter, CensusGeographySelect, []int) ([][]*CensusGeography, error)
-	CensusLayersByIDs(context.Context, []int) ([]*CensusLayer, []error)
-	CensusSourcesByIDs(context.Context, []int) ([]*CensusSource, []error)
-	CensusSourceLayersBySourceIDs(context.Context, []int) ([][]*CensusLayer, []error)
-	CensusSourcesByDatasetIDs(context.Context, *int, *CensusSourceFilter, []int) ([][]*CensusSource, error)
-	CensusTablesByDatasetIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error)
-	CensusTablesBySourceIDs(context.Context, *int, *CensusTableFilter, []int) ([][]*CensusTable, error)
-	CensusTableByIDs(context.Context, []int) ([]*CensusTable, []error)
-	CensusValuesByGeographyIDs(context.Context, *int, string, []string, []string) ([][]*CensusValue, error)
 	// GTFS Fares v1 and v2
 	FareAttributesByFeedVersionIDs(context.Context, *int, *Cursor, []int) ([][]*FareAttribute, error)
 	FareAttributesByIDs(context.Context, []int) ([]*FareAttribute, []error)

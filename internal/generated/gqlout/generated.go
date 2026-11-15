@@ -251,6 +251,8 @@ type ComplexityRoot struct {
 		IntersectionGeometry func(childComplexity int) int
 		Layer                func(childComplexity int) int
 		LayerName            func(childComplexity int) int
+		MatchID              func(childComplexity int) int
+		MatchLabel           func(childComplexity int) int
 		Name                 func(childComplexity int) int
 		Source               func(childComplexity int) int
 		SourceName           func(childComplexity int) int
@@ -2985,6 +2987,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.CensusGeography.LayerName(childComplexity), true
+	case "CensusGeography.match_id":
+		if e.ComplexityRoot.CensusGeography.MatchID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CensusGeography.MatchID(childComplexity), true
+	case "CensusGeography.match_label":
+		if e.ComplexityRoot.CensusGeography.MatchLabel == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CensusGeography.MatchLabel(childComplexity), true
 	case "CensusGeography.name":
 		if e.ComplexityRoot.CensusGeography.Name == nil {
 			break
@@ -10104,6 +10118,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAttributionFilter,
 		ec.unmarshalInputBookingRuleFilter,
 		ec.unmarshalInputBoundingBox,
+		ec.unmarshalInputBufferPoint,
 		ec.unmarshalInputCalendarDateFilter,
 		ec.unmarshalInputCensusDatasetFilter,
 		ec.unmarshalInputCensusDatasetGeographyFilter,
@@ -13961,7 +13976,7 @@ A single spatial unit within a layer — for example, a specific Census Tract, a
 
 Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via ` + "`" + `values` + "`" + `. When queried with a spatial filter, the ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
 
-A spatial query returns each geography once, with ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` covering its whole overlap with the search area, even where the search area has several separate parts.
+A spatial query returns each geography once, with ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` covering its whole overlap with the search area, even where the search area has several separate parts. A ` + "`" + `stop_buffer` + "`" + ` whose points carry keys searches each key's buffer on its own, and returns a geography once for each key, with that key as ` + "`" + `match_id` + "`" + ` and ` + "`" + `match_label` + "`" + `.
 """
 type CensusGeography {
   "Internal integer ID"
@@ -14022,6 +14037,12 @@ type CensusGeography {
   Only populated when explicitly requested; may be expensive to compute.
   """
   intersection_geometry: Geometry
+
+  "When this geography was returned by a ` + "`" + `stop_buffer` + "`" + ` search, the ` + "`" + `id` + "`" + ` of the points whose buffer it intersects. For the ` + "`" + `census_geographies` + "`" + ` of a stop, route or agency, the ID of that entity."
+  match_id: Int
+
+  "When this geography was returned by a ` + "`" + `stop_buffer` + "`" + ` search, the ` + "`" + `label` + "`" + ` of the points whose buffer it intersects"
+  match_label: String
 
   "Statistical data values for this geography from the specified tables"
   values(table_names: [String!]!, dataset: String, limit: Int): [CensusValue]!
@@ -15076,7 +15097,7 @@ input CensusSourceGeographyFilter {
 
 The query area is the first of ` + "`" + `bbox` + "`" + `, ` + "`" + `within` + "`" + ` and ` + "`" + `geography_ids` + "`" + ` that is set. It composes with ` + "`" + `stop_buffer` + "`" + `: the search area is their intersection, so ` + "`" + `intersection_area` + "`" + ` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. With ` + "`" + `stop_buffer.exclude` + "`" + `, the search area is instead the query area minus the stop buffers, and a geography wholly inside the buffers is not returned. ` + "`" + `near` + "`" + ` does not compose and takes effect only when no other filter applies.
 
-Each geography appears once in the result set, and its ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` cover its whole overlap with the search area, even where the search area has several separate parts. A ` + "`" + `bbox` + "`" + `, ` + "`" + `within` + "`" + ` polygon or ` + "`" + `near` + "`" + ` circle that crosses the antimeridian returns an error.
+Each geography appears once in the result set, or once for each key of the ` + "`" + `stop_buffer` + "`" + ` points it matches, and its ` + "`" + `intersection_area` + "`" + ` and ` + "`" + `intersection_geometry` + "`" + ` cover its whole overlap with the search area, even where the search area has several separate parts. A ` + "`" + `bbox` + "`" + `, ` + "`" + `within` + "`" + ` polygon, ` + "`" + `near` + "`" + ` circle or stop buffer that crosses the antimeridian returns an error.
 """
 input CensusDatasetGeographyLocationFilter {
   "Search within this bounding box"
@@ -15089,18 +15110,32 @@ input CensusDatasetGeographyLocationFilter {
   near: PointRadius
   "Focus search on this point; results will be sorted by distance"
   focus: FocusPoint
-  "Search based on a buffer around these stop IDs"
+  "Search based on a buffer around these stops and points"
   stop_buffer: StopBuffer
 }
 
-"""A buffer around a set of stops. A census geography search matches the geographies that intersect any stop's buffer. With ` + "`" + `exclude` + "`" + `, the search area is instead the part of the query area outside every buffer."""
+"""A buffer around a set of stops and points. A census geography search matches the geographies that intersect the buffer. Points with the same ` + "`" + `id` + "`" + ` and ` + "`" + `label` + "`" + ` share a buffer that is searched on its own, and the stops share one with the points that carry neither key. With ` + "`" + `exclude` + "`" + `, the search area is instead the part of the query area outside the buffer."""
 input StopBuffer {
   "Stop integer IDs to buffer around"
   stop_ids: [Int!]
-  "Buffer radius in meters around each stop"
+  "Points to buffer around"
+  points: [BufferPoint!]
+  "Buffer radius in meters around each stop and point"
   radius: Float
   "Search the part of the query area outside the buffers, rather than inside them. Requires a query area and a positive ` + "`" + `radius` + "`" + `"
   exclude: Boolean
+}
+
+"""A point to buffer around. Points with the same ` + "`" + `id` + "`" + ` and ` + "`" + `label` + "`" + ` share one buffer, and a census geography matched by it reports them as ` + "`" + `match_id` + "`" + ` and ` + "`" + `match_label` + "`" + `."""
+input BufferPoint {
+  "Integer key, reported as ` + "`" + `match_id` + "`" + `"
+  id: Int
+  "Text key, reported as ` + "`" + `match_label` + "`" + `"
+  label: String
+  "Longitude, in degrees"
+  lon: Float!
+  "Latitude, in degrees"
+  lat: Float!
 }
 
 """Search options for census tables"""
@@ -15705,6 +15740,10 @@ func (ec *executionContext) childFields_CensusGeography(ctx context.Context, fie
 		return ec.fieldContext_CensusGeography_intersection_area(ctx, field)
 	case "intersection_geometry":
 		return ec.fieldContext_CensusGeography_intersection_geometry(ctx, field)
+	case "match_id":
+		return ec.fieldContext_CensusGeography_match_id(ctx, field)
+	case "match_label":
+		return ec.fieldContext_CensusGeography_match_label(ctx, field)
 	case "values":
 		return ec.fieldContext_CensusGeography_values(ctx, field)
 	case "layer":
@@ -24919,6 +24958,52 @@ func (ec *executionContext) _CensusGeography_intersection_geometry(ctx context.C
 }
 func (ec *executionContext) fieldContext_CensusGeography_intersection_geometry(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("CensusGeography", field, false, false, errors.New("field of type Geometry does not have child fields"))
+}
+
+func (ec *executionContext) _CensusGeography_match_id(ctx context.Context, field graphql.CollectedField, obj *model.CensusGeography) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_CensusGeography_match_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MatchID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_CensusGeography_match_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("CensusGeography", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _CensusGeography_match_label(ctx context.Context, field graphql.CollectedField, obj *model.CensusGeography) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_CensusGeography_match_label(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MatchLabel, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_CensusGeography_match_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("CensusGeography", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _CensusGeography_values(ctx context.Context, field graphql.CollectedField, obj *model.CensusGeography) (ret graphql.Marshaler) {
@@ -55129,6 +55214,57 @@ func (ec *executionContext) unmarshalInputBoundingBox(ctx context.Context, obj a
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputBufferPoint(ctx context.Context, obj any) (model.BufferPoint, error) {
+	var it model.BufferPoint
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "label", "lon", "lat"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "label":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("label"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Label = data
+		case "lon":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lon"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Lon = data
+		case "lat":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lat"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Lat = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCalendarDateFilter(ctx context.Context, obj any) (model.CalendarDateFilter, error) {
 	var it model.CalendarDateFilter
 	if obj == nil {
@@ -57301,7 +57437,7 @@ func (ec *executionContext) unmarshalInputStopBuffer(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"stop_ids", "radius", "exclude"}
+	fieldsInOrder := [...]string{"stop_ids", "points", "radius", "exclude"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -57315,6 +57451,13 @@ func (ec *executionContext) unmarshalInputStopBuffer(ctx context.Context, obj an
 				return it, err
 			}
 			it.StopIds = data
+		case "points":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("points"))
+			data, err := ec.unmarshalOBufferPoint2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBufferPointᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Points = data
 		case "radius":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("radius"))
 			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
@@ -59846,6 +59989,10 @@ func (ec *executionContext) _CensusGeography(ctx context.Context, sel ast.Select
 			out.Values[i] = ec._CensusGeography_intersection_area(ctx, field, obj)
 		case "intersection_geometry":
 			out.Values[i] = ec._CensusGeography_intersection_geometry(ctx, field, obj)
+		case "match_id":
+			out.Values[i] = ec._CensusGeography_match_id(ctx, field, obj)
+		case "match_label":
+			out.Values[i] = ec._CensusGeography_match_label(ctx, field, obj)
 		case "values":
 			field := field
 
@@ -75643,6 +75790,11 @@ func (ec *executionContext) unmarshalNBoundingBox2ᚖgithubᚗcomᚋinterlineᚑ
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNBufferPoint2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBufferPoint(ctx context.Context, v any) (*model.BufferPoint, error) {
+	res, err := ec.unmarshalInputBufferPoint(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNCalendar2githubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v model.Calendar) graphql.Marshaler {
 	return ec._Calendar(ctx, sel, &v)
 }
@@ -78463,6 +78615,24 @@ func (ec *executionContext) unmarshalOBoundingBox2ᚖgithubᚗcomᚋinterlineᚑ
 	}
 	res, err := ec.unmarshalInputBoundingBox(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOBufferPoint2ᚕᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBufferPointᚄ(ctx context.Context, v any) ([]*model.BufferPoint, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*model.BufferPoint, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNBufferPoint2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐBufferPoint(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func (ec *executionContext) marshalOCalendar2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋserverᚋmodelᚐCalendar(ctx context.Context, sel ast.SelectionSet, v *model.Calendar) graphql.Marshaler {
