@@ -157,7 +157,7 @@ type BoundingBox struct {
 	MaxLat float64 `json:"max_lat"`
 }
 
-// A point to buffer around. Points with the same `id` and `label` share one buffer, and a census geography matched by it reports them as `match_id` and `match_label`.
+// A point a stop buffer surrounds. Points with the same `id` and `label` share one buffer, and a census geography that buffer matches reports them as `match_id` and `match_label`.
 type BufferPoint struct {
 	// Integer key, reported as `match_id`
 	ID *int `json:"id,omitempty"`
@@ -236,7 +236,7 @@ type CensusDatasetGeographyFilter struct {
 
 // Search options for census geographies
 //
-// The query area is the first of `bbox`, `within` and `geography_ids` that is set. It composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. With `stop_buffer.exclude`, the search area is instead the query area minus the stop buffers, and a geography wholly inside the buffers is not returned. `near` does not compose and takes effect only when no other filter applies.
+// The query area is the first of `bbox`, `within` and `geography_ids` that is set. It composes with `stop_buffer`: the search area is their intersection, so `intersection_area` reports the overlap inside both. A geography inside the query area but outside every stop buffer is not returned. With `stop_buffer.exclude`, the search area is instead the query area minus every stop buffer, whatever its points' keys, and a geography wholly inside the buffers is not returned. A `stop_buffer` with no stops or points matches no geographies, and with `exclude` subtracts nothing. `near` does not compose and takes effect only when no other filter applies.
 //
 // Each geography appears once in the result set, or once for each key of the `stop_buffer` points it matches, and its `intersection_area` and `intersection_geometry` cover its whole overlap with the search area, even where the search area has several separate parts. A `bbox`, `within` polygon, `near` circle or stop buffer that crosses the antimeridian returns an error.
 type CensusDatasetGeographyLocationFilter struct {
@@ -282,7 +282,7 @@ type CensusField struct {
 //
 // Geographies are the primary unit of analysis: they carry geometry, administrative context, and can be linked to statistical data via `values`. When queried with a spatial filter, the `intersection_area` and `intersection_geometry` fields are populated to describe the overlap between the geography and the search area — useful for calculating what fraction of a geography (and its population) is covered by a transit service area.
 //
-// A spatial query returns each geography once, with `intersection_area` and `intersection_geometry` covering its whole overlap with the search area, even where the search area has several separate parts. A `stop_buffer` whose points carry keys searches each key's buffer on its own, and returns a geography once for each key, with that key as `match_id` and `match_label`.
+// A spatial query returns each geography once, with `intersection_area` and `intersection_geometry` covering its whole overlap with the search area, even where the search area has several separate parts. A `stop_buffer` whose points carry keys searches each key's buffer on its own, and returns a geography once for each key, with that key as `match_id` and `match_label`. With `exclude`, the search area lies outside every buffer, so a geography is returned once, without keys.
 type CensusGeography struct {
 	// Internal integer ID
 	ID int `json:"id"`
@@ -321,9 +321,9 @@ type CensusGeography struct {
 	// When this geography was returned by a spatial query, the geometry of the intersection between this geography and the search area.
 	// Only populated when explicitly requested; may be expensive to compute.
 	IntersectionGeometry *tt.Geometry `json:"intersection_geometry,omitempty"`
-	// When this geography was returned by a `stop_buffer` search, the `id` of the points whose buffer it intersects. For the `census_geographies` of a stop, route or agency, the ID of that entity.
+	// When this geography was returned by a `stop_buffer` search, the `id` of the points whose buffer it intersects, or null with `exclude`. For the `census_geographies` of a stop, route or agency, the ID of that entity.
 	MatchID *int `json:"match_id,omitempty"`
-	// When this geography was returned by a `stop_buffer` search, the `label` of the points whose buffer it intersects
+	// When this geography was returned by a `stop_buffer` search, the `label` of the points whose buffer it intersects, or null with `exclude`
 	MatchLabel *string `json:"match_label,omitempty"`
 	// Statistical data values for this geography from the specified tables
 	Values []*CensusValue `json:"values"`
@@ -1406,15 +1406,15 @@ type StopAreaFilter struct {
 	Ids []int `json:"ids,omitempty"`
 }
 
-// A buffer around a set of stops and points. A census geography search matches the geographies that intersect the buffer. Points with the same `id` and `label` share a buffer that is searched on its own, and the stops share one with the points that carry neither key. With `exclude`, the search area is instead the part of the query area outside the buffer.
+// A buffer around a set of stops and points. A census geography search matches the geographies that intersect the buffer. Points with the same `id` and `label` share a buffer that is searched on its own, and the stops share one with the points that carry neither key. With `exclude`, the search area is instead the part of the query area outside every buffer. A buffer with no stops or points is empty, as is one whose stops the caller can't see: it matches no geographies, and with `exclude` subtracts nothing.
 type StopBuffer struct {
-	// Stop integer IDs to buffer around
+	// Integer IDs of the stops the buffer surrounds
 	StopIds []int `json:"stop_ids,omitempty"`
-	// Points to buffer around
+	// Points the buffer surrounds
 	Points []*BufferPoint `json:"points,omitempty"`
 	// Buffer radius in meters around each stop and point
 	Radius *float64 `json:"radius,omitempty"`
-	// Search the part of the query area outside the buffers, rather than inside them. Requires a query area and a positive `radius`
+	// Search the part of the query area outside every buffer, rather than inside the buffers. Requires a query area and a positive `radius`
 	Exclude *bool `json:"exclude,omitempty"`
 }
 

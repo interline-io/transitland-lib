@@ -69,14 +69,11 @@ func previousRouteIDsSelect(osids []string) sq.SelectBuilder {
 
 // RouteStopBuffer buffers a route's stops, given as points.
 func (f *Finder) RouteStopBuffer(ctx context.Context, radius *float64, points []*model.BufferPoint) (*model.RouteStopBuffer, error) {
-	var ents []*model.RouteStopBuffer
-	if err := dbutil.Select(ctx, f.db, routeStopBufferSelect(radius, points), &ents); err != nil {
+	var ent model.RouteStopBuffer
+	if err := dbutil.Get(ctx, f.db, routeStopBufferSelect(radius, points), &ent); err != nil {
 		return nil, queryErr(ctx, err)
 	}
-	if len(ents) == 0 {
-		return nil, nil
-	}
-	return ents[0], nil
+	return &ent, nil
 }
 
 func (f *Finder) RouteAttributesByRouteIDs(ctx context.Context, ids []int) ([]*model.RouteAttribute, []error) {
@@ -572,7 +569,9 @@ func routeStopBufferSelect(radius *float64, points bufferPoints) sq.SelectBuilde
 	q := sq.StatementBuilder.
 		Select(
 			"ST_Collect(buffer_points.geometry::geometry)::geography AS stop_points",
-			"ST_ConvexHull(ST_Collect(buffer_points.geometry::geometry))::geography AS stop_convexhull",
+			// The hull of one or two stops, or of stops in a line, is a point or
+			// a line rather than a polygon, so it is left out.
+			"CASE WHEN ST_Dimension(ST_ConvexHull(ST_Collect(buffer_points.geometry::geometry))) = 2 THEN ST_ConvexHull(ST_Collect(buffer_points.geometry::geometry))::geography END AS stop_convexhull",
 		).
 		Column(sq.Expr("ST_Buffer(ST_Collect(buffer_points.geometry::geometry)::geography, ?, 4)::geography AS stop_buffer", r)). // column expr
 		From("buffer_points").

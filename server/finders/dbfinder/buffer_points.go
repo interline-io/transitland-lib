@@ -12,19 +12,13 @@ type bufferPoints []*model.BufferPoint
 
 // ToSql selects the points as the columns id, label and geometry.
 func (p bufferPoints) ToSql() (string, []any, error) {
-	type row struct {
-		ID    *int    `json:"id"`
-		Label *string `json:"label"`
-		Lon   float64 `json:"lon"`
-		Lat   float64 `json:"lat"`
+	// No points are an empty array, since json_to_recordset rejects null.
+	if p == nil {
+		p = bufferPoints{}
 	}
-	rows := make([]row, len(p))
-	for i, pt := range p {
-		rows[i] = row{ID: pt.ID, Label: pt.Label, Lon: pt.Lon, Lat: pt.Lat}
-	}
-	// The rows reach the query as JSON objects in one parameter, which pairs
-	// each value with its column.
-	data, err := json.Marshal(rows)
+	// The points reach the query as JSON objects in one parameter, which pairs
+	// each value with its column. A key left out reads as NULL.
+	data, err := json.Marshal(p)
 	if err != nil {
 		return "", nil, fmt.Errorf("encoding buffer points: %w", err)
 	}

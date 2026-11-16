@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"slices"
 	"sort"
 
 	dataloader "github.com/graph-gophers/dataloader/v7"
@@ -153,15 +154,7 @@ func (r *routeResolver) RouteStopBuffer(ctx context.Context, obj *model.Route, r
 	if err != nil {
 		return nil, err
 	}
-	var points []*model.BufferPoint
-	for _, stops := range groups {
-		for _, stop := range stops {
-			if p := stopBufferPoint(stop); p != nil {
-				points = append(points, p)
-			}
-		}
-	}
-	return finder.RouteStopBuffer(ctx, radius, points)
+	return finder.RouteStopBuffer(ctx, radius, stopBufferPoints(slices.Concat(groups...), nil))
 }
 
 func (r *routeResolver) Alerts(ctx context.Context, obj *model.Route, active *bool, limit *int, includeModes *bool, includeTrips *bool) ([]*model.Alert, error) {

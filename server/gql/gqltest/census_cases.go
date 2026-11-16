@@ -2,13 +2,16 @@ package gqltest
 
 import (
 	"context"
+	"maps"
 	"math"
+	"slices"
 	"strconv"
 	"testing"
 
 	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 	"github.com/twpayne/go-geom/encoding/geojson"
 )
@@ -47,9 +50,14 @@ func censusResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 		}
 		return point
 	}
-	// The tracts within 300 m of the 12TH and 19TH stops.
+	// The tracts within 300 m of the 12TH, 19TH and MCAR stops. 19TH's are
+	// among 12TH's, and MCAR's are apart from both.
 	tracts12th := []string{"1400000US06001402801", "1400000US06001402802", "1400000US06001402900", "1400000US06001403000", "1400000US06001403100"}
 	tracts19th := []string{"1400000US06001402801", "1400000US06001402900"}
+	tractsMcar := []string{"1400000US06001401000", "1400000US06001401100"}
+	// A bbox over Oakland, with tracts wholly inside the 1,600 m buffers of
+	// 12TH and MCAR and tracts outside both.
+	oaklandBbox := hw{"min_lon": -122.30, "min_lat": 37.79, "max_lon": -122.25, "max_lat": 37.84}
 
 	// The stop buffer exclude error cases share one query and bbox.
 	excludeQuery := `query($bbox:BoundingBox, $stop_buffer:StopBuffer) { census_datasets(where:{name:"tiger2024"}) { geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:$stop_buffer}}) { geoid } } }`
@@ -991,23 +999,105 @@ func censusResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			},
 		},
 		{
-			// Points with the same key share one buffer, so each tract is
-			// listed once. 19TH's tracts are all among 12TH's.
+			// Points with the same key share one buffer, which reaches the
+			// tracts of both stops.
 			Name:  "stop_buffer points sharing a key",
 			Query: pointsQuery,
-			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"id": 7}), pointAt("19TH", hw{"id": 7})}, "radius": 300.0}},
+			Vars:  hw{"stop_buffer": hw{"points": []hw{pointAt("12TH", hw{"id": 7}), pointAt("MCAR", hw{"id": 7})}, "radius": 300.0}},
 			Sel: []testcaseSelector{
-				{Selector: "census_datasets.0.geographies.#.geoid", Expect: tracts12th},
-				{Selector: "census_datasets.0.geographies.#.match_id", Expect: []string{"7", "7", "7", "7", "7"}},
+				{Selector: "census_datasets.0.geographies.#.geoid", Expect: slices.Concat(tracts12th, tractsMcar)},
+				{Selector: "census_datasets.0.geographies.#.match_id", Expect: []string{"7", "7", "7", "7", "7", "7", "7"}},
 			},
 		},
 		{
 			// Stops share a buffer with the points that carry no key.
 			Name:         "stop_buffer stops and points without keys",
 			Query:        pointsQuery,
-			Vars:         hw{"stop_buffer": hw{"stop_ids": []int{findActiveStopID(t, cfg, "BA", "12TH")}, "points": []hw{pointAt("19TH", nil)}, "radius": 300.0}},
+			Vars:         hw{"stop_buffer": hw{"stop_ids": []int{findActiveStopID(t, cfg, "BA", "12TH")}, "points": []hw{pointAt("MCAR", nil)}, "radius": 300.0}},
 			Selector:     "census_datasets.0.geographies.#.geoid",
-			SelectExpect: tracts12th,
+			SelectExpect: slices.Concat(tracts12th, tractsMcar),
+		},
+		{
+			// One geography's rows for different keys come back in key order,
+			// so a limited result is a prefix of the full one.
+			Name:  "stop_buffer keyed results in a stable order",
+			Query: `query($points:[BufferPoint!]) { census_datasets(where:{name:"tiger2024"}) { all: geographies(where:{layer:"tract", location:{stop_buffer:{points:$points, radius:300}}}) { geoid match_id } first: geographies(limit:6, where:{layer:"tract", location:{stop_buffer:{points:$points, radius:300}}}) { geoid match_id } } }`,
+			Vars:  hw{"points": []hw{pointAt("19TH", hw{"id": 19}), pointAt("12TH", hw{"id": 12})}},
+			F: func(t *testing.T, jj string) {
+				rows := func(path string) []string {
+					var ret []string
+					for _, v := range gjson.Get(jj, path).Array() {
+						ret = append(ret, v.Get("geoid").String()+" "+v.Get("match_id").String())
+					}
+					return ret
+				}
+				all := rows("census_datasets.0.all")
+				require.Len(t, all, len(tracts12th)+len(tracts19th))
+				assert.Equal(t, all[:6], rows("census_datasets.0.first"))
+				// The tracts both stops reach come back for 12 before 19.
+				for _, geoid := range tracts19th {
+					assert.Less(t, slices.Index(all, geoid+" 12"), slices.Index(all, geoid+" 19"), "expected key 12 first for %s", geoid)
+				}
+			},
+		},
+		{
+			// A buffer without points is empty, so it matches nothing, even
+			// beside a bbox that matches tracts on its own. So does one whose
+			// stops the caller can't see.
+			Name:  "stop_buffer without stops or points",
+			Query: `query($bbox:BoundingBox) { census_datasets(where:{name:"tiger2024"}) { area: geographies(where:{layer:"tract", location:{bbox:$bbox}}) { geoid } points: geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{points:[], radius:100}}}) { geoid } stops: geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{stop_ids:[], radius:100}}}) { geoid } unknown: geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{stop_ids:[-1], radius:100}}}) { geoid } zero: geographies(where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{points:[], radius:0}}}) { geoid } alone: geographies(where:{layer:"tract", location:{stop_buffer:{points:[], radius:100}}}) { geoid } } }`,
+			Vars:  hw{"bbox": oaklandBbox},
+			F: func(t *testing.T, jj string) {
+				assert.NotEmpty(t, gjson.Get(jj, "census_datasets.0.area").Array(), "expected tracts in the bbox alone")
+				for _, alias := range []string{"points", "stops", "unknown", "zero", "alone"} {
+					assert.Empty(t, gjson.Get(jj, "census_datasets.0."+alias).Array(), "expected no tracts for the empty buffer %q", alias)
+				}
+			},
+		},
+		{
+			// With exclude, an empty buffer subtracts nothing.
+			Name:  "stop_buffer exclude without stops or points",
+			Query: `query($bbox:BoundingBox) { census_datasets(where:{name:"tiger2024"}) { area: geographies(limit:1000, where:{layer:"tract", location:{bbox:$bbox}}) { geoid intersection_area } points: geographies(limit:1000, where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{points:[], radius:100, exclude:true}}}) { geoid intersection_area } unknown: geographies(limit:1000, where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{stop_ids:[-1], radius:100, exclude:true}}}) { geoid intersection_area } } }`,
+			Vars:  hw{"bbox": oaklandBbox},
+			F: func(t *testing.T, jj string) {
+				area := intersectionAreas(jj, "census_datasets.0.area")
+				require.NotEmpty(t, area, "expected tracts in the bbox alone")
+				for _, alias := range []string{"points", "unknown"} {
+					got := intersectionAreas(jj, "census_datasets.0."+alias)
+					assert.ElementsMatch(t, slices.Collect(maps.Keys(area)), slices.Collect(maps.Keys(got)), "expected the whole bbox for %q", alias)
+					for geoid, a := range area {
+						assert.InDelta(t, a, got[geoid], 1.0, "expected the whole overlap of %s for %q", geoid, alias)
+					}
+				}
+			},
+		},
+		{
+			// Exclude subtracts every buffer, whatever its points' keys: keyed
+			// points exclude what the same points without keys do, and the part
+			// outside them belongs to no key.
+			Name:  "stop_buffer exclude with keyed points",
+			Query: `query($bbox:BoundingBox, $keyed:[BufferPoint!], $plain:[BufferPoint!]) { census_datasets(where:{name:"tiger2024"}) { area: geographies(limit:1000, where:{layer:"tract", location:{bbox:$bbox}}) { geoid } keyed: geographies(limit:1000, where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{points:$keyed, radius:1600, exclude:true}}}) { geoid intersection_area match_id match_label } plain: geographies(limit:1000, where:{layer:"tract", location:{bbox:$bbox, stop_buffer:{points:$plain, radius:1600, exclude:true}}}) { geoid intersection_area } } }`,
+			Vars: hw{
+				"bbox":  oaklandBbox,
+				"keyed": []hw{pointAt("12TH", hw{"id": 1, "label": "12th"}), pointAt("MCAR", hw{"id": 2, "label": "mcar"})},
+				"plain": []hw{pointAt("12TH", nil), pointAt("MCAR", nil)},
+			},
+			F: func(t *testing.T, jj string) {
+				plain := intersectionAreas(jj, "census_datasets.0.plain")
+				require.NotEmpty(t, plain, "expected tracts outside the buffers")
+				// Tracts wholly inside the buffers are left out.
+				assert.Less(t, len(plain), len(gjson.Get(jj, "census_datasets.0.area").Array()), "expected some tracts wholly inside the buffers")
+				keyed := gjson.Get(jj, "census_datasets.0.keyed").Array()
+				assert.Len(t, keyed, len(plain), "expected each tract once")
+				for _, v := range keyed {
+					geoid := v.Get("geoid").String()
+					a, ok := plain[geoid]
+					assert.True(t, ok, "expected %s outside the buffers", geoid)
+					assert.InDelta(t, a, v.Get("intersection_area").Float(), 1.0, "expected the same area outside the buffers for %s", geoid)
+					assert.Equal(t, gjson.Null, v.Get("match_id").Type, "expected no match_id for %s", geoid)
+					assert.Equal(t, gjson.Null, v.Get("match_label").Type, "expected no match_label for %s", geoid)
+				}
+			},
 		},
 		{
 			Name:                "stop_buffer point latitude out of range",
@@ -1021,16 +1111,34 @@ func censusResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			Vars:                hw{"stop_buffer": hw{"points": []hw{{"lon": 179.999, "lat": 51.9}}, "radius": 1000.0}},
 			ExpectErrorContains: "antimeridian",
 		},
-		// Entities without stops
+		// Entities, and entities without stops
 		{
 			// A route with no stops has no buffer, so it matches no
-			// geographies rather than every geography in the layer.
+			// geographies rather than every geography in the layer, while a
+			// route with stops matches the tracts around them.
 			Name:  "route geographies for a route without stops",
-			Query: `query { routes(where:{feed_onestop_id:"ctran-flex", route_id:"0553af3e-53b8-4f98-ba47-0fc03d2404de"}) { route_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
+			Query: `query { bart: routes(where:{feed_onestop_id:"BA", route_id:"01"}) { route_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } flex: routes(where:{feed_onestop_id:"ctran-flex", route_id:"0553af3e-53b8-4f98-ba47-0fc03d2404de"}) { route_id census_geographies(where:{layer:"tract", radius:100.0}) { geoid } } }`,
 			Vars:  vars,
-			Sel: []testcaseSelector{
-				{Selector: "routes.#.route_id", Expect: []string{"0553af3e-53b8-4f98-ba47-0fc03d2404de"}},
-				{Selector: "routes.0.census_geographies.#.geoid", Expect: []string{}},
+			F: func(t *testing.T, jj string) {
+				assert.NotEmpty(t, gjson.Get(jj, "bart.0.census_geographies").Array(), "expected tracts around a route's stops")
+				assert.Equal(t, []string{"0553af3e-53b8-4f98-ba47-0fc03d2404de"}, gqlcase.Strings(gjson.Get(jj, "flex.#.route_id").Array()))
+				assert.Empty(t, gjson.Get(jj, "flex.0.census_geographies").Array(), "expected no tracts for a route without stops")
+			},
+		},
+		{
+			// An agency repeated in a loader batch, once under each of its
+			// routes, gets each geography once.
+			Name:  "agency geographies under each of its routes",
+			Query: `query { routes(where:{feed_onestop_id:"BA"}) { route_id agency { census_geographies(where:{layer:"county", radius:100.0}) { geoid } } } }`,
+			Vars:  vars,
+			F: func(t *testing.T, jj string) {
+				routes := gjson.Get(jj, "routes").Array()
+				require.Greater(t, len(routes), 1, "expected several routes of one agency")
+				for _, route := range routes {
+					geoids := gqlcase.Strings(route.Get("agency.census_geographies.#.geoid").Array())
+					assert.Contains(t, geoids, "0500000US06001", "expected Alameda County under route %s", route.Get("route_id").String())
+					assert.Len(t, geoids, len(slices.Compact(slices.Sorted(slices.Values(geoids)))), "expected each county once under route %s", route.Get("route_id").String())
+				}
 			},
 		},
 		{
@@ -1189,11 +1297,8 @@ func stopResolverCensusTestcases(t testing.TB, cfg model.Config) []testcase {
 			SelectExpect: []string{"0500000US06001"},
 		},
 		{
-			// Two stops resolved in one request batch into a single
-			// CensusGeographiesByEntityIDs call; each must get its own
-			// geographies (including the tracts shared by both buffers).
-			// Before per-stop attribution every row carried match_entity_id=0
-			// and both stops resolved to empty lists.
+			// Two stops in one loader batch each get their own geographies,
+			// including the tracts both buffers share.
 			Name: "census_geographies per-stop attribution across batch",
 			Query: `query{
 				s12: stops(where:{feed_onestop_id:"BA", stop_id:"12TH"}) { stop_id census_geographies(where:{layer:"tract", radius:300.0}) { geoid } }
@@ -1208,6 +1313,23 @@ func stopResolverCensusTestcases(t testing.TB, cfg model.Config) []testcase {
 					Selector: "s19.0.census_geographies.#.geoid",
 					Expect:   []string{"1400000US06001402801", "1400000US06001402900"},
 				},
+			},
+		},
+		{
+			// One search serves every stop in a loader batch, and each stop
+			// still gets every tract within the radius, up to the field's
+			// limit. The counts are each stop's tracts within 1,600 m.
+			Name:  "census_geographies for every stop in a batch",
+			Query: `query{stops(where:{feed_onestop_id:"BA", location_type:0}) { stop_id census_geographies(where:{layer:"tract", radius:1600.0}) { geoid } } }`,
+			F: func(t *testing.T, jj string) {
+				counts := map[string]int{}
+				for _, stop := range gjson.Get(jj, "stops").Array() {
+					counts[stop.Get("stop_id").String()] = len(stop.Get("census_geographies").Array())
+				}
+				require.Greater(t, len(counts), 40, "expected BART's stations in one batch")
+				assert.Equal(t, 16, counts["FTVL"])
+				assert.Equal(t, 20, counts["MCAR"])
+				assert.Equal(t, 30, counts["12TH"])
 			},
 		},
 		{
@@ -1251,22 +1373,36 @@ func routeResolverStopBufferTestcases(t testing.TB, cfg model.Config) []testcase
 			Selector:     "routes.0.route_stop_buffer.stop_convexhull.type",
 			SelectExpect: []string{"Polygon"},
 		},
+		{
+			// Two stops have a buffer but no polygon hull.
+			Name:  "route_stop_buffer for a route with two stops",
+			Query: `query { routes(where:{feed_onestop_id:"BA", route_id:"19"}) { route_stop_buffer(radius: 400.0) { stop_points stop_buffer stop_convexhull } } }`,
+			F: func(t *testing.T, jj string) {
+				assert.Equal(t, "MultiPoint", gjson.Get(jj, "routes.0.route_stop_buffer.stop_points.type").String())
+				assert.Len(t, gjson.Get(jj, "routes.0.route_stop_buffer.stop_points.coordinates").Array(), 2, "expected the route's two stops")
+				assert.Equal(t, "MultiPolygon", gjson.Get(jj, "routes.0.route_stop_buffer.stop_buffer.type").String())
+				assert.Equal(t, gjson.Null, gjson.Get(jj, "routes.0.route_stop_buffer.stop_convexhull").Type, "expected no hull")
+			},
+		},
 	}
+}
+
+// intersectionAreas returns the intersection_area of each geography at path in
+// a response, by geoid.
+func intersectionAreas(jj string, path string) map[string]float64 {
+	ret := map[string]float64{}
+	for _, v := range gjson.Get(jj, path).Array() {
+		ret[v.Get("geoid").String()] = v.Get("intersection_area").Float()
+	}
+	return ret
 }
 
 // testStopBufferSplit checks that a response's `inside` and `outside`
 // stop-buffer searches split its `area` search between them.
 func testStopBufferSplit(t *testing.T, jj string) {
-	areas := func(path string) map[string]float64 {
-		ret := map[string]float64{}
-		for _, v := range gjson.Get(jj, path).Array() {
-			ret[v.Get("geoid").String()] = v.Get("intersection_area").Float()
-		}
-		return ret
-	}
-	area := areas("census_datasets.0.area")
-	inside := areas("census_datasets.0.inside")
-	outside := areas("census_datasets.0.outside")
+	area := intersectionAreas(jj, "census_datasets.0.area")
+	inside := intersectionAreas(jj, "census_datasets.0.inside")
+	outside := intersectionAreas(jj, "census_datasets.0.outside")
 	split := 0
 	for geoid, a := range area {
 		assert.InDelta(t, a, inside[geoid]+outside[geoid], 1.0, "expected inside and outside to add up for %s", geoid)
