@@ -20,9 +20,18 @@ func DecodePolylineString(p string) ([]Point, error) {
 	return DecodePolyline([]byte(p))
 }
 
+// DecodePolyline decodes a polyline at five digits of precision, the encoded
+// polyline algorithm's original form.
 func DecodePolyline(p []byte) ([]Point, error) {
+	return DecodePolylinePrecision(p, 5)
+}
+
+// DecodePolylinePrecision decodes a polyline at precision digits: 5 for the
+// original form, 6 for polyline6.
+func DecodePolylinePrecision(p []byte, precision int) ([]Point, error) {
 	// Decode directly into Points with go-polyline's integer primitive, avoiding the
 	// [][]float64 (and a 2-float64 slice per point) that polyline.DecodeCoords builds.
+	scale := math.Pow(10, float64(precision))
 	var ret []Point
 	var lat, lon int
 	for len(p) > 0 {
@@ -36,7 +45,7 @@ func DecodePolyline(p []byte) ([]Point, error) {
 		}
 		lat += dlat
 		lon += dlon
-		ret = append(ret, Point{Lat: float64(lat) / 1e5, Lon: float64(lon) / 1e5})
+		ret = append(ret, Point{Lat: float64(lat) / scale, Lon: float64(lon) / scale})
 		p = rest
 	}
 	return ret, nil

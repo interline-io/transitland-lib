@@ -38,6 +38,27 @@ func TestDecodePolyline(t *testing.T) {
 	}
 }
 
+func TestDecodePolylinePrecision(t *testing.T) {
+	check := []Point{
+		{Lon: -122.4194155, Lat: 37.7749295},
+		{Lon: -122.4183872, Lat: 37.7756012},
+		{Lon: -122.2711137, Lat: 37.8043637},
+	}
+	for _, precision := range []int{5, 6} {
+		scale := math.Pow(10, float64(precision))
+		got, err := DecodePolylinePrecision(EncodePolylinePrecision(check, precision), precision)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Len(t, got, len(check))
+		for i, p := range got {
+			// Each within half a unit of the last digit, which encoding rounds to.
+			assert.InDelta(t, check[i].Lat, p.Lat, 0.5/scale, "precision %d point %d", precision, i)
+			assert.InDelta(t, check[i].Lon, p.Lon, 0.5/scale, "precision %d point %d", precision, i)
+		}
+	}
+}
+
 func TestEncodePolyline(t *testing.T) {
 	expect := "yfttIf{jR?B@BBDD?@ANDH@XHrAj@t@Z"
 	check := []Point{
