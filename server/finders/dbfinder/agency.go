@@ -17,7 +17,7 @@ func (f *Finder) FindAgencies(ctx context.Context, limit *int, after *model.Curs
 	if len(ids) > 0 || (where != nil && where.FeedVersionSha1 != nil) {
 		useActive.active = false
 	}
-	q := agencySelect(limit, after, ids, useActive, f.PermFilter(ctx), where)
+	q := agencySelect(limit, after, ids, nil, useActive, f.PermFilter(ctx), where)
 	if err := dbutil.Select(ctx, f.db, q, &ents); err != nil {
 		return nil, queryErr(ctx, err)
 	}
@@ -72,7 +72,7 @@ func (f *Finder) AgenciesByFeedVersionIDs(ctx context.Context, limit *int, where
 	err := dbutil.Select(ctx,
 		f.db,
 		lateralWrap(
-			agencySelect(limit, nil, nil, nil, f.PermFilter(ctx), where),
+			agencySelect(limit, nil, nil, nil, nil, f.PermFilter(ctx), where),
 			"feed_versions",
 			"id",
 			"gtfs_agencies",
@@ -90,7 +90,7 @@ func (f *Finder) AgenciesByOnestopIDs(ctx context.Context, limit *int, where *mo
 		f.db,
 		// The limit counts per operator and the grouped loader applies it to each one's
 		// agencies; given to the query it would cap the whole batch of operators instead.
-		agencySelect(nil, nil, nil, &UseActive{active: true}, f.PermFilter(ctx), nil).Where(In("coif.resolved_onestop_id", keys)),
+		agencySelect(nil, nil, nil, keys, &UseActive{active: true}, f.PermFilter(ctx), nil),
 		&ents,
 	)
 	return arrangeGroup(keys, ents, func(ent *model.Agency) string { return ent.OnestopID }), queryErr(ctx, err)
@@ -110,8 +110,16 @@ func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor
 // that association's own catchment.
 const placeCityRadius = 40_000.0
 
-func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
+// agencySelect selects agencies with their operators.
+//
+// Several operators can claim one agency. It comes back once for each claiming
+// operator that onestopIDs or the filter names, or, when neither names one, once
+// with its first operator row. A deleted Atlas operator claims none.
+func agencySelect(limit *int, after *model.Cursor, ids []int, onestopIDs []string, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
 	distinct := false
+	if where != nil && where.OnestopID != nil {
+		onestopIDs = append(onestopIDs, *where.OnestopID)
+	}
 	q := sq.StatementBuilder.
 		Select(
 			"gtfs_agencies.id",
@@ -128,15 +136,28 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 			"tl_agency_geometries.geometry",
 			"feed_versions.sha1 AS feed_version_sha1",
 			"current_feeds.onestop_id AS feed_onestop_id",
-			"coalesce (coif.resolved_onestop_id, '') as onestop_id",
-			"coif.id as coif_id",
 		).
 		From(useActive.UseTable("gtfs_agencies", "tl_materialized_active_agencies as gtfs_agencies")).
 		Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
 		JoinClause("left join tl_agency_geometries ON tl_agency_geometries.agency_id = gtfs_agencies.id").
-		JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
 		Limit(finderCheckLimit(limit))
+	if len(onestopIDs) > 0 {
+		q = q.
+			Columns("coif.resolved_onestop_id as onestop_id", "coif.id as coif_id").
+			Join("current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
+			LeftJoin("current_operators co ON co.id = coif.operator_id").
+			Where(In("coif.resolved_onestop_id", onestopIDs)).
+			Where(sq.Eq{"co.deleted_at": nil})
+	} else {
+		// Both subqueries read the agency's first operator row. They sit in the
+		// select list, not a join, so they run only for the rows a page returns:
+		// Postgres evaluates them after its sort and limit.
+		q = q.Columns(
+			"coalesce ((select c.resolved_onestop_id from current_operators_in_feed c left join current_operators co on co.id = c.operator_id where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id AND co.deleted_at is null order by c.id limit 1), '') as onestop_id",
+			"(select c.id from current_operators_in_feed c left join current_operators co on co.id = c.operator_id where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id AND co.deleted_at is null order by c.id limit 1) as coif_id",
+		)
+	}
 
 	if where != nil {
 		if where.FeedVersionSha1 != nil {
@@ -150,9 +171,6 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, useActive *UseActi
 		}
 		if where.AgencyName != nil {
 			q = q.Where(sq.Eq{"gtfs_agencies.agency_name": *where.AgencyName})
-		}
-		if where.OnestopID != nil {
-			q = q.Where(sq.Eq{"coif.resolved_onestop_id": *where.OnestopID})
 		}
 		// Places
 		if where.Adm0Iso != nil || where.Adm1Iso != nil || where.Adm0Name != nil || where.Adm1Name != nil || where.CityName != nil {
