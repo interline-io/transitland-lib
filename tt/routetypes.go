@@ -216,6 +216,23 @@ func BasicRouteType(code int) int {
 	return code
 }
 
+// BasicRouteTypesMatch reports whether two route types are the same kind of
+// service: the same basic type, or both in the rail family of tram or light
+// rail, subway or metro, rail, and monorail, which publishers choose between
+// differently for one line.
+func BasicRouteTypesMatch(a, b int) bool {
+	ba, bb := BasicRouteType(a), BasicRouteType(b)
+	return ba == bb || (railFamily(ba) && railFamily(bb))
+}
+
+func railFamily(basic int) bool {
+	switch basic {
+	case 0, 1, 2, 12:
+		return true
+	}
+	return false
+}
+
 func getRouteChildren(code int) []RouteType {
 	children := map[int][]int{}
 	for _, i := range routeTypes {

@@ -155,3 +155,25 @@ func TestBasicRouteType(t *testing.T) {
 		})
 	}
 }
+
+func TestBasicRouteTypesMatch(t *testing.T) {
+	tests := []struct {
+		name   string
+		a, b   int
+		expect bool
+	}{
+		{"the same basic type", 3, 702, true},
+		{"tram and rail are both rail family", 0, 2, true},
+		{"metro and monorail are both rail family", 401, 12, true},
+		{"bus and rail are not", 3, 2, false},
+		{"trolleybus is not bus", 11, 3, false},
+		{"ferry is not rail", 4, 2, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := BasicRouteTypesMatch(tc.a, tc.b); got != tc.expect {
+				t.Errorf("BasicRouteTypesMatch(%d, %d) = %v, expected %v", tc.a, tc.b, got, tc.expect)
+			}
+		})
+	}
+}
