@@ -20,7 +20,9 @@ func (f *Finder) OperatorsByCOIFs(ctx context.Context, ids []int) ([]*model.Oper
 	var ents []*model.Operator
 	err := dbutil.Select(ctx,
 		f.db,
-		operatorSelect(nil, nil, ids, f.PermFilter(ctx), nil),
+		// Merging would keep one of the rows that share a onestop id, and leave the
+		// agencies holding the others without an operator.
+		operatorSelect(nil, nil, ids, f.PermFilter(ctx), &model.OperatorFilter{Merged: ptr(false)}),
 		&ents,
 	)
 	if err != nil {
@@ -83,7 +85,10 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 		LeftJoin("current_operators co on co.id = coif.operator_id").
 		Where(sq.Eq{"current_feeds.deleted_at": nil}).
 		Where(sq.Eq{"co.deleted_at": nil}). // not present, or present but not deleted
-		OrderBy("coif.resolved_onestop_id, coif.operator_id")
+		// Merging keeps each onestop id's first row: an Atlas operator's before a
+		// generated one, then the lowest id. Without the id, rows of one operator
+		// tie, and the merge keeps whichever the scan reads first.
+		OrderBy("coif.resolved_onestop_id, coif.operator_id, coif.id")
 
 	if where != nil {
 		if where.Merged != nil && !*where.Merged {
