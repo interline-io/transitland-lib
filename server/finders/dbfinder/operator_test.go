@@ -17,8 +17,8 @@ import (
 )
 
 // addSecondOperator syncs a second Atlas operator, o-9q9-caltrain~second, that
-// claims Caltrain's agency.
-func addSecondOperator(ctx context.Context, t *testing.T, tx *sqlx.Tx) {
+// claims Caltrain's agency, and returns its id.
+func addSecondOperator(ctx context.Context, t *testing.T, tx *sqlx.Tx) int {
 	t.Helper()
 	atx := postgres.NewPostgresAdapterFromDBX(tx)
 	agencies, err := sync.ActiveFeedAgencies(ctx, atx)
@@ -31,9 +31,11 @@ func addSecondOperator(ctx context.Context, t *testing.T, tx *sqlx.Tx) {
 		File:            tt.NewString("test.dmfr.json"),
 		AssociatedFeeds: []dmfr.OperatorAssociatedFeed{{FeedOnestopID: tt.NewString("CT")}},
 	}
-	if _, _, _, err := sync.UpdateOperator(ctx, atx, op, agencies); err != nil {
+	id, _, _, err := sync.UpdateOperator(ctx, atx, op, agencies)
+	if err != nil {
 		t.Fatal(err)
 	}
+	return id
 }
 
 // caltrainRows returns the rows of Caltrain's operator, one for each of its

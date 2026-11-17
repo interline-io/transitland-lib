@@ -110,9 +110,11 @@ func (f *Finder) FindPlaces(ctx context.Context, limit *int, after *model.Cursor
 // that association's own catchment.
 const placeCityRadius = 40_000.0
 
-// agencySelect selects agencies with their operators. Several operators can claim
-// one agency: it comes back once for each claiming operator that onestopIDs or the
-// filter names, or, when neither names one, once with its first operator row.
+// agencySelect selects agencies with their operators.
+//
+// Several operators can claim one agency. It comes back once for each claiming
+// operator that onestopIDs or the filter names, or, when neither names one, once
+// with its first operator row. A deleted Atlas operator claims none.
 func agencySelect(limit *int, after *model.Cursor, ids []int, onestopIDs []string, useActive *UseActive, permFilter *model.PermFilter, where *model.AgencyFilter) sq.SelectBuilder {
 	distinct := false
 	if where != nil && where.OnestopID != nil {
@@ -144,14 +146,16 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, onestopIDs []strin
 		q = q.
 			Columns("coif.resolved_onestop_id as onestop_id", "coif.id as coif_id").
 			Join("current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
-			Where(In("coif.resolved_onestop_id", onestopIDs))
+			LeftJoin("current_operators co ON co.id = coif.operator_id").
+			Where(In("coif.resolved_onestop_id", onestopIDs)).
+			Where(sq.Eq{"co.deleted_at": nil})
 	} else {
-		// Both subqueries read the agency's row with the lowest id. They sit in the
+		// Both subqueries read the agency's first operator row. They sit in the
 		// select list, not a join, so they run only for the rows a page returns:
 		// Postgres evaluates them after its sort and limit.
 		q = q.Columns(
-			"coalesce ((select c.resolved_onestop_id from current_operators_in_feed c where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id order by c.id limit 1), '') as onestop_id",
-			"(select c.id from current_operators_in_feed c where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id order by c.id limit 1) as coif_id",
+			"coalesce ((select c.resolved_onestop_id from current_operators_in_feed c left join current_operators co on co.id = c.operator_id where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id AND co.deleted_at is null order by c.id limit 1), '') as onestop_id",
+			"(select c.id from current_operators_in_feed c left join current_operators co on co.id = c.operator_id where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id AND co.deleted_at is null order by c.id limit 1) as coif_id",
 		)
 	}
 
