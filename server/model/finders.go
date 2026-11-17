@@ -53,6 +53,10 @@ type EntityFinder interface {
 
 // CensusFinder answers census queries: datasets and their sources, layers,
 // tables and fields, and their geographies and values.
+//
+// A geography search's stop buffer is exactly its points. Callers turn its
+// stops into points first, and a finder returns an error for a buffer that
+// still names stops.
 type CensusFinder interface {
 	FindCensusDatasets(context.Context, *int, *Cursor, []int, *CensusDatasetFilter) ([]*CensusDataset, error)
 	FindCensusValuesByDatasetID(context.Context, *int, CensusCursor, int, *CensusDatasetValueFilter) ([]*CensusValue, error)

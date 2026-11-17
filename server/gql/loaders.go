@@ -223,16 +223,16 @@ func NewLoaders(dbf model.Finder, batchSize int, stopTimeBatchSize int) *Loaders
 			},
 		),
 		CensusGeographiesByEntityIDs: withWaitAndCapacityGroup(waitTime, batchSize,
-			func(ctx context.Context, limit *int, param *censusGeographyLoaderParam, keys []int) ([][]*model.CensusGeography, error) {
+			func(ctx context.Context, limit *int, param *censusGeographyLoaderParam, keys []censusEntityKey) ([][]*model.CensusGeography, error) {
 				return censusGeographiesByEntityIDs(ctx, dbf, limit, param.Where, param.Select, param.EntityType, keys)
 			},
-			func(p censusGeographyLoaderParam) (int, *censusGeographyLoaderParam, *int) {
+			func(p censusGeographyLoaderParam) (censusEntityKey, *censusGeographyLoaderParam, *int) {
 				rp := censusGeographyLoaderParam{
 					EntityType: p.EntityType,
 					Where:      p.Where,
 					Select:     p.Select,
 				}
-				return p.EntityID, &rp, p.Limit
+				return p.Entity, &rp, p.Limit
 			},
 		),
 		CensusSourcesByDatasetIDs: withWaitAndCapacityGroup(waitTime, batchSize, dbf.CensusSourcesByDatasetIDs,

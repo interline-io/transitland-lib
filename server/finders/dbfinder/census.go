@@ -359,8 +359,11 @@ var errCensusStopBufferExclude = errors.New("census geography stop_buffer.exclud
 // longitude or latitude.
 var errCensusBufferPoint = errors.New("census geography stop_buffer points need a longitude within [-180, 180] and a latitude within [-90, 90]")
 
+// errCensusBufferStops reports a stop buffer that still names stops. A finder
+// reads only a buffer's points, and the resolvers turn its stops into points.
+var errCensusBufferStops = errors.New("census geography stop_buffer.stop_ids must be turned into points before a finder search")
+
 func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeographyFilter, sel model.CensusGeographySelect) (sq.SelectBuilder, error) {
-	// Include matched entity column
 	cols := []string{
 		"tlcg.id",
 		"tlcl.name as layer_name",
@@ -382,7 +385,10 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		cols = append(cols, "tlcg.geometry as geometry")
 	}
 
-	orderBy := sq.Expr("tlcg.id")
+	// Ordered by id, then by a stop buffer's keys, so a limited result is a
+	// prefix of the full one. A focus point orders by distance first.
+	orderBy := []string{"tlcg.id"}
+	var focusOrder sq.Sqlizer
 
 	// A normal query..
 	q := sq.StatementBuilder.
@@ -401,26 +407,27 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 	if where != nil && where.Location != nil {
 		qBufferUse := false
 		var qBuffer sq.SelectBuilder
-		qPointsUse := false
-		var qPoints sq.SelectBuilder
 		// Set for search areas that can be too large to intersect whole: a buffer
-		// shared by every point, a union of geographies, and a `within` polygon
-		// past censusClipMaxVertices.
+		// around several points, a query area less the buffers, a union of
+		// geographies, and a `within` polygon past censusClipMaxVertices.
 		subdivide := false
+		// Set for radius 0, where a geography matches the points it contains.
+		pointMatch := false
 
 		loc := where.Location
 		withinClip := loc.Within != nil && loc.Within.Valid
 		geographyIdsClip := len(loc.GeographyIds) > 0
-		// A stop buffer names stops, points or both. The resolvers add the stops
-		// to the points, and this select reads only the points, so a stop the
-		// caller can't see adds none.
-		stopBufferClip := loc.StopBuffer != nil && (len(loc.StopBuffer.StopIds) > 0 || len(loc.StopBuffer.Points) > 0)
+		// A stop buffer is exactly its points: the resolvers turn its stops into
+		// points first. A buffer without points is empty, so it matches nothing,
+		// and with exclude subtracts nothing.
+		stopBufferClip := loc.StopBuffer != nil
 		stopBufferRadius := 0.0
 		stopBufferExclude := false
 		var points bufferPoints
-		// Read even without stops or points, so the exclude check below also
-		// covers an empty buffer.
-		if loc.StopBuffer != nil {
+		if stopBufferClip {
+			if len(loc.StopBuffer.StopIds) > 0 {
+				return q, errCensusBufferStops
+			}
 			// Clamp ceiling of 1600m ~ 1 mile, a common US analysis radius.
 			stopBufferRadius = checkFloat(loc.StopBuffer.Radius, 0, 1_600)
 			stopBufferExclude = loc.StopBuffer.Exclude != nil && *loc.StopBuffer.Exclude
@@ -444,14 +451,25 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		}
 		// Points with the same id and label share a buffer, the union of their
 		// circles, and a geography matches each buffer on its own.
+		oneBuffer := sharesOneBuffer(points)
 		pointBuffersSelect := func() sq.SelectBuilder {
+			if oneBuffer {
+				// Grouping would make Postgres estimate 100 buffers, which with
+				// ST_Subdivide's estimate puts a search past jit_above_cost.
+				return sq.StatementBuilder.
+					Select("min(buffer_points.id) as match_id", "min(buffer_points.label) as match_label").
+					Column("ST_Union(ST_Buffer(buffer_points.geometry, ?)::geometry) as buffer", stopBufferRadius).
+					From("buffer_points")
+			}
 			return sq.StatementBuilder.
 				Select("buffer_points.id as match_id", "buffer_points.label as match_label").
 				Column("ST_Union(ST_Buffer(buffer_points.geometry, ?)::geometry) as buffer", stopBufferRadius).
 				From("buffer_points").
 				GroupBy("buffer_points.id", "buffer_points.label")
 		}
-		oneBuffer := sharesOneBuffer(points)
+		// One buffer around several points can be large; one point's circle
+		// never is.
+		subdivideBuffers := oneBuffer && len(points) > 1
 		// A search area that isn't a buffer matches no point keys.
 		noMatchKeys := func(b sq.SelectBuilder) sq.SelectBuilder {
 			return b.Column("NULL::bigint as match_id").Column("NULL::text as match_label")
@@ -501,31 +519,38 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		// Filter precedence: only the query area and `stop_buffer` compose.
 		//
 		// With a positive radius, the search area is the part of the query area
-		// inside each buffer, or with exclude, the part outside it. With radius
-		// 0, a geography matches when it contains a point inside the query area.
-		// Otherwise the first filter present in this chain applies and the rest
-		// are ignored.
+		// inside each buffer, or with exclude, the part outside every buffer.
+		// With radius 0, a geography matches when it contains a point inside the
+		// query area. Otherwise the first filter present in this chain applies
+		// and the rest are ignored.
 		if areaClip && stopBufferClip && stopBufferRadius > 0 {
-			// Clip the query area to each buffer: their intersection, or with
-			// exclude, their difference. Without this case the chain below would
-			// honor only the buffers and ignore the query area.
+			// Without this case the chain below would honor only the buffers and
+			// ignore the query area.
 			qBufferUse = true
-			subdivide = oneBuffer
 			q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
-			q = q.WithCTE(sq.CTE{Alias: "clip_points", Materialized: true, Expression: pointBuffersSelect()})
-			combine := "ST_Intersection(clip_area.buffer, clip_points.buffer) as buffer"
 			if stopBufferExclude {
-				// With no points, as when no requested stop is visible, the left
-				// join below gives a NULL buffer. Default it to empty, so it
-				// subtracts nothing rather than nulling the difference.
-				combine = "ST_Difference(clip_area.buffer, COALESCE(clip_points.buffer, 'SRID=4326;GEOMETRYCOLLECTION EMPTY'::geometry)) as buffer"
+				// The part outside every buffer belongs to no key, so exclude
+				// subtracts the union of all the circles. No points leave a NULL
+				// union, which subtracts nothing.
+				subdivide = true
+				q = q.WithCTE(sq.CTE{Alias: "clip_points", Materialized: true, Expression: sq.StatementBuilder.Select().
+					Column("ST_Union(ST_Buffer(buffer_points.geometry, ?)::geometry) as buffer", stopBufferRadius).
+					From("buffer_points")})
+				qBuffer = noMatchKeys(sq.StatementBuilder.Select().
+					Column("ST_Difference(clip_area.buffer, COALESCE(clip_points.buffer, 'SRID=4326;GEOMETRYCOLLECTION EMPTY'::geometry)) as buffer").
+					From("clip_area").
+					JoinClause("CROSS JOIN clip_points"))
+			} else {
+				// The query area clipped to each buffer.
+				subdivide = subdivideBuffers
+				q = q.WithCTE(sq.CTE{Alias: "clip_points", Materialized: true, Expression: pointBuffersSelect()})
+				qBuffer = sq.StatementBuilder.Select().
+					Column("ST_Intersection(clip_area.buffer, clip_points.buffer) as buffer").
+					Column("clip_points.match_id").
+					Column("clip_points.match_label").
+					From("clip_area").
+					JoinClause("CROSS JOIN clip_points")
 			}
-			qBuffer = sq.StatementBuilder.Select().
-				Column(combine).
-				Column("clip_points.match_id").
-				Column("clip_points.match_label").
-				From("clip_area").
-				JoinClause("LEFT JOIN clip_points ON true")
 		} else if loc.Bbox != nil && !stopBufferClip {
 			qBufferUse = true
 			qBuffer = noMatchKeys(bboxClipSelect())
@@ -548,18 +573,19 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			qBuffer = noMatchKeys(sq.StatementBuilder.Select().
 				Column("ST_Buffer(ST_MakePoint(?,?)::geography, ?)::geometry as buffer", loc.Near.Lon, loc.Near.Lat, radius))
 		} else if stopBufferClip {
+			qBufferUse = true
 			if stopBufferRadius == 0 {
-				// A geography matches when it contains a point, and the GROUP BY
-				// below lists it once for each id and label.
-				qPointsUse = true
-				qPoints = sq.StatementBuilder.
+				// A geography matches when it contains a point, and is listed
+				// once for each id and label.
+				pointMatch = true
+				qBuffer = sq.StatementBuilder.
 					Select("buffer_points.geometry as buffer", "buffer_points.id as match_id", "buffer_points.label as match_label").
 					From("buffer_points")
 				if areaClip {
 					// A combined query area restricts point matching to points
 					// inside it rather than being silently ignored.
 					q = q.WithCTE(sq.CTE{Alias: "clip_area", Materialized: true, Expression: areaClipSelect()})
-					qPoints = qPoints.
+					qBuffer = qBuffer.
 						JoinClause("CROSS JOIN clip_area").
 						Where(sq.Expr("ST_Intersects(clip_area.buffer, buffer_points.geometry)"))
 				}
@@ -567,8 +593,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				// A geography is listed for each buffer it intersects. Rows repeat
 				// when it intersects buffers of different keys; that's the
 				// intent, since callers apportion it to each key.
-				qBufferUse = true
-				subdivide = oneBuffer
+				subdivide = subdivideBuffers
 				qBuffer = pointBuffersSelect()
 			}
 		}
@@ -577,10 +602,10 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				// Cut the search area into small pieces, so each geography is
 				// intersected with just the union of the pieces it touches.
 				//
-				// Separate buffers for each key, and a bbox or near circle on its
-				// own, are never cut. ST_Subdivide's planner estimate is 1,000
-				// rows per input row, which multiplied across many buffers makes
-				// Postgres JIT-compile otherwise fast queries.
+				// Separate buffers for each key, one point's circle, and a bbox or
+				// near circle on its own, are never cut. ST_Subdivide's planner
+				// estimate is 1,000 rows per input row, which multiplied across
+				// many buffers makes Postgres JIT-compile otherwise fast queries.
 				qBuffer = sq.StatementBuilder.
 					Select("clip.match_id", "clip.match_label").
 					Column("ST_Segmentize(ST_Subdivide(ST_CollectionExtract(clip.buffer, 3), ?), ?) as buffer", censusClipMaxVertices, censusSegmentDegrees).
@@ -595,21 +620,27 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				Column("buffer.match_id").
 				Column("buffer.match_label").
 				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)"))
+			orderBy = append(orderBy, "buffer.match_id", "buffer.match_label")
+			// List a geography once for each key, however many pieces of a cut
+			// search area it touches or points of one key it holds.
+			if subdivide || pointMatch {
+				q = q.GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_id", "buffer.match_label")
+			}
 			// Intersect in lon/lat, then measure the result like geometry_area:
-			// densified, in the equal-area projection EPSG:6933.
+			// densified, in the equal-area projection EPSG:6933. Points have no
+			// area to intersect.
 			//
 			// Geography functions would reproject the search area on every row,
 			// and would read a long edge along a parallel, such as a bbox side,
 			// as a great circle.
 			if subdivide {
-				q = q.GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_id", "buffer.match_label")
 				if sel.IntersectionArea {
 					q = q.Column("ST_Area(ST_Transform(ST_Segmentize(ST_Intersection(tlcg.geometry::geometry, ST_Union(buffer.buffer)), ?), 6933)) as intersection_area", censusSegmentDegrees)
 				}
 				if sel.IntersectionGeometry {
 					q = q.Column("ST_Intersection(tlcg.geometry::geometry, ST_Union(buffer.buffer)) as intersection_geometry")
 				}
-			} else {
+			} else if !pointMatch {
 				if sel.IntersectionArea {
 					q = q.Column("ST_Area(ST_Transform(ST_Segmentize(ST_Intersection(tlcg.geometry::geometry, buffer.buffer), ?), 6933)) as intersection_area", censusSegmentDegrees)
 				}
@@ -618,22 +649,10 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 				}
 			}
 		}
-		if qPointsUse {
-			q = q.WithCTE(sq.CTE{
-				Alias:        "buffer",
-				Materialized: true,
-				Expression:   qPoints,
-			})
-			q = q.Join("buffer ON tlcg.geometry && buffer.buffer").
-				Column("buffer.match_id").
-				Column("buffer.match_label").
-				Where(sq.Expr("ST_Intersects(tlcg.geometry::geometry, buffer.buffer)")).
-				GroupBy("tlcg.id", "tlcl.id", "tlcd.id", "tlcs.id", "buffer.match_id", "buffer.match_label")
-		}
 		// Pin layer_id as a scalar so the composite (layer_id, geometry) GiST
 		// index can serve the spatial join. Only safe when both dataset and
 		// layer are set, since (dataset, layer) resolves to a single layer_id.
-		if (qBufferUse || qPointsUse) && where.Dataset != nil && where.Layer != nil {
+		if qBufferUse && where.Dataset != nil && where.Layer != nil {
 			layerID := sq.StatementBuilder.
 				Select("clsub.id").
 				From("tl_census_layers clsub").
@@ -642,7 +661,7 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 			q = q.Where(layerID.Prefix("tlcg.layer_id = (").Suffix(")"))
 		}
 		if loc.Focus != nil {
-			orderBy = sq.Expr("ST_Distance(tlcg.geometry, ST_MakePoint(?,?))", loc.Focus.Lon, loc.Focus.Lat)
+			focusOrder = sq.Expr("ST_Distance(tlcg.geometry, ST_MakePoint(?,?))", loc.Focus.Lon, loc.Focus.Lat)
 		}
 	}
 
@@ -662,7 +681,10 @@ func censusDatasetGeographySelect(limit *int, where *model.CensusDatasetGeograph
 		}
 	}
 
-	q = q.OrderByClause(orderBy)
+	if focusOrder != nil {
+		q = q.OrderByClause(focusOrder)
+	}
+	q = q.OrderBy(orderBy...)
 	return q, nil
 }
 

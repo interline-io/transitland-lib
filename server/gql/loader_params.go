@@ -197,7 +197,7 @@ type calendarDateLoaderParam struct {
 
 type censusGeographyLoaderParam struct {
 	EntityType string
-	EntityID   int
+	Entity     censusEntityKey
 	DatasetID  int
 	SourceID   int
 	LayerID    int
