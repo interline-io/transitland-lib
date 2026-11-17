@@ -142,12 +142,13 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, onestopIDs []strin
 		Limit(finderCheckLimit(limit))
 	if len(onestopIDs) > 0 {
 		q = q.
-			Columns("coalesce (coif.resolved_onestop_id, '') as onestop_id", "coif.id as coif_id").
-			JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
+			Columns("coif.resolved_onestop_id as onestop_id", "coif.id as coif_id").
+			Join("current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
 			Where(In("coif.resolved_onestop_id", onestopIDs))
 	} else {
-		// Subqueries in the select list, not a join, so they run only for the rows a
-		// page returns: Postgres evaluates them after its sort and limit.
+		// Both subqueries read the agency's row with the lowest id. They sit in the
+		// select list, not a join, so they run only for the rows a page returns:
+		// Postgres evaluates them after its sort and limit.
 		q = q.Columns(
 			"coalesce ((select c.resolved_onestop_id from current_operators_in_feed c where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id order by c.id limit 1), '') as onestop_id",
 			"(select c.id from current_operators_in_feed c where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id order by c.id limit 1) as coif_id",

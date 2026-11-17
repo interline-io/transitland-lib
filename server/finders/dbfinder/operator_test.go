@@ -4,32 +4,34 @@ import (
 	"context"
 	"testing"
 
+	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/server/testutil"
+	"github.com/interline-io/transitland-lib/sync"
+	"github.com/interline-io/transitland-lib/tldb/postgres"
+	"github.com/interline-io/transitland-lib/tt"
 	sq "github.com/irees/squirrel"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 )
 
-// addSecondOperator gives Caltrain's agency a second operator,
-// o-9q9-caltrain~second.
+// addSecondOperator syncs a second Atlas operator, o-9q9-caltrain~second, that
+// claims Caltrain's agency.
 func addSecondOperator(ctx context.Context, t *testing.T, tx *sqlx.Tx) {
 	t.Helper()
-	insert := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
-		Insert("current_operators_in_feed").
-		Columns("feed_id", "resolved_gtfs_agency_id", "resolved_onestop_id", "resolved_name").
-		Select(sq.StatementBuilder.
-			Select("feed_id", "resolved_gtfs_agency_id").
-			Column("?", "o-9q9-caltrain~second").
-			Column("?", "Second").
-			From("current_operators_in_feed").
-			Where(sq.Eq{"resolved_gtfs_agency_id": "caltrain-ca-us"}))
-	qstr, qargs, err := insert.ToSql()
+	atx := postgres.NewPostgresAdapterFromDBX(tx)
+	agencies, err := sync.ActiveFeedAgencies(ctx, atx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.ExecContext(ctx, qstr, qargs...); err != nil {
+	op := dmfr.Operator{
+		OnestopID:       tt.NewString("o-9q9-caltrain~second"),
+		Name:            tt.NewString("Second"),
+		File:            tt.NewString("test.dmfr.json"),
+		AssociatedFeeds: []dmfr.OperatorAssociatedFeed{{FeedOnestopID: tt.NewString("CT")}},
+	}
+	if _, _, _, err := sync.UpdateOperator(ctx, atx, op, agencies); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -84,8 +86,9 @@ func TestFinder_OperatorsByAgencyIDs(t *testing.T) {
 func TestFinder_OperatorsByCOIFs(t *testing.T) {
 	ctx := context.Background()
 	f := NewFinder(testutil.MustOpenTestDB(t))
+	rows := caltrainRows(ctx, t, f)
 	var ids []int
-	for _, row := range caltrainRows(ctx, t, f) {
+	for _, row := range rows {
 		ids = append(ids, row.ID)
 	}
 
@@ -93,13 +96,7 @@ func TestFinder_OperatorsByCOIFs(t *testing.T) {
 	if len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	gotIDs := make([]int, len(got))
-	for i, op := range got {
-		if op != nil {
-			gotIDs[i] = op.ID
-		}
-	}
-	assert.Equal(t, ids, gotIDs)
+	assert.Equal(t, rows, got)
 }
 
 // Rows of one operator merge to the row with the lowest id, in whatever order a

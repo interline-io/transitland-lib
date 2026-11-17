@@ -86,8 +86,7 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 		Where(sq.Eq{"current_feeds.deleted_at": nil}).
 		Where(sq.Eq{"co.deleted_at": nil}). // not present, or present but not deleted
 		// Merging keeps each onestop id's first row: an Atlas operator's before a
-		// generated one, then the lowest id. Without the id, rows of one operator
-		// tie, and the merge keeps whichever the scan reads first.
+		// generated one, then the lowest id, so scan order never decides.
 		OrderBy("coif.resolved_onestop_id, coif.operator_id, coif.id")
 
 	if where != nil {
