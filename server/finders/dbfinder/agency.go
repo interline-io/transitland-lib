@@ -134,8 +134,6 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, onestopIDs []strin
 			"tl_agency_geometries.geometry",
 			"feed_versions.sha1 AS feed_version_sha1",
 			"current_feeds.onestop_id AS feed_onestop_id",
-			"coalesce (coif.resolved_onestop_id, '') as onestop_id",
-			"coif.id as coif_id",
 		).
 		From(useActive.UseTable("gtfs_agencies", "tl_materialized_active_agencies as gtfs_agencies")).
 		Join("feed_versions ON feed_versions.id = gtfs_agencies.feed_version_id").
@@ -144,10 +142,16 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, onestopIDs []strin
 		Limit(finderCheckLimit(limit))
 	if len(onestopIDs) > 0 {
 		q = q.
+			Columns("coalesce (coif.resolved_onestop_id, '') as onestop_id", "coif.id as coif_id").
 			JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id").
 			Where(In("coif.resolved_onestop_id", onestopIDs))
 	} else {
-		q = q.JoinClause("left join current_operators_in_feed coif ON coif.feed_id = current_feeds.id AND coif.resolved_gtfs_agency_id = gtfs_agencies.agency_id AND coif.id = (select min(c.id) from current_operators_in_feed c where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id)")
+		// Subqueries in the select list, not a join, so they run only for the rows a
+		// page returns: Postgres evaluates them after its sort and limit.
+		q = q.Columns(
+			"coalesce ((select c.resolved_onestop_id from current_operators_in_feed c where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id order by c.id limit 1), '') as onestop_id",
+			"(select c.id from current_operators_in_feed c where c.feed_id = current_feeds.id AND c.resolved_gtfs_agency_id = gtfs_agencies.agency_id order by c.id limit 1) as coif_id",
+		)
 	}
 
 	if where != nil {
