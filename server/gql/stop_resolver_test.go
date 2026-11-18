@@ -174,49 +174,6 @@ func TestStopResolver_PreviousOnestopID(t *testing.T) {
 	gqlcase.QueryTestcases(t, c, stopResolverPreviousOnestopIDTestcases(t, cfg))
 }
 
-func TestStopResolver_StopPlaces(t *testing.T) {
-	c, _ := newTestClient(t)
-	q := `query($feed_version_sha1:String!, $stop_id:String!) { stops(where:{stop_id:$stop_id, feed_version_sha1:$feed_version_sha1}) { place { adm0_name adm1_name adm0_iso adm1_iso } } }`
-	tcs := []testcase{
-		{
-			Name:         "usa",
-			Query:        q,
-			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			Selector:     "stops.#.place.adm0_name",
-			SelectExpect: []string{"United States of America"},
-		},
-		{
-			Name:         "california",
-			Query:        q,
-			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			Selector:     "stops.#.place.adm1_name",
-			SelectExpect: []string{"California"},
-		},
-		{
-			Name:         "adm0_iso",
-			Query:        q,
-			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			Selector:     "stops.#.place.adm0_iso",
-			SelectExpect: []string{"US"},
-		},
-		{
-			Name:         "adm1_iso",
-			Query:        q,
-			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
-			Selector:     "stops.#.place.adm1_iso",
-			SelectExpect: []string{"US-CA"},
-		},
-		{
-			Name:         "florida",
-			Query:        q,
-			Vars:         hw{"feed_version_sha1": "c969427f56d3a645195dd8365cde6d7feae7e99b", "stop_id": "8032"},
-			Selector:     "stops.#.place.adm1_name",
-			SelectExpect: []string{"Florida"},
-		},
-	}
-	gqlcase.QueryTestcases(t, c, tcs)
-}
-
 func stopResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	stopObsFvid := 0
 	if err := cfg.Adapter.DBX().QueryRowx("select feed_version_id from ext_performance_stop_observations limit 1").Scan(&stopObsFvid); err != nil {

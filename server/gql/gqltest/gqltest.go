@@ -44,6 +44,10 @@ const Realtime Capability = "Realtime"
 // testdata/test_setup.sh loads, and buffering a route's stops.
 const Census Capability = "Census"
 
+// Places is answering agency places and the places query, filtering agencies
+// and operators by place, and placing stops in their admin areas.
+const Places Capability = "Places"
+
 // caseGroup is a named set of cases, run against one client. The cases are
 // built from the config of the finder under test, so they can look up ids, and
 // configure, if set, sets the config's options for the group.
@@ -152,6 +156,13 @@ var (
 			{name: "CensusResolver_Antimeridian", cases: censusResolverAntimeridianTestcases},
 			{name: "StopResolver_Census", cases: stopResolverCensusTestcases},
 			{name: "RouteResolver_StopBuffer", cases: routeResolverStopBufferTestcases},
+		},
+		Places: {
+			{name: "AgencyResolver_Places", cases: agencyResolverPlacesTestcases},
+			{name: "AgencyResolver_BatchedStops", cases: agencyResolverBatchedStopsTestcases},
+			{name: "OperatorResolver_Places", cases: operatorResolverPlacesTestcases},
+			{name: "PlaceResolver", cases: placeResolverTestcases},
+			{name: "StopResolver_Places", cases: stopResolverPlacesTestcases},
 		},
 	}
 	clockGroups = []clockGroup{
