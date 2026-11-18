@@ -476,7 +476,7 @@ func placeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 			// A city is a point in Natural Earth, buffered by the radius the place
 			// association itself uses: about 0.46 degrees of longitude at this latitude.
 			// PostGIS buffers in a planar projection, and a buffer on the sphere lands
-			// within 0.002 degrees of it.
+			// within 0.002 degrees of PostGIS's.
 			Name:  "city bbox is buffered around the point",
 			Query: `query{ places(level: ADM0_ADM1_CITY, where: {city_name: "Oakland"}) { bbox } }`,
 			F: func(t *testing.T, jj string) {

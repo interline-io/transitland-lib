@@ -51,15 +51,16 @@ func TestPlaceIndex(t *testing.T) {
 
 	t.Run("by name", func(t *testing.T) {
 		var isos []string
-		for _, a := range ix.AdminsNamed("Country", "East") {
+		for _, a := range ix.AdminsNamed("East", "Country") {
 			isos = append(isos, a.Iso31662)
 		}
 		assert.Equal(t, []string{"CC-E", "CC-FE"}, isos)
-		assert.Empty(t, ix.AdminsNamed("Elsewhere", "East"))
+		assert.Empty(t, ix.AdminsNamed("East", "Elsewhere"))
 		assert.Len(t, ix.CountryAdmins("Country"), 3)
-		// Westville goes by the names of the area holding it, not its source's.
+		// Westville goes by its source's names and by its containing area's.
 		assert.Len(t, ix.PlacesNamed("Westville", "West", "Country"), 1)
-		assert.Empty(t, ix.PlacesNamed("Westville", "East", "Country"))
+		assert.Len(t, ix.PlacesNamed("Westville", "East", "Country"), 1)
+		assert.Empty(t, ix.PlacesNamed("Westville", "Coast", "Country"))
 	})
 
 	t.Run("nearest place", func(t *testing.T) {

@@ -33,10 +33,10 @@ type PopulatedPlace struct {
 // PlaceIndex holds admin areas and populated places in memory.
 type PlaceIndex struct {
 	areas          *tlxy.PolygonIndex
-	areasByName    map[[2]string][]AdminArea // by country and name
+	areasByName    map[[2]string][]AdminArea // by name and country
 	areasByCountry map[string][]AdminArea
 	places         []PopulatedPlace               // by latitude
-	placesByName   map[[3]string][]PopulatedPlace // by name, admin area and country
+	placesByName   map[[3]string][]PopulatedPlace // by a place's own names, and by its containing area's
 }
 
 var sharedPlaces = sync.OnceValues(readPlaceIndex)
@@ -74,17 +74,22 @@ func NewPlaceIndex(areas []AdminArea, places []PopulatedPlace) (*PlaceIndex, err
 		placesByName:   map[[3]string][]PopulatedPlace{},
 	}
 	for _, a := range areas {
-		k := [2]string{a.Admin, a.Name}
+		k := [2]string{a.Name, a.Admin}
 		ix.areasByName[k] = append(ix.areasByName[k], a)
 		ix.areasByCountry[a.Admin] = append(ix.areasByCountry[a.Admin], a)
 	}
 	for _, p := range places {
+		// A place goes by its own names and by those of the area holding it,
+		// which can differ.
+		own := [3]string{p.Name, p.Adm1Name, p.Adm0Name}
 		if a, ok := ix.Admin(p.Point); ok {
 			p.Adm1Name, p.Adm0Name = a.Name, a.Admin
 		}
 		ix.places = append(ix.places, p)
-		k := [3]string{p.Name, p.Adm1Name, p.Adm0Name}
-		ix.placesByName[k] = append(ix.placesByName[k], p)
+		ix.placesByName[own] = append(ix.placesByName[own], p)
+		if k := [3]string{p.Name, p.Adm1Name, p.Adm0Name}; k != own {
+			ix.placesByName[k] = append(ix.placesByName[k], p)
+		}
 	}
 	slices.SortFunc(ix.places, func(a, b PopulatedPlace) int { return cmp.Compare(a.Point.Lat, b.Point.Lat) })
 	return ix, nil
@@ -101,22 +106,21 @@ func (ix *PlaceIndex) NearestAdmin(pt tlxy.Point) (AdminArea, bool) {
 	return foundArea(ix.areas.NearestFeature(pt))
 }
 
-// AdminsNamed returns a country's admin areas with a name. Several areas of a
-// country can share one.
-func (ix *PlaceIndex) AdminsNamed(country, name string) []AdminArea {
-	return slices.Clone(ix.areasByName[[2]string{country, name}])
+// AdminsNamed returns the admin areas with a name in a country. Several areas
+// of a country can share one.
+func (ix *PlaceIndex) AdminsNamed(name, country string) []AdminArea {
+	return ix.areasByName[[2]string{name, country}]
 }
 
 // CountryAdmins returns a country's admin areas.
 func (ix *PlaceIndex) CountryAdmins(country string) []AdminArea {
-	return slices.Clone(ix.areasByCountry[country])
+	return ix.areasByCountry[country]
 }
 
 // PlacesNamed returns the populated places with a name, in an admin area and
-// country with these names. A place lying in an admin area has that area's
-// names.
+// country with these names: the place's own, or its containing area's.
 func (ix *PlaceIndex) PlacesNamed(name, adm1, adm0 string) []PopulatedPlace {
-	return slices.Clone(ix.placesByName[[3]string{name, adm1, adm0}])
+	return ix.placesByName[[3]string{name, adm1, adm0}]
 }
 
 // foundArea returns the admin area that a search of the polygon index found.
