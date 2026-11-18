@@ -1,14 +1,16 @@
 package builders
 
 import (
+	"cmp"
 	"context"
-	"database/sql"
+	"slices"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/tldb"
 	"github.com/interline-io/transitland-lib/tldb/postgres"
+	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
 )
@@ -32,16 +34,40 @@ func (rs *AgencyPlace) Filename() string {
 	return "tl_agency_places.txt"
 }
 
+// Place is a populated place or a first-level admin area, with the admin area
+// and country it lies in. An admin area has no Name.
+type Place struct {
+	Name     tt.String
+	Adm1name tt.String
+	Adm0name tt.String
+}
+
+// PlaceLookup finds the places around a point.
+type PlaceLookup interface {
+	// NearestPlace returns the populated place nearest pt, within maxMeters.
+	NearestPlace(ctx context.Context, pt tlxy.Point, maxMeters float64) (Place, bool, error)
+	// Admin returns the first-level admin area holding pt.
+	Admin(ctx context.Context, pt tlxy.Point) (Place, bool, error)
+}
+
+// placeRadius is how far from a stop its populated place can be, in meters.
+const placeRadius = 40000.0
+
 ////////
 
 type AgencyPlaceBuilder struct {
+	places      PlaceLookup
 	stops       map[string]string // store just geohash
 	routeAgency map[string]string
 	agencyStops map[string]map[string]int
 }
 
-func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
+// NewAgencyPlaceBuilder returns a builder that finds each agency's places
+// through places. With places nil, it reads a Postgres writer's Natural Earth
+// tables, and skips any other writer.
+func NewAgencyPlaceBuilder(places PlaceLookup) *AgencyPlaceBuilder {
 	return &AgencyPlaceBuilder{
+		places:      places,
 		stops:       map[string]string{},
 		routeAgency: map[string]string{},
 		agencyStops: map[string]map[string]int{},
@@ -83,93 +109,114 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Ent
 }
 
 var agencyPlaceQuery = `
-select 
-	ne.name, 
+select
+	ne.name,
 	coalesce(neadmin.name, ne.adm1name) as adm1name,
 	coalesce(neadmin.admin, ne.adm0name) as adm0name,
-	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance 
-from ne_10m_populated_places ne 
+	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance
+from ne_10m_populated_places ne
 left join ne_10m_admin_1_states_provinces neadmin on ST_Intersects(ne.geometry, neadmin.geometry)
-where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, 40000) 
+where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, ?)
 order by distance asc
 limit 1
 `
 
 var agencyAdminQuery = `
-select 
+select
 	name adm1name,
 	ne.admin adm0name
 from ne_10m_admin_1_states_provinces ne
 where st_intersects(ne.geometry, ST_MakePoint(?, ?));
 `
 
+// postgresPlaces looks places up in a database's Natural Earth tables.
+type postgresPlaces struct {
+	db tldb.Adapter
+}
+
+func (p postgresPlaces) NearestPlace(ctx context.Context, pt tlxy.Point, maxMeters float64) (Place, bool, error) {
+	var r []Place
+	if err := p.db.Select(ctx, &r, agencyPlaceQuery, pt.Lon, pt.Lat, pt.Lon, pt.Lat, maxMeters); err != nil {
+		return Place{}, false, err
+	}
+	if len(r) == 0 {
+		return Place{}, false, nil
+	}
+	return r[0], true, nil
+}
+
+func (p postgresPlaces) Admin(ctx context.Context, pt tlxy.Point) (Place, bool, error) {
+	var r []Place
+	if err := p.db.Select(ctx, &r, agencyAdminQuery, pt.Lon, pt.Lat); err != nil {
+		return Place{}, false, err
+	}
+	if len(r) == 0 {
+		return Place{}, false, nil
+	}
+	return r[0], true, nil
+}
+
 func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
 	ctx := context.TODO()
-	// get places for each point
-	ghPoints := map[string][]string{}
-	for stopId, ghPoint := range pp.stops {
-		ghPoints[ghPoint] = append(ghPoints[ghPoint], stopId)
-	}
-	dbWriter, ok := copier.Writer().(*tldb.Writer)
-	if !ok {
-		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, writer is not dbwriter")
-		return nil
-	}
-	db := dbWriter.Adapter
-	if _, ok := db.(*postgres.PostgresAdapter); !ok {
-		log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, only postgres is supported")
-		return nil
-	}
-	// For each geohash, check nearby populated places and inside admin boundaries
-	type foundPlace struct {
-		Name     tt.String
-		Adm1name tt.String
-		Adm0name tt.String
-	}
-	pointPlaces := map[string]foundPlace{}
-	pointAdmins := map[string]foundPlace{}
-	for ghPoint := range ghPoints {
-		gLat, gLon := geohash.Decode(ghPoint)
-		r := []foundPlace{}
-		if err := db.Select(ctx, &r, agencyPlaceQuery, gLon, gLat, gLon, gLat); err == sql.ErrNoRows {
-			// ok
-		} else if err != nil {
+	places := pp.places
+	if places == nil {
+		dbWriter, ok := copier.Writer().(*tldb.Writer)
+		if !ok {
+			log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, no place lookup and writer is not dbwriter")
 			return nil
 		}
-		if len(r) > 0 {
-			pointPlaces[ghPoint] = r[0]
-		}
-	}
-	for ghPoint := range ghPoints {
-		gLat, gLon := geohash.Decode(ghPoint)
-		r := []foundPlace{}
-		if err := db.Select(ctx, &r, agencyAdminQuery, gLon, gLat); err == sql.ErrNoRows {
-			// ok
-		} else if err != nil {
+		if _, ok := dbWriter.Adapter.(*postgres.PostgresAdapter); !ok {
+			log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, only postgres is supported")
 			return nil
 		}
-		if len(r) > 0 {
-			pointAdmins[ghPoint] = r[0]
+		places = postgresPlaces{db: dbWriter.Adapter}
+	}
+	// For each geohash, find the nearby populated place and the admin area holding it
+	cells := map[string]bool{}
+	for _, ghPoint := range pp.stops {
+		cells[ghPoint] = true
+	}
+	pointPlaces := map[string]Place{}
+	pointAdmins := map[string]Place{}
+	for ghPoint := range cells {
+		gLat, gLon := geohash.Decode(ghPoint)
+		pt := tlxy.Point{Lon: gLon, Lat: gLat}
+		place, ok, err := places.NearestPlace(ctx, pt, placeRadius)
+		if err != nil {
+			return err
+		}
+		if ok {
+			pointPlaces[ghPoint] = place
+		}
+		admin, ok, err := places.Admin(ctx, pt)
+		if err != nil {
+			return err
+		}
+		if ok {
+			pointAdmins[ghPoint] = admin
 		}
 	}
-	var ents []tt.Entity
+	var aps []*AgencyPlace
 	for aid, agencyPoints := range pp.agencyStops {
-		placeWeights := map[foundPlace]int{}
+		placeWeights := map[Place]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
 			agencyTotalWeight += count
-			if place, ok := pointAdmins[ghPoint]; ok {
-				placeWeights[place] += count
+			if admin, ok := pointAdmins[ghPoint]; ok {
+				placeWeights[admin] += count
 			}
-			if place, ok := pointPlaces[ghPoint]; ok {
-				// include if we have a match for state/country, or no state/country matches
-				checkPlace := foundPlace{
-					Adm1name: place.Adm1name,
-					Adm0name: place.Adm0name,
-				}
-				if _, ok2 := placeWeights[checkPlace]; ok2 || len(pointAdmins) == 0 {
-					placeWeights[place] += count
-				}
+		}
+		// Count a populated place only in an admin area the agency's stops reach,
+		// or anywhere when no stop lies in any admin area. The admin areas are
+		// tallied first, so the answer doesn't depend on map order.
+		for ghPoint, count := range agencyPoints {
+			place, ok := pointPlaces[ghPoint]
+			if !ok {
+				continue
+			}
+			admin := Place{Adm1name: place.Adm1name, Adm0name: place.Adm0name}
+			if _, ok := placeWeights[admin]; ok || len(pointAdmins) == 0 {
+				placeWeights[place] += count
 			}
 		}
 		for k, v := range placeWeights {
@@ -182,9 +229,23 @@ func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
 				ap.Adm1name = k.Adm1name
 				ap.Count = v
 				ap.Rank = score
-				ents = append(ents, &ap)
+				aps = append(aps, &ap)
 			}
 		}
+	}
+	// Write in a fixed order, since readers order places by row id.
+	slices.SortFunc(aps, func(a, b *AgencyPlace) int {
+		return cmp.Or(
+			cmp.Compare(a.AgencyID, b.AgencyID),
+			cmp.Compare(b.Rank, a.Rank),
+			cmp.Compare(a.Name.Val, b.Name.Val),
+			cmp.Compare(a.Adm1name.Val, b.Adm1name.Val),
+			cmp.Compare(a.Adm0name.Val, b.Adm0name.Val),
+		)
+	})
+	var ents []tt.Entity
+	for _, ap := range aps {
+		ents = append(ents, ap)
 	}
 	return copier.CopyEntities(ents)
 }

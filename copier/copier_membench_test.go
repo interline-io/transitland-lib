@@ -84,7 +84,7 @@ func TestCopierBaselineMem(t *testing.T) {
 // writer, so it exercises everything a real import does without a database.
 func TestCopierImportDefaultsMem(t *testing.T) {
 	opts := copier.Options{}
-	for _, b := range builders.DefaultImportBuilders() {
+	for _, b := range builders.DefaultImportBuilders(nil) {
 		opts.AddExtension(b)
 	}
 	runCopierBench(t, opts)

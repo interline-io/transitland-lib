@@ -7,7 +7,9 @@ import (
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
+	"github.com/interline-io/transitland-lib/schema/ne"
 	"github.com/interline-io/transitland-lib/server/auth/mw/usercheck"
 	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -174,17 +176,19 @@ func TestStopResolver_PreviousOnestopID(t *testing.T) {
 	gqlcase.QueryTestcases(t, c, stopResolverPreviousOnestopIDTestcases(t, cfg))
 }
 
-func TestStopResolver_AdminCache(t *testing.T) {
-	type canLoadAdmins interface {
-		LoadAdmins(context.Context) error
+func TestStopResolver_PlaceIndex(t *testing.T) {
+	type canSetPlaceIndex interface {
+		SetPlaceIndex(*builders.PlaceIndex)
 	}
 	c, cfg := newTestClient(t)
-	if v, ok := cfg.Finder.(canLoadAdmins); !ok {
-		t.Fatal("finder cant load admins")
+	ix, err := ne.PlaceIndex()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v, ok := cfg.Finder.(canSetPlaceIndex); !ok {
+		t.Fatal("finder can't take a place index")
 	} else {
-		if err := v.LoadAdmins(context.Background()); err != nil {
-			t.Fatal(err)
-		}
+		v.SetPlaceIndex(ix)
 	}
 	q := `query($feed_version_sha1:String!, $stop_id:String!) { stops(where:{stop_id:$stop_id, feed_version_sha1:$feed_version_sha1}) { place { adm0_name adm1_name adm0_iso adm1_iso } } }`
 	tcs := []testcase{

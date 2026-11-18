@@ -15,6 +15,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/server/auth/authn"
 	"github.com/interline-io/transitland-lib/server/auth/authz"
@@ -64,7 +65,10 @@ type ServerCommand struct {
 	DBURL                     string
 	RedisURL                  string
 	MaxRadius                 float64
-	secrets                   []dmfr.Secret
+	// PlaceIndex loads the admin areas that --load-admins holds in memory. A
+	// binary sets it when it embeds Natural Earth data.
+	PlaceIndex func() (*builders.PlaceIndex, error)
+	secrets    []dmfr.Secret
 }
 
 func (cmd *ServerCommand) HelpDesc() (string, string) {
@@ -86,7 +90,7 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "DMFR file containing secrets")
 	fl.IntVar(&cmd.Timeout, "timeout", 60, "")
 	fl.IntVar(&cmd.LongQueryDuration, "long-query", 1000, "Log queries over this duration (ms)")
-	fl.BoolVar(&cmd.LoadAdmins, "load-admins", false, "Load admin polygons from database into memory")
+	fl.BoolVar(&cmd.LoadAdmins, "load-admins", false, "Hold Natural Earth's admin polygons in memory for stop places")
 	fl.IntVar(&cmd.LoaderBatchSize, "loader-batch-size", 100, "GraphQL Loader batch size")
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
@@ -140,7 +144,14 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 	// Create Finder
 	dbFinder := dbfinder.NewFinder(db)
 	if cmd.LoadAdmins {
-		dbFinder.LoadAdmins(ctx)
+		if cmd.PlaceIndex == nil {
+			return errors.New("--load-admins: this binary has no Natural Earth data")
+		}
+		ix, err := cmd.PlaceIndex()
+		if err != nil {
+			return err
+		}
+		dbFinder.SetPlaceIndex(ix)
 	}
 
 	// Create RTFinder, GbfsFinder. With Redis, the shared store also provides

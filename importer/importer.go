@@ -30,6 +30,10 @@ type Options struct {
 	ErrorThreshold map[string]float64
 	// AllowPartial imports partial feeds and skips the required minimum-entity check.
 	AllowPartial bool
+	// Places is the agency place builder's lookup. Without it, an import into
+	// Postgres reads the database's Natural Earth tables, and any other import
+	// finds no places.
+	Places builders.PlaceLookup `json:"-"`
 	copier.Options
 }
 
@@ -152,7 +156,7 @@ func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.
 	opts.Options.AllowEntityErrors = false
 	opts.Options.AllowReferenceErrors = false
 	opts.Options.NormalizeServiceIDs = true
-	for _, b := range builders.DefaultImportBuilders() {
+	for _, b := range builders.DefaultImportBuilders(opts.Places) {
 		opts.Options.AddExtension(b)
 	}
 	fvi.InProgress = false

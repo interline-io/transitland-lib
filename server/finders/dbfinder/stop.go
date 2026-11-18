@@ -331,7 +331,7 @@ func (f *Finder) StopsByLocationGroupIDs(ctx context.Context, limit *int, keys [
 }
 
 func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
-	if f.adminCache == nil {
+	if f.places == nil {
 		return f.stopPlacesByStopIdFallback(ctx, params)
 	}
 
@@ -362,15 +362,15 @@ func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlac
 		}
 	}
 
-	// Lookup stop places using adminCache
+	// Lookup stop places in the place index
 	a := map[int]*model.StopPlace{}
 	for _, param := range params {
-		if admin, ok := f.adminCache.Check(param.Point); ok {
+		if area, ok := f.places.NearestAdmin(param.Point); ok {
 			a[param.ID] = &model.StopPlace{
-				Adm0Name: &admin.Adm0Name,
-				Adm1Name: &admin.Adm1Name,
-				Adm0Iso:  &admin.Adm0Iso,
-				Adm1Iso:  &admin.Adm1Iso,
+				Adm0Name: &area.Admin,
+				Adm1Name: &area.Name,
+				Adm0Iso:  &area.IsoA2,
+				Adm1Iso:  &area.Iso31662,
 			}
 		}
 	}
@@ -382,7 +382,7 @@ func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlac
 }
 
 func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
-	// Fallback without adminCache
+	// Fallback without a place index
 	var ids []int
 	for _, param := range params {
 		ids = append(ids, param.ID)

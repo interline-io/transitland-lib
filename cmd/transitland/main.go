@@ -56,7 +56,7 @@ func init() {
 		tlcli.CobraHelper(&cmds.RTConvertCommand{}, pc, "rt-convert"),
 		tlcli.CobraHelper(&diff.Command{}, pc, "diff"),
 		tlcli.CobraHelper(&tlxy.PolylinesCommand{}, pc, "polylines-create"),
-		tlcli.CobraHelper(&cmds.ServerCommand{}, pc, "server"),
+		tlcli.CobraHelper(&cmds.ServerCommand{PlaceIndex: neSchema.PlaceIndex}, pc, "server"),
 		tlcli.CobraHelper(&versionCommand{}, pc, "version"),
 		tlcli.CobraHelper(&postgresSchema.Command{}, pc, "dbmigrate"),
 		tlcli.CobraHelper(&neSchema.Command{}, pc, "dbmigrate-natural-earth"),

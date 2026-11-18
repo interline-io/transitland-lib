@@ -12,14 +12,15 @@ import (
 // importer runs (route geometries, route stops, route headways, agency convex hulls,
 // agency places). Each call returns new instances since builders accumulate state.
 // The validator can run the same set against an empty writer to exercise them without
-// a database import.
-func DefaultImportBuilders() []any {
+// a database import. places is the agency place builder's lookup, as for
+// NewAgencyPlaceBuilder.
+func DefaultImportBuilders(places PlaceLookup) []any {
 	return []any{
 		NewRouteGeometryBuilder(),
 		NewRouteStopBuilder(),
 		NewRouteHeadwayBuilder(),
 		NewConvexHullBuilder(),
-		NewAgencyPlaceBuilder(),
+		NewAgencyPlaceBuilder(places),
 	}
 }
 
