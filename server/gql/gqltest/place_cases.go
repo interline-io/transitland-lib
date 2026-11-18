@@ -1,9 +1,9 @@
-package gql
+package gqltest
 
 import (
 	"testing"
 
-	"github.com/interline-io/transitland-lib/server/gql/internal/gqlcase"
+	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 )
@@ -28,7 +28,207 @@ func bboxWidth(jj string) float64 {
 	return gjson.Get(jj, "places.0.bbox.coordinates.0.2.0").Float() - bboxMinLon(jj)
 }
 
-func TestPlaceResolver(t *testing.T) {
+func agencyResolverPlacesTestcases(t testing.TB, cfg model.Config) []testcase {
+	vars := hw{"agency_id": "caltrain-ca-us"}
+	testcases := []testcase{
+		// places should test filters because it's not a root resolver
+		{
+			Name:         "places",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.city_name",
+			SelectExpect: []string{"San Mateo", "San Francisco", "San Jose", ""},
+		},
+		{
+			Name:         "places get adm0_iso",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.adm0_iso",
+			SelectExpect: []string{"US", "US", "US", "US"},
+		},
+		{
+			Name:         "places get adm1_iso",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places {adm0_name adm0_iso adm1_name adm1_iso city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.adm1_iso",
+			SelectExpect: []string{"US-CA", "US-CA", "US-CA", "US-CA"},
+		},
+		{
+			Name:         "places rank 0.25",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.25}) {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.city_name",
+			SelectExpect: []string{"San Mateo", "San Jose", ""},
+		},
+		{
+			Name:         "places rank 0.75",
+			Query:        `query($agency_id:String!) { agencies(where:{agency_id:$agency_id}) {places(where:{min_rank:0.75}) {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.0.places.#.adm1_name",
+			SelectExpect: []string{"California"},
+		},
+		// place iso codes
+		{
+			Name:         "places iso3166 country",
+			Query:        `query { agencies(where:{adm0_iso: "US"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"},
+		},
+		{
+			Name:         "places iso3166 state",
+			Query:        `query { agencies(where:{adm1_iso: "US-CA"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			Name:         "places iso3166 state lowercase",
+			Query:        `query { agencies(where:{adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			Name:         "places iso3166 state and country",
+			Query:        `query { agencies(where:{adm0_iso: "us", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			Name:         "places iso3166 state and city",
+			Query:        `query { agencies(where:{city_name: "oakland", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit"},
+		},
+		{
+			Name:         "places iso3166 state and city no result",
+			Query:        `query { agencies(where:{city_name: "test", adm1_iso: "us-ca"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
+		},
+		{
+			Name:         "places iso3166 state no results",
+			Query:        `query { agencies(where:{adm1_iso: "US-NY"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
+		},
+		{
+			Name:         "places state",
+			Query:        `query { agencies(where:{adm1_name: "California"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			Name:         "places state no result",
+			Query:        `query { agencies(where:{adm1_name: "New York"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
+		},
+		{
+			// `%` is an ILIKE wildcard; unescaped it would match every adm0_iso.
+			Name:         "places adm0_iso escapes ilike wildcards",
+			Query:        `query { agencies(where:{adm0_iso: "%"}) {onestop_id}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{},
+		},
+		{
+			Name:         "places city",
+			Query:        `query { agencies(where:{city_name: "Berkeley"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit"},
+		},
+		{
+			Name:         "places city 2",
+			Query:        `query { agencies(where:{city_name: "San Jose"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-caltrain"},
+		},
+		{
+			Name:         "places city 2 lowercase",
+			Query:        `query { agencies(where:{city_name: "san jose"}) {onestop_id places {adm0_name adm1_name city_name}}}`,
+			Vars:         vars,
+			Selector:     "agencies.#.onestop_id",
+			SelectExpect: []string{"o-9q9-caltrain"},
+		},
+	}
+	return testcases
+}
+
+func agencyResolverBatchedStopsTestcases(t testing.TB, cfg model.Config) []testcase {
+	testcases := []testcase{
+		{
+			// Two agencies in one request must not share a limit.
+			Name:  "batched agencies keep separate limits",
+			Query: `query { agencies(where:{adm0_iso:"US"}) { onestop_id stops(limit:3) { stop_id } } }`,
+			Sel: []testcaseSelector{
+				{Selector: "agencies.#.onestop_id", Expect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"}},
+				{Selector: "agencies.0.stops.#.stop_id", ExpectCount: 3},
+				{Selector: "agencies.3.stops.#.stop_id", ExpectCount: 3},
+			},
+		},
+	}
+	return testcases
+}
+
+func operatorResolverPlacesTestcases(t testing.TB, cfg model.Config) []testcase {
+	testcases := []testcase{
+		{
+			Name:         "places iso3166 country",
+			Query:        `query { operators(where:{adm0_iso: "US"}) {onestop_id}}`,
+			Selector:     "operators.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"},
+		},
+		{
+			Name:         "places iso3166 state",
+			Query:        `query { operators(where:{adm1_iso: "US-CA"}) {onestop_id}}`,
+			Selector:     "operators.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			Name:         "places iso3166 state not found",
+			Query:        `query { operators(where:{adm1_iso: "US-NY"}) {onestop_id}}`,
+			Selector:     "operators.#.onestop_id",
+			SelectExpect: []string{},
+		},
+		{
+			Name:         "places adm0_name",
+			Query:        `query { operators(where:{adm0_name: "United States of America"}) {onestop_id}}`,
+			Selector:     "operators.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain", "o-dhv-hillsborougharearegionaltransit", "o-dqcj-wmata"},
+		},
+		{
+			Name:         "places adm1_name",
+			Query:        `query { operators(where:{adm1_name: "California"}) {onestop_id}}`,
+			Selector:     "operators.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit", "o-9q9-caltrain"},
+		},
+		{
+			Name:         "places adm1_name not found",
+			Query:        `query { operators(where:{adm1_name: "Nowhere"}) {onestop_id}}`,
+			Selector:     "operators.#.onestop_id",
+			SelectExpect: []string{},
+		},
+		{
+			Name:         "places city_name",
+			Query:        `query { operators(where:{city_name: "Oakland"}) {onestop_id}}`,
+			Selector:     "operators.#.onestop_id",
+			SelectExpect: []string{"o-9q9-bayarearapidtransit"},
+		},
+	}
+	return testcases
+}
+
+func placeResolverTestcases(t testing.TB, cfg model.Config) []testcase {
 	q := `query($level: PlaceAggregationLevel,$where: PlaceFilter) {
 		places(level: $level, where: $where) {
 			adm0_name
@@ -275,10 +475,12 @@ func TestPlaceResolver(t *testing.T) {
 		{
 			// A city is a point in Natural Earth, buffered by the radius the place
 			// association itself uses: about 0.46 degrees of longitude at this latitude.
+			// PostGIS buffers in a planar projection, and a buffer on the sphere lands
+			// within 0.002 degrees of PostGIS's.
 			Name:  "city bbox is buffered around the point",
 			Query: `query{ places(level: ADM0_ADM1_CITY, where: {city_name: "Oakland"}) { bbox } }`,
 			F: func(t *testing.T, jj string) {
-				assert.InDelta(t, -122.732419, bboxMinLon(jj), 1e-5, "Oakland widened by the association radius")
+				assert.InDelta(t, -122.732419, bboxMinLon(jj), 2e-3, "Oakland widened by the association radius")
 			},
 		},
 		{
@@ -286,7 +488,7 @@ func TestPlaceResolver(t *testing.T) {
 			Name:  "city bbox at a coarser level",
 			Query: `query{ places(level: ADM0_CITY, where: {city_name: "Oakland"}) { bbox } }`,
 			F: func(t *testing.T, jj string) {
-				assert.InDelta(t, -122.732419, bboxMinLon(jj), 1e-5, "same box as the finer level")
+				assert.InDelta(t, -122.732419, bboxMinLon(jj), 2e-3, "same box as the finer level")
 			},
 		},
 		// operators
@@ -312,6 +514,47 @@ func TestPlaceResolver(t *testing.T) {
 			SelectExpect: []string{"o-9q9-bayarearapidtransit"},
 		},
 	}
-	c, _ := newTestClient(t)
-	gqlcase.QueryTestcases(t, c, testcases)
+	return testcases
+}
+
+func stopResolverPlacesTestcases(t testing.TB, cfg model.Config) []testcase {
+	q := `query($feed_version_sha1:String!, $stop_id:String!) { stops(where:{stop_id:$stop_id, feed_version_sha1:$feed_version_sha1}) { place { adm0_name adm1_name adm0_iso adm1_iso } } }`
+	tcs := []testcase{
+		{
+			Name:         "usa",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm0_name",
+			SelectExpect: []string{"United States of America"},
+		},
+		{
+			Name:         "california",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm1_name",
+			SelectExpect: []string{"California"},
+		},
+		{
+			Name:         "adm0_iso",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm0_iso",
+			SelectExpect: []string{"US"},
+		},
+		{
+			Name:         "adm1_iso",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "e535eb2b3b9ac3ef15d82c56575e914575e732e0", "stop_id": "FTVL"},
+			Selector:     "stops.#.place.adm1_iso",
+			SelectExpect: []string{"US-CA"},
+		},
+		{
+			Name:         "florida",
+			Query:        q,
+			Vars:         hw{"feed_version_sha1": "c969427f56d3a645195dd8365cde6d7feae7e99b", "stop_id": "8032"},
+			Selector:     "stops.#.place.adm1_name",
+			SelectExpect: []string{"Florida"},
+		},
+	}
+	return tcs
 }

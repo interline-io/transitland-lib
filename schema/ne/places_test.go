@@ -15,11 +15,13 @@ func rect(minLon, minLat, maxLon, maxLat float64) *geom.Polygon {
 }
 
 func TestPlaceIndex(t *testing.T) {
-	// Two areas side by side, split at the prime meridian. Westville's source
-	// names the wrong area, and Seaport lies in neither.
+	// Two areas side by side, split at the prime meridian, and a third, farther
+	// east, that shares a name with the second. Westville's source names the
+	// wrong area, and Seaport lies in none.
 	west := AdminArea{Name: "West", Admin: "Country", IsoA2: "CC", Iso31662: "CC-W", Geometry: rect(-1, 0, 0, 1)}
 	east := AdminArea{Name: "East", Admin: "Country", IsoA2: "CC", Iso31662: "CC-E", Geometry: geom.NewMultiPolygon(geom.XY).MustSetCoords([][][]geom.Coord{rect(0, 0, 1, 1).Coords()})}
-	ix, err := NewPlaceIndex([]AdminArea{west, east}, []PopulatedPlace{
+	farEast := AdminArea{Name: "East", Admin: "Country", IsoA2: "CC", Iso31662: "CC-FE", Geometry: rect(2, 0, 3, 1)}
+	ix, err := NewPlaceIndex([]AdminArea{west, east, farEast}, []PopulatedPlace{
 		{Name: "Westville", Adm1Name: "East", Adm0Name: "Country", Point: tlxy.Point{Lon: -0.5, Lat: 0.5}},
 		{Name: "Eastville", Adm1Name: "East", Adm0Name: "Country", Point: tlxy.Point{Lon: 0.5, Lat: 0.5}},
 		{Name: "Seaport", Adm1Name: "Coast", Adm0Name: "Country", Point: tlxy.Point{Lon: 0.5, Lat: 1.5}},
@@ -45,6 +47,20 @@ func TestPlaceIndex(t *testing.T) {
 		assert.Equal(t, "CC-E", a.Iso31662)
 		_, ok = ix.NearestAdmin(tlxy.Point{Lon: 0.5, Lat: 2})
 		assert.False(t, ok)
+	})
+
+	t.Run("by name", func(t *testing.T) {
+		var isos []string
+		for _, a := range ix.AdminsNamed("East", "Country") {
+			isos = append(isos, a.Iso31662)
+		}
+		assert.Equal(t, []string{"CC-E", "CC-FE"}, isos)
+		assert.Empty(t, ix.AdminsNamed("East", "Elsewhere"))
+		assert.Len(t, ix.CountryAdmins("Country"), 3)
+		// Westville goes by its source's names and by its containing area's.
+		assert.Len(t, ix.PlacesNamed("Westville", "West", "Country"), 1)
+		assert.Len(t, ix.PlacesNamed("Westville", "East", "Country"), 1)
+		assert.Empty(t, ix.PlacesNamed("Westville", "Coast", "Country"))
 	})
 
 	t.Run("nearest place", func(t *testing.T) {
