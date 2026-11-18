@@ -51,7 +51,6 @@ type ServerCommand struct {
 	LongQueryDuration         int
 	Port                      string
 	RestPrefix                string
-	LoadAdmins                bool
 	ValidateLargeFiles        bool
 	UseMaterialized           bool
 	UseMaterializedDepartures bool
@@ -86,7 +85,6 @@ func (cmd *ServerCommand) AddFlags(fl *pflag.FlagSet) {
 	fl.StringVar(&cmd.SecretsFile, "secrets", "", "DMFR file containing secrets")
 	fl.IntVar(&cmd.Timeout, "timeout", 60, "")
 	fl.IntVar(&cmd.LongQueryDuration, "long-query", 1000, "Log queries over this duration (ms)")
-	fl.BoolVar(&cmd.LoadAdmins, "load-admins", false, "Load admin polygons from database into memory")
 	fl.IntVar(&cmd.LoaderBatchSize, "loader-batch-size", 100, "GraphQL Loader batch size")
 	fl.IntVar(&cmd.LoaderStopTimeBatchSize, "loader-stop-time-batch-size", 1, "GraphQL Loader batch size for StopTimes")
 	fl.Float64Var(&cmd.MaxRadius, "max-radius", 100_000, "Maximum radius for nearby stops")
@@ -139,9 +137,6 @@ func (cmd *ServerCommand) Run(ctx context.Context) error {
 
 	// Create Finder
 	dbFinder := dbfinder.NewFinder(db)
-	if cmd.LoadAdmins {
-		dbFinder.LoadAdmins(ctx)
-	}
 
 	// Create RTFinder, GbfsFinder. With Redis, the shared store also provides
 	// cross-process pub/sub and the GBFS bbox index; without it, each finder

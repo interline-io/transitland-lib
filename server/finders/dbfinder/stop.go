@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/schema/ne"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -330,12 +331,15 @@ func (f *Finder) StopsByLocationGroupIDs(ctx context.Context, limit *int, keys [
 	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithLocationGroupID.Int() }), queryErr(ctx, err)
 }
 
+// StopPlacesByStopID finds each stop's admin area in the embedded Natural Earth
+// data.
 func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
-	if f.adminCache == nil {
-		return f.stopPlacesByStopIdFallback(ctx, params)
+	places, err := ne.Places()
+	if err != nil {
+		return nil, queryErrs(ctx, len(params), err)
 	}
 
-	// Lookup any geometries that were not passed in
+	// Read the geometry of each stop passed without a point.
 	var geomLookup []int
 	for _, param := range params {
 		if param.Point.Lon == 0 && param.Point.Lat == 0 {
@@ -362,44 +366,19 @@ func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlac
 		}
 	}
 
-	// Lookup stop places using adminCache
-	a := map[int]*model.StopPlace{}
-	for _, param := range params {
-		if admin, ok := f.adminCache.Check(param.Point); ok {
-			a[param.ID] = &model.StopPlace{
-				Adm0Name: &admin.Adm0Name,
-				Adm1Name: &admin.Adm1Name,
-				Adm0Iso:  &admin.Adm0Iso,
-				Adm1Iso:  &admin.Adm1Iso,
+	// Answer by position, not by id: a validation's stops all have id 0.
+	ret := make([]*model.StopPlace, len(params))
+	for i, param := range params {
+		if area, ok := places.NearestAdmin(param.Point); ok {
+			ret[i] = &model.StopPlace{
+				Adm0Name: &area.Admin,
+				Adm1Name: &area.Name,
+				Adm0Iso:  &area.IsoA2,
+				Adm1Iso:  &area.Iso31662,
 			}
 		}
 	}
-	ret := make([]*model.StopPlace, len(params))
-	for idx, param := range params {
-		ret[idx] = a[param.ID]
-	}
 	return ret, nil
-}
-
-func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
-	// Fallback without adminCache
-	var ids []int
-	for _, param := range params {
-		ids = append(ids, param.ID)
-	}
-	type result struct {
-		StopID int
-		model.StopPlace
-	}
-	var ents []result
-	detailedQuery := sq.Select("gtfs_stops.id as stop_id", "ne.name as adm1_name", "ne.admin as adm0_name").
-		From("ne_10m_admin_1_states_provinces ne").
-		Join("gtfs_stops on ST_Intersects(gtfs_stops.geometry, ne.geometry)").
-		Where(In("gtfs_stops.id", ids))
-	if err := dbutil.Select(ctx, f.db, detailedQuery, &ents); err != nil {
-		return nil, queryErrs(ctx, len(ids), err)
-	}
-	return arrangeMap(ids, ents, func(ent result) (int, *model.StopPlace) { return ent.StopID, &ent.StopPlace }), nil
 }
 
 func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {

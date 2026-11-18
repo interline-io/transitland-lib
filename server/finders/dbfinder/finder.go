@@ -10,7 +10,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -48,10 +47,9 @@ func finderCheckLimitMax(limit *int, maxLimit int) uint64 {
 }
 
 type Finder struct {
-	Clock      clock.Clock
-	db         tldb.Ext
-	adminCache *adminCache
-	fvslCache  *serviceWindowCache
+	Clock     clock.Clock
+	db        tldb.Ext
+	fvslCache *serviceWindowCache
 }
 
 func NewFinder(db tldb.Ext) *Finder {
@@ -60,16 +58,6 @@ func NewFinder(db tldb.Ext) *Finder {
 		fvslCache: newServiceWindowCache(db),
 	}
 	return finder
-}
-
-func (f *Finder) LoadAdmins(ctx context.Context) error {
-	log.For(ctx).Trace().Msg("loading admins")
-	c, err := newAdminCache(context.Background(), f.db)
-	if err != nil {
-		return err
-	}
-	f.adminCache = c
-	return nil
 }
 
 func (f *Finder) PermFilter(ctx context.Context) *model.PermFilter {
@@ -109,19 +97,6 @@ func arrangeBy[K comparable, T any](keys []K, ents []T, cb func(T) K) []T {
 		bykey[cb(ent)] = ent
 	}
 	ret := make([]T, len(keys))
-	for idx, key := range keys {
-		ret[idx] = bykey[key]
-	}
-	return ret
-}
-
-func arrangeMap[K comparable, T any, O any](keys []K, ents []T, cb func(T) (K, O)) []O {
-	bykey := map[K]O{}
-	for _, ent := range ents {
-		k, o := cb(ent)
-		bykey[k] = o
-	}
-	ret := make([]O, len(keys))
 	for idx, key := range keys {
 		ret[idx] = bykey[key]
 	}

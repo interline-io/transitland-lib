@@ -4,7 +4,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"strings"
@@ -19,10 +21,7 @@ import (
 )
 
 // Command loads Natural Earth admin boundaries and populated places into a
-// Postgres database. Lives next to the embedded shapefile data so consumers
-// that don't need to run this loader don't transitively pull the ~15MB of
-// zip files in by importing transitland-lib/cmds.
-
+// Postgres database.
 type Command struct {
 	DBURL     string
 	Overwrite bool
@@ -78,17 +77,20 @@ func (cmd *Command) Run(ctx context.Context) error {
 		if !strings.HasSuffix(path, ".zip") {
 			return nil
 		}
-		neZipData, err := EmbeddedNaturalEarthData.ReadFile(path)
+		var load shapeHandler
+		switch path {
+		case adminsZip:
+			load = cmd.loadAdmins
+		case placesZip:
+			load = cmd.loadPlaces
+		default:
+			return nil
+		}
+		shapes, err := readEmbeddedShapes(path)
 		if err != nil {
 			return err
 		}
-		switch path {
-		case "ne_10m_admin_1_states_provinces.zip":
-			return cmd.processShapes(ctx, neZipData, cmd.loadAdmins)
-		case "ne_10m_populated_places_simple.zip":
-			return cmd.processShapes(ctx, neZipData, cmd.loadPlaces)
-		}
-		return nil
+		return load(ctx, cmd.Adapter, shapes)
 	})
 }
 
@@ -99,11 +101,17 @@ type neShape struct {
 	attrs    map[string]string
 }
 
-func (cmd *Command) processShapes(ctx context.Context, neZipFile []byte, cb shapeHandler) error {
+// readEmbeddedShapes reads the shapes and their attributes from one of the
+// embedded shapefile zips.
+func readEmbeddedShapes(name string) ([]neShape, error) {
+	neZipFile, err := EmbeddedNaturalEarthData.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
 	ret := []neShape{}
 	zipReader, err := zip.NewReader(bytes.NewReader(neZipFile), int64(len(neZipFile)))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	scanner, err := shapefile.NewScannerFromZipReader(zipReader, &shapefile.ReadShapefileOptions{
 		DBF: &shapefile.ReadDBFOptions{
@@ -111,7 +119,7 @@ func (cmd *Command) processShapes(ctx context.Context, neZipFile []byte, cb shap
 		},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	shapeFields := scanner.DBFFieldDescriptors()
 	for scanner.Next() {
@@ -129,7 +137,11 @@ func (cmd *Command) processShapes(ctx context.Context, neZipFile []byte, cb shap
 		t.geometry = shpGeom.Geom
 		ret = append(ret, t)
 	}
-	return cb(ctx, cmd.Adapter, ret)
+	// The scanner stops with each of its files at EOF.
+	if err := scanner.Error(); err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+	return ret, nil
 }
 
 type neAdmin struct {

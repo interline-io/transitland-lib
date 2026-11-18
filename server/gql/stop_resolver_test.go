@@ -174,18 +174,8 @@ func TestStopResolver_PreviousOnestopID(t *testing.T) {
 	gqlcase.QueryTestcases(t, c, stopResolverPreviousOnestopIDTestcases(t, cfg))
 }
 
-func TestStopResolver_AdminCache(t *testing.T) {
-	type canLoadAdmins interface {
-		LoadAdmins(context.Context) error
-	}
-	c, cfg := newTestClient(t)
-	if v, ok := cfg.Finder.(canLoadAdmins); !ok {
-		t.Fatal("finder cant load admins")
-	} else {
-		if err := v.LoadAdmins(context.Background()); err != nil {
-			t.Fatal(err)
-		}
-	}
+func TestStopResolver_StopPlaces(t *testing.T) {
+	c, _ := newTestClient(t)
 	q := `query($feed_version_sha1:String!, $stop_id:String!) { stops(where:{stop_id:$stop_id, feed_version_sha1:$feed_version_sha1}) { place { adm0_name adm1_name adm0_iso adm1_iso } } }`
 	tcs := []testcase{
 		{

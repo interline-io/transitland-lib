@@ -17,7 +17,6 @@ transitland server [flags]
 ```
       --dburl string                      Database URL (default: $TL_DATABASE_URL)
   -h, --help                              help for server
-      --load-admins                       Load admin polygons from database into memory
       --loader-batch-size int             GraphQL Loader batch size (default 100)
       --loader-stop-time-batch-size int   GraphQL Loader batch size for StopTimes (default 1)
       --long-query int                    Log queries over this duration (ms) (default 1000)

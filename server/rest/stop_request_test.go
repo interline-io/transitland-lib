@@ -211,27 +211,6 @@ func TestStopRequest_IncludeRoutes(t *testing.T) {
 	}
 }
 
-func TestStopRequest_AdminCache(t *testing.T) {
-	tc := testCase{
-		name:         "place",
-		h:            StopRequest{StopKey: "BA:FTVL"},
-		selector:     "stops.#.place.adm1_name",
-		expectSelect: []string{"California"},
-	}
-	type canLoadAdmins interface {
-		LoadAdmins(context.Context) error
-	}
-	cfg := testconfig.Config(t, testconfig.Options{})
-	if v, ok := cfg.Finder.(canLoadAdmins); !ok {
-		t.Fatal("finder cant load admins")
-	} else {
-		if err := v.LoadAdmins(context.Background()); err != nil {
-			t.Fatal(err)
-		}
-	}
-	checkTestCase(t, tc)
-}
-
 func TestStopRequest_Format(t *testing.T) {
 	tcs := []testCase{
 		{

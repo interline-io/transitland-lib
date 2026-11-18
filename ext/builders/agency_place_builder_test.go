@@ -6,15 +6,15 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
 // runAgencyPlace copies a feed through an AgencyPlaceBuilder and returns it for
-// white-box inspection of the accumulated per-agency geohash tally. The Copy step
-// (which needs a postgres writer) is intentionally not exercised here; the refactor
-// only affects how AfterWrite tallies stop visits.
+// white-box inspection of the accumulated per-agency geohash tally.
 func runAgencyPlace(t *testing.T, url string, dedup bool) *AgencyPlaceBuilder {
 	t.Helper()
 	reader, err := tlcsv.NewReader(url)
@@ -59,4 +59,34 @@ func TestAgencyPlaceBuilder(t *testing.T) {
 		_, totalOn := agencyVisits(runAgencyPlace(t, testreader.ExampleFeedBART.URL, true), "BART")
 		assert.Equal(t, totalOff, totalOn, "dedup on/off must tally the same")
 	})
+}
+
+// WMATA's places from the embedded Natural Earth data. Its stops span D.C.,
+// Maryland and Virginia, and Washington also counts the stops in Maryland and
+// Virginia that lie nearest the city.
+func TestAgencyPlaceBuilder_Places(t *testing.T) {
+	_, w, err := newMockCopier(testpath.RelPath("testdata/server/gtfs/wmata.zip"), NewAgencyPlaceBuilder())
+	if err != nil {
+		t.Fatal(err)
+	}
+	type place struct {
+		Name     tt.String
+		Adm1name tt.String
+		Count    int
+	}
+	var got []place
+	for _, ent := range w.Reader.OtherList {
+		if ap, ok := ent.(*AgencyPlace); ok {
+			assert.Equal(t, "1", ap.AgencyID)
+			assert.Equal(t, "United States of America", ap.Adm0name.Val)
+			got = append(got, place{Name: ap.Name, Adm1name: ap.Adm1name, Count: ap.Count})
+		}
+	}
+	assert.Equal(t, []place{
+		{Name: tt.NewString("Washington,  D.C."), Adm1name: tt.NewString("District of Columbia"), Count: 294652},
+		{Adm1name: tt.NewString("District of Columbia"), Count: 174886},
+		{Adm1name: tt.NewString("Virginia"), Count: 90057},
+		{Adm1name: tt.NewString("Maryland"), Count: 82601},
+		{Name: tt.NewString("Alexandria"), Adm1name: tt.NewString("Virginia"), Count: 54670},
+	}, got)
 }
