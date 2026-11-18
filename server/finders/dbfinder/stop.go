@@ -331,13 +331,15 @@ func (f *Finder) StopsByLocationGroupIDs(ctx context.Context, limit *int, keys [
 	return arrangeGroup(keys, ents, func(ent *model.Stop) int { return ent.WithLocationGroupID.Int() }), queryErr(ctx, err)
 }
 
+// StopPlacesByStopID finds each stop's admin area in the embedded Natural Earth
+// data.
 func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
 	places, err := ne.Places()
 	if err != nil {
 		return nil, queryErrs(ctx, len(params), err)
 	}
 
-	// Lookup any geometries that were not passed in
+	// Read the geometry of each stop passed without a point.
 	var geomLookup []int
 	for _, param := range params {
 		if param.Point.Lon == 0 && param.Point.Lat == 0 {
@@ -364,21 +366,17 @@ func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlac
 		}
 	}
 
-	// Lookup stop places in the place index
-	a := map[int]*model.StopPlace{}
-	for _, param := range params {
+	// Answer by position, not by id: a validation's stops all have id 0.
+	ret := make([]*model.StopPlace, len(params))
+	for i, param := range params {
 		if area, ok := places.NearestAdmin(param.Point); ok {
-			a[param.ID] = &model.StopPlace{
+			ret[i] = &model.StopPlace{
 				Adm0Name: &area.Admin,
 				Adm1Name: &area.Name,
 				Adm0Iso:  &area.IsoA2,
 				Adm1Iso:  &area.Iso31662,
 			}
 		}
-	}
-	ret := make([]*model.StopPlace, len(params))
-	for idx, param := range params {
-		ret[idx] = a[param.ID]
 	}
 	return ret, nil
 }

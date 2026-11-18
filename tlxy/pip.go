@@ -33,11 +33,15 @@ func NewPolygonIndex(fc geojson.FeatureCollection) (*PolygonIndex, error) {
 			},
 			)
 		} else if v, ok := feature.Geometry.(*geom.MultiPolygon); ok {
+			// Each part goes in on its own bounds, so a search tests only the
+			// parts near the point.
 			for i := 0; i < v.NumPolygons(); i++ {
-				PolygonIndex.idx.Insert(bb1, bb2, pipShape{
+				pg := v.Polygon(i)
+				pb := pg.Bounds()
+				PolygonIndex.idx.Insert([2]float64{pb.Min(0), pb.Min(1)}, [2]float64{pb.Max(0), pb.Max(1)}, pipShape{
 					Name:       feature.ID,
 					Properties: feature.Properties,
-					Polygon:    v.Polygon(i),
+					Polygon:    pg,
 				},
 				)
 			}

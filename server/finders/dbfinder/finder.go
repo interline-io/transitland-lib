@@ -103,19 +103,6 @@ func arrangeBy[K comparable, T any](keys []K, ents []T, cb func(T) K) []T {
 	return ret
 }
 
-func arrangeMap[K comparable, T any, O any](keys []K, ents []T, cb func(T) (K, O)) []O {
-	bykey := map[K]O{}
-	for _, ent := range ents {
-		k, o := cb(ent)
-		bykey[k] = o
-	}
-	ret := make([]O, len(keys))
-	for idx, key := range keys {
-		ret[idx] = bykey[key]
-	}
-	return ret
-}
-
 // groupFVEntityIDs collects GTFS entity ids by feed version, so a batch of keys
 // spanning several feed versions becomes one query per feed version.
 func groupFVEntityIDs(keys []model.FVEntityID) map[int][]string {

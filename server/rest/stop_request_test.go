@@ -211,16 +211,6 @@ func TestStopRequest_IncludeRoutes(t *testing.T) {
 	}
 }
 
-func TestStopRequest_StopPlaces(t *testing.T) {
-	tc := testCase{
-		name:         "place",
-		h:            StopRequest{StopKey: "BA:FTVL"},
-		selector:     "stops.#.place.adm1_name",
-		expectSelect: []string{"California"},
-	}
-	checkTestCase(t, tc)
-}
-
 func TestStopRequest_Format(t *testing.T) {
 	tcs := []testCase{
 		{

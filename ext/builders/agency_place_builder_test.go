@@ -6,8 +6,10 @@ import (
 
 	"github.com/interline-io/transitland-lib/adapters/direct"
 	"github.com/interline-io/transitland-lib/copier"
+	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,37 +61,32 @@ func TestAgencyPlaceBuilder(t *testing.T) {
 	})
 }
 
-// BART's places from the embedded Natural Earth data, the same ones a lookup
-// in the database's Natural Earth tables found.
+// WMATA's places from the embedded Natural Earth data. Its stops span D.C.,
+// Maryland and Virginia, and Washington also counts the stops in Maryland and
+// Virginia that lie nearest the city.
 func TestAgencyPlaceBuilder_Places(t *testing.T) {
-	reader, err := tlcsv.NewReader(testreader.ExampleFeedBART.URL)
+	_, w, err := newMockCopier(testpath.RelPath("testdata/server/gtfs/wmata.zip"), NewAgencyPlaceBuilder())
 	if err != nil {
 		t.Fatal(err)
 	}
-	opts := copier.Options{}
-	opts.AddExtension(NewAgencyPlaceBuilder())
-	w := direct.NewWriter()
-	if _, err := copier.CopyWithOptions(context.Background(), reader, w, opts); err != nil {
-		t.Fatal(err)
-	}
 	type place struct {
-		Name     string
-		Adm1name string
+		Name     tt.String
+		Adm1name tt.String
 		Count    int
 	}
 	var got []place
 	for _, ent := range w.Reader.OtherList {
 		if ap, ok := ent.(*AgencyPlace); ok {
-			assert.Equal(t, "BART", ap.AgencyID)
+			assert.Equal(t, "1", ap.AgencyID)
 			assert.Equal(t, "United States of America", ap.Adm0name.Val)
-			got = append(got, place{Name: ap.Name.Val, Adm1name: ap.Adm1name.Val, Count: ap.Count})
+			got = append(got, place{Name: ap.Name, Adm1name: ap.Adm1name, Count: ap.Count})
 		}
 	}
 	assert.Equal(t, []place{
-		{Name: "", Adm1name: "California", Count: 33167},
-		{Name: "Oakland", Adm1name: "California", Count: 12092},
-		{Name: "San Francisco", Adm1name: "California", Count: 10816},
-		{Name: "Berkeley", Adm1name: "California", Count: 5611},
-		{Name: "San Mateo", Adm1name: "California", Count: 2271},
+		{Name: tt.NewString("Washington,  D.C."), Adm1name: tt.NewString("District of Columbia"), Count: 294652},
+		{Adm1name: tt.NewString("District of Columbia"), Count: 174886},
+		{Adm1name: tt.NewString("Virginia"), Count: 90057},
+		{Adm1name: tt.NewString("Maryland"), Count: 82601},
+		{Name: tt.NewString("Alexandria"), Adm1name: tt.NewString("Virginia"), Count: 54670},
 	}, got)
 }

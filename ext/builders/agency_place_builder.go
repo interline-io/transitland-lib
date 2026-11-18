@@ -2,6 +2,7 @@ package builders
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -86,31 +87,40 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Ent
 	return nil
 }
 
+// Copy writes each agency's places, ranked by their share of its stop visits.
 func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
 	places, err := ne.Places()
 	if err != nil {
 		return err
 	}
-	// For each geohash, find the nearby populated place and the admin area holding it
+	// Find each geohash cell's nearest populated place, and the admin area
+	// holding the cell's center.
+	type foundPlace struct {
+		Name     string
+		Adm1name string
+		Adm0name string
+	}
 	cells := map[string]bool{}
 	for _, ghPoint := range pp.stops {
 		cells[ghPoint] = true
 	}
-	pointPlaces := map[string]ne.Place{}
-	pointAdmins := map[string]ne.Place{}
+	pointPlaces := map[string]foundPlace{}
+	pointAdmins := map[string]foundPlace{}
 	for ghPoint := range cells {
 		gLat, gLon := geohash.Decode(ghPoint)
 		pt := tlxy.Point{Lon: gLon, Lat: gLat}
-		if place, ok := places.NearestPlace(pt, placeRadius); ok {
-			pointPlaces[ghPoint] = place
+		if p, ok := places.NearestPlace(pt, placeRadius); ok {
+			pointPlaces[ghPoint] = foundPlace{Name: p.Name, Adm1name: p.Adm1Name, Adm0name: p.Adm0Name}
 		}
-		if admin, ok := places.Admin(pt); ok {
-			pointAdmins[ghPoint] = admin
+		if a, ok := places.Admin(pt); ok {
+			pointAdmins[ghPoint] = foundPlace{Adm1name: a.Name, Adm0name: a.Admin}
 		}
 	}
-	var aps []*AgencyPlace
-	for aid, agencyPoints := range pp.agencyStops {
-		placeWeights := map[ne.Place]int{}
+	var ents []tt.Entity
+	// In agency id order, so the output doesn't depend on map order.
+	for _, aid := range slices.Sorted(maps.Keys(pp.agencyStops)) {
+		agencyPoints := pp.agencyStops[aid]
+		placeWeights := map[foundPlace]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
 			agencyTotalWeight += count
@@ -126,38 +136,43 @@ func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
 			if !ok {
 				continue
 			}
-			admin := ne.Place{Adm1name: place.Adm1name, Adm0name: place.Adm0name}
+			admin := foundPlace{Adm1name: place.Adm1name, Adm0name: place.Adm0name}
 			if _, ok := placeWeights[admin]; ok || len(pointAdmins) == 0 {
 				placeWeights[place] += count
 			}
 		}
-		for k, v := range placeWeights {
+		// Highest rank first, since readers order an agency's places by row id.
+		ranked := slices.SortedFunc(maps.Keys(placeWeights), func(a, b foundPlace) int {
+			return cmp.Or(
+				cmp.Compare(placeWeights[b], placeWeights[a]),
+				cmp.Compare(a.Name, b.Name),
+				cmp.Compare(a.Adm1name, b.Adm1name),
+				cmp.Compare(a.Adm0name, b.Adm0name),
+			)
+		})
+		for _, k := range ranked {
+			v := placeWeights[k]
 			score := float64(v) / float64(agencyTotalWeight)
 			if score > 0.05 {
 				ap := AgencyPlace{}
 				ap.AgencyID = aid
-				ap.Name = k.Name
-				ap.Adm0name = k.Adm0name
-				ap.Adm1name = k.Adm1name
+				ap.Name = placeName(k.Name)
+				ap.Adm0name = placeName(k.Adm0name)
+				ap.Adm1name = placeName(k.Adm1name)
 				ap.Count = v
 				ap.Rank = score
-				aps = append(aps, &ap)
+				ents = append(ents, &ap)
 			}
 		}
 	}
-	// Write in a fixed order, since readers order places by row id.
-	slices.SortFunc(aps, func(a, b *AgencyPlace) int {
-		return cmp.Or(
-			cmp.Compare(a.AgencyID, b.AgencyID),
-			cmp.Compare(b.Rank, a.Rank),
-			cmp.Compare(a.Name.Val, b.Name.Val),
-			cmp.Compare(a.Adm1name.Val, b.Adm1name.Val),
-			cmp.Compare(a.Adm0name.Val, b.Adm0name.Val),
-		)
-	})
-	var ents []tt.Entity
-	for _, ap := range aps {
-		ents = append(ents, ap)
-	}
 	return copier.CopyEntities(ents)
+}
+
+// placeName returns name, or an absent string when name is empty: readers join
+// places to admin areas by name, and an empty name would match an unnamed area.
+func placeName(name string) tt.String {
+	if name == "" {
+		return tt.String{}
+	}
+	return tt.NewString(name)
 }

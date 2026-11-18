@@ -29,13 +29,12 @@ func TestPlaceIndex(t *testing.T) {
 	}
 
 	t.Run("admin holding a point", func(t *testing.T) {
-		p, ok := ix.Admin(tlxy.Point{Lon: -0.5, Lat: 0.5})
+		a, ok := ix.Admin(tlxy.Point{Lon: -0.5, Lat: 0.5})
 		assert.True(t, ok)
-		assert.Equal(t, "West", p.Adm1name.Val)
-		assert.False(t, p.Name.Valid)
-		p, ok = ix.Admin(tlxy.Point{Lon: 0.5, Lat: 0.5})
+		assert.Equal(t, "West", a.Name)
+		a, ok = ix.Admin(tlxy.Point{Lon: 0.5, Lat: 0.5})
 		assert.True(t, ok)
-		assert.Equal(t, "East", p.Adm1name.Val)
+		assert.Equal(t, "East", a.Name)
 		_, ok = ix.Admin(tlxy.Point{Lon: 0.5, Lat: 1.1})
 		assert.False(t, ok, "a point outside every area has no admin")
 	})
@@ -52,13 +51,13 @@ func TestPlaceIndex(t *testing.T) {
 		// Westville is 11 km away, and takes its area's names.
 		p, ok := ix.NearestPlace(tlxy.Point{Lon: -0.4, Lat: 0.5}, 40000)
 		assert.True(t, ok)
-		assert.Equal(t, "Westville", p.Name.Val)
-		assert.Equal(t, "West", p.Adm1name.Val)
+		assert.Equal(t, "Westville", p.Name)
+		assert.Equal(t, "West", p.Adm1Name)
 		// Seaport lies in no area, so it keeps its own names.
 		p, ok = ix.NearestPlace(tlxy.Point{Lon: 0.5, Lat: 1.4}, 40000)
 		assert.True(t, ok)
-		assert.Equal(t, "Seaport", p.Name.Val)
-		assert.Equal(t, "Coast", p.Adm1name.Val)
+		assert.Equal(t, "Seaport", p.Name)
+		assert.Equal(t, "Coast", p.Adm1Name)
 		// The nearest place, Westville, is 44 km away.
 		_, ok = ix.NearestPlace(tlxy.Point{Lon: -0.5, Lat: 0.9}, 40000)
 		assert.False(t, ok)
@@ -119,6 +118,7 @@ func TestPlaces_NearestAdmin(t *testing.T) {
 			if err := testutil.MustOpenTestDB(t).Select(&pgCheck, q, tc.point.Lon, tc.point.Lat); err != nil {
 				t.Fatal(err)
 			}
+			assert.Equal(t, tc.expectOk, len(pgCheck) > 0, "different than postgres")
 			for _, ent := range pgCheck {
 				assert.Equal(t, tc.expectAdm0, ent.Admin, "different than postgres")
 				assert.Equal(t, tc.expectAdm1, ent.Name, "different than postgres")

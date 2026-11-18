@@ -475,34 +475,7 @@ Every resolver should have:
 }
 ```
 
-### 6. Stop Place Tests
-
-A stop's place comes from the embedded Natural Earth admin areas, which load on first use, so a test needs no setup:
-
-```go
-func TestStopResolver_StopPlaces(t *testing.T) {
-    c, _ := newTestClient(t)
-
-    q := `query($feed_version_sha1:String!, $stop_id:String!) {
-        stops(where:{stop_id:$stop_id, feed_version_sha1:$feed_version_sha1}) {
-            place { adm0_name adm1_name adm0_iso adm1_iso }
-        }
-    }`
-
-    tcs := []testcase{
-        {
-            Name:         "california",
-            Query:        q,
-            Vars:         hw{"feed_version_sha1": "e535eb2b...", "stop_id": "FTVL"},
-            Selector:     "stops.#.place.adm1_name",
-            SelectExpect: []string{"California"},
-        },
-    }
-    gqlcase.QueryTestcases(t, c, tcs)
-}
-```
-
-### 7. Benchmarking Tests
+### 6. Benchmarking Tests
 
 For performance testing resolvers:
 
