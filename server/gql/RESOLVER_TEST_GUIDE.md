@@ -475,25 +475,13 @@ Every resolver should have:
 }
 ```
 
-### 6. Admin Cache Tests
+### 6. Stop Place Tests
 
-For testing place/admin lookups that require the admin cache to be loaded:
+A stop's place comes from the embedded Natural Earth admin areas, which load on first use, so a test needs no setup:
 
 ```go
-func TestStopResolver_AdminCache(t *testing.T) {
-    type canLoadAdmins interface {
-        LoadAdmins(context.Context) error
-    }
-    c, cfg := newTestClient(t)
-
-    // Load the admin cache
-    if v, ok := cfg.Finder.(canLoadAdmins); !ok {
-        t.Fatal("finder cant load admins")
-    } else {
-        if err := v.LoadAdmins(context.Background()); err != nil {
-            t.Fatal(err)
-        }
-    }
+func TestStopResolver_StopPlaces(t *testing.T) {
+    c, _ := newTestClient(t)
 
     q := `query($feed_version_sha1:String!, $stop_id:String!) {
         stops(where:{stop_id:$stop_id, feed_version_sha1:$feed_version_sha1}) {

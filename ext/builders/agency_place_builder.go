@@ -2,14 +2,11 @@ package builders
 
 import (
 	"cmp"
-	"context"
 	"slices"
 
-	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/gtfs"
-	"github.com/interline-io/transitland-lib/tldb"
-	"github.com/interline-io/transitland-lib/tldb/postgres"
+	"github.com/interline-io/transitland-lib/schema/ne"
 	"github.com/interline-io/transitland-lib/tlxy"
 	"github.com/interline-io/transitland-lib/tt"
 	"github.com/mmcloughlin/geohash"
@@ -34,40 +31,21 @@ func (rs *AgencyPlace) Filename() string {
 	return "tl_agency_places.txt"
 }
 
-// Place is a populated place or a first-level admin area, with the admin area
-// and country it lies in. An admin area has no Name.
-type Place struct {
-	Name     tt.String
-	Adm1name tt.String
-	Adm0name tt.String
-}
-
-// PlaceLookup finds the places around a point.
-type PlaceLookup interface {
-	// NearestPlace returns the populated place nearest pt, within maxMeters.
-	NearestPlace(ctx context.Context, pt tlxy.Point, maxMeters float64) (Place, bool, error)
-	// Admin returns the first-level admin area holding pt.
-	Admin(ctx context.Context, pt tlxy.Point) (Place, bool, error)
-}
-
 // placeRadius is how far from a stop its populated place can be, in meters.
 const placeRadius = 40000.0
 
 ////////
 
 type AgencyPlaceBuilder struct {
-	places      PlaceLookup
 	stops       map[string]string // store just geohash
 	routeAgency map[string]string
 	agencyStops map[string]map[string]int
 }
 
-// NewAgencyPlaceBuilder returns a builder that finds each agency's places
-// through places. With places nil, it reads a Postgres writer's Natural Earth
-// tables, and skips any other writer.
-func NewAgencyPlaceBuilder(places PlaceLookup) *AgencyPlaceBuilder {
+// NewAgencyPlaceBuilder returns a builder that finds each agency's places in
+// the embedded Natural Earth data.
+func NewAgencyPlaceBuilder() *AgencyPlaceBuilder {
 	return &AgencyPlaceBuilder{
-		places:      places,
 		stops:       map[string]string{},
 		routeAgency: map[string]string{},
 		agencyStops: map[string]map[string]int{},
@@ -108,97 +86,31 @@ func (pp *AgencyPlaceBuilder) AfterWrite(eid string, ent tt.Entity, emap *tt.Ent
 	return nil
 }
 
-var agencyPlaceQuery = `
-select
-	ne.name,
-	coalesce(neadmin.name, ne.adm1name) as adm1name,
-	coalesce(neadmin.admin, ne.adm0name) as adm0name,
-	ST_Distance(ne.geometry, ST_MakePoint(?, ?)::geography) as distance
-from ne_10m_populated_places ne
-left join ne_10m_admin_1_states_provinces neadmin on ST_Intersects(ne.geometry, neadmin.geometry)
-where st_dwithin(ne.geometry, ST_MakePoint(?, ?)::geography, ?)
-order by distance asc
-limit 1
-`
-
-var agencyAdminQuery = `
-select
-	name adm1name,
-	ne.admin adm0name
-from ne_10m_admin_1_states_provinces ne
-where st_intersects(ne.geometry, ST_MakePoint(?, ?));
-`
-
-// postgresPlaces looks places up in a database's Natural Earth tables.
-type postgresPlaces struct {
-	db tldb.Adapter
-}
-
-func (p postgresPlaces) NearestPlace(ctx context.Context, pt tlxy.Point, maxMeters float64) (Place, bool, error) {
-	var r []Place
-	if err := p.db.Select(ctx, &r, agencyPlaceQuery, pt.Lon, pt.Lat, pt.Lon, pt.Lat, maxMeters); err != nil {
-		return Place{}, false, err
-	}
-	if len(r) == 0 {
-		return Place{}, false, nil
-	}
-	return r[0], true, nil
-}
-
-func (p postgresPlaces) Admin(ctx context.Context, pt tlxy.Point) (Place, bool, error) {
-	var r []Place
-	if err := p.db.Select(ctx, &r, agencyAdminQuery, pt.Lon, pt.Lat); err != nil {
-		return Place{}, false, err
-	}
-	if len(r) == 0 {
-		return Place{}, false, nil
-	}
-	return r[0], true, nil
-}
-
 func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
-	ctx := context.TODO()
-	places := pp.places
-	if places == nil {
-		dbWriter, ok := copier.Writer().(*tldb.Writer)
-		if !ok {
-			log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, no place lookup and writer is not dbwriter")
-			return nil
-		}
-		if _, ok := dbWriter.Adapter.(*postgres.PostgresAdapter); !ok {
-			log.For(ctx).Trace().Msg("AgencyPlaceBuilder: skipping, only postgres is supported")
-			return nil
-		}
-		places = postgresPlaces{db: dbWriter.Adapter}
+	places, err := ne.Places()
+	if err != nil {
+		return err
 	}
 	// For each geohash, find the nearby populated place and the admin area holding it
 	cells := map[string]bool{}
 	for _, ghPoint := range pp.stops {
 		cells[ghPoint] = true
 	}
-	pointPlaces := map[string]Place{}
-	pointAdmins := map[string]Place{}
+	pointPlaces := map[string]ne.Place{}
+	pointAdmins := map[string]ne.Place{}
 	for ghPoint := range cells {
 		gLat, gLon := geohash.Decode(ghPoint)
 		pt := tlxy.Point{Lon: gLon, Lat: gLat}
-		place, ok, err := places.NearestPlace(ctx, pt, placeRadius)
-		if err != nil {
-			return err
-		}
-		if ok {
+		if place, ok := places.NearestPlace(pt, placeRadius); ok {
 			pointPlaces[ghPoint] = place
 		}
-		admin, ok, err := places.Admin(ctx, pt)
-		if err != nil {
-			return err
-		}
-		if ok {
+		if admin, ok := places.Admin(pt); ok {
 			pointAdmins[ghPoint] = admin
 		}
 	}
 	var aps []*AgencyPlace
 	for aid, agencyPoints := range pp.agencyStops {
-		placeWeights := map[Place]int{}
+		placeWeights := map[ne.Place]int{}
 		agencyTotalWeight := 0
 		for ghPoint, count := range agencyPoints {
 			agencyTotalWeight += count
@@ -214,7 +126,7 @@ func (pp *AgencyPlaceBuilder) Copy(copier adapters.EntityCopier) error {
 			if !ok {
 				continue
 			}
-			admin := Place{Adm1name: place.Adm1name, Adm0name: place.Adm0name}
+			admin := ne.Place{Adm1name: place.Adm1name, Adm0name: place.Adm0name}
 			if _, ok := placeWeights[admin]; ok || len(pointAdmins) == 0 {
 				placeWeights[place] += count
 			}

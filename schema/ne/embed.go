@@ -1,7 +1,12 @@
+// Package ne holds Natural Earth's admin areas and populated places: the
+// shapefiles, an index of them in memory, and a command that loads them into
+// Postgres.
 package ne
 
 import "embed"
 
+// EmbeddedNaturalEarthData holds the Natural Earth shapefile zips.
+//
 //go:embed *.zip
 var EmbeddedNaturalEarthData embed.FS
 

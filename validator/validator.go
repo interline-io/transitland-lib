@@ -417,7 +417,7 @@ func (v *Validator) copierOptions() copier.Options {
 	// import does, without a database import. Keep a handle to the route-geometry
 	// builder so the report can read its output (see RouteGeometries below).
 	if v.Options.IncludeRouteGeometries {
-		for _, b := range builders.DefaultImportBuilders(nil) {
+		for _, b := range builders.DefaultImportBuilders() {
 			if rgb, ok := b.(*builders.RouteGeometryBuilder); ok {
 				v.routeGeomBuilder = rgb
 			}

@@ -10,7 +10,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/internal/clock"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
@@ -50,7 +49,6 @@ func finderCheckLimitMax(limit *int, maxLimit int) uint64 {
 type Finder struct {
 	Clock     clock.Clock
 	db        tldb.Ext
-	places    *builders.PlaceIndex
 	fvslCache *serviceWindowCache
 }
 
@@ -60,12 +58,6 @@ func NewFinder(db tldb.Ext) *Finder {
 		fvslCache: newServiceWindowCache(db),
 	}
 	return finder
-}
-
-// SetPlaceIndex gives the finder admin areas in memory, which
-// StopPlacesByStopID reads instead of the database's.
-func (f *Finder) SetPlaceIndex(ix *builders.PlaceIndex) {
-	f.places = ix
 }
 
 func (f *Finder) PermFilter(ctx context.Context) *model.PermFilter {

@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/schema/ne"
 	"github.com/interline-io/transitland-lib/server/dbutil"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/interline-io/transitland-lib/tlxy"
@@ -331,8 +332,9 @@ func (f *Finder) StopsByLocationGroupIDs(ctx context.Context, limit *int, keys [
 }
 
 func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
-	if f.places == nil {
-		return f.stopPlacesByStopIdFallback(ctx, params)
+	places, err := ne.Places()
+	if err != nil {
+		return nil, queryErrs(ctx, len(params), err)
 	}
 
 	// Lookup any geometries that were not passed in
@@ -365,7 +367,7 @@ func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlac
 	// Lookup stop places in the place index
 	a := map[int]*model.StopPlace{}
 	for _, param := range params {
-		if area, ok := f.places.NearestAdmin(param.Point); ok {
+		if area, ok := places.NearestAdmin(param.Point); ok {
 			a[param.ID] = &model.StopPlace{
 				Adm0Name: &area.Admin,
 				Adm1Name: &area.Name,
@@ -379,27 +381,6 @@ func (f *Finder) StopPlacesByStopID(ctx context.Context, params []model.StopPlac
 		ret[idx] = a[param.ID]
 	}
 	return ret, nil
-}
-
-func (f *Finder) stopPlacesByStopIdFallback(ctx context.Context, params []model.StopPlaceParam) ([]*model.StopPlace, []error) {
-	// Fallback without a place index
-	var ids []int
-	for _, param := range params {
-		ids = append(ids, param.ID)
-	}
-	type result struct {
-		StopID int
-		model.StopPlace
-	}
-	var ents []result
-	detailedQuery := sq.Select("gtfs_stops.id as stop_id", "ne.name as adm1_name", "ne.admin as adm0_name").
-		From("ne_10m_admin_1_states_provinces ne").
-		Join("gtfs_stops on ST_Intersects(gtfs_stops.geometry, ne.geometry)").
-		Where(In("gtfs_stops.id", ids))
-	if err := dbutil.Select(ctx, f.db, detailedQuery, &ents); err != nil {
-		return nil, queryErrs(ctx, len(ids), err)
-	}
-	return arrangeMap(ids, ents, func(ent result) (int, *model.StopPlace) { return ent.StopID, &ent.StopPlace }), nil
 }
 
 func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive, permFilter *model.PermFilter, where *model.StopFilter) sq.SelectBuilder {

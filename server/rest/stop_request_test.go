@@ -5,9 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/interline-io/transitland-lib/ext/builders"
 	"github.com/interline-io/transitland-lib/internal/testconfig"
-	"github.com/interline-io/transitland-lib/schema/ne"
 	"github.com/interline-io/transitland-lib/server/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
@@ -213,25 +211,12 @@ func TestStopRequest_IncludeRoutes(t *testing.T) {
 	}
 }
 
-func TestStopRequest_PlaceIndex(t *testing.T) {
+func TestStopRequest_StopPlaces(t *testing.T) {
 	tc := testCase{
 		name:         "place",
 		h:            StopRequest{StopKey: "BA:FTVL"},
 		selector:     "stops.#.place.adm1_name",
 		expectSelect: []string{"California"},
-	}
-	type canSetPlaceIndex interface {
-		SetPlaceIndex(*builders.PlaceIndex)
-	}
-	cfg := testconfig.Config(t, testconfig.Options{})
-	ix, err := ne.PlaceIndex()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v, ok := cfg.Finder.(canSetPlaceIndex); !ok {
-		t.Fatal("finder can't take a place index")
-	} else {
-		v.SetPlaceIndex(ix)
 	}
 	checkTestCase(t, tc)
 }

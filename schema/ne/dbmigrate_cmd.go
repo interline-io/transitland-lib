@@ -21,10 +21,7 @@ import (
 )
 
 // Command loads Natural Earth admin boundaries and populated places into a
-// Postgres database. Lives next to the embedded shapefile data so consumers
-// that don't need to run this loader don't transitively pull the ~15MB of
-// zip files in by importing transitland-lib/cmds.
-
+// Postgres database.
 type Command struct {
 	DBURL     string
 	Overwrite bool
