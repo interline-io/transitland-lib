@@ -127,8 +127,8 @@ func (m *DBFeedManager) SaveValidationReport(ctx context.Context, fvid int, resu
 	return validator.SaveValidationReport(ctx, m.adapter, result, fvid, reportStorage)
 }
 
-func (m *DBFeedManager) EntityWriter(fvid int) adapters.Writer {
-	return &tldb.Writer{Adapter: m.adapter, FeedVersionID: fvid}
+func (m *DBFeedManager) EntityWriter(ctx context.Context, fvid int) (EntityWriter, error) {
+	return NopFinisher(&tldb.Writer{Adapter: m.adapter, FeedVersionID: fvid}), nil
 }
 
 func (m *DBFeedManager) OpenReader(ctx context.Context, fv *dmfr.FeedVersion, storage string) (adapters.Reader, error) {

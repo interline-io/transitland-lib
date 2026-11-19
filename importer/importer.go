@@ -2,11 +2,13 @@ package importer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/interline-io/log"
+	"github.com/interline-io/transitland-lib/adapters"
 	"github.com/interline-io/transitland-lib/copier"
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/ext/builders"
@@ -47,7 +49,8 @@ func ActivateFeedVersion(ctx context.Context, atx tldb.Adapter, fvid int) error 
 // feedmanager.NewDBFeedManager(adapter) for the database backend.
 //
 // The copy is not transactional; a failure leaves the rows the copier wrote, hidden behind a
-// failed import record. Activation, when requested, runs afterwards in its own transaction.
+// failed import record. The FeedManager's entity writer is finished or aborted before the record
+// is saved. Activation, when requested, runs afterwards in its own transaction.
 func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Options) (Result, error) {
 	// Get FV
 	importSource := opts.ImportSource
@@ -70,19 +73,45 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		fvi.ExceptionLog = "FeedVersionImport record already exists, skipping"
 		return Result{FeedVersionImport: fvi}, nil
 	}
+	// Finalize under WithoutCancel: a canceled caller ctx (commonly a client disconnect) must not
+	// strand the record in_progress, which would leave it hidden and refused by unimport, or leave
+	// the entity writer unfinished.
+	finishCtx := context.WithoutCancel(ctx)
+
+	// Open the entity writer before creating the record, so a writer that can't open fails the
+	// import before the import has a record.
+	w, err := fm.EntityWriter(ctx, fv.ID)
+	if err != nil {
+		return Result{FeedVersionImport: fvi}, err
+	}
 	// Create FVI
 	if _, err := fm.CreateFeedVersionImport(ctx, &fvi); err != nil {
 		// Serious error
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
+		if abortErr := w.Abort(finishCtx); abortErr != nil {
+			err = errors.Join(err, abortErr)
+		}
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// No enclosing transaction: one spanning the whole entity copy would pin the xmin horizon and
 	// stall autovacuum database-wide.
-	fviresult, errImport := importFeedVersion(ctx, fm, *fv, opts)
+	fviresult, errImport := importFeedVersion(ctx, fm, w, *fv, opts)
 
-	// Finalize under WithoutCancel: a cancelled caller ctx (commonly a client disconnect) must not
-	// strand the record in_progress, which would leave it hidden and refused by unimport.
-	finishCtx := context.WithoutCancel(ctx)
+	// The writer ends before the record is saved: a successful copy commits the writer's output
+	// with the final record, and a failed one discards the output.
+	if errImport == nil {
+		fviresult.ID = fvi.ID
+		fviresult.CreatedAt = fvi.CreatedAt
+		fviresult.FeedVersionID = fv.ID
+		fviresult.ImportSource = fvi.ImportSource
+		fviresult.ImportLevel = 4
+		fviresult.Success = true
+		fviresult.InProgress = false
+		fviresult.ExceptionLog = ""
+		errImport = w.Finish(finishCtx, fviresult)
+	} else if abortErr := w.Abort(finishCtx); abortErr != nil {
+		errImport = errors.Join(errImport, abortErr)
+	}
 
 	if errImport != nil {
 		// A failed record keeps the copied rows hidden until an unimport removes them.
@@ -98,14 +127,6 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 
 	// success and cleared in_progress is what makes the feed version's data visible.
 	log.For(ctx).Info().Msgf("Finalizing import")
-	fviresult.ID = fvi.ID
-	fviresult.CreatedAt = fvi.CreatedAt
-	fviresult.FeedVersionID = fv.ID
-	fviresult.ImportSource = fvi.ImportSource
-	fviresult.ImportLevel = 4
-	fviresult.Success = true
-	fviresult.InProgress = false
-	fviresult.ExceptionLog = ""
 	if err := fm.UpdateFeedVersionImport(finishCtx, &fviresult); err != nil {
 		// Finalize did not persist: the record is still in_progress and hidden, so report that
 		// state (needs an unimport) rather than the success we failed to write.
@@ -130,9 +151,9 @@ type canSetAllowPartial interface {
 	SetAllowPartial(bool)
 }
 
-// importFeedVersion runs the Copier from the feed version's reader into the entity sink,
-// returning the import counts.
-func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
+// importFeedVersion runs the Copier from the feed version's reader into w, returning the import
+// counts.
+func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, w adapters.Writer, fv dmfr.FeedVersion, opts Options) (dmfr.FeedVersionImport, error) {
 	fvi := dmfr.FeedVersionImport{}
 	fvi.FeedVersionID = fv.ID
 	// Get Reader
@@ -158,7 +179,7 @@ func importFeedVersion(ctx context.Context, fm feedmanager.FeedManager, fv dmfr.
 	fvi.InProgress = false
 
 	// Go
-	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, fm.EntityWriter(fv.ID), opts.Options)
+	cpResult, cpErr := copier.CopyWithOptions(ctx, reader, w, opts.Options)
 	if cpErr != nil {
 		return fvi, cpErr
 	}

@@ -58,8 +58,9 @@ type FeedManager interface {
 	// Persists a validation report.
 	SaveValidationReport(ctx context.Context, fvid int, result *validator.Result, reportStorage string) error
 
-	// The sink the Copier writes a feed version's GTFS entities to.
-	EntityWriter(fvid int) adapters.Writer
+	// Returns the sink for a feed version's GTFS entities. The import ends the
+	// sink with Finish or Abort before saving its result.
+	EntityWriter(ctx context.Context, fvid int) (EntityWriter, error)
 
 	// The Copier's source for a feed version's GTFS data, returned unopened.
 	OpenReader(ctx context.Context, fv *dmfr.FeedVersion, storage string) (adapters.Reader, error)
@@ -68,3 +69,32 @@ type FeedManager interface {
 	// than starting another, so the whole import commits or rolls back together.
 	WithTx(ctx context.Context, fn func(ctx context.Context, tx FeedManager) error) error
 }
+
+// EntityWriter receives the GTFS entities an import copies. The import then
+// calls exactly one of Finish and Abort, before it saves its result, so a
+// writer that stages its output can commit the output when the import
+// succeeds and discard the output when the import fails.
+type EntityWriter interface {
+	adapters.Writer
+
+	// Finish commits the writer's output, given the import's final record. An
+	// error fails the import.
+	Finish(ctx context.Context, fvi dmfr.FeedVersionImport) error
+
+	// Abort discards the writer's output after a failed import.
+	Abort(ctx context.Context) error
+}
+
+// NopFinisher returns w as an EntityWriter whose Finish and Abort do nothing,
+// for a writer that stages nothing, such as a tldb.Writer.
+func NopFinisher(w adapters.Writer) EntityWriter {
+	return nopFinisher{w}
+}
+
+type nopFinisher struct {
+	adapters.Writer
+}
+
+func (nopFinisher) Finish(context.Context, dmfr.FeedVersionImport) error { return nil }
+
+func (nopFinisher) Abort(context.Context) error { return nil }
