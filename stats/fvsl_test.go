@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testreader"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tt"
@@ -113,6 +114,41 @@ func TestNewFeedVersionServiceLevelsFromReader_Frequencies(t *testing.T) {
 	// Seven 10-minute runs a day: regular once, offset twice and meet four times
 	day := 7 * 600
 	assert.Equal(t, []int{day, day, day, day, day, day, day}, []int{a.Monday, a.Tuesday, a.Wednesday, a.Thursday, a.Friday, a.Saturday, a.Sunday})
+}
+
+// Feed stats run without validation, so service levels must count a trip only
+// when it has a first departure and a last arrival, and the arrival isn't earlier.
+func TestFeedVersionServiceLevelBuilder_UntimedEnds(t *testing.T) {
+	tcs := []struct {
+		name  string
+		first tt.Seconds
+		last  tt.Seconds
+	}{
+		{"no_last_arrival", tt.NewSeconds(8 * 3600), tt.Seconds{}},
+		{"no_first_departure", tt.Seconds{}, tt.NewSeconds(8 * 3600)},
+		{"backwards", tt.NewSeconds(9 * 3600), tt.NewSeconds(8 * 3600)},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := testreader.NewFrequencyTestFeed()
+			reader.TripList = append(reader.TripList, gtfs.Trip{TripID: tt.NewString("broken"), RouteID: tt.NewKey("route1"), ServiceID: tt.NewKey("service1")})
+			reader.StopTimeList = append(reader.StopTimeList,
+				gtfs.StopTime{TripID: tt.NewString("broken"), StopID: tt.NewKey("stop1"), StopSequence: tt.NewInt(1), ArrivalTime: tc.first, DepartureTime: tc.first},
+				gtfs.StopTime{TripID: tt.NewString("broken"), StopID: tt.NewKey("stop2"), StopSequence: tt.NewInt(2), ArrivalTime: tc.last, DepartureTime: tc.last},
+			)
+			stats, err := NewFeedStatsFromReader(reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(stats.ServiceLevels) != 1 {
+				t.Fatalf("got %d service levels, expected 1", len(stats.ServiceLevels))
+			}
+			// Only the frequency test feed's own trips count
+			a := stats.ServiceLevels[0]
+			day := 7 * 600
+			assert.Equal(t, []int{day, day, day, day, day, day, day}, []int{a.Monday, a.Tuesday, a.Wednesday, a.Thursday, a.Friday, a.Saturday, a.Sunday})
+		})
+	}
 }
 
 func TestServiceLevelDefaultWeek(t *testing.T) {

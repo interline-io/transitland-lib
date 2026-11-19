@@ -201,10 +201,14 @@ func (pp *FeedVersionServiceLevelBuilder) AfterWrite(eid string, ent tt.Entity, 
 		// Only track fixed-route trips with arrival/departure times
 		// Flex trips use time windows and don't have meaningful duration semantics
 		if len(stoptimes) > 1 && !gtfs.CheckFlexStopTimes(stoptimes).IsFlexTrip() {
-			d := stoptimes[len(stoptimes)-1].ArrivalTime.Int() - stoptimes[0].DepartureTime.Int()
-			pp.tripdurations[v.TripID.Val] = fvslTripInfo{
-				ServiceID: v.ServiceID.Val,
-				Duration:  d,
+			// Feed stats run without validation, so count a trip only when it has
+			// a first departure and a last arrival, and the arrival isn't earlier.
+			first, last := stoptimes[0].DepartureTime, stoptimes[len(stoptimes)-1].ArrivalTime
+			if first.Valid && last.Valid && last.Int() >= first.Int() {
+				pp.tripdurations[v.TripID.Val] = fvslTripInfo{
+					ServiceID: v.ServiceID.Val,
+					Duration:  last.Int() - first.Int(),
+				}
 			}
 		}
 	}
