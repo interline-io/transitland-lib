@@ -12,6 +12,7 @@ import (
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/dmfr"
+	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcsv"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -87,12 +88,10 @@ func (cmd *RebuildStatsCommand) Run(ctx context.Context) error {
 		defer writer.Close()
 	}
 	// Match import_cmd's default-query filter: skip soft-deleted and storage-less FVs.
-	q := cmd.Adapter.Sqrl().
+	q := dbfinder.WhereFeedVersionNotDeleted(cmd.Adapter.Sqrl().
 		Select("feed_versions.id").
 		From("feed_versions").
-		Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-		Where("current_feeds.deleted_at IS NULL").
-		Where("feed_versions.deleted_at IS NULL").
+		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")).
 		Where("feed_versions.sha1 <> ''").
 		Where("feed_versions.file <> ''").
 		OrderBy("feed_versions.id desc")

@@ -46,7 +46,7 @@ func fareAttributeSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBu
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_fare_attributes.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_fare_attributes.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_fare_attributes.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareRulesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.FareRule, error) {
@@ -73,7 +73,7 @@ func fareRuleSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_fare_rules.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_fare_rules.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_fare_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareMediaByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.FareMedia, error) {
@@ -110,7 +110,7 @@ func fareMediaSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilde
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_fare_media.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_fare_media.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_fare_media.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareProductsByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.FareProduct, error) {
@@ -159,7 +159,7 @@ func fareProductSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_fare_products.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_fare_products.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_fare_products.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareLegRulesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.FareLegRule, error) {
@@ -211,7 +211,7 @@ func fareLegRuleSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_fare_leg_rules.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_fare_leg_rules.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_fare_leg_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareLegJoinRulesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.FareLegJoinRule, error) {
@@ -240,7 +240,7 @@ func fareLegJoinRuleSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_fare_leg_join_rules.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_fare_leg_join_rules.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_fare_leg_join_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) FareTransferRulesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.FareTransferRule, error) {
@@ -270,7 +270,7 @@ func fareTransferRuleSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_fare_transfer_rules.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_fare_transfer_rules.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_fare_transfer_rules.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) RiderCategoriesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.RiderCategory, error) {
@@ -315,7 +315,7 @@ func riderCategorySelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_rider_categories.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_rider_categories.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_rider_categories.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) TimeframesByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.Timeframe, error) {
@@ -358,7 +358,7 @@ func timeframeSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_timeframes.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_timeframes.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_timeframes.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) AreasByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.Area, error) {
@@ -403,7 +403,7 @@ func areaSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_areas.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_areas.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_areas.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) NetworksByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.Network, error) {
@@ -448,7 +448,7 @@ func networkSelect(limit *int, after *model.Cursor, ids []int) sq.SelectBuilder 
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_networks.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_networks.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_networks.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) RouteNetworksByFeedVersionIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.RouteNetwork, error) {
@@ -472,7 +472,7 @@ func routeNetworkSelect(limit *int, after *model.Cursor) sq.SelectBuilder {
 	if after != nil && after.Valid && after.ID > 0 {
 		q = q.Where(sq.Gt{"gtfs_route_networks.id": after.ID})
 	}
-	return joinImported(q).OrderBy("gtfs_route_networks.id ASC").Limit(finderCheckLimit(limit))
+	return JoinImported(q).OrderBy("gtfs_route_networks.id ASC").Limit(finderCheckLimit(limit))
 }
 
 func (f *Finder) StopAreasByAreaIDs(ctx context.Context, limit *int, after *model.Cursor, keys []int) ([][]*model.StopArea, error) {
@@ -509,7 +509,7 @@ func stopAreaSelect(limit *int, after *model.Cursor, permFilter *model.PermFilte
 			q = q.Where(In("gtfs_stop_areas.id", where.Ids))
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q.OrderBy("gtfs_stop_areas.id ASC").Limit(finderCheckLimit(limit))
 }

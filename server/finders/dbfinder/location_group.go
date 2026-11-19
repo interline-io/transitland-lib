@@ -60,7 +60,7 @@ func locationGroupStopSelect(limit *int, after *model.Cursor, permFilter *model.
 			q = q.Where(In("gtfs_location_group_stops.id", where.Ids))
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q.OrderBy("gtfs_location_group_stops.id ASC").Limit(finderCheckLimit(limit))
 }

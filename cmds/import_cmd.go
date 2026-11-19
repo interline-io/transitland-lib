@@ -12,6 +12,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/importer"
+	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
 	sq "github.com/irees/squirrel"
@@ -176,12 +177,10 @@ func (cmd *ImportCommand) Run(ctx context.Context) error {
 	// If no ImportJobs specified, query database for feed versions to import
 	// FeedIDs are additive with existing ImportJobs
 	if len(cmd.FeedIDs) > 0 || len(cmd.ImportJobs) == 0 {
-		q := cmd.Adapter.Sqrl().
+		q := dbfinder.WhereFeedVersionNotDeleted(cmd.Adapter.Sqrl().
 			Select("feed_versions.id").
 			From("feed_versions").
-			Join("current_feeds ON current_feeds.id = feed_versions.feed_id").
-			Where("current_feeds.deleted_at IS NULL").
-			Where("feed_versions.deleted_at IS NULL").
+			Join("current_feeds ON current_feeds.id = feed_versions.feed_id")).
 			Where("feed_versions.sha1 <> ''").
 			Where("feed_versions.file <> ''")
 		if len(cmd.FeedIDs) > 0 {

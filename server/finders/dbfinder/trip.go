@@ -103,7 +103,7 @@ func frequencySelect(limit *int, after *model.Cursor, permFilter *model.PermFilt
 			q = q.Where(In("gtfs_frequencies.id", where.Ids))
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q.OrderBy("gtfs_frequencies.id ASC").Limit(finderCheckLimit(limit))
 }
@@ -394,7 +394,7 @@ func tripSelect(limit *int, after *model.Cursor, ids []int, active bool, permFil
 	}
 
 	// Handle permissions
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q, tripDates, nil
 }

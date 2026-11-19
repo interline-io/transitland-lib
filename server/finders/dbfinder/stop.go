@@ -91,7 +91,7 @@ func (f *Finder) StopObservationsByStopIDs(ctx context.Context, limit *int, wher
 	// A request can name any feed version, so each observation passes the permission
 	// check for its own.
 	//
-	// Not joinImported: an import doesn't write observations, so an unimport leaves them in
+	// Not JoinImported: an import doesn't write observations, so an unimport leaves them in
 	// place, and their feed version may be a container that is never imported at all.
 	q := sq.StatementBuilder.Select("gtfs_stops.id as stop_id", "obs.*").
 		From("ext_performance_stop_observations obs").
@@ -683,7 +683,7 @@ func stopSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActive
 	}
 
 	// Handle permissions
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

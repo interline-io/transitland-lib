@@ -89,7 +89,7 @@ func levelSelect(limit *int, after *model.Cursor, ids []int, permFilter *model.P
 			q = q.Where(sq.Eq{"gtfs_levels.level_id": *where.LevelID})
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q.OrderBy("gtfs_levels.id ASC").Limit(finderCheckLimit(limit))
 }
@@ -183,7 +183,7 @@ func pathwaySelect(limit *int, after *model.Cursor, ids []int, permFilter *model
 	}
 
 	// Handle permissions
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

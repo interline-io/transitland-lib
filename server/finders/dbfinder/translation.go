@@ -52,7 +52,7 @@ func translationSelect(limit *int, after *model.Cursor, permFilter *model.PermFi
 			q = q.Where(sq.Eq{"gtfs_translations.record_id": *where.RecordID})
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q.OrderBy("gtfs_translations.id ASC").Limit(finderCheckLimit(limit))
 }

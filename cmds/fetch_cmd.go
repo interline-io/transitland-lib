@@ -13,6 +13,7 @@ import (
 	"github.com/interline-io/transitland-lib/dmfr"
 	"github.com/interline-io/transitland-lib/feedmanager"
 	"github.com/interline-io/transitland-lib/fetch"
+	"github.com/interline-io/transitland-lib/server/finders/dbfinder"
 	"github.com/interline-io/transitland-lib/stats"
 	"github.com/interline-io/transitland-lib/tlcli"
 	"github.com/interline-io/transitland-lib/tldb"
@@ -176,10 +177,9 @@ func (cmd *FetchCommand) Run(ctx context.Context) error {
 
 	// Populate FetchJobs from database if none specified
 	if len(cmd.FetchJobs) == 0 {
-		q := adapter.Sqrl().
+		q := dbfinder.WhereFeedNotDeleted(adapter.Sqrl().
 			Select("*").
-			From("current_feeds").
-			Where("deleted_at IS NULL").
+			From("current_feeds")).
 			Where("spec = ?", "gtfs")
 		qstr, qargs, err := q.ToSql()
 		if err != nil {
