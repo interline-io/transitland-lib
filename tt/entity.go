@@ -171,7 +171,7 @@ func (ent DatabaseEntity) GetID() int {
 
 /////////////
 
-// Timestamps .
+// Timestamps records when a row was created and last updated.
 type Timestamps struct {
 	CreatedAt time.Time `csv:"-"`
 	UpdatedAt time.Time `csv:"-"`
@@ -184,6 +184,12 @@ func (ent *Timestamps) UpdateTimestamps() {
 		ent.CreatedAt = t
 	}
 	ent.UpdatedAt = t
+}
+
+// SetTimestamps sets CreatedAt and UpdatedAt.
+func (ent *Timestamps) SetTimestamps(createdAt, updatedAt time.Time) {
+	ent.CreatedAt = createdAt
+	ent.UpdatedAt = updatedAt
 }
 
 /////////////
