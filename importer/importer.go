@@ -87,19 +87,18 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 	// Create FVI
 	if _, err := fm.CreateFeedVersionImport(ctx, &fvi); err != nil {
 		// Serious error
+		err = errors.Join(err, abortWriter(finishCtx, w))
 		log.For(ctx).Error().Msgf("Error creating FeedVersionImport: %s", err.Error())
-		if abortErr := w.Abort(finishCtx); abortErr != nil {
-			err = errors.Join(err, abortErr)
-		}
 		return Result{FeedVersionImport: fvi}, err
 	}
 	// No enclosing transaction: one spanning the whole entity copy would pin the xmin horizon and
 	// stall autovacuum database-wide.
 	fviresult, errImport := importFeedVersion(ctx, fm, w, *fv, opts)
 
-	// The writer ends before the record is saved: a successful copy commits the writer's output
-	// with the final record, and a failed one discards the output.
+	// End the writer before saving the record: Finish after a successful copy, Abort after a
+	// failed one.
 	if errImport == nil {
+		log.For(ctx).Info().Msgf("Finalizing import")
 		fviresult.ID = fvi.ID
 		fviresult.CreatedAt = fvi.CreatedAt
 		fviresult.FeedVersionID = fv.ID
@@ -108,9 +107,11 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		fviresult.Success = true
 		fviresult.InProgress = false
 		fviresult.ExceptionLog = ""
-		errImport = w.Finish(finishCtx, fviresult)
-	} else if abortErr := w.Abort(finishCtx); abortErr != nil {
-		errImport = errors.Join(errImport, abortErr)
+		if err := w.Finish(finishCtx, fviresult); err != nil {
+			errImport = fmt.Errorf("error finishing entity writer: %w", err)
+		}
+	} else {
+		errImport = errors.Join(errImport, abortWriter(finishCtx, w))
 	}
 
 	if errImport != nil {
@@ -119,14 +120,16 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		fvi.InProgress = false
 		fvi.ExceptionLog = errImport.Error()
 		if err := fm.UpdateFeedVersionImport(finishCtx, &fvi); err != nil {
+			// The stored record is still in_progress. Report that state, and keep the error that
+			// failed the import.
 			log.For(ctx).Error().Msgf("Error saving FeedVersionImport: %s", err.Error())
-			return Result{FeedVersionImport: fvi}, err
+			fvi.InProgress = true
+			return Result{FeedVersionImport: fvi}, errors.Join(errImport, err)
 		}
 		return Result{FeedVersionImport: fvi}, errImport
 	}
 
 	// success and cleared in_progress is what makes the feed version's data visible.
-	log.For(ctx).Info().Msgf("Finalizing import")
 	if err := fm.UpdateFeedVersionImport(finishCtx, &fviresult); err != nil {
 		// Finalize did not persist: the record is still in_progress and hidden, so report that
 		// state (needs an unimport) rather than the success we failed to write.
@@ -145,6 +148,14 @@ func ImportFeedVersion(ctx context.Context, fm feedmanager.FeedManager, opts Opt
 		}
 	}
 	return Result{FeedVersionImport: fviresult}, nil
+}
+
+// abortWriter aborts w, labeling the error Abort returns.
+func abortWriter(ctx context.Context, w feedmanager.EntityWriter) error {
+	if err := w.Abort(ctx); err != nil {
+		return fmt.Errorf("error aborting entity writer: %w", err)
+	}
+	return nil
 }
 
 type canSetAllowPartial interface {

@@ -58,8 +58,9 @@ type FeedManager interface {
 	// Persists a validation report.
 	SaveValidationReport(ctx context.Context, fvid int, result *validator.Result, reportStorage string) error
 
-	// Returns the sink for a feed version's GTFS entities. The import ends the
-	// sink with Finish or Abort before saving its result.
+	// Returns the writer for a feed version's GTFS entities, ready for writes.
+	// ctx covers only opening the writer: the writes, Finish and Abort can run
+	// after ctx is canceled.
 	EntityWriter(ctx context.Context, fvid int) (EntityWriter, error)
 
 	// The Copier's source for a feed version's GTFS data, returned unopened.
@@ -70,23 +71,32 @@ type FeedManager interface {
 	WithTx(ctx context.Context, fn func(ctx context.Context, tx FeedManager) error) error
 }
 
-// EntityWriter receives the GTFS entities an import copies. The import then
-// calls exactly one of Finish and Abort, before it saves its result, so a
-// writer that stages its output can commit the output when the import
-// succeeds and discard the output when the import fails.
+// EntityWriter receives the GTFS entities an import copies.
+//
+// The import calls FeedManager.EntityWriter once, before it creates the import
+// record, and never calls the writer's Open or Close. Its last call on the
+// writer is exactly one of Finish and Abort. The import saves its record after
+// Finish, and the save can fail, so the saved record, not Finish, gates the
+// output, as it gates a database import's rows.
 type EntityWriter interface {
 	adapters.Writer
 
-	// Finish commits the writer's output, given the import's final record. An
-	// error fails the import.
+	// Finish commits the writer's output after a successful copy, given the
+	// import's final record. An error fails the import, and no Abort follows,
+	// so a Finish that fails must discard its own output.
 	Finish(ctx context.Context, fvi dmfr.FeedVersionImport) error
 
-	// Abort discards the writer's output after a failed import.
+	// Abort discards the writer's staged output when the import fails before
+	// Finish.
 	Abort(ctx context.Context) error
 }
 
 // NopFinisher returns w as an EntityWriter whose Finish and Abort do nothing,
 // for a writer that stages nothing, such as a tldb.Writer.
+//
+// The wrapper hides w's other methods: a copy with CopyExtraFiles set fails on
+// a wrapped tlcsv.Writer, and a wrapped EntityWriter loses its own Finish and
+// Abort.
 func NopFinisher(w adapters.Writer) EntityWriter {
 	return nopFinisher{w}
 }
