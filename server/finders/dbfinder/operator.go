@@ -63,8 +63,19 @@ func (f *Finder) OperatorsByFeedIDs(ctx context.Context, limit *int, where *mode
 	return arrangeGroup(keys, ents, func(ent *model.Operator) int { return ent.FeedID }), queryErr(ctx, err)
 }
 
+// FromOperatorsInFeed sets q to select from current_operators_in_feed, as coif, joined to
+// each row's feed, as current_feeds, and its Atlas operator, as co. It keeps the rows whose
+// feed isn't deleted and whose Atlas operator isn't deleted. A generated operator's row has
+// no Atlas operator, and stays.
+func FromOperatorsInFeed(q sq.SelectBuilder) sq.SelectBuilder {
+	q = q.From("current_operators_in_feed coif").
+		Join("current_feeds on current_feeds.id = coif.feed_id").
+		LeftJoin("current_operators co on co.id = coif.operator_id")
+	return WhereFeedNotDeleted(q).Where(sq.Eq{"co.deleted_at": nil})
+}
+
 func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBuilder {
-	q := sq.StatementBuilder.
+	q := FromOperatorsInFeed(sq.StatementBuilder.
 		Select(
 			"coif.id as id",
 			"coif.feed_id as feed_id",
@@ -79,12 +90,7 @@ func operatorSelectBase(distinct bool, where *model.OperatorFilter) sq.SelectBui
 			"co.operator_tags as operator_tags",
 			// Not linked to an operator record defined in Atlas: a virtual (generated) operator record.
 			"(coif.operator_id IS NULL) as generated",
-		).
-		From("current_operators_in_feed coif").
-		Join("current_feeds on current_feeds.id = coif.feed_id").
-		LeftJoin("current_operators co on co.id = coif.operator_id").
-		Where(sq.Eq{"current_feeds.deleted_at": nil}).
-		Where(sq.Eq{"co.deleted_at": nil}). // not present, or present but not deleted
+		)).
 		// Merging keeps each onestop id's first row: an Atlas operator's before a
 		// generated one, then the lowest id, so scan order never decides.
 		OrderBy("coif.resolved_onestop_id, coif.operator_id, coif.id")

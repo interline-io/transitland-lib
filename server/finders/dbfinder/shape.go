@@ -51,7 +51,7 @@ func shapeSelect(limit *int, after *model.Cursor, fvid int, permFilter *model.Pe
 			))
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

@@ -192,7 +192,7 @@ func pathwaySelect(limit *int, after *model.Cursor, ids []int, permFilter *model
             q = q.Where(sq.Eq{"gtfs_pathways.pathway_id": *where.PathwayID})
         }
     }
-    q = joinImported(q)
+    q = JoinImported(q)
     q = pfJoinCheckFv(q, permFilter)
     return q.OrderBy("gtfs_pathways.id ASC").Limit(finderCheckLimit(limit))
 }
@@ -201,7 +201,7 @@ func pathwaySelect(limit *int, after *model.Cursor, ids []int, permFilter *model
 Each select follows the same rules:
 - **One select per table.** Every finder of the table calls it with its own arguments, so the columns, gates and filters stay the same across finders.
 - **`lateralWrap` for lists under a parent.** It applies `limit` and `after` to each parent key, so a query across five feed versions returns up to `limit` records from each one, not `limit` in all.
-- **`joinImported`, the import gate.** It hides a feed version's records unless its import succeeded and no import or unimport is running.
+- **`JoinImported`, the import gate.** It hides a feed version's records unless its import succeeded and no import or unimport is running.
 - **`pfJoinCheckFv`, the permission filter.** It hides the records of deleted feeds and feed versions, and of feeds the caller can't see. Apply it even under a parent that passed the check, because the `feed_version_fetch` mutation returns a feed version without checking permissions.
 - **Ascending ids.** `after` takes the last id of the previous page, so the select orders by id.
 
@@ -604,7 +604,7 @@ func transferSelect(limit *int, after *model.Cursor, permFilter *model.PermFilte
             q = q.Where(sq.Eq{"gtfs_transfers.transfer_type": *where.TransferType})
         }
     }
-    q = joinImported(q)
+    q = JoinImported(q)
     q = pfJoinCheckFv(q, permFilter)
     return q.OrderBy("gtfs_transfers.id ASC").Limit(finderCheckLimit(limit))
 }
@@ -709,7 +709,7 @@ When adding a new entity to GraphQL, ensure you complete all these steps:
 - [ ] **Database Finder** (`server/finders/dbfinder/<entity>.go`)
   - [ ] Implement finder methods
   - [ ] Create one select function for the table, with explicit field enumeration (no `SELECT *`), and use it in every finder
-  - [ ] Apply `joinImported` and `pfJoinCheckFv` in the select, and order by id
+  - [ ] Apply `JoinImported` and `pfJoinCheckFv` in the select, and order by id
   - [ ] Wrap lists under a parent in `lateralWrap`
   - [ ] Use `arrangeBy()` and `arrangeGroup()` helpers
 

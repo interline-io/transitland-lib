@@ -268,7 +268,7 @@ func agencySelect(limit *int, after *model.Cursor, ids []int, onestopIDs []strin
 	}
 
 	// Handle permissions
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }
@@ -453,7 +453,7 @@ func placeSelect(_ *int, _ *model.Cursor, _ []int, level *model.PlaceAggregation
 	}
 
 	// Handle permissions
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }

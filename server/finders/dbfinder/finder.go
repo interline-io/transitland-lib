@@ -180,52 +180,45 @@ func escapeWordsWithSuffix(v string, sfx string) []string {
 	return ret
 }
 
-// joinImported restricts a select over imported entity rows to feed versions whose import
-// completed. It is applied to the entity selects: agency, place, route, stop, trip, shape,
-// pathway, level, frequency, transfer, translation, attribution, location group stop and
-// the fares entities. gatedRows applies it, with the permission check, to rows a request
-// selects by a raw id.
+// JoinImported joins each feed version in q to its import record, as fvgi, and keeps the
+// versions whose import succeeded and finished. q must join feed_versions.
 //
-// Excluded: an import still running (in_progress), and an import that failed and left rows
-// behind (success = false). Both columns are load-bearing and neither implies the other -- a
-// failed import ends with in_progress = false, and an unimport runs against a feed version
-// that still has success = true.
+// It hides the rows of an import still running (in_progress) and of one that failed
+// (success = false). Both columns are load-bearing and neither implies the other: a failed
+// import ends with in_progress = false, and an unimport runs against a feed version that
+// still has success = true. Active versions need the join too, since being active doesn't
+// mean a version's rows are intact. Selects that describe the import itself, such as feed
+// versions and validation reports, skip the join: they must still see failed and running
+// imports.
 //
-// Today the import and unimport each run in one transaction, so their partial states are
-// already invisible and this mostly restates that guarantee. It is a prerequisite rather
-// than a no-op: it is what will keep those states unreachable once they stop being
-// transactional, which is why it has to be deployed first.
+// Some reads of the tables in dmfr.GetFeedVersionTables().ImportedTables() still skip the join:
 //
-// Keyed off feed_versions.id rather than the entity table, so one clause covers every table:
-// each of these selects already inner joins feed_versions on its feed_version_id. Applied
-// unconditionally, including on the active path -- a feed version being active does not by
-// itself mean its data is intact.
-//
-// Feed version and validation report selects deliberately do not use this: they describe the
-// import itself, and must still see failed and in-progress ones.
-//
-// Not yet applied everywhere it needs to be. These still read tables in
-// dmfr.GetFeedVersionTables().ImportedTables() without a gate, and must be closed before the
-// import and unimport stop being transactional:
-//
-//   - The FeedVersion child resolvers -- geometry, feed_infos, locations, location_groups,
+//   - The FeedVersion child resolvers -- feed_infos, locations, location_groups,
 //     booking_rules -- and the stop_times reachable under locations. They hang off the
 //     feed version select, which is ungated by design, so nothing upstream covers them.
 //   - The operator and feed spatial filters, which reach imported tables through
-//     feed_states. These cannot use this helper as written: it keys off feed_versions.id,
-//     which is not in scope for them.
+//     feed_states, where feed_versions.id isn't in scope.
 //   - The entity update and delete mutations, which load the row to edit by the id from
 //     the request.
 //
-// Everything else that reads those tables is keyed by ids that can only have come from one of
-// the gated selects above.
-func joinImported(q sq.SelectBuilder) sq.SelectBuilder {
+// Every other read of those tables is keyed by ids that only a gated select returns.
+func JoinImported(q sq.SelectBuilder) sq.SelectBuilder {
 	return q.Join("feed_version_gtfs_imports fvgi on fvgi.feed_version_id = feed_versions.id and fvgi.success and not fvgi.in_progress")
 }
 
+// WhereFeedNotDeleted keeps the rows of q whose feed, joined as current_feeds, isn't deleted.
+func WhereFeedNotDeleted(q sq.SelectBuilder) sq.SelectBuilder {
+	return q.Where(sq.Eq{"current_feeds.deleted_at": nil})
+}
+
+// WhereFeedVersionNotDeleted keeps the rows of q whose feed version, joined as
+// feed_versions, and its feed, joined as current_feeds, aren't deleted.
+func WhereFeedVersionNotDeleted(q sq.SelectBuilder) sq.SelectBuilder {
+	return WhereFeedNotDeleted(q).Where(sq.Eq{"feed_versions.deleted_at": nil})
+}
+
 func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuilder {
-	q = q.Join("feed_states fsp on fsp.feed_id = current_feeds.id").
-		Where(sq.Eq{"current_feeds.deleted_at": nil})
+	q = WhereFeedNotDeleted(q.Join("feed_states fsp on fsp.feed_id = current_feeds.id"))
 	sqOr := sq.Or{}
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("fsp.feed_id", permFilter.GetAllowedFeeds()))
@@ -236,9 +229,7 @@ func pfJoinCheck(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuil
 }
 
 func pfJoinCheckFv(q sq.SelectBuilder, permFilter *model.PermFilter) sq.SelectBuilder {
-	q = q.Join("feed_states fsp on fsp.feed_id = feed_versions.feed_id").
-		Where(sq.Eq{"current_feeds.deleted_at": nil}).
-		Where(sq.Eq{"feed_versions.deleted_at": nil})
+	q = WhereFeedVersionNotDeleted(q.Join("feed_states fsp on fsp.feed_id = feed_versions.feed_id"))
 	sqOr := sq.Or{}
 	sqOr = append(sqOr, sq.Expr("fsp.public = true"))
 	sqOr = append(sqOr, In("feed_versions.feed_id", permFilter.GetAllowedFeeds()))
@@ -260,7 +251,7 @@ func gatedRows(table string, permFilter *model.PermFilter) sq.SelectBuilder {
 		From(table).
 		Join(fmt.Sprintf("feed_versions ON feed_versions.id = %s.feed_version_id", table)).
 		Join("current_feeds ON current_feeds.id = feed_versions.feed_id")
-	q = joinImported(q)
+	q = JoinImported(q)
 	return pfJoinCheckFv(q, permFilter)
 }
 

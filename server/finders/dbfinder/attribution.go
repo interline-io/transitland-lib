@@ -47,7 +47,7 @@ func attributionSelect(limit *int, after *model.Cursor, permFilter *model.PermFi
 			q = q.Where(sq.Eq{"gtfs_attributions.attribution_id": *where.AttributionID})
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q.OrderBy("gtfs_attributions.id ASC").Limit(finderCheckLimit(limit))
 }

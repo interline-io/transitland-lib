@@ -44,7 +44,7 @@ func transferSelect(limit *int, after *model.Cursor, permFilter *model.PermFilte
 			q = q.Where(sq.Eq{"gtfs_transfers.transfer_type": *where.TransferType})
 		}
 	}
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q.OrderBy("gtfs_transfers.id ASC").Limit(finderCheckLimit(limit))
 }

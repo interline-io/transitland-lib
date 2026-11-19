@@ -558,7 +558,7 @@ func routeSelect(limit *int, after *model.Cursor, ids []int, useActive *UseActiv
 	}
 
 	// Handle permissions
-	q = joinImported(q)
+	q = JoinImported(q)
 	q = pfJoinCheckFv(q, permFilter)
 	return q
 }
