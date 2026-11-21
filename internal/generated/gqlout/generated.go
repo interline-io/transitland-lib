@@ -11257,7 +11257,7 @@ An IANA timezone name (e.g., ` + "`" + `America/Los_Angeles` + "`" + `).
 scalar Timezone
 
 # Force resolver
-directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
 # Root query
 """
@@ -15289,7 +15289,7 @@ input FeedVersionInput {
   id: Int
 }
 
-"""Create or update a stop entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value. A text or number field set to null is cleared, except ` + "`" + `stop_id` + "`" + ` and ` + "`" + `location_type` + "`" + `, which can't be. ` + "`" + `parent` + "`" + ` and ` + "`" + `level` + "`" + ` are cleared with ` + "`" + `{id: null}` + "`" + `, and ` + "`" + `external_reference` + "`" + ` with null. ` + "`" + `geometry` + "`" + ` can't be cleared."""
+"""Create or update a stop entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value, and null clears a GTFS field; ` + "`" + `stop_id` + "`" + ` and ` + "`" + `location_type` + "`" + ` ignore null."""
 input StopSetInput {
   "Integer ID of the stop to update; omit when creating a new stop"
   id: Int
@@ -15298,34 +15298,34 @@ input StopSetInput {
   "Set GTFS location_type"
   location_type: Int
   "Set GTFS stop_code"
-  stop_code: String
+  stop_code: String @goField(omittable: true)
   "Set GTFS stop_desc"
-  stop_desc: String
+  stop_desc: String @goField(omittable: true)
   "Set GTFS stop_id"
   stop_id: String
   "Set GTFS stop_name"
-  stop_name: String
+  stop_name: String @goField(omittable: true)
   "Set GTFS stop_timezone"
-  stop_timezone: String
+  stop_timezone: String @goField(omittable: true)
   "Set GTFS stop_url"
-  stop_url: String
+  stop_url: String @goField(omittable: true)
   "Set GTFS wheelchair_boarding"
-  wheelchair_boarding: Int
+  wheelchair_boarding: Int @goField(omittable: true)
   "Set GTFS zone_id"
-  zone_id: String
+  zone_id: String @goField(omittable: true)
   "Set GTFS platform_code"
-  platform_code: String
+  platform_code: String @goField(omittable: true)
   "Set GTFS tts_stop_name"
-  tts_stop_name: String
+  tts_stop_name: String @goField(omittable: true)
   "Set GTFS stop_access"
-  stop_access: Int
+  stop_access: Int @goField(omittable: true)
   "Set stop geometry"
   geometry: Point
   "Reference to an existing parent station; only the ` + "`" + `id` + "`" + ` is used (the parent must already exist)"
   parent: StopSetInput
   "Reference to an existing level; only the ` + "`" + `id` + "`" + ` is used (the level must already exist)"
   level: LevelSetInput
-  "Set or update the cross-feed external reference for this stop; null, or a null ` + "`" + `target_feed_onestop_id` + "`" + `, removes it"
+  "Set or update the cross-feed external reference for this stop"
   external_reference: StopExternalReferenceSetInput
 }
 
@@ -15337,7 +15337,7 @@ input StopExternalReferenceSetInput {
   target_stop_id: String
 }
 
-"""Create or update a level entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value, and ` + "`" + `level_name` + "`" + ` set to null is cleared; ` + "`" + `level_id` + "`" + ` and ` + "`" + `level_index` + "`" + ` can't be. ` + "`" + `parent` + "`" + ` is cleared with ` + "`" + `{id: null}` + "`" + `. ` + "`" + `geometry` + "`" + ` can't be cleared."""
+"""Create or update a level entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value, and null clears a GTFS field; ` + "`" + `level_id` + "`" + ` and ` + "`" + `level_index` + "`" + ` ignore null."""
 input LevelSetInput {
   "Integer ID of the level to update; omit when creating a new level"
   id: Int
@@ -15346,7 +15346,7 @@ input LevelSetInput {
   "Set GTFS level_id"
   level_id: String
   "Set GTFS level_name"
-  level_name: String
+  level_name: String @goField(omittable: true)
   "Set GTFS level_index"
   level_index: Float
   "Set level geometry"
@@ -15355,7 +15355,7 @@ input LevelSetInput {
   parent: StopSetInput
 }
 
-"""Create or update a pathway entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value, and a measurement or sign set to null is cleared; ` + "`" + `pathway_id` + "`" + `, ` + "`" + `pathway_mode` + "`" + ` and ` + "`" + `is_bidirectional` + "`" + ` can't be. ` + "`" + `from_stop` + "`" + ` and ` + "`" + `to_stop` + "`" + ` take another stop's ` + "`" + `id` + "`" + `."""
+"""Create or update a pathway entity. For updates, supply ` + "`" + `id` + "`" + `. For creation, supply ` + "`" + `feed_version` + "`" + `. In an update, a field left out keeps its value, and null clears a GTFS field; ` + "`" + `pathway_id` + "`" + `, ` + "`" + `pathway_mode` + "`" + ` and ` + "`" + `is_bidirectional` + "`" + ` ignore null."""
 input PathwaySetInput {
   "Integer ID of the pathway to update; omit when creating a new pathway"
   id: Int
@@ -15368,19 +15368,19 @@ input PathwaySetInput {
   "Set GTFS is_bidirectional"
   is_bidirectional: Int
   "Set GTFS length"
-  length: Float
+  length: Float @goField(omittable: true)
   "Set GTFS traversal_time"
-  traversal_time: Int
+  traversal_time: Int @goField(omittable: true)
   "Set GTFS stair_count"
-  stair_count: Int
+  stair_count: Int @goField(omittable: true)
   "Set GTFS max_slope"
-  max_slope: Float
+  max_slope: Float @goField(omittable: true)
   "Set GTFS min_width"
-  min_width: Float
+  min_width: Float @goField(omittable: true)
   "Set GTFS signposted_as"
-  signposted_as: String
+  signposted_as: String @goField(omittable: true)
   "Set GTFS reverse_signposted_as"
-  reverse_signposted_as: String
+  reverse_signposted_as: String @goField(omittable: true)
   "Reference to an existing origin stop; only the ` + "`" + `id` + "`" + ` is used (the stop must already exist)"
   from_stop: StopSetInput
   "Reference to an existing destination stop; only the ` + "`" + `id` + "`" + ` is used (the stop must already exist)"
@@ -56235,7 +56235,7 @@ func (ec *executionContext) unmarshalInputLevelSetInput(ctx context.Context, obj
 			if err != nil {
 				return it, err
 			}
-			it.LevelID = graphql.OmittableOf(data)
+			it.LevelID = data
 		case "level_name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("level_name"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -56249,7 +56249,7 @@ func (ec *executionContext) unmarshalInputLevelSetInput(ctx context.Context, obj
 			if err != nil {
 				return it, err
 			}
-			it.LevelIndex = graphql.OmittableOf(data)
+			it.LevelIndex = data
 		case "geometry":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("geometry"))
 			data, err := ec.unmarshalOMultiPolygon2ᚖgithubᚗcomᚋinterlineᚑioᚋtransitlandᚑlibᚋttᚐMultiPolygon(ctx, v)
@@ -56648,21 +56648,21 @@ func (ec *executionContext) unmarshalInputPathwaySetInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
-			it.PathwayID = graphql.OmittableOf(data)
+			it.PathwayID = data
 		case "pathway_mode":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pathway_mode"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.PathwayMode = graphql.OmittableOf(data)
+			it.PathwayMode = data
 		case "is_bidirectional":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("is_bidirectional"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.IsBidirectional = graphql.OmittableOf(data)
+			it.IsBidirectional = data
 		case "length":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("length"))
 			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
@@ -57674,7 +57674,7 @@ func (ec *executionContext) unmarshalInputStopSetInput(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
-			it.LocationType = graphql.OmittableOf(data)
+			it.LocationType = data
 		case "stop_code":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_code"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -57695,7 +57695,7 @@ func (ec *executionContext) unmarshalInputStopSetInput(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
-			it.StopID = graphql.OmittableOf(data)
+			it.StopID = data
 		case "stop_name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stop_name"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -57779,7 +57779,7 @@ func (ec *executionContext) unmarshalInputStopSetInput(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
-			it.ExternalReference = graphql.OmittableOf(data)
+			it.ExternalReference = data
 		}
 	}
 	return it, nil

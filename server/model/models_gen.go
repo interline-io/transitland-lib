@@ -803,18 +803,18 @@ type LevelFilter struct {
 	LevelID *string `json:"level_id,omitempty"`
 }
 
-// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and `level_name` set to null is cleared; `level_id` and `level_index` can't be. `parent` is cleared with `{id: null}`. `geometry` can't be cleared.
+// Create or update a level entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and null clears a GTFS field; `level_id` and `level_index` ignore null.
 type LevelSetInput struct {
 	// Integer ID of the level to update; omit when creating a new level
 	ID *int `json:"id,omitempty"`
 	// Feed version this level belongs to (required when creating a new level)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS level_id
-	LevelID graphql.Omittable[*string] `json:"level_id,omitempty"`
+	LevelID *string `json:"level_id,omitempty"`
 	// Set GTFS level_name
 	LevelName graphql.Omittable[*string] `json:"level_name,omitempty"`
 	// Set GTFS level_index
-	LevelIndex graphql.Omittable[*float64] `json:"level_index,omitempty"`
+	LevelIndex *float64 `json:"level_index,omitempty"`
 	// Set level geometry
 	Geometry *tt.MultiPolygon `json:"geometry,omitempty"`
 	// Reference to an existing parent station; only the `id` is used (the parent must already exist)
@@ -923,18 +923,18 @@ type PathwayFilter struct {
 	PathwayMode *int `json:"pathway_mode,omitempty"`
 }
 
-// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and a measurement or sign set to null is cleared; `pathway_id`, `pathway_mode` and `is_bidirectional` can't be. `from_stop` and `to_stop` take another stop's `id`.
+// Create or update a pathway entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and null clears a GTFS field; `pathway_id`, `pathway_mode` and `is_bidirectional` ignore null.
 type PathwaySetInput struct {
 	// Integer ID of the pathway to update; omit when creating a new pathway
 	ID *int `json:"id,omitempty"`
 	// Feed version this pathway belongs to (required when creating a new pathway)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS pathway_id
-	PathwayID graphql.Omittable[*string] `json:"pathway_id,omitempty"`
+	PathwayID *string `json:"pathway_id,omitempty"`
 	// Set GTFS pathway_mode
-	PathwayMode graphql.Omittable[*int] `json:"pathway_mode,omitempty"`
+	PathwayMode *int `json:"pathway_mode,omitempty"`
 	// Set GTFS is_bidirectional
-	IsBidirectional graphql.Omittable[*int] `json:"is_bidirectional,omitempty"`
+	IsBidirectional *int `json:"is_bidirectional,omitempty"`
 	// Set GTFS length
 	Length graphql.Omittable[*float64] `json:"length,omitempty"`
 	// Set GTFS traversal_time
@@ -1524,20 +1524,20 @@ type StopPlace struct {
 	Adm0Iso *string `json:"adm0_iso,omitempty"`
 }
 
-// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value. A text or number field set to null is cleared, except `stop_id` and `location_type`, which can't be. `parent` and `level` are cleared with `{id: null}`, and `external_reference` with null. `geometry` can't be cleared.
+// Create or update a stop entity. For updates, supply `id`. For creation, supply `feed_version`. In an update, a field left out keeps its value, and null clears a GTFS field; `stop_id` and `location_type` ignore null.
 type StopSetInput struct {
 	// Integer ID of the stop to update; omit when creating a new stop
 	ID *int `json:"id,omitempty"`
 	// Feed version this stop belongs to (required when creating a new stop)
 	FeedVersion *FeedVersionInput `json:"feed_version,omitempty"`
 	// Set GTFS location_type
-	LocationType graphql.Omittable[*int] `json:"location_type,omitempty"`
+	LocationType *int `json:"location_type,omitempty"`
 	// Set GTFS stop_code
 	StopCode graphql.Omittable[*string] `json:"stop_code,omitempty"`
 	// Set GTFS stop_desc
 	StopDesc graphql.Omittable[*string] `json:"stop_desc,omitempty"`
 	// Set GTFS stop_id
-	StopID graphql.Omittable[*string] `json:"stop_id,omitempty"`
+	StopID *string `json:"stop_id,omitempty"`
 	// Set GTFS stop_name
 	StopName graphql.Omittable[*string] `json:"stop_name,omitempty"`
 	// Set GTFS stop_timezone
@@ -1560,8 +1560,8 @@ type StopSetInput struct {
 	Parent *StopSetInput `json:"parent,omitempty"`
 	// Reference to an existing level; only the `id` is used (the level must already exist)
 	Level *LevelSetInput `json:"level,omitempty"`
-	// Set or update the cross-feed external reference for this stop; null, or a null `target_feed_onestop_id`, removes it
-	ExternalReference graphql.Omittable[*StopExternalReferenceSetInput] `json:"external_reference,omitempty"`
+	// Set or update the cross-feed external reference for this stop
+	ExternalReference *StopExternalReferenceSetInput `json:"external_reference,omitempty"`
 }
 
 // StopTimeEvent combines scheduled arrival/departure data with data sourced from GTFS-RT.

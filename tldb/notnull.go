@@ -43,7 +43,7 @@ func (e *NotNullFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 // change, unlike NotNullFilter's defaults.
 type EmptyTextFilter struct{}
 
-// Filter sets an entity's empty text fields.
+// Filter sets an entity's unset text fields to empty strings.
 func (e *EmptyTextFilter) Filter(ent tt.Entity, emap *tt.EntityMap) error {
 	switch v := ent.(type) {
 	case *gtfs.Agency:
