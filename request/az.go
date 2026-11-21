@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -205,7 +206,28 @@ func (r Az) getFullKey(key string) string {
 	return azKey
 }
 
+// azClients holds each account's credential and blob client. Both are safe for
+// concurrent use, and the credential caches its token, so calls to an account
+// share one token rather than each requesting its own.
+var (
+	azClientsMu sync.Mutex
+	azClients   = map[string]azClient{}
+)
+
+// azClient is an account's credential and the blob client built on it.
+type azClient struct {
+	credential *azidentity.DefaultAzureCredential
+	client     *azblob.Client
+}
+
+// getAzBlobClient returns the account's credential and blob client, built on
+// first use.
 func getAzBlobClient(account string) (*azidentity.DefaultAzureCredential, *azblob.Client, error) {
+	azClientsMu.Lock()
+	defer azClientsMu.Unlock()
+	if c, ok := azClients[account]; ok {
+		return c.credential, c.client, nil
+	}
 	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return nil, nil, err
@@ -224,5 +246,6 @@ func getAzBlobClient(account string) (*azidentity.DefaultAzureCredential, *azblo
 	if err != nil {
 		return nil, nil, err
 	}
+	azClients[account] = azClient{credential: credential, client: client}
 	return credential, client, nil
 }

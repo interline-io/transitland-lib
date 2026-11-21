@@ -22,6 +22,29 @@ func TestAz(t *testing.T) {
 	testBucket(t, ctx, b)
 }
 
+// TestGetAzBlobClient checks that calls to one account share a credential and
+// client, and so share its token.
+func TestGetAzBlobClient(t *testing.T) {
+	cred1, client1, err := getAzBlobClient("myaccount.blob.core.windows.net")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cred2, client2, err := getAzBlobClient("myaccount.blob.core.windows.net")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cred1 != cred2 || client1 != client2 {
+		t.Error("a second call to the account built a new credential or client")
+	}
+	_, other, err := getAzBlobClient("otheraccount.blob.core.windows.net")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other == client1 {
+		t.Error("two accounts share a client")
+	}
+}
+
 func TestNewAzFromUrl(t *testing.T) {
 	tests := []struct {
 		name          string
