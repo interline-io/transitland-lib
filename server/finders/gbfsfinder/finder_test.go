@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/interline-io/transitland-lib/internal/gbfs"
 	"github.com/interline-io/transitland-lib/server/caches/kvcache"
 	"github.com/interline-io/transitland-lib/server/model"
+	"github.com/interline-io/transitland-lib/server/testutil"
 	"github.com/interline-io/transitland-lib/testdata"
 	"github.com/interline-io/transitland-lib/tlxy"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,6 +57,117 @@ func TestGbfsFinder(t *testing.T) {
 
 }
 
+func TestGbfsFinder_GetFeed(t *testing.T) {
+	ctx := context.Background()
+	gbf := NewFinder(kvcache.NewMemoryStore())
+	defer gbf.Close()
+	if err := testSetupGbfs(gbf); err != nil {
+		t.Fatal(err)
+	}
+
+	feed, ok := gbf.GetFeed(ctx, "gbfs-test")
+	assert.True(t, ok)
+	assert.NotEmpty(t, feed.GbfsFeed.StationInformation)
+	assert.NotEmpty(t, feed.Bikes)
+
+	_, ok = gbf.GetFeed(ctx, "gbfs-other")
+	assert.False(t, ok)
+}
+
+// A process that did not run a fetch has to see it anyway. Without the
+// announcement a second finder serves its first read until the 24 hour expiry.
+func TestGbfsFinder_FollowsOtherProcesses(t *testing.T) {
+	if a, ok := testutil.CheckTestRedisClient(); !ok {
+		t.Skip(a)
+		return
+	}
+	ctx := context.Background()
+	client := testutil.MustOpenTestRedisClient(t)
+	writer := NewFinder(kvcache.NewRedisStore(client))
+	defer writer.Close()
+	reader := NewFinder(kvcache.NewRedisStore(client))
+	defer reader.Close()
+
+	topic := fmt.Sprintf("gbfs-follow-%d", time.Now().UnixNano())
+	named := func(name string) gbfs.GbfsFeed {
+		return gbfs.GbfsFeed{SystemInformation: &gbfs.SystemInformation{Name: tt.NewString(name)}}
+	}
+	// Rewritten on each tick, so an announcement that races the reader's
+	// subscription setup is retried.
+	converges := func(name string) {
+		t.Helper()
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.NoError(c, writer.AddData(ctx, topic, named(name)))
+			feed, ok := reader.GetFeed(ctx, topic)
+			if assert.True(c, ok) {
+				assert.Equal(c, name, feed.GbfsFeed.SystemInformation.Name.Val)
+			}
+		}, 5*time.Second, 100*time.Millisecond, "the reader should adopt %q", name)
+	}
+
+	if err := writer.AddData(ctx, topic, named("first")); err != nil {
+		t.Fatal(err)
+	}
+	feed, ok := reader.GetFeed(ctx, topic)
+	assert.True(t, ok)
+	assert.Equal(t, "first", feed.GbfsFeed.SystemInformation.Name.Val)
+	converges("second")
+
+	// Every fetch in the fleet is announced, and a finder re-reads only what it
+	// holds. Announcements arrive in order, so once a later one is adopted the
+	// unheld topic's has been seen and passed over.
+	unheld := topic + "-unheld"
+	if err := writer.AddData(ctx, unheld, named("unheld")); err != nil {
+		t.Fatal(err)
+	}
+	converges("third")
+	assert.False(t, reader.cache.Contains(unheld), "an announcement does not load a topic this finder never read")
+}
+
+// orderStore records the writes a finder makes. It announces nothing.
+type orderStore struct {
+	*kvcache.MemoryStore
+	ops []string
+}
+
+func (s *orderStore) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	s.ops = append(s.ops, "set")
+	return s.MemoryStore.Set(ctx, key, value, ttl)
+}
+
+func (s *orderStore) HSet(ctx context.Context, key string, field string, value string) error {
+	s.ops = append(s.ops, "hset")
+	return s.MemoryStore.HSet(ctx, key, field, value)
+}
+
+func (s *orderStore) Publish(ctx context.Context, channel string, payload []byte) error {
+	s.ops = append(s.ops, "publish")
+	return nil
+}
+
+func (s *orderStore) Subscribe(ctx context.Context, channel string) (kvcache.Subscription, error) {
+	return idleSubscription{}, nil
+}
+
+type idleSubscription struct{}
+
+func (idleSubscription) Messages() <-chan []byte { return nil }
+
+func (idleSubscription) Close() error { return nil }
+
+// The announcement goes last. A finder re-reading on it has to find the new
+// data, and a failed one should cost other processes their freshness, not the
+// data or its index.
+func TestGbfsFinder_AnnouncesLast(t *testing.T) {
+	store := &orderStore{MemoryStore: kvcache.NewMemoryStore()}
+	gbf := NewFinder(store)
+	defer gbf.Close()
+	if err := gbf.AddData(context.Background(), "gbfs-test", gbfs.GbfsFeed{}); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, []string{"set", "hset", "hset", "publish"}, store.ops)
+}
+
 func testSetupGbfs(gbf model.GbfsFinder) error {
 	// Setup
 	sourceFeedId := "gbfs-test"
@@ -67,8 +181,9 @@ func testSetupGbfs(gbf model.GbfsFinder) error {
 		return err
 	}
 	for _, feed := range feeds {
-		key := fmt.Sprintf("%s:%s", sourceFeedId, feed.SystemInformation.Language.Val)
-		gbf.AddData(context.Background(), key, feed)
+		if err := gbf.AddData(context.Background(), sourceFeedId, feed); err != nil {
+			return err
+		}
 	}
 	return nil
 }
