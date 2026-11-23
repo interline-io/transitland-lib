@@ -58,9 +58,14 @@ type Config struct {
 	// RestPrefix for the REST mount), used to build absolute artifact download
 	// links that are correct behind a path-rewriting ingress. Empty yields
 	// host-relative links.
-	JobsPrefix      string
-	Storage         string
-	RTStorage       string
+	JobsPrefix string
+	Storage    string
+	RTStorage  string
+	// RTSpool, when set, receives every fetched message of the URL types in
+	// RTSpoolURLTypes, for every feed, as input to batch jobs. See
+	// fetch.RTFetchOptions.Spool.
+	RTSpool         string
+	RTSpoolURLTypes []string
 	ArtifactStorage string // job-artifact storage URL; no fallback to Storage
 	// ArtifactStoreFactory is the unscoped read/serve side (jobserver) and the
 	// producer of per-job scoped handles (see JobArtifacts). The per-job handle
