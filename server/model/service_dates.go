@@ -67,8 +67,8 @@ func mapIntoServiceWindow(s time.Time, fvsw *ServiceWindow) *tt.Date {
 	// parses as midnight UTC, and comparing instants misplaces the window's
 	// first or last day.
 	local := tzTruncate(s, loc)
-	day := civilDate(local.Val)
-	if !day.Before(civilDate(fvsw.StartDate)) && !day.After(civilDate(fvsw.EndDate)) {
+	day := CivilDate(local.Val)
+	if !day.Before(CivilDate(fvsw.StartDate)) && !day.After(CivilDate(fvsw.EndDate)) {
 		return local
 	}
 	dow := int(local.Val.Weekday()) - 1
@@ -78,11 +78,46 @@ func mapIntoServiceWindow(s time.Time, fvsw *ServiceWindow) *tt.Date {
 	return tzTruncate(fvsw.FallbackWeek.AddDate(0, 0, dow), loc)
 }
 
-// civilDate returns t's calendar date in its own location, as midnight UTC, so
+// CivilDate returns t's calendar date in its own location, as midnight UTC, so
 // dates compare as dates whatever their time of day.
-func civilDate(t time.Time) time.Time {
+func CivilDate(t time.Time) time.Time {
 	y, m, d := t.Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+}
+
+// SimilarRouteDates returns the dates Route.similar_routes compares trips on:
+// the filter's service dates as given, or its relative date counted from
+// nowLocal and the days after it, one by default. Neither moves into a fallback
+// week. Nil when the filter gives no dates, or its relative date does not
+// resolve.
+func SimilarRouteDates(where *SimilarRouteFilter, nowLocal time.Time) []time.Time {
+	if where == nil {
+		return nil
+	}
+	var ret []time.Time
+	if len(where.ServiceDates) > 0 {
+		for _, d := range where.ServiceDates {
+			if d != nil && d.Valid {
+				ret = append(ret, CivilDate(d.Val))
+			}
+		}
+		return ret
+	}
+	if where.RelativeDate == nil {
+		return nil
+	}
+	start, err := ResolveRelativeDate(*where.RelativeDate, nowLocal)
+	if err != nil {
+		return nil
+	}
+	days := 1
+	if where.Days != nil {
+		days = *where.Days
+	}
+	for i := 0; i < days; i++ {
+		ret = append(ret, CivilDate(start.AddDate(0, 0, i)))
+	}
+	return ret
 }
 
 // ResolveServiceDate resolves a filter's date inputs into the service date to
