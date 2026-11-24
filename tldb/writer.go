@@ -12,7 +12,7 @@ import (
 
 var notNullFilter = &NotNullFilter{}
 
-var emptyText = &emptyTextFilter{}
+var emptyText = &EmptyTextFilter{}
 
 // OpenWriter opens & creates a db writer
 func OpenWriter(dburl string, create bool) (*Writer, error) {
