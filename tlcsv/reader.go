@@ -327,9 +327,7 @@ func (reader *Reader) TripsWithStopTimes(ids ...string) chan gtfs.TripStopTimes 
 			if _, ok := counts[tid]; ok {
 				return
 			}
-			e := gtfs.Trip{}
-			loadRow(&e, row)
-			out <- gtfs.TripStopTimes{Valid: true, Trip: e}
+			out <- gtfs.TripStopTimes{Valid: true, Trip: loadTrip(row)}
 		})
 	}()
 	return out
@@ -413,11 +411,20 @@ func (reader *Reader) readTripsForIDs(ids []string) map[string][]gtfs.Trip {
 		if _, ok := set[tid]; !ok {
 			return
 		}
-		e := gtfs.Trip{}
-		loadRow(&e, row)
-		tripRows[tid] = append(tripRows[tid], e)
+		tripRows[tid] = append(tripRows[tid], loadTrip(row))
 	})
 	return tripRows
+}
+
+// loadTrip loads a trip from its trips.txt row. It clones the row's fields first,
+// so a map that keeps a trip's ids doesn't keep the whole row.
+func loadTrip(row Row) gtfs.Trip {
+	for i := range row.Row {
+		row.Row[i] = strings.Clone(row.Row[i])
+	}
+	e := gtfs.Trip{}
+	loadRow(&e, row)
+	return e
 }
 
 // emitJoinedTrip emits one trip joined with its stop_times (sorted by stop_sequence).
