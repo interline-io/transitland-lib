@@ -184,6 +184,28 @@ func (mr *Reader) CalendarDates() chan gtfs.CalendarDate {
 	return out
 }
 
+// CalendarDatesByServiceID sends each service's calendar dates grouped together,
+// in first-appearance order.
+func (mr *Reader) CalendarDatesByServiceID(...string) chan []gtfs.CalendarDate {
+	out := make(chan []gtfs.CalendarDate, bufferSize)
+	go func() {
+		groups := map[string][]gtfs.CalendarDate{}
+		var order []string
+		for _, ent := range mr.CalendarDateList {
+			sid := ent.ServiceID.Val
+			if _, ok := groups[sid]; !ok {
+				order = append(order, sid)
+			}
+			groups[sid] = append(groups[sid], ent)
+		}
+		for _, sid := range order {
+			out <- groups[sid]
+		}
+		close(out)
+	}()
+	return out
+}
+
 // FareAttributes .
 func (mr *Reader) FareAttributes() chan gtfs.FareAttribute {
 	out := make(chan gtfs.FareAttribute, bufferSize)

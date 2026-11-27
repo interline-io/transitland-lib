@@ -225,6 +225,44 @@ func (reader *Reader) Calendars() chan gtfs.Calendar {
 	return ReadEntities[gtfs.Calendar](reader, GetTableName(&gtfs.Calendar{}))
 }
 
+// CalendarDatesByServiceID sends each service's calendar dates grouped together.
+func (reader *Reader) CalendarDatesByServiceID(serviceIDs ...string) chan []gtfs.CalendarDate {
+	if len(serviceIDs) == 0 {
+		q := reader.Adapter.Sqrl().Select("id").From("gtfs_calendars").OrderBy("id")
+		if len(reader.FeedVersionIDs) == 1 {
+			q = q.Where("feed_version_id = ?", reader.FeedVersionIDs[0])
+		} else if len(reader.FeedVersionIDs) > 1 {
+			q = q.Where(sq.Eq{"feed_version_id": reader.FeedVersionIDs})
+		}
+		qstr, args, err := q.ToSql()
+		check(err)
+		check(reader.Adapter.Select(context.TODO(), &serviceIDs, qstr, args...))
+	}
+	out := make(chan []gtfs.CalendarDate, bufferSize)
+	go func() {
+		for _, chunk := range chunkStrings(serviceIDs, 1000) {
+			ents := []gtfs.CalendarDate{}
+			qstr, args, err := reader.Where().From("gtfs_calendar_dates").Where(sq.Eq{"service_id": chunk}).OrderBy("service_id", "id").ToSql()
+			check(err)
+			check(reader.Adapter.Select(context.TODO(), &ents, qstr, args...))
+			// split by service
+			var cc []gtfs.CalendarDate
+			for _, cd := range ents {
+				if len(cc) > 0 && cc[len(cc)-1].ServiceID != cd.ServiceID {
+					out <- cc
+					cc = nil
+				}
+				cc = append(cc, cd)
+			}
+			if len(cc) > 0 {
+				out <- cc
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
 func (reader *Reader) CalendarDates() chan gtfs.CalendarDate {
 	return ReadEntities[gtfs.CalendarDate](reader, GetTableName(&gtfs.CalendarDate{}))
 }

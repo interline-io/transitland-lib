@@ -244,10 +244,11 @@ func stopDeparturesSelect(fvid int, entityIDs []int, entityType stopTimeEntityTy
 
 	// Each entity's departures in order, for firstDepartures, or with RouteLimit
 	// each route's departures at each entity. A stop time names exactly one
-	// stop, location or location group.
-	entityRank := "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts.departure_time_freq, gtfs_trips.id) AS entity_rank"
+	// stop, location or location group. Stop sequence orders a trip's visits to
+	// one entity, which tie when they share a departure time or have none.
+	entityRank := "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts.departure_time_freq, gtfs_trips.id, sts.stop_sequence) AS entity_rank"
 	if where != nil && where.RouteLimit != nil {
-		entityRank = "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id, gtfs_trips.route_id order by sts.departure_time_freq, gtfs_trips.id) AS entity_rank"
+		entityRank = "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id, gtfs_trips.route_id order by sts.departure_time_freq, gtfs_trips.id, sts.stop_sequence) AS entity_rank"
 	}
 
 	// Build main query with CTEs
@@ -428,10 +429,11 @@ func stopDeparturesMaterializedSelect(fvid int, entityIDs []int, entityType stop
 
 	// Each entity's departures in order, for firstDepartures, or with RouteLimit
 	// each route's departures at each entity. A stop time names exactly one
-	// stop, location or location group.
-	entityRank := "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts_freq.departure_time_freq, gtfs_trips.id) AS entity_rank"
+	// stop, location or location group. Stop sequence orders a trip's visits to
+	// one entity, which tie when they share a departure time or have none.
+	entityRank := "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id order by sts_freq.departure_time_freq, gtfs_trips.id, sts.stop_sequence) AS entity_rank"
 	if where != nil && where.RouteLimit != nil {
-		entityRank = "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id, gtfs_trips.route_id order by sts_freq.departure_time_freq, gtfs_trips.id) AS entity_rank"
+		entityRank = "row_number() over (partition by sts.stop_id, sts.location_id, sts.location_group_id, gtfs_trips.route_id order by sts_freq.departure_time_freq, gtfs_trips.id, sts.stop_sequence) AS entity_rank"
 	}
 
 	// Build main query with CTEs

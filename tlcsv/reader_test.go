@@ -178,6 +178,65 @@ func TestReader_TripsWithStopTimes_Grouping(t *testing.T) {
 	}
 }
 
+// TestReader_CalendarDatesByServiceID reads an interleaved calendar_dates.txt,
+// which takes the chunked path: each service's rows still come together, the
+// services in first-appearance order and their rows in file order.
+func TestReader_CalendarDatesByServiceID(t *testing.T) {
+	dir := t.TempDir()
+	w, err := NewWriter(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Open(); err != nil {
+		t.Fatal(err)
+	}
+	cd := func(sid string, date string, exceptionType int) tt.Entity {
+		d, err := tt.ParseDate(date)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return &gtfs.CalendarDate{ServiceID: tt.NewKey(sid), Date: d, ExceptionType: tt.NewInt(exceptionType)}
+	}
+	if _, err := w.AddEntities([]tt.Entity{
+		cd("a", "20260101", 1),
+		cd("b", "20260102", 2),
+		cd("a", "20260103", 2),
+		cd("b", "20260104", 1),
+		cd("c", "20260105", 1),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	old := chunkSize
+	chunkSize = 2
+	defer func() { chunkSize = old }()
+
+	reader, err := NewReader(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reader.Open(); err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	var got [][]string
+	for grp := range reader.CalendarDatesByServiceID() {
+		var rows []string
+		for _, cd := range grp {
+			rows = append(rows, cd.ServiceID.Val+" "+cd.Date.ToCsv())
+		}
+		got = append(got, rows)
+	}
+	assert.Equal(t, [][]string{
+		{"a 20260101", "a 20260103"},
+		{"b 20260102", "b 20260104"},
+		{"c 20260105"},
+	}, got)
+}
+
 func TestReader_ShapesByShapeID_Order(t *testing.T) {
 	// Grouped file (example feed): shapes emit in first-appearance order via the
 	// single-pass fast path.

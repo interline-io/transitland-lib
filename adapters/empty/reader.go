@@ -43,6 +43,11 @@ func (mr *Reader) ShapesByShapeID(...string) chan []gtfs.Shape {
 	return readNullEntities[[]gtfs.Shape](mr)
 }
 
+// CalendarDatesByServiceID .
+func (mr *Reader) CalendarDatesByServiceID(...string) chan []gtfs.CalendarDate {
+	return readNullEntities[[]gtfs.CalendarDate](mr)
+}
+
 func (mr *Reader) Stops() chan gtfs.Stop {
 	return readNullEntities[gtfs.Stop](mr)
 }
