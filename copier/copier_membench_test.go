@@ -81,9 +81,11 @@ func TestCopierBaselineMem(t *testing.T) {
 // TestCopierImportDefaultsMem is the ceiling: the full default stack an import runs —
 // the minimal validators, the shape geometry cache, and DefaultImportBuilders (route
 // geometries, route stops, headways, convex hulls, agency places) — against a null
-// writer, so it exercises everything a real import does without a database.
+// writer, so it exercises everything a real import does without a database. Service
+// IDs are normalized, as an import normalizes them, so generated calendars reach the
+// builders.
 func TestCopierImportDefaultsMem(t *testing.T) {
-	opts := copier.Options{}
+	opts := copier.Options{NormalizeServiceIDs: true}
 	for _, b := range builders.DefaultImportBuilders() {
 		opts.AddExtension(b)
 	}

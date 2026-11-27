@@ -93,6 +93,9 @@ type Service struct {
 // NewService returns a new Service. It leaves out a calendar date whose
 // exception type is neither 1 nor 2.
 func NewService(c gtfs.Calendar, cds ...gtfs.CalendarDate) *Service {
+	// A Service keeps its dates as added and removed, so it drops the calendar
+	// dates the copier attached, which are many times their size.
+	c.CalendarDates = nil
 	s := Service{Calendar: c}
 	for _, cd := range cds {
 		s.AddCalendarDate(cd)
