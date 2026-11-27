@@ -66,6 +66,16 @@ func (mr *Reader) ShapesByShapeID(ids ...string) chan []gtfs.Shape {
 	return readEntities(mr, func(r adapters.Reader) chan []gtfs.Shape { return r.ShapesByShapeID(ids...) }, nil)
 }
 
+// CalendarDatesByServiceID sends each reader's calendar dates grouped by service,
+// marking each date with its reader's feed version, as CalendarDates does.
+func (mr *Reader) CalendarDatesByServiceID(ids ...string) chan []gtfs.CalendarDate {
+	return readEntities(mr, func(r adapters.Reader) chan []gtfs.CalendarDate { return r.CalendarDatesByServiceID(ids...) }, func(fvid int, cds *[]gtfs.CalendarDate) {
+		for i := range *cds {
+			(*cds)[i].SetFeedVersionID(fvid)
+		}
+	})
+}
+
 func (mr *Reader) Stops() chan gtfs.Stop {
 	return readEntities(mr, func(r adapters.Reader) chan gtfs.Stop { return r.Stops() }, setFv[*gtfs.Stop])
 }

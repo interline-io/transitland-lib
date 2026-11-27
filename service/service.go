@@ -4,6 +4,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/interline-io/transitland-lib/adapters"
@@ -11,33 +12,33 @@ import (
 	"github.com/interline-io/transitland-lib/tt"
 )
 
-type calDate struct {
-	date          ymd
-	exceptionType int
-}
-
 // ymd for use as a map key
 type ymd struct {
-	year  int
-	month int
-	day   int
+	year  int32
+	month int8
+	day   int8
 }
 
 func newYMD(t time.Time) ymd {
 	y, m, d := t.Date()
-	return ymd{y, int(m), d}
+	return ymd{int32(y), int8(m), int8(d)}
 }
 
 func (d *ymd) Before(other ymd) bool {
-	return (d.year*10000)+(d.month*100)+d.day < (other.year*10000)+(other.month*100)+(other.day)
+	return d.num() < other.num()
 }
 
 func (d *ymd) After(other ymd) bool {
-	return (d.year*10000)+(d.month*100)+d.day > (other.year*10000)+(other.month*100)+(other.day)
+	return d.num() > other.num()
+}
+
+// num is the date as yyyymmdd.
+func (d ymd) num() int {
+	return int(d.year)*10000 + int(d.month)*100 + int(d.day)
 }
 
 func (d *ymd) Time() time.Time {
-	return time.Date(d.year, time.Month(d.month), d.day, 0, 0, 0, 0, time.UTC)
+	return time.Date(int(d.year), time.Month(d.month), int(d.day), 0, 0, 0, 0, time.UTC)
 }
 
 func (d *ymd) IsZero() bool {
@@ -84,11 +85,13 @@ func NewServicesFromReader(reader adapters.Reader) []*Service {
 
 // Service is a Calendar / CalendarDate union.
 type Service struct {
-	dates []calDate
+	added   []ymd // calendar dates with exception type 1
+	removed []ymd // calendar dates with exception type 2
 	gtfs.Calendar
 }
 
-// NewService returns a new Service.
+// NewService returns a new Service. It leaves out a calendar date whose
+// exception type is neither 1 nor 2.
 func NewService(c gtfs.Calendar, cds ...gtfs.CalendarDate) *Service {
 	s := Service{Calendar: c}
 	for _, cd := range cds {
@@ -101,29 +104,41 @@ func NewService(c gtfs.Calendar, cds ...gtfs.CalendarDate) *Service {
 func (s *Service) Reset() {
 	sid := s.ServiceID
 	s.Calendar = gtfs.Calendar{ServiceID: sid}
-	s.dates = nil
+	s.added, s.removed = nil, nil
 }
 
-// AddCalendarDate adds a service exception.
+// AddCalendarDate adds a service exception, of exception type 1 or 2.
 func (s *Service) AddCalendarDate(cd gtfs.CalendarDate) error {
-	s.dates = append(s.dates, calDate{
-		date:          newYMD(cd.Date.Val),
-		exceptionType: cd.ExceptionType.Int(),
-	})
+	switch d := newYMD(cd.Date.Val); cd.ExceptionType.Int() {
+	case 1:
+		s.added = append(s.added, d)
+	case 2:
+		s.removed = append(s.removed, d)
+	default:
+		return fmt.Errorf("invalid exception_type %d", cd.ExceptionType.Int())
+	}
 	return nil
 }
 
-// CalendarDates returns CalendarDates for this service.
+// CalendarDates returns CalendarDates for this service: the added dates, then
+// the removed ones.
 func (s *Service) CalendarDates() []gtfs.CalendarDate {
-	ret := []gtfs.CalendarDate{}
-	for _, cd := range s.dates {
-		ret = append(ret, gtfs.CalendarDate{
-			ServiceID:     tt.NewKey(s.EntityID()),
-			Date:          tt.NewDate(cd.date.Time()),
-			ExceptionType: tt.NewInt(cd.exceptionType),
-		})
+	ret := make([]gtfs.CalendarDate, 0, len(s.added)+len(s.removed))
+	for _, d := range s.added {
+		ret = append(ret, s.calendarDate(d, 1))
+	}
+	for _, d := range s.removed {
+		ret = append(ret, s.calendarDate(d, 2))
 	}
 	return ret
+}
+
+func (s *Service) calendarDate(d ymd, exceptionType int) gtfs.CalendarDate {
+	return gtfs.CalendarDate{
+		ServiceID:     tt.NewKey(s.EntityID()),
+		Date:          tt.NewDate(d.Time()),
+		ExceptionType: tt.NewInt(exceptionType),
+	}
 }
 
 // GetWeekday returns the value fo the day of week.
@@ -180,12 +195,14 @@ func (s *Service) SetWeekday(dow int, value int) error {
 // ServicePeriod returns the widest possible range of days with transit service, including service exceptions.
 func (s *Service) ServicePeriod() (time.Time, time.Time) {
 	start, end := newYMD(s.StartDate.Val), newYMD(s.EndDate.Val)
-	for _, cd := range s.dates {
-		if start.IsZero() || cd.date.Before(start) {
-			start = cd.date
-		}
-		if end.IsZero() || cd.date.After(end) {
-			end = cd.date
+	for _, dates := range [][]ymd{s.added, s.removed} {
+		for _, d := range dates {
+			if start.IsZero() || d.Before(start) {
+				start = d
+			}
+			if end.IsZero() || d.After(end) {
+				end = d
+			}
 		}
 	}
 	return start.Time(), end.Time()
@@ -198,11 +215,11 @@ func (s *Service) Exception(t time.Time) (int, bool) {
 }
 
 func (s *Service) exceptionOn(d ymd) (int, bool) {
-	// Cache into map?
-	for _, cd := range s.dates {
-		if cd.date == d {
-			return cd.exceptionType, true
-		}
+	if slices.Contains(s.added, d) {
+		return 1, true
+	}
+	if slices.Contains(s.removed, d) {
+		return 2, true
 	}
 	return 0, false
 }
@@ -236,23 +253,15 @@ func (s *Service) HasAtLeastOneDay() bool {
 	// otherwise fall back to full check...
 	duration := s.EndDate.Val.Sub(s.StartDate.Val).Hours() / 24
 	days := s.Monday.Val + s.Tuesday.Val + s.Wednesday.Val + s.Thursday.Val + s.Friday.Val + s.Saturday.Val + s.Sunday.Val
-	if duration >= 7 && days > 0 && len(s.dates) == 0 {
+	if duration >= 7 && days > 0 && len(s.added)+len(s.removed) == 0 {
 		return true
 	}
-	add, remove := 0, 0
-	for _, v := range s.dates {
-		if v.exceptionType == 1 {
-			add++
-		} else if v.exceptionType == 2 {
-			remove++
-		}
-	}
 	// By definition, at least one day
-	if add > 0 {
+	if len(s.added) > 0 {
 		return true
 	}
 	// By definition, no days
-	if days == 0 && add == 0 {
+	if days == 0 {
 		return false
 	}
 	// Now unfortunately have to check every day

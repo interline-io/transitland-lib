@@ -527,6 +527,73 @@ func (reader *Reader) chunkTripStopTimes(out chan<- gtfs.TripStopTimes, order []
 	}
 }
 
+// CalendarDatesByServiceID yields each service's calendar dates grouped into one
+// []gtfs.CalendarDate, in calendar_dates.txt order. A grouped file streams in a
+// single pass; otherwise rows are chunked under chunkSize by first-appearance
+// order, as ShapesByShapeID does. With serviceIDs, only those services are yielded.
+func (reader *Reader) CalendarDatesByServiceID(serviceIDs ...string) chan []gtfs.CalendarDate {
+	var chunks s2D
+	grouped := false
+	if len(serviceIDs) == 0 {
+		grouped = true
+		counter := map[string]int{}
+		var order []string // service_ids in first-appearance order
+		last := ""
+		reader.Adapter.ReadRows("calendar_dates.txt", func(row Row) {
+			sid, _ := row.Get("service_id")
+			_, seen := counter[sid]
+			// A service_id reappearing after a gap means the file isn't grouped by ID.
+			if grouped && sid != last && last != "" && seen {
+				grouped = false
+			}
+			if !seen {
+				order = append(order, sid)
+			}
+			counter[sid]++
+			last = sid
+		})
+		if grouped {
+			chunks = s2D{order}
+		} else {
+			chunks = chunkByCount(order, counter)
+		}
+	} else {
+		chunks = s2D{serviceIDs}
+	}
+	out := make(chan []gtfs.CalendarDate, groupBufferSize)
+	go func(chunks s2D, grouped bool) {
+		for _, chunk := range chunks {
+			set := stringsToSet(chunk)
+			m := map[string][]gtfs.CalendarDate{}
+			last := ""
+			reader.Adapter.ReadRows("calendar_dates.txt", func(row Row) {
+				sid, _ := row.Get("service_id")
+				// If we know the file is grouped, send the service at transition
+				if grouped && sid != last && last != "" {
+					if v, ok := m[last]; ok {
+						out <- v
+						delete(m, last)
+					}
+				}
+				if _, ok := set[sid]; ok {
+					ent := gtfs.CalendarDate{}
+					loadRow(&ent, row)
+					m[sid] = append(m[sid], ent)
+				}
+				last = sid
+			})
+			// Emit remaining services in first-appearance (chunk) order.
+			for _, sid := range chunk {
+				if v, ok := m[sid]; ok {
+					out <- v
+				}
+			}
+		}
+		close(out)
+	}(chunks, grouped)
+	return out
+}
+
 // Shapes sends single-geometry LineString Shapes
 func (reader *Reader) Shapes() chan gtfs.Shape {
 	return ReadEntities[gtfs.Shape](reader, getFilename(&gtfs.Shape{}))

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"iter"
-	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -744,57 +743,40 @@ func (copier *Copier) copyExtraFiles() error {
 	return nil
 }
 
-// copyCalendars
+// copyCalendars copies the calendars and their calendar dates, a batch of
+// services at a time.
+//
+// It holds calendar.txt, which is small next to calendar_dates.txt, and reads
+// the calendar dates grouped by service, as shapes are, since a feed can list
+// millions of them. Each service's dates go out with its calendar, or with a
+// generated one for a service that only calendar_dates.txt lists.
 func (copier *Copier) copyCalendars() error {
-	// Get Calendars as grouped calendars/calendar_dates
-	calDates := map[string][]gtfs.CalendarDate{}
-	for ent := range copier.reader.CalendarDates() {
-		calDates[ent.ServiceID.Val] = append(calDates[ent.ServiceID.Val], ent)
+	var cals []gtfs.Calendar
+	first := map[string]int{} // each service's first calendar in cals
+	for cal := range copier.reader.Calendars() {
+		if _, ok := first[cal.EntityID()]; !ok {
+			first[cal.EntityID()] = len(cals)
+		}
+		cals = append(cals, cal)
 	}
+	withDates := make([]bool, len(cals))
 
-	// Simplify and and adjust StartDate and EndDate
-	for cals := range batchChan(copier.reader.Calendars(), copier.options.BatchSize, nil) {
-		batchCals := make([]*gtfs.Calendar, 0, len(cals))
-		cdCount := 0
-		for _, cal := range cals {
-			// Add CalendarDates
-			cal.CalendarDates = calDates[cal.EntityID()]
-			// Remove from CalendarDates, process only once
-			// Left-overs will be handled as Generated Calendars below
-			delete(calDates, cal.EntityID())
-			batchCals = append(batchCals, &cal)
-			cdCount += len(cal.CalendarDates)
-		}
-		// Write Calendars
-		okCals, err := copyEntities(copier, batchCals)
-		if err != nil {
-			return err
-		}
-		// Write CalendarDates
-		batchCalDates := make([]*gtfs.CalendarDate, 0, cdCount)
-		for _, ent := range okCals {
-			if cal, ok := ent.(*gtfs.Calendar); ok {
-				for _, cd := range cal.CalendarDates {
-					batchCalDates = append(batchCalDates, &cd)
-				}
+	for groups := range batchChan(copier.reader.CalendarDatesByServiceID(), copier.options.BatchSize, nil) {
+		var batchCals, genCals []*gtfs.Calendar
+		for _, cds := range groups {
+			if len(cds) == 0 {
+				continue
 			}
-		}
-		if _, err := copyEntities(copier, batchCalDates); err != nil {
-			return err
-		}
-	}
-
-	// Process generated Calendars
-	{
-		batchCals := make([]*gtfs.Calendar, 0, len(calDates))
-		cdCount := 0
-		// Sorted: these calendars have no source order to preserve, and writers
-		// that assign ids in arrival order would otherwise number them
-		// differently on every run.
-		for _, serviceId := range slices.Sorted(maps.Keys(calDates)) {
-			cds := calDates[serviceId]
+			serviceID := cds[0].ServiceID.Val
+			if i, ok := first[serviceID]; ok {
+				withDates[i] = true
+				cal := cals[i]
+				cal.CalendarDates = cds
+				batchCals = append(batchCals, &cal)
+				continue
+			}
 			cal := gtfs.Calendar{}
-			cal.ServiceID.Set(serviceId)
+			cal.ServiceID.Set(serviceID)
 			// Set generated
 			cal.Generated.Set(true)
 			// Set days of week as 0
@@ -811,40 +793,58 @@ func (copier *Copier) copyCalendars() error {
 			a, b := svc.ServicePeriod()
 			cal.StartDate.Set(a)
 			cal.EndDate.Set(b)
-			batchCals = append(batchCals, &cal)
-			cdCount += len(cal.CalendarDates)
+			genCals = append(genCals, &cal)
 		}
-		// Write Calendars
-		var okCals []tt.Entity
+		okCals, err := copyEntities(copier, batchCals)
+		if err != nil {
+			return err
+		}
 		if copier.options.NormalizeServiceIDs {
-			var err error
-			okCals, err = copyEntities(copier, batchCals)
+			okGen, err := copyEntities(copier, genCals)
 			if err != nil {
 				return err
 			}
+			okCals = append(okCals, okGen...)
 		} else {
-			okCals = make([]tt.Entity, 0, len(batchCals))
-			for _, cal := range batchCals {
+			for _, cal := range genCals {
 				copier.EntityMap.Set("calendar.txt", cal.ServiceID.Val, cal.ServiceID.Val)
 				okCals = append(okCals, cal)
 			}
 		}
-		// Write CalendarDates
-		batchCalDates := make([]*gtfs.CalendarDate, 0, cdCount)
-		for _, ent := range okCals {
-			if cal, ok := ent.(*gtfs.Calendar); ok {
-				for _, cd := range cal.CalendarDates {
-					batchCalDates = append(batchCalDates, &cd)
-				}
-			}
+		if err := copier.copyCalendarDates(okCals); err != nil {
+			return err
 		}
-		if _, err := copyEntities(copier, batchCalDates); err != nil {
+	}
+
+	// Calendars without calendar dates
+	var rest []*gtfs.Calendar
+	for i := range cals {
+		if !withDates[i] {
+			rest = append(rest, &cals[i])
+		}
+	}
+	for batch := range slices.Chunk(rest, copier.options.BatchSize) {
+		if _, err := copyEntities(copier, batch); err != nil {
 			return err
 		}
 	}
 	copier.logCount(&gtfs.Calendar{})
 	copier.logCount(&gtfs.CalendarDate{})
 	return nil
+}
+
+// copyCalendarDates copies the calendar dates of cals.
+func (copier *Copier) copyCalendarDates(cals []tt.Entity) error {
+	var cds []*gtfs.CalendarDate
+	for _, ent := range cals {
+		if cal, ok := ent.(*gtfs.Calendar); ok {
+			for i := range cal.CalendarDates {
+				cds = append(cds, &cal.CalendarDates[i])
+			}
+		}
+	}
+	_, err := copyEntities(copier, cds)
+	return err
 }
 
 type patInfo struct {

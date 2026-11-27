@@ -25,6 +25,7 @@ type GtfsReader interface {
 	gtfs.Reader
 	StopTimesByTripID(...string) chan []gtfs.StopTime
 	ShapesByShapeID(...string) chan []gtfs.Shape
+	CalendarDatesByServiceID(...string) chan []gtfs.CalendarDate
 }
 
 type EntityCopier interface {
