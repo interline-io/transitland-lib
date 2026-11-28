@@ -96,8 +96,11 @@ func (pp *ConvexHullBuilder) Copy(copier adapters.EntityCopier) error {
 	}
 	// In agency id order, so the output doesn't depend on map order.
 	for _, aid := range slices.Sorted(maps.Keys(agencyStops)) {
+		// In stop id order too: go-geom's hull of more than 50 points depends on
+		// the order its points arrive in.
 		coords := []float64{}
-		for _, sg := range agencyStops[aid] {
+		for _, stopid := range slices.Sorted(maps.Keys(agencyStops[aid])) {
+			sg := agencyStops[aid][stopid]
 			coords = append(coords, sg.lon, sg.lat)
 		}
 		ch := xy.ConvexHullFlat(geom.XY, coords)

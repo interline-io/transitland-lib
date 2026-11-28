@@ -10,7 +10,6 @@ import (
 	"os"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/interline-io/log"
 	"github.com/interline-io/transitland-lib/adapters"
@@ -1025,7 +1024,7 @@ func (copier *Copier) processTripBatch(batch []gtfs.TripStopTimes, state *tripSt
 			if shapeid, ok := state.stopPatternShapeIDs[trip.StopPatternID.Int()]; ok {
 				trip.ShapeID.Set(shapeid)
 			} else {
-				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d-%d", trip.StopPatternID.Val, time.Now().Unix()), trip.StopTimes); err != nil {
+				if shapeid, err := copier.createMissingShape(fmt.Sprintf("generated-%d", trip.StopPatternID.Val), trip.StopTimes); err != nil {
 					copier.log.Debug().Err(err).Str("filename", "trips.txt").Str("source_id", trip.EntityID()).Msg("skipping shape generation")
 				} else {
 					// Set ShapeID

@@ -129,6 +129,27 @@ func TestRouteHeadwayBuilder_WriterIDs(t *testing.T) {
 	}
 }
 
+// A feed's headways come out in the same order on every copy. Most BART routes run
+// on weekdays and weekends, so they have headways in more than one dow category.
+func TestRouteHeadwayBuilder_Order(t *testing.T) {
+	order := func() []string {
+		_, writer, err := newMockCopier(testreader.ExampleFeedBART.URL, NewRouteHeadwayBuilder())
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ret []string
+		for _, ent := range writer.Reader.OtherList {
+			if v, ok := ent.(*RouteHeadway); ok {
+				ret = append(ret, fmt.Sprintf("%s dir %d dow %d", v.RouteID, v.DirectionID.Val, v.DowCategory.Val))
+			}
+		}
+		return ret
+	}
+	expect := order()
+	assert.NotEmpty(t, expect)
+	assert.Equal(t, expect, order())
+}
+
 // selectedStops gives each route headway's selected stop, by its id in the feed,
 // with the headway measured there.
 func selectedStops(ents []tt.Entity, entityID func(string) string) map[string]string {

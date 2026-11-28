@@ -141,8 +141,10 @@ func (pp *RouteHeadwayBuilder) Copy(copier adapters.EntityCopier) error {
 		}
 		// For each direction...
 		for direction := uint8(0); direction < 2; direction++ {
-			// Find the stop with the most visits on the highest day in each dow category
-			for dowCat, day := range dowCatDay {
+			// Find the stop with the most visits on the highest day in each dow
+			// category, in category order so the output doesn't depend on map order.
+			for _, dowCat := range slices.Sorted(maps.Keys(dowCatDay)) {
+				day := dowCatDay[dowCat]
 				d, _ := time.Parse("2006-01-02", day)
 				stopDepartures := map[string][]int32{}
 				for k, v := range routeDepartures {

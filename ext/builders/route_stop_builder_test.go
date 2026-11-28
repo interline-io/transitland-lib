@@ -24,6 +24,11 @@ func copyFeed(url string, writer adapters.Writer, exts ...any) (*copier.Result, 
 	if err != nil {
 		return nil, err
 	}
+	return copyReader(reader, writer, exts...)
+}
+
+// copyReader copies reader's feed into writer with the given extensions.
+func copyReader(reader adapters.Reader, writer adapters.Writer, exts ...any) (*copier.Result, error) {
 	cpOpts := copier.Options{}
 	for _, e := range exts {
 		cpOpts.AddExtension(e)

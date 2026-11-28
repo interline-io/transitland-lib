@@ -1,10 +1,15 @@
 package builders
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/interline-io/transitland-lib/adapters/direct"
+	"github.com/interline-io/transitland-lib/gtfs"
 	"github.com/interline-io/transitland-lib/internal/testpath"
 	"github.com/interline-io/transitland-lib/internal/testreader"
+	"github.com/interline-io/transitland-lib/tt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -86,5 +91,48 @@ func TestConvexHullBuilder(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// An agency's hull comes out the same on every copy. go-geom's hull of more than
+// 50 points depends on their order when several tie for an extreme, as this grid's
+// westernmost stops do.
+func TestConvexHullBuilder_Order(t *testing.T) {
+	on := tt.NewInt(1)
+	day := tt.NewDate(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	reader := direct.NewReader()
+	reader.AgencyList = []gtfs.Agency{{AgencyID: tt.NewString("a"), AgencyName: tt.NewString("A"), AgencyURL: tt.NewUrl("http://example.com"), AgencyTimezone: tt.NewTimezone("America/Los_Angeles")}}
+	reader.RouteList = []gtfs.Route{{RouteID: tt.NewString("r"), RouteShortName: tt.NewString("R"), RouteType: tt.NewInt(3), AgencyID: tt.NewKey("a")}}
+	reader.CalendarList = []gtfs.Calendar{{ServiceID: tt.NewString("s"), Monday: on, Tuesday: on, Wednesday: on, Thursday: on, Friday: on, Saturday: on, Sunday: on, StartDate: day, EndDate: day}}
+	reader.TripList = []gtfs.Trip{{TripID: tt.NewString("t"), RouteID: tt.NewKey("r"), ServiceID: tt.NewKey("s")}}
+	// One trip visits an 8x8 grid of stops. A full grid's hull doesn't depend on
+	// order; one with its southwest corner cut off does.
+	for x := range 8 {
+		for y := range 8 {
+			if x+y < 2 {
+				continue
+			}
+			id := fmt.Sprintf("%d-%d", x, y)
+			seq := len(reader.StopList) + 1
+			reader.StopList = append(reader.StopList, gtfs.Stop{StopID: tt.NewString(id), StopName: tt.NewString(id), Geometry: tt.NewPoint(-122+float64(x)*0.001, 37+float64(y)*0.001)})
+			reader.StopTimeList = append(reader.StopTimeList, gtfs.StopTime{TripID: tt.NewString("t"), StopID: tt.NewKey(id), StopSequence: tt.NewInt(seq), ArrivalTime: tt.NewSeconds(3600 + 60*seq), DepartureTime: tt.NewSeconds(3600 + 60*seq)})
+		}
+	}
+	hull := func() []float64 {
+		writer := direct.NewWriter()
+		if _, err := copyReader(reader, writer, NewConvexHullBuilder()); err != nil {
+			t.Fatal(err)
+		}
+		for _, ent := range writer.Reader.OtherList {
+			if v, ok := ent.(*AgencyGeometry); ok {
+				return v.Geometry.FlatCoords()
+			}
+		}
+		t.Fatal("no agency hull")
+		return nil
+	}
+	expect := hull()
+	for range 10 {
+		assert.Equal(t, expect, hull())
 	}
 }
